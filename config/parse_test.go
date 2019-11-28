@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestMultiCluster(t *testing.T) {
+func TestSingleKubernetesCluster(t *testing.T) {
 	c, err := ParseFolder("./examples/single-cluster-k8s")
 
 	assert.NoError(t, err)
@@ -19,4 +19,17 @@ func TestMultiCluster(t *testing.T) {
 	assert.Equal(t, "1.16.0", c1.Version)
 	assert.Equal(t, 3, c1.Nodes)
 	assert.Equal(t, "network.k8s", c1.Network)
+
+	// validate networks
+	assert.Len(t, c.Networks, 1)
+
+	n1 := c.Networks[0]
+	assert.Equal(t, "k8s", n1.name)
+	assert.Equal(t, "10.4.0.0/16", n1.Subnet)
+
+	// validate references
+	err = ParseReferences(c)
+	assert.NoError(t, err)
+
+	assert.Equal(t, n1, c1.networkRef)
 }

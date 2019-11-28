@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/hashicorp/hcl2/gohcl"
 	"github.com/hashicorp/hcl2/hcl"
@@ -51,21 +52,6 @@ func ParseFolder(folder string) (*Config, error) {
 		if err != nil {
 			return c, err
 		}
-		/*
-
-			for k, v := range conf.Pipes {
-				c.Pipes[k] = v
-			}
-			for k, v := range conf.Inputs {
-				c.Inputs[k] = v
-			}
-			for k, v := range conf.Outputs {
-				c.Outputs[k] = v
-			}
-			for k, v := range conf.ConnectionPools {
-				c.ConnectionPools[k] = v
-			}
-		*/
 	}
 
 	return c, nil
@@ -98,6 +84,16 @@ func (c *Config) ParseHCLFile(file string) error {
 			}
 
 			c.Clusters = append(c.Clusters, cl)
+		case "network":
+			n := &Network{}
+			n.name = b.Labels[0]
+
+			err := decodeBody(b, n)
+			if err != nil {
+				return err
+			}
+
+			c.Networks = append(c.Networks, n)
 
 			/*
 				case "input":
@@ -112,6 +108,21 @@ func (c *Config) ParseHCLFile(file string) error {
 						return config, err
 					}
 			*/
+		}
+	}
+
+	return nil
+}
+
+func ParseReferences(c *Config) error {
+	// link the networks in the clusters
+	for _, cl := range c.Clusters {
+		nn := strings.Split(cl.Network, ".")[1]
+
+		for _, n := range c.Networks {
+			if n.name == nn {
+				cl.networkRef = n
+			}
 		}
 	}
 
