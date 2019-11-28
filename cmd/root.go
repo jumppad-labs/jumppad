@@ -109,7 +109,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&config, "config", "", "config file (default is $HOME/.shipyard)")
 
-	rootCmd.AddCommand(subcommand)
+	//rootCmd.AddCommand(subcommand)
 }
 
 func configure() {

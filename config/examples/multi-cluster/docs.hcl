@@ -7,6 +7,7 @@ docs "multi-cluster" {
 code "multi-cluster" {
   port    = 8080
   workdir = ""
+
   volume {
     source      = "./consul_config"
     destination = "/config"
