@@ -19,7 +19,7 @@ func setupContainer(c *config.Container) (*clients.MockDocker, *Container) {
 }
 
 func TestContainerCreatesCorrectly(t *testing.T) {
-	md, p := setupContainer(&config.Container{Image: "consul:v1.6.1"})
+	md, p := setupContainer(&config.Container{Name: "testcontainer", Image: "consul:v1.6.1"})
 
 	err := p.Create()
 	assert.NoError(t, err)
