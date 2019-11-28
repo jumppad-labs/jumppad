@@ -11,12 +11,26 @@ helm "consul" {
   cluster = cluster.cloud
   chart   = "${environment(SHIPYARD_HOME)}/helm/charts/consul"
   values  = "${environment(SHIPYARD_HOME)}/helm/charts/consul-values.yml"
+
+  healthcheck {
+    http     = "http://consul-consul:8500/v1/leader"                          // can the http endpoint be reached
+    tcp      = "consul-consul:8500"                                           // can a TCP connection be made
+    services = ["consul-consul"]                                              // does service exist and there are endpoints
+    pods     = ["component=server,app=consul", "component=client,app=consul"] // is the pod running and healthy
+  }
 }
 
 // runs kubectl apply
 k8s_config "dashboard" {
   cluster = cluster.cloud
   config  = "${environment(SHIPYARD_HOME)}/k8s_config/dashboard.yml"
+
+  healthcheck {
+    http     = "http://consul-consul:8500/v1/leader"                          // can the http endpoint be reached
+    tcp      = "consul-consul:8500"                                           // can a TCP connection be made
+    services = ["consul-consul"]                                              // does service exist and there are endpoints
+    pods     = ["component=server,app=consul", "component=client,app=consul"] // is the pod running and healthy
+  }
 }
 
 ingress "k8s-dashboard" {
