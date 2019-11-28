@@ -154,6 +154,10 @@ func ParseReferences(c *Config) error {
 		cl.networkRef = findNetworkRef(cl.Network, c)
 	}
 
+	for _, cl := range c.Containers {
+		cl.networkRef = findNetworkRef(cl.Network, c)
+	}
+
 	for _, hc := range c.HelmCharts {
 		hc.clusterRef = findClusterRef(hc.Cluster, c)
 	}
@@ -246,4 +250,19 @@ func decodeBody(b *hclsyntax.Block, p interface{}) error {
 	}
 
 	return nil
+}
+
+func generateOrder(c *Config) []interface{} {
+	oc := make([]interface{}, 0)
+
+	// first elements to create are networks
+	for _, n := range c.Networks {
+		oc = append(oc, n)
+	}
+
+	for _, c := range c.Containers {
+		oc = append(oc, c)
+	}
+
+	return oc
 }

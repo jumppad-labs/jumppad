@@ -1,12 +1,13 @@
 package config
 
 type Container struct {
-	name      string
-	Image     string   `hcl:"image"`
-	Command   []string `hcl:"command,optional"`
-	Volumes   []Volume `hcl:"volume,block"`
-	Network   string   `hcl:"network"`
-	IPAddress string   `hcl:"ip_address,optional"`
+	name       string
+	Image      string   `hcl:"image"`
+	Command    []string `hcl:"command,optional"`
+	Volumes    []Volume `hcl:"volume,block"`
+	Network    string   `hcl:"network"`
+	networkRef *Network
+	IPAddress  string `hcl:"ip_address,optional"`
 }
 
 type Volume struct {

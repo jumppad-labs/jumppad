@@ -1,9 +1,10 @@
 package config
 
 import (
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func setup() func() {
@@ -111,6 +112,29 @@ func TestMultiCluster(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, co1, i1.targetRef)
+}
+
+func TestCorrectlyOrdersElements(t *testing.T) {
+	n1 := &Network{name: "network1"}
+	c1 := &Container{name: "container1", networkRef: n1}
+
+	c := &Config{}
+	c.Containers = []*Container{c1}
+	c.Networks = []*Network{n1}
+
+	// process the config
+	oc := generateOrder(c)
+
+	// first element should be a network
+	assert.Len(t, oc, 2)
+
+	el1, ok := oc[0].(*Network)
+	assert.True(t, ok)
+	assert.Equal(t, "network1", el1.name)
+
+	co1, ok := oc[1].(*Container)
+	assert.True(t, ok)
+	assert.Equal(t, "container1", co1.name)
 }
 
 func testFindIngress(name string, ingress []*Ingress) *Ingress {

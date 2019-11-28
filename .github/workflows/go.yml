@@ -24,8 +24,8 @@ jobs:
             dep ensure
         fi
 
-    - name: Test
-      run: go test -v ./... 
+    - name: Unit Test
+      run: go test $(go list ./... | grep -v /functional_tests) -v
       
     - name: Build
       run: go build -v .
