@@ -4,13 +4,13 @@ cluster "cloud" {
 
   nodes = 1 // default
 
-  network = network.k8s
+  network = "network.k8s"
 }
 
 helm "consul" {
-  cluster = cluster.cloud
-  chart   = "${environment(SHIPYARD_HOME)}/helm/charts/consul"
-  values  = "${environment(SHIPYARD_HOME)}/helm/charts/consul-values.yml"
+  cluster = "cluster.cloud"
+  chart   = "${env("SHIPYARD_HOME")}/helm/charts/consul"
+  values  = "${env("SHIPYARD_HOME")}/helm/charts/consul-values.yml"
 
   health_check {
     http     = "http://consul-consul:8500/v1/leader"                          // can the http endpoint be reached
@@ -22,8 +22,8 @@ helm "consul" {
 
 // runs kubectl apply
 k8s_config "dashboard" {
-  cluster = cluster.cloud
-  config  = "${environment(SHIPYARD_HOME)}/k8s_config/dashboard.yml"
+  cluster = "cluster.cloud"
+  config  = "${env("SHIPYARD_HOME")}/k8s_config/dashboard.yml"
 
   healthcheck {
     http     = "http://consul-consul:8500/v1/leader"                          // can the http endpoint be reached
@@ -34,10 +34,10 @@ k8s_config "dashboard" {
 }
 
 ingress "k8s-dashboard" {
-  cluster = cluster.cloud
+  target  = "cluster.cloud"
   service = "kubernetes-dashboard" //kubernetes service or nomad job
 
-  ports {
+  port {
     local  = 8443
     remote = 8443
     host   = 18443
@@ -45,31 +45,31 @@ ingress "k8s-dashboard" {
 }
 
 ingress "consul-k8s" {
-  cluster = cluster.cloud
+  target  = "cluster.cloud"
   service = "consul-consul-server" //kubernetes service or nomad job
 
-  ports {
+  port {
     local  = 8500
     remote = 8500
     host   = 28500
   }
 
-  ports {
+  port {
     local  = 8600
     remote = 8600
   }
 
-  ports {
+  port {
     local  = 8302
     remote = 8302
   }
 
-  ports {
+  port {
     local  = 8301
     remote = 8301
   }
 
-  ports {
+  port {
     local  = 8300
     remote = 8300
   }
@@ -78,10 +78,10 @@ ingress "consul-k8s" {
 }
 
 ingress "gateway-k8s" {
-  cluster = cluster.cloud
+  target  = "cluster.cloud"
   service = "consul-consul-mesh-gateway" //kubernetes service or nomad job
 
-  ports {
+  port {
     local  = 443
     remote = 443
   }

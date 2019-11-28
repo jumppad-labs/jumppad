@@ -1,5 +1,7 @@
 package config
 
+// TODO how do we deal with multiple stanza with the same name
+
 import (
 	"errors"
 	"fmt"
@@ -21,6 +23,7 @@ var ctx *hcl.EvalContext
 // Config defines the stack config
 type Config struct {
 	Clusters   []*Cluster
+	Containers []*Container
 	Networks   []*Network
 	HelmCharts []*Helm
 	Ingresses  []*Ingress
@@ -116,6 +119,16 @@ func (c *Config) ParseHCLFile(file string) error {
 			}
 
 			c.Ingresses = append(c.Ingresses, i)
+		case "container":
+			co := &Container{}
+			co.name = b.Labels[0]
+
+			err := decodeBody(b, co)
+			if err != nil {
+				return err
+			}
+
+			c.Containers = append(c.Containers, co)
 			/*
 				case "input":
 					fallthrough
@@ -176,6 +189,18 @@ func findClusterRef(name string, c *Config) *Cluster {
 	return nil
 }
 
+func findContainerRef(name string, c *Config) *Container {
+	nn := strings.Split(name, ".")[1]
+
+	for _, c := range c.Containers {
+		if c.name == nn {
+			return c
+		}
+	}
+
+	return nil
+}
+
 func findTargetRef(name string, c *Config) interface{} {
 	// target can be either a cluster or a container
 	cl := findClusterRef(name, c)
@@ -183,7 +208,10 @@ func findTargetRef(name string, c *Config) interface{} {
 		return cl
 	}
 
-	// TODO  add code for containers
+	co := findContainerRef(name, c)
+	if co != nil {
+		return co
+	}
 
 	return nil
 }

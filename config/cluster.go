@@ -8,4 +8,9 @@ type Cluster struct {
 	Nodes      int    `hcl:"nodes,optional"`
 	Network    string `hcl:"network"`
 	networkRef *Network
+	Config     *ClusterConfig `hcl:"config,block"`
+}
+
+type ClusterConfig struct {
+	ConsulHTTPAddr string `hcl:"consul_http_addr,optional"`
 }

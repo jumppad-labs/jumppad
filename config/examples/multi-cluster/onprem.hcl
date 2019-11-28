@@ -7,15 +7,15 @@ container "consul" {
     destination = "/config"
   }
 
-  network    = network.onprem
+  network    = "network.onprem"
   ip_address = "10.5.0.2" // optional
 }
 
 // consul.consul.ingress.local
 ingress "consul" {
-  target = container.consul
+  target = "container.consul"
 
-  ports {
+  port {
     local  = 8500
     remote = 8500
     host   = 18500

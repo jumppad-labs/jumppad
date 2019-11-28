@@ -1,4 +1,4 @@
-container "consul" {
+container "consul_nomad" {
   image   = "consul:1.6.1"
   command = ["consul", "agent", "-config-file=/config/consul.hcl"]
 
@@ -7,49 +7,48 @@ container "consul" {
     destination = "/config"
   }
 
-  network    = network.nomad
+  network    = "network.nomad"
   ip_address = "10.6.0.2" // optional
 }
 
 cluster "nomad" {
-  driver = "nomad"
-  image  = "0.10.0"
+  driver  = "nomad"
+  version = "0.10.0"
 
   nodes = 3
 
-  network = network.nomad
+  network = "network.nomad"
 
   config {
-    consul_http_addr = container.consul.ip_address
+    consul_http_addr = "container.consul_nomad.ip_address"
   }
 }
 
-ingress "consul" {
-  cluster = container.consul
-  service = "consul" //kubernetes service or nomad job
+ingress "consul_nomad" {
+  target = "container.consul_nomad"
 
-  ports {
+  port {
     local  = 8500
     remote = 8500
     host   = 38500
   }
 
-  ports {
+  port {
     local  = 8600
     remote = 8600
   }
 
-  ports {
+  port {
     local  = 8302
     remote = 8302
   }
 
-  ports {
+  port {
     local  = 8301
     remote = 8301
   }
 
-  ports {
+  port {
     local  = 8300
     remote = 8300
   }
@@ -58,10 +57,10 @@ ingress "consul" {
 }
 
 ingress "nomad" {
-  cluster = cluster.nomad
+  target  = "cluster.nomad"
   service = "nomad-server" //kubernetes service or nomad job
 
-  ports {
+  port {
     local  = 4646
     remote = 4646
     host   = 14646

@@ -70,3 +70,55 @@ func TestSingleKubernetesCluster(t *testing.T) {
 	assert.Equal(t, i1.targetRef, c1)
 	assert.Equal(t, i2.targetRef, c1)
 }
+
+func TestMultiCluster(t *testing.T) {
+	tearDown := setup()
+	defer tearDown()
+
+	c, err := ParseFolder("./examples/multi-cluster")
+
+	assert.NoError(t, err)
+	assert.NotNil(t, c)
+
+	// validate clusters
+	assert.Len(t, c.Clusters, 2)
+
+	c1 := c.Clusters[0]
+	assert.Equal(t, "cloud", c1.name)
+	assert.Equal(t, "1.16.0", c1.Version)
+	assert.Equal(t, 1, c1.Nodes)
+	assert.Equal(t, "network.k8s", c1.Network)
+
+	// validate containers
+	assert.Len(t, c.Containers, 2)
+
+	co1 := c.Containers[0]
+	assert.Equal(t, "consul_nomad", co1.name)
+	assert.Equal(t, []string{"consul", "agent", "-config-file=/config/consul.hcl"}, co1.Command)
+	assert.Equal(t, "./consul_config", co1.Volumes[0].Source)
+	assert.Equal(t, "/config", co1.Volumes[0].Destination)
+	assert.Equal(t, "network.nomad", co1.Network)
+	assert.Equal(t, "10.6.0.2", co1.IPAddress)
+
+	// validate ingress
+	assert.Len(t, c.Ingresses, 6)
+
+	i1 := testFindIngress("consul_nomad", c.Ingresses)
+	assert.Equal(t, "consul_nomad", i1.name)
+
+	// validate references
+	err = ParseReferences(c)
+	assert.NoError(t, err)
+
+	assert.Equal(t, co1, i1.targetRef)
+}
+
+func testFindIngress(name string, ingress []*Ingress) *Ingress {
+	for _, i := range ingress {
+		if i.name == name {
+			return i
+		}
+	}
+
+	return nil
+}
