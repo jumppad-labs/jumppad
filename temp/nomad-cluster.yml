@@ -1,0 +1,83 @@
+version: "3"
+services:
+  # Consul server on "VM"
+  consul-server:
+    image: consul:1.6.1
+    command: ["consul", "agent", "-config-file=/etc/consul.d/server.hcl"]
+    volumes:
+      - "./consul_config/server.hcl:/etc/consul.d/server.hcl"
+    ports:
+      - 8300
+      - 8301
+      - 8302
+      - 38500:8500
+      - 8502
+      - 8600
+    networks:
+      nomad:
+        ipv4_address: 10.6.0.2
+      wan:
+        ipv4_address: 192.169.7.20
+
+  # Nomad server on "VM"
+  nomad-server:
+    image: nomad-vm
+    volumes:
+      - "./nomad_config/server.hcl:/etc/nomad.d/server.hcl"
+      - "./consul_config/client.hcl:/etc/consul.d/client.hcl"
+    privileged: true
+    ports:
+      - 4646:4646
+      - 4647
+    networks:
+      nomad:
+        ipv4_address: 10.6.0.3
+
+  nomad-client-a:
+    image: nomad-vm
+    volumes:
+      - "./nomad_config/client.hcl:/etc/nomad.d/client.hcl"
+      - "./consul_config/client.hcl:/etc/consul.d/client.hcl"
+    privileged: true
+    ports:
+      - 4646
+      - 4647
+    networks:
+      nomad:
+        ipv4_address: 10.6.0.10
+
+  nomad-client-b:
+    image: nomad-vm
+    volumes:
+      - "./nomad_config/client.hcl:/etc/nomad.d/client.hcl"
+      - "./consul_config/client.hcl:/etc/consul.d/client.hcl"
+    privileged: true
+    ports:
+      - 4646
+      - 4647
+    networks:
+      nomad:
+        ipv4_address: 10.6.0.11
+
+  nomad-client-c:
+    image: nomad-vm
+    volumes:
+      - "./nomad_config/client.hcl:/etc/nomad.d/client.hcl"
+      - "./consul_config/client.hcl:/etc/consul.d/client.hcl"
+    privileged: true
+    ports:
+      - 4646
+      - 4647
+    networks:
+      nomad:
+        ipv4_address: 10.6.0.12
+
+networks:
+  nomad:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.6.0.0/16
+  wan:
+    external:
+      name: yard_wan
