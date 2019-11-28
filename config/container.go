@@ -1,7 +1,7 @@
 package config
 
 type Container struct {
-	name       string
+	Name       string
 	Image      string   `hcl:"image"`
 	Command    []string `hcl:"command,optional"`
 	Volumes    []Volume `hcl:"volume,block"`

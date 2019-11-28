@@ -1,7 +1,7 @@
 package config
 
 type Helm struct {
-	name       string
+	Name       string
 	clusterRef *Cluster
 
 	Cluster string `hcl:"cluster"`

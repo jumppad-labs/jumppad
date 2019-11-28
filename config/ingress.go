@@ -1,7 +1,7 @@
 package config
 
 type Ingress struct {
-	name      string
+	Name      string
 	targetRef interface{}
 
 	Target    string `hcl:"target"`

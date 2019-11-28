@@ -81,7 +81,7 @@ func (c *Config) ParseHCLFile(file string) error {
 		switch b.Type {
 		case "cluster":
 			cl := &Cluster{}
-			cl.name = b.Labels[0]
+			cl.Name = b.Labels[0]
 
 			err := decodeBody(b, cl)
 			if err != nil {
@@ -91,7 +91,7 @@ func (c *Config) ParseHCLFile(file string) error {
 			c.Clusters = append(c.Clusters, cl)
 		case "network":
 			n := &Network{}
-			n.name = b.Labels[0]
+			n.Name = b.Labels[0]
 
 			err := decodeBody(b, n)
 			if err != nil {
@@ -101,7 +101,7 @@ func (c *Config) ParseHCLFile(file string) error {
 			c.Networks = append(c.Networks, n)
 		case "helm":
 			h := &Helm{}
-			h.name = b.Labels[0]
+			h.Name = b.Labels[0]
 
 			err := decodeBody(b, h)
 			if err != nil {
@@ -111,7 +111,7 @@ func (c *Config) ParseHCLFile(file string) error {
 			c.HelmCharts = append(c.HelmCharts, h)
 		case "ingress":
 			i := &Ingress{}
-			i.name = b.Labels[0]
+			i.Name = b.Labels[0]
 
 			err := decodeBody(b, i)
 			if err != nil {
@@ -121,7 +121,7 @@ func (c *Config) ParseHCLFile(file string) error {
 			c.Ingresses = append(c.Ingresses, i)
 		case "container":
 			co := &Container{}
-			co.name = b.Labels[0]
+			co.Name = b.Labels[0]
 
 			err := decodeBody(b, co)
 			if err != nil {
@@ -173,7 +173,7 @@ func findNetworkRef(name string, c *Config) *Network {
 	nn := strings.Split(name, ".")[1]
 
 	for _, n := range c.Networks {
-		if n.name == nn {
+		if n.Name == nn {
 			return n
 		}
 	}
@@ -185,7 +185,7 @@ func findClusterRef(name string, c *Config) *Cluster {
 	nn := strings.Split(name, ".")[1]
 
 	for _, c := range c.Clusters {
-		if c.name == nn {
+		if c.Name == nn {
 			return c
 		}
 	}
@@ -197,7 +197,7 @@ func findContainerRef(name string, c *Config) *Container {
 	nn := strings.Split(name, ".")[1]
 
 	for _, c := range c.Containers {
-		if c.name == nn {
+		if c.Name == nn {
 			return c
 		}
 	}
