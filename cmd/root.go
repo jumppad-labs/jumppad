@@ -13,103 +13,29 @@ var config = ""
 
 var rootCmd = &cobra.Command{
 	Use:   "yard",
-	Short: "Yard short description",
-	Long:  `Yard long description`,
+	Short: "A tool that helps you create and run demo and tutorial environments",
+	Long:  `A tool that helps you create and run demo and tutorial environments`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Do Stuff Here
 	},
 }
-
-var initCmd = &cobra.Command{Use: "yard",
-	Short: "Yard short description",
-	Long:  `Yard long description`,
-	Run: func(cmd *cobra.Command, args []string) {
-		// Do Stuff Here
-	},
-}
-
-var applyCmd = &cobra.Command{
-	Use:   "yard",
-	Short: "Yard short description",
-	Long:  `Yard long description`,
-	Run: func(cmd *cobra.Command, args []string) {
-		// Do Stuff Here
-	},
-}
-
-var deleteCmd = &cobra.Command{
-	Use:   "yard",
-	Short: "Yard short description",
-	Long:  `Yard long description`,
-	Run: func(cmd *cobra.Command, args []string) {
-		// Do Stuff Here
-	},
-}
-
-var statusCmd = &cobra.Command{
-	Use:   "yard",
-	Short: "Yard short description",
-	Long:  `Yard long description`,
-	Run: func(cmd *cobra.Command, args []string) {
-		// Do Stuff Here
-	},
-}
-
-var upgradeCmd = &cobra.Command{
-	Use:   "yard",
-	Short: "Yard short description",
-	Long:  `Yard long description`,
-	Run: func(cmd *cobra.Command, args []string) {
-		// Do Stuff Here
-	},
-}
-
-var exposeCmd = &cobra.Command{
-	Use:   "yard",
-	Short: "Yard short description",
-	Long:  `Yard long description`,
-	Run: func(cmd *cobra.Command, args []string) {
-		// Do Stuff Here
-	},
-}
-
-var containerCmd = &cobra.Command{
-	Use:   "yard",
-	Short: "Yard short description",
-	Long:  `Yard long description`,
-	Run: func(cmd *cobra.Command, args []string) {
-		// Do Stuff Here
-	},
-}
-
-var codeCmd = &cobra.Command{
-	Use:   "yard",
-	Short: "Yard short description",
-	Long:  `Yard long description`,
-	Run: func(cmd *cobra.Command, args []string) {
-		// Do Stuff Here
-	},
-}
-
-var docsCmd = &cobra.Command{
-	Use:   "yard",
-	Short: "Yard short description",
-	Long:  `Yard long description`,
-	Run: func(cmd *cobra.Command, args []string) {
-		// Do Stuff Here
-	},
-}
-
-var toolsCmd = &cobra.Command{}
-
-var uninstallCmd = &cobra.Command{}
 
 func init() {
 	cobra.OnInitialize(configure)
 
-	rootCmd.PersistentFlags().StringVar(&config, "config", "", "config file (default is $HOME/.shipyard)")
+	rootCmd.PersistentFlags().StringVar(&config, "config", "", "config file (default is $HOME/.shipyard/config)")
 
-	rootCmd.AddCommand(subcommand)
+	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(applyCmd)
+	rootCmd.AddCommand(deleteCmd)
+	rootCmd.AddCommand(statusCmd)
+	rootCmd.AddCommand(exposeCmd)
+	rootCmd.AddCommand(containerCmd)
+	rootCmd.AddCommand(codeCmd)
+	rootCmd.AddCommand(docsCmd)
+	rootCmd.AddCommand(toolsCmd)
+	rootCmd.AddCommand(upgradeCmd)
+	rootCmd.AddCommand(uninstallCmd)
 }
 
 func configure() {
@@ -125,7 +51,7 @@ func configure() {
 
 		// Search config in home directory with name ".shipyard".
 		viper.AddConfigPath(home)
-		viper.SetConfigName(".shipyard")
+		viper.SetConfigName(".shipyard/config")
 	}
 
 	viper.AutomaticEnv()
