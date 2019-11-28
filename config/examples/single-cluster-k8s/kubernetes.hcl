@@ -45,9 +45,13 @@ network "k8s" {
 
 // runs helm install
 helm "consul" {
-  cluster = k8s_cluster.default
-  chart   = "./consul-values"
+  cluster = "cluster.default"
+  chart   = "${env("SHIPYARD_CONFIG")}/charts/consul"
   values  = "./consul-values"
+
+  health_check {
+    pods = ["component=server,app=consul", "component=client,app=consul"] // is the pod running and healthy
+  }
 }
 
 // runs kubectl apply

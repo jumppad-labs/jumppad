@@ -20,8 +20,9 @@ var ctx *hcl.EvalContext
 
 // Config defines the stack config
 type Config struct {
-	Clusters []*Cluster
-	Networks []*Network
+	Clusters   []*Cluster
+	Networks   []*Network
+	HelmCharts []*Helm
 }
 
 // ParseFolder for config entries
@@ -94,7 +95,16 @@ func (c *Config) ParseHCLFile(file string) error {
 			}
 
 			c.Networks = append(c.Networks, n)
+		case "helm":
+			h := &Helm{}
+			h.name = b.Labels[0]
 
+			err := decodeBody(b, h)
+			if err != nil {
+				return err
+			}
+
+			c.HelmCharts = append(c.HelmCharts, h)
 			/*
 				case "input":
 					fallthrough

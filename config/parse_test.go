@@ -2,10 +2,22 @@ package config
 
 import (
 	"github.com/stretchr/testify/assert"
+	"os"
 	"testing"
 )
 
+func setup() func() {
+	os.Setenv("SHIPYARD_CONFIG", "/User/yamcha/.shipyard")
+
+	return func() {
+		os.Unsetenv("SHIPYARD_CONFIG")
+	}
+}
+
 func TestSingleKubernetesCluster(t *testing.T) {
+	tearDown := setup()
+	defer tearDown()
+
 	c, err := ParseFolder("./examples/single-cluster-k8s")
 
 	assert.NoError(t, err)
@@ -26,6 +38,16 @@ func TestSingleKubernetesCluster(t *testing.T) {
 	n1 := c.Networks[0]
 	assert.Equal(t, "k8s", n1.name)
 	assert.Equal(t, "10.4.0.0/16", n1.Subnet)
+
+	// validate helm charts
+	assert.Len(t, c.HelmCharts, 1)
+
+	h1 := c.HelmCharts[0]
+	assert.Equal(t, "cluster.default", h1.Cluster)
+	assert.Equal(t, "/User/yamcha/.shipyard/charts/consul", h1.Chart)
+	assert.Equal(t, "./consul-values", h1.Values)
+	assert.Equal(t, "component=server,app=consul", h1.HealthCheck.Pods[0])
+	assert.Equal(t, "component=client,app=consul", h1.HealthCheck.Pods[1])
 
 	// validate references
 	err = ParseReferences(c)

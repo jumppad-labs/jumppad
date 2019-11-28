@@ -12,7 +12,7 @@ helm "consul" {
   chart   = "${environment(SHIPYARD_HOME)}/helm/charts/consul"
   values  = "${environment(SHIPYARD_HOME)}/helm/charts/consul-values.yml"
 
-  healthcheck {
+  health_check {
     http     = "http://consul-consul:8500/v1/leader"                          // can the http endpoint be reached
     tcp      = "consul-consul:8500"                                           // can a TCP connection be made
     services = ["consul-consul"]                                              // does service exist and there are endpoints
