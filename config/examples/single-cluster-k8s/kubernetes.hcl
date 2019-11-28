@@ -63,10 +63,10 @@ k8s_config "dashboard" {
 // expose a port to the local machine
 // ingress will create a localy routable dns consul.cluster.ingress.local
 ingress "consul" {
-  target  = cluster.default
+  target  = "cluster.default"
   service = "consul-consul-server" //kubernetes service or nomad job
 
-  ports {
+  port {
     local  = 8500
     remote = 8500
     host   = 8500
@@ -74,9 +74,9 @@ ingress "consul" {
 }
 
 ingress "web" {
-  target = container.web
+  target = "cluster.default"
 
-  ports {
+  port {
     local  = 9090
     remote = 9090
     host   = 9090

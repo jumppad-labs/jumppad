@@ -23,6 +23,7 @@ type Config struct {
 	Clusters   []*Cluster
 	Networks   []*Network
 	HelmCharts []*Helm
+	Ingresses  []*Ingress
 }
 
 // ParseFolder for config entries
@@ -105,6 +106,16 @@ func (c *Config) ParseHCLFile(file string) error {
 			}
 
 			c.HelmCharts = append(c.HelmCharts, h)
+		case "ingress":
+			i := &Ingress{}
+			i.name = b.Labels[0]
+
+			err := decodeBody(b, i)
+			if err != nil {
+				return err
+			}
+
+			c.Ingresses = append(c.Ingresses, i)
 			/*
 				case "input":
 					fallthrough
@@ -127,14 +138,52 @@ func (c *Config) ParseHCLFile(file string) error {
 func ParseReferences(c *Config) error {
 	// link the networks in the clusters
 	for _, cl := range c.Clusters {
-		nn := strings.Split(cl.Network, ".")[1]
+		cl.networkRef = findNetworkRef(cl.Network, c)
+	}
 
-		for _, n := range c.Networks {
-			if n.name == nn {
-				cl.networkRef = n
-			}
+	for _, hc := range c.HelmCharts {
+		hc.clusterRef = findClusterRef(hc.Cluster, c)
+	}
+
+	for _, hc := range c.Ingresses {
+		hc.targetRef = findTargetRef(hc.Target, c)
+	}
+
+	return nil
+}
+
+func findNetworkRef(name string, c *Config) *Network {
+	nn := strings.Split(name, ".")[1]
+
+	for _, n := range c.Networks {
+		if n.name == nn {
+			return n
 		}
 	}
+
+	return nil
+}
+
+func findClusterRef(name string, c *Config) *Cluster {
+	nn := strings.Split(name, ".")[1]
+
+	for _, c := range c.Clusters {
+		if c.name == nn {
+			return c
+		}
+	}
+
+	return nil
+}
+
+func findTargetRef(name string, c *Config) interface{} {
+	// target can be either a cluster or a container
+	cl := findClusterRef(name, c)
+	if cl != nil {
+		return cl
+	}
+
+	// TODO  add code for containers
 
 	return nil
 }
