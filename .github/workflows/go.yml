@@ -18,7 +18,7 @@ jobs:
 
       - name: Get dependencies
         run: |
-          go get -v -t ./...
+          GONOSUMDB="*" go get -v -t ./...
 
       - name: Unit Test
         run: |
