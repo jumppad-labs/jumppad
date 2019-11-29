@@ -42,3 +42,7 @@ func (c *Container) Create() error {
 
 	return err
 }
+
+func (c*Container) Destroy() error {
+	return nil
+}

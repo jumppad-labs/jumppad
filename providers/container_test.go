@@ -25,17 +25,4 @@ func TestContainerCreatesCorrectly(t *testing.T) {
 	assert.NoError(t, err)
 
 	md.AssertCalled(t, "ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
-
-	/* assert correct
-	params := md.Calls[0].Arguments
-
-	// check config
-	c := params[1].(*container.Config)
-	assert.Equal(t, "arse", c.Hostname)
-
-	config *container.Config,
-	hostConfig *container.HostConfig,
-	networkingConfig *network.NetworkingConfig,
-	containerName string,
-	*/
 }

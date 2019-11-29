@@ -149,7 +149,7 @@ func ParseReferences(c *Config) error {
 		in.wanRef = c.WAN
 		in.targetRef = findTargetRef(in.Target, c)
 
-		if c, ok:= in.targetRef.(*Cluster); ok {
+		if c, ok := in.targetRef.(*Cluster); ok {
 			in.networkRef = c.networkRef
 		} else {
 			in.networkRef = in.targetRef.(*Container).networkRef
@@ -240,31 +240,4 @@ func decodeBody(b *hclsyntax.Block, p interface{}) error {
 	}
 
 	return nil
-}
-
-func generateOrder(c *Config) []interface{} {
-	oc := make([]interface{}, 0)
-
-	// first elements to create are networks
-	for _, n := range c.Networks {
-		oc = append(oc, n)
-	}
-
-	for _, c := range c.Containers {
-		oc = append(oc, c)
-	}
-
-	for _, c := range c.Clusters {
-		oc = append(oc, c)
-	}
-
-	for _, c := range c.HelmCharts {
-		oc = append(oc, c)
-	}
-
-	for _, c := range c.Ingresses {
-		oc = append(oc, c)
-	}
-
-	return oc
 }

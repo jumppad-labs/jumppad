@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/shipyard-run/cli/shipyard"
+
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -16,9 +18,11 @@ var rootCmd = &cobra.Command{
 	Short: "A tool that helps you create and run demo and tutorial environments",
 	Long:  `A tool that helps you create and run demo and tutorial environments`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// Do Stuff Here
+		// engine = shipyard.New()
 	},
 }
+
+var engine *shipyard.Engine
 
 func init() {
 	cobra.OnInitialize(configure)
