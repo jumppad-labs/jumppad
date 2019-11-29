@@ -18,21 +18,15 @@ jobs:
 
       - name: Get dependencies
         run: |
-          GONOSUMDB="*" go get -v -t -d ./...
-        env:
-          GONOSUMDB: "*"
+          go get -v -t -d -insecure ./...
 
       - name: Unit Test
         run: |
           go test -v -race -coverprofile=coverage.txt -covermode=atomic $(go list ./... | grep -v /functional_tests)
-        env:
-          GONOSUMDB: "*"
 
       - name: Build
         run: |
           go build -v .
-        env:
-          GONOSUMDB: "*"
 
       - name: Upload Code Coverage
         uses: codecov/codecov-action@v1
