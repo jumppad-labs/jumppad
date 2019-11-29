@@ -16,17 +16,13 @@ jobs:
 
       - name: Get dependencies
         run: |
-          go get -v -t -d ./...
-          if [ -f Gopkg.toml ]; then
-              curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-              dep ensure
-          fi
+          GOSUMDB="off" go get -v -t -d ./...
 
       - name: Unit Test
         run: GOSUMDB="off" go test -v -race -coverprofile=coverage.txt -covermode=atomic $(GOSUMDB="off" go list ./... | grep -v /functional_tests)
 
       - name: Build
-        run: go build -v .
+        run: GOSUMDB="off" go build -v .
 
       - name: Upload Code Coverage
         uses: codecov/codecov-action@v1
