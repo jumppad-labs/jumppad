@@ -6,8 +6,8 @@ type Container struct {
 	Command    []string `hcl:"command,optional"`
 	Volumes    []Volume `hcl:"volume,block"`
 	Network    string   `hcl:"network"`
-	networkRef *Network
-	wanRef     *Network
+	NetworkRef *Network
+	WANRef     *Network
 	IPAddress  string `hcl:"ip_address,optional"`
 }
 

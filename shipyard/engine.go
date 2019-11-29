@@ -16,6 +16,17 @@ type Engine struct {
 	clients   *Clients
 }
 
+func GenerateClients() (*Clients, error) {
+	dc, err := clients.NewDocker()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Clients{
+		Docker: dc,
+	}, nil
+}
+
 func New(c *config.Config, cc *Clients) *Engine {
 	p := generateProviders(c, cc)
 
@@ -25,14 +36,26 @@ func New(c *config.Config, cc *Clients) *Engine {
 	}
 }
 
-func (e *Engine) Apply() {
+func (e *Engine) Apply() error {
 	for _, p := range e.providers {
-		p.Create()
+		err := p.Create()
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
-func (e *Engine) Destroy() {
+func (e *Engine) Destroy() error {
+	for _, p := range e.providers {
+		err := p.Destroy()
+		if err != nil {
+			return err
+		}
+	}
 
+	return nil
 }
 
 func generateProviders(c *config.Config, cc *Clients) []providers.Provider {

@@ -137,8 +137,8 @@ func ParseReferences(c *Config) error {
 	}
 
 	for _, co := range c.Containers {
-		co.wanRef = c.WAN
-		co.networkRef = findNetworkRef(co.Network, c)
+		co.WANRef = c.WAN
+		co.NetworkRef = findNetworkRef(co.Network, c)
 	}
 
 	for _, hc := range c.HelmCharts {
@@ -152,7 +152,7 @@ func ParseReferences(c *Config) error {
 		if c, ok := in.targetRef.(*Cluster); ok {
 			in.networkRef = c.networkRef
 		} else {
-			in.networkRef = in.targetRef.(*Container).networkRef
+			in.networkRef = in.targetRef.(*Container).NetworkRef
 		}
 	}
 

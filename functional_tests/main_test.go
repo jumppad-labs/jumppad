@@ -1,16 +1,23 @@
 package main
 
 import (
+	"context"
 	"flag"
+	"fmt"
 	"os"
 	"testing"
 
 	"github.com/DATA-DOG/godog"
 	"github.com/DATA-DOG/godog/colors"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/shipyard-run/cli/config"
+	"github.com/shipyard-run/cli/shipyard"
 )
 
+var currentClients *shipyard.Clients
 var currentConfig *config.Config
+var currentEngine *shipyard.Engine
 
 var opt = godog.Options{
 	Output: colors.Colored(os.Stdout),
@@ -45,9 +52,16 @@ func TestMain(m *testing.M) {
 func FeatureContext(s *godog.Suite) {
 	s.Step(`^the config "([^"]*)"$`, theConfig)
 	s.Step(`^I run apply$`, iRunApply)
-	s.Step(`^there should be (\d+) container running$`, thereShouldBeContainerRunning)
+	s.Step(`^there should be (\d+) container running called "([^"]*)"$`, thereShouldBeContainerRunningCalled)
 
 	s.BeforeScenario(func(interface{}) {
+	})
+
+	s.AfterScenario(func(interface{}, error) {
+		err := currentEngine.Destroy()
+		if err != nil {
+			panic(err)
+		}
 	})
 }
 
@@ -55,14 +69,45 @@ func theConfig(arg1 string) error {
 	var err error
 	currentConfig = &config.Config{}
 	err = config.ParseFolder(arg1, currentConfig)
+	if err != nil {
+		return err
+	}
 
-	return err
+	err = config.ParseReferences(currentConfig)
+	if err != nil {
+		return err
+	}
+
+	// create providers
+	cc, err := shipyard.GenerateClients()
+	if err != nil {
+		return err
+	}
+
+	currentClients = cc
+	currentEngine = shipyard.New(currentConfig, cc)
+
+	return nil
 }
 
 func iRunApply() error {
-	return godog.ErrPending
+	return currentEngine.Apply()
 }
 
-func thereShouldBeContainerRunning(arg1 int) error {
-	return godog.ErrPending
+func thereShouldBeContainerRunningCalled(arg1 int, arg2 string) error {
+	args, _ := filters.ParseFlag("name="+arg2, filters.NewArgs())
+	args, _ = filters.ParseFlag("status=running", args)
+
+	opts := types.ContainerListOptions{Filters: args}
+
+	cl, err := currentClients.Docker.ContainerList(context.Background(), opts)
+	if err != nil {
+		return err
+	}
+
+	if len(cl) != arg1 {
+		return fmt.Errorf("Expected %d containers %s found %d", arg1, arg2, len(cl))
+	}
+
+	return nil
 }

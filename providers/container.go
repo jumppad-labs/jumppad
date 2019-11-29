@@ -2,9 +2,13 @@ package providers
 
 import (
 	"context"
+	"path/filepath"
 
-	"github.com/docker/engine/api/types/container"
-	"github.com/docker/engine/api/types/network"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/api/types/network"
 	"github.com/shipyard-run/cli/clients"
 	"github.com/shipyard-run/cli/config"
 )
@@ -29,23 +33,67 @@ func (c *Container) Create() error {
 	// - wanRef
 
 	dc := &container.Config{
-		Hostname: c.config.Name,
-		Image: c.config.Image,
+		Hostname:     c.config.Name,
+		Image:        c.config.Image,
+		AttachStdin:  true,
+		AttachStdout: true,
+		AttachStderr: true,
 	}
-	hc := &container.HostConfig{}
+
+	// Create volume mounts
+	mounts := []mount.Mount{}
+	for _, vc := range c.config.Volumes {
+		sourcePath, err := filepath.Abs(vc.Source)
+		if err != nil {
+			return err
+		}
+
+		mounts = append(mounts, mount.Mount{
+			Type:   mount.TypeBind,
+			Source: sourcePath,
+			Target: vc.Destination,
+		})
+	}
+
+	hc := &container.HostConfig{
+		Mounts: mounts,
+	}
+
 	nc := &network.NetworkingConfig{}
 
-	_, err := c.client.ContainerCreate(
+	cont, err := c.client.ContainerCreate(
 		context.Background(),
 		dc,
 		hc,
 		nc,
-		c.config.Name,
+		FQDN(c.config.Name, c.config.NetworkRef.Name),
 	)
+	c.client.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
 
 	return err
 }
 
-func (c*Container) Destroy() error {
-	return nil
+func (c *Container) Destroy() error {
+	id, err := c.Lookup()
+	if err != nil {
+		return err
+	}
+
+	return c.client.ContainerRemove(context.Background(), id, types.ContainerRemoveOptions{Force: true})
+}
+
+func (c *Container) Lookup() (string, error) {
+	name := FQDN(c.config.Name, c.config.NetworkRef.Name)
+
+	args, _ := filters.ParseFlag("name="+name, filters.NewArgs())
+	args, _ = filters.ParseFlag("status=running", args)
+
+	opts := types.ContainerListOptions{Filters: args}
+
+	cl, err := c.client.ContainerList(context.Background(), opts)
+	if err != nil {
+		return "", err
+	}
+
+	return cl[0].ID, nil
 }
