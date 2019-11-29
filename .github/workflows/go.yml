@@ -1,7 +1,7 @@
 name: Go
 on: [push]
 env:
-  GOSUMDB: "off"
+  GONOSUMDB: "*"
 jobs:
   build:
     name: Build
