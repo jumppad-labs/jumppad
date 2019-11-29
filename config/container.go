@@ -7,6 +7,7 @@ type Container struct {
 	Volumes    []Volume `hcl:"volume,block"`
 	Network    string   `hcl:"network"`
 	networkRef *Network
+	wanRef     *Network
 	IPAddress  string `hcl:"ip_address,optional"`
 }
 

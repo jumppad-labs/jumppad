@@ -20,51 +20,40 @@ import (
 
 var ctx *hcl.EvalContext
 
-// Config defines the stack config
-type Config struct {
-	Clusters   []*Cluster
-	Containers []*Container
-	Networks   []*Network
-	HelmCharts []*Helm
-	Ingresses  []*Ingress
-}
-
 // ParseFolder for config entries
-func ParseFolder(folder string) (*Config, error) {
+func ParseFolder(folder string, c *Config) error {
 	ctx = buildContext()
 
 	abs, _ := filepath.Abs(folder)
-	c := &Config{}
 
 	// current folder
 	files, err := filepath.Glob(path.Join(abs, "*.hcl"))
 	if err != nil {
 		fmt.Println("err")
-		return c, err
+		return err
 	}
 
 	// sub folders
 	filesDir, err := filepath.Glob(path.Join(abs, "**/*.hcl"))
 	if err != nil {
 		fmt.Println("err")
-		return c, err
+		return err
 	}
 
 	files = append(files, filesDir...)
 
 	for _, f := range files {
-		err := c.ParseHCLFile(f)
+		err := ParseHCLFile(f, c)
 		if err != nil {
-			return c, err
+			return err
 		}
 	}
 
-	return c, nil
+	return nil
 }
 
 // ParseHCLFile parses a config file and adds it to the config
-func (c *Config) ParseHCLFile(file string) error {
-	fmt.Println("Parsing", file)
+func ParseHCLFile(file string, c *Config) error {
 	parser := hclparse.NewParser()
 
 	f, diag := parser.ParseHCLFile(file)
@@ -90,6 +79,10 @@ func (c *Config) ParseHCLFile(file string) error {
 
 			c.Clusters = append(c.Clusters, cl)
 		case "network":
+			if b.Labels[0] == "wan" {
+				return ErrorWANExists
+			}
+
 			n := &Network{}
 			n.Name = b.Labels[0]
 
@@ -129,41 +122,38 @@ func (c *Config) ParseHCLFile(file string) error {
 			}
 
 			c.Containers = append(c.Containers, co)
-			/*
-				case "input":
-					fallthrough
-				case "output":
-					if err := processBody(config, b); err != nil {
-						return config, err
-					}
-
-				case "pipe":
-					if err := processPipe(config, b); err != nil {
-						return config, err
-					}
-			*/
 		}
 	}
 
 	return nil
 }
 
+// ParseReferences links the object references in config elements
 func ParseReferences(c *Config) error {
 	// link the networks in the clusters
 	for _, cl := range c.Clusters {
+		cl.wanRef = c.WAN
 		cl.networkRef = findNetworkRef(cl.Network, c)
 	}
 
-	for _, cl := range c.Containers {
-		cl.networkRef = findNetworkRef(cl.Network, c)
+	for _, co := range c.Containers {
+		co.wanRef = c.WAN
+		co.networkRef = findNetworkRef(co.Network, c)
 	}
 
 	for _, hc := range c.HelmCharts {
 		hc.clusterRef = findClusterRef(hc.Cluster, c)
 	}
 
-	for _, hc := range c.Ingresses {
-		hc.targetRef = findTargetRef(hc.Target, c)
+	for _, in := range c.Ingresses {
+		in.wanRef = c.WAN
+		in.targetRef = findTargetRef(in.Target, c)
+
+		if c, ok:= in.targetRef.(*Cluster); ok {
+			in.networkRef = c.networkRef
+		} else {
+			in.networkRef = in.targetRef.(*Container).networkRef
+		}
 	}
 
 	return nil
@@ -261,6 +251,18 @@ func generateOrder(c *Config) []interface{} {
 	}
 
 	for _, c := range c.Containers {
+		oc = append(oc, c)
+	}
+
+	for _, c := range c.Clusters {
+		oc = append(oc, c)
+	}
+
+	for _, c := range c.HelmCharts {
+		oc = append(oc, c)
+	}
+
+	for _, c := range c.Ingresses {
 		oc = append(oc, c)
 	}
 

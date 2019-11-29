@@ -13,6 +13,7 @@ require (
 	github.com/spf13/viper v1.5.0
 	github.com/stretchr/testify v1.2.2
 	github.com/zclconf/go-cty v1.1.1
+	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898
 )
 
 replace github.com/docker/docker => github.com/moby/moby v1.13.1

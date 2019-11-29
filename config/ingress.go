@@ -1,8 +1,10 @@
 package config
 
 type Ingress struct {
-	Name      string
-	targetRef interface{}
+	Name       string
+	targetRef  interface{}
+	networkRef *Network // automatically fetched from target
+	wanRef     *Network // automatically created
 
 	Target    string `hcl:"target"`
 	Service   string `hcl:"service,optional"`

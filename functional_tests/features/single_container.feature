@@ -1,4 +1,4 @@
-Feature: Docker Continer
+Feature: Docker Container
   In order to test Docker containers
   something
   something

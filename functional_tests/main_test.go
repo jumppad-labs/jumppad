@@ -53,7 +53,8 @@ func FeatureContext(s *godog.Suite) {
 
 func theConfig(arg1 string) error {
 	var err error
-	currentConfig, err = config.ParseFolder(arg1)
+	currentConfig = &config.Config{}
+	err = config.ParseFolder(arg1, currentConfig)
 
 	return err
 }

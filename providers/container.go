@@ -23,6 +23,11 @@ func NewContainer(co *config.Container, cl clients.Docker) *Container {
 // Create implements provider method and creates a Docker container with the given config
 func (c *Container) Create() error {
 
+	// create a unique name based on service network [container].[network].shipyard
+	// attach to networks
+	// - networkRef
+	// - wanRef
+
 	dc := &container.Config{}
 	hc := &container.HostConfig{}
 	nc := &network.NetworkingConfig{}
