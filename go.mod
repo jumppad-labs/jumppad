@@ -4,7 +4,8 @@ go 1.13
 
 require (
 	github.com/DATA-DOG/godog v0.7.13
-	github.com/docker/docker v1.13.1
+	github.com/docker/docker v1.13.1 // indirect
+	github.com/docker/engine v1.13.1
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/hashicorp/hcl2 v0.0.0-20191002203319-fb75b3253c80
@@ -15,5 +16,3 @@ require (
 	github.com/zclconf/go-cty v1.1.1
 	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898
 )
-
-replace github.com/docker/docker => github.com/moby/moby v1.13.1
