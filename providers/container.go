@@ -82,6 +82,7 @@ func (c *Container) Destroy() error {
 	return c.client.ContainerRemove(context.Background(), id, types.ContainerRemoveOptions{Force: true})
 }
 
+// Lookup the containers ID based on the config
 func (c *Container) Lookup() (string, error) {
 	name := FQDN(c.config.Name, c.config.NetworkRef.Name)
 

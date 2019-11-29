@@ -32,9 +32,13 @@ func (m *MockDocker) ContainerCreate(
 }
 
 func (m *MockDocker) ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
-	m.Called(ctx, options)
+	args := m.Called(ctx, options)
 
-	return nil, nil
+	if cl, ok := args.Get(0).([]types.Container); ok {
+		return cl, nil
+	}
+
+	return nil, args.Error(1)
 }
 
 func (m *MockDocker) ContainerStart(ctx context.Context, ID string, opts types.ContainerStartOptions) error {
