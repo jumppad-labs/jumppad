@@ -3,8 +3,8 @@ package providers
 import (
 	"context"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
+	"github.com/docker/engine/api/types/container"
+	"github.com/docker/engine/api/types/network"
 	"github.com/shipyard-run/cli/clients"
 	"github.com/shipyard-run/cli/config"
 )
@@ -28,7 +28,10 @@ func (c *Container) Create() error {
 	// - networkRef
 	// - wanRef
 
-	dc := &container.Config{}
+	dc := &container.Config{
+		Hostname: c.config.Name,
+		Image: c.config.Image,
+	}
 	hc := &container.HostConfig{}
 	nc := &network.NetworkingConfig{}
 

@@ -3,8 +3,8 @@ package clients
 import (
 	"context"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
+	"github.com/docker/engine/api/types/container"
+	"github.com/docker/engine/api/types/network"
 	"github.com/stretchr/testify/mock"
 )
 
