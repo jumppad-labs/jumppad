@@ -3,7 +3,7 @@ on: [push]
 jobs:
   build:
     env:
-      GONOSUMDB: "*"
+      GONOSUMDB: "github.com/moby/moby"
     name: Build
     runs-on: ubuntu-latest
     steps:
@@ -18,7 +18,7 @@ jobs:
 
       - name: Get dependencies
         run: |
-          GONOSUMDB="*" go get -v -t ./...
+          go get -v -t ./...
 
       - name: Unit Test
         run: |
