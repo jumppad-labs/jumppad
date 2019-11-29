@@ -1,7 +1,5 @@
 name: Go
 on: [push]
-env:
-  GONOSUMDB: "*"
 jobs:
   build:
     name: Build
@@ -18,7 +16,7 @@ jobs:
 
       - name: Get dependencies
         run: |
-          go get -v -t -d ./...
+          go get -v -t ./...
 
       - name: Unit Test
         run: |

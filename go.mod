@@ -3,6 +3,7 @@ module github.com/shipyard-run/cli
 go 1.13
 
 require (
+	github.com/DATA-DOG/godog v0.7.13
 	github.com/docker/docker v1.13.1
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
@@ -13,3 +14,5 @@ require (
 	github.com/stretchr/testify v1.2.2
 	github.com/zclconf/go-cty v1.1.1
 )
+
+replace github.com/docker/docker => github.com/moby/moby v1.13.1
