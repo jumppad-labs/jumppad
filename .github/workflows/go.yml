@@ -2,6 +2,8 @@ name: Go
 on: [push]
 jobs:
   build:
+    env:
+      GONOSUMDB: "*"
     name: Build
     runs-on: ubuntu-latest
     steps:
