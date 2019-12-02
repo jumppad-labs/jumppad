@@ -2,10 +2,12 @@ package providers
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/go-connections/nat"
 	clients "github.com/shipyard-run/cli/clients/mocks"
 	"github.com/shipyard-run/cli/config"
 	"github.com/stretchr/testify/assert"
@@ -46,10 +48,15 @@ func TestK3sReturnsErrorIfClusterExists(t *testing.T) {
 }
 
 func TestK3sClusterServerCreatesWithCorrectOptions(t *testing.T) {
+	cn := &config.Network{
+		Name: "k3snet",
+	}
+
 	c := &config.Cluster{
-		Name:    "hostname",
-		Driver:  "k3s",
-		Version: "v1.0.0",
+		Name:       "hostname",
+		Driver:     "k3s",
+		Version:    "v1.0.0",
+		NetworkRef: cn,
 	}
 
 	md, p := setupK3sCluster(c)
@@ -62,9 +69,37 @@ func TestK3sClusterServerCreatesWithCorrectOptions(t *testing.T) {
 	// assert server properties
 	params := md.Calls[1].Arguments
 	dc := params[1].(*container.Config)
+	hc := params[2].(*container.HostConfig)
+	fqdn := params[4]
 
 	assert.Equal(t, fmt.Sprintf("%s:%s", k3sBaseImage, c.Version), dc.Image)
-	assert.Equal(t, c.Name, dc.Hostname)
+
+	// check cluster names
+	assert.Equal(t, "server.hostname.k3snet.shipyard", fqdn, "FQDN should be [nodetype].[name].[network].shipyard")
+	assert.Equal(t, "server.hostname", dc.Hostname, "Hostname should be [nodetype].[hostname]")
+
+	// check environment variables
+	assert.Len(t, dc.Env, 2)
+	assert.Equal(t, "K3S_KUBECONFIG_OUTPUT=/output/kubeconfig.yaml", dc.Env[0])
+	assert.Contains(t, dc.Env[1], "K3S_KUBECONFIG_OUTPUT=")
+
+	// check the command
+	assert.Equal(t, "server", dc.Cmd[0])
+	assert.Contains(t, dc.Cmd[1], "--api-port=")
+	assert.Contains(t, dc.Cmd[2], "--server-arg=")
+
+	// check the ports
+	apiPort := strings.Split(dc.Cmd[1], "=")
+	dockerPort, _ := nat.NewPort("tcp", apiPort[1])
+	fmt.Println(dockerPort)
+
+	fmt.Println(hc.PortBindings)
+	fmt.Println(dc.ExposedPorts)
+
+	assert.Len(t, dc.ExposedPorts, 1)
+	assert.NotNil(t, dc.ExposedPorts[dockerPort])
+	assert.Len(t, hc.PortBindings, 1)
+	assert.NotNil(t, hc.PortBindings[dockerPort])
 }
 
 // removeOn is a utility function for removing Expectations from mock objects

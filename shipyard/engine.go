@@ -61,16 +61,22 @@ func (e *Engine) Destroy() error {
 func generateProviders(c *config.Config, cc *Clients) []providers.Provider {
 	oc := make([]providers.Provider, 0)
 
+	for _, n := range c.Networks {
+		p := providers.NewNetwork(n, cc.Docker)
+		oc = append(oc, p)
+	}
+
 	for _, c := range c.Containers {
 		p := providers.NewContainer(c, cc.Docker)
 		oc = append(oc, p)
 	}
+
+	for _, c := range c.Clusters {
+		p := providers.NewCluster(c, cc.Docker)
+		oc = append(oc, p)
+	}
 	// first elements to create are networks
 	/*
-		for _, n := range c.Networks {
-			p :=
-			oc = append(oc, n)
-		}
 
 		for _, c := range c.Containers {
 			oc = append(oc, c)

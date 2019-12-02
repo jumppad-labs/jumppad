@@ -1,7 +1,9 @@
 package config
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -79,8 +81,8 @@ func TestSingleKubernetesCluster(t *testing.T) {
 	err = ParseReferences(c)
 	assert.NoError(t, err)
 
-	assert.Equal(t, n1, c1.networkRef)
-	assert.Equal(t, c.WAN, c1.wanRef)
+	assert.Equal(t, n1, c1.NetworkRef)
+	assert.Equal(t, c.WAN, c1.WANRef)
 	assert.Equal(t, c1, h1.clusterRef)
 	assert.Equal(t, i1.targetRef, c1)
 	assert.Equal(t, i1.networkRef, n1)
@@ -89,11 +91,16 @@ func TestSingleKubernetesCluster(t *testing.T) {
 }
 
 func TestMultiCluster(t *testing.T) {
+	absoluteFolderPath, err := filepath.Abs("./examples/multi-cluster")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	tearDown := setup()
 	defer tearDown()
 
 	c, _ := New()
-	err := ParseFolder("./examples/multi-cluster", c)
+	err = ParseFolder(absoluteFolderPath, c)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, c)
@@ -113,7 +120,7 @@ func TestMultiCluster(t *testing.T) {
 	co1 := c.Containers[0]
 	assert.Equal(t, "consul_nomad", co1.Name)
 	assert.Equal(t, []string{"consul", "agent", "-config-file=/config/consul.hcl"}, co1.Command)
-	assert.Equal(t, "./consul_config", co1.Volumes[0].Source)
+	assert.Equal(t, fmt.Sprintf("%s/consul_config", absoluteFolderPath), co1.Volumes[0].Source, "Volume should have been converted to be absolute")
 	assert.Equal(t, "/config", co1.Volumes[0].Destination)
 	assert.Equal(t, "network.nomad", co1.Network)
 	assert.Equal(t, "10.6.0.2", co1.IPAddress)

@@ -7,8 +7,8 @@ type Cluster struct {
 	Version    string `hcl:"version,optional"`
 	Nodes      int    `hcl:"nodes,optional"`
 	Network    string `hcl:"network"`
-	networkRef *Network
-	wanRef     *Network
+	NetworkRef *Network
+	WANRef     *Network
 	Config     *ClusterConfig `hcl:"config,block"`
 }
 

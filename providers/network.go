@@ -41,7 +41,7 @@ func (n *Network) Create() error {
 
 // Destroy implements the provider interface method for destroying networks
 func (n *Network) Destroy() error {
-	return nil
+	return n.client.NetworkRemove(context.Background(), n.config.Name)
 }
 
 // Lookup the ID for a network

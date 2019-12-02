@@ -121,6 +121,12 @@ func ParseHCLFile(file string, c *Config) error {
 				return err
 			}
 
+			// process volumes
+			// make sure mount paths are absolute
+			for i, v := range co.Volumes {
+				co.Volumes[i].Source = ensureAbsolute(v.Source, file)
+			}
+
 			c.Containers = append(c.Containers, co)
 		}
 	}
@@ -132,8 +138,8 @@ func ParseHCLFile(file string, c *Config) error {
 func ParseReferences(c *Config) error {
 	// link the networks in the clusters
 	for _, cl := range c.Clusters {
-		cl.wanRef = c.WAN
-		cl.networkRef = findNetworkRef(cl.Network, c)
+		cl.WANRef = c.WAN
+		cl.NetworkRef = findNetworkRef(cl.Network, c)
 	}
 
 	for _, co := range c.Containers {
@@ -150,7 +156,7 @@ func ParseReferences(c *Config) error {
 		in.targetRef = findTargetRef(in.Target, c)
 
 		if c, ok := in.targetRef.(*Cluster); ok {
-			in.networkRef = c.networkRef
+			in.networkRef = c.NetworkRef
 		} else {
 			in.networkRef = in.targetRef.(*Container).NetworkRef
 		}
@@ -240,4 +246,16 @@ func decodeBody(b *hclsyntax.Block, p interface{}) error {
 	}
 
 	return nil
+}
+
+// ensureAbsolute ensure that the given path is either absolute or
+// if relative is converted to abasolute based on the path of the config
+func ensureAbsolute(path, file string) string {
+	if filepath.IsAbs(path) {
+		return path
+	}
+
+	// path is relative so make absolute using the current file path as base
+	baseDir := filepath.Dir(file)
+	return filepath.Join(baseDir, path)
 }

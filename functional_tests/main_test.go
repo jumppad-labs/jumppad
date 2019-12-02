@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/godog"
 	"github.com/DATA-DOG/godog/colors"
@@ -53,6 +54,7 @@ func FeatureContext(s *godog.Suite) {
 	s.Step(`^the config "([^"]*)"$`, theConfig)
 	s.Step(`^I run apply$`, iRunApply)
 	s.Step(`^there should be (\d+) container running called "([^"]*)"$`, thereShouldBeContainerRunningCalled)
+	s.Step(`^(\d+) network called "([^"]*)"$`, thereShouldBe1NetworkCalled)
 
 	s.BeforeScenario(func(interface{}) {
 	})
@@ -95,19 +97,35 @@ func iRunApply() error {
 }
 
 func thereShouldBeContainerRunningCalled(arg1 int, arg2 string) error {
-	args, _ := filters.ParseFlag("name="+arg2, filters.NewArgs())
-	args, _ = filters.ParseFlag("status=running", args)
 
-	opts := types.ContainerListOptions{Filters: args}
+	// a container can start immediately and then it can crash, this can cause a false positive for the test
+	// wait a few seconds to ensure the state does not change
+	time.Sleep(5 * time.Second)
 
-	cl, err := currentClients.Docker.ContainerList(context.Background(), opts)
-	if err != nil {
-		return err
+	// we need to check this a number of times to make sure it is not just a slow starting container
+	for i := 0; i < 10; i++ {
+
+		args, _ := filters.ParseFlag("name="+arg2, filters.NewArgs())
+		args, _ = filters.ParseFlag("status=running", args)
+
+		opts := types.ContainerListOptions{Filters: args}
+
+		cl, err := currentClients.Docker.ContainerList(context.Background(), opts)
+		if err != nil {
+			return err
+		}
+
+		if len(cl) == arg1 {
+			return nil
+		}
+
+		// wait a few seconds before trying again
+		time.Sleep(2 * time.Second)
 	}
 
-	if len(cl) != arg1 {
-		return fmt.Errorf("Expected %d containers %s found %d", arg1, arg2, len(cl))
-	}
+	return fmt.Errorf("Expected %d containers %s", arg1, arg2)
+}
 
-	return nil
+func thereShouldBe1NetworkCalled(arg1 string) error {
+	return godog.ErrPending
 }

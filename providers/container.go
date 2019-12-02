@@ -2,13 +2,15 @@ package providers
 
 import (
 	"context"
-	"path/filepath"
+	"fmt"
+	"strconv"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/go-connections/nat"
 	"github.com/shipyard-run/cli/clients"
 	"github.com/shipyard-run/cli/config"
 )
@@ -32,34 +34,44 @@ func (c *Container) Create() error {
 	// - networkRef
 	// - wanRef
 
+	// convert the environment vars to a list of [key]=[value]
+	env := make([]string, 0)
+	for _, kv := range c.config.Environment {
+		env = append(env, fmt.Sprintf("%s=%s", kv.Key, kv.Value))
+	}
+
+	// create the container config
 	dc := &container.Config{
 		Hostname:     c.config.Name,
 		Image:        c.config.Image,
+		Env:          env,
+		Cmd:          c.config.Command,
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
 	}
 
+	// create the host and network configs
+	hc := &container.HostConfig{}
+	nc := &network.NetworkingConfig{}
+
 	// Create volume mounts
-	mounts := []mount.Mount{}
+	mounts := make([]mount.Mount, 0)
 	for _, vc := range c.config.Volumes {
-		sourcePath, err := filepath.Abs(vc.Source)
-		if err != nil {
-			return err
-		}
 
 		mounts = append(mounts, mount.Mount{
 			Type:   mount.TypeBind,
-			Source: sourcePath,
+			Source: vc.Source,
 			Target: vc.Destination,
 		})
 	}
 
-	hc := &container.HostConfig{
-		Mounts: mounts,
-	}
+	hc.Mounts = mounts
 
-	nc := &network.NetworkingConfig{}
+	// create the ports config
+	ports := createPublishedPorts(c.config.Ports)
+	dc.ExposedPorts = ports.ExposedPorts
+	hc.PortBindings = ports.PortBindings
 
 	cont, err := c.client.ContainerCreate(
 		context.Background(),
@@ -68,12 +80,16 @@ func (c *Container) Create() error {
 		nc,
 		FQDN(c.config.Name, c.config.NetworkRef.Name),
 	)
-	c.client.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
+	if err != nil {
+		return err
+	}
 
-	return err
+	return c.client.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
 }
 
+// Destroy stops and removes the container
 func (c *Container) Destroy() error {
+	return nil
 	id, err := c.Lookup()
 	if err != nil {
 		return err
@@ -97,4 +113,34 @@ func (c *Container) Lookup() (string, error) {
 	}
 
 	return cl[0].ID, nil
+}
+
+// publishedPorts defines a Docker published port
+type publishedPorts struct {
+	ExposedPorts map[nat.Port]struct{}
+	PortBindings map[nat.Port][]nat.PortBinding
+}
+
+// createPublishedPorts converts a list of config.Port to Docker publishedPorts type
+func createPublishedPorts(ps []config.Port) publishedPorts {
+	pp := publishedPorts{
+		ExposedPorts: make(map[nat.Port]struct{}, 0),
+		PortBindings: make(map[nat.Port][]nat.PortBinding, 0),
+	}
+
+	for _, p := range ps {
+		dp, _ := nat.NewPort(p.Protocol, strconv.Itoa(p.Local))
+		pp.ExposedPorts[dp] = struct{}{}
+
+		pb := []nat.PortBinding{
+			nat.PortBinding{
+				HostIP:   "0.0.0.0",
+				HostPort: strconv.Itoa(p.Host),
+			},
+		}
+
+		pp.PortBindings[dp] = pb
+	}
+
+	return pp
 }

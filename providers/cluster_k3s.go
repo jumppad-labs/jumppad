@@ -1,19 +1,19 @@
 package providers
 
 import (
-	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
+	"github.com/shipyard-run/cli/config"
 	"golang.org/x/xerrors"
 )
 
 var (
 	ErrorClusterInvalidName = errors.New("invalid cluster name")
 )
+
+// https://github.com/rancher/k3d/blob/master/cli/commands.go
 
 const k3sBaseImage = "rancher/k3s"
 
@@ -33,46 +33,47 @@ func (c *Cluster) createK3s() error {
 	image := fmt.Sprintf("%s:%s", k3sBaseImage, c.config.Version)
 
 	// create the server
-	dc := &container.Config{
-		Hostname: c.config.Name,
-		Image:    image,
+	// since the server is just a container create the container config and provider
+	cc := &config.Container{}
+	cc.Name = fmt.Sprintf("server.%s", c.config.Name)
+	cc.Image = image
+	cc.NetworkRef = c.config.NetworkRef
+
+	// set the environment variables for the K3S_KUBECONFIG_OUTPUT and K3S_CLUSTER_SECRET
+	cc.Environment = []config.KV{
+		config.KV{Key: "K3S_KUBECONFIG_OUTPUT", Value: "/output/kubeconfig.yaml"},
+		config.KV{Key: "K3S_KUBECONFIG_OUTPUT", Value: "mysupersecret"}, // This should be random
 	}
 
-	/*
-		// Create volume mounts
-		mounts := []mount.Mount{}
-		for _, vc := range c.config.Volumes {
-			sourcePath, err := filepath.Abs(vc.Source)
-			if err != nil {
-				return err
-			}
+	// set the API server port to a random number 64000 - 65000
+	apiPort := rand.Intn(1000) + 64000
+	args := []string{"server", fmt.Sprintf("--api-port=%d", apiPort)}
 
-			mounts = append(mounts, mount.Mount{
-				Type:   mount.TypeBind,
-				Source: sourcePath,
-				Target: vc.Destination,
-			})
-		}
+	// expose the API server port
+	cc.Ports = []config.Port{
+		config.Port{
+			Local:    apiPort,
+			Host:     apiPort,
+			Protocol: "tcp",
+		},
+	}
 
-		hc := &container.HostConfig{
-			Mounts: mounts,
-		}
-	*/
+	// disable the installation of traefik
+	args = append(args, "--server-arg=\"--no-deploy=traefik\"")
 
-	hc := &container.HostConfig{}
-	nc := &network.NetworkingConfig{}
+	cc.Command = args
 
-	cont, err := c.client.ContainerCreate(
-		context.Background(),
-		dc,
-		hc,
-		nc,
-		c.config.Name,
-	)
+	cp := NewContainer(cc, c.client)
+	return cp.Create()
+}
 
-	c.client.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
+func (c *Cluster) destroyK3s() error {
+	cc := &config.Container{}
+	cc.Name = fmt.Sprintf("server.%s", c.config.Name)
+	cc.NetworkRef = c.config.NetworkRef
 
-	return nil
+	cp := NewContainer(cc, c.client)
+	return cp.Destroy()
 }
 
 const clusterNameMaxSize int = 35

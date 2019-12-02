@@ -7,3 +7,4 @@ Feature: Docker Container
     Given the config "./test_fixtures/single_container"
     When I run apply
     Then there should be 1 container running called "consul.onprem.shipyard"
+    And 1 network called "onprem"

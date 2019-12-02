@@ -34,14 +34,16 @@ func (c *Cluster) Create() error {
 	default:
 		return ErrorClusterDriverNotImplemented
 	}
-
-	return nil
 }
 
 // Destroy implements interface method to destroy a cluster
 func (c *Cluster) Destroy() error {
-
-	return nil
+	switch c.config.Driver {
+	case "k3s":
+		return c.destroyK3s()
+	default:
+		return ErrorClusterDriverNotImplemented
+	}
 }
 
 // Lookup the a clusters current state
