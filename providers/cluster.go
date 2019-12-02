@@ -1,11 +1,8 @@
 package providers
 
 import (
-	"context"
 	"errors"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/filters"
 	"github.com/shipyard-run/cli/clients"
 	"github.com/shipyard-run/cli/config"
 )
@@ -48,17 +45,14 @@ func (c *Cluster) Destroy() error {
 
 // Lookup the a clusters current state
 func (c *Cluster) Lookup() (string, error) {
-	args := filters.NewArgs()
-	args.Add("label", "app=shipyard")
-	args.Add("label", "component=server")
-	args.Add("label", "cluster="+c.config.Name)
-
-	opts := types.ContainerListOptions{Filters: args}
-
-	cl, err := c.client.ContainerList(context.Background(), opts)
-	if err != nil {
-		return "", err
+	// lookup the server id
+	// base of cluster is a container
+	co := &config.Container{
+		Name:       c.config.Name,
+		NetworkRef: c.config.NetworkRef,
 	}
 
-	return cl[0].ID, nil
+	p := NewContainer(co, c.client)
+
+	return p.Lookup()
 }

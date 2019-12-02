@@ -3,7 +3,10 @@ package providers
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
 	"strconv"
+	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -73,6 +76,22 @@ func (c *Container) Create() error {
 	dc.ExposedPorts = ports.ExposedPorts
 	hc.PortBindings = ports.PortBindings
 
+	// make sure the image name is canonical
+	image := c.config.Image
+	imageParts := strings.Split(image, "/")
+	switch len(imageParts) {
+	case 1:
+		image = fmt.Sprintf("docker.io/library/%s", imageParts[0])
+	case 2:
+		image = fmt.Sprintf("docker.io/%s/%s", imageParts[0], imageParts[1])
+	}
+
+	out, err := c.client.ImagePull(context.Background(), image, types.ImagePullOptions{})
+	if err != nil {
+		panic(err)
+	}
+	io.Copy(os.Stdout, out)
+
 	cont, err := c.client.ContainerCreate(
 		context.Background(),
 		dc,
@@ -89,7 +108,6 @@ func (c *Container) Create() error {
 
 // Destroy stops and removes the container
 func (c *Container) Destroy() error {
-	return nil
 	id, err := c.Lookup()
 	if err != nil {
 		return err
@@ -112,7 +130,11 @@ func (c *Container) Lookup() (string, error) {
 		return "", err
 	}
 
-	return cl[0].ID, nil
+	if len(cl) > 0 {
+		return cl[0].ID, nil
+	}
+
+	return "", nil
 }
 
 // publishedPorts defines a Docker published port

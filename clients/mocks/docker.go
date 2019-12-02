@@ -2,6 +2,7 @@ package clients
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -12,6 +13,16 @@ import (
 
 type MockDocker struct {
 	mock.Mock
+}
+
+func (m *MockDocker) ImagePull(ctx context.Context, refStr string, options types.ImagePullOptions) (io.ReadCloser, error) {
+	args := m.Called(ctx, refStr, options)
+
+	if rc, ok := args.Get(0).(io.ReadCloser); ok {
+		return rc, args.Error(1)
+	}
+
+	return nil, args.Error(1)
 }
 
 func (m *MockDocker) ContainerCreate(

@@ -2,6 +2,7 @@ package clients
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -12,6 +13,8 @@ import (
 
 // Docker defines an interface for a Docker client
 type Docker interface {
+	ImagePull(ctx context.Context, refStr string, options types.ImagePullOptions) (io.ReadCloser, error)
+
 	ContainerCreate(
 		ctx context.Context,
 		config *container.Config,
@@ -19,7 +22,6 @@ type Docker interface {
 		networkingConfig *network.NetworkingConfig,
 		containerName string,
 	) (container.ContainerCreateCreatedBody, error)
-
 	ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
 	ContainerStart(context.Context, string, types.ContainerStartOptions) error
 	ContainerStop(ctx context.Context, containerID string, timeout *time.Duration) error

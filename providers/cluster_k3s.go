@@ -25,7 +25,7 @@ func (c *Cluster) createK3s() error {
 
 	// check the cluster does not already exist
 	id, err := c.Lookup()
-	if err == nil || id != "" {
+	if err == nil && id != "" {
 		return ErrorClusterExists
 	}
 
