@@ -101,6 +101,11 @@ func generateProviders(c *config.Config, cc *Clients) []providers.Provider {
 		p := providers.NewCluster(c, cc.Docker)
 		oc = append(oc, p)
 	}
+
+	for _, c := range c.Ingresses {
+		p := providers.NewIngress(c, cc.Docker)
+		oc = append(oc, p)
+	}
 	// first elements to create are networks
 	/*
 

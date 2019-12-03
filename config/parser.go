@@ -152,13 +152,13 @@ func ParseReferences(c *Config) error {
 	}
 
 	for _, in := range c.Ingresses {
-		in.wanRef = c.WAN
-		in.targetRef = findTargetRef(in.Target, c)
+		in.WANRef = c.WAN
+		in.TargetRef = findTargetRef(in.Target, c)
 
-		if c, ok := in.targetRef.(*Cluster); ok {
-			in.networkRef = c.NetworkRef
+		if c, ok := in.TargetRef.(*Cluster); ok {
+			in.NetworkRef = c.NetworkRef
 		} else {
-			in.networkRef = in.targetRef.(*Container).NetworkRef
+			in.NetworkRef = in.TargetRef.(*Container).NetworkRef
 		}
 	}
 

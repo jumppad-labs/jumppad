@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"testing"
 	"time"
@@ -55,6 +56,7 @@ func FeatureContext(s *godog.Suite) {
 	s.Step(`^I run apply$`, iRunApply)
 	s.Step(`^there should be (\d+) container running called "([^"]*)"$`, thereShouldBeContainerRunningCalled)
 	s.Step(`^there should be 1 network called "([^"]*)"$`, thereShouldBe1NetworkCalled)
+	s.Step(`^a call to "([^"]*)" should result in status (\d+)$`, aCallToShouldResultInStatus)
 
 	s.BeforeScenario(func(interface{}) {
 	})
@@ -146,4 +148,22 @@ func thereShouldBe1NetworkCalled(arg1 string) error {
 	}
 
 	return nil
+}
+
+// test making a HTTP call, for testing Ingress
+func aCallToShouldResultInStatus(arg1 string, arg2 int) error {
+	// try 10 times
+	var err error
+	for i := 0; i < 10; i++ {
+		var resp *http.Response
+		resp, err = http.Get(arg1)
+
+		if err == nil && resp.StatusCode == arg2 {
+			return nil
+		}
+
+		time.Sleep(2 * time.Second)
+	}
+
+	return err
 }

@@ -8,3 +8,5 @@ Feature: Docker Container
     When I run apply
     Then there should be 1 network called "onprem"
     And there should be 1 container running called "consul.onprem.shipyard"
+    And there should be 1 container running called "consul-http.onprem.shipyard"
+    And a call to "http://localhost:18500/v1/members" should result in status 200

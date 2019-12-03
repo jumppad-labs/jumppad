@@ -84,10 +84,10 @@ func TestSingleKubernetesCluster(t *testing.T) {
 	assert.Equal(t, n1, c1.NetworkRef)
 	assert.Equal(t, c.WAN, c1.WANRef)
 	assert.Equal(t, c1, h1.clusterRef)
-	assert.Equal(t, i1.targetRef, c1)
-	assert.Equal(t, i1.networkRef, n1)
-	assert.Equal(t, c.WAN, i1.wanRef)
-	assert.Equal(t, i2.targetRef, c1)
+	assert.Equal(t, i1.TargetRef, c1)
+	assert.Equal(t, i1.NetworkRef, n1)
+	assert.Equal(t, c.WAN, i1.WANRef)
+	assert.Equal(t, i2.TargetRef, c1)
 }
 
 func TestMultiCluster(t *testing.T) {
@@ -135,8 +135,8 @@ func TestMultiCluster(t *testing.T) {
 	err = ParseReferences(c)
 	assert.NoError(t, err)
 
-	assert.Equal(t, co1, i1.targetRef)
-	assert.Equal(t, c.WAN, i1.wanRef)
+	assert.Equal(t, co1, i1.TargetRef)
+	assert.Equal(t, c.WAN, i1.WANRef)
 }
 
 func testFindIngress(name string, ingress []*Ingress) *Ingress {
