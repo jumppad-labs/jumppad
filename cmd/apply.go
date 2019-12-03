@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/shipyard-run/cli/shipyard"
 	"github.com/spf13/cobra"
 )
 
@@ -17,5 +18,14 @@ var applyCmd = &cobra.Command{
 	Args: cobra.ArbitraryArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Do Stuff Here
+		e, err := shipyard.NewWithFolder(args[0])
+		if err != nil {
+			panic(err)
+		}
+
+		err = e.Apply()
+		if err != nil {
+			panic(err)
+		}
 	},
 }

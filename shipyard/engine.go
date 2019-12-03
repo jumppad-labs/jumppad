@@ -27,6 +27,30 @@ func GenerateClients() (*Clients, error) {
 	}, nil
 }
 
+// NewWithFolder creates a new shipyard engine with a given configuration folder
+func NewWithFolder(folder string) (*Engine, error) {
+	var err error
+	cc := &config.Config{}
+	err = config.ParseFolder(folder, cc)
+	if err != nil {
+		return nil, err
+	}
+
+	err = config.ParseReferences(cc)
+	if err != nil {
+		return nil, err
+	}
+
+	// create providers
+	cl, err := GenerateClients()
+	if err != nil {
+		return nil, err
+	}
+
+	e := New(cc, cl)
+	return e, nil
+}
+
 func New(c *config.Config, cc *Clients) *Engine {
 	p := generateProviders(c, cc)
 

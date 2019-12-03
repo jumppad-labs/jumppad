@@ -68,6 +68,9 @@ func FeatureContext(s *godog.Suite) {
 }
 
 func theConfig(arg1 string) error {
+	// we are creating this manually rather than using NewWithFolder
+	// so we can obtain references to the clients for checks
+
 	var err error
 	currentConfig = &config.Config{}
 	err = config.ParseFolder(arg1, currentConfig)
