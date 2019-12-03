@@ -1,7 +1,8 @@
 package providers
 
 import (
-	"path/filepath"
+	"io/ioutil"
+	"strings"
 	"testing"
 
 	"github.com/docker/docker/api/types/container"
@@ -14,6 +15,10 @@ import (
 
 func setupContainer(c *config.Container) (*clients.MockDocker, *Container) {
 	md := &clients.MockDocker{}
+	md.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).Return(
+		ioutil.NopCloser(strings.NewReader("hello world")),
+		nil,
+	)
 	md.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(container.ContainerCreateCreatedBody{}, nil)
 	md.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -23,7 +28,7 @@ func setupContainer(c *config.Container) (*clients.MockDocker, *Container) {
 
 func TestContainerCreatesCorrectly(t *testing.T) {
 	cn := &config.Network{Name: "testnet", Subnet: "192.168.4.0/24"}
-	cc := &config.Container{Name: "testcontainer", Image: "consul:v1.6.1", NetworkRef: cn, Volumes: []config.Volume{config.Volume{Source: "data", Destination: "/data"}}}
+	cc := &config.Container{Name: "testcontainer", Image: "consul:v1.6.1", NetworkRef: cn, Volumes: []config.Volume{config.Volume{Source: "/mnt/data", Destination: "/data"}}}
 	md, p := setupContainer(cc)
 
 	err := p.Create()
@@ -32,7 +37,8 @@ func TestContainerCreatesCorrectly(t *testing.T) {
 	md.AssertCalled(t, "ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	md.AssertCalled(t, "ContainerStart", mock.Anything, mock.Anything, mock.Anything)
 
-	params := md.Calls[0].Arguments
+	// second call is create
+	params := md.Calls[1].Arguments
 
 	cfg := params[1].(*container.Config)
 	assert.Equal(t, "testcontainer", cfg.Hostname)
@@ -43,9 +49,8 @@ func TestContainerCreatesCorrectly(t *testing.T) {
 	// assert.Equal(t, true, cfg.Tty)
 
 	host := params[2].(*container.HostConfig)
-	sourcePath, err := filepath.Abs(cc.Volumes[0].Source)
-	assert.NoError(t, err)
 
+	sourcePath := cc.Volumes[0].Source
 	destPath := cc.Volumes[0].Destination
 	assert.Equal(t, sourcePath, host.Mounts[0].Source)
 	assert.Equal(t, destPath, host.Mounts[0].Target)

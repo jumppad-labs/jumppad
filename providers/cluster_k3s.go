@@ -47,7 +47,7 @@ func (c *Cluster) createK3s() error {
 
 	// set the API server port to a random number 64000 - 65000
 	apiPort := rand.Intn(1000) + 64000
-	args := []string{"server", fmt.Sprintf("--api-port=%d", apiPort)}
+	args := []string{"server", fmt.Sprintf("--https-listen-port=%d", apiPort)}
 
 	// expose the API server port
 	cc.Ports = []config.Port{
@@ -59,7 +59,7 @@ func (c *Cluster) createK3s() error {
 	}
 
 	// disable the installation of traefik
-	args = append(args, "--server-arg=\"--no-deploy=traefik\"")
+	args = append(args, "--no-deploy=traefik")
 
 	cc.Command = args
 

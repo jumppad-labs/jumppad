@@ -2,6 +2,7 @@ package providers
 
 import (
 	"fmt"
+	"io/ioutil"
 	"strings"
 	"testing"
 
@@ -17,6 +18,10 @@ import (
 
 func setupK3sCluster(c *config.Cluster) (*clients.MockDocker, *Cluster) {
 	md := &clients.MockDocker{}
+	md.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).Return(
+		ioutil.NopCloser(strings.NewReader("hello world")),
+		nil,
+	)
 	md.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(container.ContainerCreateCreatedBody{}, nil)
 	md.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -35,7 +40,9 @@ func TestK3sInvalidClusterNameReturnsError(t *testing.T) {
 }
 
 func TestK3sReturnsErrorIfClusterExists(t *testing.T) {
-	c := &config.Cluster{Name: "hostname", Driver: "k3s"}
+	cn := &config.Network{Name: "k3snet"}
+	c := &config.Cluster{Name: "hostname", Driver: "k3s", NetworkRef: cn}
+
 	md, p := setupK3sCluster(c)
 	removeOn(&md.Mock, "ContainerList")
 	md.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{types.Container{ID: "123sdsdsd"}}, nil)
@@ -67,7 +74,7 @@ func TestK3sClusterServerCreatesWithCorrectOptions(t *testing.T) {
 	md.AssertCalled(t, "ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 
 	// assert server properties
-	params := md.Calls[1].Arguments
+	params := md.Calls[2].Arguments
 	dc := params[1].(*container.Config)
 	hc := params[2].(*container.HostConfig)
 	fqdn := params[4]
@@ -85,8 +92,8 @@ func TestK3sClusterServerCreatesWithCorrectOptions(t *testing.T) {
 
 	// check the command
 	assert.Equal(t, "server", dc.Cmd[0])
-	assert.Contains(t, dc.Cmd[1], "--api-port=")
-	assert.Contains(t, dc.Cmd[2], "--server-arg=")
+	assert.Contains(t, dc.Cmd[1], "--https-listen-port=")
+	assert.Equal(t, dc.Cmd[2], "--no-deploy=traefik")
 
 	// check the ports
 	apiPort := strings.Split(dc.Cmd[1], "=")

@@ -113,6 +113,11 @@ func (c *Container) Destroy() error {
 		return err
 	}
 
+	// container not running do nothing
+	if id == "" {
+		return nil
+	}
+
 	return c.client.ContainerRemove(context.Background(), id, types.ContainerRemoveOptions{Force: true})
 }
 
@@ -121,9 +126,8 @@ func (c *Container) Lookup() (string, error) {
 	name := FQDN(c.config.Name, c.config.NetworkRef.Name)
 
 	args, _ := filters.ParseFlag("name="+name, filters.NewArgs())
-	args, _ = filters.ParseFlag("status=running", args)
 
-	opts := types.ContainerListOptions{Filters: args}
+	opts := types.ContainerListOptions{Filters: args, All: true}
 
 	cl, err := c.client.ContainerList(context.Background(), opts)
 	if err != nil {

@@ -106,9 +106,7 @@ func thereShouldBeContainerRunningCalled(arg1 int, arg2 string) error {
 	for i := 0; i < 10; i++ {
 
 		args, _ := filters.ParseFlag("name="+arg2, filters.NewArgs())
-		args, _ = filters.ParseFlag("status=running", args)
-
-		opts := types.ContainerListOptions{Filters: args}
+		opts := types.ContainerListOptions{Filters: args, All: true}
 
 		cl, err := currentClients.Docker.ContainerList(context.Background(), opts)
 		if err != nil {
@@ -116,7 +114,15 @@ func thereShouldBeContainerRunningCalled(arg1 int, arg2 string) error {
 		}
 
 		if len(cl) == arg1 {
-			return nil
+			fmt.Println(cl[0].State)
+			// check to see if the container has failed
+			if cl[0].State == "exited" {
+				return fmt.Errorf("container exited prematurely")
+			}
+
+			if cl[0].State == "running" {
+				return nil
+			}
 		}
 
 		// wait a few seconds before trying again
