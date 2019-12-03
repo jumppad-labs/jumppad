@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types/container"
-	// "github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/network"
 	clients "github.com/shipyard-run/cli/clients/mocks"
 	"github.com/shipyard-run/cli/config"
 	"github.com/stretchr/testify/assert"
@@ -39,6 +39,8 @@ func TestContainerCreatesCorrectly(t *testing.T) {
 
 	// second call is create
 	params := md.Calls[1].Arguments
+	host := params[2].(*container.HostConfig)
+	network := params[3].(*network.NetworkingConfig)
 
 	cfg := params[1].(*container.Config)
 	assert.Equal(t, "testcontainer", cfg.Hostname)
@@ -48,15 +50,13 @@ func TestContainerCreatesCorrectly(t *testing.T) {
 	// assert.Equal(t, true, cfg.AttachStderr)
 	// assert.Equal(t, true, cfg.Tty)
 
-	host := params[2].(*container.HostConfig)
-
 	sourcePath := cc.Volumes[0].Source
 	destPath := cc.Volumes[0].Destination
 	assert.Equal(t, sourcePath, host.Mounts[0].Source)
 	assert.Equal(t, destPath, host.Mounts[0].Target)
 
-	// network := params[3].(*network.NetworkingConfig)
-	// assert.Equal(t, )
+	assert.NotNil(t, network.EndpointsConfig[cn.Name])
+	assert.Equal(t, cn.Name, network.EndpointsConfig[cn.Name].NetworkID)
 
 	name := params[4].(string)
 	assert.Equal(t, FQDN(cc.Name, cn.Name), name)

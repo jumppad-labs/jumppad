@@ -48,8 +48,10 @@ func (e *Engine) Apply() error {
 }
 
 func (e *Engine) Destroy() error {
-	for _, p := range e.providers {
-		err := p.Destroy()
+	// should run through the providers in reverse order
+	// to ensure objects with dependencies are destroyed first
+	for i := len(e.providers) - 1; i > -1; i-- {
+		err := e.providers[i].Destroy()
 		if err != nil {
 			return err
 		}

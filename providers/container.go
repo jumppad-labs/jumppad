@@ -58,6 +58,10 @@ func (c *Container) Create() error {
 	hc := &container.HostConfig{}
 	nc := &network.NetworkingConfig{}
 
+	// attach the container to the network
+	nc.EndpointsConfig = make(map[string]*network.EndpointSettings)
+	nc.EndpointsConfig[c.config.NetworkRef.Name] = &network.EndpointSettings{NetworkID: c.config.NetworkRef.Name}
+
 	// Create volume mounts
 	mounts := make([]mount.Mount, 0)
 	for _, vc := range c.config.Volumes {

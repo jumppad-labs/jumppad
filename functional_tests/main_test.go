@@ -54,7 +54,7 @@ func FeatureContext(s *godog.Suite) {
 	s.Step(`^the config "([^"]*)"$`, theConfig)
 	s.Step(`^I run apply$`, iRunApply)
 	s.Step(`^there should be (\d+) container running called "([^"]*)"$`, thereShouldBeContainerRunningCalled)
-	s.Step(`^(\d+) network called "([^"]*)"$`, thereShouldBe1NetworkCalled)
+	s.Step(`^there should be 1 network called "([^"]*)"$`, thereShouldBe1NetworkCalled)
 
 	s.BeforeScenario(func(interface{}) {
 	})
@@ -97,14 +97,12 @@ func iRunApply() error {
 }
 
 func thereShouldBeContainerRunningCalled(arg1 int, arg2 string) error {
-
 	// a container can start immediately and then it can crash, this can cause a false positive for the test
 	// wait a few seconds to ensure the state does not change
 	time.Sleep(5 * time.Second)
 
 	// we need to check this a number of times to make sure it is not just a slow starting container
 	for i := 0; i < 10; i++ {
-
 		args, _ := filters.ParseFlag("name="+arg2, filters.NewArgs())
 		opts := types.ContainerListOptions{Filters: args, All: true}
 
@@ -133,5 +131,16 @@ func thereShouldBeContainerRunningCalled(arg1 int, arg2 string) error {
 }
 
 func thereShouldBe1NetworkCalled(arg1 string) error {
-	return godog.ErrPending
+	args, _ := filters.ParseFlag("name="+arg1, filters.NewArgs())
+	n, err := currentClients.Docker.NetworkList(context.Background(), types.NetworkListOptions{Filters: args})
+
+	if err != nil {
+		return err
+	}
+
+	if len(n) != 1 {
+		return fmt.Errorf("Expected 1 network called %s to be created", arg1)
+	}
+
+	return nil
 }
