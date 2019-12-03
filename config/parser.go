@@ -128,6 +128,19 @@ func ParseHCLFile(file string, c *Config) error {
 			}
 
 			c.Containers = append(c.Containers, co)
+
+		case "docs":
+			do := &Docs{}
+			do.Name = b.Labels[0]
+
+			err := decodeBody(b, do)
+			if err != nil {
+				return err
+			}
+
+			do.Path = ensureAbsolute(do.Path, file)
+
+			c.Docs = do
 		}
 	}
 

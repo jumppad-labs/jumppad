@@ -3,6 +3,7 @@ package config
 // Config defines the stack config
 type Config struct {
 	WAN        *Network
+	Docs       *Docs
 	Clusters   []*Cluster
 	Containers []*Container
 	Networks   []*Network

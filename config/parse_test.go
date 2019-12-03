@@ -137,6 +137,13 @@ func TestMultiCluster(t *testing.T) {
 
 	assert.Equal(t, co1, i1.TargetRef)
 	assert.Equal(t, c.WAN, i1.WANRef)
+
+	// validate documentation
+	d1 := c.Docs
+	assert.Equal(t, "multi-cluster", d1.Name)
+	assert.Equal(t, fmt.Sprintf("%s/docs", absoluteFolderPath), d1.Path)
+	assert.Equal(t, 8080, d1.Port)
+	assert.Equal(t, "index.html", d1.Index)
 }
 
 func testFindIngress(name string, ingress []*Ingress) *Ingress {
