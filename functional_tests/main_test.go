@@ -74,7 +74,11 @@ func theConfig(arg1 string) error {
 	// so we can obtain references to the clients for checks
 
 	var err error
-	currentConfig = &config.Config{}
+	currentConfig, err = config.New()
+	if err != nil {
+		return err
+	}
+
 	err = config.ParseFolder(arg1, currentConfig)
 	if err != nil {
 		return err
@@ -117,7 +121,6 @@ func thereShouldBeContainerRunningCalled(arg1 int, arg2 string) error {
 		}
 
 		if len(cl) == arg1 {
-			fmt.Println(cl[0].State)
 			// check to see if the container has failed
 			if cl[0].State == "exited" {
 				return fmt.Errorf("container exited prematurely")

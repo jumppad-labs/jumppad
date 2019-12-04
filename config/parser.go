@@ -175,6 +175,10 @@ func ParseReferences(c *Config) error {
 		}
 	}
 
+	if c.Docs != nil {
+		c.Docs.WANRef = c.WAN
+	}
+
 	return nil
 }
 

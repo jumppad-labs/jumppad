@@ -87,6 +87,9 @@ func (e *Engine) Destroy() error {
 func generateProviders(c *config.Config, cc *Clients) []providers.Provider {
 	oc := make([]providers.Provider, 0)
 
+	p := providers.NewNetwork(c.WAN, cc.Docker)
+	oc = append(oc, p)
+
 	for _, n := range c.Networks {
 		p := providers.NewNetwork(n, cc.Docker)
 		oc = append(oc, p)
@@ -104,6 +107,11 @@ func generateProviders(c *config.Config, cc *Clients) []providers.Provider {
 
 	for _, c := range c.Ingresses {
 		p := providers.NewIngress(c, cc.Docker)
+		oc = append(oc, p)
+	}
+
+	if c.Docs != nil {
+		p := providers.NewDocs(c.Docs, cc.Docker)
 		oc = append(oc, p)
 	}
 	// first elements to create are networks
