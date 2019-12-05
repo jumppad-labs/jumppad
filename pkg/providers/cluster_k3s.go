@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 
-	"github.com/shipyard-run/cli/config"
+	"github.com/shipyard-run/cli/pkg/config"
 	"golang.org/x/xerrors"
 )
 

@@ -2,8 +2,8 @@ package providers
 
 import (
 	"fmt"
-	"github.com/shipyard-run/cli/clients"
-	"github.com/shipyard-run/cli/config"
+	"github.com/shipyard-run/cli/pkg/clients"
+	"github.com/shipyard-run/cli/pkg/config"
 	"strconv"
 )
 

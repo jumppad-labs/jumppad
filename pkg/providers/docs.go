@@ -1,8 +1,8 @@
 package providers
 
 import (
-	"github.com/shipyard-run/cli/clients"
-	"github.com/shipyard-run/cli/config"
+	"github.com/shipyard-run/cli/pkg/clients"
+	"github.com/shipyard-run/cli/pkg/config"
 )
 
 // Docs defines a provider for creating documentation containers

@@ -7,8 +7,8 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
-	clients "github.com/shipyard-run/cli/clients/mocks"
-	"github.com/shipyard-run/cli/config"
+	clients "github.com/shipyard-run/cli/pkg/clients/mocks"
+	"github.com/shipyard-run/cli/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

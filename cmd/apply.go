@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/shipyard-run/cli/shipyard"
+	"github.com/shipyard-run/cli/pkg/shipyard"
 	"github.com/spf13/cobra"
 )
 

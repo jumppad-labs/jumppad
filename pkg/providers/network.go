@@ -5,8 +5,8 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/network"
-	"github.com/shipyard-run/cli/clients"
-	"github.com/shipyard-run/cli/config"
+	"github.com/shipyard-run/cli/pkg/clients"
+	"github.com/shipyard-run/cli/pkg/config"
 )
 
 // Network is a provider for creating docker networks

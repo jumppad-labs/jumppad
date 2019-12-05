@@ -13,8 +13,8 @@ import (
 	"github.com/DATA-DOG/godog/colors"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/shipyard-run/cli/config"
-	"github.com/shipyard-run/cli/shipyard"
+	"github.com/shipyard-run/cli/pkg/config"
+	"github.com/shipyard-run/cli/pkg/shipyard"
 )
 
 var currentClients *shipyard.Clients
