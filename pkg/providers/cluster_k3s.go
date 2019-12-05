@@ -1,10 +1,17 @@
 package providers
 
 import (
+	"bytes"
+	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
+	"os"
+	"strings"
+	"time"
 
+	"github.com/docker/docker/api/types"
 	"github.com/shipyard-run/cli/pkg/config"
 	"golang.org/x/xerrors"
 )
@@ -25,7 +32,7 @@ func (c *Cluster) createK3s() error {
 
 	// check the cluster does not already exist
 	id, err := c.Lookup()
-	if err == nil && id != "" {
+	if id != "" {
 		return ErrorClusterExists
 	}
 
@@ -38,11 +45,12 @@ func (c *Cluster) createK3s() error {
 	cc.Name = fmt.Sprintf("server.%s", c.config.Name)
 	cc.Image = image
 	cc.NetworkRef = c.config.NetworkRef
+	cc.Privileged = true // k3s must run Privlidged
 
 	// set the environment variables for the K3S_KUBECONFIG_OUTPUT and K3S_CLUSTER_SECRET
 	cc.Environment = []config.KV{
 		config.KV{Key: "K3S_KUBECONFIG_OUTPUT", Value: "/output/kubeconfig.yaml"},
-		config.KV{Key: "K3S_KUBECONFIG_OUTPUT", Value: "mysupersecret"}, // This should be random
+		config.KV{Key: "K3S_CLUSTER_SECRET", Value: "mysupersecret"}, // This should be random
 	}
 
 	// set the API server port to a random number 64000 - 65000
@@ -64,7 +72,95 @@ func (c *Cluster) createK3s() error {
 	cc.Command = args
 
 	cp := NewContainer(cc, c.client)
-	return cp.Create()
+	err = cp.Create()
+	if err != nil {
+		return err
+	}
+
+	// get the id
+	id, err = c.Lookup()
+	if err != nil {
+		return err
+	}
+
+	// wait for the server to start
+	err = c.waitForStart(id)
+	if err != nil {
+		return err
+	}
+
+	// get the Kubernetes config file and drop it in $HOME/.shipyard/config/[clustername]/kubeconfig.yml
+
+	return c.copyKubeConfig(id)
+}
+
+func (c *Cluster) waitForStart(id string) error {
+	start := time.Now()
+	timeout := 120 * time.Second
+
+	for {
+		// not running after timeout exceeded? Rollback and delete everything.
+		if timeout != 0 && time.Now().After(start.Add(timeout)) {
+			//deleteCluster()
+			return errors.New("Cluster creation exceeded specified timeout")
+		}
+
+		// scan container logs for a line that tells us that the required services are up and running
+		out, err := c.client.ContainerLogs(context.Background(), id, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true})
+		if err != nil {
+			out.Close()
+			return fmt.Errorf(" Couldn't get docker logs for %s\n%+v", id, err)
+		}
+		buf := new(bytes.Buffer)
+		nRead, _ := buf.ReadFrom(out)
+		out.Close()
+		output := buf.String()
+		if nRead > 0 && strings.Contains(string(output), "Running kubelet") {
+			break
+		}
+
+		time.Sleep(1 * time.Second)
+	}
+
+	return nil
+}
+
+func (c *Cluster) copyKubeConfig(id string) error {
+	// get kubeconfig file from container and read contents
+	reader, _, err := c.client.CopyFromContainer(context.Background(), id, "/output/kubeconfig.yaml")
+	if err != nil {
+		return fmt.Errorf(" Couldn't copy kubeconfig.yaml from server container %s\n%+v", id, err)
+	}
+	defer reader.Close()
+
+	readBytes, err := ioutil.ReadAll(reader)
+	fmt.Println(len(readBytes))
+	if err != nil {
+		return fmt.Errorf(" Couldn't read kubeconfig from container\n%+v", err)
+	}
+
+	// write to file, skipping the first 512 bytes which contain file metadata
+	// and trimming any NULL characters
+	trimBytes := bytes.Trim(readBytes[512:], "\x00")
+
+	// create destination kubeconfig file
+	destDir := fmt.Sprintf("%s/.shipyard/config/%s", os.Getenv("HOME"), c.config.Name)
+	destPath := fmt.Sprintf("%s/kubeconfig.yaml", destDir)
+
+	err = os.MkdirAll(destDir, 0755)
+	if err != nil {
+		return err
+	}
+
+	kubeconfigfile, err := os.Create(destPath)
+	if err != nil {
+		return fmt.Errorf(" Couldn't create kubeconfig file %s\n%+v", destPath, err)
+	}
+
+	defer kubeconfigfile.Close()
+	kubeconfigfile.Write(trimBytes)
+
+	return nil
 }
 
 func (c *Cluster) destroyK3s() error {

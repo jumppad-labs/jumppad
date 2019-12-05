@@ -70,6 +70,26 @@ func (m *MockDocker) ContainerRemove(ctx context.Context, containerID string, op
 	return args.Error(0)
 }
 
+func (m *MockDocker) ContainerLogs(ctx context.Context, containerID string, options types.ContainerLogsOptions) (io.ReadCloser, error) {
+	args := m.Called(ctx, containerID, options)
+
+	rc, _ := args.Get(0).(io.ReadCloser)
+
+	return rc, args.Error(1)
+}
+
+func (m *MockDocker) CopyFromContainer(ctx context.Context, containerID, srcPath string) (io.ReadCloser, types.ContainerPathStat, error) {
+	args := m.Called(ctx, containerID, srcPath)
+
+	rc, _ := args.Get(0).(io.ReadCloser)
+	t, ok := args.Get(1).(types.ContainerPathStat)
+	if !ok {
+		t = types.ContainerPathStat{}
+	}
+
+	return rc, t, args.Error(2)
+}
+
 func (m *MockDocker) NetworkList(ctx context.Context, options types.NetworkListOptions) ([]types.NetworkResource, error) {
 	args := m.Called(ctx, options)
 

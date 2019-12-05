@@ -80,6 +80,9 @@ func (c *Container) Create() error {
 	dc.ExposedPorts = ports.ExposedPorts
 	hc.PortBindings = ports.PortBindings
 
+	// is this a privlidged container
+	hc.Privileged = c.config.Privileged
+
 	// make sure the image name is canonical
 	image := c.config.Image
 	imageParts := strings.Split(image, "/")

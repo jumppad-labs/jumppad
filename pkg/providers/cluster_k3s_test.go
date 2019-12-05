@@ -3,6 +3,7 @@ package providers
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -16,23 +17,47 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func setupK3sCluster(c *config.Cluster) (*clients.MockDocker, *Cluster) {
+var kubeconfig = `
+kubeconfig.yam@@@@i@@@@@@@@@@@@@@@@@@@@@@2@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@lapiVersion: v1
+clusters:
+- cluster:
+`
+
+func setupK3sCluster(c *config.Cluster) (*clients.MockDocker, *Cluster, func()) {
+	// set the shipyard env
+	oldHome := os.Getenv("HOME")
+	os.Setenv("HOME", "/tmp")
+
 	md := &clients.MockDocker{}
 	md.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).Return(
-		ioutil.NopCloser(strings.NewReader("hello world")),
+		ioutil.NopCloser(strings.NewReader("")),
 		nil,
 	)
 	md.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(container.ContainerCreateCreatedBody{}, nil)
 	md.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("container not found"))
+	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("container not found")).Once()
+	md.On("ContainerList", mock.Anything, mock.Anything).Return("abc", nil).Once()
+	md.On("CopyFromContainer", mock.Anything, mock.Anything, mock.Anything).Return(
+		ioutil.NopCloser(strings.NewReader(kubeconfig)),
+		types.ContainerPathStat{},
+		nil,
+	)
+	md.On("ContainerLogs", mock.Anything, mock.Anything, mock.Anything).Return(
+		ioutil.NopCloser(strings.NewReader("Running kubelet")),
+		nil,
+	)
 
-	return md, NewCluster(c, md)
+	return md, NewCluster(c, md), func() {
+		// cleanup
+		os.Setenv("HOME", oldHome)
+	}
 }
 
 func TestK3sInvalidClusterNameReturnsError(t *testing.T) {
 	c := &config.Cluster{Name: "-hostname.1231", Driver: "k3s"}
-	_, p := setupK3sCluster(c)
+	_, p, cleanup := setupK3sCluster(c)
+	defer cleanup()
 
 	err := p.Create()
 
@@ -43,7 +68,9 @@ func TestK3sReturnsErrorIfClusterExists(t *testing.T) {
 	cn := &config.Network{Name: "k3snet"}
 	c := &config.Cluster{Name: "hostname", Driver: "k3s", NetworkRef: cn}
 
-	md, p := setupK3sCluster(c)
+	md, p, cleanup := setupK3sCluster(c)
+	defer cleanup()
+
 	removeOn(&md.Mock, "ContainerList")
 	md.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{types.Container{ID: "123sdsdsd"}}, nil)
 
@@ -66,7 +93,8 @@ func TestK3sClusterServerCreatesWithCorrectOptions(t *testing.T) {
 		NetworkRef: cn,
 	}
 
-	md, p := setupK3sCluster(c)
+	md, p, cleanup := setupK3sCluster(c)
+	defer cleanup()
 
 	err := p.Create()
 
@@ -88,12 +116,15 @@ func TestK3sClusterServerCreatesWithCorrectOptions(t *testing.T) {
 	// check environment variables
 	assert.Len(t, dc.Env, 2)
 	assert.Equal(t, "K3S_KUBECONFIG_OUTPUT=/output/kubeconfig.yaml", dc.Env[0])
-	assert.Contains(t, dc.Env[1], "K3S_KUBECONFIG_OUTPUT=")
+	assert.Contains(t, dc.Env[1], "K3S_CLUSTER_SECRET=")
 
 	// check the command
 	assert.Equal(t, "server", dc.Cmd[0])
 	assert.Contains(t, dc.Cmd[1], "--https-listen-port=")
 	assert.Equal(t, dc.Cmd[2], "--no-deploy=traefik")
+
+	// make sure privlidged
+	assert.True(t, hc.Privileged)
 
 	// check the ports
 	apiPort := strings.Split(dc.Cmd[1], "=")
@@ -107,6 +138,14 @@ func TestK3sClusterServerCreatesWithCorrectOptions(t *testing.T) {
 	assert.NotNil(t, dc.ExposedPorts[dockerPort])
 	assert.Len(t, hc.PortBindings, 1)
 	assert.NotNil(t, hc.PortBindings[dockerPort])
+
+	// checks that the config is witten
+	f, err := os.OpenFile("/tmp/.shipyard/config/hostname/kubeconfig.yaml", os.O_RDONLY, 0755)
+	assert.NoError(t, err)
+	defer f.Close()
+
+	d, err := ioutil.ReadAll(f)
+	assert.Contains(t, string(d), "clusters")
 }
 
 // removeOn is a utility function for removing Expectations from mock objects
