@@ -132,7 +132,8 @@ func (c *Container) Destroy() error {
 func (c *Container) Lookup() (string, error) {
 	name := FQDN(c.config.Name, c.config.NetworkRef.Name)
 
-	args, _ := filters.ParseFlag("name="+name, filters.NewArgs())
+	args := filters.NewArgs()
+	args.Add("name", name)
 
 	opts := types.ContainerListOptions{Filters: args, All: true}
 

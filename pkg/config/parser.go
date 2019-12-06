@@ -101,6 +101,9 @@ func ParseHCLFile(file string, c *Config) error {
 				return err
 			}
 
+			h.Chart = ensureAbsolute(h.Chart, file)
+			h.Values = ensureAbsolute(h.Values, file)
+
 			c.HelmCharts = append(c.HelmCharts, h)
 		case "ingress":
 			i := &Ingress{}
@@ -161,7 +164,7 @@ func ParseReferences(c *Config) error {
 	}
 
 	for _, hc := range c.HelmCharts {
-		hc.clusterRef = findClusterRef(hc.Cluster, c)
+		hc.ClusterRef = findClusterRef(hc.Cluster, c)
 	}
 
 	for _, in := range c.Ingresses {

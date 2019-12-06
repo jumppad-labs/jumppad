@@ -30,11 +30,16 @@ func TestReturnsErrorIfDefaultWANInUse(t *testing.T) {
 }
 
 func TestSingleKubernetesCluster(t *testing.T) {
+	absoluteFolderPath, err := filepath.Abs("./examples/single-cluster-k8s")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	tearDown := setup()
 	defer tearDown()
 
 	c, _ := New()
-	err := ParseFolder("./examples/single-cluster-k8s", c)
+	err = ParseFolder("./examples/single-cluster-k8s", c)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, c)
@@ -61,7 +66,7 @@ func TestSingleKubernetesCluster(t *testing.T) {
 	h1 := c.HelmCharts[0]
 	assert.Equal(t, "cluster.default", h1.Cluster)
 	assert.Equal(t, "/User/yamcha/.shipyard/charts/consul", h1.Chart)
-	assert.Equal(t, "./consul-values", h1.Values)
+	assert.Equal(t, fmt.Sprintf("%s/consul-values", absoluteFolderPath), h1.Values)
 	assert.Equal(t, "component=server,app=consul", h1.HealthCheck.Pods[0])
 	assert.Equal(t, "component=client,app=consul", h1.HealthCheck.Pods[1])
 
@@ -83,7 +88,7 @@ func TestSingleKubernetesCluster(t *testing.T) {
 
 	assert.Equal(t, n1, c1.NetworkRef)
 	assert.Equal(t, c.WAN, c1.WANRef)
-	assert.Equal(t, c1, h1.clusterRef)
+	assert.Equal(t, c1, h1.ClusterRef)
 	assert.Equal(t, i1.TargetRef, c1)
 	assert.Equal(t, i1.NetworkRef, n1)
 	assert.Equal(t, c.WAN, i1.WANRef)

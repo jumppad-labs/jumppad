@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"golang.org/x/xerrors"
+	v1 "k8s.io/api/core/v1"
 )
 
 var kubeconfig = `
@@ -48,7 +49,22 @@ func setupK3sCluster(c *config.Cluster) (*clients.MockDocker, *Cluster, func()) 
 		nil,
 	)
 
-	return md, NewCluster(c, md), func() {
+	mk := &clients.MockKubernetes{}
+	mk.Mock.On("SetConfig", mock.Anything).Return(nil)
+	mk.Mock.On("GetPods").Return(
+		&v1.PodList{
+			Items: []v1.Pod{
+				v1.Pod{
+					Status: v1.PodStatus{
+						Phase: "Running",
+					},
+				},
+			},
+		},
+		nil,
+	)
+
+	return md, NewCluster(c, md, mk), func() {
 		// cleanup
 		os.Setenv("HOME", oldHome)
 	}

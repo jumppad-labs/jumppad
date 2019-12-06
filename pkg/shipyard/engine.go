@@ -7,7 +7,8 @@ import (
 )
 
 type Clients struct {
-	Docker clients.Docker
+	Docker     clients.Docker
+	Kubernetes clients.Kubernetes
 }
 
 // Defines
@@ -22,8 +23,11 @@ func GenerateClients() (*Clients, error) {
 		return nil, err
 	}
 
+	kc := clients.NewKubernetes()
+
 	return &Clients{
-		Docker: dc,
+		Docker:     dc,
+		Kubernetes: kc,
 	}, nil
 }
 
@@ -105,7 +109,12 @@ func generateProviders(c *config.Config, cc *Clients) []providers.Provider {
 	}
 
 	for _, c := range c.Clusters {
-		p := providers.NewCluster(c, cc.Docker)
+		p := providers.NewCluster(c, cc.Docker, cc.Kubernetes)
+		oc = append(oc, p)
+	}
+
+	for _, c := range c.HelmCharts {
+		p := providers.NewHelm(c)
 		oc = append(oc, p)
 	}
 

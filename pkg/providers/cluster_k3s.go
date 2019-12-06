@@ -90,8 +90,51 @@ func (c *Cluster) createK3s() error {
 	}
 
 	// get the Kubernetes config file and drop it in $HOME/.shipyard/config/[clustername]/kubeconfig.yml
+	kubeconfig, err := c.copyKubeConfig(id)
+	if err != nil {
+		return xerrors.Errorf("Error copying Kubernetes config: %w", err)
+	}
 
-	return c.copyKubeConfig(id)
+	err = c.kubeClient.SetConfig(kubeconfig)
+	if err != nil {
+		return xerrors.Errorf("Error creating Kubernetes client: %w", err)
+	}
+
+	// check all pods are running
+	st := time.Now()
+	for {
+		if time.Now().Sub(st) > (120 * time.Second) {
+			return fmt.Errorf("Timeout waiting for pods to start")
+		}
+
+		// GetPods may return an error if the API server is not avaialble
+		pl, err := c.kubeClient.GetPods()
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+
+		// there should be at least 1 pod
+		if len(pl.Items) < 1 {
+			continue
+		}
+
+		allRunning := true
+		for _, pod := range pl.Items {
+			if pod.Status.Phase != "Running" {
+				allRunning = false
+				break
+			}
+		}
+
+		if allRunning {
+			break
+		}
+
+		time.Sleep(2 * time.Second)
+	}
+
+	return nil
 }
 
 func (c *Cluster) waitForStart(id string) error {
@@ -125,18 +168,18 @@ func (c *Cluster) waitForStart(id string) error {
 	return nil
 }
 
-func (c *Cluster) copyKubeConfig(id string) error {
+func (c *Cluster) copyKubeConfig(id string) (string, error) {
 	// get kubeconfig file from container and read contents
 	reader, _, err := c.client.CopyFromContainer(context.Background(), id, "/output/kubeconfig.yaml")
 	if err != nil {
-		return fmt.Errorf(" Couldn't copy kubeconfig.yaml from server container %s\n%+v", id, err)
+		return "", fmt.Errorf(" Couldn't copy kubeconfig.yaml from server container %s\n%+v", id, err)
 	}
 	defer reader.Close()
 
 	readBytes, err := ioutil.ReadAll(reader)
 	fmt.Println(len(readBytes))
 	if err != nil {
-		return fmt.Errorf(" Couldn't read kubeconfig from container\n%+v", err)
+		return "", fmt.Errorf(" Couldn't read kubeconfig from container\n%+v", err)
 	}
 
 	// write to file, skipping the first 512 bytes which contain file metadata
@@ -149,18 +192,18 @@ func (c *Cluster) copyKubeConfig(id string) error {
 
 	err = os.MkdirAll(destDir, 0755)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	kubeconfigfile, err := os.Create(destPath)
 	if err != nil {
-		return fmt.Errorf(" Couldn't create kubeconfig file %s\n%+v", destPath, err)
+		return "", fmt.Errorf(" Couldn't create kubeconfig file %s\n%+v", destPath, err)
 	}
 
 	defer kubeconfigfile.Close()
 	kubeconfigfile.Write(trimBytes)
 
-	return nil
+	return destPath, nil
 }
 
 func (c *Cluster) destroyK3s() error {

@@ -112,7 +112,8 @@ func thereShouldBeContainerRunningCalled(arg1 int, arg2 string) error {
 
 	// we need to check this a number of times to make sure it is not just a slow starting container
 	for i := 0; i < 10; i++ {
-		args, _ := filters.ParseFlag("name="+arg2, filters.NewArgs())
+		args := filters.NewArgs()
+		args.Add("name", arg2)
 		opts := types.ContainerListOptions{Filters: args, All: true}
 
 		cl, err := currentClients.Docker.ContainerList(context.Background(), opts)
@@ -139,7 +140,8 @@ func thereShouldBeContainerRunningCalled(arg1 int, arg2 string) error {
 }
 
 func thereShouldBe1NetworkCalled(arg1 string) error {
-	args, _ := filters.ParseFlag("name="+arg1, filters.NewArgs())
+	args := filters.NewArgs()
+	args.Add("name", arg1)
 	n, err := currentClients.Docker.NetworkList(context.Background(), types.NetworkListOptions{Filters: args})
 
 	if err != nil {

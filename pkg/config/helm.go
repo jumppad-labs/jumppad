@@ -2,7 +2,7 @@ package config
 
 type Helm struct {
 	Name       string
-	clusterRef *Cluster
+	ClusterRef *Cluster
 
 	Cluster string `hcl:"cluster"`
 	Chart   string `hcl:"chart"`

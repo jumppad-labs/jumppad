@@ -14,13 +14,14 @@ var (
 
 // Cluster defines a provider which can create a cluster
 type Cluster struct {
-	config *config.Cluster
-	client clients.Docker
+	config     *config.Cluster
+	client     clients.Docker
+	kubeClient clients.Kubernetes
 }
 
 // NewCluster creates a new
-func NewCluster(c *config.Cluster, cc clients.Docker) *Cluster {
-	return &Cluster{c, cc}
+func NewCluster(c *config.Cluster, cc clients.Docker, kc clients.Kubernetes) *Cluster {
+	return &Cluster{c, cc, kc}
 }
 
 // Create implements interface method to create a cluster of the specified type
