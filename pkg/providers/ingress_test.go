@@ -67,3 +67,62 @@ func TestCreatesIngressWithValidOptions(t *testing.T) {
 	// check the network
 	assert.NotNil(t, network.EndpointsConfig[cn.Name])
 }
+
+func TestCreatesIngressWithContainerOptions(t *testing.T) {
+	cn := &config.Network{Name: "testnet", Subnet: "192.168.4.0/24"}
+	cc := &config.Container{Name: "testcontainer", Image: "consul:v1.6.1", NetworkRef: cn, Volumes: []config.Volume{config.Volume{Source: "/mnt/data", Destination: "/data"}}}
+	i := &config.Ingress{Name: "testingress", TargetRef: cc, NetworkRef: cn, Ports: []config.Port{config.Port{Protocol: "tcp", Host: 18500, Local: 8600, Remote: 8500}}}
+
+	md, p := setupIngress(i)
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	// second call is create
+	params := md.Calls[1].Arguments
+	name := params[4].(string)
+	cfg := params[1].(*container.Config)
+	network := params[3].(*network.NetworkingConfig)
+
+	assert.Equal(t, "testingress.testnet.shipyard", name)
+
+	assert.Equal(t, "--service-name", cfg.Cmd[0])
+	assert.Equal(t, "testcontainer.testnet.shipyard", cfg.Cmd[1])
+
+	// check the network
+	assert.NotNil(t, network.EndpointsConfig[cn.Name])
+}
+
+func TestCreatesIngressWithK8sClusterOptions(t *testing.T) {
+	cn := &config.Network{Name: "testnet", Subnet: "192.168.4.0/24"}
+	cc := &config.Cluster{Name: "testcontainer", Driver: "k3s", NetworkRef: cn}
+	i := &config.Ingress{Name: "testingress", Service: "svc/consul-consul", TargetRef: cc, NetworkRef: cn, Ports: []config.Port{config.Port{Protocol: "tcp", Host: 18500, Local: 8600, Remote: 8500}}}
+
+	md, p := setupIngress(i)
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	// second call is create
+	params := md.Calls[1].Arguments
+	name := params[4].(string)
+	cfg := params[1].(*container.Config)
+	host := params[2].(*container.HostConfig)
+	network := params[3].(*network.NetworkingConfig)
+
+	assert.Equal(t, "testingress.testnet.shipyard", name)
+
+	assert.Equal(t, "--proxy-type", cfg.Cmd[0])
+	assert.Equal(t, "kubernetes", cfg.Cmd[1])
+
+	assert.Equal(t, "--service-name", cfg.Cmd[2])
+	assert.Equal(t, i.Service, cfg.Cmd[3])
+
+	// check the network
+	assert.NotNil(t, network.EndpointsConfig[cn.Name])
+
+	// check mounts the kubeconfig
+	assert.Equal(t, "/.kube/kubeconfig.yml", host.Mounts[0].Target)
+	assert.Contains(t, host.Mounts[0].Source, ".shipyard/config/testcontainer/kubeconfig-docker.yaml")
+	assert.Equal(t, "KUBECONFIG=/.kube/kubeconfig.yml", cfg.Env[0])
+}

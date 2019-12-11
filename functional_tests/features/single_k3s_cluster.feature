@@ -8,3 +8,4 @@ Feature: Kubernetes Cluster
     When I run apply
     Then there should be 1 network called "cloud"
     And there should be 1 container running called "server.k3s.cloud.shipyard"
+    And a call to "http://localhost:18500/v1/members" should result in status 200

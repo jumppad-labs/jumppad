@@ -194,8 +194,7 @@ func (c *Cluster) copyKubeConfig(id string) (string, error) {
 	trimBytes := bytes.Trim(readBytes[512:], "\x00")
 
 	// create destination kubeconfig file
-	destDir := fmt.Sprintf("%s/.shipyard/config/%s", os.Getenv("HOME"), c.config.Name)
-	destPath := fmt.Sprintf("%s/kubeconfig.yaml", destDir)
+	destDir, destPath, _ := CreateKubeConfigPath(c.config.Name)
 
 	err = os.MkdirAll(destDir, 0755)
 	if err != nil {

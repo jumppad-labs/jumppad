@@ -17,19 +17,36 @@ func NewIngress(c *config.Ingress, cc clients.Docker) *Ingress {
 }
 
 func (i *Ingress) Create() error {
-	// get the target ref
-	t, ok := i.config.TargetRef.(*config.Container)
-	if !ok {
-		return fmt.Errorf("Only Container ingress is supported at present")
+
+	var serviceName string
+	var volumes []config.Volume
+	var env []config.KV
+	command := make([]string, 0)
+
+	switch v := i.config.TargetRef.(type) {
+	case *config.Container:
+		serviceName = FQDN(v.Name, v.NetworkRef.Name)
+	case *config.Cluster:
+		serviceName = i.config.Service
+
+		_, _, kubeConfigPath := CreateKubeConfigPath(v.Name)
+		volumes = append(volumes, config.Volume{
+			Source:      kubeConfigPath,
+			Destination: "/.kube/kubeconfig.yml",
+		})
+
+		env = append(env, config.KV{Key: "KUBECONFIG", Value: "/.kube/kubeconfig.yml"})
+
+		command = append(command, "--proxy-type")
+		command = append(command, "kubernetes")
+	default:
+		return fmt.Errorf("Only Container ingress and K3s are supported at present")
 	}
 
 	image := "shipyardrun/ingress:latest"
-	command := make([]string, 0)
 
-	// --network onprem docker.pkg.github.com/shipyard-run/ingress:latest --service-name consul.onprem.shipyard --port-remote 8500 --port-host 8500t
-	// build the command based on the ports
 	command = append(command, "--service-name")
-	command = append(command, FQDN(t.Name, t.NetworkRef.Name))
+	command = append(command, serviceName)
 
 	// add the ports
 	for _, p := range i.config.Ports {
@@ -39,11 +56,13 @@ func (i *Ingress) Create() error {
 
 	// ingress simply crease a container with specific options
 	c := &config.Container{
-		Name:       i.config.Name,
-		NetworkRef: i.config.NetworkRef,
-		Ports:      i.config.Ports,
-		Image:      image,
-		Command:    command,
+		Name:        i.config.Name,
+		NetworkRef:  i.config.NetworkRef,
+		Ports:       i.config.Ports,
+		Image:       image,
+		Command:     command,
+		Volumes:     volumes,
+		Environment: env,
 	}
 
 	p := NewContainer(c, i.client)
