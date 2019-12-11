@@ -2,9 +2,9 @@ package providers
 
 import (
 	"fmt"
+
 	"github.com/shipyard-run/cli/pkg/clients"
 	"github.com/shipyard-run/cli/pkg/config"
-	"strconv"
 )
 
 type Ingress struct {
@@ -31,14 +31,11 @@ func (i *Ingress) Create() error {
 	command = append(command, "--service-name")
 	command = append(command, FQDN(t.Name, t.NetworkRef.Name))
 
-	command = append(command, "--port-host")
-	command = append(command, strconv.Itoa(i.config.Ports[0].Host))
-
-	command = append(command, "--port-remote")
-	command = append(command, strconv.Itoa(i.config.Ports[0].Remote))
-
-	command = append(command, "--port-local")
-	command = append(command, strconv.Itoa(i.config.Ports[0].Local))
+	// add the ports
+	for _, p := range i.config.Ports {
+		command = append(command, "--ports")
+		command = append(command, fmt.Sprintf("%d:%d", p.Local, p.Remote))
+	}
 
 	// ingress simply crease a container with specific options
 	c := &config.Container{

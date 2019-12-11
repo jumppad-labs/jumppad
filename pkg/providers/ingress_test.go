@@ -55,14 +55,8 @@ func TestCreatesIngressWithValidOptions(t *testing.T) {
 	assert.Equal(t, "--service-name", cfg.Cmd[0])
 	assert.Equal(t, "testcontainer.testnet.shipyard", cfg.Cmd[1])
 
-	assert.Equal(t, "--port-host", cfg.Cmd[2])
-	assert.Equal(t, "18500", cfg.Cmd[3])
-
-	assert.Equal(t, "--port-remote", cfg.Cmd[4])
-	assert.Equal(t, "8500", cfg.Cmd[5])
-
-	assert.Equal(t, "--port-local", cfg.Cmd[6])
-	assert.Equal(t, "8600", cfg.Cmd[7])
+	assert.Equal(t, "--ports", cfg.Cmd[2])
+	assert.Equal(t, "8600:8500", cfg.Cmd[3])
 
 	// check the ports
 	dockerPort, _ := nat.NewPort("tcp", "8600")
