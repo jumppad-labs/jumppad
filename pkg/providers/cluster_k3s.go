@@ -95,6 +95,14 @@ func (c *Cluster) createK3s() error {
 		return xerrors.Errorf("Error copying Kubernetes config: %w", err)
 	}
 
+	// create the Docker container version of the Kubeconfig
+	// the default KubeConfig has the server location https://localhost:port
+	// to use this config inside a docker container we need to use the FQDN for the server
+	err = c.createDockerKubeConfig(kubeconfig)
+	if err != nil {
+		return xerrors.Errorf("Error creating Docker Kubernetes config: %w", err)
+	}
+
 	err = c.kubeClient.SetConfig(kubeconfig)
 	if err != nil {
 		return xerrors.Errorf("Error creating Kubernetes client: %w", err)
@@ -177,7 +185,6 @@ func (c *Cluster) copyKubeConfig(id string) (string, error) {
 	defer reader.Close()
 
 	readBytes, err := ioutil.ReadAll(reader)
-	fmt.Println(len(readBytes))
 	if err != nil {
 		return "", fmt.Errorf(" Couldn't read kubeconfig from container\n%+v", err)
 	}
@@ -204,6 +211,40 @@ func (c *Cluster) copyKubeConfig(id string) (string, error) {
 	kubeconfigfile.Write(trimBytes)
 
 	return destPath, nil
+}
+
+func (c *Cluster) createDockerKubeConfig(kubeconfig string) error {
+	// read the config into a string
+	f, err := os.OpenFile(kubeconfig, os.O_RDONLY, 0755)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	readBytes, err := ioutil.ReadAll(f)
+	if err != nil {
+		return fmt.Errorf("Couldn't read kubeconfig, %v", err)
+	}
+
+	// manipulate the file
+	newConfig := strings.Replace(
+		string(readBytes),
+		"server: https://127.0.0.1",
+		fmt.Sprintf("server: https://server.%s", FQDN(c.config.Name, c.config.NetworkRef.Name)),
+		-1,
+	)
+
+	destPath := strings.Replace(kubeconfig, ".yaml", "-docker.yaml", 1)
+
+	kubeconfigfile, err := os.Create(destPath)
+	if err != nil {
+		return fmt.Errorf("Couldn't create kubeconfig file %s\n%+v", destPath, err)
+	}
+
+	defer kubeconfigfile.Close()
+	kubeconfigfile.Write([]byte(newConfig))
+
+	return nil
 }
 
 func (c *Cluster) destroyK3s() error {
