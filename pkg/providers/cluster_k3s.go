@@ -103,6 +103,8 @@ func (c *Cluster) createK3s() error {
 		return xerrors.Errorf("Error creating Docker Kubernetes config: %w", err)
 	}
 
+	// janky  sleep to wait for API server, will make better
+	time.Sleep(10 * time.Second)
 	err = c.kubeClient.SetConfig(kubeconfig)
 	if err != nil {
 		return xerrors.Errorf("Error creating Kubernetes client: %w", err)
