@@ -12,7 +12,7 @@ container "consul_nomad" {
 }
 
 cluster "nomad" {
-  driver  = "nomad"
+  driver  = "nomad" // k3s kind
   version = "0.10.0"
 
   nodes = 3

@@ -15,6 +15,7 @@ type Clients struct {
 type Engine struct {
 	providers []providers.Provider
 	clients   *Clients
+	config    *config.Config
 }
 
 func GenerateClients() (*Clients, error) {
@@ -56,6 +57,7 @@ func NewWithFolder(folder string) (*Engine, error) {
 	}
 
 	e := New(cc, cl)
+
 	return e, nil
 }
 
@@ -65,6 +67,7 @@ func New(c *config.Config, cc *Clients) *Engine {
 	return &Engine{
 		providers: p,
 		clients:   cc,
+		config:    c,
 	}
 }
 
@@ -90,6 +93,10 @@ func (e *Engine) Destroy() error {
 	}
 
 	return nil
+}
+
+func (e *Engine) Blueprint() *config.Blueprint {
+	return e.config.Blueprint
 }
 
 func generateProviders(c *config.Config, cc *Clients) []providers.Provider {

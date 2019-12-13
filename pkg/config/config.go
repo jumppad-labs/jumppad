@@ -2,6 +2,7 @@ package config
 
 // Config defines the stack config
 type Config struct {
+	Blueprint  *Blueprint
 	WAN        *Network
 	Docs       *Docs
 	Clusters   []*Cluster

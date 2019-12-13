@@ -33,6 +33,21 @@ func ParseFolder(folder string, c *Config) error {
 		return err
 	}
 
+	// pick up the blueprint file
+	yardFiles, err := filepath.Glob(path.Join(abs, "*.yard"))
+	if err != nil {
+		fmt.Println("err")
+		return err
+	}
+
+	if len(yardFiles) > 0 {
+		err := ParseYardFile(yardFiles[0], c)
+		if err != nil {
+			fmt.Println("err")
+			return err
+		}
+	}
+
 	// sub folders
 	filesDir, err := filepath.Glob(path.Join(abs, "**/*.hcl"))
 	if err != nil {
@@ -48,6 +63,31 @@ func ParseFolder(folder string, c *Config) error {
 			return err
 		}
 	}
+
+	return nil
+}
+
+func ParseYardFile(file string, c *Config) error {
+	parser := hclparse.NewParser()
+
+	f, diag := parser.ParseHCLFile(file)
+	if diag.HasErrors() {
+		return errors.New(diag.Error())
+	}
+
+	body, ok := f.Body.(*hclsyntax.Body)
+	if !ok {
+		return errors.New("Error getting body")
+	}
+
+	bp := &Blueprint{}
+
+	diag = gohcl.DecodeBody(body, ctx, bp)
+	if diag.HasErrors() {
+		return errors.New(diag.Error())
+	}
+
+	c.Blueprint = bp
 
 	return nil
 }
