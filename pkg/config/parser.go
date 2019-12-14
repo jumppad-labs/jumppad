@@ -26,13 +26,6 @@ func ParseFolder(folder string, c *Config) error {
 
 	abs, _ := filepath.Abs(folder)
 
-	// current folder
-	files, err := filepath.Glob(path.Join(abs, "*.hcl"))
-	if err != nil {
-		fmt.Println("err")
-		return err
-	}
-
 	// pick up the blueprint file
 	yardFiles, err := filepath.Glob(path.Join(abs, "*.yard"))
 	if err != nil {
@@ -46,6 +39,13 @@ func ParseFolder(folder string, c *Config) error {
 			fmt.Println("err")
 			return err
 		}
+	}
+
+	// load files from the current folder
+	files, err := filepath.Glob(path.Join(abs, "*.hcl"))
+	if err != nil {
+		fmt.Println("err")
+		return err
 	}
 
 	// sub folders

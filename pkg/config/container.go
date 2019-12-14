@@ -23,6 +23,6 @@ type Volume struct {
 
 // KV is a key/value type
 type KV struct {
-	Key   string
-	Value string
+	Key   string `hcl:"key"`
+	Value string `hcl:"value"`
 }

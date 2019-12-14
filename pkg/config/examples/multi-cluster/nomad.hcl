@@ -12,15 +12,16 @@ container "consul_nomad" {
 }
 
 cluster "nomad" {
-  driver  = "nomad" // k3s kind
-  version = "0.10.0"
+  driver  = "k3s" // default
+  version = "1.16.0"
 
-  nodes = 3
+  nodes = 1 // default
 
   network = "network.nomad"
-
+  
   config {
-    consul_http_addr = "container.consul_nomad.ip_address"
+    key = "CONSUL_HTTP_ADDR"
+    value = "container.consul_nomad.ip_address"
   }
 }
 

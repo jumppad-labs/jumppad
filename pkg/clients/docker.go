@@ -8,6 +8,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 )
 
@@ -33,6 +34,9 @@ type Docker interface {
 	NetworkList(ctx context.Context, options types.NetworkListOptions) ([]types.NetworkResource, error)
 	NetworkCreate(ctx context.Context, name string, options types.NetworkCreate) (types.NetworkCreateResponse, error)
 	NetworkRemove(ctx context.Context, networkID string) error
+
+	VolumeCreate(ctx context.Context, options volumetypes.VolumeCreateBody) (types.Volume, error)
+	VolumeRemove(ctx context.Context, volumeID string, force bool) error
 }
 
 // NewDocker creates a new Docker client

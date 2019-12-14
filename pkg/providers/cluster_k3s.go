@@ -36,6 +36,12 @@ func (c *Cluster) createK3s() error {
 		return ErrorClusterExists
 	}
 
+	// create the volume for the cluster
+	_, err = c.createVolume()
+	if err != nil {
+		return err
+	}
+
 	// set the image
 	image := fmt.Sprintf("%s:%s", k3sBaseImage, c.config.Version)
 

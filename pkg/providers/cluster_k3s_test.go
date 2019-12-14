@@ -9,6 +9,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/go-connections/nat"
 	clients "github.com/shipyard-run/cli/pkg/clients/mocks"
 	"github.com/shipyard-run/cli/pkg/config"
@@ -54,6 +55,7 @@ func setupK3sCluster(c *config.Cluster) (*clients.MockDocker, *Cluster, func()) 
 		ioutil.NopCloser(strings.NewReader("Running kubelet")),
 		nil,
 	)
+	md.On("VolumeCreate", mock.Anything, mock.Anything).Return(types.Volume{Name: "testvolume"}, nil)
 
 	mk := &clients.MockKubernetes{}
 	mk.Mock.On("SetConfig", mock.Anything).Return(nil)
@@ -124,7 +126,7 @@ func TestK3sClusterServerCreatesWithCorrectOptions(t *testing.T) {
 	md.AssertCalled(t, "ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 
 	// assert server properties
-	params := md.Calls[2].Arguments
+	params := md.Calls[3].Arguments
 	dc := params[1].(*container.Config)
 	hc := params[2].(*container.HostConfig)
 	fqdn := params[4]
@@ -176,6 +178,45 @@ func TestK3sClusterServerCreatesWithCorrectOptions(t *testing.T) {
 
 	d, err = ioutil.ReadAll(f)
 	assert.Contains(t, string(d), "server: https://server.hostname.k3snet.shipyard")
+}
+
+func TestK3sClusterPushesLocalImages(t *testing.T) {
+	cn := &config.Network{
+		Name: "k3snet",
+	}
+
+	c := &config.Cluster{
+		Name:       "hostname",
+		Driver:     "k3s",
+		Version:    "v1.0.0",
+		NetworkRef: cn,
+		Images: []config.Image{
+			config.Image{
+				Name: "myrepo/myimage:latest",
+			},
+		},
+	}
+
+	md, p, cleanup := setupK3sCluster(c)
+	defer cleanup()
+
+	err := p.Create()
+
+	assert.NoError(t, err)
+	md.AssertCalled(t, "VolumeCreate", mock.Anything, mock.Anything)
+	md.AssertCalled(t, "ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+
+	params := md.Calls[1].Arguments
+	vco := params[1].(volume.VolumeCreateBody)
+
+	assert.Equal(t, "hostname.volume", vco.Name)
+	// assert server properties
+	/*
+		params := md.Calls[3].Arguments
+		dc := params[1].(*container.Config)
+		hc := params[2].(*container.HostConfig)
+		fqdn := params[4]
+	*/
 }
 
 // removeOn is a utility function for removing Expectations from mock objects

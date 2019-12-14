@@ -5,6 +5,7 @@ import (
 	"io"
 	"time"
 
+	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
@@ -112,6 +113,22 @@ func (m *MockDocker) NetworkCreate(ctx context.Context, name string, options typ
 
 func (m *MockDocker) NetworkRemove(ctx context.Context, networkID string) error {
 	args := m.Called(ctx, networkID)
+
+	return args.Error(0)
+}
+
+func (m *MockDocker) VolumeCreate(ctx context.Context, options volumetypes.VolumeCreateBody) (types.Volume, error) {
+	args := m.Called(ctx, options)
+
+	if v, ok := args.Get(0).(types.Volume); ok {
+		return v, args.Error(1)
+	}
+
+	return types.Volume{}, args.Error(1)
+}
+
+func (m *MockDocker) VolumeRemove(ctx context.Context, volumeID string, force bool) error {
+	args := m.Called(ctx, volumeID)
 
 	return args.Error(0)
 }

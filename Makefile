@@ -17,3 +17,6 @@ build-darwin:
 
 build-linux:
 	CGO_ENABLED=0 GOOS=linux go build -o bin/yard-linux main.go
+
+install_local:
+	go build -o /usr/local/bin/yard main.go
