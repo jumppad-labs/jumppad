@@ -10,7 +10,10 @@ test: test_unit test_functional
 autotest:
 	filewatcher --idle-timeout 24h -x **/functional_tests gotestsum --format standard-verbose
 
-build: build-darwin
+build: build-darwin build-linux
 
 build-darwin:
 	CGO_ENABLED=0 GOOS=darwin go build -o bin/yard-darwin main.go
+
+build-linux:
+	CGO_ENABLED=0 GOOS=linux go build -o bin/yard-linux main.go
