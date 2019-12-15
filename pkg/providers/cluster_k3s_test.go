@@ -227,7 +227,7 @@ func TestK3sClusterPushesLocalImages(t *testing.T) {
 	hc := params[2].(*container.HostConfig)
 
 	// check the host mount has the images volume
-	assert.Equal(t, "hostname.volume", hc.Mounts[0].Source)
+	assert.Equal(t, "hostname.volume", hc.Mounts[1].Source)
 	assert.Equal(t, "/images", hc.Mounts[0].Target)
 	assert.Equal(t, mount.TypeVolume, hc.Mounts[0].Type)
 }
