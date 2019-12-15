@@ -138,7 +138,7 @@ func writeLocalDockerImageToVolume(c clients.Docker, images []config.Image, volu
 	// create a dummy container to import to volume
 	cc := &config.Container{
 		Name:  "tmp.import",
-		Image: makeImageCanonical("alpine:latest"),
+		Image: config.Image{Name: makeImageCanonical("alpine:latest")},
 		Volumes: []config.Volume{
 			config.Volume{
 				Source:      volume,

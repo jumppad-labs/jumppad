@@ -29,7 +29,7 @@ func setupIngress(c *config.Ingress) (*clients.MockDocker, *Ingress) {
 
 func TestCreatesIngressWithValidOptions(t *testing.T) {
 	cn := &config.Network{Name: "testnet", Subnet: "192.168.4.0/24"}
-	cc := &config.Container{Name: "testcontainer", Image: "consul:v1.6.1", NetworkRef: cn, Volumes: []config.Volume{config.Volume{Source: "/mnt/data", Destination: "/data"}}}
+	cc := &config.Container{Name: "testcontainer", Image: config.Image{Name: "consul:v1.6.1"}, NetworkRef: cn, Volumes: []config.Volume{config.Volume{Source: "/mnt/data", Destination: "/data"}}}
 	i := &config.Ingress{Name: "testingress", TargetRef: cc, NetworkRef: cn, Ports: []config.Port{config.Port{Protocol: "tcp", Host: 18500, Local: 8600, Remote: 8500}}}
 
 	md, p := setupIngress(i)
@@ -70,7 +70,7 @@ func TestCreatesIngressWithValidOptions(t *testing.T) {
 
 func TestCreatesIngressWithContainerOptions(t *testing.T) {
 	cn := &config.Network{Name: "testnet", Subnet: "192.168.4.0/24"}
-	cc := &config.Container{Name: "testcontainer", Image: "consul:v1.6.1", NetworkRef: cn, Volumes: []config.Volume{config.Volume{Source: "/mnt/data", Destination: "/data"}}}
+	cc := &config.Container{Name: "testcontainer", Image: config.Image{Name: "consul:v1.6.1"}, NetworkRef: cn, Volumes: []config.Volume{config.Volume{Source: "/mnt/data", Destination: "/data"}}}
 	i := &config.Ingress{Name: "testingress", TargetRef: cc, NetworkRef: cn, Ports: []config.Port{config.Port{Protocol: "tcp", Host: 18500, Local: 8600, Remote: 8500}}}
 
 	md, p := setupIngress(i)

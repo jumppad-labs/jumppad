@@ -8,6 +8,7 @@ require (
 	github.com/Microsoft/go-winio v0.4.14 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/containerd/containerd v1.3.2 // indirect
+	github.com/dnephin/filewatcher v0.3.2 // indirect
 	github.com/docker/docker v1.4.2-0.20181221150755-2cb26cfe9cbf
 	github.com/docker/go-connections v0.4.0
 	github.com/hashicorp/go-getter v1.4.0
@@ -23,6 +24,7 @@ require (
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
 	golang.org/x/sys v0.0.0-20191204072324-ce4227a45e2e // indirect
 	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898
+	gotest.tools/gotestsum v0.4.0 // indirect
 	helm.sh/helm/v3 v3.0.1
 	k8s.io/api v0.0.0-20191016110408-35e52d86657a
 	k8s.io/apimachinery v0.0.0-20191004115801-a2eda9f80ab8
