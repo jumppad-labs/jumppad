@@ -9,6 +9,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/go-connections/nat"
 	clients "github.com/shipyard-run/cli/pkg/clients/mocks"
@@ -45,17 +46,24 @@ func setupK3sCluster(c *config.Cluster) (*clients.MockDocker, *Cluster, func()) 
 		Return(container.ContainerCreateCreatedBody{}, nil)
 	md.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("container not found")).Once()
+	md.On("ContainerList", mock.Anything, mock.Anything).Return("volume", nil).Once()
 	md.On("ContainerList", mock.Anything, mock.Anything).Return("abc", nil).Once()
 	md.On("CopyFromContainer", mock.Anything, mock.Anything, mock.Anything).Return(
 		ioutil.NopCloser(strings.NewReader(kubeconfig)),
 		types.ContainerPathStat{},
 		nil,
 	)
+	md.On("CopyToContainer", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("ContainerLogs", mock.Anything, mock.Anything, mock.Anything).Return(
 		ioutil.NopCloser(strings.NewReader("Running kubelet")),
 		nil,
 	)
-	md.On("VolumeCreate", mock.Anything, mock.Anything).Return(types.Volume{Name: "testvolume"}, nil)
+	md.On("VolumeCreate", mock.Anything, mock.Anything).Return(types.Volume{Name: "hostname.volume"}, nil)
+
+	md.On("ImageSave", mock.Anything, mock.Anything).Return(
+		ioutil.NopCloser(strings.NewReader(kubeconfig)),
+		nil,
+	)
 
 	mk := &clients.MockKubernetes{}
 	mk.Mock.On("SetConfig", mock.Anything).Return(nil)
@@ -204,31 +212,47 @@ func TestK3sClusterPushesLocalImages(t *testing.T) {
 
 	assert.NoError(t, err)
 	md.AssertCalled(t, "VolumeCreate", mock.Anything, mock.Anything)
-	md.AssertCalled(t, "ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	md.AssertNumberOfCalls(t, "ContainerCreate", 2)
+	md.AssertNumberOfCalls(t, "ImageSave", 1)
+	md.AssertNumberOfCalls(t, "CopyToContainer", 1)
 
 	params := md.Calls[1].Arguments
 	vco := params[1].(volume.VolumeCreateBody)
 
 	assert.Equal(t, "hostname.volume", vco.Name)
 	// assert server properties
-	/*
-		params := md.Calls[3].Arguments
-		dc := params[1].(*container.Config)
-		hc := params[2].(*container.HostConfig)
-		fqdn := params[4]
-	*/
+
+	// first container create will be for the image
+	params = getCalls(&md.Mock, "ContainerCreate")[1].Arguments
+	hc := params[2].(*container.HostConfig)
+
+	// check the host mount has the images volume
+	assert.Equal(t, "hostname.volume", hc.Mounts[0].Source)
+	assert.Equal(t, "/images", hc.Mounts[0].Target)
+	assert.Equal(t, mount.TypeVolume, hc.Mounts[0].Type)
 }
 
 // removeOn is a utility function for removing Expectations from mock objects
-func removeOn(m *mock.Mock, name string) {
+func removeOn(m *mock.Mock, method string) {
 	ec := m.ExpectedCalls
 	rc := make([]*mock.Call, 0)
 
 	for _, c := range ec {
-		if c.Method != name {
+		if c.Method != method {
 			rc = append(rc, c)
 		}
 	}
 
 	m.ExpectedCalls = rc
+}
+
+func getCalls(m *mock.Mock, method string) []mock.Call {
+	rc := make([]mock.Call, 0)
+	for _, c := range m.Calls {
+		if c.Method == method {
+			rc = append(rc, c)
+		}
+	}
+
+	return rc
 }

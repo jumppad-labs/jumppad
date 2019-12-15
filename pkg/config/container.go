@@ -19,6 +19,7 @@ type Container struct {
 type Volume struct {
 	Source      string `hcl:"source"`
 	Destination string `hcl:"destination"`
+	Type        string `hcl:"type,optional"`
 }
 
 // KV is a key/value type

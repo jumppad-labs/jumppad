@@ -10,7 +10,7 @@ type Cluster struct {
 	NetworkRef *Network
 	WANRef     *Network
 	Config     []KV    `hcl:"config,block"`
-	Images     []Image `hcl:"images,block"`
+	Images     []Image `hcl:"image,block"`
 }
 
 // ClusterConfig defines arbitary config to set for the cluster
@@ -21,5 +21,5 @@ type ClusterConfig struct {
 // Image defines a docker image which will be pushed to the clusters Docker
 // registry
 type Image struct {
-	Name string `hcl:"Name"`
+	Name string `hcl:"name"`
 }

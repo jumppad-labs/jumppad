@@ -59,5 +59,5 @@ func TestContainerCreatesCorrectly(t *testing.T) {
 	assert.Equal(t, cn.Name, network.EndpointsConfig[cn.Name].NetworkID)
 
 	name := params[4].(string)
-	assert.Equal(t, FQDN(cc.Name, cn.Name), name)
+	assert.Equal(t, FQDN(cc.Name, cn), name)
 }

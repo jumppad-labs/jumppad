@@ -5,10 +5,10 @@ import (
 	"io"
 	"time"
 
-	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -91,6 +91,12 @@ func (m *MockDocker) CopyFromContainer(ctx context.Context, containerID, srcPath
 	return rc, t, args.Error(2)
 }
 
+func (m *MockDocker) CopyToContainer(ctx context.Context, container, path string, content io.Reader, options types.CopyToContainerOptions) error {
+	args := m.Called(ctx, container, path, content, options)
+
+	return args.Error(0)
+}
+
 func (m *MockDocker) NetworkList(ctx context.Context, options types.NetworkListOptions) ([]types.NetworkResource, error) {
 	args := m.Called(ctx, options)
 
@@ -131,4 +137,14 @@ func (m *MockDocker) VolumeRemove(ctx context.Context, volumeID string, force bo
 	args := m.Called(ctx, volumeID)
 
 	return args.Error(0)
+}
+
+func (m *MockDocker) ImageSave(ctx context.Context, imageIDs []string) (io.ReadCloser, error) {
+	args := m.Called(ctx, imageIDs)
+
+	if rc, ok := args.Get(0).(io.ReadCloser); ok {
+		return rc, args.Error(1)
+	}
+
+	return nil, args.Error(1)
 }
