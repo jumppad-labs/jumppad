@@ -49,7 +49,7 @@ func (c *Cluster) createK3s() error {
 	// since the server is just a container create the container config and provider
 	cc := &config.Container{}
 	cc.Name = fmt.Sprintf("server.%s", c.config.Name)
-	cc.Image = image
+	cc.Image = config.Image{Name: image}
 	cc.NetworkRef = c.config.NetworkRef
 	cc.Privileged = true // k3s must run Privlidged
 
@@ -162,12 +162,7 @@ func (c *Cluster) createK3s() error {
 	// import the images to the servers container d instance
 	// importing images means that k3s does not need to pull from a remote docker hub
 	if c.config.Images != nil && len(c.config.Images) > 0 {
-		images := []string{}
-		for _, i := range c.config.Images {
-			images = append(images, i.Name)
-		}
-
-		imageFile, err := writeLocalDockerImageToVolume(c.client, images, volID)
+		imageFile, err := writeLocalDockerImageToVolume(c.client, c.config.Images, volID)
 		if err != nil {
 			return err
 		}

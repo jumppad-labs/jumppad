@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"archive/tar"
+
 	"github.com/docker/docker/api/types"
 	"github.com/shipyard-run/cli/pkg/clients"
 	"github.com/shipyard-run/cli/pkg/config"
@@ -16,8 +17,17 @@ import (
 )
 
 // pullImage pulls a Docker image from a remote repo
-func pullImage(c clients.Docker, image string) error {
-	out, err := c.ImagePull(context.Background(), image, types.ImagePullOptions{})
+func pullImage(c clients.Docker, image config.Image) error {
+	in := makeImageCanonical(image.Name)
+	ipo := types.ImagePullOptions{}
+
+	// if the username and password is not null make an authenticated
+	// image pull
+	if image.Username != "" && image.Password != "" {
+		ipo.RegistryAuth = fmt.Sprintf(`{"Username": "%s", "Password": "%s"}`, image.Username, image.Password)
+	}
+
+	out, err := c.ImagePull(context.Background(), in, ipo)
 	if err != nil {
 		return err
 	}
@@ -45,17 +55,22 @@ func makeImageCanonical(image string) string {
 
 // writeLocalDockerImageToVolume writes a docker image to a Docker volume
 // returns the filename and an error if one occured
-func writeLocalDockerImageToVolume(c clients.Docker, images []string, volume string) (string, error) {
+func writeLocalDockerImageToVolume(c clients.Docker, images []config.Image, volume string) (string, error) {
+	// temporary slice of image names for the save command
+	ins := []string{}
+
 	// make sure that the given image has been pulled locally before saving
 	for _, i := range images {
-		err := pullImage(c, makeImageCanonical(i))
+		err := pullImage(c, i)
 		if err != nil {
 			return "", xerrors.Errorf("unable to pull image %s: %w", i, err)
 		}
+
+		ins = append(ins, i.Name)
 	}
 
 	// save the image to a local temp file
-	ir, err := c.ImageSave(context.Background(), images)
+	ir, err := c.ImageSave(context.Background(), ins)
 	if err != nil {
 		return "", xerrors.Errorf("unable to save images: %w", err)
 	}
