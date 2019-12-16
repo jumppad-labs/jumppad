@@ -71,6 +71,28 @@ var applyCmd = &cobra.Command{
 			panic(err)
 		}
 
+		// apply any env vars
+		if e.Blueprint() != nil && len(e.Blueprint().Environment) > 0 {
+			fmt.Println("Setting environment variables:")
+			fmt.Println("")
+			ef, err := NewEnv(fmt.Sprintf("%s/env.var", StateDir()))
+			if err != nil {
+				panic(err)
+			}
+			defer ef.Close()
+
+			for _, e := range e.Blueprint().Environment {
+				fmt.Printf("export %s=%s\n", e.Key, e.Value)
+				err := ef.Set(e.Key, e.Value)
+				if err != nil {
+					panic(err)
+				}
+			}
+
+			fmt.Println("")
+			fmt.Println("environment variables can be restored to previous values when using the `yard delete` command")
+		}
+
 		// open any browser windows
 		if e.Blueprint() != nil {
 			openCommand := "open"

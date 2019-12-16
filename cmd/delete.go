@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/shipyard-run/cli/pkg/shipyard"
@@ -24,6 +25,21 @@ var deleteCmd = &cobra.Command{
 		err = e.Destroy()
 		if err != nil {
 			panic(err)
+		}
+
+		// remove the environment varibles
+		if e.Blueprint() != nil && len(e.Blueprint().Environment) > 0 {
+			fmt.Println("restoring environment variables")
+			ef, err := NewEnv(fmt.Sprintf("%s/env.var", StateDir()))
+			if err != nil {
+				panic(err)
+			}
+			defer ef.Close()
+
+			err = ef.Clear()
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		// delete the contents of the state folder
