@@ -39,9 +39,13 @@ func (h *Helm) Create() error {
 
 	settings := cli.EnvSettings{}
 	p := getter.All(&settings)
-	vo := values.Options{
-		// ValueFiles: []string{""}
+	vo := values.Options{}
+
+	// if we have an overriden values file set it
+	if h.config.Values != "" {
+		vo.ValueFiles = []string{h.config.Values}
 	}
+
 	vals, err := vo.MergeValues(p)
 	if err != nil {
 		return err

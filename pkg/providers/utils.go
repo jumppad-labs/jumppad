@@ -4,11 +4,17 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/shipyard-run/cli/pkg/config"
 )
 
 // FQDN generate the name of a docker container
-func FQDN(name, networkName string) string {
-	return fmt.Sprintf("%s.%s.shipyard", name, networkName)
+func FQDN(name string, net *config.Network) string {
+	if net == nil {
+		return fmt.Sprintf("%s.shipyard", name)
+	}
+
+	return fmt.Sprintf("%s.%s.shipyard", name, net.Name)
 }
 
 // CreateKubeConfigPath creates the file path for the KubeConfig file when

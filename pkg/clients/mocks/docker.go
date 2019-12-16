@@ -5,10 +5,10 @@ import (
 	"io"
 	"time"
 
-	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -79,6 +79,36 @@ func (m *MockDocker) ContainerLogs(ctx context.Context, containerID string, opti
 	return rc, args.Error(1)
 }
 
+func (m *MockDocker) ContainerExecCreate(ctx context.Context, container string, config types.ExecConfig) (types.IDResponse, error) {
+	args := m.Called(ctx, container, config)
+
+	if idr, ok := args.Get(0).(types.IDResponse); ok {
+		return idr, args.Error(1)
+	}
+
+	return types.IDResponse{}, args.Error(1)
+}
+
+func (m *MockDocker) ContainerExecStart(ctx context.Context, execID string, config types.ExecStartCheck) error {
+	args := m.Called(ctx, execID, config)
+
+	return args.Error(0)
+}
+
+func (m *MockDocker) ContainerExecAttach(ctx context.Context, execID string, config types.ExecStartCheck) (types.HijackedResponse, error) {
+	return types.HijackedResponse{}, nil
+}
+
+func (m *MockDocker) ContainerExecInspect(ctx context.Context, execID string) (types.ContainerExecInspect, error) {
+	args := m.Called(ctx, execID)
+
+	if idr, ok := args.Get(0).(types.ContainerExecInspect); ok {
+		return idr, args.Error(1)
+	}
+
+	return types.ContainerExecInspect{}, args.Error(1)
+}
+
 func (m *MockDocker) CopyFromContainer(ctx context.Context, containerID, srcPath string) (io.ReadCloser, types.ContainerPathStat, error) {
 	args := m.Called(ctx, containerID, srcPath)
 
@@ -89,6 +119,12 @@ func (m *MockDocker) CopyFromContainer(ctx context.Context, containerID, srcPath
 	}
 
 	return rc, t, args.Error(2)
+}
+
+func (m *MockDocker) CopyToContainer(ctx context.Context, container, path string, content io.Reader, options types.CopyToContainerOptions) error {
+	args := m.Called(ctx, container, path, content, options)
+
+	return args.Error(0)
 }
 
 func (m *MockDocker) NetworkList(ctx context.Context, options types.NetworkListOptions) ([]types.NetworkResource, error) {
@@ -131,4 +167,20 @@ func (m *MockDocker) VolumeRemove(ctx context.Context, volumeID string, force bo
 	args := m.Called(ctx, volumeID)
 
 	return args.Error(0)
+}
+
+func (m *MockDocker) ImageSave(ctx context.Context, imageIDs []string) (io.ReadCloser, error) {
+	args := m.Called(ctx, imageIDs)
+
+	if rc, ok := args.Get(0).(io.ReadCloser); ok {
+		return rc, args.Error(1)
+	}
+
+	return nil, args.Error(1)
+}
+
+func (m *MockDocker) ImageList(ctx context.Context, options types.ImageListOptions) ([]types.ImageSummary, error) {
+	args := m.Called(ctx, options)
+
+	return []types.ImageSummary{}, args.Error(1)
 }

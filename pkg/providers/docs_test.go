@@ -15,6 +15,7 @@ import (
 
 func setupDocs(c *config.Docs) (*clients.MockDocker, *Docs) {
 	md := &clients.MockDocker{}
+	md.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 	md.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).Return(
 		ioutil.NopCloser(strings.NewReader("")),
 		nil,
@@ -45,7 +46,7 @@ func TestCreatesDocumentationContainer(t *testing.T) {
 	md.AssertCalled(t, "ContainerStart", mock.Anything, mock.Anything, mock.Anything)
 
 	// second call is create
-	params := md.Calls[1].Arguments
+	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
 	name := params[4].(string)
 	hc := params[2].(*container.HostConfig)
 	dc := params[1].(*container.Config)

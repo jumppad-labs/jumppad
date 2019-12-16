@@ -5,4 +5,8 @@ cluster "k3s" {
   nodes = 1 // default
 
   network = "network.cloud"
+
+  image {
+    name = "consul:1.6.1"
+  }
 }

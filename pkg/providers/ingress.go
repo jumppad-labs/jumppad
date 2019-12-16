@@ -25,7 +25,7 @@ func (i *Ingress) Create() error {
 
 	switch v := i.config.TargetRef.(type) {
 	case *config.Container:
-		serviceName = FQDN(v.Name, v.NetworkRef.Name)
+		serviceName = FQDN(v.Name, v.NetworkRef)
 	case *config.Cluster:
 		serviceName = i.config.Service
 
@@ -59,7 +59,7 @@ func (i *Ingress) Create() error {
 		Name:        i.config.Name,
 		NetworkRef:  i.config.NetworkRef,
 		Ports:       i.config.Ports,
-		Image:       image,
+		Image:       config.Image{Name: image},
 		Command:     command,
 		Volumes:     volumes,
 		Environment: env,

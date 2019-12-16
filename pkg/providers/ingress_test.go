@@ -16,6 +16,7 @@ import (
 
 func setupIngress(c *config.Ingress) (*clients.MockDocker, *Ingress) {
 	md := &clients.MockDocker{}
+	md.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 	md.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).Return(
 		ioutil.NopCloser(strings.NewReader("hello world")),
 		nil,
@@ -29,7 +30,7 @@ func setupIngress(c *config.Ingress) (*clients.MockDocker, *Ingress) {
 
 func TestCreatesIngressWithValidOptions(t *testing.T) {
 	cn := &config.Network{Name: "testnet", Subnet: "192.168.4.0/24"}
-	cc := &config.Container{Name: "testcontainer", Image: "consul:v1.6.1", NetworkRef: cn, Volumes: []config.Volume{config.Volume{Source: "/mnt/data", Destination: "/data"}}}
+	cc := &config.Container{Name: "testcontainer", Image: config.Image{Name: "consul:v1.6.1"}, NetworkRef: cn, Volumes: []config.Volume{config.Volume{Source: "/mnt/data", Destination: "/data"}}}
 	i := &config.Ingress{Name: "testingress", TargetRef: cc, NetworkRef: cn, Ports: []config.Port{config.Port{Protocol: "tcp", Host: 18500, Local: 8600, Remote: 8500}}}
 
 	md, p := setupIngress(i)
@@ -41,7 +42,7 @@ func TestCreatesIngressWithValidOptions(t *testing.T) {
 	md.AssertCalled(t, "ContainerStart", mock.Anything, mock.Anything, mock.Anything)
 
 	// second call is create
-	params := md.Calls[1].Arguments
+	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
 	name := params[4].(string)
 	host := params[2].(*container.HostConfig)
 	cfg := params[1].(*container.Config)
@@ -70,7 +71,7 @@ func TestCreatesIngressWithValidOptions(t *testing.T) {
 
 func TestCreatesIngressWithContainerOptions(t *testing.T) {
 	cn := &config.Network{Name: "testnet", Subnet: "192.168.4.0/24"}
-	cc := &config.Container{Name: "testcontainer", Image: "consul:v1.6.1", NetworkRef: cn, Volumes: []config.Volume{config.Volume{Source: "/mnt/data", Destination: "/data"}}}
+	cc := &config.Container{Name: "testcontainer", Image: config.Image{Name: "consul:v1.6.1"}, NetworkRef: cn, Volumes: []config.Volume{config.Volume{Source: "/mnt/data", Destination: "/data"}}}
 	i := &config.Ingress{Name: "testingress", TargetRef: cc, NetworkRef: cn, Ports: []config.Port{config.Port{Protocol: "tcp", Host: 18500, Local: 8600, Remote: 8500}}}
 
 	md, p := setupIngress(i)
@@ -79,7 +80,7 @@ func TestCreatesIngressWithContainerOptions(t *testing.T) {
 	assert.NoError(t, err)
 
 	// second call is create
-	params := md.Calls[1].Arguments
+	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
 	name := params[4].(string)
 	cfg := params[1].(*container.Config)
 	network := params[3].(*network.NetworkingConfig)
@@ -104,7 +105,7 @@ func TestCreatesIngressWithK8sClusterOptions(t *testing.T) {
 	assert.NoError(t, err)
 
 	// second call is create
-	params := md.Calls[1].Arguments
+	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
 	name := params[4].(string)
 	cfg := params[1].(*container.Config)
 	host := params[2].(*container.HostConfig)

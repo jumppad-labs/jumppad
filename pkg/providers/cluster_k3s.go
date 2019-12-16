@@ -37,7 +37,7 @@ func (c *Cluster) createK3s() error {
 	}
 
 	// create the volume for the cluster
-	_, err = c.createVolume()
+	volID, err := c.createVolume()
 	if err != nil {
 		return err
 	}
@@ -49,9 +49,18 @@ func (c *Cluster) createK3s() error {
 	// since the server is just a container create the container config and provider
 	cc := &config.Container{}
 	cc.Name = fmt.Sprintf("server.%s", c.config.Name)
-	cc.Image = image
+	cc.Image = config.Image{Name: image}
 	cc.NetworkRef = c.config.NetworkRef
 	cc.Privileged = true // k3s must run Privlidged
+
+	// set the volume mount for the images
+	cc.Volumes = []config.Volume{
+		config.Volume{
+			Source:      volID,
+			Destination: "/images",
+			Type:        "volume",
+		},
+	}
 
 	// set the environment variables for the K3S_KUBECONFIG_OUTPUT and K3S_CLUSTER_SECRET
 	cc.Environment = []config.KV{
@@ -150,6 +159,27 @@ func (c *Cluster) createK3s() error {
 		time.Sleep(2 * time.Second)
 	}
 
+	// import the images to the servers container d instance
+	// importing images means that k3s does not need to pull from a remote docker hub
+	if c.config.Images != nil && len(c.config.Images) > 0 {
+		imageFile, err := writeLocalDockerImageToVolume(c.client, c.config.Images, volID)
+		if err != nil {
+			return err
+		}
+
+		// import the image
+		//ctr image import filename
+		err = execCommand(c.client, id, []string{"ctr", "image", "import", imageFile})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ensure that the k3s server, workers and volume is correctly disposed
+func (c *Cluster) deleteK3s() error {
 	return nil
 }
 
@@ -237,7 +267,7 @@ func (c *Cluster) createDockerKubeConfig(kubeconfig string) error {
 	newConfig := strings.Replace(
 		string(readBytes),
 		"server: https://127.0.0.1",
-		fmt.Sprintf("server: https://server.%s", FQDN(c.config.Name, c.config.NetworkRef.Name)),
+		fmt.Sprintf("server: https://server.%s", FQDN(c.config.Name, c.config.NetworkRef)),
 		-1,
 	)
 

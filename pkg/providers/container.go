@@ -3,10 +3,7 @@ package providers
 import (
 	"context"
 	"fmt"
-	"io"
-	"os"
 	"strconv"
-	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -46,7 +43,7 @@ func (c *Container) Create() error {
 	// create the container config
 	dc := &container.Config{
 		Hostname:     c.config.Name,
-		Image:        c.config.Image,
+		Image:        c.config.Image.Name,
 		Env:          env,
 		Cmd:          c.config.Command,
 		AttachStdin:  true,
@@ -60,14 +57,26 @@ func (c *Container) Create() error {
 
 	// attach the container to the network
 	nc.EndpointsConfig = make(map[string]*network.EndpointSettings)
-	nc.EndpointsConfig[c.config.NetworkRef.Name] = &network.EndpointSettings{NetworkID: c.config.NetworkRef.Name}
+	if c.config.NetworkRef != nil {
+		nc.EndpointsConfig[c.config.NetworkRef.Name] = &network.EndpointSettings{NetworkID: c.config.NetworkRef.Name}
+	}
 
 	// Create volume mounts
 	mounts := make([]mount.Mount, 0)
 	for _, vc := range c.config.Volumes {
 
+		t := mount.TypeBind
+		switch vc.Type {
+		case "bind":
+			t = mount.TypeBind
+		case "volume":
+			t = mount.TypeVolume
+		case "tmpfs":
+			t = mount.TypeTmpfs
+		}
+
 		mounts = append(mounts, mount.Mount{
-			Type:   mount.TypeBind,
+			Type:   t,
 			Source: vc.Source,
 			Target: vc.Destination,
 		})
@@ -84,27 +93,17 @@ func (c *Container) Create() error {
 	hc.Privileged = c.config.Privileged
 
 	// make sure the image name is canonical
-	image := c.config.Image
-	imageParts := strings.Split(image, "/")
-	switch len(imageParts) {
-	case 1:
-		image = fmt.Sprintf("docker.io/library/%s", imageParts[0])
-	case 2:
-		image = fmt.Sprintf("docker.io/%s/%s", imageParts[0], imageParts[1])
-	}
-
-	out, err := c.client.ImagePull(context.Background(), image, types.ImagePullOptions{})
+	err := pullImage(c.client, c.config.Image)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	io.Copy(os.Stdout, out)
 
 	cont, err := c.client.ContainerCreate(
 		context.Background(),
 		dc,
 		hc,
 		nc,
-		FQDN(c.config.Name, c.config.NetworkRef.Name),
+		FQDN(c.config.Name, c.config.NetworkRef),
 	)
 	if err != nil {
 		return err
@@ -130,7 +129,10 @@ func (c *Container) Destroy() error {
 
 // Lookup the containers ID based on the config
 func (c *Container) Lookup() (string, error) {
-	name := FQDN(c.config.Name, c.config.NetworkRef.Name)
+	name := c.config.Name
+	if c.config.NetworkRef != nil {
+		name = FQDN(c.config.Name, c.config.NetworkRef)
+	}
 
 	args := filters.NewArgs()
 	args.Add("name", name)

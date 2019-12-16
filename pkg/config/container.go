@@ -3,7 +3,7 @@ package config
 // Container defines a structure for creating Docker containers
 type Container struct {
 	Name        string
-	Image       string   `hcl:"image"`
+	Image       Image    `hcl:"image,block"`
 	Command     []string `hcl:"command,optional"`
 	Environment []KV     `hcl:"env,block"`
 	Volumes     []Volume `hcl:"volume,block"`
@@ -19,6 +19,7 @@ type Container struct {
 type Volume struct {
 	Source      string `hcl:"source"`
 	Destination string `hcl:"destination"`
+	Type        string `hcl:"type,optional"`
 }
 
 // KV is a key/value type

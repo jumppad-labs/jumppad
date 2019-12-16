@@ -15,6 +15,7 @@ import (
 
 func setupContainer(c *config.Container) (*clients.MockDocker, *Container) {
 	md := &clients.MockDocker{}
+	md.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 	md.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).Return(
 		ioutil.NopCloser(strings.NewReader("hello world")),
 		nil,
@@ -28,7 +29,7 @@ func setupContainer(c *config.Container) (*clients.MockDocker, *Container) {
 
 func TestContainerCreatesCorrectly(t *testing.T) {
 	cn := &config.Network{Name: "testnet", Subnet: "192.168.4.0/24"}
-	cc := &config.Container{Name: "testcontainer", Image: "consul:v1.6.1", NetworkRef: cn, Volumes: []config.Volume{config.Volume{Source: "/mnt/data", Destination: "/data"}}}
+	cc := &config.Container{Name: "testcontainer", Image: config.Image{Name: "consul:v1.6.1"}, NetworkRef: cn, Volumes: []config.Volume{config.Volume{Source: "/mnt/data", Destination: "/data"}}}
 	md, p := setupContainer(cc)
 
 	err := p.Create()
@@ -37,8 +38,7 @@ func TestContainerCreatesCorrectly(t *testing.T) {
 	md.AssertCalled(t, "ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	md.AssertCalled(t, "ContainerStart", mock.Anything, mock.Anything, mock.Anything)
 
-	// second call is create
-	params := md.Calls[1].Arguments
+	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
 	host := params[2].(*container.HostConfig)
 	network := params[3].(*network.NetworkingConfig)
 
@@ -59,5 +59,5 @@ func TestContainerCreatesCorrectly(t *testing.T) {
 	assert.Equal(t, cn.Name, network.EndpointsConfig[cn.Name].NetworkID)
 
 	name := params[4].(string)
-	assert.Equal(t, FQDN(cc.Name, cn.Name), name)
+	assert.Equal(t, FQDN(cc.Name, cn), name)
 }

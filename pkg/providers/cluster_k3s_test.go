@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/go-connections/nat"
 	clients "github.com/shipyard-run/cli/pkg/clients/mocks"
@@ -37,6 +39,7 @@ func setupK3sCluster(c *config.Cluster) (*clients.MockDocker, *Cluster, func()) 
 	os.Setenv("HOME", "/tmp")
 
 	md := &clients.MockDocker{}
+	md.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 	md.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).Return(
 		ioutil.NopCloser(strings.NewReader("")),
 		nil,
@@ -44,18 +47,31 @@ func setupK3sCluster(c *config.Cluster) (*clients.MockDocker, *Cluster, func()) 
 	md.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(container.ContainerCreateCreatedBody{}, nil)
 	md.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	md.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("container not found")).Once()
-	md.On("ContainerList", mock.Anything, mock.Anything).Return("abc", nil).Once()
+	md.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{{ID: "volume"}}, nil).Once()
+	md.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{{ID: "cluster"}}, nil).Once()
+
+	md.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(types.IDResponse{ID: "abc"}, nil)
+	md.On("ContainerExecStart", mock.Anything, "abc", mock.Anything).Return(nil)
+	md.On("ContainerExecInspect", mock.Anything, "abc").Return(nil, nil)
+
 	md.On("CopyFromContainer", mock.Anything, mock.Anything, mock.Anything).Return(
 		ioutil.NopCloser(strings.NewReader(kubeconfig)),
 		types.ContainerPathStat{},
 		nil,
 	)
+	md.On("CopyToContainer", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("ContainerLogs", mock.Anything, mock.Anything, mock.Anything).Return(
 		ioutil.NopCloser(strings.NewReader("Running kubelet")),
 		nil,
 	)
-	md.On("VolumeCreate", mock.Anything, mock.Anything).Return(types.Volume{Name: "testvolume"}, nil)
+	md.On("VolumeCreate", mock.Anything, mock.Anything).Return(types.Volume{Name: "hostname.volume"}, nil)
+
+	md.On("ImageSave", mock.Anything, mock.Anything).Return(
+		ioutil.NopCloser(strings.NewReader(kubeconfig)),
+		nil,
+	)
 
 	mk := &clients.MockKubernetes{}
 	mk.Mock.On("SetConfig", mock.Anything).Return(nil)
@@ -126,7 +142,7 @@ func TestK3sClusterServerCreatesWithCorrectOptions(t *testing.T) {
 	md.AssertCalled(t, "ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 
 	// assert server properties
-	params := md.Calls[3].Arguments
+	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
 	dc := params[1].(*container.Config)
 	hc := params[2].(*container.HostConfig)
 	fqdn := params[4]
@@ -192,7 +208,9 @@ func TestK3sClusterPushesLocalImages(t *testing.T) {
 		NetworkRef: cn,
 		Images: []config.Image{
 			config.Image{
-				Name: "myrepo/myimage:latest",
+				Name:     "myrepo/myimage:latest",
+				Username: "myuser",
+				Password: "mypassword",
 			},
 		},
 	}
@@ -201,34 +219,83 @@ func TestK3sClusterPushesLocalImages(t *testing.T) {
 	defer cleanup()
 
 	err := p.Create()
-
 	assert.NoError(t, err)
+
+	// creating a cluster should create an images volume
 	md.AssertCalled(t, "VolumeCreate", mock.Anything, mock.Anything)
-	md.AssertCalled(t, "ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	// Calls container create twice, once for the server
+	// once for copying the images
+	md.AssertNumberOfCalls(t, "ContainerCreate", 2)
+	// Pulls a remote image with username and password
+	// called 3 times, k3s, volume, and image to push
+	md.AssertNumberOfCalls(t, "ImagePull", 3)
+	// Calls ImageSave to save an array of images to the Container
+	md.AssertNumberOfCalls(t, "ImageSave", 1)
+	// Calls CopyToContainer to copy the saved tar file to the images volume
+	md.AssertNumberOfCalls(t, "CopyToContainer", 1)
+	// ExecCreate called when importing image with `ctr`
+	md.AssertNumberOfCalls(t, "ContainerExecCreate", 1)
+	md.AssertNumberOfCalls(t, "ContainerExecStart", 1)
+	md.AssertNumberOfCalls(t, "ContainerExecInspect", 1)
 
 	params := md.Calls[1].Arguments
 	vco := params[1].(volume.VolumeCreateBody)
 
 	assert.Equal(t, "hostname.volume", vco.Name)
 	// assert server properties
-	/*
-		params := md.Calls[3].Arguments
-		dc := params[1].(*container.Config)
-		hc := params[2].(*container.HostConfig)
-		fqdn := params[4]
-	*/
+
+	// first container create will be for the image
+	params = getCalls(&md.Mock, "ContainerCreate")[0].Arguments
+	hc := params[2].(*container.HostConfig)
+
+	execParams := getCalls(&md.Mock, "ContainerExecCreate")[0].Arguments
+	name := execParams[1].(string)
+	ex := execParams[2].(types.ExecConfig)
+
+	// second container pulled will be our image to load
+	ipParams := getCalls(&md.Mock, "ImagePull")[1].Arguments
+	in := ipParams[1].(string)
+	ipo := ipParams[2].(types.ImagePullOptions)
+
+	// check the cluster has the images volume
+	assert.Equal(t, "hostname.volume", hc.Mounts[0].Source)
+	assert.Equal(t, "/images", hc.Mounts[0].Target)
+	assert.Equal(t, mount.TypeVolume, hc.Mounts[0].Type)
+
+	// check that the image is pulled correctly with valid credentials
+	creds, err := base64.StdEncoding.DecodeString(ipo.RegistryAuth)
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{"Username": "myuser", "Password": "mypassword"}`, string(creds))
+	assert.Equal(t, "docker.io/"+c.Images[0].Name, in)
+
+	// check the import statement
+	assert.Equal(t, "volume", name)
+	assert.Equal(t, "ctr", ex.Cmd[0])
+	assert.Equal(t, "image", ex.Cmd[1])
+	assert.Equal(t, "import", ex.Cmd[2])
 }
 
 // removeOn is a utility function for removing Expectations from mock objects
-func removeOn(m *mock.Mock, name string) {
+func removeOn(m *mock.Mock, method string) {
 	ec := m.ExpectedCalls
 	rc := make([]*mock.Call, 0)
 
 	for _, c := range ec {
-		if c.Method != name {
+		if c.Method != method {
 			rc = append(rc, c)
 		}
 	}
 
 	m.ExpectedCalls = rc
+}
+
+func getCalls(m *mock.Mock, method string) []mock.Call {
+	rc := make([]mock.Call, 0)
+	for _, c := range m.Calls {
+		if c.Method == method {
+			rc = append(rc, c)
+		}
+	}
+
+	return rc
 }
