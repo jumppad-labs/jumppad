@@ -22,7 +22,7 @@ func (i *Docs) Create() error {
 	cc := &config.Container{}
 	cc.Name = i.config.Name
 	cc.NetworkRef = i.config.WANRef
-	cc.Image = "shipyardrun/docs:latest"
+	cc.Image = config.Image{Name: "shipyardrun/docs:latest"}
 
 	cc.Volumes = []config.Volume{
 		config.Volume{

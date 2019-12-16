@@ -79,6 +79,32 @@ func (m *MockDocker) ContainerLogs(ctx context.Context, containerID string, opti
 	return rc, args.Error(1)
 }
 
+func (m *MockDocker) ContainerExecCreate(ctx context.Context, container string, config types.ExecConfig) (types.IDResponse, error) {
+	args := m.Called(ctx, container, config)
+
+	if idr, ok := args.Get(0).(types.IDResponse); ok {
+		return idr, args.Error(1)
+	}
+
+	return types.IDResponse{}, args.Error(1)
+}
+
+func (m *MockDocker) ContainerExecStart(ctx context.Context, execID string, config types.ExecStartCheck) error {
+	args := m.Called(ctx, execID, config)
+
+	return args.Error(0)
+}
+
+func (m *MockDocker) ContainerExecInspect(ctx context.Context, execID string) (types.ContainerExecInspect, error) {
+	args := m.Called(ctx, execID)
+
+	if idr, ok := args.Get(0).(types.ContainerExecInspect); ok {
+		return idr, args.Error(1)
+	}
+
+	return types.ContainerExecInspect{}, args.Error(1)
+}
+
 func (m *MockDocker) CopyFromContainer(ctx context.Context, containerID, srcPath string) (io.ReadCloser, types.ContainerPathStat, error) {
 	args := m.Called(ctx, containerID, srcPath)
 

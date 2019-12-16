@@ -28,7 +28,7 @@ func setupContainer(c *config.Container) (*clients.MockDocker, *Container) {
 
 func TestContainerCreatesCorrectly(t *testing.T) {
 	cn := &config.Network{Name: "testnet", Subnet: "192.168.4.0/24"}
-	cc := &config.Container{Name: "testcontainer", Image: "consul:v1.6.1", NetworkRef: cn, Volumes: []config.Volume{config.Volume{Source: "/mnt/data", Destination: "/data"}}}
+	cc := &config.Container{Name: "testcontainer", Image: config.Image{Name: "consul:v1.6.1"}, NetworkRef: cn, Volumes: []config.Volume{config.Volume{Source: "/mnt/data", Destination: "/data"}}}
 	md, p := setupContainer(cc)
 
 	err := p.Create()

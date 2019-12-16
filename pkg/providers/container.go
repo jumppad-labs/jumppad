@@ -43,7 +43,7 @@ func (c *Container) Create() error {
 	// create the container config
 	dc := &container.Config{
 		Hostname:     c.config.Name,
-		Image:        c.config.Image,
+		Image:        c.config.Image.Name,
 		Env:          env,
 		Cmd:          c.config.Command,
 		AttachStdin:  true,
@@ -93,8 +93,7 @@ func (c *Container) Create() error {
 	hc.Privileged = c.config.Privileged
 
 	// make sure the image name is canonical
-	image := makeImageCanonical(c.config.Image)
-	err := pullImage(c.client, image)
+	err := pullImage(c.client, c.config.Image)
 	if err != nil {
 		return err
 	}

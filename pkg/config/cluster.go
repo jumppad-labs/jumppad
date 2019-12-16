@@ -17,9 +17,3 @@ type Cluster struct {
 type ClusterConfig struct {
 	ConsulHTTPAddr string `hcl:"consul_http_addr,optional"`
 }
-
-// Image defines a docker image which will be pushed to the clusters Docker
-// registry
-type Image struct {
-	Name string `hcl:"name"`
-}

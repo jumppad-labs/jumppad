@@ -45,9 +45,15 @@ func setupK3sCluster(c *config.Cluster) (*clients.MockDocker, *Cluster, func()) 
 	md.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(container.ContainerCreateCreatedBody{}, nil)
 	md.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	md.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("container not found")).Once()
-	md.On("ContainerList", mock.Anything, mock.Anything).Return("volume", nil).Once()
-	md.On("ContainerList", mock.Anything, mock.Anything).Return("abc", nil).Once()
+	md.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{{ID: "volume"}}, nil).Once()
+	md.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{{ID: "cluster"}}, nil).Once()
+
+	md.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(types.IDResponse{ID: "abc"}, nil)
+	md.On("ContainerExecStart", mock.Anything, "abc", mock.Anything).Return(nil)
+	md.On("ContainerExecInspect", mock.Anything, "abc").Return(nil, nil)
+
 	md.On("CopyFromContainer", mock.Anything, mock.Anything, mock.Anything).Return(
 		ioutil.NopCloser(strings.NewReader(kubeconfig)),
 		types.ContainerPathStat{},
@@ -212,9 +218,18 @@ func TestK3sClusterPushesLocalImages(t *testing.T) {
 
 	assert.NoError(t, err)
 	md.AssertCalled(t, "VolumeCreate", mock.Anything, mock.Anything)
+
+	// Calls container create twice, once for the server
+	// once for copying the images
 	md.AssertNumberOfCalls(t, "ContainerCreate", 2)
+	// Calls ImageSave to save an array of images to the Container
 	md.AssertNumberOfCalls(t, "ImageSave", 1)
+	// Calls CopyToContainer to copy the saved tar file to the images volume
 	md.AssertNumberOfCalls(t, "CopyToContainer", 1)
+	// ExecCreate called when importing image with `ctr`
+	md.AssertNumberOfCalls(t, "ContainerExecCreate", 1)
+	md.AssertNumberOfCalls(t, "ContainerExecStart", 1)
+	md.AssertNumberOfCalls(t, "ContainerExecInspect", 1)
 
 	params := md.Calls[1].Arguments
 	vco := params[1].(volume.VolumeCreateBody)
@@ -226,10 +241,19 @@ func TestK3sClusterPushesLocalImages(t *testing.T) {
 	params = getCalls(&md.Mock, "ContainerCreate")[1].Arguments
 	hc := params[2].(*container.HostConfig)
 
+	execParams := getCalls(&md.Mock, "ContainerExecCreate")[0].Arguments
+	name := execParams[1].(string)
+	ex := execParams[2].(types.ExecConfig)
+
 	// check the host mount has the images volume
 	assert.Equal(t, "hostname.volume", hc.Mounts[1].Source)
 	assert.Equal(t, "/images", hc.Mounts[0].Target)
 	assert.Equal(t, mount.TypeVolume, hc.Mounts[0].Type)
+
+	// check the import statement
+	assert.Equal(t, "volume", name)
+	assert.Equal(t, "ctr", ex.Cmd[0])
+	assert.Equal(t, "import", ex.Cmd[1])
 }
 
 // removeOn is a utility function for removing Expectations from mock objects

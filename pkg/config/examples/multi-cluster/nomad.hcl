@@ -1,5 +1,8 @@
 container "consul_nomad" {
-  image   = "consul:1.6.1"
+  image   {
+    name = "consul:1.6.1"
+  }
+
   command = ["consul", "agent", "-config-file=/config/consul.hcl"]
 
   volume {

@@ -59,7 +59,7 @@ func (i *Ingress) Create() error {
 		Name:        i.config.Name,
 		NetworkRef:  i.config.NetworkRef,
 		Ports:       i.config.Ports,
-		Image:       image,
+		Image:       config.Image{Name: image},
 		Command:     command,
 		Volumes:     volumes,
 		Environment: env,
