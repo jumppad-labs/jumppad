@@ -2,6 +2,7 @@ package providers
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -11,6 +12,7 @@ import (
 	"archive/tar"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/shipyard-run/cli/pkg/clients"
 	"github.com/shipyard-run/cli/pkg/config"
 	"golang.org/x/xerrors"
@@ -19,12 +21,32 @@ import (
 // pullImage pulls a Docker image from a remote repo
 func pullImage(c clients.Docker, image config.Image) error {
 	in := makeImageCanonical(image.Name)
+
+	args := filters.NewArgs()
+	args.Add("reference", image.Name)
+
+	// only pull if image is not in current registry
+	sum, err := c.ImageList(context.Background(), types.ImageListOptions{Filters: args})
+	if err != nil {
+		return xerrors.Errorf("unable to list images in local Docker cache: %w", err)
+	}
+
+	// if we have images do not pull
+	if len(sum) > 0 {
+		return nil
+	}
+
 	ipo := types.ImagePullOptions{}
 
 	// if the username and password is not null make an authenticated
 	// image pull
 	if image.Username != "" && image.Password != "" {
-		ipo.RegistryAuth = fmt.Sprintf(`{"Username": "%s", "Password": "%s"}`, image.Username, image.Password)
+		// credentials are a json string and need to be bas64 encoded
+		ipo.RegistryAuth = base64.StdEncoding.EncodeToString(
+			[]byte(
+				fmt.Sprintf(`{"Username": "%s", "Password": "%s"}`, image.Username, image.Password),
+			),
+		)
 	}
 
 	out, err := c.ImagePull(context.Background(), in, ipo)
@@ -167,12 +189,27 @@ func writeLocalDockerImageToVolume(c clients.Docker, images []config.Image, volu
 // execute a command in a container
 func execCommand(c clients.Docker, container string, command []string) error {
 	id, err := c.ContainerExecCreate(context.Background(), container, types.ExecConfig{
-		Cmd:        command,
-		WorkingDir: "/",
+		Cmd:          command,
+		WorkingDir:   "/",
+		AttachStdout: true,
+		AttachStderr: true,
 	})
 	if err != nil {
 		return xerrors.Errorf("unable to create container exec: %w", err)
 	}
+
+	// to get logs from an attach
+	/*
+		stream, err := c.ContainerExecAttach(context.Background(), id.ID, types.ExecStartCheck{})
+		if err != nil {
+			return xerrors.Errorf("unable to start exec process: %w", err)
+		}
+		defer stream.Close()
+
+		go func() {
+			io.Copy(os.Stderr, stream.Reader)
+		}()
+	*/
 
 	err = c.ContainerExecStart(context.Background(), id.ID, types.ExecStartCheck{})
 	if err != nil {
@@ -186,12 +223,14 @@ func execCommand(c clients.Docker, container string, command []string) error {
 			return xerrors.Errorf("unable to determine status of exec process: %w", err)
 		}
 
+		fmt.Println(i)
+
 		if !i.Running {
-			if i.ExitCode != 0 {
-				return xerrors.Errorf("container exec failed with exit code %d", i.ExitCode)
+			if i.ExitCode == 0 {
+				return nil
 			}
 
-			return nil
+			return xerrors.Errorf("container exec failed with exit code %d", i.ExitCode)
 		}
 
 		time.Sleep(1 * time.Second)

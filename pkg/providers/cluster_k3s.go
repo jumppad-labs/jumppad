@@ -169,9 +169,9 @@ func (c *Cluster) createK3s() error {
 
 		// import the image
 		//ctr image import filename
-		err = execCommand(c.client, id, []string{"ctr", "import", imageFile})
+		err = execCommand(c.client, id, []string{"ctr", "image", "import", imageFile})
 		if err != nil {
-
+			return err
 		}
 	}
 

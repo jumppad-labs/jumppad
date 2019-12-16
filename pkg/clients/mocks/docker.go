@@ -95,6 +95,10 @@ func (m *MockDocker) ContainerExecStart(ctx context.Context, execID string, conf
 	return args.Error(0)
 }
 
+func (m *MockDocker) ContainerExecAttach(ctx context.Context, execID string, config types.ExecStartCheck) (types.HijackedResponse, error) {
+	return types.HijackedResponse{}, nil
+}
+
 func (m *MockDocker) ContainerExecInspect(ctx context.Context, execID string) (types.ContainerExecInspect, error) {
 	args := m.Called(ctx, execID)
 
@@ -173,4 +177,10 @@ func (m *MockDocker) ImageSave(ctx context.Context, imageIDs []string) (io.ReadC
 	}
 
 	return nil, args.Error(1)
+}
+
+func (m *MockDocker) ImageList(ctx context.Context, options types.ImageListOptions) ([]types.ImageSummary, error) {
+	args := m.Called(ctx, options)
+
+	return []types.ImageSummary{}, args.Error(1)
 }

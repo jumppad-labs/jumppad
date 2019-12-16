@@ -16,6 +16,7 @@ import (
 
 func setupIngress(c *config.Ingress) (*clients.MockDocker, *Ingress) {
 	md := &clients.MockDocker{}
+	md.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 	md.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).Return(
 		ioutil.NopCloser(strings.NewReader("hello world")),
 		nil,
@@ -41,7 +42,7 @@ func TestCreatesIngressWithValidOptions(t *testing.T) {
 	md.AssertCalled(t, "ContainerStart", mock.Anything, mock.Anything, mock.Anything)
 
 	// second call is create
-	params := md.Calls[1].Arguments
+	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
 	name := params[4].(string)
 	host := params[2].(*container.HostConfig)
 	cfg := params[1].(*container.Config)
@@ -79,7 +80,7 @@ func TestCreatesIngressWithContainerOptions(t *testing.T) {
 	assert.NoError(t, err)
 
 	// second call is create
-	params := md.Calls[1].Arguments
+	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
 	name := params[4].(string)
 	cfg := params[1].(*container.Config)
 	network := params[3].(*network.NetworkingConfig)
@@ -104,7 +105,7 @@ func TestCreatesIngressWithK8sClusterOptions(t *testing.T) {
 	assert.NoError(t, err)
 
 	// second call is create
-	params := md.Calls[1].Arguments
+	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
 	name := params[4].(string)
 	cfg := params[1].(*container.Config)
 	host := params[2].(*container.HostConfig)
