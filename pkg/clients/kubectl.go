@@ -8,11 +8,13 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+// Kubernetes defines an interface for a Kuberenetes client
 type Kubernetes interface {
 	SetConfig(string) error
-	GetPods() (*v1.PodList, error)
+	GetPods(string) (*v1.PodList, error)
 }
 
+// KubernetesImpl is a concrete implementation of a Kubernetes client
 type KubernetesImpl struct {
 	client corev1.CoreV1Interface
 }
@@ -38,8 +40,11 @@ func (k *KubernetesImpl) SetConfig(kubeconfig string) error {
 	return nil
 }
 
-func (k *KubernetesImpl) GetPods() (*v1.PodList, error) {
-	lo := metav1.ListOptions{}
+// GetPods returns the Kubernetes pods based on the label selector
+func (k *KubernetesImpl) GetPods(selector string) (*v1.PodList, error) {
+	lo := metav1.ListOptions{
+		LabelSelector: selector,
+	}
 	pl, err := k.client.Pods("").List(lo)
 	if err != nil {
 		return nil, err

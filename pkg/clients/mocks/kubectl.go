@@ -15,8 +15,8 @@ func (m *MockKubernetes) SetConfig(kubeconfig string) error {
 	return args.Error(0)
 }
 
-func (m *MockKubernetes) GetPods() (*v1.PodList, error) {
-	args := m.Called()
+func (m *MockKubernetes) GetPods(selector string) (*v1.PodList, error) {
+	args := m.Called(selector)
 
 	if pl, ok := args.Get(0).(*v1.PodList); ok {
 		return pl, args.Error(1)

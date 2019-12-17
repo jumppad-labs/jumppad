@@ -118,45 +118,18 @@ func (c *Cluster) createK3s() error {
 		return xerrors.Errorf("Error creating Docker Kubernetes config: %w", err)
 	}
 
-	// janky  sleep to wait for API server, will make better
+	// janky  sleep to wait for API server before creating client, will make better
 	time.Sleep(10 * time.Second)
 	err = c.kubeClient.SetConfig(kubeconfig)
 	if err != nil {
 		return xerrors.Errorf("Error creating Kubernetes client: %w", err)
 	}
 
-	// check all pods are running
-	st := time.Now()
-	for {
-		if time.Now().Sub(st) > (120 * time.Second) {
-			return fmt.Errorf("Timeout waiting for pods to start")
-		}
-
-		// GetPods may return an error if the API server is not avaialble
-		pl, err := c.kubeClient.GetPods()
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-
-		// there should be at least 1 pod
-		if len(pl.Items) < 1 {
-			continue
-		}
-
-		allRunning := true
-		for _, pod := range pl.Items {
-			if pod.Status.Phase != "Running" {
-				allRunning = false
-				break
-			}
-		}
-
-		if allRunning {
-			break
-		}
-
-		time.Sleep(2 * time.Second)
+	// wait for all the default pods like core DNS to start running
+	// before progressing
+	err = healthCheckPods(c.kubeClient, []string{""}, 120*time.Second)
+	if err != nil {
+		return xerrors.Errorf("Error while waiting for Kubernetes default pods: %w", err)
 	}
 
 	// import the images to the servers container d instance

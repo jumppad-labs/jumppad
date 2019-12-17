@@ -50,6 +50,7 @@ helm "consul" {
   values  = "./consul-values"
 
   health_check {
+    timeout = "2m"
     pods = ["component=server,app=consul", "component=client,app=consul"] // is the pod running and healthy
   }
 }

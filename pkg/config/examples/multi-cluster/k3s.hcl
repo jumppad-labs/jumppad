@@ -13,6 +13,7 @@ helm "consul" {
   values  = "${env("SHIPYARD_HOME")}/helm/charts/consul-values.yml"
 
   health_check {
+    timeout = "2m"
     http     = "http://consul-consul:8500/v1/leader"                          // can the http endpoint be reached
     tcp      = "consul-consul:8500"                                           // can a TCP connection be made
     services = ["consul-consul"]                                              // does service exist and there are endpoints
@@ -26,6 +27,7 @@ k8s_config "dashboard" {
   config  = "${env("SHIPYARD_HOME")}/k8s_config/dashboard.yml"
 
   healthcheck {
+    timeout = "2m"
     http     = "http://consul-consul:8500/v1/leader"                          // can the http endpoint be reached
     tcp      = "consul-consul:8500"                                           // can a TCP connection be made
     services = ["consul-consul"]                                              // does service exist and there are endpoints

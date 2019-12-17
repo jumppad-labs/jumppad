@@ -121,7 +121,7 @@ func generateProviders(c *config.Config, cc *Clients) []providers.Provider {
 	}
 
 	for _, c := range c.HelmCharts {
-		p := providers.NewHelm(c)
+		p := providers.NewHelm(c, cc.Kubernetes)
 		oc = append(oc, p)
 	}
 

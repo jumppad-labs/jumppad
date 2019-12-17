@@ -75,7 +75,7 @@ func setupK3sCluster(c *config.Cluster) (*clients.MockDocker, *Cluster, func()) 
 
 	mk := &clients.MockKubernetes{}
 	mk.Mock.On("SetConfig", mock.Anything).Return(nil)
-	mk.Mock.On("GetPods").Return(
+	mk.Mock.On("GetPods", mock.Anything).Return(
 		&v1.PodList{
 			Items: []v1.Pod{
 				v1.Pod{
