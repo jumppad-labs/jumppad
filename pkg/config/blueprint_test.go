@@ -6,14 +6,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestBlueprintCreatesCorrectly(t *testing.T) {
+func setupBlueprints(t *testing.T, contents string) (*Config, func()) {
 	dir, cleanup := createTestFiles(t)
-	createNamedFile(t, dir, "*.yard", defaultBlueprint)
-	defer cleanup()
+	createNamedFile(t, dir, "*.yard", contents)
 
 	c := &Config{}
 	err := ParseFolder(dir, c)
 	assert.NoError(t, err)
+
+	return c, cleanup
+}
+
+func TestBlueprintCreatesCorrectly(t *testing.T) {
+	c, cleanup := setupBlueprints(t, blueprintDefault)
+	defer cleanup()
 
 	// should have created a blueprint
 	bp := c.Blueprint
@@ -29,7 +35,15 @@ func TestBlueprintCreatesCorrectly(t *testing.T) {
 	assert.Equal(t, "true", bp.Environment[1].Value)
 }
 
-var defaultBlueprint = `
+func TestBlueprintValidationInvalidBrowser(t *testing.T) {
+	c, cleanup := setupBlueprints(t, blueprintInvalidBrowser)
+	defer cleanup()
+
+	errs := c.Blueprint.Validate()
+	assert.Len(t, errs, 1)
+}
+
+var blueprintDefault = `
 title = "default blueprint"
 author = "Keyser Söze"
 slug = <<EOF
@@ -50,4 +64,11 @@ env {
 	key = "DEBUG"
 	value = "true"
 }
+`
+
+var blueprintInvalidBrowser = `
+browser_windows = [
+	"",
+	"https://www.something.com",
+]
 `
