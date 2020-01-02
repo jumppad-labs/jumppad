@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/shipyard-run/cli/pkg/clients"
+	"github.com/shipyard-run/shipyard/pkg/clients"
 )
 
 // healthCheckPods uses the given selector to check that all pods are started

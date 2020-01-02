@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/shipyard-run/cli/pkg/clients"
-	"github.com/shipyard-run/cli/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/clients"
+	"github.com/shipyard-run/shipyard/pkg/config"
 	"golang.org/x/xerrors"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"

@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/shipyard-run/cli/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config"
 )
 
 // FQDN generate the name of a docker container

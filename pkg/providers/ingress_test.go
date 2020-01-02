@@ -8,8 +8,8 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
-	clients "github.com/shipyard-run/cli/pkg/clients/mocks"
-	"github.com/shipyard-run/cli/pkg/config"
+	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
+	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

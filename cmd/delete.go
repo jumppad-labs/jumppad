@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/shipyard-run/cli/pkg/shipyard"
+	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/spf13/cobra"
 )
 

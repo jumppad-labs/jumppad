@@ -11,8 +11,8 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
-	"github.com/shipyard-run/cli/pkg/clients"
-	"github.com/shipyard-run/cli/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/clients"
+	"github.com/shipyard-run/shipyard/pkg/config"
 )
 
 // Container is a provider for creating and destroying Docker containers

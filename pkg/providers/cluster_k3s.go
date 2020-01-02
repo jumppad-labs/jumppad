@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
-	"github.com/shipyard-run/cli/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config"
 	"golang.org/x/xerrors"
 )
 

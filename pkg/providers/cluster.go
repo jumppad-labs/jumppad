@@ -3,8 +3,8 @@ package providers
 import (
 	"errors"
 
-	"github.com/shipyard-run/cli/pkg/clients"
-	"github.com/shipyard-run/cli/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/clients"
+	"github.com/shipyard-run/shipyard/pkg/config"
 )
 
 var (

@@ -1,9 +1,9 @@
 package shipyard
 
 import (
-	"github.com/shipyard-run/cli/pkg/clients"
-	"github.com/shipyard-run/cli/pkg/config"
-	"github.com/shipyard-run/cli/pkg/providers"
+	"github.com/shipyard-run/shipyard/pkg/clients"
+	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/providers"
 )
 
 type Clients struct {
