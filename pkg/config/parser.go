@@ -118,6 +118,7 @@ func ParseHCLFile(file string, c *Config) error {
 			}
 
 			c.Clusters = append(c.Clusters, cl)
+
 		case "network":
 			if b.Labels[0] == "wan" {
 				return ErrorWANExists
@@ -132,6 +133,7 @@ func ParseHCLFile(file string, c *Config) error {
 			}
 
 			c.Networks = append(c.Networks, n)
+
 		case "helm":
 			h := &Helm{}
 			h.Name = b.Labels[0]
@@ -145,6 +147,20 @@ func ParseHCLFile(file string, c *Config) error {
 			h.Values = ensureAbsolute(h.Values, file)
 
 			c.HelmCharts = append(c.HelmCharts, h)
+
+		case "k8s_config":
+			h := &K8sConfig{}
+			h.Name = b.Labels[0]
+
+			err := decodeBody(b, h)
+			if err != nil {
+				return err
+			}
+
+			h.Path = ensureAbsolute(h.Path, file)
+
+			c.K8sConfig = append(c.K8sConfig, h)
+
 		case "ingress":
 			i := &Ingress{}
 			i.Name = b.Labels[0]
@@ -155,6 +171,7 @@ func ParseHCLFile(file string, c *Config) error {
 			}
 
 			c.Ingresses = append(c.Ingresses, i)
+
 		case "container":
 			co := &Container{}
 			co.Name = b.Labels[0]
@@ -205,6 +222,10 @@ func ParseReferences(c *Config) error {
 
 	for _, hc := range c.HelmCharts {
 		hc.ClusterRef = findClusterRef(hc.Cluster, c)
+	}
+
+	for _, k8s := range c.K8sConfig {
+		k8s.ClusterRef = findClusterRef(k8s.Cluster, c)
 	}
 
 	for _, in := range c.Ingresses {

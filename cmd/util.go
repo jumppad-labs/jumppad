@@ -4,12 +4,23 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"runtime"
 )
+
+// HomeFolder returns the users homefolder this will be $HOME on windows and mac and
+// USERPROFILE on windows
+func HomeFolder() string {
+	if runtime.GOOS == "windows" {
+		return os.Getenv("USERPROFILE")
+	}
+
+	return os.Getenv("HOME")
+}
 
 // ShipyardHome returns the location of the shipyard
 // folder, usually $HOME/.shipyard
 func ShipyardHome() string {
-	return fmt.Sprintf("%s/.shipyard", os.Getenv("HOME"))
+	return fmt.Sprintf("%s/.shipyard", HomeFolder())
 }
 
 // StateDir returns the location of the shipyard

@@ -26,10 +26,7 @@ func NewHelm(c *config.Helm, kc clients.Kubernetes) *Helm {
 }
 
 func (h *Helm) Create() error {
-	// TODO refactor out in to a generic function
-	destDir := fmt.Sprintf("%s/.shipyard/config/%s", os.Getenv("HOME"), h.config.ClusterRef.Name)
-	destPath := fmt.Sprintf("%s/kubeconfig.yaml", destDir)
-
+	_, destPath, _ := CreateKubeConfigPath(h.config.ClusterRef.Name)
 	// set the KubeConfig for the kubernetes client
 	// this is used by the healthchecks
 	err := h.kubeClient.SetConfig(destPath)

@@ -9,6 +9,7 @@ type Config struct {
 	Containers []*Container
 	Networks   []*Network
 	HelmCharts []*Helm
+	K8sConfig  []*K8sConfig
 	Ingresses  []*Ingress
 }
 
