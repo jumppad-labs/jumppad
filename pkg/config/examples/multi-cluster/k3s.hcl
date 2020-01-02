@@ -24,9 +24,10 @@ helm "consul" {
 // runs kubectl apply
 k8s_config "dashboard" {
   cluster = "cluster.cloud"
-  config  = "${env("SHIPYARD_HOME")}/k8s_config/dashboard.yml"
+  path  = "${env("SHIPYARD_HOME")}/k8s_config/dashboard.yml"
+  wait_until_ready = false
 
-  healthcheck {
+  health_check {
     timeout = "2m"
     http     = "http://consul-consul:8500/v1/leader"                          // can the http endpoint be reached
     tcp      = "consul-consul:8500"                                           // can a TCP connection be made

@@ -1,4 +1,4 @@
-module github.com/shipyard-run/cli
+module github.com/shipyard-run/shipyard
 
 go 1.13
 
@@ -27,9 +27,9 @@ require (
 	gotest.tools/gotestsum v0.4.0 // indirect
 	helm.sh/helm/v3 v3.0.1
 	k8s.io/api v0.0.0-20191016110408-35e52d86657a
-	k8s.io/apiextensions-apiserver v0.0.0-20191016113550-5357c4baaf65
 	k8s.io/apimachinery v0.0.0-20191004115801-a2eda9f80ab8
 	k8s.io/client-go v0.0.0-20191016111102-bec269661e48
+	k8s.io/helm v2.16.1+incompatible
 )
 
 replace github.com/docker/docker => github.com/docker/engine v1.4.2-0.20180718150940-a3ef7e9a9bda

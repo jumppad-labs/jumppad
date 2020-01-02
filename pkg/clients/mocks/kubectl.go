@@ -25,5 +25,8 @@ func (m *MockKubernetes) GetPods(selector string) (*v1.PodList, error) {
 	return nil, args.Error(1)
 }
 
-// Apply
-// https://stackoverflow.com/questions/47116811/client-go-parse-kubernetes-json-files-to-k8s-structures
+func (m *MockKubernetes) Apply(files []string, waitUntilReady bool) error {
+	args := m.Called(files, waitUntilReady)
+
+	return args.Error(0)
+}

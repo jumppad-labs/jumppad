@@ -57,8 +57,9 @@ helm "consul" {
 
 // runs kubectl apply
 k8s_config "dashboard" {
-  cluster = k8s_cluster.default
-  config  = "./k8s_dashboard"
+  cluster = "cluster.default"
+  path  = "./k8s_dashboard"
+  wait_until_ready = false
 }
 
 // expose a port to the local machine
