@@ -24,7 +24,7 @@ helm "consul" {
 // runs kubectl apply
 k8s_config "dashboard" {
   cluster = "cluster.cloud"
-  path  = "${env("SHIPYARD_HOME")}/k8s_config/dashboard.yml"
+  paths  = ["${env("SHIPYARD_HOME")}/k8s_config/dashboard.yml"]
   wait_until_ready = false
 
   health_check {

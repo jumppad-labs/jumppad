@@ -1,6 +1,7 @@
 package clients
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -19,6 +20,7 @@ type Kubernetes interface {
 	SetConfig(string) error
 	GetPods(string) (*v1.PodList, error)
 	Apply(files []string, waitUntilReady bool) error
+	Delete(files []string) error
 }
 
 // KubernetesImpl is a concrete implementation of a Kubernetes client
@@ -85,6 +87,24 @@ func (k *KubernetesImpl) Apply(files []string, waitUntilReady bool) error {
 	return nil
 }
 
+// Delete Kuberentes YAML files at path
+func (k *KubernetesImpl) Delete(files []string) error {
+	allFiles, err := buildFileList(files)
+	if err != nil {
+		return err
+	}
+
+	s := kube.GetConfig(k.configPath, "default", "default")
+	kc := kube.New(s)
+
+	// process the files
+	for _, f := range allFiles {
+		deleteFile(f, kc)
+	}
+
+	return nil
+}
+
 func buildFileList(files []string) ([]string, error) {
 	allFiles := make([]string, 0)
 
@@ -136,6 +156,27 @@ func applyFile(path string, waitUntilReady bool, kc *kube.Client) error {
 
 	if waitUntilReady {
 		kc.WatchUntilReady(r, 30*time.Second)
+	}
+
+	return nil
+}
+
+func deleteFile(path string, kc *kube.Client) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	r, err := kc.Build(f, false)
+	if err != nil {
+		return err
+	}
+
+	_, errs := kc.Delete(r)
+	if errs != nil {
+		//TODO need to handle this better
+		return fmt.Errorf("Error deleting configuration: %v", errs)
 	}
 
 	return nil

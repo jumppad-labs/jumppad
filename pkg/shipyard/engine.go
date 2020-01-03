@@ -6,18 +6,20 @@ import (
 	"github.com/shipyard-run/shipyard/pkg/providers"
 )
 
+// Clients contains clients which are responsible for creating and destrying reources
 type Clients struct {
 	Docker     clients.Docker
 	Kubernetes clients.Kubernetes
 }
 
-// Defines
+// Engine is responsible for creating and destroying resources
 type Engine struct {
 	providers []providers.Provider
 	clients   *Clients
 	config    *config.Config
 }
 
+// GenerateClients creates the various clients for creating and destroying resources
 func GenerateClients() (*Clients, error) {
 	dc, err := clients.NewDocker()
 	if err != nil {
@@ -61,6 +63,7 @@ func NewWithFolder(folder string) (*Engine, error) {
 	return e, nil
 }
 
+// New engine using the given configuration and clients
 func New(c *config.Config, cc *Clients) *Engine {
 	p := generateProviders(c, cc)
 
@@ -71,6 +74,7 @@ func New(c *config.Config, cc *Clients) *Engine {
 	}
 }
 
+// Apply the current config creating the resources
 func (e *Engine) Apply() error {
 	for _, p := range e.providers {
 		err := p.Create()
@@ -82,6 +86,7 @@ func (e *Engine) Apply() error {
 	return nil
 }
 
+// Destroy the resources defined by the config
 func (e *Engine) Destroy() error {
 	// should run through the providers in reverse order
 	// to ensure objects with dependencies are destroyed first
@@ -95,6 +100,7 @@ func (e *Engine) Destroy() error {
 	return nil
 }
 
+// Blueprint returns the blueprint for the current config
 func (e *Engine) Blueprint() *config.Blueprint {
 	return e.config.Blueprint
 }
@@ -125,6 +131,11 @@ func generateProviders(c *config.Config, cc *Clients) []providers.Provider {
 		oc = append(oc, p)
 	}
 
+	for _, c := range c.K8sConfig {
+		p := providers.NewK8sConfig(c, cc.Kubernetes)
+		oc = append(oc, p)
+	}
+
 	for _, c := range c.Ingresses {
 		p := providers.NewIngress(c, cc.Docker)
 		oc = append(oc, p)
@@ -134,25 +145,6 @@ func generateProviders(c *config.Config, cc *Clients) []providers.Provider {
 		p := providers.NewDocs(c.Docs, cc.Docker)
 		oc = append(oc, p)
 	}
-	// first elements to create are networks
-	/*
-
-		for _, c := range c.Containers {
-			oc = append(oc, c)
-		}
-
-		for _, c := range c.Clusters {
-			oc = append(oc, c)
-		}
-
-		for _, c := range c.HelmCharts {
-			oc = append(oc, c)
-		}
-
-		for _, c := range c.Ingresses {
-			oc = append(oc, c)
-		}
-	*/
 
 	return oc
 }

@@ -18,6 +18,30 @@ func NewK8sConfig(c *config.K8sConfig, kc clients.Kubernetes) *K8sConfig {
 
 // Create the Kubernetes resources defined by the config
 func (c *K8sConfig) Create() error {
+	err := c.setup()
+	if err != nil {
+		return err
+	}
+
+	return c.client.Apply(c.config.Paths, c.config.WaitUntilReady)
+}
+
+// Destroy the Kubernetes resources defined by the config
+func (c *K8sConfig) Destroy() error {
+	err := c.setup()
+	if err != nil {
+		return err
+	}
+
+	return c.client.Delete(c.config.Paths)
+}
+
+// Lookup the Kubernetes resources defined by the config
+func (c *K8sConfig) Lookup() (string, error) {
+	return "", nil
+}
+
+func (c *K8sConfig) setup() error {
 	_, destPath, _ := CreateKubeConfigPath(c.config.ClusterRef.Name)
 	err := c.client.SetConfig(destPath)
 	if err != nil {
@@ -25,14 +49,4 @@ func (c *K8sConfig) Create() error {
 	}
 
 	return nil
-}
-
-// Destroy the Kubernetes resources defined by the config
-func (c *K8sConfig) Destroy() error {
-	return nil
-}
-
-// Lookup the Kubernetes resources defined by the config
-func (c *K8sConfig) Lookup() (string, error) {
-	return "", nil
 }

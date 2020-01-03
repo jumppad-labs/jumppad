@@ -30,3 +30,9 @@ func (m *MockKubernetes) Apply(files []string, waitUntilReady bool) error {
 
 	return args.Error(0)
 }
+
+func (m *MockKubernetes) Delete(files []string) error {
+	args := m.Called(files)
+
+	return args.Error(0)
+}

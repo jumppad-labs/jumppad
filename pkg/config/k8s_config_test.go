@@ -28,8 +28,15 @@ func TestCreatesCorrectly(t *testing.T) {
 
 	k8s := c.K8sConfig[0]
 	assert.Equal(t, c.Clusters[0], k8s.ClusterRef)
-	assert.Equal(t, "/tmp/files", k8s.Path)
+	assert.Equal(t, "/tmp/files", k8s.Paths[0])
 	assert.True(t, k8s.WaitUntilReady)
+}
+
+func TestMakesPathAbsolute(t *testing.T) {
+	c, cleanup := setupK8sConfig(t, k8sConfigValid)
+	defer cleanup()
+
+	assert.Contains(t, c.K8sConfig[0].Paths[1], "/var/folders/")
 }
 
 var k8sConfigValid = `
@@ -44,7 +51,7 @@ cluster "cloud" {
 
 k8s_config "test" {
 	cluster = "cluster.cloud"
-	path = "/tmp/files"
+	paths = ["/tmp/files","./myfiles"]
 	wait_until_ready = true
 
 	health_check {

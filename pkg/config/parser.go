@@ -157,7 +157,10 @@ func ParseHCLFile(file string, c *Config) error {
 				return err
 			}
 
-			h.Path = ensureAbsolute(h.Path, file)
+			// make all the paths absolute
+			for i, p := range h.Paths {
+				h.Paths[i] = ensureAbsolute(p, file)
+			}
 
 			c.K8sConfig = append(c.K8sConfig, h)
 

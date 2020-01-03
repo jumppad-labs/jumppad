@@ -58,7 +58,7 @@ helm "consul" {
 // runs kubectl apply
 k8s_config "dashboard" {
   cluster = "cluster.default"
-  path  = "./k8s_dashboard"
+  paths  = ["./k8s_dashboard"]
   wait_until_ready = false
 }
 
