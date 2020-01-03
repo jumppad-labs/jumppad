@@ -5,6 +5,7 @@ import (
 
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
+	hclog "github.com/hashicorp/go-hclog"
 )
 
 var (
@@ -17,11 +18,12 @@ type Cluster struct {
 	config     *config.Cluster
 	client     clients.Docker
 	kubeClient clients.Kubernetes
+	log        hclog.Logger
 }
 
 // NewCluster creates a new
-func NewCluster(c *config.Cluster, cc clients.Docker, kc clients.Kubernetes) *Cluster {
-	return &Cluster{c, cc, kc}
+func NewCluster(c *config.Cluster, cc clients.Docker, kc clients.Kubernetes,l hclog.Logger) *Cluster {
+	return &Cluster{c, cc, kc, l}
 }
 
 // Create implements interface method to create a cluster of the specified type

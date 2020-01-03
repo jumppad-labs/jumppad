@@ -1,3 +1,8 @@
+// TODO setting env vars in go behaves like bash
+// i.e you cannot set the current shells env vars from a program
+// as the application runs in a child process
+// need to look at better options
+
 package cmd
 
 import (
@@ -30,6 +35,7 @@ func (e *Env) Set(key, value string) error {
 		}
 	}
 
+	// set the new env var
 	return os.Setenv(key, value)
 }
 

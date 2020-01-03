@@ -25,6 +25,8 @@ var (
 const k3sBaseImage = "rancher/k3s"
 
 func (c *Cluster) createK3s() error {
+	c.log.Debug("Creating Cluster", "ref", c.config.Name)
+
 	// check the cluster name is valid
 	if err := validateClusterName(c.config.Name); err != nil {
 		return err
@@ -127,7 +129,7 @@ func (c *Cluster) createK3s() error {
 
 	// wait for all the default pods like core DNS to start running
 	// before progressing
-	err = healthCheckPods(c.kubeClient, []string{""}, 120*time.Second)
+	err = healthCheckPods(c.kubeClient, []string{""}, 120*time.Second, c.log.With("ref", c.config.Name))
 	if err != nil {
 		return xerrors.Errorf("Error while waiting for Kubernetes default pods: %w", err)
 	}
@@ -148,11 +150,6 @@ func (c *Cluster) createK3s() error {
 		}
 	}
 
-	return nil
-}
-
-// ensure that the k3s server, workers and volume is correctly disposed
-func (c *Cluster) deleteK3s() error {
 	return nil
 }
 
@@ -258,6 +255,8 @@ func (c *Cluster) createDockerKubeConfig(kubeconfig string) error {
 }
 
 func (c *Cluster) destroyK3s() error {
+	c.log.Debug("Delete Cluster", "ref", c.config.Name)
+
 	cc := &config.Container{}
 	cc.Name = fmt.Sprintf("server.%s", c.config.Name)
 	cc.NetworkRef = c.config.NetworkRef

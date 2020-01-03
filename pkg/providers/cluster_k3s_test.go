@@ -13,6 +13,7 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/go-connections/nat"
+	hclog "github.com/hashicorp/go-hclog"
 	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/stretchr/testify/assert"
@@ -88,7 +89,7 @@ func setupK3sCluster(c *config.Cluster) (*clients.MockDocker, *Cluster, func()) 
 		nil,
 	)
 
-	return md, NewCluster(c, md, mk), func() {
+	return md, NewCluster(c, md, mk, hclog.Default()), func() {
 		// cleanup
 		os.Setenv("HOME", oldHome)
 	}

@@ -3,6 +3,7 @@ package providers
 import (
 	"fmt"
 
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
 )
@@ -10,13 +11,15 @@ import (
 type Ingress struct {
 	config *config.Ingress
 	client clients.Docker
+	log    hclog.Logger
 }
 
-func NewIngress(c *config.Ingress, cc clients.Docker) *Ingress {
-	return &Ingress{c, cc}
+func NewIngress(c *config.Ingress, cc clients.Docker, l hclog.Logger) *Ingress {
+	return &Ingress{c, cc, l}
 }
 
 func (i *Ingress) Create() error {
+	i.log.Debug("Creating Ingress", "ref", i.config.Name)
 
 	var serviceName string
 	var volumes []config.Volume
@@ -70,7 +73,10 @@ func (i *Ingress) Create() error {
 	return p.Create()
 }
 
+// Destroy the ingress
 func (i *Ingress) Destroy() error {
+	i.log.Debug("Destroy Ingress", "ref", i.config.Name)
+
 	c := &config.Container{
 		Name:       i.config.Name,
 		NetworkRef: i.config.NetworkRef,

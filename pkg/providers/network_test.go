@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
+	hclog "github.com/hashicorp/go-hclog"
 	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/stretchr/testify/assert"
@@ -15,7 +16,7 @@ func setupNetworkTests(c *config.Network) (*clients.MockDocker, *Network) {
 	md.On("NetworkCreate", mock.Anything, mock.Anything, mock.Anything).
 		Return(types.NetworkCreateResponse{}, nil)
 
-	return md, NewNetwork(c, md)
+	return md, NewNetwork(c, md, hclog.Default())
 }
 
 func TestNetworkCreatesCorrectly(t *testing.T) {

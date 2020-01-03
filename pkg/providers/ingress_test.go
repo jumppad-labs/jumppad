@@ -8,6 +8,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
+	hclog "github.com/hashicorp/go-hclog"
 	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/stretchr/testify/assert"
@@ -25,7 +26,7 @@ func setupIngress(c *config.Ingress) (*clients.MockDocker, *Ingress) {
 		Return(container.ContainerCreateCreatedBody{}, nil)
 	md.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	return md, &Ingress{c, md}
+	return md, &Ingress{c, md, hclog.Default()}
 }
 
 func TestCreatesIngressWithValidOptions(t *testing.T) {

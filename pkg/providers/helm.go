@@ -2,9 +2,9 @@ package providers
 
 import (
 	"fmt"
-	"os"
 	"time"
 
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"golang.org/x/xerrors"
@@ -19,13 +19,16 @@ import (
 type Helm struct {
 	config     *config.Helm
 	kubeClient clients.Kubernetes
+	log        hclog.Logger
 }
 
-func NewHelm(c *config.Helm, kc clients.Kubernetes) *Helm {
-	return &Helm{c, kc}
+func NewHelm(c *config.Helm, kc clients.Kubernetes, l hclog.Logger) *Helm {
+	return &Helm{c, kc, l}
 }
 
 func (h *Helm) Create() error {
+	h.log.Debug("Creating Helm chart", "ref", h.config.Name)
+
 	_, destPath, _ := CreateKubeConfigPath(h.config.ClusterRef.Name)
 	// set the KubeConfig for the kubernetes client
 	// this is used by the healthchecks
@@ -37,9 +40,13 @@ func (h *Helm) Create() error {
 	// set the kubeclient for Helm
 	s := kube.GetConfig(destPath, "default", "default")
 	cfg := &action.Configuration{}
-	if err := cfg.Init(s, "default", "", debug); err != nil {
-		debug("%+v", err)
-		os.Exit(1)
+	err = cfg.Init(s, "default", "", func(format string, v ...interface{}) {
+		h.log.Debug("Helm debug message", "message", fmt.Sprintf(format, v...))
+	})
+
+	if err != nil {
+		h.log.Error("Error initializing helm", "error", err)
+		return err
 	}
 
 	client := action.NewInstall(cfg)
@@ -83,7 +90,7 @@ func (h *Helm) Create() error {
 			xerrors.Errorf("unable to parse healthcheck duration: %w", err)
 		}
 
-		err = healthCheckPods(h.kubeClient, h.config.HealthCheck.Pods, to)
+		err = healthCheckPods(h.kubeClient, h.config.HealthCheck.Pods, to, h.log.With("ref", h.config.Name))
 		if err != nil {
 			xerrors.Errorf("healthcheck failed after helm chart setup: %w", err)
 		}
@@ -93,6 +100,7 @@ func (h *Helm) Create() error {
 }
 
 func (h *Helm) Destroy() error {
+	h.log.Debug("Destroy Helm chart", "ref", h.config.Name)
 	return nil
 }
 

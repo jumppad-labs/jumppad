@@ -12,6 +12,7 @@ require (
 	github.com/docker/docker v1.4.2-0.20181221150755-2cb26cfe9cbf
 	github.com/docker/go-connections v0.4.0
 	github.com/hashicorp/go-getter v1.4.0
+	github.com/hashicorp/go-hclog v0.10.1
 	github.com/hashicorp/hcl2 v0.0.0-20191002203319-fb75b3253c80
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/mitchellh/go-homedir v1.1.0

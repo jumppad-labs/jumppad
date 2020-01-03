@@ -13,6 +13,7 @@ import (
 	"github.com/DATA-DOG/godog/colors"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
 )
@@ -96,7 +97,7 @@ func theConfig(arg1 string) error {
 	}
 
 	currentClients = cc
-	currentEngine = shipyard.New(currentConfig, cc)
+	currentEngine = shipyard.New(currentConfig, cc, hclog.New(&hclog.LoggerOptions{Level: hclog.Debug}))
 
 	return nil
 }

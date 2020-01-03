@@ -73,6 +73,7 @@ var applyCmd = &cobra.Command{
 
 		// apply any env vars
 		if e.Blueprint() != nil && len(e.Blueprint().Environment) > 0 {
+			fmt.Println("")
 			fmt.Println("Setting environment variables:")
 			fmt.Println("")
 			ef, err := NewEnv(fmt.Sprintf("%s/env.var", StateDir()))
@@ -90,7 +91,7 @@ var applyCmd = &cobra.Command{
 			}
 
 			fmt.Println("")
-			fmt.Println("environment variables can be restored to previous values when using the `yard delete` command")
+			fmt.Println("environment variables will be restored to previous values when using the `yard delete` command")
 		}
 
 		// open any browser windows

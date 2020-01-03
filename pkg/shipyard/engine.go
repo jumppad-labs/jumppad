@@ -1,6 +1,7 @@
 package shipyard
 
 import (
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/providers"
@@ -17,6 +18,7 @@ type Engine struct {
 	providers []providers.Provider
 	clients   *Clients
 	config    *config.Config
+	log       hclog.Logger
 }
 
 // GenerateClients creates the various clients for creating and destroying resources
@@ -58,19 +60,21 @@ func NewWithFolder(folder string) (*Engine, error) {
 		return nil, err
 	}
 
-	e := New(cc, cl)
+	l := hclog.New(&hclog.LoggerOptions{Level: hclog.Debug, Color: hclog.AutoColor})
+	e := New(cc, cl, l)
 
 	return e, nil
 }
 
 // New engine using the given configuration and clients
-func New(c *config.Config, cc *Clients) *Engine {
-	p := generateProviders(c, cc)
+func New(c *config.Config, cc *Clients, l hclog.Logger) *Engine {
+	p := generateProviders(c, cc, l)
 
 	return &Engine{
 		providers: p,
 		clients:   cc,
 		config:    c,
+		log:       l,
 	}
 }
 
@@ -105,14 +109,14 @@ func (e *Engine) Blueprint() *config.Blueprint {
 	return e.config.Blueprint
 }
 
-func generateProviders(c *config.Config, cc *Clients) []providers.Provider {
+func generateProviders(c *config.Config, cc *Clients, l hclog.Logger) []providers.Provider {
 	oc := make([]providers.Provider, 0)
 
-	p := providers.NewNetwork(c.WAN, cc.Docker)
+	p := providers.NewNetwork(c.WAN, cc.Docker, l)
 	oc = append(oc, p)
 
 	for _, n := range c.Networks {
-		p := providers.NewNetwork(n, cc.Docker)
+		p := providers.NewNetwork(n, cc.Docker, l)
 		oc = append(oc, p)
 	}
 
@@ -122,12 +126,12 @@ func generateProviders(c *config.Config, cc *Clients) []providers.Provider {
 	}
 
 	for _, c := range c.Clusters {
-		p := providers.NewCluster(c, cc.Docker, cc.Kubernetes)
+		p := providers.NewCluster(c, cc.Docker, cc.Kubernetes, l)
 		oc = append(oc, p)
 	}
 
 	for _, c := range c.HelmCharts {
-		p := providers.NewHelm(c, cc.Kubernetes)
+		p := providers.NewHelm(c, cc.Kubernetes, l)
 		oc = append(oc, p)
 	}
 
@@ -137,7 +141,7 @@ func generateProviders(c *config.Config, cc *Clients) []providers.Provider {
 	}
 
 	for _, c := range c.Ingresses {
-		p := providers.NewIngress(c, cc.Docker)
+		p := providers.NewIngress(c, cc.Docker, l)
 		oc = append(oc, p)
 	}
 
