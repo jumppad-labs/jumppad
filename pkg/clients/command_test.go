@@ -12,6 +12,7 @@ func setupExecute(t *testing.T) Command {
 }
 
 func TestExecuteWithBasicParams(t *testing.T) {
+	t.Skip()
 	e := setupExecute(t)
 
 	e.Execute("ls")

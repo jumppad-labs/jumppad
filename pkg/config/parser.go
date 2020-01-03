@@ -214,6 +214,8 @@ func ParseHCLFile(file string, c *Config) error {
 				return err
 			}
 
+			h.Script = ensureAbsolute(h.Script, file)
+
 			c.Execs = append(c.Execs, h)
 		}
 	}

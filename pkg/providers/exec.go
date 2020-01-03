@@ -1,6 +1,8 @@
 package providers
 
 import (
+	"os"
+
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
@@ -19,7 +21,15 @@ func NewExec(c *config.Exec, ex clients.Command, l hclog.Logger) *Exec {
 }
 
 func (c *Exec) Create() error {
-	return c.client.Execute(c.config.Command, c.config.Arguments...)
+	c.log.Debug("Executing script", "ref", c.config.Name, "script", c.config.Script)
+
+	// make sure the script is executable
+	err := os.Chmod(c.config.Script, 0777)
+	if err != nil {
+		c.log.Error("Unable to set script permissions", "error", err)
+	}
+
+	return c.client.Execute(c.config.Script)
 }
 
 func (c *Exec) Destroy() error {
