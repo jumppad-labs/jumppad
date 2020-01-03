@@ -1,3 +1,4 @@
+name: Relase
 on:
   push:
     # Sequence of patterns matched against refs/tags
