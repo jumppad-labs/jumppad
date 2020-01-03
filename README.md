@@ -1,6 +1,6 @@
 # Shipyard
 ![](https://github.com/shipyard-run/shipyard/workflows/Build/badge.svg)  
-![](https://github.com/shipyard-run/shipyard/workflows/Build/badge.svg)  
+![](https://github.com/shipyard-run/shipyard/workflows/Release/badge.svg)  
   
 [![codecov](https://codecov.io/gh/shipyard-run/cli/branch/master/graph/badge.svg)](https://codecov.io/gh/shipyard-run/cli)
 
