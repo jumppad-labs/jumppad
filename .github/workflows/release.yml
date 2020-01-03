@@ -1,0 +1,156 @@
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
+
+jobs:
+  build:
+    env:
+      GONOSUMDB: "github.com/moby/moby"
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version:
+          [
+            "linux-armhf",
+            "linux-arm64",
+            "linux-i386",
+            "linux-amd64",
+            "darwin-amd64",
+            "windows-amd64",
+          ]
+        # add the GO naming convention for OS ($GOOS) and architecture ($GOARCH)
+        # instead of using Linux' naming convention (version items).
+        include:
+          - version: linux-armhf
+            OS: linux
+            ARCH: arm
+          - version: linux-arm64
+            OS: linux
+            ARCH: arm64
+          - version: linux-i386
+            OS: linux
+            ARCH: "386"
+          - version: linux-amd64
+            OS: linux
+            ARCH: amd64
+          - version: darwin-amd64
+            OS: darwin
+            ARCH: amd64
+          - version: windows-amd64
+            OS: windows
+            ARCH: amd64
+    steps:
+      - name: Set up Go 1.13
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.13.1
+        id: go
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v1
+
+      - name: Get dependencies
+        run: |
+          go get -v -t ./...
+
+      - name: Build Application
+        run: |
+          CGO_ENABLED=0 GOOS=${{matrix.OS}} GOARCH=${{matrix.ARCH}} go build -o bin/yard-${{ matrix.OS }}-${{ matrix.ARCH }} main.go
+
+      - name: Stash binary
+        uses: actions/upload-artifact@v1
+        with:
+          name: yard-${{ matrix.OS }}-${{ matrix.ARCH }}
+          path: bin/yard-${{ matrix.OS }}-${{ matrix.ARCH }}
+
+  create_release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+      # since jobs can not share any variables we have to copy the URL of the created Github release
+      # into a file and stash it as an artifact
+      - name: Copy release URL into file
+        run: |
+          mkdir release
+          printf "%s" "${{ steps.create_release.outputs.upload_url }}" > release/url.txt
+      - name: Stash file containing the release URL as an artifact
+        uses: actions/upload-artifact@v1
+        with:
+          name: release-url
+          path: ./release
+
+  release:
+    name: Release Assets
+    runs-on: ubuntu-latest
+    needs: create_release
+    strategy:
+      matrix:
+        version:
+          [
+            "linux-armhf",
+            "linux-arm64",
+            "linux-i386",
+            "linux-amd64",
+            "darwin-amd64",
+            "windows-amd64",
+          ]
+        # add the GO naming convention for OS ($GOOS) and architecture ($GOARCH)
+        # instead of using Linux' naming convention (version items).
+        include:
+          - version: linux-armhf
+            OS: linux
+            ARCH: arm
+          - version: linux-arm64
+            OS: linux
+            ARCH: arm64
+          - version: linux-i386
+            OS: linux
+            ARCH: "386"
+          - version: linux-amd64
+            OS: linux
+            ARCH: amd64
+          - version: darwin-amd64
+            OS: darwin
+            ARCH: amd64
+          - version: windows-amd64
+            OS: windows
+            ARCH: amd64
+    steps:
+      - name: Retrieve stashed release URL
+        uses: actions/download-artifact@v1
+        with:
+          name: release-url
+      - name: Retrieve stashed binary
+        uses: actions/download-artifact@v1
+        with:
+          name: yard-${{ matrix.OS }}-${{ matrix.ARCH }}
+
+      # Write content of downloaded file (a string which contains the release URL) into a step.outputs variable
+      - name: Read release URL
+        id: get_release_url
+        run: echo ::set-output name=URL::$(cat release-url/url.txt)
+
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release_url.outputs.URL }}
+          asset_path: yard-${{ matrix.OS }}-${{ matrix.ARCH }}/yard-${{ matrix.OS }}-${{ matrix.ARCH }}
+          asset_name: yard-${{ matrix.OS }}-${{ matrix.ARCH }}
+          asset_content_type: application/octet-stream
