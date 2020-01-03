@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func setupK8sConfig(t *testing.T, contents string) (*Config, func()) {
+func setupK8sConfig(t *testing.T, contents string) (*Config, string, func()) {
 	dir, cleanup := createTestFiles(t)
 	createNamedFile(t, dir, "*.hcl", contents)
 
@@ -17,11 +17,11 @@ func setupK8sConfig(t *testing.T, contents string) (*Config, func()) {
 	err = ParseReferences(c)
 	assert.NoError(t, err)
 
-	return c, cleanup
+	return c, dir, cleanup
 }
 
 func TestCreatesCorrectly(t *testing.T) {
-	c, cleanup := setupK8sConfig(t, k8sConfigValid)
+	c, _, cleanup := setupK8sConfig(t, k8sConfigValid)
 	defer cleanup()
 
 	assert.Len(t, c.K8sConfig, 1)
@@ -33,10 +33,10 @@ func TestCreatesCorrectly(t *testing.T) {
 }
 
 func TestMakesPathAbsolute(t *testing.T) {
-	c, cleanup := setupK8sConfig(t, k8sConfigValid)
+	c, base, cleanup := setupK8sConfig(t, k8sConfigValid)
 	defer cleanup()
 
-	assert.Contains(t, c.K8sConfig[0].Paths[1], "/var/folders/")
+	assert.Contains(t, c.K8sConfig[0].Paths[1], base)
 }
 
 var k8sConfigValid = `

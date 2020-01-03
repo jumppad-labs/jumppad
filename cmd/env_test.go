@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -34,9 +33,4 @@ func TestSetsEnvVar(t *testing.T) {
 
 	v := os.Getenv(envN)
 	assert.Equal(t, envV, v)
-
-	envs := os.Environ()
-	for _, e := range envs {
-		fmt.Println(e)
-	}
 }
