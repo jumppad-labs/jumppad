@@ -5,12 +5,14 @@ import (
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/providers"
+	"time"
 )
 
 // Clients contains clients which are responsible for creating and destrying reources
 type Clients struct {
 	Docker     clients.Docker
 	Kubernetes clients.Kubernetes
+	Command    clients.Command
 }
 
 // Engine is responsible for creating and destroying resources
@@ -22,7 +24,7 @@ type Engine struct {
 }
 
 // GenerateClients creates the various clients for creating and destroying resources
-func GenerateClients() (*Clients, error) {
+func GenerateClients(l hclog.Logger) (*Clients, error) {
 	dc, err := clients.NewDocker()
 	if err != nil {
 		return nil, err
@@ -30,15 +32,20 @@ func GenerateClients() (*Clients, error) {
 
 	kc := clients.NewKubernetes()
 
+	ec := clients.NewCommand(30*time.Second, l)
+
 	return &Clients{
 		Docker:     dc,
 		Kubernetes: kc,
+		Command:    ec,
 	}, nil
 }
 
 // NewWithFolder creates a new shipyard engine with a given configuration folder
 func NewWithFolder(folder string) (*Engine, error) {
+	l := hclog.New(&hclog.LoggerOptions{Level: hclog.Debug, Color: hclog.AutoColor})
 	var err error
+
 	cc, err := config.New()
 	if err != nil {
 		return nil, err
@@ -55,12 +62,11 @@ func NewWithFolder(folder string) (*Engine, error) {
 	}
 
 	// create providers
-	cl, err := GenerateClients()
+	cl, err := GenerateClients(l)
 	if err != nil {
 		return nil, err
 	}
 
-	l := hclog.New(&hclog.LoggerOptions{Level: hclog.Debug, Color: hclog.AutoColor})
 	e := New(cc, cl, l)
 
 	return e, nil
@@ -136,7 +142,7 @@ func generateProviders(c *config.Config, cc *Clients, l hclog.Logger) []provider
 	}
 
 	for _, c := range c.K8sConfig {
-		p := providers.NewK8sConfig(c, cc.Kubernetes)
+		p := providers.NewK8sConfig(c, cc.Kubernetes, l)
 		oc = append(oc, p)
 	}
 
@@ -147,6 +153,11 @@ func generateProviders(c *config.Config, cc *Clients, l hclog.Logger) []provider
 
 	if c.Docs != nil {
 		p := providers.NewDocs(c.Docs, cc.Docker)
+		oc = append(oc, p)
+	}
+
+	for _, c := range c.Execs {
+		p := providers.NewExec(c, cc.Command, l)
 		oc = append(oc, p)
 	}
 

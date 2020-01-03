@@ -11,6 +11,7 @@ type Config struct {
 	HelmCharts []*Helm
 	K8sConfig  []*K8sConfig
 	Ingresses  []*Ingress
+	Execs      []*Exec
 }
 
 // New creates a new Config with the default WAN network

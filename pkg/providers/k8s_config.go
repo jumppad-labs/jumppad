@@ -1,6 +1,7 @@
 package providers
 
 import (
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"golang.org/x/xerrors"
@@ -9,15 +10,18 @@ import (
 type K8sConfig struct {
 	config *config.K8sConfig
 	client clients.Kubernetes
+	log    hclog.Logger
 }
 
 // NewK8sConfig creates a provider which can create and destroy kubernetes configuration
-func NewK8sConfig(c *config.K8sConfig, kc clients.Kubernetes) *K8sConfig {
-	return &K8sConfig{c, kc}
+func NewK8sConfig(c *config.K8sConfig, kc clients.Kubernetes, l hclog.Logger) *K8sConfig {
+	return &K8sConfig{c, kc, l}
 }
 
 // Create the Kubernetes resources defined by the config
 func (c *K8sConfig) Create() error {
+	c.log.Debug("Applying Kubernetes configuration", "ref", c.config.Name, "config", c.config.Paths)
+
 	err := c.setup()
 	if err != nil {
 		return err
@@ -28,6 +32,8 @@ func (c *K8sConfig) Create() error {
 
 // Destroy the Kubernetes resources defined by the config
 func (c *K8sConfig) Destroy() error {
+	c.log.Debug("Delete Kubernetes configuration", "ref", c.config.Name, "config", c.config.Paths)
+
 	err := c.setup()
 	if err != nil {
 		return err

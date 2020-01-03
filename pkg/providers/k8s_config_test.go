@@ -1,11 +1,13 @@
 package providers
 
 import (
+	"testing"
+
+	hclog "github.com/hashicorp/go-hclog"
 	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"testing"
 )
 
 func setupK8sConfig(c *config.K8sConfig) (*clients.MockKubernetes, *K8sConfig) {
@@ -14,7 +16,7 @@ func setupK8sConfig(c *config.K8sConfig) (*clients.MockKubernetes, *K8sConfig) {
 	mk.On("Apply", mock.Anything, mock.Anything).Return(nil)
 	mk.On("Delete", mock.Anything, mock.Anything).Return(nil)
 
-	p := NewK8sConfig(c, mk)
+	p := NewK8sConfig(c, mk, hclog.Default())
 
 	return mk, p
 }

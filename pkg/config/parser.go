@@ -204,6 +204,17 @@ func ParseHCLFile(file string, c *Config) error {
 			do.Path = ensureAbsolute(do.Path, file)
 
 			c.Docs = do
+
+		case "exec":
+			h := &Exec{}
+			h.Name = b.Labels[0]
+
+			err := decodeBody(b, h)
+			if err != nil {
+				return err
+			}
+
+			c.Execs = append(c.Execs, h)
 		}
 	}
 
