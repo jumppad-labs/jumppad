@@ -14,6 +14,7 @@ import (
 	"context"
 
 	getter "github.com/hashicorp/go-getter"
+	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/spf13/cobra"
 )
@@ -36,18 +37,26 @@ var applyCmd = &cobra.Command{
 		var err error
 		dst := args[0]
 
+		fmt.Println("Applying configuration from: ", dst)
+		fmt.Println("")
+
+		// create a logger
+		log := hclog.New(&hclog.LoggerOptions{Level: hclog.Debug, Color: hclog.AutoColor})
+
 		if !IsLocalFolder(dst) {
 			// fetch the remote server from github
 			dst, err = pullRemoteBlueprint(dst)
 			if err != nil {
-				panic(err)
+				log.Error("Unable to retrieve blueprint", "error", err)
+				return
 			}
 		}
 
 		// Load the files
-		e, err := shipyard.NewWithFolder(dst)
+		e, err := shipyard.NewWithFolder(dst, log)
 		if err != nil {
-			panic(err)
+			log.Error("Unable to load blueprint", "error", err)
+			return
 		}
 
 		// if we have a blueprint show the header
@@ -55,44 +64,59 @@ var applyCmd = &cobra.Command{
 			fmt.Println("Title", e.Blueprint().Title)
 			fmt.Println("Author", e.Blueprint().Author)
 			fmt.Println("")
-			fmt.Println(e.Blueprint().Intro)
-			fmt.Println("")
 		}
+
+		fmt.Printf("Creating %d resources\n\n", e.ResourceCount())
 
 		err = e.Apply()
 		if err != nil {
-			panic(err)
+			log.Error("Unable to apply blueprint", "error", err)
+
+			log.Info("Attempting to roll back state")
+			err := e.Destroy()
+			if err != nil {
+				log.Error("Unable to roll back state, you may need to manually remove Docker containers and networks", "error", err)
+			}
+
+			return
 		}
 
 		// copy the blueprints to our state folder
 		// this is temporary
 		err = copy.Copy(dst, StateDir())
 		if err != nil {
-			panic(err)
+			log.Error("Unable to copy blueprint to state folder", "error", err)
+			return
 		}
 
-		// apply any env vars
-		if e.Blueprint() != nil && len(e.Blueprint().Environment) > 0 {
-			fmt.Println("")
-			fmt.Println("Setting environment variables:")
-			fmt.Println("")
-			ef, err := NewEnv(fmt.Sprintf("%s/env.var", StateDir()))
-			if err != nil {
-				panic(err)
-			}
-			defer ef.Close()
+		fmt.Println("")
+		fmt.Println(e.Blueprint().Intro)
+		fmt.Println("")
 
-			for _, e := range e.Blueprint().Environment {
-				fmt.Printf("export %s=%s\n", e.Key, e.Value)
-				err := ef.Set(e.Key, e.Value)
+		// apply any env vars
+		/*
+			if e.Blueprint() != nil && len(e.Blueprint().Environment) > 0 {
+				fmt.Println("")
+				fmt.Println("Setting environment variables:")
+				fmt.Println("")
+				ef, err := NewEnv(fmt.Sprintf("%s/env.var", StateDir()))
 				if err != nil {
 					panic(err)
 				}
-			}
+				defer ef.Close()
 
-			fmt.Println("")
-			fmt.Println("environment variables will be restored to previous values when using the `yard delete` command")
-		}
+				for _, e := range e.Blueprint().Environment {
+					fmt.Printf("export %s=%s\n", e.Key, e.Value)
+					err := ef.Set(e.Key, e.Value)
+					if err != nil {
+						panic(err)
+					}
+				}
+
+				fmt.Println("")
+				fmt.Println("environment variables will be restored to previous values when using the `yard delete` command")
+			}
+		*/
 
 		// open any browser windows
 		if e.Blueprint() != nil {

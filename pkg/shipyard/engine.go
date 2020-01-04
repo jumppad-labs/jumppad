@@ -42,8 +42,7 @@ func GenerateClients(l hclog.Logger) (*Clients, error) {
 }
 
 // NewWithFolder creates a new shipyard engine with a given configuration folder
-func NewWithFolder(folder string) (*Engine, error) {
-	l := hclog.New(&hclog.LoggerOptions{Level: hclog.Debug, Color: hclog.AutoColor})
+func NewWithFolder(folder string, l hclog.Logger) (*Engine, error) {
 	var err error
 
 	cc, err := config.New()
@@ -108,6 +107,11 @@ func (e *Engine) Destroy() error {
 	}
 
 	return nil
+}
+
+// ResourceCount defines the number of resources in a plan
+func (e *Engine) ResourceCount() int {
+	return e.config.ResourceCount()
 }
 
 // Blueprint returns the blueprint for the current config

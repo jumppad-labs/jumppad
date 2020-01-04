@@ -28,3 +28,23 @@ func New() (*Config, error) {
 
 	return c, nil
 }
+
+// ResourceCount defines the number of resources in a config
+func (c *Config) ResourceCount() int {
+	// start at 1 as we always have a wan
+	co := 1
+
+	if c.Docs != nil {
+		co++
+	}
+
+	co += len(c.Clusters)
+	co += len(c.Containers)
+	co += len(c.Containers)
+	co += len(c.HelmCharts)
+	co += len(c.K8sConfig)
+	co += len(c.Ingresses)
+	co += len(c.Execs)
+
+	return co
+}

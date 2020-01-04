@@ -223,8 +223,6 @@ func execCommand(c clients.Docker, container string, command []string) error {
 			return xerrors.Errorf("unable to determine status of exec process: %w", err)
 		}
 
-		fmt.Println(i)
-
 		if !i.Running {
 			if i.ExitCode == 0 {
 				return nil
