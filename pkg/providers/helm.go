@@ -30,6 +30,7 @@ func (h *Helm) Create() error {
 	h.log.Debug("Creating Helm chart", "ref", h.config.Name)
 
 	_, destPath, _ := CreateKubeConfigPath(h.config.ClusterRef.Name)
+
 	// set the KubeConfig for the kubernetes client
 	// this is used by the healthchecks
 	err := h.kubeClient.SetConfig(destPath)
@@ -64,23 +65,23 @@ func (h *Helm) Create() error {
 
 	vals, err := vo.MergeValues(p)
 	if err != nil {
-		return err
+		return xerrors.Errorf("Error merging Helm values: %w", err)
 	}
 
 	cp, err := client.ChartPathOptions.LocateChart(h.config.Chart, &settings)
 	if err != nil {
-		return err
+		return xerrors.Errorf("Error locating chart: %w", err)
 	}
 
 	chartRequested, err := loader.Load(cp)
 	if err != nil {
-		return err
+		return xerrors.Errorf("Error loading chart: %w", err)
 	}
 
 	// merge values
 	_, err = client.Run(chartRequested, vals)
 	if err != nil {
-		return err
+		return xerrors.Errorf("Error running chart: %w", err)
 	}
 
 	// we can now health check the install

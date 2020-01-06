@@ -1,6 +1,9 @@
 package providers
 
 import (
+	"os"
+	"path/filepath"
+
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
 )
@@ -18,32 +21,110 @@ func NewDocs(c *config.Docs, cc clients.Docker) *Docs {
 
 // Create a new documentation container
 func (i *Docs) Create() error {
+	// create the documentation container 
+	err := i.createDocsContainer()
+	if err != nil {
+		return err
+	}
+
+	// create the terminal server container
+	err = i.createTerminalContainer()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (i *Docs) createDocsContainer() error {
 	// create the container config
 	cc := &config.Container{}
 	cc.Name = i.config.Name
 	cc.NetworkRef = i.config.WANRef
 	cc.Image = config.Image{Name: "shipyardrun/docs:latest"}
 
-	cc.Volumes = []config.Volume{
-		config.Volume{
-			Source:      i.config.Path + "/docs",
-			Destination: "/app/docs",
-		},
+	cc.Volumes = []config.Volume{}
+
+	if i.config.Path != "" {
+		cc.Volumes = append(
+			cc.Volumes,
+			config.Volume{
+				Source:      i.config.Path + "/docs",
+				Destination: "/shipyard/docs",
+			},
+		)
+
+		siteConfigPath := filepath.Join(i.config.Path, "siteConfig.js")
+		_, err := os.Stat(siteConfigPath)
+		if err == nil {
+			cc.Volumes = append(
+				cc.Volumes,
+				config.Volume{
+					Source:      i.config.Path + "/siteConfig.js",
+					Destination: "/shipyard/siteConfig.js",
+				},
+			)
+		}
+
+		sidebarsPath := filepath.Join(i.config.Path, "sidebars.js")
+		_, err = os.Stat(sidebarsPath)
+		if err == nil {
+			cc.Volumes = append(
+				cc.Volumes,
+				config.Volume{
+					Source:      i.config.Path + "/sidebars.js",
+					Destination: "/shipyard/sidebars.js",
+				},
+			)
+		}
+	}
+
+	/*
 		config.Volume{
 			Source:      i.config.Path + "/static",
-			Destination: "/app/website/static",
+			Destination: "/shipyard/website/static",
 		},
 		config.Volume{
 			Source:      i.config.Path + "/siteConfig.js",
-			Destination: "/app/website/siteConfig.js",
+			Destination: "/shipyard/website/siteConfig.js",
 		},
-	}
+	*/
 
 	cc.Ports = []config.Port{
 		config.Port{
 			Protocol: "tcp",
 			Host:     i.config.Port,
 			Local:    3000,
+		},
+	}
+
+	p := NewContainer(cc, i.client)
+
+	return p.Create()
+}
+
+func (i *Docs) createTerminalContainer() error {
+	// create the container config
+	cc := &config.Container{}
+	cc.Name = "terminal"
+	cc.NetworkRef = i.config.WANRef
+	cc.Image = config.Image{Name: "shipyardrun/terminal-server:latest"}
+
+	// TODO we are mounting the docker sock, need to look at how this works on Windows
+	cc.Volumes = make([]config.Volume,0)
+	cc.Volumes = append(
+		cc.Volumes,
+		config.Volume{
+			Source:      "/var/run/docker.sock",
+			Destination: "/var/run/docker.sock",
+		},
+	)
+
+	cc.Ports = []config.Port{
+		config.Port{
+			Protocol: "tcp",
+			Host:     27950,
+			Local:    27950,
 		},
 	}
 
@@ -60,8 +141,23 @@ func (i *Docs) Destroy() error {
 	}
 
 	p := NewContainer(cc, i.client)
+	err := p.Destroy()
+	if err != nil {
+		return err
+	}
+	
+	cc = &config.Container{
+		Name:       "terminal",
+		NetworkRef: i.config.WANRef,
+	}
 
-	return p.Destroy()
+	p = NewContainer(cc, i.client)
+	err = p.Destroy()
+	if err != nil {
+		return err
+	}
+	
+	return nil
 }
 
 // Lookup the ID of the documentation container

@@ -22,4 +22,5 @@ build-windows:
 	CGO_ENABLED=0 GOOS=windows go build -o bin/yard-windows.exe main.go
 
 install_local:
-	go build -o /usr/local/bin/yard-dev main.go
+	go build -o bin/yard-dev main.go
+	sudo cp bin/yard-dev /usr/local/bin/yard-dev

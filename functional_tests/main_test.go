@@ -90,14 +90,16 @@ func theConfig(arg1 string) error {
 		return err
 	}
 
+	l := hclog.New(&hclog.LoggerOptions{Level: hclog.Debug})
+
 	// create providers
-	cc, err := shipyard.GenerateClients()
+	cc, err := shipyard.GenerateClients(l)
 	if err != nil {
 		return err
 	}
 
 	currentClients = cc
-	currentEngine = shipyard.New(currentConfig, cc, hclog.New(&hclog.LoggerOptions{Level: hclog.Debug}))
+	currentEngine = shipyard.New(currentConfig, cc, l)
 
 	return nil
 }

@@ -89,9 +89,11 @@ var applyCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Println("")
-		fmt.Println(e.Blueprint().Intro)
-		fmt.Println("")
+		if e.Blueprint() != nil {
+			fmt.Println("")
+			fmt.Println(e.Blueprint().Intro)
+			fmt.Println("")
+		}
 
 		// apply any env vars
 		/*
