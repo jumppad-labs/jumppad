@@ -195,7 +195,7 @@ func writeLocalDockerImageToVolume(c clients.Docker, images []config.Image, volu
 }
 
 // execute a command in a container
-func execCommand(c clients.Docker, container string, command []string) error {
+func execCommand(c clients.Docker, container string, command []string, l hclog.Logger) error {
 	id, err := c.ContainerExecCreate(context.Background(), container, types.ExecConfig{
 		Cmd:          command,
 		WorkingDir:   "/",
@@ -206,18 +206,19 @@ func execCommand(c clients.Docker, container string, command []string) error {
 		return xerrors.Errorf("unable to create container exec: %w", err)
 	}
 
-	// to get logs from an attach
-	/*
-		stream, err := c.ContainerExecAttach(context.Background(), id.ID, types.ExecStartCheck{})
-		if err != nil {
-			return xerrors.Errorf("unable to start exec process: %w", err)
-		}
-		defer stream.Close()
+	// get logs from an attach
+	stream, err := c.ContainerExecAttach(context.Background(), id.ID, types.ExecStartCheck{})
+	if err != nil {
+		return xerrors.Errorf("unable to attach logging to exec process: %w", err)
+	}
+	defer stream.Close()
 
-		go func() {
-			io.Copy(os.Stderr, stream.Reader)
-		}()
-	*/
+	go func() {
+		io.Copy(
+			l.StandardWriter(&hclog.StandardLoggerOptions{}), 
+			stream.Reader,
+		)
+	}()
 
 	err = c.ContainerExecStart(context.Background(), id.ID, types.ExecStartCheck{})
 	if err != nil {

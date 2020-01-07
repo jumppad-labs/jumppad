@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var config = ""
+var configFile = ""
 
 var rootCmd = &cobra.Command{
 	Use:   "yard",
@@ -27,7 +27,7 @@ var engine *shipyard.Engine
 func init() {
 	cobra.OnInitialize(configure)
 
-	rootCmd.PersistentFlags().StringVar(&config, "config", "", "config file (default is $HOME/.shipyard/config)")
+	rootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.shipyard/config)")
 
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(applyCmd)
@@ -40,12 +40,13 @@ func init() {
 	rootCmd.AddCommand(toolsCmd)
 	rootCmd.AddCommand(upgradeCmd)
 	rootCmd.AddCommand(uninstallCmd)
+	rootCmd.AddCommand(pushCmd)
 }
 
 func configure() {
-	if config != "" {
+	if configFile != "" {
 		// Use config file from the flag.
-		viper.SetConfigFile(config)
+		viper.SetConfigFile(configFile)
 	} else {
 		// Find home directory.
 		home, err := homedir.Dir()

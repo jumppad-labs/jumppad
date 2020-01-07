@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/spf13/cobra"
 )
@@ -16,7 +15,7 @@ var deleteCmd = &cobra.Command{
 	Example: `yard delete my-stack`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		log := hclog.New(&hclog.LoggerOptions{Level: hclog.Debug, Color: hclog.AutoColor})
+		log := createLogger() 
 
 		// When destroying a stack all the config
 		// which is created with apply is copied

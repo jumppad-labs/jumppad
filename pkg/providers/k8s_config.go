@@ -32,7 +32,7 @@ func (c *K8sConfig) Create() error {
 
 // Destroy the Kubernetes resources defined by the config
 func (c *K8sConfig) Destroy() error {
-	c.log.Info("Delete Kubernetes configuration", "ref", c.config.Name, "config", c.config.Paths)
+	c.log.Info("Destroy Kubernetes configuration", "ref", c.config.Name, "config", c.config.Paths)
 
 	err := c.setup()
 	if err != nil {

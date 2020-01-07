@@ -59,8 +59,7 @@ jobs:
 
       - name: Build Application
         run: |
-          GIT_COMMIT=$(git log -1 --pretty=format:"%H")
-          CGO_ENABLED=0 GOOS=${{matrix.OS}} GOARCH=${{matrix.ARCH}} go build -ldflags "-X main.version=${GIT_COMMIT}" -o bin/yard-${{ matrix.OS }}-${{ matrix.ARCH }} main.go
+          CGO_ENABLED=0 GOOS=${{matrix.OS}} GOARCH=${{matrix.ARCH}} go build -ldflags "-X main.version=${{ github.tag }}" -o bin/yard-${{ matrix.OS }}-${{ matrix.ARCH }} main.go
 
       - name: Stash binary
         uses: actions/upload-artifact@v1

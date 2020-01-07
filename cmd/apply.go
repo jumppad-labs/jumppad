@@ -14,7 +14,6 @@ import (
 	"context"
 
 	getter "github.com/hashicorp/go-getter"
-	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/spf13/cobra"
 )
@@ -41,7 +40,7 @@ var applyCmd = &cobra.Command{
 		fmt.Println("")
 
 		// create a logger
-		log := hclog.New(&hclog.LoggerOptions{Level: hclog.Debug, Color: hclog.AutoColor})
+		log := createLogger() 
 
 		if !IsLocalFolder(dst) {
 			// fetch the remote server from github

@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"runtime"
+	"github.com/hashicorp/go-hclog"
 )
 
 // HomeFolder returns the users homefolder this will be $HOME on windows and mac and
@@ -60,4 +61,8 @@ func GetBlueprintFolder(blueprint string) (string, error) {
 	}
 
 	return parts[1], nil
+}
+
+func createLogger() hclog.Logger {
+	return hclog.New(&hclog.LoggerOptions{Level: hclog.Debug, Color: hclog.AutoColor})
 }

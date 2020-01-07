@@ -45,7 +45,7 @@ func (n *Network) Create() error {
 
 // Destroy implements the provider interface method for destroying networks
 func (n *Network) Destroy() error {
-	n.log.Info("Destroying Network", "ref", n.config.Name)
+	n.log.Info("Destroy Network", "ref", n.config.Name)
 
 	return n.client.NetworkRemove(context.Background(), n.config.Name)
 }

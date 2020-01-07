@@ -129,7 +129,7 @@ func (c *Container) Destroy() error {
 		return nil
 	}
 
-	return c.client.ContainerRemove(context.Background(), id, types.ContainerRemoveOptions{Force: true})
+	return c.client.ContainerRemove(context.Background(), id, types.ContainerRemoveOptions{RemoveVolumes: true, Force: true})
 }
 
 // Lookup the containers ID based on the config
