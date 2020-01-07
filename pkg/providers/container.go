@@ -13,21 +13,24 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
+	hclog "github.com/hashicorp/go-hclog"
 )
 
 // Container is a provider for creating and destroying Docker containers
 type Container struct {
 	config *config.Container
 	client clients.Docker
+	log hclog.Logger
 }
 
 // NewContainer creates a new container with the given config and Docker client
-func NewContainer(co *config.Container, cl clients.Docker) *Container {
-	return &Container{co, cl}
+func NewContainer(co *config.Container, cl clients.Docker, l hclog.Logger) *Container {
+	return &Container{co, cl, l}
 }
 
 // Create implements provider method and creates a Docker container with the given config
 func (c *Container) Create() error {
+	c.log.Info("Creating Container", "ref", c.config.Name)
 
 	// create a unique name based on service network [container].[network].shipyard
 	// attach to networks
@@ -93,7 +96,7 @@ func (c *Container) Create() error {
 	hc.Privileged = c.config.Privileged
 
 	// make sure the image name is canonical
-	err := pullImage(c.client, c.config.Image)
+	err := pullImage(c.client, c.config.Image, c.log.With("parent_ref", c.config.Name))
 	if err != nil {
 		return err
 	}
@@ -114,6 +117,8 @@ func (c *Container) Create() error {
 
 // Destroy stops and removes the container
 func (c *Container) Destroy() error {
+	c.log.Info("Destroy Container", "ref", c.config.Name)
+
 	id, err := c.Lookup()
 	if err != nil {
 		return err

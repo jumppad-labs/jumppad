@@ -24,7 +24,7 @@ func NewNetwork(co *config.Network, cl clients.Docker, l hclog.Logger) *Network 
 
 // Create implements the provider interface method for creating new networks
 func (n *Network) Create() error {
-	n.log.Debug("Creating Network", "ref", n.config.Name)
+	n.log.Info("Creating Network", "ref", n.config.Name)
 
 	opts := types.NetworkCreate{
 		CheckDuplicate: true,
@@ -45,7 +45,7 @@ func (n *Network) Create() error {
 
 // Destroy implements the provider interface method for destroying networks
 func (n *Network) Destroy() error {
-	n.log.Debug("Destroying Network", "ref", n.config.Name)
+	n.log.Info("Destroying Network", "ref", n.config.Name)
 
 	return n.client.NetworkRemove(context.Background(), n.config.Name)
 }

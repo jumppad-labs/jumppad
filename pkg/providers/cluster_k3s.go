@@ -25,7 +25,7 @@ var (
 const k3sBaseImage = "rancher/k3s"
 
 func (c *Cluster) createK3s() error {
-	c.log.Debug("Creating Cluster", "ref", c.config.Name)
+	c.log.Info("Creating Cluster", "ref", c.config.Name)
 
 	// check the cluster name is valid
 	if err := validateClusterName(c.config.Name); err != nil {
@@ -88,7 +88,7 @@ func (c *Cluster) createK3s() error {
 
 	cc.Command = args
 
-	cp := NewContainer(cc, c.client)
+	cp := NewContainer(cc, c.client, c.log.With("parent_ref", c.config.Name))
 	err = cp.Create()
 	if err != nil {
 		return err
@@ -137,7 +137,7 @@ func (c *Cluster) createK3s() error {
 	// import the images to the servers container d instance
 	// importing images means that k3s does not need to pull from a remote docker hub
 	if c.config.Images != nil && len(c.config.Images) > 0 {
-		imageFile, err := writeLocalDockerImageToVolume(c.client, c.config.Images, volID)
+		imageFile, err := writeLocalDockerImageToVolume(c.client, c.config.Images, volID, c.log)
 		if err != nil {
 			return err
 		}
@@ -255,13 +255,13 @@ func (c *Cluster) createDockerKubeConfig(kubeconfig string) error {
 }
 
 func (c *Cluster) destroyK3s() error {
-	c.log.Debug("Delete Cluster", "ref", c.config.Name)
+	c.log.Info("Delete Cluster", "ref", c.config.Name)
 
 	cc := &config.Container{}
 	cc.Name = fmt.Sprintf("server.%s", c.config.Name)
 	cc.NetworkRef = c.config.NetworkRef
 
-	cp := NewContainer(cc, c.client)
+	cp := NewContainer(cc, c.client, c.log.With("parent_ref", c.config.Name))
 	return cp.Destroy()
 }
 

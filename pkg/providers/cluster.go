@@ -55,7 +55,7 @@ func (c *Cluster) Lookup() (string, error) {
 		NetworkRef: c.config.NetworkRef,
 	}
 
-	p := NewContainer(co, c.client)
+	p := NewContainer(co, c.client, c.log.With("parent_ref", c.config.Name))
 
 	return p.Lookup()
 }

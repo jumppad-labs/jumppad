@@ -19,7 +19,7 @@ func NewIngress(c *config.Ingress, cc clients.Docker, l hclog.Logger) *Ingress {
 }
 
 func (i *Ingress) Create() error {
-	i.log.Debug("Creating Ingress", "ref", i.config.Name)
+	i.log.Info("Creating Ingress", "ref", i.config.Name)
 
 	var serviceName string
 	var volumes []config.Volume
@@ -68,25 +68,26 @@ func (i *Ingress) Create() error {
 		Environment: env,
 	}
 
-	p := NewContainer(c, i.client)
+	p := NewContainer(c, i.client, i.log.With("parent_ref", i.config.Name))
 
 	return p.Create()
 }
 
 // Destroy the ingress
 func (i *Ingress) Destroy() error {
-	i.log.Debug("Destroy Ingress", "ref", i.config.Name)
+	i.log.Info("Destroy Ingress", "ref", i.config.Name)
 
 	c := &config.Container{
 		Name:       i.config.Name,
 		NetworkRef: i.config.NetworkRef,
 	}
 
-	p := NewContainer(c, i.client)
+	p := NewContainer(c, i.client, i.log.With("parent_ref", i.config.Name))
 
 	return p.Destroy()
 }
 
+// Lookup the id of the ingress
 func (i *Ingress) Lookup() (string, error) {
 	return "", nil
 }

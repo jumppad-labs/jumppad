@@ -4,23 +4,28 @@ import (
 	"os"
 	"path/filepath"
 
+
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
+	hclog "github.com/hashicorp/go-hclog"
 )
 
 // Docs defines a provider for creating documentation containers
 type Docs struct {
 	config *config.Docs
 	client clients.Docker
+	log hclog.Logger
 }
 
 // NewDocs creates a new Docs provider
-func NewDocs(c *config.Docs, cc clients.Docker) *Docs {
-	return &Docs{c, cc}
+func NewDocs(c *config.Docs, cc clients.Docker, l hclog.Logger) *Docs {
+	return &Docs{c, cc, l}
 }
 
 // Create a new documentation container
 func (i *Docs) Create() error {
+	i.log.Info("Creating Documentation", "ref", i.config.Name)
+
 	// create the documentation container 
 	err := i.createDocsContainer()
 	if err != nil {
@@ -98,7 +103,7 @@ func (i *Docs) createDocsContainer() error {
 		},
 	}
 
-	p := NewContainer(cc, i.client)
+	p := NewContainer(cc, i.client, i.log.With("parent_ref", i.config.Name))
 
 	return p.Create()
 }
@@ -128,19 +133,21 @@ func (i *Docs) createTerminalContainer() error {
 		},
 	}
 
-	p := NewContainer(cc, i.client)
+	p := NewContainer(cc, i.client, i.log.With("parent_ref", i.config.Name))
 
 	return p.Create()
 }
 
 // Destroy the documentation container
 func (i *Docs) Destroy() error {
+	i.log.Info("Destroy Documentation", "ref", i.config.Name)
+
 	cc := &config.Container{
 		Name:       i.config.Name,
 		NetworkRef: i.config.WANRef,
 	}
 
-	p := NewContainer(cc, i.client)
+	p := NewContainer(cc, i.client, i.log.With("parent_ref", i.config.Name))
 	err := p.Destroy()
 	if err != nil {
 		return err
@@ -151,7 +158,7 @@ func (i *Docs) Destroy() error {
 		NetworkRef: i.config.WANRef,
 	}
 
-	p = NewContainer(cc, i.client)
+	p = NewContainer(cc, i.client, i.log.With("parent_ref", i.config.Name))
 	err = p.Destroy()
 	if err != nil {
 		return err
@@ -167,7 +174,7 @@ func (i *Docs) Lookup() (string, error) {
 		NetworkRef: i.config.WANRef,
 	}
 
-	p := NewContainer(cc, i.client)
+	p := NewContainer(cc, i.client, i.log.With("parent_ref", i.config.Name))
 
 	return p.Lookup()
 }

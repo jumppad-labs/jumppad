@@ -27,7 +27,7 @@ func NewHelm(c *config.Helm, kc clients.Kubernetes, l hclog.Logger) *Helm {
 }
 
 func (h *Helm) Create() error {
-	h.log.Debug("Creating Helm chart", "ref", h.config.Name)
+	h.log.Info("Creating Helm chart", "ref", h.config.Name)
 
 	_, destPath, _ := CreateKubeConfigPath(h.config.ClusterRef.Name)
 
@@ -46,8 +46,7 @@ func (h *Helm) Create() error {
 	})
 
 	if err != nil {
-		h.log.Error("Error initializing helm", "error", err)
-		return err
+		return xerrors.Errorf("unalbe to iniailize Helm: %w", err)
 	}
 
 	client := action.NewInstall(cfg)
@@ -101,15 +100,10 @@ func (h *Helm) Create() error {
 }
 
 func (h *Helm) Destroy() error {
-	h.log.Debug("Destroy Helm chart", "ref", h.config.Name)
+	h.log.Info("Destroy Helm chart", "ref", h.config.Name)
 	return nil
 }
 
 func (h *Helm) Lookup() (string, error) {
 	return "", nil
-}
-
-func debug(format string, v ...interface{}) {
-	format = fmt.Sprintf("[debug] %s\n", format)
-	fmt.Printf(format, v...)
 }

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/hashicorp/go-hclog"
 	"github.com/docker/go-connections/nat"
 	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
@@ -24,7 +25,7 @@ func setupDocs(c *config.Docs) (*clients.MockDocker, *Docs) {
 		Return(container.ContainerCreateCreatedBody{}, nil)
 	md.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	return md, &Docs{c, md}
+	return md, &Docs{c, md, hclog.Default()}
 }
 
 func TestCreatesDocumentationContainer(t *testing.T) {

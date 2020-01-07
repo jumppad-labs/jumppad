@@ -1,3 +1,5 @@
+git_commit = $(shell git log -1 --pretty=format:"%H")
+
 test_unit:
 	go test -v -race $(shell go list ./... | grep -v /functional_tests)
 
@@ -13,14 +15,14 @@ autotest:
 build: build-darwin build-linux build-windows
 
 build-darwin:
-	CGO_ENABLED=0 GOOS=darwin go build -o bin/yard-darwin main.go
+	CGO_ENABLED=0 GOOS=darwin go build -ldflags "-X main.version=${git_commit}" -o bin/yard-darwin main.go
 
 build-linux:
-	CGO_ENABLED=0 GOOS=linux go build -o bin/yard-linux main.go
+	CGO_ENABLED=0 GOOS=linux go build -ldflags "-X main.version=${git_commit}" -o bin/yard-linux main.go
 
 build-windows:
-	CGO_ENABLED=0 GOOS=windows go build -o bin/yard-windows.exe main.go
+	CGO_ENABLED=0 GOOS=windows go build -ldflags "-X main.version=${git_commit}" -o bin/yard-windows.exe main.go
 
 install_local:
-	go build -o bin/yard-dev main.go
+	go build -ldflags "-X main.version=${git_commit}" -o bin/yard-dev main.go
 	sudo cp bin/yard-dev /usr/local/bin/yard-dev

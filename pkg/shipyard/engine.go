@@ -131,7 +131,7 @@ func generateProviders(c *config.Config, cc *Clients, l hclog.Logger) []provider
 	}
 
 	for _, c := range c.Containers {
-		p := providers.NewContainer(c, cc.Docker)
+		p := providers.NewContainer(c, cc.Docker, l)
 		oc = append(oc, p)
 	}
 
@@ -156,7 +156,7 @@ func generateProviders(c *config.Config, cc *Clients, l hclog.Logger) []provider
 	}
 
 	if c.Docs != nil {
-		p := providers.NewDocs(c.Docs, cc.Docker)
+		p := providers.NewDocs(c.Docs, cc.Docker, l)
 		oc = append(oc, p)
 	}
 

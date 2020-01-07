@@ -16,10 +16,11 @@ import (
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"golang.org/x/xerrors"
+	hclog "github.com/hashicorp/go-hclog"
 )
 
 // pullImage pulls a Docker image from a remote repo
-func pullImage(c clients.Docker, image config.Image) error {
+func pullImage(c clients.Docker, image config.Image, l hclog.Logger) error {
 	in := makeImageCanonical(image.Name)
 
 	args := filters.NewArgs()
@@ -33,6 +34,8 @@ func pullImage(c clients.Docker, image config.Image) error {
 
 	// if we have images do not pull
 	if len(sum) > 0 {
+		l.Debug("Image exists in local cache", "image", image.Name)
+
 		return nil
 	}
 
@@ -49,9 +52,11 @@ func pullImage(c clients.Docker, image config.Image) error {
 		)
 	}
 
+	l.Debug("Pulling image", "image", image.Name)
+
 	out, err := c.ImagePull(context.Background(), in, ipo)
 	if err != nil {
-		return err
+		return xerrors.Errorf("Error pulling image: %w", err)
 	}
 
 	// write the output to /dev/null
@@ -77,13 +82,16 @@ func makeImageCanonical(image string) string {
 
 // writeLocalDockerImageToVolume writes a docker image to a Docker volume
 // returns the filename and an error if one occured
-func writeLocalDockerImageToVolume(c clients.Docker, images []config.Image, volume string) (string, error) {
+func writeLocalDockerImageToVolume(c clients.Docker, images []config.Image, volume string, l hclog.Logger) (string, error) {
+	l.Debug("Writing docker images to volume", "images", images, "volume", volume)
+
 	// temporary slice of image names for the save command
 	ins := []string{}
 
 	// make sure that the given image has been pulled locally before saving
 	for _, i := range images {
-		err := pullImage(c, i)
+
+		err := pullImage(c, i, l)
 		if err != nil {
 			return "", xerrors.Errorf("unable to pull image %s: %w", i, err)
 		}
@@ -171,7 +179,7 @@ func writeLocalDockerImageToVolume(c clients.Docker, images []config.Image, volu
 		Command: []string{"tail", "-f", "/dev/null"},
 	}
 
-	con := NewContainer(cc, c)
+	con := NewContainer(cc, c, l)
 	err = con.Create()
 	if err != nil {
 		return "", xerrors.Errorf("unable to create dummy container for importing images: %w", err)

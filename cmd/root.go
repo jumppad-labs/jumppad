@@ -66,7 +66,11 @@ func configure() {
 }
 
 // Execute the root command
-func Execute() {
+func Execute(version string) {
+	// TODO implemnent a version subcommand
+	fmt.Println("Shipyard version:", version)
+	fmt.Println("")
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
