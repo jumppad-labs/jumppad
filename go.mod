@@ -26,7 +26,7 @@ require (
 	golang.org/x/sys v0.0.0-20191204072324-ce4227a45e2e // indirect
 	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898
 	gotest.tools/gotestsum v0.4.0 // indirect
-	helm.sh/helm/v3 v3.0.1
+	helm.sh/helm/v3 v3.0.2
 	k8s.io/api v0.0.0-20191016110408-35e52d86657a
 	k8s.io/apimachinery v0.0.0-20191004115801-a2eda9f80ab8
 	k8s.io/client-go v0.0.0-20191016111102-bec269661e48

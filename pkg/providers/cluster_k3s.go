@@ -134,6 +134,9 @@ func (c *Cluster) createK3s() error {
 		return xerrors.Errorf("Error while waiting for Kubernetes default pods: %w", err)
 	}
 
+	// we might need to wait for the api services to become ready
+	//kubectl get apiservice
+
 	// import the images to the servers container d instance
 	// importing images means that k3s does not need to pull from a remote docker hub
 	if c.config.Images != nil && len(c.config.Images) > 0 {
