@@ -40,8 +40,18 @@ func (i *Ingress) Create() error {
 
 		env = append(env, config.KV{Key: "KUBECONFIG", Value: "/.kube/kubeconfig.yml"})
 
+
 		command = append(command, "--proxy-type")
 		command = append(command, "kubernetes")
+
+		// if the namespace is not present assume default
+		if i.config.Namespace == "" {
+			i.config.Namespace = "default"
+		}
+		
+		command = append(command, "--namespace")
+		command = append(command, i.config.Namespace)
+		
 	default:
 		return fmt.Errorf("Only Container ingress and K3s are supported at present")
 	}

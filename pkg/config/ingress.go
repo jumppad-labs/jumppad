@@ -9,6 +9,7 @@ type Ingress struct {
 
 	Target    string `hcl:"target"`
 	Service   string `hcl:"service,optional"`
+	Namespace string `hcl:"namespace,optional"`
 	Ports     []Port `hcl:"port,block"`
 	IPAddress string `hcl:"ip_address,optional"`
 }

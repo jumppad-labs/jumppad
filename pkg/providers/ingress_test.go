@@ -119,6 +119,9 @@ func TestCreatesIngressWithK8sClusterOptions(t *testing.T) {
 
 	assert.Equal(t, "--service-name", cfg.Cmd[2])
 	assert.Equal(t, i.Service, cfg.Cmd[3])
+	
+	assert.Equal(t, "--namespace", cfg.Cmd[4])
+	assert.Equal(t, "default", cfg.Cmd[5])
 
 	// check the network
 	assert.NotNil(t, network.EndpointsConfig[cn.Name])
