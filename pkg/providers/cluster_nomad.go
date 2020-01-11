@@ -81,5 +81,5 @@ func (c *Cluster) createNomad() error {
 }
 
 func (c*Cluster) destroyNomad() error {
-	return nil
+	return c.destroyK3s()
 }
