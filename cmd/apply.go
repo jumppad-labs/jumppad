@@ -120,6 +120,7 @@ var applyCmd = &cobra.Command{
 		*/
 
 		// open any browser windows
+		//TODO implement windows using start "start http://www.google.com"
 		if e.Blueprint() != nil {
 			openCommand := "open"
 			if runtime.GOOS == "linux" {

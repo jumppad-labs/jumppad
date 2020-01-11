@@ -31,6 +31,8 @@ func (c *Cluster) Create() error {
 	switch c.config.Driver {
 	case "k3s":
 		return c.createK3s()
+	case "nomad":
+		return c.createNomad()
 	default:
 		return ErrorClusterDriverNotImplemented
 	}
@@ -41,6 +43,8 @@ func (c *Cluster) Destroy() error {
 	switch c.config.Driver {
 	case "k3s":
 		return c.destroyK3s()
+	case "nomad":
+		return c.destroyNomad()
 	default:
 		return ErrorClusterDriverNotImplemented
 	}

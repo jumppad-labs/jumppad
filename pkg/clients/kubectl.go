@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"helm.sh/helm/v3/pkg/kube"
+	"golang.org/x/xerrors"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -81,7 +82,10 @@ func (k *KubernetesImpl) Apply(files []string, waitUntilReady bool) error {
 
 	// process the files
 	for _, f := range allFiles {
-		applyFile(f, waitUntilReady, kc)
+		err := applyFile(f, waitUntilReady, kc)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -140,18 +144,18 @@ func buildFileList(files []string) ([]string, error) {
 func applyFile(path string, waitUntilReady bool, kc *kube.Client) error {
 	f, err := os.Open(path)
 	if err != nil {
-		return err
+		return xerrors.Errorf("Unable to open file: %w", err)
 	}
 	defer f.Close()
 
-	r, err := kc.Build(f, false)
+	r, err := kc.Build(f, true)
 	if err != nil {
-		return err
+		return xerrors.Errorf("Unable to build resources: %w", err)
 	}
 
 	_, err = kc.Create(r)
 	if err != nil {
-		return err
+		return xerrors.Errorf("Unable to create resources: %w", err)
 	}
 
 	if waitUntilReady {

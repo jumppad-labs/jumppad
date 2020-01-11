@@ -11,6 +11,7 @@ type Cluster struct {
 	WANRef     *Network
 	Config     []KV    `hcl:"config,block"`
 	Images     []Image `hcl:"image,block"`
+	Environment []KV   `hcl:"env,block"`
 }
 
 // ClusterConfig defines arbitary config to set for the cluster
