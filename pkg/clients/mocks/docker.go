@@ -96,6 +96,12 @@ func (m *MockDocker) ContainerExecStart(ctx context.Context, execID string, conf
 }
 
 func (m *MockDocker) ContainerExecAttach(ctx context.Context, execID string, config types.ExecStartCheck) (types.HijackedResponse, error) {
+	args := m.Called(ctx, execID, config)
+
+	if hjr, ok := args.Get(0).(types.HijackedResponse); ok {
+		return hjr, args.Error(1)
+	}
+
 	return types.HijackedResponse{}, nil
 }
 

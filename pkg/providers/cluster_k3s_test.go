@@ -1,10 +1,13 @@
 package providers
 
 import (
+	"bytes"
+	"net"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"bufio"
 	"strings"
 	"testing"
 
@@ -54,6 +57,13 @@ func setupK3sCluster(c *config.Cluster) (*clients.MockDocker, *Cluster, func()) 
 	md.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{{ID: "cluster"}}, nil).Once()
 
 	md.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(types.IDResponse{ID: "abc"}, nil)
+	md.On("ContainerExecAttach", mock.Anything, "abc", mock.Anything).Return(
+		types.HijackedResponse{
+			&net.TCPConn{}, 
+			bufio.NewReader(bytes.NewReader([]byte("Do exec"))),
+		}, 
+		nil,
+	)
 	md.On("ContainerExecStart", mock.Anything, "abc", mock.Anything).Return(nil)
 	md.On("ContainerExecInspect", mock.Anything, "abc").Return(nil, nil)
 

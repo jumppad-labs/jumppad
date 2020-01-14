@@ -13,10 +13,10 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"golang.org/x/xerrors"
-	hclog "github.com/hashicorp/go-hclog"
 )
 
 // pullImage pulls a Docker image from a remote repo
@@ -213,9 +213,10 @@ func execCommand(c clients.Docker, container string, command []string, l hclog.L
 	}
 	defer stream.Close()
 
+	// ensure that the log from the Docker exec command is copied to the default logger
 	go func() {
 		io.Copy(
-			l.StandardWriter(&hclog.StandardLoggerOptions{}), 
+			l.StandardWriter(&hclog.StandardLoggerOptions{}),
 			stream.Reader,
 		)
 	}()

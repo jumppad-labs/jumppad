@@ -140,14 +140,14 @@ func (c *Cluster) createK3s() error {
 	// import the images to the servers container d instance
 	// importing images means that k3s does not need to pull from a remote docker hub
 	if c.config.Images != nil && len(c.config.Images) > 0 {
-		return c.ImportLocalDockerImages(c.config.Images)
+		return c.ImportLocalDockerImages(id, c.config.Images)
 	}
 
 	return nil
 }
 
 // ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
-func (c*Cluster) ImportLocalDockerImages(images []config.Image) error {
+func (c *Cluster) ImportLocalDockerImages(clusterID string, images []config.Image) error {
 	vn := volumeName(c.config.Name)
 	c.log.Debug("Writing local Docker images to cluster", "ref", c.config.Name, "images", images, "volume", vn)
 
@@ -156,15 +156,10 @@ func (c*Cluster) ImportLocalDockerImages(images []config.Image) error {
 		return err
 	}
 
-	id, err := c.Lookup()
-	if err != nil {
-		return err
-	}
-
 	// import the image
 	// ctr image import filename
-	c.log.Debug("Importing Docker images on cluster", "ref", c.config.Name, "id", id, "image", imageFile)
-	err = execCommand(c.client, id, []string{"ctr", "image", "import", imageFile}, c.log.With("parent_ref", c.config.Name))
+	c.log.Debug("Importing Docker images on cluster", "ref", c.config.Name, "id", clusterID, "image", imageFile)
+	err = execCommand(c.client, clusterID, []string{"ctr", "image", "import", imageFile}, c.log.With("parent_ref", c.config.Name))
 	if err != nil {
 		return err
 	}
