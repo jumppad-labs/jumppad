@@ -59,7 +59,7 @@ jobs:
 
       - name: Build Application
         run: |
-          CGO_ENABLED=0 GOOS=${{matrix.OS}} GOARCH=${{matrix.ARCH}} go build -ldflags "-X main.version=${{ github.tag }}" -o bin/${{ matrix.OS }}-${{ matrix.ARCH }}/yard2 main.go
+          CGO_ENABLED=0 GOOS=${{matrix.OS}} GOARCH=${{matrix.ARCH}} go build -ldflags "-X main.version=${GITHUB_REF#refs/tags/}" -o bin/${{ matrix.OS }}-${{ matrix.ARCH }}/yard2 main.go
           mkdir -p release/shipyard-${{ matrix.OS }}-${{ matrix.ARCH }}
           zip -j release/shipyard-${{ matrix.OS }}-${{ matrix.ARCH }}/shipyard-${{ matrix.OS }}-${{ matrix.ARCH }} bin/${{ matrix.OS }}-${{ matrix.ARCH }}/yard2
 
