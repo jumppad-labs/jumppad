@@ -61,7 +61,7 @@ jobs:
         run: |
           CGO_ENABLED=0 GOOS=${{matrix.OS}} GOARCH=${{matrix.ARCH}} go build -ldflags "-X main.version=${{ github.tag }}" -o bin/${{ matrix.OS }}-${{ matrix.ARCH }}/yard2 main.go
           mkdir -p release/shipyard-${{ matrix.OS }}-${{ matrix.ARCH }}
-          zip -j release/shipyard-${{ matrix.OS }}-${{ matrix.ARCH }}/shipyard-${{ matrix.OS }}-${{ matrix.ARCH }} /bin/${{ matrix.OS }}-${{ matrix.ARCH }}/yard2
+          zip -j release/shipyard-${{ matrix.OS }}-${{ matrix.ARCH }}/shipyard-${{ matrix.OS }}-${{ matrix.ARCH }} bin/${{ matrix.OS }}-${{ matrix.ARCH }}/yard2
 
       - name: Stash binary
         uses: actions/upload-artifact@v1
