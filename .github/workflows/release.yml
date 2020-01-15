@@ -60,13 +60,14 @@ jobs:
       - name: Build Application
         run: |
           CGO_ENABLED=0 GOOS=${{matrix.OS}} GOARCH=${{matrix.ARCH}} go build -ldflags "-X main.version=${{ github.tag }}" -o bin/${{ matrix.OS }}-${{ matrix.ARCH }}/yard2 main.go
-          zip -j ${{ matrix.OS }}-${{ matrix.ARCH }} /bin/${{ matrix.OS }}-${{ matrix.ARCH }}/yard2
+          mkdir -p release/shipyard-${{ matrix.OS }}-${{ matrix.ARCH }}
+          zip -j release/shipyard-${{ matrix.OS }}-${{ matrix.ARCH }}/shipyard-${{ matrix.OS }}-${{ matrix.ARCH }} /bin/${{ matrix.OS }}-${{ matrix.ARCH }}/yard2
 
       - name: Stash binary
         uses: actions/upload-artifact@v1
         with:
           name: shipyard-${{ matrix.OS }}-${{ matrix.ARCH }}.zip
-          path: shipyard-${{ matrix.OS }}-${{ matrix.ARCH }}
+          path: release/shipyard-${{ matrix.OS }}-${{ matrix.ARCH }}
 
   create_release:
     name: Create Release
@@ -139,7 +140,7 @@ jobs:
       - name: Retrieve stashed binary
         uses: actions/download-artifact@v1
         with:
-          name: shipyard-${{ matrix.OS }}-${{ matrix.ARCH }}
+          name: shipyard-${{ matrix.OS }}-${{ matrix.ARCH }}.zip
 
       # Write content of downloaded file (a string which contains the release URL) into a step.outputs variable
       - name: Read release URL
@@ -153,6 +154,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.get_release_url.outputs.URL }}
-          asset_path: shipyard-${{ matrix.OS }}-${{ matrix.ARCH }}/shipyard-${{ matrix.OS }}-${{ matrix.ARCH }}.zip
+          asset_path: shipyard-${{ matrix.OS }}-${{ matrix.ARCH }}.zip/shipyard-${{ matrix.OS }}-${{ matrix.ARCH }}.zip
           asset_name: shipyard-${{ matrix.OS }}-${{ matrix.ARCH }}.zip
           asset_content_type: application/octet-stream
