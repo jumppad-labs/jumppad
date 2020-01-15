@@ -21,26 +21,30 @@ import (
 // ErrorInvalidBlueprintURI is returned when the URI for a blueprint can not be parsed
 var ErrorInvalidBlueprintURI = errors.New("error invalid Blueprint URI, blueprints should be formatted 'github.com/org/repo//blueprint'")
 
-var applyCmd = &cobra.Command{
-	Use:   "apply [file] [directory] ...",
-	Short: "Apply the supplied stack configuration",
-	Long:  `Apply the supplied stack configuration`,
-	Example: `  # Recursively create a stack from a directory
-  yard apply my-stack
+var runCmd = &cobra.Command{
+	Use:   "run [file] [directory] ...",
+	Short: "Run the supplied stack configuration",
+	Long:  `Run the supplied stack configuration`,
+	Example: `
+  # Recursively create a stack from a directory
+  yard run ./-stack
 
   # Create a stack from a specific file
-  yard apply my-stack/network.hcl
+  yard run my-stack/network.hcl
+  
+  # Create a stack from a blueprint in GitHub
+  yard run github.com/shipyard-run/blueprints//vault-k8s
 	`,
 	Args: cobra.ArbitraryArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		var err error
 		dst := args[0]
 
-		fmt.Println("Applying configuration from: ", dst)
+		fmt.Println("Running configuration from: ", dst)
 		fmt.Println("")
 
 		// create a logger
-		log := createLogger() 
+		log := createLogger()
 
 		if !IsLocalFolder(dst) {
 			// fetch the remote server from github

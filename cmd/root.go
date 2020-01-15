@@ -15,8 +15,8 @@ var configFile = ""
 
 var rootCmd = &cobra.Command{
 	Use:   "yard",
-	Short: "A tool that helps you create and run demo and tutorial environments",
-	Long:  `A tool that helps you create and run demo and tutorial environments`,
+	Short: "Modern cloud native development environments",
+	Long:  `Shipyard is a tool that helps you create and run demo and tutorial environments`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// engine = shipyard.New()
 	},
@@ -30,7 +30,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.shipyard/config)")
 
 	rootCmd.AddCommand(initCmd)
-	rootCmd.AddCommand(applyCmd)
+	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(deleteCmd)
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(exposeCmd)
