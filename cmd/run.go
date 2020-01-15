@@ -39,12 +39,14 @@ var runCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		var err error
 		dst := args[0]
-
 		fmt.Println("Running configuration from: ", dst)
 		fmt.Println("")
 
 		// create a logger
 		log := createLogger()
+
+		// create the shipyard home
+		os.MkdirAll(ShipyardHome(), os.FileMode(0755))
 
 		if !IsLocalFolder(dst) {
 			// fetch the remote server from github
@@ -81,6 +83,13 @@ var runCmd = &cobra.Command{
 				log.Error("Unable to roll back state, you may need to manually remove Docker containers and networks", "error", err)
 			}
 
+			return
+		}
+
+		// create the state directory
+		err = os.MkdirAll(StateDir(), 0755)
+		if err != nil {
+			log.Error("Unable to create state folder", "error", err)
 			return
 		}
 

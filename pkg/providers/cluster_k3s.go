@@ -236,7 +236,7 @@ func (c *Cluster) copyKubeConfig(id string) (string, error) {
 
 func (c *Cluster) createDockerKubeConfig(kubeconfig string) error {
 	// read the config into a string
-	f, err := os.OpenFile(kubeconfig, os.O_RDONLY, 0755)
+	f, err := os.OpenFile(kubeconfig, os.O_RDONLY, 0666)
 	if err != nil {
 		return err
 	}
