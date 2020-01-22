@@ -2,16 +2,17 @@ package config
 
 // Config defines the stack config
 type Config struct {
-	Blueprint  *Blueprint
-	WAN        *Network
-	Docs       *Docs
-	Clusters   []*Cluster
-	Containers []*Container
-	Networks   []*Network
-	HelmCharts []*Helm
-	K8sConfig  []*K8sConfig
-	Ingresses  []*Ingress
-	Execs      []*Exec
+	Blueprint   *Blueprint
+	WAN         *Network
+	Docs        *Docs
+	Clusters    []*Cluster
+	Containers  []*Container
+	Networks    []*Network
+	HelmCharts  []*Helm
+	K8sConfig   []*K8sConfig
+	Ingresses   []*Ingress
+	LocalExecs  []*LocalExec
+	RemoteExecs []*RemoteExec
 }
 
 // New creates a new Config with the default WAN network
@@ -44,7 +45,8 @@ func (c *Config) ResourceCount() int {
 	co += len(c.HelmCharts)
 	co += len(c.K8sConfig)
 	co += len(c.Ingresses)
-	co += len(c.Execs)
+	co += len(c.LocalExecs)
+	co += len(c.RemoteExecs)
 
 	return co
 }

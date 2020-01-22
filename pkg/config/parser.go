@@ -205,8 +205,8 @@ func ParseHCLFile(file string, c *Config) error {
 
 			c.Docs = do
 
-		case "exec":
-			h := &Exec{}
+		case "local_exec":
+			h := &LocalExec{}
 			h.Name = b.Labels[0]
 
 			err := decodeBody(b, h)
@@ -216,7 +216,26 @@ func ParseHCLFile(file string, c *Config) error {
 
 			h.Script = ensureAbsolute(h.Script, file)
 
-			c.Execs = append(c.Execs, h)
+			c.LocalExecs = append(c.LocalExecs, h)
+
+		case "remote_exec":
+			h := &RemoteExec{}
+			h.Name = b.Labels[0]
+
+			err := decodeBody(b, h)
+			if err != nil {
+				return err
+			}
+
+			h.Script = ensureAbsolute(h.Script, file)
+
+			// process volumes
+			// make sure mount paths are absolute
+			for i, v := range h.Volumes {
+				h.Volumes[i].Source = ensureAbsolute(v.Source, file)
+			}
+
+			c.RemoteExecs = append(c.RemoteExecs, h)
 		}
 	}
 

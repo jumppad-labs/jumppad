@@ -202,6 +202,7 @@ func execCommand(c clients.Docker, container string, command []string, l hclog.L
 		AttachStdout: true,
 		AttachStderr: true,
 	})
+
 	if err != nil {
 		return xerrors.Errorf("unable to create container exec: %w", err)
 	}

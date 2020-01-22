@@ -15,7 +15,8 @@ func TestResourceCount(t *testing.T) {
 	c.HelmCharts = []*Helm{&Helm{}}
 	c.K8sConfig = []*K8sConfig{&K8sConfig{}}
 	c.Ingresses = []*Ingress{&Ingress{}}
-	c.Execs = []*Exec{&Exec{}}
+	c.LocalExecs = []*LocalExec{&LocalExec{}}
+	c.RemoteExecs = []*RemoteExec{&RemoteExec{}}
 
-	assert.Equal(t, 9, c.ResourceCount())
+	assert.Equal(t, 10, c.ResourceCount())
 }

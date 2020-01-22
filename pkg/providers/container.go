@@ -11,16 +11,16 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
-	hclog "github.com/hashicorp/go-hclog"
 )
 
 // Container is a provider for creating and destroying Docker containers
 type Container struct {
 	config *config.Container
 	client clients.Docker
-	log hclog.Logger
+	log    hclog.Logger
 }
 
 // NewContainer creates a new container with the given config and Docker client
@@ -68,7 +68,10 @@ func (c *Container) Create() error {
 	mounts := make([]mount.Mount, 0)
 	for _, vc := range c.config.Volumes {
 
+		// default mount type to bind
 		t := mount.TypeBind
+
+		// select mount type if set
 		switch vc.Type {
 		case "bind":
 			t = mount.TypeBind

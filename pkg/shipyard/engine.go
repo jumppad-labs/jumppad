@@ -160,8 +160,13 @@ func generateProviders(c *config.Config, cc *Clients, l hclog.Logger) []provider
 		oc = append(oc, p)
 	}
 
-	for _, c := range c.Execs {
-		p := providers.NewExec(c, cc.Command, l)
+	for _, c := range c.LocalExecs {
+		p := providers.NewLocalExec(c, cc.Command, l)
+		oc = append(oc, p)
+	}
+
+	for _, c := range c.RemoteExecs {
+		p := providers.NewRemoteExec(c, cc.Docker, l)
 		oc = append(oc, p)
 	}
 
