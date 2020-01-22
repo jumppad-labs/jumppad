@@ -36,6 +36,9 @@ func TestCreatesConfigCorrectly(t *testing.T) {
 }
 
 func TestDestroysCorrectly(t *testing.T) {
+	//skip this test as functionality has been removed until we implement a DAG
+	t.SkipNow()
+
 	paths := []string{"/tmp/something"}
 	c := &config.Cluster{Name: "testcluster"}
 	kc := &config.K8sConfig{ClusterRef: c, Paths: paths}
