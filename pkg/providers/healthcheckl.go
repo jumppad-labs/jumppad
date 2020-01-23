@@ -2,6 +2,7 @@ package providers
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -57,6 +58,29 @@ func healthCheckSingle(c clients.Kubernetes, selector string, timeout time.Durat
 		if allRunning {
 			l.Debug("Health check complete", "selector", selector)
 			break
+		}
+
+		// backoff
+		time.Sleep(2 * time.Second)
+	}
+
+	return nil
+}
+
+func healthCheckHTTP(address string, timeout time.Duration, l hclog.Logger) error {
+	l.Debug("Performing health check for address", "address", address)
+	st := time.Now()
+	for {
+		if time.Now().Sub(st) > timeout {
+			l.Error("Timeout wating for HTTP healthcheck", "address", address)
+
+			return fmt.Errorf("Timeout waiting for HTTP healthcheck %s", address)
+		}
+
+		resp, err := http.Get(address)
+		if err == nil && resp.StatusCode == 200 {
+			l.Debug("Health check complete", "address", address)
+			return nil
 		}
 
 		// backoff

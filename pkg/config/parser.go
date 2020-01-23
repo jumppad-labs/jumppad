@@ -227,7 +227,9 @@ func ParseHCLFile(file string, c *Config) error {
 				return err
 			}
 
-			h.Script = ensureAbsolute(h.Script, file)
+			if h.Script != "" {
+				h.Script = ensureAbsolute(h.Script, file)
+			}
 
 			// process volumes
 			// make sure mount paths are absolute
@@ -264,6 +266,17 @@ func ParseReferences(c *Config) error {
 	}
 
 	for _, in := range c.Ingresses {
+		in.WANRef = c.WAN
+		in.TargetRef = findTargetRef(in.Target, c)
+
+		if c, ok := in.TargetRef.(*Cluster); ok {
+			in.NetworkRef = c.NetworkRef
+		} else {
+			in.NetworkRef = in.TargetRef.(*Container).NetworkRef
+		}
+	}
+
+	for _, in := range c.RemoteExecs {
 		in.WANRef = c.WAN
 		in.TargetRef = findTargetRef(in.Target, c)
 

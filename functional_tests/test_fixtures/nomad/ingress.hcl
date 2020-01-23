@@ -7,3 +7,13 @@ ingress "consul-http" {
     host   = 18500
   }
 }
+
+ingress "nomad-http" {
+  target  = "clusters.nomad"
+
+  port {
+    local  = 4646
+    remote = 4646
+    host   = 14646
+  }
+}

@@ -6,7 +6,7 @@ type LocalExec struct {
 	// Either Script or Command must be specified
 	Script    string   `hcl:"script,optional"` // Path to a script to execute
 	Command   string   `hcl:"cmd,optional"`    // Command to execute
-	Arguments []string `hcl:args,optional`     // only used when combined with Command
+	Arguments []string `hcl:"args,optional"`   // only used when combined with Command
 
 	Environment []KV `hcl:"env,block"` // Envrionment variables to set
 }
@@ -25,7 +25,7 @@ type RemoteExec struct {
 	// Either Script or Command must be specified
 	Script    string   `hcl:"script,optional"` // Path to a script to execute
 	Command   string   `hcl:"cmd,optional"`    // Command to execute
-	Arguments []string `hcl:args,optional`     // only used when combined with Command
+	Arguments []string `hcl:"args,optional"`   // only used when combined with Command
 
 	Volumes     []Volume `hcl:"volume,block"` // Volumes to mount to container
 	Environment []KV     `hcl:"env,block"`    // Environment varialbes to set

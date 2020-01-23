@@ -30,28 +30,34 @@ func (i *Ingress) Create() error {
 	case *config.Container:
 		serviceName = FQDN(v.Name, v.NetworkRef)
 	case *config.Cluster:
-		serviceName = i.config.Service
 
-		_, _, kubeConfigPath := CreateKubeConfigPath(v.Name)
-		volumes = append(volumes, config.Volume{
-			Source:      kubeConfigPath,
-			Destination: "/.kube/kubeconfig.yml",
-		})
+		// determine the type of cluster
+		// if this is a k3s cluster we need to add the kubeconfig and
+		// make sure that the proxy runs in kube mode
+		if v.Driver == "k3s" {
+			serviceName = i.config.Service
+			_, _, kubeConfigPath := CreateKubeConfigPath(v.Name)
+			volumes = append(volumes, config.Volume{
+				Source:      kubeConfigPath,
+				Destination: "/.kube/kubeconfig.yml",
+			})
 
-		env = append(env, config.KV{Key: "KUBECONFIG", Value: "/.kube/kubeconfig.yml"})
+			env = append(env, config.KV{Key: "KUBECONFIG", Value: "/.kube/kubeconfig.yml"})
 
+			command = append(command, "--proxy-type")
+			command = append(command, "kubernetes")
 
-		command = append(command, "--proxy-type")
-		command = append(command, "kubernetes")
+			// if the namespace is not present assume default
+			if i.config.Namespace == "" {
+				i.config.Namespace = "default"
+			}
 
-		// if the namespace is not present assume default
-		if i.config.Namespace == "" {
-			i.config.Namespace = "default"
+			command = append(command, "--namespace")
+			command = append(command, i.config.Namespace)
+		} else {
+			serviceName = fmt.Sprintf("server.%s", FQDN(v.Name, v.NetworkRef))
 		}
-		
-		command = append(command, "--namespace")
-		command = append(command, i.config.Namespace)
-		
+
 	default:
 		return fmt.Errorf("Only Container ingress and K3s are supported at present")
 	}

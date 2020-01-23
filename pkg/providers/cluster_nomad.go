@@ -3,6 +3,7 @@ package providers
 import (
 	"fmt"
 	"math/rand"
+	"time"
 
 	"github.com/shipyard-run/shipyard/pkg/config"
 )
@@ -17,7 +18,7 @@ func (c *Cluster) createNomad() error {
 	if id != "" {
 		return ErrorClusterExists
 	}
-	
+
 	// set the image
 	image := fmt.Sprintf("%s:%s", nomadBaseImage, c.config.Version)
 
@@ -49,7 +50,7 @@ func (c *Cluster) createNomad() error {
 
 	// set the API server port to a random number 64000 - 65000
 	apiPort := rand.Intn(1000) + 64000
-	
+
 	// expose the API server port
 	cc.Ports = []config.Port{
 		config.Port{
@@ -58,13 +59,13 @@ func (c *Cluster) createNomad() error {
 			Protocol: "tcp",
 		},
 	}
-	
+
 	cp := NewContainer(cc, c.client, c.log.With("parent_ref", c.config.Name))
 	err = cp.Create()
 	if err != nil {
 		return err
 	}
-	
+
 	// get the id
 	id, err = c.Lookup()
 	if err != nil {
@@ -77,9 +78,15 @@ func (c *Cluster) createNomad() error {
 		//return c.ImportLocalDockerImages(c.config.Images)
 	}
 
+	// wait for nomad to start
+	err = healthCheckHTTP(fmt.Sprintf("http://localhost:%d/v1/status/leader", apiPort), 60*time.Second, c.log)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (c*Cluster) destroyNomad() error {
+func (c *Cluster) destroyNomad() error {
 	return c.destroyK3s()
 }
