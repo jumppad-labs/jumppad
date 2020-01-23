@@ -84,6 +84,12 @@ func (c *Cluster) createNomad() error {
 		return err
 	}
 
+	// ensure all client nodes are up
+	err = healthCheckNomad(fmt.Sprintf("http://localhost:%d", apiPort), c.config.Nodes, 60*time.Second, c.log)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

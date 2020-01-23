@@ -16,4 +16,6 @@ ingress "nomad-http" {
     remote = 4646
     host   = 14646
   }
+
+  ip_address = "10.5.0.200"
 }

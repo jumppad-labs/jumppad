@@ -62,6 +62,13 @@ func (c *Container) Create() error {
 	nc.EndpointsConfig = make(map[string]*network.EndpointSettings)
 	if c.config.NetworkRef != nil {
 		nc.EndpointsConfig[c.config.NetworkRef.Name] = &network.EndpointSettings{NetworkID: c.config.NetworkRef.Name}
+
+		// are we binding to a specific ip
+		if c.config.IPAddress != "" {
+			c.log.Debug("Assigning static ip address", "ref", c.config.Name, "ip_address", c.config.IPAddress)
+			//nc.EndpointsConfig[c.config.NetworkRef.Name].IPAddress = c.config.IPAddress
+			nc.EndpointsConfig[c.config.NetworkRef.Name].IPAMConfig = &network.EndpointIPAMConfig{IPv4Address: c.config.IPAddress}
+		}
 	}
 
 	// Create volume mounts

@@ -82,6 +82,7 @@ func (i *Ingress) Create() error {
 		Command:     command,
 		Volumes:     volumes,
 		Environment: env,
+		IPAddress:   i.config.IPAddress,
 	}
 
 	p := NewContainer(c, i.client, i.log.With("parent_ref", i.config.Name))
