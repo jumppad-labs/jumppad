@@ -31,7 +31,7 @@ func init() {
 
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(runCmd)
-	rootCmd.AddCommand(deleteCmd)
+	rootCmd.AddCommand(destroyCmd)
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(exposeCmd)
 	rootCmd.AddCommand(containerCmd)

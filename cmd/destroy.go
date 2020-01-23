@@ -8,14 +8,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var deleteCmd = &cobra.Command{
-	Use:     "delete [file] [directory] ...",
-	Short:   "Delete the current stack",
-	Long:    `Delete the current stack`,
-	Example: `yard delete my-stack`,
+var destroyCmd = &cobra.Command{
+	Use:     "destroy [file] [directory] ...",
+	Short:   "Destroy the current stack",
+	Long:    `Destroy the current stack`,
+	Example: `yard destroy`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		log := createLogger() 
+		log := createLogger()
 
 		// When destroying a stack all the config
 		// which is created with apply is copied
@@ -26,11 +26,11 @@ var deleteCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Printf("Deleting %d resources\n\n", e.ResourceCount())
+		fmt.Printf("Destroying %d resources\n\n", e.ResourceCount())
 
 		err = e.Destroy()
 		if err != nil {
-			log.Error("Unable to delete stack", "error", err)
+			log.Error("Unable to destroy stack", "error", err)
 			return
 		}
 
