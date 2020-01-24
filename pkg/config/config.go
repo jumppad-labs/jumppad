@@ -1,5 +1,17 @@
 package config
 
+// State defines the current state of a resource
+type State string
+
+// Applied means the resrouce has been successfully created
+const Applied State = "applied"
+
+// Pending means the resource has not yet been created
+const Pending State = "pending"
+
+// Failed means the resource failed during creation
+const Failed State = "failed"
+
 // Config defines the stack config
 type Config struct {
 	Blueprint   *Blueprint

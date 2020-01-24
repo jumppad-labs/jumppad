@@ -2,16 +2,20 @@ package config
 
 // Cluster is a config stanza which defines a Kubernetes or a Nomad cluster
 type Cluster struct {
+	ID         string // unqique id for the resource
+	State      State  // current state
 	Name       string
-	Driver     string `hcl:"driver"`
-	Version    string `hcl:"version,optional"`
-	Nodes      int    `hcl:"nodes,optional"`
-	Network    string `hcl:"network"`
 	NetworkRef *Network
 	WANRef     *Network
-	Config     []KV    `hcl:"config,block"`
-	Images     []Image `hcl:"image,block"`
-	Environment []KV   `hcl:"env,block"`
+
+	Network string `hcl:"network"`
+
+	Driver      string  `hcl:"driver"`
+	Version     string  `hcl:"version,optional"`
+	Nodes       int     `hcl:"nodes,optional"`
+	Config      []KV    `hcl:"config,block"`
+	Environment []KV    `hcl:"env,block"`
+	Images      []Image `hcl:"image,block"`
 }
 
 // ClusterConfig defines arbitary config to set for the cluster
