@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var startCmd = &cobra.Command{
+var restartCmd = &cobra.Command{
 	Use:   "restart",
 	Short: "Restarts all paused resources for the currently active blueprint",
 	Long:  `Restarts all paused resources for the currently active blueprint`,

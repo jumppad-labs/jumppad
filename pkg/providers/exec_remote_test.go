@@ -62,10 +62,10 @@ func setupRemoteExec(c *config.RemoteExec) (*clients.MockDocker, *RemoteExec, fu
 	}
 }
 
-func TestRemoteExecCreatesCorrectly(t *testing.T) {
+func TestRemoteExecCreatesCorrectlyForContainer(t *testing.T) {
 	c := &config.RemoteExec{
-		Image:   &config.Image{Name: "hashicorp/tools:latests"},
-		Command: "/files/myscript.sh",
+		TargetRef: config.Container{Name: "tester", NetworkRef: &config.Network{Name: "test"}},
+		Command:   "/files/myscript.sh",
 		Volumes: []config.Volume{
 			config.Volume{
 				Source:      "./files",
