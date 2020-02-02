@@ -15,8 +15,8 @@ type LocalExec struct {
 type RemoteExec struct {
 	Name       string
 	TargetRef  interface{}
-	NetworkRef *Network // automatically fetched from target
-	WANRef     *Network // automatically created
+	NetworkRef *Network // Automatically fetched from target
+	WANRef     *Network // Automatically created
 
 	// Either Image or Target must be specified
 	Image  *Image `hcl:"image,block"`     // Create a new container and exec

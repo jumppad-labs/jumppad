@@ -12,4 +12,13 @@ container "consul" {
 
   network    = "network.cloud"
   ip_address = "10.5.0.2" // optional
+
+  resources {
+    # Max CPU to consume, 1024 is one core, default unlimited
+    cpu = 2048
+    # Pin container to specified CPU cores, default all cores
+    cpu_pin = [1,2]
+    # max memory in MB to consume, default unlimited
+    memory = 1024
+  }
 }
