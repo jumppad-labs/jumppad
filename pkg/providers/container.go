@@ -58,8 +58,9 @@ func (c *Container) Create() error {
 	hc := &container.HostConfig{}
 	nc := &network.NetworkingConfig{}
 
-	// attach the container to the network
 	nc.EndpointsConfig = make(map[string]*network.EndpointSettings)
+
+	// attach the container to the network
 	if c.config.NetworkRef != nil {
 		nc.EndpointsConfig[c.config.NetworkRef.Name] = &network.EndpointSettings{NetworkID: c.config.NetworkRef.Name}
 
@@ -69,6 +70,11 @@ func (c *Container) Create() error {
 			//nc.EndpointsConfig[c.config.NetworkRef.Name].IPAddress = c.config.IPAddress
 			nc.EndpointsConfig[c.config.NetworkRef.Name].IPAMConfig = &network.EndpointIPAMConfig{IPv4Address: c.config.IPAddress}
 		}
+	}
+
+	// attach the container to the WAN network
+	if c.config.WANRef != nil {
+		nc.EndpointsConfig[c.config.WANRef.Name] = &network.EndpointSettings{NetworkID: c.config.WANRef.Name}
 	}
 
 	// Create volume mounts

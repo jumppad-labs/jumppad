@@ -1,5 +1,6 @@
 package config
 
+// LocalExec allows commands to be executed on the local machine
 type LocalExec struct {
 	Name string
 

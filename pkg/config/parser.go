@@ -67,6 +67,7 @@ func ParseFolder(folder string, c *Config) error {
 	return nil
 }
 
+// ParseYardFile parses a blueprint configuration file
 func ParseYardFile(file string, c *Config) error {
 	parser := hclparse.NewParser()
 

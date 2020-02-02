@@ -23,9 +23,9 @@ type Container struct {
 
 // Resources allows the setting of resource constraints for the Container
 type Resources struct {
-	CPU    int   `hcl:"cpu,optional"`    // cpu limit for the container where 1 CPU = 1024
-	CPUPin []int `hcl:"cpu_pin,optional` // pin the container to one or more cpu cores
-	Memory int   `hcl:"memory,optional"` // max memory the container can consume in MB
+	CPU    int   `hcl:"cpu,optional"`     // cpu limit for the container where 1 CPU = 1024
+	CPUPin []int `hcl:"cpu_pin,optional"` // pin the container to one or more cpu cores
+	Memory int   `hcl:"memory,optional"`  // max memory the container can consume in MB
 }
 
 // Volume defines a folder, Docker volume, or temp folder to mount to the Container
@@ -43,5 +43,5 @@ type KV struct {
 
 // Validate the config
 func (c *Container) Validate() error {
-
+	return nil
 }

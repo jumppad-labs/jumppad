@@ -1,5 +1,6 @@
 package config
 
+// Helm defines configuration for running Helm charts
 type Helm struct {
 	Name       string
 	ClusterRef *Cluster
