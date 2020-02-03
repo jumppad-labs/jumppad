@@ -1,14 +1,19 @@
 package providers
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
+	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/go-hclog"
 	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
@@ -31,9 +36,21 @@ var containerConfig = &config.Container{
 	Environment: []config.KV{
 		config.KV{Key: "TEST", Value: "true"},
 	},
+	Ports: []config.Port{
+		config.Port{
+			Local:    8080,
+			Host:     9080,
+			Protocol: "tcp",
+		},
+		config.Port{
+			Local:    8081,
+			Host:     9081,
+			Protocol: "udp",
+		},
+	},
 }
 
-func createConfig() (*config.Container, *config.Network, *config.Network) {
+func createConfig() (*config.Container, *config.Network, *config.Network, *clients.MockDocker) {
 	cc := *containerConfig
 	cn := *containerNetwork
 	wn := *wanNetwork
@@ -41,10 +58,10 @@ func createConfig() (*config.Container, *config.Network, *config.Network) {
 	cc.NetworkRef = &cn
 	cc.WANRef = &wn
 
-	return &cc, &cn, &wn
+	return &cc, &cn, &wn, setupContainerMocks()
 }
 
-func setupContainerMocks(t *testing.T, cc *config.Container) *clients.MockDocker {
+func setupContainerMocks() *clients.MockDocker {
 	md := &clients.MockDocker{}
 	md.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 	md.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).Return(
@@ -58,8 +75,7 @@ func setupContainerMocks(t *testing.T, cc *config.Container) *clients.MockDocker
 	return md
 }
 
-func setupContainer(t *testing.T, cc *config.Container) (*Container, *clients.MockDocker) {
-	md := setupContainerMocks(t, cc)
+func setupContainer(t *testing.T, cc *config.Container, md *clients.MockDocker) *Container {
 	p := NewContainer(cc, md, hclog.NewNullLogger())
 
 	// create the container
@@ -70,12 +86,12 @@ func setupContainer(t *testing.T, cc *config.Container) (*Container, *clients.Mo
 	md.AssertCalled(t, "ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	md.AssertCalled(t, "ContainerStart", mock.Anything, mock.Anything, mock.Anything)
 
-	return p, md
+	return p
 }
 
 func TestContainerCreatesCorrectly(t *testing.T) {
-	cc, _, _ := createConfig()
-	_, md := setupContainer(t, cc)
+	cc, _, _, md := createConfig()
+	setupContainer(t, cc, md)
 
 	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
 
@@ -93,8 +109,8 @@ func TestContainerCreatesCorrectly(t *testing.T) {
 }
 
 func TestContainerAttachesToUserNetwork(t *testing.T) {
-	cc, _, _ := createConfig()
-	_, md := setupContainer(t, cc)
+	cc, _, _, md := createConfig()
+	setupContainer(t, cc, md)
 
 	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
 	nc := params[3].(*network.NetworkingConfig)
@@ -105,9 +121,9 @@ func TestContainerAttachesToUserNetwork(t *testing.T) {
 }
 
 func TestContainerDoesNOTAttachesToUserNetworkWhenNil(t *testing.T) {
-	cc, cn, _ := createConfig()
+	cc, cn, _, md := createConfig()
 	cc.NetworkRef = nil
-	_, md := setupContainer(t, cc)
+	setupContainer(t, cc, md)
 
 	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
 	nc := params[3].(*network.NetworkingConfig)
@@ -116,9 +132,9 @@ func TestContainerDoesNOTAttachesToUserNetworkWhenNil(t *testing.T) {
 }
 
 func TestContainerAssignsIPToUserNetwork(t *testing.T) {
-	cc, _, _ := createConfig()
+	cc, _, _, md := createConfig()
 	cc.IPAddress = "192.168.1.123"
-	_, md := setupContainer(t, cc)
+	setupContainer(t, cc, md)
 
 	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
 	nc := params[3].(*network.NetworkingConfig)
@@ -127,8 +143,8 @@ func TestContainerAssignsIPToUserNetwork(t *testing.T) {
 }
 
 func TestContainerAttachesToWANNetwork(t *testing.T) {
-	cc, _, _ := createConfig()
-	_, md := setupContainer(t, cc)
+	cc, _, _, md := createConfig()
+	setupContainer(t, cc, md)
 
 	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
 	nc := params[3].(*network.NetworkingConfig)
@@ -139,9 +155,9 @@ func TestContainerAttachesToWANNetwork(t *testing.T) {
 }
 
 func TestContainerDoesNOTAttachesToWANNetworkWhenNil(t *testing.T) {
-	cc, _, wn := createConfig()
+	cc, _, wn, md := createConfig()
 	cc.WANRef = nil
-	_, md := setupContainer(t, cc)
+	setupContainer(t, cc, md)
 
 	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
 	nc := params[3].(*network.NetworkingConfig)
@@ -150,8 +166,8 @@ func TestContainerDoesNOTAttachesToWANNetworkWhenNil(t *testing.T) {
 }
 
 func TestContainerAttachesVolumeMounts(t *testing.T) {
-	cc, _, _ := createConfig()
-	_, md := setupContainer(t, cc)
+	cc, _, _, md := createConfig()
+	setupContainer(t, cc, md)
 
 	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
 	hc := params[2].(*container.HostConfig)
@@ -163,22 +179,85 @@ func TestContainerAttachesVolumeMounts(t *testing.T) {
 }
 
 func TestContainerPublishesPorts(t *testing.T) {
-	/*
-		cc, _, _ := createConfig()
-		_, md := setupContainer(t, cc)
+	cc, _, _, md := createConfig()
+	setupContainer(t, cc, md)
 
-		params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
-		dc := params[1].(*container.Config)
-		hc := params[3].(*container.HostConfig)
-	*/
+	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
+	dc := params[1].(*container.Config)
+	hc := params[2].(*container.HostConfig)
 
-	t.SkipNow()
+	// check the first port mapping
+	exp, err := nat.NewPort(cc.Ports[0].Protocol, strconv.Itoa(cc.Ports[0].Local))
+	assert.NoError(t, err)
+	assert.NotNil(t, dc.ExposedPorts[exp])
+
+	// check the port bindings for the local machine
+	assert.Equal(t, strconv.Itoa(cc.Ports[0].Host), hc.PortBindings[exp][0].HostPort)
+	assert.Equal(t, "0.0.0.0", hc.PortBindings[exp][0].HostIP)
+
+	// check the second port mapping
+	exp, err = nat.NewPort(cc.Ports[1].Protocol, strconv.Itoa(cc.Ports[1].Local))
+	assert.NoError(t, err)
+	assert.NotNil(t, dc.ExposedPorts[exp])
+
+	// check the port bindings for the local machine
+	assert.Equal(t, strconv.Itoa(cc.Ports[1].Host), hc.PortBindings[exp][0].HostPort)
+	assert.Equal(t, "0.0.0.0", hc.PortBindings[exp][0].HostIP)
 }
 
 func TestContainerPullsImageWhenNOTCached(t *testing.T) {
-	t.SkipNow()
+	cc, _, _, md := createConfig()
+	setupContainer(t, cc, md)
+
+	// test calls list image with a canonical image reference
+	args := filters.NewArgs(filters.KeyValuePair{Key: "reference", Value: cc.Image.Name})
+	md.AssertCalled(t, "ImageList", mock.Anything, types.ImageListOptions{Filters: args})
+
+	// test pulls image replacing the short name with the canonical registry name
+	md.AssertCalled(t, "ImagePull", mock.Anything, makeImageCanonical(cc.Image.Name), types.ImagePullOptions{})
 }
 
+func TestContainerPullsImageWithCredentialsWhenNOTCached(t *testing.T) {
+	cc, _, _, md := createConfig()
+	cc.Image.Username = "nicjackson"
+	cc.Image.Password = "S3cur1t11"
+
+	setupContainer(t, cc, md)
+
+	// test calls list image with a canonical image reference
+	args := filters.NewArgs(filters.KeyValuePair{Key: "reference", Value: cc.Image.Name})
+	md.AssertCalled(t, "ImageList", mock.Anything, types.ImageListOptions{Filters: args})
+
+	// test pulls image replacing the short name with the canonical registry name
+	// adding credentials to image pull
+	ipo := types.ImagePullOptions{RegistryAuth: createRegistryAuth(cc.Image.Username, cc.Image.Password)}
+	md.AssertCalled(t, "ImagePull", mock.Anything, makeImageCanonical(cc.Image.Name), ipo)
+
+}
+
+func TestContainerPullsImageWithValidCredentials(t *testing.T) {
+	cc, _, _, md := createConfig()
+	cc.Image.Username = "nicjackson"
+	cc.Image.Password = "S3cur1t11"
+
+	setupContainer(t, cc, md)
+
+	ipo := getCalls(&md.Mock, "ImagePull")[0].Arguments[2].(types.ImagePullOptions)
+
+	d, err := base64.StdEncoding.DecodeString(ipo.RegistryAuth)
+	assert.NoError(t, err)
+	assert.Equal(t, `{"Username": "nicjackson", "Password": "S3cur1t11"}`, string(d))
+}
+
+// validate the registry auth is in the correct format
 func TestContainerDoesNOTPullImageWhenCached(t *testing.T) {
-	t.SkipNow()
+	cc, _, _, md := createConfig()
+
+	// remove the default image list which returns 0 cached images
+	removeOn(&md.Mock, "ImageList")
+	md.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return([]types.ImageSummary{types.ImageSummary{}}, nil)
+
+	setupContainer(t, cc, md)
+
+	md.AssertNotCalled(t, "ImagePull", mock.Anything, mock.Anything, mock.Anything)
 }

@@ -188,5 +188,9 @@ func (m *MockDocker) ImageSave(ctx context.Context, imageIDs []string) (io.ReadC
 func (m *MockDocker) ImageList(ctx context.Context, options types.ImageListOptions) ([]types.ImageSummary, error) {
 	args := m.Called(ctx, options)
 
+	if is, ok := args.Get(0).([]types.ImageSummary); ok {
+		return is, args.Error(1)
+	}
+
 	return []types.ImageSummary{}, args.Error(1)
 }

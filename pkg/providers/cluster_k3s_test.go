@@ -1,13 +1,13 @@
 package providers
 
 import (
+	"bufio"
 	"bytes"
-	"net"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
-	"bufio"
 	"strings"
 	"testing"
 
@@ -59,9 +59,9 @@ func setupK3sCluster(c *config.Cluster) (*clients.MockDocker, *Cluster, func()) 
 	md.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(types.IDResponse{ID: "abc"}, nil)
 	md.On("ContainerExecAttach", mock.Anything, "abc", mock.Anything).Return(
 		types.HijackedResponse{
-			&net.TCPConn{}, 
+			&net.TCPConn{},
 			bufio.NewReader(bytes.NewReader([]byte("Do exec"))),
-		}, 
+		},
 		nil,
 	)
 	md.On("ContainerExecStart", mock.Anything, "abc", mock.Anything).Return(nil)
@@ -284,29 +284,4 @@ func TestK3sClusterPushesLocalImages(t *testing.T) {
 	assert.Equal(t, "ctr", ex.Cmd[0])
 	assert.Equal(t, "image", ex.Cmd[1])
 	assert.Equal(t, "import", ex.Cmd[2])
-}
-
-// removeOn is a utility function for removing Expectations from mock objects
-func removeOn(m *mock.Mock, method string) {
-	ec := m.ExpectedCalls
-	rc := make([]*mock.Call, 0)
-
-	for _, c := range ec {
-		if c.Method != method {
-			rc = append(rc, c)
-		}
-	}
-
-	m.ExpectedCalls = rc
-}
-
-func getCalls(m *mock.Mock, method string) []mock.Call {
-	rc := make([]mock.Call, 0)
-	for _, c := range m.Calls {
-		if c.Method == method {
-			rc = append(rc, c)
-		}
-	}
-
-	return rc
 }

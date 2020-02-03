@@ -44,12 +44,7 @@ func pullImage(c clients.Docker, image config.Image, l hclog.Logger) error {
 	// if the username and password is not null make an authenticated
 	// image pull
 	if image.Username != "" && image.Password != "" {
-		// credentials are a json string and need to be bas64 encoded
-		ipo.RegistryAuth = base64.StdEncoding.EncodeToString(
-			[]byte(
-				fmt.Sprintf(`{"Username": "%s", "Password": "%s"}`, image.Username, image.Password),
-			),
-		)
+		ipo.RegistryAuth = createRegistryAuth(image.Username, image.Password)
 	}
 
 	l.Debug("Pulling image", "image", image.Name)
@@ -64,6 +59,15 @@ func pullImage(c clients.Docker, image config.Image, l hclog.Logger) error {
 	io.Copy(ioutil.Discard, out)
 
 	return nil
+}
+
+// credentials are a json string and need to be base64 encoded
+func createRegistryAuth(username, password string) string {
+	return base64.StdEncoding.EncodeToString(
+		[]byte(
+			fmt.Sprintf(`{"Username": "%s", "Password": "%s"}`, username, password),
+		),
+	)
 }
 
 // makeImageCanonical makes sure the image reference uses full canonical name i.e.
