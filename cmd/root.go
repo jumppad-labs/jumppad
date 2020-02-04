@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
 
@@ -17,9 +16,6 @@ var rootCmd = &cobra.Command{
 	Use:   "yard",
 	Short: "Modern cloud native development environments",
 	Long:  `Shipyard is a tool that helps you create and run demo and tutorial environments`,
-	Run: func(cmd *cobra.Command, args []string) {
-		// engine = shipyard.New()
-	},
 }
 
 var engine *shipyard.Engine
@@ -70,13 +66,6 @@ func configure() {
 }
 
 // Execute the root command
-func Execute(version string) {
-	// TODO implemnent a version subcommand
-	fmt.Println("Shipyard version:", version)
-	fmt.Println("")
-
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+func Execute(version string) error {
+	return rootCmd.Execute()
 }
