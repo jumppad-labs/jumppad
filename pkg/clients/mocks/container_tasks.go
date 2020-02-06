@@ -60,3 +60,9 @@ func (d *MockContainerTasks) ContainerLogs(id string, stdOut, stdErr bool) (io.R
 
 	return nil, args.Error(1)
 }
+
+func (d *MockContainerTasks) CopyFromContainer(id, src, dst string) error {
+	args := d.Called(id, src, dst)
+
+	return args.Error(0)
+}

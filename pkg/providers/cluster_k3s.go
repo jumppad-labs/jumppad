@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 	"golang.org/x/xerrors"
 )
 
@@ -97,20 +99,21 @@ func (c *Cluster) createK3s() error {
 	}
 
 	// get the Kubernetes config file and drop it in $HOME/.shipyard/config/[clustername]/kubeconfig.yml
-	kubeconfig, err := c.copyKubeConfig(id)
+	kc, err := c.copyKubeConfig(id)
 	if err != nil {
 		return xerrors.Errorf("Error copying Kubernetes config: %w", err)
 	}
 
+	// create the Docker container version of the Kubeconfig
+	// the default KubeConfig has the server location https://localhost:port
+	// to use this config inside a docker container we need to use the FQDN for the server
+	err = c.createDockerKubeConfig(kc)
+	if err != nil {
+		return xerrors.Errorf("Error creating Docker Kubernetes config: %w", err)
+	}
+
 	/*
 
-		// create the Docker container version of the Kubeconfig
-		// the default KubeConfig has the server location https://localhost:port
-		// to use this config inside a docker container we need to use the FQDN for the server
-		err = c.createDockerKubeConfig(kubeconfig)
-		if err != nil {
-			return xerrors.Errorf("Error creating Docker Kubernetes config: %w", err)
-		}
 
 		// janky  sleep to wait for API server before creating client, will make better
 		time.Sleep(10 * time.Second)
@@ -178,12 +181,7 @@ func (c *Cluster) waitForStart(id string) error {
 
 func (c *Cluster) copyKubeConfig(id string) (string, error) {
 	// create destination kubeconfig file paths
-	destDir, destPath, _ := CreateKubeConfigPath(c.config.Name)
-
-	err := os.MkdirAll(destDir, 0755)
-	if err != nil {
-		return "", err
-	}
+	_, destPath, _ := CreateKubeConfigPath(c.config.Name)
 
 	// get kubeconfig file from container and read contents
 	err := c.client.CopyFromContainer(id, "/output/kubeconfig.yaml", destPath)
@@ -192,6 +190,40 @@ func (c *Cluster) copyKubeConfig(id string) (string, error) {
 	}
 
 	return destPath, nil
+}
+
+func (c *Cluster) createDockerKubeConfig(kubeconfig string) error {
+	// read the config into a string
+	f, err := os.OpenFile(kubeconfig, os.O_RDONLY, 0666)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	readBytes, err := ioutil.ReadAll(f)
+	if err != nil {
+		return fmt.Errorf("Couldn't read kubeconfig, %v", err)
+	}
+
+	// manipulate the file
+	newConfig := strings.Replace(
+		string(readBytes),
+		"server: https://127.0.0.1",
+		fmt.Sprintf("server: https://server.%s", utils.FQDN(c.config.Name, c.config.NetworkRef.Name)),
+		-1,
+	)
+
+	_, _, dockerPath := CreateKubeConfigPath(c.config.Name)
+
+	kubeconfigfile, err := os.Create(dockerPath)
+	if err != nil {
+		return fmt.Errorf("Couldn't create kubeconfig file %s\n%+v", dockerPath, err)
+	}
+
+	defer kubeconfigfile.Close()
+	kubeconfigfile.Write([]byte(newConfig))
+
+	return nil
 }
 
 /*
@@ -218,39 +250,6 @@ func (c *Cluster) ImportLocalDockerImages(clusterID string, images []config.Imag
 
 
 
-func (c *Cluster) createDockerKubeConfig(kubeconfig string) error {
-	// read the config into a string
-	f, err := os.OpenFile(kubeconfig, os.O_RDONLY, 0666)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	readBytes, err := ioutil.ReadAll(f)
-	if err != nil {
-		return fmt.Errorf("Couldn't read kubeconfig, %v", err)
-	}
-
-	// manipulate the file
-	newConfig := strings.Replace(
-		string(readBytes),
-		"server: https://127.0.0.1",
-		fmt.Sprintf("server: https://server.%s", FQDN(c.config.Name, c.config.NetworkRef)),
-		-1,
-	)
-
-	destPath := strings.Replace(kubeconfig, ".yaml", "-docker.yaml", 1)
-
-	kubeconfigfile, err := os.Create(destPath)
-	if err != nil {
-		return fmt.Errorf("Couldn't create kubeconfig file %s\n%+v", destPath, err)
-	}
-
-	defer kubeconfigfile.Close()
-	kubeconfigfile.Write([]byte(newConfig))
-
-	return nil
-}
 
 func (c *Cluster) destroyK3s() error {
 	c.log.Info("Destroy Cluster", "ref", c.config.Name)

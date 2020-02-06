@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -11,12 +12,13 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
 // setupClusterMocks sets up a happy path for mocks
-func setupClusterMocks() *mocks.MockContainerTasks {
+func setupClusterMocks() (*mocks.MockContainerTasks, func()) {
 	md := &mocks.MockContainerTasks{}
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, nil)
 	md.On("CreateVolume", mock.Anything, mock.Anything).Return("123", nil)
@@ -25,8 +27,26 @@ func setupClusterMocks() *mocks.MockContainerTasks {
 		ioutil.NopCloser(bytes.NewBufferString("Running kubelet")),
 		nil,
 	)
+	md.On("CopyFromContainer", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	return md
+	// set the home folder to a temp folder
+	tmpDir, _ := ioutil.TempDir("", "")
+	currentHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+
+	// write the kubeconfi
+	_, destPath, _ := CreateKubeConfigPath(clusterConfig.Name)
+	kcf, err := os.Create(destPath)
+	if err != nil {
+		panic(err)
+	}
+	kcf.WriteString(kubeconfig)
+	kcf.Close()
+
+	return md, func() {
+		os.Setenv("HOME", currentHome)
+		os.RemoveAll(tmpDir)
+	}
 }
 
 func TestClusterK3ErrorsWhenUnableToLookupIDs(t *testing.T) {
@@ -52,7 +72,8 @@ func TestClusterK3ErrorsWhenClusterExists(t *testing.T) {
 }
 
 func TestClusterK3CreatesANewVolume(t *testing.T) {
-	md := setupClusterMocks()
+	md, cleanup := setupClusterMocks()
+	defer cleanup()
 
 	mk := &mocks.MockKubernetes{}
 	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
@@ -63,7 +84,9 @@ func TestClusterK3CreatesANewVolume(t *testing.T) {
 }
 
 func TestClusterK3FailsWhenUnableToCreatesANewVolume(t *testing.T) {
-	md := setupClusterMocks()
+	md, cleanup := setupClusterMocks()
+	defer cleanup()
+
 	removeOn(&md.Mock, "CreateVolume")
 	md.On("CreateVolume", mock.Anything, mock.Anything).Return("", fmt.Errorf("boom"))
 
@@ -76,7 +99,9 @@ func TestClusterK3FailsWhenUnableToCreatesANewVolume(t *testing.T) {
 }
 
 func TestClusterK3CreatesAServer(t *testing.T) {
-	md := setupClusterMocks()
+	md, cleanup := setupClusterMocks()
+	defer cleanup()
+
 	mk := &mocks.MockKubernetes{}
 	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
 
@@ -108,7 +133,9 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 }
 
 func TestClusterK3sErrorsIfServerNOTStart(t *testing.T) {
-	md := setupClusterMocks()
+	md, cleanup := setupClusterMocks()
+	defer cleanup()
+
 	removeOn(&md.Mock, "ContainerLogs")
 	md.On("ContainerLogs", mock.Anything, true, true).Return(
 		ioutil.NopCloser(bytes.NewBufferString("Not running")),
@@ -124,12 +151,58 @@ func TestClusterK3sErrorsIfServerNOTStart(t *testing.T) {
 }
 
 func TestClusterK3sDownloadsConfig(t *testing.T) {
-	md := setupClusterMocks()
+	md, cleanup := setupClusterMocks()
+	defer cleanup()
+
 	mk := &mocks.MockKubernetes{}
 	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
+
+	_, destPath, _ := CreateKubeConfigPath(clusterConfig.Name)
+	params := getCalls(&md.Mock, "CopyFromContainer")[0].Arguments
+	assert.Equal(t, "containerid", params.String(0))
+	assert.Equal(t, "/output/kubeconfig.yaml", params.String(1))
+	assert.Equal(t, destPath, params.String(2))
+}
+
+func TestClusterK3sRaisesErrorWhenUnableToDownloadConfig(t *testing.T) {
+	md, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	removeOn(&md.Mock, "CopyFromContainer")
+	md.On("CopyFromContainer", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
+
+	mk := &mocks.MockKubernetes{}
+	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.Error(t, err)
+}
+
+func TestClusterK3sCreatesDockerConfig(t *testing.T) {
+	md, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	mk := &mocks.MockKubernetes{}
+	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	// check the kubeconfig file for docker uses a network ip not localhost
+
+	// check file has been written
+	_, _, dockerPath := CreateKubeConfigPath(clusterConfig.Name)
+	f, err := os.Open(dockerPath)
+	assert.NoError(t, err)
+	defer f.Close()
+
+	// check file contains docker ip
+	d, err := ioutil.ReadAll(f)
+	assert.NoError(t, err)
+	assert.Contains(t, string(d), fmt.Sprintf("server.%s", utils.FQDN(clusterConfig.Name, clusterConfig.NetworkRef.Name)))
 }
 
 var clusterNetwork = config.Network{Name: "cloud"}
@@ -141,7 +214,7 @@ var clusterConfig = config.Cluster{
 }
 
 var kubeconfig = `
-kubeconfig.yam@@@@i@@@@@@@@@@@@@@@@@@@@@@2@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@lapiVersion: v1
+apiVersion: v1
 clusters:
 - cluster:
    certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJWakNCL3FBREFnRUNBZ0VBTUFvR0NDcUdTTTQ5QkFNQ01DTXhJVEFmQmdOVkJBTU1HR3N6Y3kxelpYSjIKWlhJdFkyRk
