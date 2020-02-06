@@ -123,6 +123,15 @@ func TestClusterK3sErrorsIfServerNOTStart(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestClusterK3sDownloadsConfig(t *testing.T) {
+	md := setupClusterMocks()
+	mk := &mocks.MockKubernetes{}
+	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+}
+
 var clusterNetwork = config.Network{Name: "cloud"}
 
 var clusterConfig = config.Cluster{

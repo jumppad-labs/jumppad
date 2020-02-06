@@ -1,11 +1,13 @@
 package clients
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 
@@ -245,6 +247,36 @@ func (d *DockerTasks) RemoveVolume(name string) error {
 // ContainerLogs streams the logs for the container to the returned io.ReadCloser
 func (d *DockerTasks) ContainerLogs(id string, stdOut, stdErr bool) (io.ReadCloser, error) {
 	return d.c.ContainerLogs(context.Background(), id, types.ContainerLogsOptions{ShowStderr: stdErr, ShowStdout: stdOut})
+}
+
+// CopyFromContainer copies a file from a container
+func (d *DockerTasks) CopyFromContainer(id, src, dst string) error {
+	d.l.Debug("Copying file from", "id", id, "src", src, "dst", dst)
+
+	reader, _, err := d.c.CopyFromContainer(context.Background(), id, src)
+	if err != nil {
+		return fmt.Errorf("Couldn't copy kubeconfig.yaml from server container %s\n%+v", id, err)
+	}
+	defer reader.Close()
+
+	readBytes, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return fmt.Errorf("Couldn't read kubeconfig from container\n%+v", err)
+	}
+
+	// write to file, skipping the first 512 bytes which contain file metadata
+	// and trimming any NULL characters
+	trimBytes := bytes.Trim(readBytes[512:], "\x00")
+
+	file, err := os.Create(dst)
+	if err != nil {
+		return fmt.Errorf("Couldn't create file %s\n%+v", dst, err)
+	}
+
+	defer file.Close()
+	file.Write(trimBytes)
+
+	return nil
 }
 
 func volumeName(clusterName string) string {

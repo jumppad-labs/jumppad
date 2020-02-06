@@ -39,4 +39,6 @@ type ContainerTasks interface {
 	// io.ReadCloser.
 	// Returns an error if the container is not running
 	ContainerLogs(id string, stdOut, stdErr bool) (io.ReadCloser, error)
+	// CopyFromContainer allows the copying of a file from a container
+	CopyFromContainer(id, src, dst string) error
 }

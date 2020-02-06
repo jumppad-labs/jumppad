@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/shipyard-run/shipyard/pkg/config"
+	"golang.org/x/xerrors"
 )
 
 var (
@@ -94,12 +96,13 @@ func (c *Cluster) createK3s() error {
 		return err
 	}
 
+	// get the Kubernetes config file and drop it in $HOME/.shipyard/config/[clustername]/kubeconfig.yml
+	kubeconfig, err := c.copyKubeConfig(id)
+	if err != nil {
+		return xerrors.Errorf("Error copying Kubernetes config: %w", err)
+	}
+
 	/*
-		// get the Kubernetes config file and drop it in $HOME/.shipyard/config/[clustername]/kubeconfig.yml
-		kubeconfig, err := c.copyKubeConfig(id)
-		if err != nil {
-			return xerrors.Errorf("Error copying Kubernetes config: %w", err)
-		}
 
 		// create the Docker container version of the Kubeconfig
 		// the default KubeConfig has the server location https://localhost:port
@@ -173,6 +176,24 @@ func (c *Cluster) waitForStart(id string) error {
 	return nil
 }
 
+func (c *Cluster) copyKubeConfig(id string) (string, error) {
+	// create destination kubeconfig file paths
+	destDir, destPath, _ := CreateKubeConfigPath(c.config.Name)
+
+	err := os.MkdirAll(destDir, 0755)
+	if err != nil {
+		return "", err
+	}
+
+	// get kubeconfig file from container and read contents
+	err := c.client.CopyFromContainer(id, "/output/kubeconfig.yaml", destPath)
+	if err != nil {
+		return "", err
+	}
+
+	return destPath, nil
+}
+
 /*
 // ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
 func (c *Cluster) ImportLocalDockerImages(clusterID string, images []config.Image) error {
@@ -196,41 +217,6 @@ func (c *Cluster) ImportLocalDockerImages(clusterID string, images []config.Imag
 }
 
 
-func (c *Cluster) copyKubeConfig(id string) (string, error) {
-	// get kubeconfig file from container and read contents
-	reader, _, err := c.client.CopyFromContainer(context.Background(), id, "/output/kubeconfig.yaml")
-	if err != nil {
-		return "", fmt.Errorf(" Couldn't copy kubeconfig.yaml from server container %s\n%+v", id, err)
-	}
-	defer reader.Close()
-
-	readBytes, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return "", fmt.Errorf(" Couldn't read kubeconfig from container\n%+v", err)
-	}
-
-	// write to file, skipping the first 512 bytes which contain file metadata
-	// and trimming any NULL characters
-	trimBytes := bytes.Trim(readBytes[512:], "\x00")
-
-	// create destination kubeconfig file
-	destDir, destPath, _ := CreateKubeConfigPath(c.config.Name)
-
-	err = os.MkdirAll(destDir, 0755)
-	if err != nil {
-		return "", err
-	}
-
-	kubeconfigfile, err := os.Create(destPath)
-	if err != nil {
-		return "", fmt.Errorf(" Couldn't create kubeconfig file %s\n%+v", destPath, err)
-	}
-
-	defer kubeconfigfile.Close()
-	kubeconfigfile.Write(trimBytes)
-
-	return destPath, nil
-}
 
 func (c *Cluster) createDockerKubeConfig(kubeconfig string) error {
 	// read the config into a string
