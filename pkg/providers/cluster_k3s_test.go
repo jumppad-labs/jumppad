@@ -1,9 +1,12 @@
 package providers
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
@@ -12,8 +15,18 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func setupClusterMocks(md *mocks.MockContainerTasks) {
+// setupClusterMocks sets up a happy path for mocks
+func setupClusterMocks() *mocks.MockContainerTasks {
+	md := &mocks.MockContainerTasks{}
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, nil)
+	md.On("CreateVolume", mock.Anything, mock.Anything).Return("123", nil)
+	md.On("CreateContainer", mock.Anything).Return("containerid", nil)
+	md.On("ContainerLogs", mock.Anything, true, true).Return(
+		ioutil.NopCloser(bytes.NewBufferString("Running kubelet")),
+		nil,
+	)
 
+	return md
 }
 
 func TestClusterK3ErrorsWhenUnableToLookupIDs(t *testing.T) {
@@ -39,9 +52,7 @@ func TestClusterK3ErrorsWhenClusterExists(t *testing.T) {
 }
 
 func TestClusterK3CreatesANewVolume(t *testing.T) {
-	md := &mocks.MockContainerTasks{}
-	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, nil)
-	md.On("CreateVolume", mock.Anything, mock.Anything).Return("123", nil)
+	md := setupClusterMocks()
 
 	mk := &mocks.MockKubernetes{}
 	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
@@ -52,8 +63,8 @@ func TestClusterK3CreatesANewVolume(t *testing.T) {
 }
 
 func TestClusterK3FailsWhenUnableToCreatesANewVolume(t *testing.T) {
-	md := &mocks.MockContainerTasks{}
-	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, nil)
+	md := setupClusterMocks()
+	removeOn(&md.Mock, "CreateVolume")
 	md.On("CreateVolume", mock.Anything, mock.Anything).Return("", fmt.Errorf("boom"))
 
 	mk := &mocks.MockKubernetes{}
@@ -65,11 +76,7 @@ func TestClusterK3FailsWhenUnableToCreatesANewVolume(t *testing.T) {
 }
 
 func TestClusterK3CreatesAServer(t *testing.T) {
-	md := &mocks.MockContainerTasks{}
-	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, nil)
-	md.On("CreateVolume", mock.Anything, mock.Anything).Return("123", nil)
-	md.On("CreateContainer", mock.Anything).Return("containerid", nil)
-
+	md := setupClusterMocks()
 	mk := &mocks.MockKubernetes{}
 	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
 
@@ -98,6 +105,22 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 	assert.Equal(t, "server", params.Command[0])
 	assert.Contains(t, params.Command[1], strconv.Itoa(params.Ports[0].Local))
 	assert.Contains(t, params.Command[2], "traefik")
+}
+
+func TestClusterK3sErrorsIfServerNOTStart(t *testing.T) {
+	md := setupClusterMocks()
+	removeOn(&md.Mock, "ContainerLogs")
+	md.On("ContainerLogs", mock.Anything, true, true).Return(
+		ioutil.NopCloser(bytes.NewBufferString("Not running")),
+		nil,
+	)
+
+	mk := &mocks.MockKubernetes{}
+	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
+	startTimeout = 10 * time.Millisecond // reset the startTimeout, do not want to wait 120s
+
+	err := p.Create()
+	assert.Error(t, err)
 }
 
 var clusterNetwork = config.Network{Name: "cloud"}

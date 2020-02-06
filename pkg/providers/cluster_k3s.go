@@ -19,16 +19,18 @@ var (
 
 const k3sBaseImage = "rancher/k3s"
 
+var startTimeout = (120 * time.Second)
+
 func (c *Cluster) createK3s() error {
 	c.log.Info("Creating Cluster", "ref", c.config.Name)
 
 	// check the cluster does not already exist
-	id, err := c.client.FindContainerIDs(c.config.Name, c.config.NetworkRef.Name)
+	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.NetworkRef.Name)
 	if err != nil {
 		return err
 	}
 
-	if id != nil && len(id) > 0 {
+	if ids != nil && len(ids) > 0 {
 		return ErrorClusterExists
 	}
 
@@ -81,7 +83,10 @@ func (c *Cluster) createK3s() error {
 	args = append(args, "--no-deploy=traefik")
 	cc.Command = args
 
-	c.client.CreateContainer(cc)
+	id, err := c.client.CreateContainer(cc)
+	if err != nil {
+		return err
+	}
 
 	// wait for the server to start
 	err = c.waitForStart(id)
@@ -90,20 +95,6 @@ func (c *Cluster) createK3s() error {
 	}
 
 	/*
-
-		cp := NewContainer(cc, c.client, c.log.With("parent_ref", c.config.Name))
-		err = cp.Create()
-		if err != nil {
-			return err
-		}
-
-		// get the id
-		id, err = c.Lookup()
-		if err != nil {
-			return err
-		}
-
-
 		// get the Kubernetes config file and drop it in $HOME/.shipyard/config/[clustername]/kubeconfig.yml
 		kubeconfig, err := c.copyKubeConfig(id)
 		if err != nil {
@@ -151,11 +142,10 @@ func (c *Cluster) destroyK3s() error {
 
 func (c *Cluster) waitForStart(id string) error {
 	start := time.Now()
-	timeout := 120 * time.Second
 
 	for {
 		// not running after timeout exceeded? Rollback and delete everything.
-		if timeout != 0 && time.Now().After(start.Add(timeout)) {
+		if startTimeout != 0 && time.Now().After(start.Add(startTimeout)) {
 			//deleteCluster()
 			return errors.New("Cluster creation exceeded specified timeout")
 		}
@@ -166,6 +156,8 @@ func (c *Cluster) waitForStart(id string) error {
 			out.Close()
 			return fmt.Errorf(" Couldn't get docker logs for %s\n%+v", id, err)
 		}
+
+		// read from the log and check for Kublet running
 		buf := new(bytes.Buffer)
 		nRead, _ := buf.ReadFrom(out)
 		out.Close()
@@ -174,6 +166,7 @@ func (c *Cluster) waitForStart(id string) error {
 			break
 		}
 
+		// wait and try again
 		time.Sleep(1 * time.Second)
 	}
 
