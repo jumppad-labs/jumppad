@@ -18,7 +18,7 @@ import (
 )
 
 // setupClusterMocks sets up a happy path for mocks
-func setupClusterMocks() (*mocks.MockContainerTasks, func()) {
+func setupClusterMocks() (*mocks.MockContainerTasks, *mocks.MockKubernetes, func()) {
 	md := &mocks.MockContainerTasks{}
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, nil)
 	md.On("CreateVolume", mock.Anything, mock.Anything).Return("123", nil)
@@ -43,7 +43,10 @@ func setupClusterMocks() (*mocks.MockContainerTasks, func()) {
 	kcf.WriteString(kubeconfig)
 	kcf.Close()
 
-	return md, func() {
+	mk := &mocks.MockKubernetes{}
+	mk.Mock.On("SetConfig", mock.Anything).Return(nil)
+
+	return md, mk, func() {
 		os.Setenv("HOME", currentHome)
 		os.RemoveAll(tmpDir)
 	}
@@ -72,10 +75,9 @@ func TestClusterK3ErrorsWhenClusterExists(t *testing.T) {
 }
 
 func TestClusterK3CreatesANewVolume(t *testing.T) {
-	md, cleanup := setupClusterMocks()
+	md, mk, cleanup := setupClusterMocks()
 	defer cleanup()
 
-	mk := &mocks.MockKubernetes{}
 	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
 
 	err := p.Create()
@@ -84,13 +86,12 @@ func TestClusterK3CreatesANewVolume(t *testing.T) {
 }
 
 func TestClusterK3FailsWhenUnableToCreatesANewVolume(t *testing.T) {
-	md, cleanup := setupClusterMocks()
+	md, mk, cleanup := setupClusterMocks()
 	defer cleanup()
 
 	removeOn(&md.Mock, "CreateVolume")
 	md.On("CreateVolume", mock.Anything, mock.Anything).Return("", fmt.Errorf("boom"))
 
-	mk := &mocks.MockKubernetes{}
 	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
 
 	err := p.Create()
@@ -99,10 +100,9 @@ func TestClusterK3FailsWhenUnableToCreatesANewVolume(t *testing.T) {
 }
 
 func TestClusterK3CreatesAServer(t *testing.T) {
-	md, cleanup := setupClusterMocks()
+	md, mk, cleanup := setupClusterMocks()
 	defer cleanup()
 
-	mk := &mocks.MockKubernetes{}
 	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
 
 	err := p.Create()
@@ -133,7 +133,7 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 }
 
 func TestClusterK3sErrorsIfServerNOTStart(t *testing.T) {
-	md, cleanup := setupClusterMocks()
+	md, mk, cleanup := setupClusterMocks()
 	defer cleanup()
 
 	removeOn(&md.Mock, "ContainerLogs")
@@ -142,7 +142,6 @@ func TestClusterK3sErrorsIfServerNOTStart(t *testing.T) {
 		nil,
 	)
 
-	mk := &mocks.MockKubernetes{}
 	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
 	startTimeout = 10 * time.Millisecond // reset the startTimeout, do not want to wait 120s
 
@@ -151,10 +150,9 @@ func TestClusterK3sErrorsIfServerNOTStart(t *testing.T) {
 }
 
 func TestClusterK3sDownloadsConfig(t *testing.T) {
-	md, cleanup := setupClusterMocks()
+	md, mk, cleanup := setupClusterMocks()
 	defer cleanup()
 
-	mk := &mocks.MockKubernetes{}
 	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
 
 	err := p.Create()
@@ -168,13 +166,12 @@ func TestClusterK3sDownloadsConfig(t *testing.T) {
 }
 
 func TestClusterK3sRaisesErrorWhenUnableToDownloadConfig(t *testing.T) {
-	md, cleanup := setupClusterMocks()
+	md, mk, cleanup := setupClusterMocks()
 	defer cleanup()
 
 	removeOn(&md.Mock, "CopyFromContainer")
 	md.On("CopyFromContainer", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
-	mk := &mocks.MockKubernetes{}
 	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
 
 	err := p.Create()
@@ -182,10 +179,9 @@ func TestClusterK3sRaisesErrorWhenUnableToDownloadConfig(t *testing.T) {
 }
 
 func TestClusterK3sCreatesDockerConfig(t *testing.T) {
-	md, cleanup := setupClusterMocks()
+	md, mk, cleanup := setupClusterMocks()
 	defer cleanup()
 
-	mk := &mocks.MockKubernetes{}
 	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
 
 	err := p.Create()
@@ -203,6 +199,42 @@ func TestClusterK3sCreatesDockerConfig(t *testing.T) {
 	d, err := ioutil.ReadAll(f)
 	assert.NoError(t, err)
 	assert.Contains(t, string(d), fmt.Sprintf("server.%s", utils.FQDN(clusterConfig.Name, clusterConfig.NetworkRef.Name)))
+}
+
+func TestClusterK3sCreatesKubeClient(t *testing.T) {
+	md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+	mk.AssertCalled(t, "SetConfig", mock.Anything)
+}
+
+func TestClusterK3sErrorsWhenFailedToCreateKubeClient(t *testing.T) {
+	md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	removeOn(&mk.Mock, "SetConfig")
+	mk.Mock.On("SetConfig", mock.Anything).Return(fmt.Errorf("boom"))
+
+	startTimeout = 10 * time.Millisecond
+
+	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.Error(t, err)
+}
+
+func TestClusterK3sWaitsForPods(t *testing.T) {
+	md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
 }
 
 var clusterNetwork = config.Network{Name: "cloud"}

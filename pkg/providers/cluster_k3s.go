@@ -112,25 +112,34 @@ func (c *Cluster) createK3s() error {
 		return xerrors.Errorf("Error creating Docker Kubernetes config: %w", err)
 	}
 
+	// it is possible for the API server to not be available when setting the config
+	// retry until no error or timeout
+	st := time.Now()
+	for {
+		err = c.kubeClient.SetConfig(kc)
+		if err == nil {
+			break
+		}
+
+		if time.Now().Sub(st) > startTimeout {
+			return xerrors.Errorf("Error waiting for kubeclient: %w", err)
+		}
+	}
+
+	// wait for all the default pods like core DNS to start running
+	// before progressing
+
+	// we might need to wait for the api services to become ready
+	//kubectl get apiservice
+	err = healthCheckPods(c.kubeClient, []string{""}, startTimeout, c.log.With("ref", c.config.Name))
+	if err != nil {
+		return xerrors.Errorf("Error while waiting for Kubernetes default pods: %w", err)
+	}
+
 	/*
 
 
-		// janky  sleep to wait for API server before creating client, will make better
-		time.Sleep(10 * time.Second)
-		err = c.kubeClient.SetConfig(kubeconfig)
-		if err != nil {
-			return xerrors.Errorf("Error creating Kubernetes client: %w", err)
-		}
 
-		// wait for all the default pods like core DNS to start running
-		// before progressing
-		err = healthCheckPods(c.kubeClient, []string{""}, 120*time.Second, c.log.With("ref", c.config.Name))
-		if err != nil {
-			return xerrors.Errorf("Error while waiting for Kubernetes default pods: %w", err)
-		}
-
-		// we might need to wait for the api services to become ready
-		//kubectl get apiservice
 
 		// import the images to the servers container d instance
 		// importing images means that k3s does not need to pull from a remote docker hub
