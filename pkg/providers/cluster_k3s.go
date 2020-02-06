@@ -1,19 +1,7 @@
 package providers
 
 import (
-	"bytes"
-	"context"
 	"errors"
-	"fmt"
-	"io/ioutil"
-	"math/rand"
-	"os"
-	"strings"
-	"time"
-
-	"github.com/docker/docker/api/types"
-	"github.com/shipyard-run/shipyard/pkg/config"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -25,127 +13,134 @@ var (
 const k3sBaseImage = "rancher/k3s"
 
 func (c *Cluster) createK3s() error {
-	c.log.Info("Creating Cluster", "ref", c.config.Name)
+	/*
+		c.log.Info("Creating Cluster", "ref", c.config.Name)
 
-	// check the cluster name is valid
-	if err := validateClusterName(c.config.Name); err != nil {
-		return err
-	}
+		// check the cluster name is valid
+		if err := validateClusterName(c.config.Name); err != nil {
+			return err
+		}
 
-	// check the cluster does not already exist
-	id, err := c.Lookup()
-	if id != "" {
-		return ErrorClusterExists
-	}
+		// check the cluster does not already exist
+		id, err := c.Lookup()
+		if id != "" {
+			return ErrorClusterExists
+		}
 
-	// create the volume for the cluster
-	volID, err := c.createVolume()
-	if err != nil {
-		return err
-	}
+		// create the volume for the cluster
+		volID, err := c.createVolume()
+		if err != nil {
+			return err
+		}
 
-	// set the image
-	image := fmt.Sprintf("%s:%s", k3sBaseImage, c.config.Version)
+		// set the image
+		image := fmt.Sprintf("%s:%s", k3sBaseImage, c.config.Version)
 
-	// create the server
-	// since the server is just a container create the container config and provider
-	cc := &config.Container{}
-	cc.Name = fmt.Sprintf("server.%s", c.config.Name)
-	cc.Image = config.Image{Name: image}
-	cc.NetworkRef = c.config.NetworkRef
-	cc.Privileged = true // k3s must run Privlidged
+		// create the server
+		// since the server is just a container create the container config and provider
+		cc := &config.Container{}
+		cc.Name = fmt.Sprintf("server.%s", c.config.Name)
+		cc.Image = config.Image{Name: image}
+		cc.NetworkRef = c.config.NetworkRef
+		cc.Privileged = true // k3s must run Privlidged
 
-	// set the volume mount for the images
-	cc.Volumes = []config.Volume{
-		config.Volume{
-			Source:      volID,
-			Destination: "/images",
-			Type:        "volume",
-		},
-	}
+		// set the volume mount for the images
+		cc.Volumes = []config.Volume{
+			config.Volume{
+				Source:      volID,
+				Destination: "/images",
+				Type:        "volume",
+			},
+		}
 
-	// set the environment variables for the K3S_KUBECONFIG_OUTPUT and K3S_CLUSTER_SECRET
-	cc.Environment = []config.KV{
-		config.KV{Key: "K3S_KUBECONFIG_OUTPUT", Value: "/output/kubeconfig.yaml"},
-		config.KV{Key: "K3S_CLUSTER_SECRET", Value: "mysupersecret"}, // This should be random
-	}
+		// set the environment variables for the K3S_KUBECONFIG_OUTPUT and K3S_CLUSTER_SECRET
+		cc.Environment = []config.KV{
+			config.KV{Key: "K3S_KUBECONFIG_OUTPUT", Value: "/output/kubeconfig.yaml"},
+			config.KV{Key: "K3S_CLUSTER_SECRET", Value: "mysupersecret"}, // This should be random
+		}
 
-	// set the API server port to a random number 64000 - 65000
-	apiPort := rand.Intn(1000) + 64000
-	args := []string{"server", fmt.Sprintf("--https-listen-port=%d", apiPort)}
+		// set the API server port to a random number 64000 - 65000
+		apiPort := rand.Intn(1000) + 64000
+		args := []string{"server", fmt.Sprintf("--https-listen-port=%d", apiPort)}
 
-	// expose the API server port
-	cc.Ports = []config.Port{
-		config.Port{
-			Local:    apiPort,
-			Host:     apiPort,
-			Protocol: "tcp",
-		},
-	}
+		// expose the API server port
+		cc.Ports = []config.Port{
+			config.Port{
+				Local:    apiPort,
+				Host:     apiPort,
+				Protocol: "tcp",
+			},
+		}
 
-	// disable the installation of traefik
-	args = append(args, "--no-deploy=traefik")
+		// disable the installation of traefik
+		args = append(args, "--no-deploy=traefik")
 
-	cc.Command = args
+		cc.Command = args
 
-	cp := NewContainer(cc, c.client, c.log.With("parent_ref", c.config.Name))
-	err = cp.Create()
-	if err != nil {
-		return err
-	}
+		cp := NewContainer(cc, c.client, c.log.With("parent_ref", c.config.Name))
+		err = cp.Create()
+		if err != nil {
+			return err
+		}
 
-	// get the id
-	id, err = c.Lookup()
-	if err != nil {
-		return err
-	}
+		// get the id
+		id, err = c.Lookup()
+		if err != nil {
+			return err
+		}
 
-	// wait for the server to start
-	err = c.waitForStart(id)
-	if err != nil {
-		return err
-	}
+		// wait for the server to start
+		err = c.waitForStart(id)
+		if err != nil {
+			return err
+		}
 
-	// get the Kubernetes config file and drop it in $HOME/.shipyard/config/[clustername]/kubeconfig.yml
-	kubeconfig, err := c.copyKubeConfig(id)
-	if err != nil {
-		return xerrors.Errorf("Error copying Kubernetes config: %w", err)
-	}
+		// get the Kubernetes config file and drop it in $HOME/.shipyard/config/[clustername]/kubeconfig.yml
+		kubeconfig, err := c.copyKubeConfig(id)
+		if err != nil {
+			return xerrors.Errorf("Error copying Kubernetes config: %w", err)
+		}
 
-	// create the Docker container version of the Kubeconfig
-	// the default KubeConfig has the server location https://localhost:port
-	// to use this config inside a docker container we need to use the FQDN for the server
-	err = c.createDockerKubeConfig(kubeconfig)
-	if err != nil {
-		return xerrors.Errorf("Error creating Docker Kubernetes config: %w", err)
-	}
+		// create the Docker container version of the Kubeconfig
+		// the default KubeConfig has the server location https://localhost:port
+		// to use this config inside a docker container we need to use the FQDN for the server
+		err = c.createDockerKubeConfig(kubeconfig)
+		if err != nil {
+			return xerrors.Errorf("Error creating Docker Kubernetes config: %w", err)
+		}
 
-	// janky  sleep to wait for API server before creating client, will make better
-	time.Sleep(10 * time.Second)
-	err = c.kubeClient.SetConfig(kubeconfig)
-	if err != nil {
-		return xerrors.Errorf("Error creating Kubernetes client: %w", err)
-	}
+		// janky  sleep to wait for API server before creating client, will make better
+		time.Sleep(10 * time.Second)
+		err = c.kubeClient.SetConfig(kubeconfig)
+		if err != nil {
+			return xerrors.Errorf("Error creating Kubernetes client: %w", err)
+		}
 
-	// wait for all the default pods like core DNS to start running
-	// before progressing
-	err = healthCheckPods(c.kubeClient, []string{""}, 120*time.Second, c.log.With("ref", c.config.Name))
-	if err != nil {
-		return xerrors.Errorf("Error while waiting for Kubernetes default pods: %w", err)
-	}
+		// wait for all the default pods like core DNS to start running
+		// before progressing
+		err = healthCheckPods(c.kubeClient, []string{""}, 120*time.Second, c.log.With("ref", c.config.Name))
+		if err != nil {
+			return xerrors.Errorf("Error while waiting for Kubernetes default pods: %w", err)
+		}
 
-	// we might need to wait for the api services to become ready
-	//kubectl get apiservice
+		// we might need to wait for the api services to become ready
+		//kubectl get apiservice
 
-	// import the images to the servers container d instance
-	// importing images means that k3s does not need to pull from a remote docker hub
-	if c.config.Images != nil && len(c.config.Images) > 0 {
-		return c.ImportLocalDockerImages(id, c.config.Images)
-	}
+		// import the images to the servers container d instance
+		// importing images means that k3s does not need to pull from a remote docker hub
+		if c.config.Images != nil && len(c.config.Images) > 0 {
+			return c.ImportLocalDockerImages(id, c.config.Images)
+		}
+	*/
 
 	return nil
 }
 
+func (c *Cluster) destroyK3s() error {
+	return nil
+}
+
+/*
 // ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
 func (c *Cluster) ImportLocalDockerImages(clusterID string, images []config.Image) error {
 	vn := volumeName(c.config.Name)
@@ -324,3 +319,4 @@ func validateHostname(name string) error {
 
 	return nil
 }
+*/

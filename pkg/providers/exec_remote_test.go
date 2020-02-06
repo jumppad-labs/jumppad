@@ -1,24 +1,6 @@
 package providers
 
-import (
-	"bufio"
-	"bytes"
-	"fmt"
-	"io/ioutil"
-	"net"
-	"os"
-	"strings"
-	"testing"
-
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
-	hclog "github.com/hashicorp/go-hclog"
-	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
-	"github.com/shipyard-run/shipyard/pkg/config"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-)
+/*
 
 func setupRemoteExec(c *config.RemoteExec) (*clients.MockDocker, *RemoteExec, func()) {
 	// set the shipyard env
@@ -115,3 +97,4 @@ func TestRemoteExecCreatesCorrectlyForContainer(t *testing.T) {
 
 	assert.Equal(t, c.Command, ec.Cmd[0])
 }
+*/

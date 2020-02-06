@@ -1,20 +1,6 @@
 package providers
 
-import (
-	"io/ioutil"
-	"strings"
-	"testing"
-
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/go-connections/nat"
-	hclog "github.com/hashicorp/go-hclog"
-	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
-	"github.com/shipyard-run/shipyard/pkg/config"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-)
-
+/*
 func setupIngress(c *config.Ingress) (*clients.MockDocker, *Ingress) {
 	md := &clients.MockDocker{}
 	md.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
@@ -131,3 +117,4 @@ func TestCreatesIngressWithK8sClusterOptions(t *testing.T) {
 	assert.Contains(t, host.Mounts[0].Source, ".shipyard/config/testcontainer/kubeconfig-docker.yaml")
 	assert.Equal(t, "KUBECONFIG=/.kube/kubeconfig.yml", cfg.Env[0])
 }
+*/
