@@ -14,6 +14,7 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/config"
@@ -65,6 +66,7 @@ func (d *DockerTasks) CreateContainer(c config.Container) (string, error) {
 	nc.EndpointsConfig = make(map[string]*network.EndpointSettings)
 
 	// attach the container to the network
+	networkName := ""
 	if c.NetworkRef != nil {
 		nc.EndpointsConfig[c.NetworkRef.Name] = &network.EndpointSettings{NetworkID: c.NetworkRef.Name}
 
@@ -74,6 +76,8 @@ func (d *DockerTasks) CreateContainer(c config.Container) (string, error) {
 			//nc.EndpointsConfig[c.config.NetworkRef.Name].IPAddress = c.config.IPAddress
 			nc.EndpointsConfig[c.NetworkRef.Name].IPAMConfig = &network.EndpointIPAMConfig{IPv4Address: c.IPAddress}
 		}
+
+		networkName = c.NetworkRef.Name
 	}
 
 	// attach the container to the WAN network
@@ -120,7 +124,7 @@ func (d *DockerTasks) CreateContainer(c config.Container) (string, error) {
 		dc,
 		hc,
 		nc,
-		utils.FQDN(c.Name, c.NetworkRef.Name),
+		utils.FQDN(c.Name, networkName),
 	)
 	if err != nil {
 		return "", err
@@ -205,9 +209,46 @@ func (d *DockerTasks) FindContainerIDs(containerName string, networkName string)
 	return nil, nil
 }
 
-// RemovesContainer with the given id
+// RemoveContainer with the given id
 func (d *DockerTasks) RemoveContainer(id string) error {
 	return d.c.ContainerRemove(context.Background(), id, types.ContainerRemoveOptions{Force: true, RemoveVolumes: true})
+}
+
+// CreateVolume creates a Docker volume for a cluster
+// returns the volume name and an error if unsuccessful
+func (d *DockerTasks) CreateVolume(name string) (string, error) {
+	vn := volumeName(name)
+	d.l.Debug("Create Volume", "ref", name, "name", vn)
+
+	volumeCreateOptions := volume.VolumeCreateBody{
+		Name:       vn,
+		Driver:     "local", //TODO: allow setting driver + opts
+		DriverOpts: map[string]string{},
+	}
+
+	vol, err := d.c.VolumeCreate(context.Background(), volumeCreateOptions)
+	if err != nil {
+		return "", fmt.Errorf("failed to create image volume [%s] for cluster [%s]\n%+v", vn, name, err)
+	}
+
+	return vol.Name, nil
+}
+
+// RemoveVolume deletes the Docker volume associated with  a cluster
+func (d *DockerTasks) RemoveVolume(name string) error {
+	vn := volumeName(name)
+	d.l.Debug("Deleting Volume", "ref", name, "name", vn)
+
+	return d.c.VolumeRemove(context.Background(), vn, true)
+}
+
+// ContainerLogs streams the logs for the container to the returned io.ReadCloser
+func (d *DockerTasks) ContainerLogs(id string, stdOut, stdErr bool) (io.ReadCloser, error) {
+	return d.c.ContainerLogs(context.Background(), id, types.ContainerLogsOptions{ShowStderr: stdErr, ShowStdout: stdOut})
+}
+
+func volumeName(clusterName string) string {
+	return fmt.Sprintf("%s.volume", clusterName)
 }
 
 // publishedPorts defines a Docker published port

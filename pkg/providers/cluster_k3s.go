@@ -1,7 +1,14 @@
 package providers
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
+	"math/rand"
+	"strings"
+	"time"
+
+	"github.com/shipyard-run/shipyard/pkg/config"
 )
 
 var (
@@ -13,69 +20,76 @@ var (
 const k3sBaseImage = "rancher/k3s"
 
 func (c *Cluster) createK3s() error {
+	c.log.Info("Creating Cluster", "ref", c.config.Name)
+
+	// check the cluster does not already exist
+	id, err := c.client.FindContainerIDs(c.config.Name, c.config.NetworkRef.Name)
+	if err != nil {
+		return err
+	}
+
+	if id != nil && len(id) > 0 {
+		return ErrorClusterExists
+	}
+
+	// create the volume for the cluster
+	volID, err := c.client.CreateVolume(c.config.Name)
+	if err != nil {
+		return err
+	}
+
+	// set the image
+	image := fmt.Sprintf("%s:%s", k3sBaseImage, c.config.Version)
+
+	// create the server
+	// since the server is just a container create the container config and provider
+	cc := config.Container{}
+	cc.Name = fmt.Sprintf("server.%s", c.config.Name)
+	cc.Image = config.Image{Name: image}
+	cc.NetworkRef = c.config.NetworkRef
+	cc.Privileged = true // k3s must run Privlidged
+
+	// set the volume mount for the images
+	cc.Volumes = []config.Volume{
+		config.Volume{
+			Source:      volID,
+			Destination: "/images",
+			Type:        "volume",
+		},
+	}
+
+	// set the environment variables for the K3S_KUBECONFIG_OUTPUT and K3S_CLUSTER_SECRET
+	cc.Environment = []config.KV{
+		config.KV{Key: "K3S_KUBECONFIG_OUTPUT", Value: "/output/kubeconfig.yaml"},
+		config.KV{Key: "K3S_CLUSTER_SECRET", Value: "mysupersecret"}, // This should be random
+	}
+
+	// set the API server port to a random number 64000 - 65000
+	apiPort := rand.Intn(1000) + 64000
+	args := []string{"server", fmt.Sprintf("--https-listen-port=%d", apiPort)}
+
+	// expose the API server port
+	cc.Ports = []config.Port{
+		config.Port{
+			Local:    apiPort,
+			Host:     apiPort,
+			Protocol: "tcp",
+		},
+	}
+
+	// disable the installation of traefik
+	args = append(args, "--no-deploy=traefik")
+	cc.Command = args
+
+	c.client.CreateContainer(cc)
+
+	// wait for the server to start
+	err = c.waitForStart(id)
+	if err != nil {
+		return err
+	}
+
 	/*
-		c.log.Info("Creating Cluster", "ref", c.config.Name)
-
-		// check the cluster name is valid
-		if err := validateClusterName(c.config.Name); err != nil {
-			return err
-		}
-
-		// check the cluster does not already exist
-		id, err := c.Lookup()
-		if id != "" {
-			return ErrorClusterExists
-		}
-
-		// create the volume for the cluster
-		volID, err := c.createVolume()
-		if err != nil {
-			return err
-		}
-
-		// set the image
-		image := fmt.Sprintf("%s:%s", k3sBaseImage, c.config.Version)
-
-		// create the server
-		// since the server is just a container create the container config and provider
-		cc := &config.Container{}
-		cc.Name = fmt.Sprintf("server.%s", c.config.Name)
-		cc.Image = config.Image{Name: image}
-		cc.NetworkRef = c.config.NetworkRef
-		cc.Privileged = true // k3s must run Privlidged
-
-		// set the volume mount for the images
-		cc.Volumes = []config.Volume{
-			config.Volume{
-				Source:      volID,
-				Destination: "/images",
-				Type:        "volume",
-			},
-		}
-
-		// set the environment variables for the K3S_KUBECONFIG_OUTPUT and K3S_CLUSTER_SECRET
-		cc.Environment = []config.KV{
-			config.KV{Key: "K3S_KUBECONFIG_OUTPUT", Value: "/output/kubeconfig.yaml"},
-			config.KV{Key: "K3S_CLUSTER_SECRET", Value: "mysupersecret"}, // This should be random
-		}
-
-		// set the API server port to a random number 64000 - 65000
-		apiPort := rand.Intn(1000) + 64000
-		args := []string{"server", fmt.Sprintf("--https-listen-port=%d", apiPort)}
-
-		// expose the API server port
-		cc.Ports = []config.Port{
-			config.Port{
-				Local:    apiPort,
-				Host:     apiPort,
-				Protocol: "tcp",
-			},
-		}
-
-		// disable the installation of traefik
-		args = append(args, "--no-deploy=traefik")
-
-		cc.Command = args
 
 		cp := NewContainer(cc, c.client, c.log.With("parent_ref", c.config.Name))
 		err = cp.Create()
@@ -89,11 +103,6 @@ func (c *Cluster) createK3s() error {
 			return err
 		}
 
-		// wait for the server to start
-		err = c.waitForStart(id)
-		if err != nil {
-			return err
-		}
 
 		// get the Kubernetes config file and drop it in $HOME/.shipyard/config/[clustername]/kubeconfig.yml
 		kubeconfig, err := c.copyKubeConfig(id)
@@ -140,6 +149,37 @@ func (c *Cluster) destroyK3s() error {
 	return nil
 }
 
+func (c *Cluster) waitForStart(id string) error {
+	start := time.Now()
+	timeout := 120 * time.Second
+
+	for {
+		// not running after timeout exceeded? Rollback and delete everything.
+		if timeout != 0 && time.Now().After(start.Add(timeout)) {
+			//deleteCluster()
+			return errors.New("Cluster creation exceeded specified timeout")
+		}
+
+		// scan container logs for a line that tells us that the required services are up and running
+		out, err := c.client.ContainerLogs(id, true, true)
+		if err != nil {
+			out.Close()
+			return fmt.Errorf(" Couldn't get docker logs for %s\n%+v", id, err)
+		}
+		buf := new(bytes.Buffer)
+		nRead, _ := buf.ReadFrom(out)
+		out.Close()
+		output := buf.String()
+		if nRead > 0 && strings.Contains(string(output), "Running kubelet") {
+			break
+		}
+
+		time.Sleep(1 * time.Second)
+	}
+
+	return nil
+}
+
 /*
 // ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
 func (c *Cluster) ImportLocalDockerImages(clusterID string, images []config.Image) error {
@@ -162,36 +202,6 @@ func (c *Cluster) ImportLocalDockerImages(clusterID string, images []config.Imag
 	return nil
 }
 
-func (c *Cluster) waitForStart(id string) error {
-	start := time.Now()
-	timeout := 120 * time.Second
-
-	for {
-		// not running after timeout exceeded? Rollback and delete everything.
-		if timeout != 0 && time.Now().After(start.Add(timeout)) {
-			//deleteCluster()
-			return errors.New("Cluster creation exceeded specified timeout")
-		}
-
-		// scan container logs for a line that tells us that the required services are up and running
-		out, err := c.client.ContainerLogs(context.Background(), id, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true})
-		if err != nil {
-			out.Close()
-			return fmt.Errorf(" Couldn't get docker logs for %s\n%+v", id, err)
-		}
-		buf := new(bytes.Buffer)
-		nRead, _ := buf.ReadFrom(out)
-		out.Close()
-		output := buf.String()
-		if nRead > 0 && strings.Contains(string(output), "Running kubelet") {
-			break
-		}
-
-		time.Sleep(1 * time.Second)
-	}
-
-	return nil
-}
 
 func (c *Cluster) copyKubeConfig(id string) (string, error) {
 	// get kubeconfig file from container and read contents

@@ -1,6 +1,8 @@
 package mocks
 
 import (
+	"io"
+
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/stretchr/testify/mock"
 )
@@ -13,6 +15,24 @@ func (m *MockContainerTasks) CreateContainer(c config.Container) (id string, err
 	args := m.Called(c)
 
 	return args.String(0), args.Error(1)
+}
+
+func (m *MockContainerTasks) RemoveContainer(id string) error {
+	args := m.Called(id)
+
+	return args.Error(0)
+}
+
+func (m *MockContainerTasks) CreateVolume(name string) (id string, err error) {
+	args := m.Called(name)
+
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockContainerTasks) RemoveVolume(name string) error {
+	args := m.Called(name)
+
+	return args.Error(1)
 }
 
 func (m *MockContainerTasks) PullImage(i config.Image, f bool) error {
@@ -31,8 +51,12 @@ func (m *MockContainerTasks) FindContainerIDs(name string, networkName string) (
 	return nil, args.Error(1)
 }
 
-func (m *MockContainerTasks) RemoveContainer(id string) error {
-	args := m.Called(id)
+func (d *MockContainerTasks) ContainerLogs(id string, stdOut, stdErr bool) (io.ReadCloser, error) {
+	args := d.Called(id, stdOut, stdErr)
 
-	return args.Error(0)
+	if rc, ok := args.Get(0).(io.ReadCloser); ok {
+		return rc, args.Error(1)
+	}
+
+	return nil, args.Error(1)
 }

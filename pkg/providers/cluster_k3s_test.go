@@ -1,5 +1,113 @@
 package providers
 
+import (
+	"fmt"
+	"strconv"
+	"testing"
+
+	"github.com/hashicorp/go-hclog"
+	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
+	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+)
+
+func setupClusterMocks(md *mocks.MockContainerTasks) {
+
+}
+
+func TestClusterK3ErrorsWhenUnableToLookupIDs(t *testing.T) {
+	md := &mocks.MockContainerTasks{}
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
+
+	mk := &mocks.MockKubernetes{}
+	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.Error(t, err)
+}
+
+func TestClusterK3ErrorsWhenClusterExists(t *testing.T) {
+	md := &mocks.MockContainerTasks{}
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
+
+	mk := &mocks.MockKubernetes{}
+	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.Error(t, err)
+}
+
+func TestClusterK3CreatesANewVolume(t *testing.T) {
+	md := &mocks.MockContainerTasks{}
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, nil)
+	md.On("CreateVolume", mock.Anything, mock.Anything).Return("123", nil)
+
+	mk := &mocks.MockKubernetes{}
+	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+	md.AssertCalled(t, "CreateVolume", clusterConfig.Name)
+}
+
+func TestClusterK3FailsWhenUnableToCreatesANewVolume(t *testing.T) {
+	md := &mocks.MockContainerTasks{}
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, nil)
+	md.On("CreateVolume", mock.Anything, mock.Anything).Return("", fmt.Errorf("boom"))
+
+	mk := &mocks.MockKubernetes{}
+	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.Error(t, err)
+	md.AssertCalled(t, "CreateVolume", clusterConfig.Name)
+}
+
+func TestClusterK3CreatesAServer(t *testing.T) {
+	md := &mocks.MockContainerTasks{}
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, nil)
+	md.On("CreateVolume", mock.Anything, mock.Anything).Return("123", nil)
+	md.On("CreateContainer", mock.Anything).Return("containerid", nil)
+
+	mk := &mocks.MockKubernetes{}
+	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(config.Container)
+
+	// validate the basic details for the server container
+	assert.Contains(t, params.Name, "server")
+	assert.Contains(t, params.Image.Name, "rancher")
+	assert.Equal(t, &clusterNetwork, params.NetworkRef)
+	assert.True(t, params.Privileged)
+
+	// validate that the volume is correctly set
+	assert.Equal(t, "123", params.Volumes[0].Source)
+	assert.Equal(t, "/images", params.Volumes[0].Destination)
+	assert.Equal(t, "volume", params.Volumes[0].Type)
+
+	// validate the API port is set
+	assert.GreaterOrEqual(t, params.Ports[0].Local, 64000)
+	assert.GreaterOrEqual(t, params.Ports[0].Local, params.Ports[0].Host)
+	assert.Equal(t, "tcp", params.Ports[0].Protocol)
+
+	// validate the command
+	assert.Equal(t, "server", params.Command[0])
+	assert.Contains(t, params.Command[1], strconv.Itoa(params.Ports[0].Local))
+	assert.Contains(t, params.Command[2], "traefik")
+}
+
+var clusterNetwork = config.Network{Name: "cloud"}
+
+var clusterConfig = config.Cluster{
+	Name:       "test",
+	Driver:     "k3s",
+	NetworkRef: &clusterNetwork,
+}
+
 var kubeconfig = `
 kubeconfig.yam@@@@i@@@@@@@@@@@@@@@@@@@@@@2@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@lapiVersion: v1
 clusters:

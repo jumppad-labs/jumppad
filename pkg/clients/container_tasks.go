@@ -1,6 +1,8 @@
 package clients
 
 import (
+	"io"
+
 	"github.com/shipyard-run/shipyard/pkg/config"
 )
 
@@ -19,6 +21,11 @@ type ContainerTasks interface {
 	CreateContainer(config.Container) (id string, err error)
 	// RemoveContainer stops and removes a running container
 	RemoveContainer(id string) error
+	// CreateVolume creates a new volume with the given name.
+	// If successful the id of the newly created volume is returned
+	CreateVolume(name string) (id string, err error)
+	// RemoveVolume removes a volume with the given name
+	RemoveVolume(name string) error
 	// PullImage pulls a Docker image from the registry if it is not already
 	// present in the local cache.
 	// If the Username and Password config options are set then PullImage will attempt to
@@ -28,4 +35,8 @@ type ContainerTasks interface {
 	PullImage(image config.Image, force bool) error
 	// FindContainerIDs returns the Container IDs for the given identifier
 	FindContainerIDs(name string, networkName string) ([]string, error)
+	// ContainerLogs attaches to the container and streams the logs to the returned
+	// io.ReadCloser.
+	// Returns an error if the container is not running
+	ContainerLogs(id string, stdOut, stdErr bool) (io.ReadCloser, error)
 }
