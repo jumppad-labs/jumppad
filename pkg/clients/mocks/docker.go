@@ -102,7 +102,7 @@ func (m *MockDocker) ContainerExecAttach(ctx context.Context, execID string, con
 		return hjr, args.Error(1)
 	}
 
-	return types.HijackedResponse{}, nil
+	return types.HijackedResponse{}, args.Error(1)
 }
 
 func (m *MockDocker) ContainerExecInspect(ctx context.Context, execID string) (types.ContainerExecInspect, error) {

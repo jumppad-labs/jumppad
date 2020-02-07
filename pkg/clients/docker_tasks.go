@@ -11,6 +11,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -220,7 +221,7 @@ func (d *DockerTasks) RemoveContainer(id string) error {
 // CreateVolume creates a Docker volume for a cluster
 // returns the volume name and an error if unsuccessful
 func (d *DockerTasks) CreateVolume(name string) (string, error) {
-	vn := volumeName(name)
+	vn := utils.FQDNVolumeName(name)
 	d.l.Debug("Create Volume", "ref", name, "name", vn)
 
 	volumeCreateOptions := volume.VolumeCreateBody{
@@ -239,7 +240,7 @@ func (d *DockerTasks) CreateVolume(name string) (string, error) {
 
 // RemoveVolume deletes the Docker volume associated with  a cluster
 func (d *DockerTasks) RemoveVolume(name string) error {
-	vn := volumeName(name)
+	vn := utils.FQDNVolumeName(name)
 	d.l.Debug("Deleting Volume", "ref", name, "name", vn)
 
 	return d.c.VolumeRemove(context.Background(), vn, true)
@@ -378,8 +379,61 @@ func (d *DockerTasks) CopyLocalDockerImageToVolume(images []string, volume strin
 	return fmt.Sprintf("/images/%s", fi.Name()), nil
 }
 
-func volumeName(clusterName string) string {
-	return fmt.Sprintf("%s.volume", clusterName)
+// ExecuteCommand allows the execution of commands in a running docker container
+// id is the id of the container to execute the command in
+// command is a slice of strings to execute
+// writer [optional] will be used to write any output from the command execution.
+func (d *DockerTasks) ExecuteCommand(id string, command []string, writer io.Writer) error {
+	execid, err := d.c.ContainerExecCreate(context.Background(), id, types.ExecConfig{
+		Cmd:          command,
+		WorkingDir:   "/",
+		AttachStdout: true,
+		AttachStderr: true,
+	})
+
+	if err != nil {
+		return xerrors.Errorf("unable to create container exec: %w", err)
+	}
+
+	// get logs from an attach
+	stream, err := d.c.ContainerExecAttach(context.Background(), execid.ID, types.ExecStartCheck{})
+	if err != nil {
+		return xerrors.Errorf("unable to attach logging to exec process: %w", err)
+	}
+	defer stream.Close()
+
+	// ensure that the log from the Docker exec command is copied to the default logger
+	if writer != nil {
+		go func() {
+			io.Copy(
+				writer,
+				stream.Reader,
+			)
+		}()
+	}
+
+	err = d.c.ContainerExecStart(context.Background(), execid.ID, types.ExecStartCheck{})
+	if err != nil {
+		return xerrors.Errorf("unable to start exec process: %w", err)
+	}
+
+	// loop until the container finishes execution
+	for {
+		i, err := d.c.ContainerExecInspect(context.Background(), execid.ID)
+		if err != nil {
+			return xerrors.Errorf("unable to determine status of exec process: %w", err)
+		}
+
+		if !i.Running {
+			if i.ExitCode == 0 {
+				return nil
+			}
+
+			return xerrors.Errorf("container exec failed with exit code %d", i.ExitCode)
+		}
+
+		time.Sleep(1 * time.Second)
+	}
 }
 
 // publishedPorts defines a Docker published port

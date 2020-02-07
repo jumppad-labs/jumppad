@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"golang.org/x/xerrors"
@@ -36,6 +37,12 @@ func (c *Cluster) createK3s() error {
 
 	if ids != nil && len(ids) > 0 {
 		return ErrorClusterExists
+	}
+
+	// pull the container image
+	err = c.client.PullImage(config.Image{Name: fmt.Sprintf("%s:%s", k3sBaseImage, c.config.Version)}, false)
+	if err != nil {
+		return err
 	}
 
 	// create the volume for the cluster
@@ -129,7 +136,7 @@ func (c *Cluster) createK3s() error {
 	// import the images to the servers container d instance
 	// importing images means that k3s does not need to pull from a remote docker hub
 	if c.config.Images != nil && len(c.config.Images) > 0 {
-		return c.ImportLocalDockerImages(id, c.config.Images)
+		return c.ImportLocalDockerImages(c.config.Name, c.config.Images)
 	}
 
 	return nil
@@ -174,7 +181,7 @@ func (c *Cluster) waitForStart(id string) error {
 
 func (c *Cluster) copyKubeConfig(id string) (string, error) {
 	// create destination kubeconfig file paths
-	_, destPath, _ := CreateKubeConfigPath(c.config.Name)
+	_, destPath, _ := utils.CreateKubeConfigPath(c.config.Name)
 
 	// get kubeconfig file from container and read contents
 	err := c.client.CopyFromContainer(id, "/output/kubeconfig.yaml", destPath)
@@ -206,7 +213,7 @@ func (c *Cluster) createDockerKubeConfig(kubeconfig string) error {
 		-1,
 	)
 
-	_, _, dockerPath := CreateKubeConfigPath(c.config.Name)
+	_, _, dockerPath := utils.CreateKubeConfigPath(c.config.Name)
 
 	kubeconfigfile, err := os.Create(dockerPath)
 	if err != nil {
@@ -221,27 +228,30 @@ func (c *Cluster) createDockerKubeConfig(kubeconfig string) error {
 
 // ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
 func (c *Cluster) ImportLocalDockerImages(clusterID string, images []config.Image) error {
-	// pull the images
+	imgs := []string{}
+
+	for _, i := range images {
+		err := c.client.PullImage(i, false)
+		if err != nil {
+			return err
+		}
+
+		imgs = append(imgs, i.Name)
+	}
+
 	// import to volume
-	// exec import command
+	vn := utils.FQDNVolumeName(clusterID)
+	imageFile, err := c.client.CopyLocalDockerImageToVolume(imgs, vn)
+	if err != nil {
+		return err
+	}
 
-	/*
-		vn := volumeName(c.config.Name)
-		c.log.Debug("Writing local Docker images to cluster", "ref", c.config.Name, "images", images, "volume", vn)
-
-		imageFile, err := writeLocalDockerImageToVolume(c.client, images, vn, c.log)
-		if err != nil {
-			return err
-		}
-
-		// import the image
-		// ctr image import filename
-		c.log.Debug("Importing Docker images on cluster", "ref", c.config.Name, "id", clusterID, "image", imageFile)
-		err = execCommand(c.client, clusterID, []string{"ctr", "image", "import", imageFile}, c.log.With("parent_ref", c.config.Name))
-		if err != nil {
-			return err
-		}
-	*/
+	// execute the command to import the image
+	// write any command output to the logger
+	err = c.client.ExecuteCommand(clusterID, []string{"ctr", "image", "import", imageFile}, c.log.StandardWriter(&hclog.StandardLoggerOptions{}))
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

@@ -6,6 +6,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -30,7 +31,7 @@ func TestCreatesConfigCorrectly(t *testing.T) {
 	err := p.Create()
 	assert.NoError(t, err)
 
-	_, destPath, _ := CreateKubeConfigPath(c.Name)
+	_, destPath, _ := utils.CreateKubeConfigPath(c.Name)
 	mk.AssertCalled(t, "SetConfig", destPath)
 	mk.AssertCalled(t, "Apply", paths, kc.WaitUntilReady)
 }
