@@ -1,6 +1,8 @@
 package mocks
 
 import (
+	"time"
+
 	"github.com/stretchr/testify/mock"
 	v1 "k8s.io/api/core/v1"
 )
@@ -33,6 +35,12 @@ func (m *MockKubernetes) Apply(files []string, waitUntilReady bool) error {
 
 func (m *MockKubernetes) Delete(files []string) error {
 	args := m.Called(files)
+
+	return args.Error(0)
+}
+
+func (m *MockKubernetes) HealthCheckPods(selectors []string, timeout time.Duration) error {
+	args := m.Called(selectors, timeout)
 
 	return args.Error(0)
 }

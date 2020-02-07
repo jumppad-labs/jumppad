@@ -45,6 +45,7 @@ func setupClusterMocks() (*mocks.MockContainerTasks, *mocks.MockKubernetes, func
 
 	mk := &mocks.MockKubernetes{}
 	mk.Mock.On("SetConfig", mock.Anything).Return(nil)
+	mk.Mock.On("HealthCheckPods", mock.Anything, mock.Anything).Return(nil)
 
 	return md, mk, func() {
 		os.Setenv("HOME", currentHome)
@@ -219,8 +220,6 @@ func TestClusterK3sErrorsWhenFailedToCreateKubeClient(t *testing.T) {
 	removeOn(&mk.Mock, "SetConfig")
 	mk.Mock.On("SetConfig", mock.Anything).Return(fmt.Errorf("boom"))
 
-	startTimeout = 10 * time.Millisecond
-
 	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
 
 	err := p.Create()
@@ -235,6 +234,19 @@ func TestClusterK3sWaitsForPods(t *testing.T) {
 
 	err := p.Create()
 	assert.NoError(t, err)
+	mk.AssertCalled(t, "HealthCheckPods", []string{""}, startTimeout)
+}
+
+func TestClusterK3sErrorsWhenWaitsForPodsFail(t *testing.T) {
+	md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+	removeOn(&mk.Mock, "HealthCheckPods")
+	mk.On("HealthCheckPods", mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
+
+	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.Error(t, err)
 }
 
 var clusterNetwork = config.Network{Name: "cloud"}

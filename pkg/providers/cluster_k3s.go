@@ -112,41 +112,25 @@ func (c *Cluster) createK3s() error {
 		return xerrors.Errorf("Error creating Docker Kubernetes config: %w", err)
 	}
 
-	// it is possible for the API server to not be available when setting the config
-	// retry until no error or timeout
-	st := time.Now()
-	for {
-		err = c.kubeClient.SetConfig(kc)
-		if err == nil {
-			break
-		}
-
-		if time.Now().Sub(st) > startTimeout {
-			return xerrors.Errorf("Error waiting for kubeclient: %w", err)
-		}
-	}
-
 	// wait for all the default pods like core DNS to start running
 	// before progressing
+	// we might also need to wait for the api services to become ready
+	// this could be done with the folowing command kubectl get apiservice
+	err = c.kubeClient.SetConfig(kc)
+	if err != nil {
+		return err
+	}
 
-	// we might need to wait for the api services to become ready
-	//kubectl get apiservice
-	err = healthCheckPods(c.kubeClient, []string{""}, startTimeout, c.log.With("ref", c.config.Name))
+	err = c.kubeClient.HealthCheckPods([]string{""}, startTimeout)
 	if err != nil {
 		return xerrors.Errorf("Error while waiting for Kubernetes default pods: %w", err)
 	}
 
-	/*
-
-
-
-
-		// import the images to the servers container d instance
-		// importing images means that k3s does not need to pull from a remote docker hub
-		if c.config.Images != nil && len(c.config.Images) > 0 {
-			return c.ImportLocalDockerImages(id, c.config.Images)
-		}
-	*/
+	// import the images to the servers container d instance
+	// importing images means that k3s does not need to pull from a remote docker hub
+	if c.config.Images != nil && len(c.config.Images) > 0 {
+		return c.ImportLocalDockerImages(id, c.config.Images)
+	}
 
 	return nil
 }
@@ -235,28 +219,34 @@ func (c *Cluster) createDockerKubeConfig(kubeconfig string) error {
 	return nil
 }
 
-/*
 // ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
 func (c *Cluster) ImportLocalDockerImages(clusterID string, images []config.Image) error {
-	vn := volumeName(c.config.Name)
-	c.log.Debug("Writing local Docker images to cluster", "ref", c.config.Name, "images", images, "volume", vn)
+	// pull the images
+	// import to volume
+	// exec import command
 
-	imageFile, err := writeLocalDockerImageToVolume(c.client, images, vn, c.log)
-	if err != nil {
-		return err
-	}
+	/*
+		vn := volumeName(c.config.Name)
+		c.log.Debug("Writing local Docker images to cluster", "ref", c.config.Name, "images", images, "volume", vn)
 
-	// import the image
-	// ctr image import filename
-	c.log.Debug("Importing Docker images on cluster", "ref", c.config.Name, "id", clusterID, "image", imageFile)
-	err = execCommand(c.client, clusterID, []string{"ctr", "image", "import", imageFile}, c.log.With("parent_ref", c.config.Name))
-	if err != nil {
-		return err
-	}
+		imageFile, err := writeLocalDockerImageToVolume(c.client, images, vn, c.log)
+		if err != nil {
+			return err
+		}
+
+		// import the image
+		// ctr image import filename
+		c.log.Debug("Importing Docker images on cluster", "ref", c.config.Name, "id", clusterID, "image", imageFile)
+		err = execCommand(c.client, clusterID, []string{"ctr", "image", "import", imageFile}, c.log.With("parent_ref", c.config.Name))
+		if err != nil {
+			return err
+		}
+	*/
 
 	return nil
 }
 
+/*
 
 
 

@@ -90,7 +90,7 @@ func (h *Helm) Create() error {
 			xerrors.Errorf("unable to parse healthcheck duration: %w", err)
 		}
 
-		err = healthCheckPods(h.kubeClient, h.config.HealthCheck.Pods, to, h.log.With("ref", h.config.Name))
+		err = h.kubeClient.HealthCheckPods(h.config.HealthCheck.Pods, to)
 		if err != nil {
 			xerrors.Errorf("healthcheck failed after helm chart setup: %w", err)
 		}

@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"helm.sh/helm/v3/pkg/kube"
 	"golang.org/x/xerrors"
+	"helm.sh/helm/v3/pkg/kube"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -20,6 +20,7 @@ import (
 type Kubernetes interface {
 	SetConfig(string) error
 	GetPods(string) (*v1.PodList, error)
+	HealthCheckPods(selectors []string, timeout time.Duration) error
 	Apply(files []string, waitUntilReady bool) error
 	Delete(files []string) error
 }
@@ -29,18 +30,38 @@ type KubernetesImpl struct {
 	clientset  *kubernetes.Clientset
 	client     corev1.CoreV1Interface
 	configPath string
+	timeout    time.Duration
 }
 
 // NewKubernetes creates a new client for interacting with Kubernetes clusters
-func NewKubernetes() Kubernetes {
-	return &KubernetesImpl{}
+func NewKubernetes(t time.Duration) Kubernetes {
+	return &KubernetesImpl{timeout: t}
 }
 
 // SetConfig for the Kubernetes cluster
 func (k *KubernetesImpl) SetConfig(kubeconfig string) error {
 	k.configPath = kubeconfig
 
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	st := time.Now()
+	for {
+		err := k.setConfig()
+		if err == nil {
+			break
+		}
+
+		if time.Now().Sub(st) > k.timeout {
+			return xerrors.Errorf("Error waiting for kubeclient: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// setConfig retries setting the config and building the client APIs
+// it is possible that the cluster is not fully ready when
+// this operation is first called
+func (k *KubernetesImpl) setConfig() error {
+	config, err := clientcmd.BuildConfigFromFlags("", k.configPath)
 	if err != nil {
 		return err
 	}
@@ -104,6 +125,60 @@ func (k *KubernetesImpl) Delete(files []string) error {
 	// process the files
 	for _, f := range allFiles {
 		deleteFile(f, kc)
+	}
+
+	return nil
+}
+
+// HealthCheckPods uses the given selector to check that all pods are started
+// and running.
+// selectors are checked sequentially
+// pods = ["component=server,app=consul", "component=client,app=consul"]
+func (k *KubernetesImpl) HealthCheckPods(selectors []string, timeout time.Duration) error {
+	// check all pods are running
+	for _, s := range selectors {
+		err := k.healthCheckSingle(s, timeout)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// healthCheckSingle checks for running containers with the given selector
+func (k *KubernetesImpl) healthCheckSingle(selector string, timeout time.Duration) error {
+	st := time.Now()
+	for {
+		if time.Now().Sub(st) > timeout {
+			return fmt.Errorf("Timeout waiting for pods %s to start", selector)
+		}
+
+		// GetPods may return an error if the API server is not available
+		pl, err := k.GetPods(selector)
+		if err != nil {
+			continue
+		}
+
+		// there should be at least 1 pod
+		if len(pl.Items) < 1 {
+			continue
+		}
+
+		allRunning := true
+		for _, pod := range pl.Items {
+			if pod.Status.Phase != "Running" {
+				allRunning = false
+				break
+			}
+		}
+
+		if allRunning {
+			break
+		}
+
+		// backoff
+		time.Sleep(2 * time.Second)
 	}
 
 	return nil

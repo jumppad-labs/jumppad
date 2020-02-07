@@ -1,6 +1,7 @@
 package clients
 
 import (
+	"archive/tar"
 	"bytes"
 	"context"
 	"encoding/base64"
@@ -277,6 +278,104 @@ func (d *DockerTasks) CopyFromContainer(id, src, dst string) error {
 	file.Write(trimBytes)
 
 	return nil
+}
+
+// CopyLocalDockerImageToVolume writes multiple Docker images to a Docker volume as a compressed archive
+// returns the filename of the archive and an error if one occured
+func (d *DockerTasks) CopyLocalDockerImageToVolume(images []string, volume string) (string, error) {
+	d.l.Debug("Writing docker images to volume", "images", images, "volume", volume)
+
+	// save the image to a local temp file
+	ir, err := d.c.ImageSave(context.Background(), images)
+	if err != nil {
+		return "", xerrors.Errorf("unable to save images: %w", err)
+	}
+	defer ir.Close()
+
+	// create a temp file to hold the tar
+	tmpFile, err := ioutil.TempFile("", "*.tar")
+	if err != nil {
+		return "", xerrors.Errorf("unable to create temporary file: %w", err)
+	}
+
+	defer tmpFile.Close()
+
+	_, err = io.Copy(tmpFile, ir)
+	if err != nil {
+		return "", xerrors.Errorf("unable to copy image to temp file: %w", err)
+	}
+
+	// set the seek pos back to 0
+	tmpFile.Seek(0, 0)
+
+	// create  temp file for a tar to contain the tar we just created
+	// CopyToContainer expects a tar which has individual file entries
+	// if we write the original file the output will not be a single file
+	// but the contents of the tar. To bypass this we need to add the output from
+	// save image to a tar
+	tmpTarFile, err := ioutil.TempFile("", "*.tar")
+	if err != nil {
+		return "", xerrors.Errorf("unable to create temporary file: %w", err)
+	}
+
+	defer tmpTarFile.Close()
+
+	_, err = io.Copy(tmpTarFile, ir)
+	if err != nil {
+		return "", xerrors.Errorf("unable to copy image to temp file: %w", err)
+	}
+
+	ta := tar.NewWriter(tmpTarFile)
+
+	fi, _ := tmpFile.Stat()
+
+	hdr, err := tar.FileInfoHeader(fi, fi.Name())
+	if err != nil {
+		return "", xerrors.Errorf("unable to create header for tar: %w", err)
+	}
+
+	// write the header to the tar file, this has to happen before the file
+	err = ta.WriteHeader(hdr)
+	if err != nil {
+		return "", xerrors.Errorf("unable to write tar header: %w", err)
+	}
+
+	io.Copy(ta, tmpFile)
+	if err != nil {
+		return "", xerrors.Errorf("unable to copy image to tar file: %w", err)
+	}
+
+	ta.Close()
+
+	// reset the file seek so we can copy to the container
+	tmpTarFile.Seek(0, 0)
+
+	// create a dummy container to import to volume
+	cc := config.Container{
+		Name:  "tmp.import",
+		Image: config.Image{Name: makeImageCanonical("alpine:latest")},
+		Volumes: []config.Volume{
+			config.Volume{
+				Source:      volume,
+				Destination: "/images",
+				Type:        "volume",
+			},
+		},
+		Command: []string{"tail", "-f", "/dev/null"},
+	}
+
+	tmpID, err := d.CreateContainer(cc)
+	if err != nil {
+		return "", xerrors.Errorf("unable to create dummy container for importing images: %w", err)
+	}
+	defer d.RemoveContainer(tmpID)
+
+	err = d.c.CopyToContainer(context.Background(), utils.FQDN(cc.Name, ""), "/images", tmpTarFile, types.CopyToContainerOptions{})
+	if err != nil {
+		return "", xerrors.Errorf("unable to copy file to container: %w", err)
+	}
+
+	return fmt.Sprintf("/images/%s", fi.Name()), nil
 }
 
 func volumeName(clusterName string) string {
