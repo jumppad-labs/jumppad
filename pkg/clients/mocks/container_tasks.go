@@ -32,7 +32,7 @@ func (m *MockContainerTasks) CreateVolume(name string) (id string, err error) {
 func (m *MockContainerTasks) RemoveVolume(name string) error {
 	args := m.Called(name)
 
-	return args.Error(1)
+	return args.Error(0)
 }
 
 func (m *MockContainerTasks) PullImage(i config.Image, f bool) error {

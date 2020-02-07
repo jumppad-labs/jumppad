@@ -20,7 +20,7 @@ import (
 // setupClusterMocks sets up a happy path for mocks
 func setupClusterMocks() (*mocks.MockContainerTasks, *mocks.MockKubernetes, func()) {
 	md := &mocks.MockContainerTasks{}
-	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, nil)
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"contianerid"}, nil)
 	md.On("PullImage", mock.Anything, mock.Anything).Return(nil)
 	md.On("CreateVolume", mock.Anything, mock.Anything).Return("123", nil)
 	md.On("CreateContainer", mock.Anything).Return("containerid", nil)
@@ -31,6 +31,8 @@ func setupClusterMocks() (*mocks.MockContainerTasks, *mocks.MockKubernetes, func
 	md.On("CopyFromContainer", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything).Return("/images/file.tar.gz", nil)
 	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	md.On("RemoveContainer", mock.Anything).Return(nil)
+	md.On("RemoveVolume", mock.Anything).Return(nil)
 
 	// set the home folder to a temp folder
 	tmpDir, _ := ioutil.TempDir("", "")
@@ -318,6 +320,65 @@ func TestClusterK3sImportDockerExecFailReturnsError(t *testing.T) {
 
 	err := p.Create()
 	assert.Error(t, err)
+}
+
+// Destroy Tests
+func TestClusterK3sDestroyGetsIDr(t *testing.T) {
+	md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
+
+	err := p.Destroy()
+	assert.NoError(t, err)
+	md.AssertCalled(t, "FindContainerIDs", clusterConfig.Name, clusterConfig.NetworkRef.Name)
+}
+
+func TestClusterK3sDestroyWithFindIDErrorReturnsError(t *testing.T) {
+	md, mk, cleanup := setupClusterMocks()
+	removeOn(&md.Mock, "FindContainerIDs")
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
+	defer cleanup()
+
+	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
+
+	err := p.Destroy()
+	assert.Error(t, err)
+}
+
+func TestClusterK3sDestroyWithNoIDReturns(t *testing.T) {
+	md, mk, cleanup := setupClusterMocks()
+	removeOn(&md.Mock, "FindContainerIDs")
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, nil)
+	defer cleanup()
+
+	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
+
+	err := p.Destroy()
+	assert.NoError(t, err)
+	md.AssertNotCalled(t, "RemoveContainer", mock.Anything)
+}
+
+func TestClusterK3sDestroyRemovesContainer(t *testing.T) {
+	md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
+
+	err := p.Destroy()
+	assert.NoError(t, err)
+	md.AssertCalled(t, "RemoveContainer", mock.Anything)
+}
+
+func TestClusterK3sDestroyRemovesVolume(t *testing.T) {
+	md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	p := NewCluster(&clusterConfig, md, mk, hclog.NewNullLogger())
+
+	err := p.Destroy()
+	assert.NoError(t, err)
+	md.AssertCalled(t, "RemoveVolume", "test.volume.shipyard")
 }
 
 var clusterNetwork = config.Network{Name: "cloud"}
