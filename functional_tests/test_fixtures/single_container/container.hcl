@@ -10,7 +10,7 @@ container "consul" {
     destination = "/config"
   }
 
-  network    = "network.cloud"
+  network    = "network.onprem"
   ip_address = "10.5.0.2" // optional
 
   resources {

@@ -6,18 +6,21 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 )
 
 type Ingress struct {
-	config *config.Ingress
-	client clients.Docker
+	config config.Ingress
+	client clients.ContainerTasks
 	log    hclog.Logger
 }
 
-func NewIngress(c *config.Ingress, cc clients.Docker, l hclog.Logger) *Ingress {
+// NewIngress creates a new ingress provider
+func NewIngress(c config.Ingress, cc clients.ContainerTasks, l hclog.Logger) *Ingress {
 	return &Ingress{c, cc, l}
 }
 
+// Create the ingress
 func (i *Ingress) Create() error {
 	i.log.Info("Creating Ingress", "ref", i.config.Name)
 
@@ -28,7 +31,7 @@ func (i *Ingress) Create() error {
 
 	switch v := i.config.TargetRef.(type) {
 	case *config.Container:
-		serviceName = FQDN(v.Name, v.NetworkRef)
+		serviceName = utils.FQDN(v.Name, v.NetworkRef.Name)
 	case *config.Cluster:
 
 		// determine the type of cluster
@@ -36,7 +39,7 @@ func (i *Ingress) Create() error {
 		// make sure that the proxy runs in kube mode
 		if v.Driver == "k3s" {
 			serviceName = i.config.Service
-			_, _, kubeConfigPath := CreateKubeConfigPath(v.Name)
+			_, _, kubeConfigPath := utils.CreateKubeConfigPath(v.Name)
 			volumes = append(volumes, config.Volume{
 				Source:      kubeConfigPath,
 				Destination: "/.kube/kubeconfig.yml",
@@ -55,7 +58,7 @@ func (i *Ingress) Create() error {
 			command = append(command, "--namespace")
 			command = append(command, i.config.Namespace)
 		} else {
-			serviceName = fmt.Sprintf("server.%s", FQDN(v.Name, v.NetworkRef))
+			serviceName = fmt.Sprintf("server.%s", utils.FQDN(v.Name, v.NetworkRef.Name))
 		}
 
 	default:
@@ -74,7 +77,7 @@ func (i *Ingress) Create() error {
 	}
 
 	// ingress simply crease a container with specific options
-	c := &config.Container{
+	c := config.Container{
 		Name:        i.config.Name,
 		NetworkRef:  i.config.NetworkRef,
 		Ports:       i.config.Ports,
@@ -85,26 +88,31 @@ func (i *Ingress) Create() error {
 		IPAddress:   i.config.IPAddress,
 	}
 
-	p := NewContainer(c, i.client, i.log.With("parent_ref", i.config.Name))
-
-	return p.Create()
+	_, err := i.client.CreateContainer(c)
+	return err
 }
 
 // Destroy the ingress
 func (i *Ingress) Destroy() error {
 	i.log.Info("Destroy Ingress", "ref", i.config.Name)
 
-	c := &config.Container{
-		Name:       i.config.Name,
-		NetworkRef: i.config.NetworkRef,
+	ids, err := i.client.FindContainerIDs(i.config.Name, i.config.NetworkRef.Name)
+	if err != nil {
+		return err
 	}
 
-	p := NewContainer(c, i.client, i.log.With("parent_ref", i.config.Name))
+	for _, id := range ids {
+		err := i.client.RemoveContainer(id)
+		if err != nil {
+			return err
+		}
 
-	return p.Destroy()
+	}
+
+	return nil
 }
 
 // Lookup the id of the ingress
-func (i *Ingress) Lookup() (string, error) {
-	return "", nil
+func (i *Ingress) Lookup() ([]string, error) {
+	return []string{}, nil
 }

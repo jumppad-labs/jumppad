@@ -7,6 +7,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 	"golang.org/x/xerrors"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
@@ -29,7 +30,7 @@ func NewHelm(c *config.Helm, kc clients.Kubernetes, l hclog.Logger) *Helm {
 func (h *Helm) Create() error {
 	h.log.Info("Creating Helm chart", "ref", h.config.Name)
 
-	_, destPath, _ := CreateKubeConfigPath(h.config.ClusterRef.Name)
+	_, destPath, _ := utils.CreateKubeConfigPath(h.config.ClusterRef.Name)
 
 	// set the KubeConfig for the kubernetes client
 	// this is used by the healthchecks
@@ -90,7 +91,7 @@ func (h *Helm) Create() error {
 			xerrors.Errorf("unable to parse healthcheck duration: %w", err)
 		}
 
-		err = healthCheckPods(h.kubeClient, h.config.HealthCheck.Pods, to, h.log.With("ref", h.config.Name))
+		err = h.kubeClient.HealthCheckPods(h.config.HealthCheck.Pods, to)
 		if err != nil {
 			xerrors.Errorf("healthcheck failed after helm chart setup: %w", err)
 		}
@@ -104,6 +105,6 @@ func (h *Helm) Destroy() error {
 	return nil
 }
 
-func (h *Helm) Lookup() (string, error) {
-	return "", nil
+func (h *Helm) Lookup() ([]string, error) {
+	return []string{}, nil
 }

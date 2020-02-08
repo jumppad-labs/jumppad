@@ -1,4 +1,4 @@
-package clients
+package mocks
 
 import (
 	"context"
@@ -102,7 +102,7 @@ func (m *MockDocker) ContainerExecAttach(ctx context.Context, execID string, con
 		return hjr, args.Error(1)
 	}
 
-	return types.HijackedResponse{}, nil
+	return types.HijackedResponse{}, args.Error(1)
 }
 
 func (m *MockDocker) ContainerExecInspect(ctx context.Context, execID string) (types.ContainerExecInspect, error) {
@@ -155,6 +155,12 @@ func (m *MockDocker) NetworkCreate(ctx context.Context, name string, options typ
 
 func (m *MockDocker) NetworkRemove(ctx context.Context, networkID string) error {
 	args := m.Called(ctx, networkID)
+
+	return args.Error(0)
+}
+
+func (m *MockDocker) NetworkConnect(ctx context.Context, networkID, containerID string, config *network.EndpointSettings) error {
+	args := m.Called(ctx, networkID, containerID, config)
 
 	return args.Error(0)
 }

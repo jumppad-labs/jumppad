@@ -2,7 +2,6 @@ package providers
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -11,8 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
+	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 	"golang.org/x/xerrors"
 )
 
@@ -24,22 +24,29 @@ var (
 
 const k3sBaseImage = "rancher/k3s"
 
+var startTimeout = (120 * time.Second)
+
 func (c *Cluster) createK3s() error {
 	c.log.Info("Creating Cluster", "ref", c.config.Name)
 
-	// check the cluster name is valid
-	if err := validateClusterName(c.config.Name); err != nil {
+	// check the cluster does not already exist
+	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.NetworkRef.Name)
+	if err != nil {
 		return err
 	}
 
-	// check the cluster does not already exist
-	id, err := c.Lookup()
-	if id != "" {
+	if ids != nil && len(ids) > 0 {
 		return ErrorClusterExists
 	}
 
+	// pull the container image
+	err = c.client.PullImage(config.Image{Name: fmt.Sprintf("%s:%s", k3sBaseImage, c.config.Version)}, false)
+	if err != nil {
+		return err
+	}
+
 	// create the volume for the cluster
-	volID, err := c.createVolume()
+	volID, err := c.client.CreateVolume(c.config.Name)
 	if err != nil {
 		return err
 	}
@@ -49,7 +56,7 @@ func (c *Cluster) createK3s() error {
 
 	// create the server
 	// since the server is just a container create the container config and provider
-	cc := &config.Container{}
+	cc := config.Container{}
 	cc.Name = fmt.Sprintf("server.%s", c.config.Name)
 	cc.Image = config.Image{Name: image}
 	cc.NetworkRef = c.config.NetworkRef
@@ -85,17 +92,9 @@ func (c *Cluster) createK3s() error {
 
 	// disable the installation of traefik
 	args = append(args, "--no-deploy=traefik")
-
 	cc.Command = args
 
-	cp := NewContainer(cc, c.client, c.log.With("parent_ref", c.config.Name))
-	err = cp.Create()
-	if err != nil {
-		return err
-	}
-
-	// get the id
-	id, err = c.Lookup()
+	id, err := c.client.CreateContainer(cc)
 	if err != nil {
 		return err
 	}
@@ -107,7 +106,7 @@ func (c *Cluster) createK3s() error {
 	}
 
 	// get the Kubernetes config file and drop it in $HOME/.shipyard/config/[clustername]/kubeconfig.yml
-	kubeconfig, err := c.copyKubeConfig(id)
+	kc, err := c.copyKubeConfig(id)
 	if err != nil {
 		return xerrors.Errorf("Error copying Kubernetes config: %w", err)
 	}
@@ -115,53 +114,29 @@ func (c *Cluster) createK3s() error {
 	// create the Docker container version of the Kubeconfig
 	// the default KubeConfig has the server location https://localhost:port
 	// to use this config inside a docker container we need to use the FQDN for the server
-	err = c.createDockerKubeConfig(kubeconfig)
+	err = c.createDockerKubeConfig(kc)
 	if err != nil {
 		return xerrors.Errorf("Error creating Docker Kubernetes config: %w", err)
 	}
 
-	// janky  sleep to wait for API server before creating client, will make better
-	time.Sleep(10 * time.Second)
-	err = c.kubeClient.SetConfig(kubeconfig)
-	if err != nil {
-		return xerrors.Errorf("Error creating Kubernetes client: %w", err)
-	}
-
 	// wait for all the default pods like core DNS to start running
 	// before progressing
-	err = healthCheckPods(c.kubeClient, []string{""}, 120*time.Second, c.log.With("ref", c.config.Name))
+	// we might also need to wait for the api services to become ready
+	// this could be done with the folowing command kubectl get apiservice
+	err = c.kubeClient.SetConfig(kc)
+	if err != nil {
+		return err
+	}
+
+	err = c.kubeClient.HealthCheckPods([]string{""}, startTimeout)
 	if err != nil {
 		return xerrors.Errorf("Error while waiting for Kubernetes default pods: %w", err)
 	}
 
-	// we might need to wait for the api services to become ready
-	//kubectl get apiservice
-
 	// import the images to the servers container d instance
 	// importing images means that k3s does not need to pull from a remote docker hub
 	if c.config.Images != nil && len(c.config.Images) > 0 {
-		return c.ImportLocalDockerImages(id, c.config.Images)
-	}
-
-	return nil
-}
-
-// ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
-func (c *Cluster) ImportLocalDockerImages(clusterID string, images []config.Image) error {
-	vn := volumeName(c.config.Name)
-	c.log.Debug("Writing local Docker images to cluster", "ref", c.config.Name, "images", images, "volume", vn)
-
-	imageFile, err := writeLocalDockerImageToVolume(c.client, images, vn, c.log)
-	if err != nil {
-		return err
-	}
-
-	// import the image
-	// ctr image import filename
-	c.log.Debug("Importing Docker images on cluster", "ref", c.config.Name, "id", clusterID, "image", imageFile)
-	err = execCommand(c.client, clusterID, []string{"ctr", "image", "import", imageFile}, c.log.With("parent_ref", c.config.Name))
-	if err != nil {
-		return err
+		return c.ImportLocalDockerImages(c.config.Name, id, c.config.Images)
 	}
 
 	return nil
@@ -169,21 +144,22 @@ func (c *Cluster) ImportLocalDockerImages(clusterID string, images []config.Imag
 
 func (c *Cluster) waitForStart(id string) error {
 	start := time.Now()
-	timeout := 120 * time.Second
 
 	for {
 		// not running after timeout exceeded? Rollback and delete everything.
-		if timeout != 0 && time.Now().After(start.Add(timeout)) {
+		if startTimeout != 0 && time.Now().After(start.Add(startTimeout)) {
 			//deleteCluster()
 			return errors.New("Cluster creation exceeded specified timeout")
 		}
 
 		// scan container logs for a line that tells us that the required services are up and running
-		out, err := c.client.ContainerLogs(context.Background(), id, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true})
+		out, err := c.client.ContainerLogs(id, true, true)
 		if err != nil {
 			out.Close()
 			return fmt.Errorf(" Couldn't get docker logs for %s\n%+v", id, err)
 		}
+
+		// read from the log and check for Kublet running
 		buf := new(bytes.Buffer)
 		nRead, _ := buf.ReadFrom(out)
 		out.Close()
@@ -192,6 +168,7 @@ func (c *Cluster) waitForStart(id string) error {
 			break
 		}
 
+		// wait and try again
 		time.Sleep(1 * time.Second)
 	}
 
@@ -199,37 +176,14 @@ func (c *Cluster) waitForStart(id string) error {
 }
 
 func (c *Cluster) copyKubeConfig(id string) (string, error) {
+	// create destination kubeconfig file paths
+	_, destPath, _ := utils.CreateKubeConfigPath(c.config.Name)
+
 	// get kubeconfig file from container and read contents
-	reader, _, err := c.client.CopyFromContainer(context.Background(), id, "/output/kubeconfig.yaml")
-	if err != nil {
-		return "", fmt.Errorf(" Couldn't copy kubeconfig.yaml from server container %s\n%+v", id, err)
-	}
-	defer reader.Close()
-
-	readBytes, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return "", fmt.Errorf(" Couldn't read kubeconfig from container\n%+v", err)
-	}
-
-	// write to file, skipping the first 512 bytes which contain file metadata
-	// and trimming any NULL characters
-	trimBytes := bytes.Trim(readBytes[512:], "\x00")
-
-	// create destination kubeconfig file
-	destDir, destPath, _ := CreateKubeConfigPath(c.config.Name)
-
-	err = os.MkdirAll(destDir, 0755)
+	err := c.client.CopyFromContainer(id, "/output/kubeconfig.yaml", destPath)
 	if err != nil {
 		return "", err
 	}
-
-	kubeconfigfile, err := os.Create(destPath)
-	if err != nil {
-		return "", fmt.Errorf(" Couldn't create kubeconfig file %s\n%+v", destPath, err)
-	}
-
-	defer kubeconfigfile.Close()
-	kubeconfigfile.Write(trimBytes)
 
 	return destPath, nil
 }
@@ -251,15 +205,15 @@ func (c *Cluster) createDockerKubeConfig(kubeconfig string) error {
 	newConfig := strings.Replace(
 		string(readBytes),
 		"server: https://127.0.0.1",
-		fmt.Sprintf("server: https://server.%s", FQDN(c.config.Name, c.config.NetworkRef)),
+		fmt.Sprintf("server: https://server.%s", utils.FQDN(c.config.Name, c.config.NetworkRef.Name)),
 		-1,
 	)
 
-	destPath := strings.Replace(kubeconfig, ".yaml", "-docker.yaml", 1)
+	_, _, dockerPath := utils.CreateKubeConfigPath(c.config.Name)
 
-	kubeconfigfile, err := os.Create(destPath)
+	kubeconfigfile, err := os.Create(dockerPath)
 	if err != nil {
-		return fmt.Errorf("Couldn't create kubeconfig file %s\n%+v", destPath, err)
+		return fmt.Errorf("Couldn't create kubeconfig file %s\n%+v", dockerPath, err)
 	}
 
 	defer kubeconfigfile.Close()
@@ -268,59 +222,50 @@ func (c *Cluster) createDockerKubeConfig(kubeconfig string) error {
 	return nil
 }
 
-func (c *Cluster) destroyK3s() error {
-	c.log.Info("Destroy Cluster", "ref", c.config.Name)
+// ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
+func (c *Cluster) ImportLocalDockerImages(name string, id string, images []config.Image) error {
+	imgs := []string{}
 
-	cc := &config.Container{}
-	cc.Name = fmt.Sprintf("server.%s", c.config.Name)
-	cc.NetworkRef = c.config.NetworkRef
+	for _, i := range images {
+		err := c.client.PullImage(i, false)
+		if err != nil {
+			return err
+		}
 
-	cp := NewContainer(cc, c.client, c.log.With("parent_ref", c.config.Name))
-	err := cp.Destroy()
+		imgs = append(imgs, i.Name)
+	}
+
+	// import to volume
+	vn := utils.FQDNVolumeName(name)
+	imageFile, err := c.client.CopyLocalDockerImageToVolume(imgs, vn)
 	if err != nil {
 		return err
 	}
 
-	// delete the volume
-	return c.deleteVolume()
-}
-
-const clusterNameMaxSize int = 35
-
-func validateClusterName(name string) error {
-	if err := validateHostname(name); err != nil {
+	// execute the command to import the image
+	// write any command output to the logger
+	err = c.client.ExecuteCommand(id, []string{"ctr", "image", "import", "/images/" + imageFile}, c.log.StandardWriter(&hclog.StandardLoggerOptions{}))
+	if err != nil {
 		return err
 	}
 
-	if len(name) > clusterNameMaxSize {
-		return xerrors.Errorf("cluster name is too long (%d > %d): %w", len(name), clusterNameMaxSize, ErrorClusterInvalidName)
-	}
-
 	return nil
 }
 
-// ValidateHostname ensures that a cluster name is also a valid host name according to RFC 1123.
-func validateHostname(name string) error {
-	if len(name) == 0 {
-		return xerrors.Errorf("no name provided %w", ErrorClusterInvalidName)
+func (c *Cluster) destroyK3s() error {
+	c.log.Info("Destroy Cluster", "ref", c.config.Name)
+	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.NetworkRef.Name)
+	if err != nil {
+		return err
 	}
 
-	if name[0] == '-' || name[len(name)-1] == '-' {
-		return xerrors.Errorf("hostname [%s] must not start or end with - (dash): %w", name, ErrorClusterInvalidName)
-	}
-
-	for _, c := range name {
-		switch {
-		case '0' <= c && c <= '9':
-		case 'a' <= c && c <= 'z':
-		case 'A' <= c && c <= 'Z':
-		case c == '-':
-			break
-		default:
-			return xerrors.Errorf("hostname [%s] contains characters other than 'Aa-Zz', '0-9' or '-': %w", ErrorClusterInvalidName)
-
+	for _, i := range ids {
+		err := c.client.RemoveContainer(i)
+		if err != nil {
+			return err
 		}
 	}
 
-	return nil
+	// delete the volume
+	return c.client.RemoveVolume(c.config.Name)
 }

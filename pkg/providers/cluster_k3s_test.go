@@ -1,32 +1,408 @@
 package providers
 
 import (
-	"bufio"
 	"bytes"
-	"encoding/base64"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"os"
-	"strings"
+	"strconv"
 	"testing"
+	"time"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/api/types/volume"
-	"github.com/docker/go-connections/nat"
-	hclog "github.com/hashicorp/go-hclog"
-	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
+	"github.com/hashicorp/go-hclog"
+	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"golang.org/x/xerrors"
-	v1 "k8s.io/api/core/v1"
 )
 
+// setupClusterMocks sets up a happy path for mocks
+func setupClusterMocks() (config.Cluster, *mocks.MockContainerTasks, *mocks.MockKubernetes, func()) {
+	md := &mocks.MockContainerTasks{}
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{}, nil)
+	md.On("PullImage", mock.Anything, mock.Anything).Return(nil)
+	md.On("CreateVolume", mock.Anything, mock.Anything).Return("123", nil)
+	md.On("CreateContainer", mock.Anything).Return("containerid", nil)
+	md.On("ContainerLogs", mock.Anything, true, true).Return(
+		ioutil.NopCloser(bytes.NewBufferString("Running kubelet")),
+		nil,
+	)
+	md.On("CopyFromContainer", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	md.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything).Return("/images/file.tar.gz", nil)
+	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	md.On("RemoveContainer", mock.Anything).Return(nil)
+	md.On("RemoveVolume", mock.Anything).Return(nil)
+
+	// set the home folder to a temp folder
+	tmpDir, _ := ioutil.TempDir("", "")
+	currentHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+
+	// write the kubeconfi
+	_, destPath, _ := utils.CreateKubeConfigPath(clusterConfig.Name)
+	kcf, err := os.Create(destPath)
+	if err != nil {
+		panic(err)
+	}
+	kcf.WriteString(kubeconfig)
+	kcf.Close()
+
+	mk := &mocks.MockKubernetes{}
+	mk.Mock.On("SetConfig", mock.Anything).Return(nil)
+	mk.Mock.On("HealthCheckPods", mock.Anything, mock.Anything).Return(nil)
+
+	// copy the config
+	cc := clusterConfig
+	cn := clusterNetwork
+	cc.NetworkRef = &cn
+
+	return cc, md, mk, func() {
+		os.Setenv("HOME", currentHome)
+		os.RemoveAll(tmpDir)
+	}
+}
+
+func TestClusterK3ErrorsWhenUnableToLookupIDs(t *testing.T) {
+	md := &mocks.MockContainerTasks{}
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
+
+	mk := &mocks.MockKubernetes{}
+	p := NewCluster(clusterConfig, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.Error(t, err)
+}
+
+func TestClusterK3ErrorsWhenClusterExists(t *testing.T) {
+	md := &mocks.MockContainerTasks{}
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
+
+	mk := &mocks.MockKubernetes{}
+	p := NewCluster(clusterConfig, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.Error(t, err)
+}
+
+func TestClusterK3PullsImage(t *testing.T) {
+	cc, md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+	md.AssertCalled(t, "PullImage", config.Image{Name: "rancher/k3s:v1.0.0"}, false)
+}
+
+func TestClusterK3CreatesANewVolume(t *testing.T) {
+	cc, md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+	md.AssertCalled(t, "CreateVolume", clusterConfig.Name)
+}
+
+func TestClusterK3FailsWhenUnableToCreatesANewVolume(t *testing.T) {
+	cc, md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	removeOn(&md.Mock, "CreateVolume")
+	md.On("CreateVolume", mock.Anything, mock.Anything).Return("", fmt.Errorf("boom"))
+
+	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.Error(t, err)
+	md.AssertCalled(t, "CreateVolume", clusterConfig.Name)
+}
+
+func TestClusterK3CreatesAServer(t *testing.T) {
+	cc, md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(config.Container)
+
+	// validate the basic details for the server container
+	assert.Contains(t, params.Name, "server")
+	assert.Contains(t, params.Image.Name, "rancher")
+	assert.Equal(t, &clusterNetwork, params.NetworkRef)
+	assert.True(t, params.Privileged)
+
+	// validate that the volume is correctly set
+	assert.Equal(t, "123", params.Volumes[0].Source)
+	assert.Equal(t, "/images", params.Volumes[0].Destination)
+	assert.Equal(t, "volume", params.Volumes[0].Type)
+
+	// validate the API port is set
+	assert.GreaterOrEqual(t, params.Ports[0].Local, 64000)
+	assert.GreaterOrEqual(t, params.Ports[0].Local, params.Ports[0].Host)
+	assert.Equal(t, "tcp", params.Ports[0].Protocol)
+
+	// validate the command
+	assert.Equal(t, "server", params.Command[0])
+	assert.Contains(t, params.Command[1], strconv.Itoa(params.Ports[0].Local))
+	assert.Contains(t, params.Command[2], "traefik")
+}
+
+func TestClusterK3sErrorsIfServerNOTStart(t *testing.T) {
+	cc, md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	removeOn(&md.Mock, "ContainerLogs")
+	md.On("ContainerLogs", mock.Anything, true, true).Return(
+		ioutil.NopCloser(bytes.NewBufferString("Not running")),
+		nil,
+	)
+
+	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+	startTimeout = 10 * time.Millisecond // reset the startTimeout, do not want to wait 120s
+
+	err := p.Create()
+	assert.Error(t, err)
+}
+
+func TestClusterK3sDownloadsConfig(t *testing.T) {
+	cc, md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	_, destPath, _ := utils.CreateKubeConfigPath(clusterConfig.Name)
+	params := getCalls(&md.Mock, "CopyFromContainer")[0].Arguments
+	assert.Equal(t, "containerid", params.String(0))
+	assert.Equal(t, "/output/kubeconfig.yaml", params.String(1))
+	assert.Equal(t, destPath, params.String(2))
+}
+
+func TestClusterK3sRaisesErrorWhenUnableToDownloadConfig(t *testing.T) {
+	cc, md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	removeOn(&md.Mock, "CopyFromContainer")
+	md.On("CopyFromContainer", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
+
+	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.Error(t, err)
+}
+
+func TestClusterK3sCreatesDockerConfig(t *testing.T) {
+	cc, md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	// check the kubeconfig file for docker uses a network ip not localhost
+
+	// check file has been written
+	_, _, dockerPath := utils.CreateKubeConfigPath(clusterConfig.Name)
+	f, err := os.Open(dockerPath)
+	assert.NoError(t, err)
+	defer f.Close()
+
+	// check file contains docker ip
+	d, err := ioutil.ReadAll(f)
+	assert.NoError(t, err)
+	assert.Contains(t, string(d), fmt.Sprintf("server.%s", utils.FQDN(clusterConfig.Name, clusterConfig.NetworkRef.Name)))
+}
+
+func TestClusterK3sCreatesKubeClient(t *testing.T) {
+	cc, md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+	mk.AssertCalled(t, "SetConfig", mock.Anything)
+}
+
+func TestClusterK3sErrorsWhenFailedToCreateKubeClient(t *testing.T) {
+	cc, md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	removeOn(&mk.Mock, "SetConfig")
+	mk.Mock.On("SetConfig", mock.Anything).Return(fmt.Errorf("boom"))
+
+	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.Error(t, err)
+}
+
+func TestClusterK3sWaitsForPods(t *testing.T) {
+	cc, md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+	mk.AssertCalled(t, "HealthCheckPods", []string{""}, startTimeout)
+}
+
+func TestClusterK3sErrorsWhenWaitsForPodsFail(t *testing.T) {
+	cc, md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+	removeOn(&mk.Mock, "HealthCheckPods")
+	mk.On("HealthCheckPods", mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
+
+	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.Error(t, err)
+}
+
+func TestClusterK3sImportDockerImagesPullsImages(t *testing.T) {
+	cc, md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+	md.AssertCalled(t, "PullImage", clusterConfig.Images[0], false)
+	md.AssertCalled(t, "PullImage", clusterConfig.Images[1], false)
+}
+
+func TestClusterK3sImportDockerCopiesImages(t *testing.T) {
+	cc, md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+	md.AssertCalled(t, "CopyLocalDockerImageToVolume", []string{"consul:1.6.1", "vault:1.6.1"}, "test.volume.shipyard")
+}
+func TestClusterK3sImportDockerCopyImageFailReturnsError(t *testing.T) {
+	cc, md, mk, cleanup := setupClusterMocks()
+	removeOn(&md.Mock, "CopyLocalDockerImageToVolume")
+	md.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything).Return("", fmt.Errorf("boom"))
+	defer cleanup()
+
+	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.Error(t, err)
+}
+
+func TestClusterK3sImportDockerRunsExecCommand(t *testing.T) {
+	cc, md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+	md.AssertCalled(t, "ExecuteCommand", "containerid", mock.Anything, mock.Anything)
+}
+
+func TestClusterK3sImportDockerExecFailReturnsError(t *testing.T) {
+	cc, md, mk, cleanup := setupClusterMocks()
+	removeOn(&md.Mock, "ExecuteCommand")
+	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
+	defer cleanup()
+
+	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.Error(t, err)
+}
+
+// Destroy Tests
+func TestClusterK3sDestroyGetsIDr(t *testing.T) {
+	cc, md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+
+	err := p.Destroy()
+	assert.NoError(t, err)
+	md.AssertCalled(t, "FindContainerIDs", clusterConfig.Name, clusterConfig.NetworkRef.Name)
+}
+
+func TestClusterK3sDestroyWithFindIDErrorReturnsError(t *testing.T) {
+	cc, md, mk, cleanup := setupClusterMocks()
+	removeOn(&md.Mock, "FindContainerIDs")
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
+	defer cleanup()
+
+	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+
+	err := p.Destroy()
+	assert.Error(t, err)
+}
+
+func TestClusterK3sDestroyWithNoIDReturns(t *testing.T) {
+	cc, md, mk, cleanup := setupClusterMocks()
+	removeOn(&md.Mock, "FindContainerIDs")
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, nil)
+	defer cleanup()
+
+	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+
+	err := p.Destroy()
+	assert.NoError(t, err)
+	md.AssertNotCalled(t, "RemoveContainer", mock.Anything)
+}
+
+func TestClusterK3sDestroyRemovesContainer(t *testing.T) {
+	cc, md, mk, cleanup := setupClusterMocks()
+	removeOn(&md.Mock, "FindContainerIDs")
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"found"}, nil)
+	defer cleanup()
+
+	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+
+	err := p.Destroy()
+	assert.NoError(t, err)
+	md.AssertCalled(t, "RemoveContainer", mock.Anything)
+}
+
+func TestClusterK3sDestroyRemovesVolume(t *testing.T) {
+	cc, md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+
+	err := p.Destroy()
+	assert.NoError(t, err)
+	md.AssertCalled(t, "RemoveVolume", "test")
+}
+
+var clusterNetwork = config.Network{Name: "cloud"}
+
+var clusterConfig = config.Cluster{
+	Name:       "test",
+	Driver:     "k3s",
+	Version:    "v1.0.0",
+	NetworkRef: &clusterNetwork,
+	Images: []config.Image{
+		config.Image{Name: "consul:1.6.1"},
+		config.Image{Name: "vault:1.6.1"},
+	},
+}
+
 var kubeconfig = `
-kubeconfig.yam@@@@i@@@@@@@@@@@@@@@@@@@@@@2@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@lapiVersion: v1
+apiVersion: v1
 clusters:
 - cluster:
    certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJWakNCL3FBREFnRUNBZ0VBTUFvR0NDcUdTTTQ5QkFNQ01DTXhJVEFmQmdOVkJBTU1HR3N6Y3kxelpYSjIKWlhJdFkyRk
@@ -36,252 +412,3 @@ dRRQpBd0lDcERBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUFvR0NDcUdTTTQ5QkFNQ0EwY0FNRVFDSUhFYl
 K3lkNVNQOEUKUmQ4OGxRWW9oRnV2enc9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
     server: https://127.0.0.1:64674
 `
-
-func setupK3sCluster(c *config.Cluster) (*clients.MockDocker, *Cluster, func()) {
-	// set the shipyard env
-	oldHome := os.Getenv("HOME")
-	os.Setenv("HOME", "/tmp")
-
-	md := &clients.MockDocker{}
-	md.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
-	md.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).Return(
-		ioutil.NopCloser(strings.NewReader("")),
-		nil,
-	)
-	md.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(container.ContainerCreateCreatedBody{}, nil)
-	md.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	md.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("container not found")).Once()
-	md.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{{ID: "volume"}}, nil).Once()
-	md.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{{ID: "cluster"}}, nil).Once()
-
-	md.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(types.IDResponse{ID: "abc"}, nil)
-	md.On("ContainerExecAttach", mock.Anything, "abc", mock.Anything).Return(
-		types.HijackedResponse{
-			&net.TCPConn{},
-			bufio.NewReader(bytes.NewReader([]byte("Do exec"))),
-		},
-		nil,
-	)
-	md.On("ContainerExecStart", mock.Anything, "abc", mock.Anything).Return(nil)
-	md.On("ContainerExecInspect", mock.Anything, "abc").Return(nil, nil)
-
-	md.On("CopyFromContainer", mock.Anything, mock.Anything, mock.Anything).Return(
-		ioutil.NopCloser(strings.NewReader(kubeconfig)),
-		types.ContainerPathStat{},
-		nil,
-	)
-	md.On("CopyToContainer", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	md.On("ContainerLogs", mock.Anything, mock.Anything, mock.Anything).Return(
-		ioutil.NopCloser(strings.NewReader("Running kubelet")),
-		nil,
-	)
-	md.On("VolumeCreate", mock.Anything, mock.Anything).Return(types.Volume{Name: "hostname.volume"}, nil)
-
-	md.On("ImageSave", mock.Anything, mock.Anything).Return(
-		ioutil.NopCloser(strings.NewReader(kubeconfig)),
-		nil,
-	)
-
-	mk := &clients.MockKubernetes{}
-	mk.Mock.On("SetConfig", mock.Anything).Return(nil)
-	mk.Mock.On("GetPods", mock.Anything).Return(
-		&v1.PodList{
-			Items: []v1.Pod{
-				v1.Pod{
-					Status: v1.PodStatus{
-						Phase: "Running",
-					},
-				},
-			},
-		},
-		nil,
-	)
-
-	return md, NewCluster(c, md, mk, hclog.Default()), func() {
-		// cleanup
-		os.Setenv("HOME", oldHome)
-	}
-}
-
-func TestK3sInvalidClusterNameReturnsError(t *testing.T) {
-	c := &config.Cluster{Name: "-hostname.1231", Driver: "k3s"}
-	_, p, cleanup := setupK3sCluster(c)
-	defer cleanup()
-
-	err := p.Create()
-
-	assert.True(t, xerrors.Is(err, ErrorClusterInvalidName))
-}
-
-func TestK3sReturnsErrorIfClusterExists(t *testing.T) {
-	cn := &config.Network{Name: "k3snet"}
-	c := &config.Cluster{Name: "hostname", Driver: "k3s", NetworkRef: cn}
-
-	md, p, cleanup := setupK3sCluster(c)
-	defer cleanup()
-
-	removeOn(&md.Mock, "ContainerList")
-	md.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{types.Container{ID: "123sdsdsd"}}, nil)
-
-	err := p.Create()
-
-	md.AssertCalled(t, "ContainerList", mock.Anything, mock.Anything)
-
-	assert.True(t, xerrors.Is(err, ErrorClusterExists))
-}
-
-func TestK3sClusterServerCreatesWithCorrectOptions(t *testing.T) {
-	cn := &config.Network{
-		Name: "k3snet",
-	}
-
-	c := &config.Cluster{
-		Name:       "hostname",
-		Driver:     "k3s",
-		Version:    "v1.0.0",
-		NetworkRef: cn,
-	}
-
-	md, p, cleanup := setupK3sCluster(c)
-	defer cleanup()
-
-	err := p.Create()
-
-	assert.NoError(t, err)
-	md.AssertCalled(t, "ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
-
-	// assert server properties
-	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
-	dc := params[1].(*container.Config)
-	hc := params[2].(*container.HostConfig)
-	fqdn := params[4]
-
-	assert.Equal(t, fmt.Sprintf("%s:%s", k3sBaseImage, c.Version), dc.Image)
-
-	// check cluster names
-	assert.Equal(t, "server.hostname.k3snet.shipyard", fqdn, "FQDN should be [nodetype].[name].[network].shipyard")
-	assert.Equal(t, "server.hostname", dc.Hostname, "Hostname should be [nodetype].[hostname]")
-
-	// check environment variables
-	assert.Len(t, dc.Env, 2)
-	assert.Equal(t, "K3S_KUBECONFIG_OUTPUT=/output/kubeconfig.yaml", dc.Env[0])
-	assert.Contains(t, dc.Env[1], "K3S_CLUSTER_SECRET=")
-
-	// check the command
-	assert.Equal(t, "server", dc.Cmd[0])
-	assert.Contains(t, dc.Cmd[1], "--https-listen-port=")
-	assert.Equal(t, dc.Cmd[2], "--no-deploy=traefik")
-
-	// make sure privlidged
-	assert.True(t, hc.Privileged)
-
-	// check the ports
-	apiPort := strings.Split(dc.Cmd[1], "=")
-	dockerPort, _ := nat.NewPort("tcp", apiPort[1])
-	fmt.Println(dockerPort)
-
-	fmt.Println(hc.PortBindings)
-	fmt.Println(dc.ExposedPorts)
-
-	assert.Len(t, dc.ExposedPorts, 1)
-	assert.NotNil(t, dc.ExposedPorts[dockerPort])
-	assert.Len(t, hc.PortBindings, 1)
-	assert.NotNil(t, hc.PortBindings[dockerPort])
-
-	// checks that the config is witten
-	f, err := os.OpenFile("/tmp/.shipyard/config/hostname/kubeconfig.yaml", os.O_RDONLY, 0755)
-	assert.NoError(t, err)
-	defer f.Close()
-
-	d, err := ioutil.ReadAll(f)
-	assert.Contains(t, string(d), "server: https://127.0.0.1")
-
-	// checks that the docker config is witten
-	f, err = os.OpenFile("/tmp/.shipyard/config/hostname/kubeconfig-docker.yaml", os.O_RDONLY, 0755)
-	assert.NoError(t, err)
-	defer f.Close()
-
-	d, err = ioutil.ReadAll(f)
-	assert.Contains(t, string(d), "server: https://server.hostname.k3snet.shipyard")
-}
-
-func TestK3sClusterPushesLocalImages(t *testing.T) {
-	cn := &config.Network{
-		Name: "k3snet",
-	}
-
-	c := &config.Cluster{
-		Name:       "hostname",
-		Driver:     "k3s",
-		Version:    "v1.0.0",
-		NetworkRef: cn,
-		Images: []config.Image{
-			config.Image{
-				Name:     "myrepo/myimage:latest",
-				Username: "myuser",
-				Password: "mypassword",
-			},
-		},
-	}
-
-	md, p, cleanup := setupK3sCluster(c)
-	defer cleanup()
-
-	err := p.Create()
-	assert.NoError(t, err)
-
-	// creating a cluster should create an images volume
-	md.AssertCalled(t, "VolumeCreate", mock.Anything, mock.Anything)
-	// Calls container create twice, once for the server
-	// once for copying the images
-	md.AssertNumberOfCalls(t, "ContainerCreate", 2)
-	// Pulls a remote image with username and password
-	// called 3 times, k3s, volume, and image to push
-	md.AssertNumberOfCalls(t, "ImagePull", 3)
-	// Calls ImageSave to save an array of images to the Container
-	md.AssertNumberOfCalls(t, "ImageSave", 1)
-	// Calls CopyToContainer to copy the saved tar file to the images volume
-	md.AssertNumberOfCalls(t, "CopyToContainer", 1)
-	// ExecCreate called when importing image with `ctr`
-	md.AssertNumberOfCalls(t, "ContainerExecCreate", 1)
-	md.AssertNumberOfCalls(t, "ContainerExecStart", 1)
-	md.AssertNumberOfCalls(t, "ContainerExecInspect", 1)
-
-	params := md.Calls[1].Arguments
-	vco := params[1].(volume.VolumeCreateBody)
-
-	assert.Equal(t, "hostname.volume", vco.Name)
-	// assert server properties
-
-	// first container create will be for the image
-	params = getCalls(&md.Mock, "ContainerCreate")[0].Arguments
-	hc := params[2].(*container.HostConfig)
-
-	execParams := getCalls(&md.Mock, "ContainerExecCreate")[0].Arguments
-	name := execParams[1].(string)
-	ex := execParams[2].(types.ExecConfig)
-
-	// second container pulled will be our image to load
-	ipParams := getCalls(&md.Mock, "ImagePull")[1].Arguments
-	in := ipParams[1].(string)
-	ipo := ipParams[2].(types.ImagePullOptions)
-
-	// check the cluster has the images volume
-	assert.Equal(t, "hostname.volume", hc.Mounts[0].Source)
-	assert.Equal(t, "/images", hc.Mounts[0].Target)
-	assert.Equal(t, mount.TypeVolume, hc.Mounts[0].Type)
-
-	// check that the image is pulled correctly with valid credentials
-	creds, err := base64.StdEncoding.DecodeString(ipo.RegistryAuth)
-	assert.NoError(t, err)
-	assert.JSONEq(t, `{"Username": "myuser", "Password": "mypassword"}`, string(creds))
-	assert.Equal(t, "docker.io/"+c.Images[0].Name, in)
-
-	// check the import statement
-	assert.Equal(t, "volume", name)
-	assert.Equal(t, "ctr", ex.Cmd[0])
-	assert.Equal(t, "image", ex.Cmd[1])
-	assert.Equal(t, "import", ex.Cmd[2])
-}

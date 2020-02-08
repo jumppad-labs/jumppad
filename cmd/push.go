@@ -2,12 +2,14 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"strings"
+
+	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/providers"
 	"github.com/spf13/cobra"
-	"os"
-	"strings"
 )
 
 var pushCmd = &cobra.Command{
@@ -26,7 +28,7 @@ var pushCmd = &cobra.Command{
 
 		fmt.Printf("Pushing image %s to cluster %s\n\n", image, cluster)
 
-		pc := &config.Cluster{
+		pc := config.Cluster{
 			Name:       cluster,
 			Driver:     "k3s",
 			NetworkRef: &config.Network{Name: network},
@@ -38,24 +40,28 @@ var pushCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		dt := clients.NewDockerTasks(dc, hclog.Default())
+
 		p := providers.NewCluster(
 			pc,
-			dc,
+			dt,
 			nil,
 			createLogger(),
 		)
 
 		// get the id of the cluster
-		id, err := p.Lookup()
+		ids, err := p.Lookup()
 		if err != nil {
 			fmt.Println("Error getting id for cluster")
 			os.Exit(1)
 		}
 
-		err = p.ImportLocalDockerImages(id, []config.Image{config.Image{Name: strings.Trim(image, " ")}})
-		if err != nil {
-			fmt.Println("Error pushing image: ", err)
-			os.Exit(1)
+		for _, id := range ids {
+			err = p.ImportLocalDockerImages(cluster, id, []config.Image{config.Image{Name: strings.Trim(image, " ")}})
+			if err != nil {
+				fmt.Println("Error pushing image: ", err)
+				os.Exit(1)
+			}
 		}
 	},
 }

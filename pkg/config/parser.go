@@ -247,15 +247,19 @@ func ParseHCLFile(file string, c *Config) error {
 
 // ParseReferences links the object references in config elements
 func ParseReferences(c *Config) error {
+	for _, co := range c.Containers {
+		co.WANRef = c.WAN
+		co.NetworkRef = findNetworkRef(co.Network, c)
+
+		if co.NetworkRef == nil {
+			return fmt.Errorf("Unable to assign network '%s' for container '%s'", co.Network, co.Name)
+		}
+	}
+
 	// link the networks in the clusters
 	for _, cl := range c.Clusters {
 		cl.WANRef = c.WAN
 		cl.NetworkRef = findNetworkRef(cl.Network, c)
-	}
-
-	for _, co := range c.Containers {
-		co.WANRef = c.WAN
-		co.NetworkRef = findNetworkRef(co.Network, c)
 	}
 
 	for _, hc := range c.HelmCharts {
@@ -270,21 +274,36 @@ func ParseReferences(c *Config) error {
 		in.WANRef = c.WAN
 		in.TargetRef = findTargetRef(in.Target, c)
 
+		if in.TargetRef == nil {
+			return fmt.Errorf("Unable to find target '%s' for ingress '%s'", in.Target, in.Name)
+		}
+
 		if c, ok := in.TargetRef.(*Cluster); ok {
 			in.NetworkRef = c.NetworkRef
 		} else {
 			in.NetworkRef = in.TargetRef.(*Container).NetworkRef
 		}
+
+		if in.NetworkRef == nil {
+			return fmt.Errorf("Unable to assign network from target '%s' for ingress '%s'", in.Target, in.Name)
+		}
 	}
 
 	for _, in := range c.RemoteExecs {
 		in.WANRef = c.WAN
-		in.TargetRef = findTargetRef(in.Target, c)
 
-		if c, ok := in.TargetRef.(*Cluster); ok {
-			in.NetworkRef = c.NetworkRef
+		if in.Target != "" {
+			// if we are using a target get the network from the target
+			in.TargetRef = findTargetRef(in.Target, c)
+
+			if c, ok := in.TargetRef.(*Cluster); ok {
+				in.NetworkRef = c.NetworkRef
+			} else {
+				in.NetworkRef = in.TargetRef.(*Container).NetworkRef
+			}
 		} else {
-			in.NetworkRef = in.TargetRef.(*Container).NetworkRef
+			// if not using a target then network should be set
+			in.NetworkRef = findNetworkRef(in.Network, c)
 		}
 	}
 

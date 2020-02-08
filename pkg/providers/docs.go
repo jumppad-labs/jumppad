@@ -4,21 +4,20 @@ import (
 	"os"
 	"path/filepath"
 
-
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
-	hclog "github.com/hashicorp/go-hclog"
 )
 
 // Docs defines a provider for creating documentation containers
 type Docs struct {
 	config *config.Docs
-	client clients.Docker
-	log hclog.Logger
+	client clients.ContainerTasks
+	log    hclog.Logger
 }
 
 // NewDocs creates a new Docs provider
-func NewDocs(c *config.Docs, cc clients.Docker, l hclog.Logger) *Docs {
+func NewDocs(c *config.Docs, cc clients.ContainerTasks, l hclog.Logger) *Docs {
 	return &Docs{c, cc, l}
 }
 
@@ -26,7 +25,7 @@ func NewDocs(c *config.Docs, cc clients.Docker, l hclog.Logger) *Docs {
 func (i *Docs) Create() error {
 	i.log.Info("Creating Documentation", "ref", i.config.Name)
 
-	// create the documentation container 
+	// create the documentation container
 	err := i.createDocsContainer()
 	if err != nil {
 		return err
@@ -43,7 +42,7 @@ func (i *Docs) Create() error {
 
 func (i *Docs) createDocsContainer() error {
 	// create the container config
-	cc := &config.Container{}
+	cc := config.Container{}
 	cc.Name = i.config.Name
 	cc.NetworkRef = i.config.WANRef
 	cc.Image = config.Image{Name: "shipyardrun/docs:latest"}
@@ -84,39 +83,35 @@ func (i *Docs) createDocsContainer() error {
 		}
 	}
 
-	/*
-		config.Volume{
-			Source:      i.config.Path + "/static",
-			Destination: "/shipyard/website/static",
-		},
-		config.Volume{
-			Source:      i.config.Path + "/siteConfig.js",
-			Destination: "/shipyard/website/siteConfig.js",
-		},
-	*/
-
+	// add the ports
 	cc.Ports = []config.Port{
+		// set the doumentation port
 		config.Port{
-			Protocol: "tcp",
-			Host:     i.config.Port,
-			Local:    3000,
+			Local:  3000,
+			Remote: 3000,
+			Host:   i.config.Port,
+		},
+		// set the livereload port
+		config.Port{
+			Local:  37950,
+			Remote: 37950,
+			Host:   37950,
 		},
 	}
 
-	p := NewContainer(cc, i.client, i.log.With("parent_ref", i.config.Name))
-
-	return p.Create()
+	_, err := i.client.CreateContainer(cc)
+	return err
 }
 
 func (i *Docs) createTerminalContainer() error {
 	// create the container config
-	cc := &config.Container{}
+	cc := config.Container{}
 	cc.Name = "terminal"
 	cc.NetworkRef = i.config.WANRef
 	cc.Image = config.Image{Name: "shipyardrun/terminal-server:latest"}
 
 	// TODO we are mounting the docker sock, need to look at how this works on Windows
-	cc.Volumes = make([]config.Volume,0)
+	cc.Volumes = make([]config.Volume, 0)
 	cc.Volumes = append(
 		cc.Volumes,
 		config.Volume{
@@ -133,48 +128,48 @@ func (i *Docs) createTerminalContainer() error {
 		},
 	}
 
-	p := NewContainer(cc, i.client, i.log.With("parent_ref", i.config.Name))
-
-	return p.Create()
+	_, err := i.client.CreateContainer(cc)
+	return err
 }
 
 // Destroy the documentation container
 func (i *Docs) Destroy() error {
 	i.log.Info("Destroy Documentation", "ref", i.config.Name)
 
-	cc := &config.Container{
-		Name:       i.config.Name,
-		NetworkRef: i.config.WANRef,
-	}
-
-	p := NewContainer(cc, i.client, i.log.With("parent_ref", i.config.Name))
-	err := p.Destroy()
+	// remove the docs
+	ids, err := i.client.FindContainerIDs(i.config.Name, i.config.WANRef.Name)
 	if err != nil {
 		return err
 	}
-	
-	cc = &config.Container{
-		Name:       "terminal",
-		NetworkRef: i.config.WANRef,
+
+	for _, id := range ids {
+		err := i.client.RemoveContainer(id)
+		if err != nil {
+			return err
+		}
 	}
 
-	p = NewContainer(cc, i.client, i.log.With("parent_ref", i.config.Name))
-	err = p.Destroy()
-	if err != nil {
-		return err
+	// remove the terminal server
+	ids, err = i.client.FindContainerIDs("terminal", i.config.WANRef.Name)
+	for _, id := range ids {
+		err := i.client.RemoveContainer(id)
+		if err != nil {
+			return err
+		}
 	}
-	
 	return nil
 }
 
 // Lookup the ID of the documentation container
-func (i *Docs) Lookup() (string, error) {
-	cc := &config.Container{
-		Name:       i.config.Name,
-		NetworkRef: i.config.WANRef,
-	}
+func (i *Docs) Lookup() ([]string, error) {
+	/*
+		cc := &config.Container{
+			Name:       i.config.Name,
+			NetworkRef: i.config.WANRef,
+		}
 
-	p := NewContainer(cc, i.client, i.log.With("parent_ref", i.config.Name))
+		p := NewContainer(cc, i.client, i.log.With("parent_ref", i.config.Name))
+	*/
 
-	return p.Lookup()
+	return []string{}, nil
 }

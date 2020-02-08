@@ -12,13 +12,13 @@ import (
 // RemoteExec provider allows the execution of arbitrary commands on an existing target or
 // can create a new container before running
 type RemoteExec struct {
-	config *config.RemoteExec
-	client clients.Docker
+	config config.RemoteExec
+	client clients.ContainerTasks
 	log    hclog.Logger
 }
 
 // NewRemoteExec creates a new Exec provider
-func NewRemoteExec(c *config.RemoteExec, ex clients.Docker, l hclog.Logger) *RemoteExec {
+func NewRemoteExec(c config.RemoteExec, ex clients.ContainerTasks, l hclog.Logger) *RemoteExec {
 	return &RemoteExec{c, ex, l}
 }
 
@@ -32,38 +32,30 @@ func (c *RemoteExec) Create() error {
 
 	// execution target id
 	targetID := ""
-	var targetContainer *Container // created if necessary
 
 	if c.config.TargetRef == nil {
 		// Not using existing target create new container
-		id, cp, err := c.createRemoteExecContainer()
+		id, err := c.createRemoteExecContainer()
 		if err != nil {
-			return err
+			return xerrors.Errorf("Unable to create container for remote exec: %w", err)
 		}
 
 		targetID = id
-		targetContainer = cp
 	} else {
 		// Fetch the id for the target
 		switch v := c.config.TargetRef.(type) {
 		case *config.Container:
-			cc := &config.Container{
-				Name:       v.Name,
-				Network:    v.Network,
-				NetworkRef: v.NetworkRef,
-			}
-			cp := NewContainer(cc, c.client, c.log)
-			id, err := cp.Lookup()
+			ids, err := c.client.FindContainerIDs(v.Name, v.NetworkRef.Name)
 
 			if err != nil {
 				return xerrors.Errorf("Unable to find remote exec target: %w", err)
 			}
 
-			if id == "" {
+			if len(ids) != 1 {
 				return xerrors.Errorf("Unable to find remote exec target")
 			}
 
-			targetID = id
+			targetID = ids[0]
 		}
 	}
 
@@ -71,22 +63,23 @@ func (c *RemoteExec) Create() error {
 	command := []string{}
 	command = append(command, c.config.Command)
 	command = append(command, c.config.Arguments...)
-	err := execCommand(c.client, targetID, command, c.log)
+
+	err := c.client.ExecuteCommand(targetID, command, c.log.StandardWriter(&hclog.StandardLoggerOptions{}))
 	if err != nil {
 		return xerrors.Errorf("Unable to execute command in remote container: %w", err)
 	}
 
 	// destroy the container if we created one
 	if c.config.Target == "" {
-		return targetContainer.Destroy()
+		return c.client.RemoveContainer(targetID)
 	}
 
 	return nil
 }
 
-func (c *RemoteExec) createRemoteExecContainer() (string, *Container, error) {
+func (c *RemoteExec) createRemoteExecContainer() (string, error) {
 	// first create a new container
-	cc := &config.Container{
+	cc := config.Container{
 		Name:        "remote_exec_temp",
 		Image:       *c.config.Image,
 		Command:     []string{"tail", "-f", "/dev/null"}, // ensure container does not immediately exit
@@ -95,24 +88,7 @@ func (c *RemoteExec) createRemoteExecContainer() (string, *Container, error) {
 		Environment: c.config.Environment,
 	}
 
-	cp := NewContainer(cc, c.client, c.log)
-
-	err := cp.Create()
-	if err != nil {
-		return "", nil, xerrors.Errorf("Unable to create container for remote exec: %w", err)
-	}
-
-	// get the id of the new container
-	id, err := cp.Lookup()
-	if err != nil {
-		return "", nil, xerrors.Errorf("Unable to find id for remote exec container: %w", err)
-	}
-
-	if id == "" {
-		return "", nil, xerrors.Errorf("Unable to find id for remote exec container")
-	}
-
-	return id, cp, nil
+	return c.client.CreateContainer(cc)
 }
 
 // Destroy statisfies the interface requirements but is not used
@@ -121,6 +97,6 @@ func (c *RemoteExec) Destroy() error {
 }
 
 // Lookup statisfies the interface requirements but is not used
-func (c *RemoteExec) Lookup() (string, error) {
-	return "", nil
+func (c *RemoteExec) Lookup() ([]string, error) {
+	return []string{}, nil
 }

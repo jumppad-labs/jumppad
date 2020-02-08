@@ -4,6 +4,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 	"golang.org/x/xerrors"
 )
 
@@ -50,12 +51,12 @@ func (c *K8sConfig) Destroy() error {
 }
 
 // Lookup the Kubernetes resources defined by the config
-func (c *K8sConfig) Lookup() (string, error) {
-	return "", nil
+func (c *K8sConfig) Lookup() ([]string, error) {
+	return []string{}, nil
 }
 
 func (c *K8sConfig) setup() error {
-	_, destPath, _ := CreateKubeConfigPath(c.config.ClusterRef.Name)
+	_, destPath, _ := utils.CreateKubeConfigPath(c.config.ClusterRef.Name)
 	err := c.client.SetConfig(destPath)
 	if err != nil {
 		return xerrors.Errorf("unable to create Kubernetes client: %w", err)

@@ -53,10 +53,15 @@ local_exec "setup_vault" {
 `
 
 var execRemoteRelative = `
+network "cloud" {
+	subnet = "192.158.32.12"
+}
+
 remote_exec "setup_vault" {
   image {
 	  name = "hashicorp/vault:latest"
   }
+  network = "network.cloud"
   script = "./scripts/setup_vault.sh"
   volume {
 	  source = "./scripts"

@@ -1,48 +1,57 @@
 package shipyard
 
+import (
+	"testing"
+
+	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/providers"
+
+	"github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/assert"
+)
+
 func setup() {
 	//md := &clients.MockDocker{}
 }
 
-/*
-func TestCorrectlyOrdersElements(t *testing.T) {
-	n1 := &Network{Name: "network1"}
-	c1 := &Container{Name: "container1", networkRef: n1}
-	cl1 := &Cluster{Name: "cluster1", networkRef: n1}
-	h1 := &Helm{Name: "helm1", clusterRef: cl1}
-	i1 := &Ingress{Name: "ingress1", targetRef: cl1}
+func TestCorrectlyGeneratesProviders(t *testing.T) {
+	n1 := &config.Network{Name: "network1"}
+	c1 := &config.Container{Name: "container1", NetworkRef: n1}
+	cl1 := &config.Cluster{Name: "cluster1", NetworkRef: n1}
+	h1 := &config.Helm{Name: "helm1", ClusterRef: cl1}
+	i1 := &config.Ingress{Name: "ingress1", TargetRef: cl1}
 
-	c,_ := New()
-	c.Containers = []*Container{c1}
-	c.Clusters = []*Cluster{cl1}
-	c.Networks = []*Network{n1}
-	c.Ingresses = []*Ingress{i1}
-	c.HelmCharts = []*Helm{h1}
+	c, _ := config.New()
+	c.Containers = []*config.Container{c1}
+	c.Clusters = []*config.Cluster{cl1}
+	c.Networks = []*config.Network{n1}
+	c.Ingresses = []*config.Ingress{i1}
+	c.HelmCharts = []*config.Helm{h1}
+
+	cl := &Clients{}
 
 	// process the config
-	oc := generateOrder(c)
+	oc := generateProviders(c, cl, hclog.NewNullLogger())
 
 	// first element should be a network
-	assert.Len(t, oc, 5)
+	assert.Len(t, oc, 6)
 
-	el1, ok := oc[0].(*Network)
+	// WAN network
+	_, ok := oc[0].(*providers.Network)
 	assert.True(t, ok)
-	assert.Equal(t, "network1", el1.Name)
 
-	co1, ok := oc[1].(*Container)
+	_, ok = oc[1].(*providers.Network)
 	assert.True(t, ok)
-	assert.Equal(t, "container1", co1.Name)
 
-	cll1, ok := oc[2].(*Cluster)
+	_, ok = oc[2].(*providers.Container)
 	assert.True(t, ok)
-	assert.Equal(t, "cluster1", cll1.Name)
 
-	hl1, ok := oc[3].(*Helm)
+	_, ok = oc[3].(*providers.Cluster)
 	assert.True(t, ok)
-	assert.Equal(t, "helm1", hl1.Name)
 
-	in1, ok := oc[4].(*Ingress)
+	_, ok = oc[4].(*providers.Helm)
 	assert.True(t, ok)
-	assert.Equal(t, "ingress1", in1.Name)
+
+	_, ok = oc[5].(*providers.Ingress)
+	assert.True(t, ok)
 }
-*/

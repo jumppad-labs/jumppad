@@ -10,12 +10,13 @@ import (
 
 const nomadBaseImage = "shipyardrun/nomad"
 
+// TODO tidy code, add tests like k3s cluster
 func (c *Cluster) createNomad() error {
 	c.log.Info("Creating Cluster", "ref", c.config.Name)
 
 	// check the cluster does not already exist
-	id, _ := c.Lookup()
-	if id != "" {
+	ids, _ := c.client.FindContainerIDs(c.config.Name, c.config.NetworkRef.Name)
+	if len(ids) > 0 {
 		return ErrorClusterExists
 	}
 
@@ -23,14 +24,14 @@ func (c *Cluster) createNomad() error {
 	image := fmt.Sprintf("%s:%s", nomadBaseImage, c.config.Version)
 
 	// create the volume for the cluster
-	volID, err := c.createVolume()
+	volID, err := c.client.CreateVolume(c.config.Name)
 	if err != nil {
 		return err
 	}
 
 	// create the server
 	// since the server is just a container create the container config and provider
-	cc := &config.Container{}
+	cc := config.Container{}
 	cc.Name = fmt.Sprintf("server.%s", c.config.Name)
 	cc.Image = config.Image{Name: image}
 	cc.NetworkRef = c.config.NetworkRef
@@ -60,14 +61,7 @@ func (c *Cluster) createNomad() error {
 		},
 	}
 
-	cp := NewContainer(cc, c.client, c.log.With("parent_ref", c.config.Name))
-	err = cp.Create()
-	if err != nil {
-		return err
-	}
-
-	// get the id
-	id, err = c.Lookup()
+	_, err = c.client.CreateContainer(cc)
 	if err != nil {
 		return err
 	}

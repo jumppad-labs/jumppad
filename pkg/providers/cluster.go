@@ -3,9 +3,9 @@ package providers
 import (
 	"errors"
 
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
-	hclog "github.com/hashicorp/go-hclog"
 )
 
 var (
@@ -15,14 +15,14 @@ var (
 
 // Cluster defines a provider which can create a cluster
 type Cluster struct {
-	config     *config.Cluster
-	client     clients.Docker
+	config     config.Cluster
+	client     clients.ContainerTasks
 	kubeClient clients.Kubernetes
 	log        hclog.Logger
 }
 
 // NewCluster creates a new
-func NewCluster(c *config.Cluster, cc clients.Docker, kc clients.Kubernetes,l hclog.Logger) *Cluster {
+func NewCluster(c config.Cluster, cc clients.ContainerTasks, kc clients.Kubernetes, l hclog.Logger) *Cluster {
 	return &Cluster{c, cc, kc, l}
 }
 
@@ -51,15 +51,18 @@ func (c *Cluster) Destroy() error {
 }
 
 // Lookup the a clusters current state
-func (c *Cluster) Lookup() (string, error) {
-	// lookup the server id
-	// base of cluster is a container
-	co := &config.Container{
-		Name:       c.config.Name,
-		NetworkRef: c.config.NetworkRef,
-	}
+func (c *Cluster) Lookup() ([]string, error) {
+	/*
+		// lookup the server id
+		// base of cluster is a container
+		co := &config.Container{
+			Name:       c.config.Name,
+			NetworkRef: c.config.NetworkRef,
+		}
 
-	p := NewContainer(co, c.client, c.log.With("parent_ref", c.config.Name))
+		p := NewContainer(co, c.client, c.log.With("parent_ref", c.config.Name))
 
-	return p.Lookup()
+		return p.Lookup()
+	*/
+	return []string{}, nil
 }
