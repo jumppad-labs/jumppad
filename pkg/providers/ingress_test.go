@@ -1,120 +1,153 @@
 package providers
 
-/*
-func setupIngress(c *config.Ingress) (*clients.MockDocker, *Ingress) {
-	md := &clients.MockDocker{}
-	md.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
-	md.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).Return(
-		ioutil.NopCloser(strings.NewReader("hello world")),
-		nil,
-	)
-	md.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(container.ContainerCreateCreatedBody{}, nil)
-	md.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+import (
+	"fmt"
+	"testing"
 
-	return md, &Ingress{c, md, hclog.Default()}
+	"github.com/hashicorp/go-hclog"
+	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
+	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/utils"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+)
+
+func testIngressCreateMocks() *mocks.MockContainerTasks {
+	md := &mocks.MockContainerTasks{}
+	md.On("CreateContainer", mock.Anything).Return("ingress", nil)
+	md.On("RemoveContainer", mock.Anything).Return(nil)
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"ingress"}, nil)
+	return md
 }
 
-func TestCreatesIngressWithValidOptions(t *testing.T) {
-	cn := &config.Network{Name: "testnet", Subnet: "192.168.4.0/24"}
-	cc := &config.Container{Name: "testcontainer", Image: config.Image{Name: "consul:v1.6.1"}, NetworkRef: cn, Volumes: []config.Volume{config.Volume{Source: "/mnt/data", Destination: "/data"}}}
-	i := &config.Ingress{Name: "testingress", TargetRef: cc, NetworkRef: cn, Ports: []config.Port{config.Port{Protocol: "tcp", Host: 18500, Local: 8600, Remote: 8500}}}
-
-	md, p := setupIngress(i)
+func TestIngressK8sTargetConfiguresCommand(t *testing.T) {
+	md := testIngressCreateMocks()
+	p := NewIngress(testIngressConfig, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
 
-	md.AssertCalled(t, "ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
-	md.AssertCalled(t, "ContainerStart", mock.Anything, mock.Anything, mock.Anything)
+	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(config.Container)
+	// ensure the proxy is type k8s
+	assert.Equal(t, "--proxy-type", params.Command[0])
+	assert.Equal(t, "kubernetes", params.Command[1])
 
-	// second call is create
-	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
-	name := params[4].(string)
-	host := params[2].(*container.HostConfig)
-	cfg := params[1].(*container.Config)
-	network := params[3].(*network.NetworkingConfig)
+	// default namespace should be default
+	assert.Equal(t, "default", params.Command[3])
 
-	assert.Equal(t, "testingress.testnet.shipyard", name)
-
-	assert.Equal(t, "testingress", cfg.Hostname)
-	assert.Equal(t, "shipyardrun/ingress:latest", cfg.Image)
-
-	assert.Equal(t, "--service-name", cfg.Cmd[0])
-	assert.Equal(t, "testcontainer.testnet.shipyard", cfg.Cmd[1])
-
-	assert.Equal(t, "--ports", cfg.Cmd[2])
-	assert.Equal(t, "8600:8500", cfg.Cmd[3])
-
-	// check the ports
-	dockerPort, _ := nat.NewPort("tcp", "8600")
-	assert.NotNil(t, cfg.ExposedPorts[dockerPort])
-	assert.NotNil(t, host.PortBindings[dockerPort])
-	assert.Equal(t, "18500", host.PortBindings[dockerPort][0].HostPort)
-
-	// check the network
-	assert.NotNil(t, network.EndpointsConfig[cn.Name])
+	// check the servicename
+	assert.Equal(t, "--service-name", params.Command[4])
+	assert.Equal(t, testIngressConfig.Service, params.Command[5])
 }
 
-func TestCreatesIngressWithContainerOptions(t *testing.T) {
-	cn := &config.Network{Name: "testnet", Subnet: "192.168.4.0/24"}
-	cc := &config.Container{Name: "testcontainer", Image: config.Image{Name: "consul:v1.6.1"}, NetworkRef: cn, Volumes: []config.Volume{config.Volume{Source: "/mnt/data", Destination: "/data"}}}
-	i := &config.Ingress{Name: "testingress", TargetRef: cc, NetworkRef: cn, Ports: []config.Port{config.Port{Protocol: "tcp", Host: 18500, Local: 8600, Remote: 8500}}}
-
-	md, p := setupIngress(i)
+func TestIngressK8sTargetConfiguresKubeConfig(t *testing.T) {
+	md := testIngressCreateMocks()
+	p := NewIngress(testIngressConfig, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
 
-	// second call is create
-	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
-	name := params[4].(string)
-	cfg := params[1].(*container.Config)
-	network := params[3].(*network.NetworkingConfig)
+	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(config.Container)
 
-	assert.Equal(t, "testingress.testnet.shipyard", name)
+	// check the volume mount is set
+	_, _, path := utils.CreateKubeConfigPath("test")
+	assert.Equal(t, path, params.Volumes[0].Source)
+	assert.Equal(t, "/.kube/kubeconfig.yml", params.Volumes[0].Destination)
 
-	assert.Equal(t, "--service-name", cfg.Cmd[0])
-	assert.Equal(t, "testcontainer.testnet.shipyard", cfg.Cmd[1])
-
-	// check the network
-	assert.NotNil(t, network.EndpointsConfig[cn.Name])
+	// check the env var for the kubeconfig is set
+	assert.Equal(t, "/.kube/kubeconfig.yml", params.Environment[0].Value)
 }
 
-func TestCreatesIngressWithK8sClusterOptions(t *testing.T) {
-	cn := &config.Network{Name: "testnet", Subnet: "192.168.4.0/24"}
-	cc := &config.Cluster{Name: "testcontainer", Driver: "k3s", NetworkRef: cn}
-	i := &config.Ingress{Name: "testingress", Service: "svc/consul-consul", TargetRef: cc, NetworkRef: cn, Ports: []config.Port{config.Port{Protocol: "tcp", Host: 18500, Local: 8600, Remote: 8500}}}
-
-	md, p := setupIngress(i)
+func TestIngressK8sTargetWithNamespaceConfiguresCommand(t *testing.T) {
+	md := testIngressCreateMocks()
+	tc := testIngressConfig
+	tc.Namespace = "mine"
+	p := NewIngress(tc, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
 
-	// second call is create
-	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
-	name := params[4].(string)
-	cfg := params[1].(*container.Config)
-	host := params[2].(*container.HostConfig)
-	network := params[3].(*network.NetworkingConfig)
+	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(config.Container)
 
-	assert.Equal(t, "testingress.testnet.shipyard", name)
-
-	assert.Equal(t, "--proxy-type", cfg.Cmd[0])
-	assert.Equal(t, "kubernetes", cfg.Cmd[1])
-
-	assert.Equal(t, "--namespace", cfg.Cmd[2])
-	assert.Equal(t, "default", cfg.Cmd[3])
-
-	assert.Equal(t, "--service-name", cfg.Cmd[4])
-	assert.Equal(t, i.Service, cfg.Cmd[5])
-
-	// check the network
-	assert.NotNil(t, network.EndpointsConfig[cn.Name])
-
-	// check mounts the kubeconfig
-	assert.Equal(t, "/.kube/kubeconfig.yml", host.Mounts[0].Target)
-	assert.Contains(t, host.Mounts[0].Source, ".shipyard/config/testcontainer/kubeconfig-docker.yaml")
-	assert.Equal(t, "KUBECONFIG=/.kube/kubeconfig.yml", cfg.Env[0])
+	// namespace should be same as custom
+	assert.Equal(t, "mine", params.Command[3])
 }
-*/
+
+func TestIngressContainerTargetConfiguresCommand(t *testing.T) {
+	md := testIngressCreateMocks()
+	p := NewIngress(testIngressContainerConfig, md, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(config.Container)
+
+	assert.Equal(t, "--service-name", params.Command[0])
+	assert.Equal(t, "test.cloud.shipyard", params.Command[1])
+}
+
+func TestIngressContainerAddsPorts(t *testing.T) {
+	md := testIngressCreateMocks()
+	p := NewIngress(testIngressContainerConfig, md, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(config.Container)
+	assert.Equal(t, "--ports", params.Command[2])
+	assert.Equal(t, "8080:8081", params.Command[3])
+
+	assert.Equal(t, "--ports", params.Command[4])
+	assert.Equal(t, "9080:9081", params.Command[5])
+
+	// check the host ports
+	assert.Equal(t, testIngressContainerConfig.Ports, params.Ports)
+}
+
+func TestIngressContainerFailReturnsError(t *testing.T) {
+	md := testIngressCreateMocks()
+	removeOn(&md.Mock, "CreateContainer")
+	md.On("CreateContainer", mock.Anything).Return("", fmt.Errorf("boom"))
+	p := NewIngress(testIngressContainerConfig, md, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.Error(t, err)
+}
+
+func TestIngressK8sTargetDestroysContainer(t *testing.T) {
+	md := testIngressCreateMocks()
+	p := NewIngress(testIngressConfig, md, hclog.NewNullLogger())
+
+	err := p.Destroy()
+	assert.NoError(t, err)
+	md.AssertCalled(t, "RemoveContainer", "ingress")
+}
+
+var testIngressConfig = config.Ingress{
+	Service:    "svc/web",
+	Name:       "web-http",
+	NetworkRef: &config.Network{Name: "cloud"},
+	TargetRef: &config.Cluster{
+		Name:   "test",
+		Driver: "k3s",
+	},
+}
+
+var testIngressContainerConfig = config.Ingress{
+	TargetRef: &config.Container{
+		Name:       "test",
+		NetworkRef: &config.Network{Name: "cloud"},
+	},
+	Ports: []config.Port{
+		config.Port{
+			Local:  8080,
+			Remote: 8081,
+			Host:   8082,
+		},
+		config.Port{
+			Local:  9080,
+			Remote: 9081,
+			Host:   9082,
+		},
+	},
+}

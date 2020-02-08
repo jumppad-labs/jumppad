@@ -1,111 +1,113 @@
 package providers
 
 import (
+	"fmt"
+
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 )
 
 type Ingress struct {
-	config *config.Ingress
-	client clients.Docker
+	config config.Ingress
+	client clients.ContainerTasks
 	log    hclog.Logger
 }
 
-func NewIngress(c *config.Ingress, cc clients.Docker, l hclog.Logger) *Ingress {
+// NewIngress creates a new ingress provider
+func NewIngress(c config.Ingress, cc clients.ContainerTasks, l hclog.Logger) *Ingress {
 	return &Ingress{c, cc, l}
 }
 
+// Create the ingress
 func (i *Ingress) Create() error {
-	/*
-		i.log.Info("Creating Ingress", "ref", i.config.Name)
+	i.log.Info("Creating Ingress", "ref", i.config.Name)
 
-		var serviceName string
-		var volumes []config.Volume
-		var env []config.KV
-		command := make([]string, 0)
+	var serviceName string
+	var volumes []config.Volume
+	var env []config.KV
+	command := make([]string, 0)
 
-		switch v := i.config.TargetRef.(type) {
-		case *config.Container:
-			serviceName = FQDN(v.Name, v.NetworkRef)
-		case *config.Cluster:
+	switch v := i.config.TargetRef.(type) {
+	case *config.Container:
+		serviceName = utils.FQDN(v.Name, v.NetworkRef.Name)
+	case *config.Cluster:
 
-			// determine the type of cluster
-			// if this is a k3s cluster we need to add the kubeconfig and
-			// make sure that the proxy runs in kube mode
-			if v.Driver == "k3s" {
-				serviceName = i.config.Service
-				_, _, kubeConfigPath := CreateKubeConfigPath(v.Name)
-				volumes = append(volumes, config.Volume{
-					Source:      kubeConfigPath,
-					Destination: "/.kube/kubeconfig.yml",
-				})
+		// determine the type of cluster
+		// if this is a k3s cluster we need to add the kubeconfig and
+		// make sure that the proxy runs in kube mode
+		if v.Driver == "k3s" {
+			serviceName = i.config.Service
+			_, _, kubeConfigPath := utils.CreateKubeConfigPath(v.Name)
+			volumes = append(volumes, config.Volume{
+				Source:      kubeConfigPath,
+				Destination: "/.kube/kubeconfig.yml",
+			})
 
-				env = append(env, config.KV{Key: "KUBECONFIG", Value: "/.kube/kubeconfig.yml"})
+			env = append(env, config.KV{Key: "KUBECONFIG", Value: "/.kube/kubeconfig.yml"})
 
-				command = append(command, "--proxy-type")
-				command = append(command, "kubernetes")
+			command = append(command, "--proxy-type")
+			command = append(command, "kubernetes")
 
-				// if the namespace is not present assume default
-				if i.config.Namespace == "" {
-					i.config.Namespace = "default"
-				}
-
-				command = append(command, "--namespace")
-				command = append(command, i.config.Namespace)
-			} else {
-				serviceName = fmt.Sprintf("server.%s", FQDN(v.Name, v.NetworkRef))
+			// if the namespace is not present assume default
+			if i.config.Namespace == "" {
+				i.config.Namespace = "default"
 			}
 
-		default:
-			return fmt.Errorf("Only Container ingress and K3s are supported at present")
+			command = append(command, "--namespace")
+			command = append(command, i.config.Namespace)
+		} else {
+			serviceName = fmt.Sprintf("server.%s", utils.FQDN(v.Name, v.NetworkRef.Name))
 		}
 
-		image := "shipyardrun/ingress:latest"
+	default:
+		return fmt.Errorf("Only Container ingress and K3s are supported at present")
+	}
 
-		command = append(command, "--service-name")
-		command = append(command, serviceName)
+	image := "shipyardrun/ingress:latest"
 
-		// add the ports
-		for _, p := range i.config.Ports {
-			command = append(command, "--ports")
-			command = append(command, fmt.Sprintf("%d:%d", p.Local, p.Remote))
-		}
+	command = append(command, "--service-name")
+	command = append(command, serviceName)
 
-		// ingress simply crease a container with specific options
-		c := &config.Container{
-			Name:        i.config.Name,
-			NetworkRef:  i.config.NetworkRef,
-			Ports:       i.config.Ports,
-			Image:       config.Image{Name: image},
-			Command:     command,
-			Volumes:     volumes,
-			Environment: env,
-			IPAddress:   i.config.IPAddress,
-		}
+	// add the ports
+	for _, p := range i.config.Ports {
+		command = append(command, "--ports")
+		command = append(command, fmt.Sprintf("%d:%d", p.Local, p.Remote))
+	}
 
-		p := NewContainer(c, i.client, i.log.With("parent_ref", i.config.Name))
+	// ingress simply crease a container with specific options
+	c := config.Container{
+		Name:        i.config.Name,
+		NetworkRef:  i.config.NetworkRef,
+		Ports:       i.config.Ports,
+		Image:       config.Image{Name: image},
+		Command:     command,
+		Volumes:     volumes,
+		Environment: env,
+		IPAddress:   i.config.IPAddress,
+	}
 
-		return p.Create()
-	*/
-
-	return nil
+	_, err := i.client.CreateContainer(c)
+	return err
 }
 
 // Destroy the ingress
 func (i *Ingress) Destroy() error {
-	/*
-		i.log.Info("Destroy Ingress", "ref", i.config.Name)
+	i.log.Info("Destroy Ingress", "ref", i.config.Name)
 
-		c := &config.Container{
-			Name:       i.config.Name,
-			NetworkRef: i.config.NetworkRef,
+	ids, err := i.client.FindContainerIDs(i.config.Name, i.config.NetworkRef.Name)
+	if err != nil {
+		return err
+	}
+
+	for _, id := range ids {
+		err := i.client.RemoveContainer(id)
+		if err != nil {
+			return err
 		}
 
-		p := NewContainer(c, i.client, i.log.With("parent_ref", i.config.Name))
-
-		return p.Destroy()
-	*/
+	}
 
 	return nil
 }

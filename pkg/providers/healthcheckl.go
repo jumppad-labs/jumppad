@@ -28,8 +28,6 @@ func healthCheckHTTP(address string, timeout time.Duration, l hclog.Logger) erro
 		// backoff
 		time.Sleep(2 * time.Second)
 	}
-
-	return nil
 }
 
 func healthCheckNomad(address string, nodeCount int, timeout time.Duration, l hclog.Logger) error {
@@ -65,6 +63,4 @@ func healthCheckNomad(address string, nodeCount int, timeout time.Duration, l hc
 		// backoff
 		time.Sleep(2 * time.Second)
 	}
-
-	return nil
 }
