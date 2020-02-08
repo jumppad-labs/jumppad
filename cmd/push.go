@@ -28,7 +28,7 @@ var pushCmd = &cobra.Command{
 
 		fmt.Printf("Pushing image %s to cluster %s\n\n", image, cluster)
 
-		pc := &config.Cluster{
+		pc := config.Cluster{
 			Name:       cluster,
 			Driver:     "k3s",
 			NetworkRef: &config.Network{Name: network},
@@ -57,7 +57,7 @@ var pushCmd = &cobra.Command{
 		}
 
 		for _, id := range ids {
-			err = p.ImportLocalDockerImages(id, []config.Image{config.Image{Name: strings.Trim(image, " ")}})
+			err = p.ImportLocalDockerImages(cluster, id, []config.Image{config.Image{Name: strings.Trim(image, " ")}})
 			if err != nil {
 				fmt.Println("Error pushing image: ", err)
 				os.Exit(1)

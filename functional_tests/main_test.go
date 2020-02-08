@@ -1,3 +1,7 @@
+// The tests in this file are functional tests which require a running Docker server
+// they will take over 2 minutes to run so should be excluded from any autorunning
+// unit tests
+
 package main
 
 import (

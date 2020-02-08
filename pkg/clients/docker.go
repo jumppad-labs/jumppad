@@ -39,6 +39,7 @@ type Docker interface {
 	NetworkList(ctx context.Context, options types.NetworkListOptions) ([]types.NetworkResource, error)
 	NetworkCreate(ctx context.Context, name string, options types.NetworkCreate) (types.NetworkCreateResponse, error)
 	NetworkRemove(ctx context.Context, networkID string) error
+	NetworkConnect(ctx context.Context, networkID, containerID string, config *network.EndpointSettings) error
 
 	VolumeCreate(ctx context.Context, options volumetypes.VolumeCreateBody) (types.Volume, error)
 	VolumeRemove(ctx context.Context, volumeID string, force bool) error

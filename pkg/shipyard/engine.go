@@ -141,7 +141,7 @@ func generateProviders(c *config.Config, cc *Clients, l hclog.Logger) []provider
 	}
 
 	for _, c := range c.Clusters {
-		p := providers.NewCluster(c, cc.ContainerTasks, cc.Kubernetes, l)
+		p := providers.NewCluster(*c, cc.ContainerTasks, cc.Kubernetes, l)
 		oc = append(oc, p)
 	}
 

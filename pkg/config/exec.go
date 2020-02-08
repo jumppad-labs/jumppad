@@ -20,7 +20,9 @@ type RemoteExec struct {
 	WANRef     *Network // Automatically created
 
 	// Either Image or Target must be specified
-	Image  *Image `hcl:"image,block"`     // Create a new container and exec
+	Image   *Image `hcl:"image,block"`      // Create a new container and exec
+	Network string `hcl:"network,optional"` // Attach to the correct network // only when Image is specified
+
 	Target string `hcl:"target,optional"` // Attach to a running target and exec
 
 	// Either Script or Command must be specified

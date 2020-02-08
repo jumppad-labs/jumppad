@@ -72,21 +72,7 @@ func (d *DockerTasks) CreateContainer(c config.Container) (string, error) {
 	// attach the container to the network
 	networkName := ""
 	if c.NetworkRef != nil {
-		nc.EndpointsConfig[c.NetworkRef.Name] = &network.EndpointSettings{NetworkID: c.NetworkRef.Name}
-
-		// are we binding to a specific ip
-		if c.IPAddress != "" {
-			d.l.Debug("Assigning static ip address", "ref", c.Name, "ip_address", c.IPAddress)
-			//nc.EndpointsConfig[c.config.NetworkRef.Name].IPAddress = c.config.IPAddress
-			nc.EndpointsConfig[c.NetworkRef.Name].IPAMConfig = &network.EndpointIPAMConfig{IPv4Address: c.IPAddress}
-		}
-
 		networkName = c.NetworkRef.Name
-	}
-
-	// attach the container to the WAN network
-	if c.WANRef != nil {
-		nc.EndpointsConfig[c.WANRef.Name] = &network.EndpointSettings{NetworkID: c.WANRef.Name}
 	}
 
 	// Create volume mounts
@@ -132,6 +118,34 @@ func (d *DockerTasks) CreateContainer(c config.Container) (string, error) {
 	)
 	if err != nil {
 		return "", err
+	}
+
+	// attach the container to the network
+	if c.NetworkRef != nil {
+		d.l.Debug("Attaching container to network", "ref", c.Name, "network", c.NetworkRef.Name)
+		es := &network.EndpointSettings{NetworkID: c.NetworkRef.Name}
+
+		// are we binding to a specific ip
+		if c.IPAddress != "" {
+			d.l.Debug("Assigning static ip address", "ref", c.Name, "network", c.NetworkRef.Name, "ip_address", c.IPAddress)
+			es.IPAMConfig = &network.EndpointIPAMConfig{IPv4Address: c.IPAddress}
+		}
+
+		err := d.c.NetworkConnect(context.Background(), c.NetworkRef.Name, cont.ID, es)
+		if err != nil {
+			return "", xerrors.Errorf("Unable to connect container to network %s: %w", c.NetworkRef.Name, err)
+		}
+	}
+
+	// attach the container to the WAN network
+	if c.WANRef != nil {
+		d.l.Debug("Attaching container to WAN network", "ref", c.Name, "network", c.WANRef.Name)
+		es := &network.EndpointSettings{NetworkID: c.WANRef.Name}
+
+		err := d.c.NetworkConnect(context.Background(), c.WANRef.Name, cont.ID, es)
+		if err != nil {
+			return "", xerrors.Errorf("Unable to connect container to wan network %s: %w", c.WANRef.Name, err)
+		}
 	}
 
 	err = d.c.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
@@ -376,7 +390,8 @@ func (d *DockerTasks) CopyLocalDockerImageToVolume(images []string, volume strin
 		return "", xerrors.Errorf("unable to copy file to container: %w", err)
 	}
 
-	return fmt.Sprintf("/images/%s", fi.Name()), nil
+	// return the name of the archive
+	return fi.Name(), nil
 }
 
 // ExecuteCommand allows the execution of commands in a running docker container

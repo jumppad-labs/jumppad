@@ -15,14 +15,14 @@ var (
 
 // Cluster defines a provider which can create a cluster
 type Cluster struct {
-	config     *config.Cluster
+	config     config.Cluster
 	client     clients.ContainerTasks
 	kubeClient clients.Kubernetes
 	log        hclog.Logger
 }
 
 // NewCluster creates a new
-func NewCluster(c *config.Cluster, cc clients.ContainerTasks, kc clients.Kubernetes, l hclog.Logger) *Cluster {
+func NewCluster(c config.Cluster, cc clients.ContainerTasks, kc clients.Kubernetes, l hclog.Logger) *Cluster {
 	return &Cluster{c, cc, kc, l}
 }
 

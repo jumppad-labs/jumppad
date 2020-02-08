@@ -83,6 +83,22 @@ func (i *Docs) createDocsContainer() error {
 		}
 	}
 
+	// add the ports
+	cc.Ports = []config.Port{
+		// set the doumentation port
+		config.Port{
+			Local:  3000,
+			Remote: 3000,
+			Host:   i.config.Port,
+		},
+		// set the livereload port
+		config.Port{
+			Local:  37950,
+			Remote: 37950,
+			Host:   37950,
+		},
+	}
+
 	_, err := i.client.CreateContainer(cc)
 	return err
 }

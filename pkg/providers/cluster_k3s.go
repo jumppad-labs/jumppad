@@ -136,7 +136,7 @@ func (c *Cluster) createK3s() error {
 	// import the images to the servers container d instance
 	// importing images means that k3s does not need to pull from a remote docker hub
 	if c.config.Images != nil && len(c.config.Images) > 0 {
-		return c.ImportLocalDockerImages(c.config.Name, c.config.Images)
+		return c.ImportLocalDockerImages(c.config.Name, id, c.config.Images)
 	}
 
 	return nil
@@ -223,7 +223,7 @@ func (c *Cluster) createDockerKubeConfig(kubeconfig string) error {
 }
 
 // ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
-func (c *Cluster) ImportLocalDockerImages(clusterID string, images []config.Image) error {
+func (c *Cluster) ImportLocalDockerImages(name string, id string, images []config.Image) error {
 	imgs := []string{}
 
 	for _, i := range images {
@@ -236,7 +236,7 @@ func (c *Cluster) ImportLocalDockerImages(clusterID string, images []config.Imag
 	}
 
 	// import to volume
-	vn := utils.FQDNVolumeName(clusterID)
+	vn := utils.FQDNVolumeName(name)
 	imageFile, err := c.client.CopyLocalDockerImageToVolume(imgs, vn)
 	if err != nil {
 		return err
@@ -244,7 +244,7 @@ func (c *Cluster) ImportLocalDockerImages(clusterID string, images []config.Imag
 
 	// execute the command to import the image
 	// write any command output to the logger
-	err = c.client.ExecuteCommand(clusterID, []string{"ctr", "image", "import", imageFile}, c.log.StandardWriter(&hclog.StandardLoggerOptions{}))
+	err = c.client.ExecuteCommand(id, []string{"ctr", "image", "import", "/images/" + imageFile}, c.log.StandardWriter(&hclog.StandardLoggerOptions{}))
 	if err != nil {
 		return err
 	}
@@ -267,5 +267,5 @@ func (c *Cluster) destroyK3s() error {
 	}
 
 	// delete the volume
-	return c.client.RemoveVolume(utils.FQDNVolumeName(c.config.Name))
+	return c.client.RemoveVolume(c.config.Name)
 }
