@@ -97,6 +97,6 @@ func (c *RemoteExec) Destroy() error {
 }
 
 // Lookup statisfies the interface requirements but is not used
-func (c *RemoteExec) Lookup() (string, error) {
-	return "", nil
+func (c *RemoteExec) Lookup() ([]string, error) {
+	return []string{}, nil
 }

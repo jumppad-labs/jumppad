@@ -51,7 +51,7 @@ func (c *Cluster) Destroy() error {
 }
 
 // Lookup the a clusters current state
-func (c *Cluster) Lookup() (string, error) {
+func (c *Cluster) Lookup() ([]string, error) {
 	/*
 		// lookup the server id
 		// base of cluster is a container
@@ -64,5 +64,5 @@ func (c *Cluster) Lookup() (string, error) {
 
 		return p.Lookup()
 	*/
-	return "", nil
+	return []string{}, nil
 }

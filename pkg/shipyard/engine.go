@@ -1,18 +1,20 @@
 package shipyard
 
 import (
+	"time"
+
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/providers"
-	"time"
 )
 
 // Clients contains clients which are responsible for creating and destrying reources
 type Clients struct {
-	Docker     clients.Docker
-	Kubernetes clients.Kubernetes
-	Command    clients.Command
+	Docker         clients.Docker
+	ContainerTasks clients.ContainerTasks
+	Kubernetes     clients.Kubernetes
+	Command        clients.Command
 }
 
 // Engine is responsible for creating and destroying resources
@@ -30,14 +32,17 @@ func GenerateClients(l hclog.Logger) (*Clients, error) {
 		return nil, err
 	}
 
-	kc := clients.NewKubernetes()
+	kc := clients.NewKubernetes(60 * time.Second)
 
 	ec := clients.NewCommand(30*time.Second, l)
 
+	ct := clients.NewDockerTasks(dc, l)
+
 	return &Clients{
-		Docker:     dc,
-		Kubernetes: kc,
-		Command:    ec,
+		ContainerTasks: ct,
+		Docker:         dc,
+		Kubernetes:     kc,
+		Command:        ec,
 	}, nil
 }
 
@@ -131,12 +136,12 @@ func generateProviders(c *config.Config, cc *Clients, l hclog.Logger) []provider
 	}
 
 	for _, c := range c.Containers {
-		p := providers.NewContainer(c, cc.Docker, l)
+		p := providers.NewContainer(*c, cc.ContainerTasks, l)
 		oc = append(oc, p)
 	}
 
 	for _, c := range c.Clusters {
-		p := providers.NewCluster(c, cc.Docker, cc.Kubernetes, l)
+		p := providers.NewCluster(c, cc.ContainerTasks, cc.Kubernetes, l)
 		oc = append(oc, p)
 	}
 
@@ -151,12 +156,12 @@ func generateProviders(c *config.Config, cc *Clients, l hclog.Logger) []provider
 	}
 
 	for _, c := range c.Ingresses {
-		p := providers.NewIngress(c, cc.Docker, l)
+		p := providers.NewIngress(*c, cc.ContainerTasks, l)
 		oc = append(oc, p)
 	}
 
 	if c.Docs != nil {
-		p := providers.NewDocs(c.Docs, cc.Docker, l)
+		p := providers.NewDocs(c.Docs, cc.ContainerTasks, l)
 		oc = append(oc, p)
 	}
 
@@ -166,7 +171,7 @@ func generateProviders(c *config.Config, cc *Clients, l hclog.Logger) []provider
 	}
 
 	for _, c := range c.RemoteExecs {
-		p := providers.NewRemoteExec(c, cc.Docker, l)
+		p := providers.NewRemoteExec(*c, cc.ContainerTasks, l)
 		oc = append(oc, p)
 	}
 

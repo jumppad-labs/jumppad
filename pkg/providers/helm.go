@@ -105,6 +105,6 @@ func (h *Helm) Destroy() error {
 	return nil
 }
 
-func (h *Helm) Lookup() (string, error) {
-	return "", nil
+func (h *Helm) Lookup() ([]string, error) {
+	return []string{}, nil
 }

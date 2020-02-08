@@ -145,7 +145,7 @@ func (i *Docs) Destroy() error {
 }
 
 // Lookup the ID of the documentation container
-func (i *Docs) Lookup() (string, error) {
+func (i *Docs) Lookup() ([]string, error) {
 	/*
 		cc := &config.Container{
 			Name:       i.config.Name,
@@ -155,5 +155,5 @@ func (i *Docs) Lookup() (string, error) {
 		p := NewContainer(cc, i.client, i.log.With("parent_ref", i.config.Name))
 	*/
 
-	return "", nil
+	return []string{}, nil
 }

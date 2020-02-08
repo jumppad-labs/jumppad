@@ -4,5 +4,5 @@ package providers
 type Provider interface {
 	Create() error
 	Destroy() error
-	Lookup() (string, error)
+	Lookup() ([]string, error)
 }

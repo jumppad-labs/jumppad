@@ -45,6 +45,6 @@ func (c *LocalExec) Destroy() error {
 }
 
 // Lookup statisfies the interface method but is not implemented by LocalExec
-func (c *LocalExec) Lookup() (string, error) {
-	return "", nil
+func (c *LocalExec) Lookup() ([]string, error) {
+	return []string{}, nil
 }

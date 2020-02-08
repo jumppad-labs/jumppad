@@ -113,6 +113,6 @@ func (i *Ingress) Destroy() error {
 }
 
 // Lookup the id of the ingress
-func (i *Ingress) Lookup() (string, error) {
-	return "", nil
+func (i *Ingress) Lookup() ([]string, error) {
+	return []string{}, nil
 }

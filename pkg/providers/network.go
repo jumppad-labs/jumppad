@@ -51,6 +51,6 @@ func (n *Network) Destroy() error {
 }
 
 // Lookup the ID for a network
-func (n *Network) Lookup() (string, error) {
-	return "", nil
+func (n *Network) Lookup() ([]string, error) {
+	return []string{}, nil
 }

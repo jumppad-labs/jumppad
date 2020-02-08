@@ -51,8 +51,8 @@ func (c *K8sConfig) Destroy() error {
 }
 
 // Lookup the Kubernetes resources defined by the config
-func (c *K8sConfig) Lookup() (string, error) {
-	return "", nil
+func (c *K8sConfig) Lookup() ([]string, error) {
+	return []string{}, nil
 }
 
 func (c *K8sConfig) setup() error {
