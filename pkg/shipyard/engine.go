@@ -1,6 +1,7 @@
 package shipyard
 
 import (
+	"sync"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -19,7 +20,7 @@ type Clients struct {
 
 // Engine is responsible for creating and destroying resources
 type Engine struct {
-	providers []providers.Provider
+	providers [][]providers.Provider
 	clients   *Clients
 	config    *config.Config
 	log       hclog.Logger
@@ -90,8 +91,10 @@ func New(c *config.Config, cc *Clients, l hclog.Logger) *Engine {
 
 // Apply the current config creating the resources
 func (e *Engine) Apply() error {
-	for _, p := range e.providers {
-		err := p.Create()
+	// loop through each group
+	for _, g := range e.providers {
+		// apply the provider in parallel
+		err := createParallel(g)
 		if err != nil {
 			return err
 		}
@@ -105,7 +108,8 @@ func (e *Engine) Destroy() error {
 	// should run through the providers in reverse order
 	// to ensure objects with dependencies are destroyed first
 	for i := len(e.providers) - 1; i > -1; i-- {
-		err := e.providers[i].Destroy()
+
+		err := destroyParallel(e.providers[i])
 		if err != nil {
 			return err
 		}
@@ -124,55 +128,115 @@ func (e *Engine) Blueprint() *config.Blueprint {
 	return e.config.Blueprint
 }
 
-func generateProviders(c *config.Config, cc *Clients, l hclog.Logger) []providers.Provider {
-	oc := make([]providers.Provider, 0)
+// createParallel is just a quick implementation for now to test the UX
+func createParallel(p []providers.Provider) error {
+	errs := make(chan error)
+	done := make(chan struct{})
+
+	// create the wait group and set the size to the provider length
+	wg := sync.WaitGroup{}
+	wg.Add(len(p))
+
+	for _, pr := range p {
+		go func(pr providers.Provider) {
+			err := pr.Create()
+			if err != nil {
+				errs <- err
+			}
+
+			wg.Done()
+		}(pr)
+	}
+
+	go func() {
+		wg.Wait()
+		done <- struct{}{}
+	}()
+
+	select {
+	case <-done:
+		return nil
+	case err := <-errs:
+		return err
+	}
+
+}
+
+// destroyParallel is just a quick implementation for now to test the UX
+func destroyParallel(p []providers.Provider) error {
+	// create the wait group and set the size to the provider length
+	wg := sync.WaitGroup{}
+	wg.Add(len(p))
+
+	for _, pr := range p {
+		go func(pr providers.Provider) {
+			pr.Destroy()
+			wg.Done()
+		}(pr)
+	}
+
+	wg.Wait()
+
+	return nil
+}
+
+// generateProviders returns providers grouped together in order of execution
+func generateProviders(c *config.Config, cc *Clients, l hclog.Logger) [][]providers.Provider {
+	oc := make([][]providers.Provider, 7)
+	oc[0] = make([]providers.Provider, 0)
+	oc[1] = make([]providers.Provider, 0)
+	oc[2] = make([]providers.Provider, 0)
+	oc[3] = make([]providers.Provider, 0)
+	oc[4] = make([]providers.Provider, 0)
+	oc[5] = make([]providers.Provider, 0)
+	oc[6] = make([]providers.Provider, 0)
 
 	p := providers.NewNetwork(c.WAN, cc.Docker, l)
-	oc = append(oc, p)
+	oc[0] = append(oc[0], p)
 
 	for _, n := range c.Networks {
 		p := providers.NewNetwork(n, cc.Docker, l)
-		oc = append(oc, p)
+		oc[0] = append(oc[0], p)
 	}
 
 	for _, c := range c.Containers {
 		p := providers.NewContainer(*c, cc.ContainerTasks, l)
-		oc = append(oc, p)
+		oc[1] = append(oc[1], p)
 	}
 
 	for _, c := range c.Clusters {
 		p := providers.NewCluster(*c, cc.ContainerTasks, cc.Kubernetes, l)
-		oc = append(oc, p)
+		oc[2] = append(oc[2], p)
 	}
 
 	for _, c := range c.HelmCharts {
 		p := providers.NewHelm(c, cc.Kubernetes, l)
-		oc = append(oc, p)
+		oc[3] = append(oc[3], p)
 	}
 
 	for _, c := range c.K8sConfig {
 		p := providers.NewK8sConfig(c, cc.Kubernetes, l)
-		oc = append(oc, p)
+		oc[4] = append(oc[4], p)
 	}
 
 	for _, c := range c.Ingresses {
 		p := providers.NewIngress(*c, cc.ContainerTasks, l)
-		oc = append(oc, p)
+		oc[1] = append(oc[1], p)
 	}
 
 	if c.Docs != nil {
 		p := providers.NewDocs(c.Docs, cc.ContainerTasks, l)
-		oc = append(oc, p)
+		oc[5] = append(oc[5], p)
 	}
 
 	for _, c := range c.LocalExecs {
 		p := providers.NewLocalExec(c, cc.Command, l)
-		oc = append(oc, p)
+		oc[6] = append(oc[6], p)
 	}
 
 	for _, c := range c.RemoteExecs {
 		p := providers.NewRemoteExec(*c, cc.ContainerTasks, l)
-		oc = append(oc, p)
+		oc[6] = append(oc[6], p)
 	}
 
 	return oc

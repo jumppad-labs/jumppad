@@ -6,8 +6,10 @@ import (
 	"os/exec"
 	"runtime"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/otiai10/copy"
 
+	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/spf13/cobra"
 )
@@ -131,9 +133,15 @@ var runCmd = &cobra.Command{
 				openCommand = "xdg-open"
 			}
 
+			c := clients.NewHTTP(30*time.Seconds, hclog.Default())
+
 			for _, b := range e.Blueprint().BrowserWindows {
-				cmd := exec.Command(openCommand, b)
-				cmd.Run()
+				// health check the URL
+				err := c.HealthCheckHTTP(b)
+				if err != nil {
+					cmd := exec.Command(openCommand, b)
+					cmd.Run()
+				}
 			}
 		}
 	},
