@@ -15,6 +15,7 @@ type Clients struct {
 	Docker         clients.Docker
 	ContainerTasks clients.ContainerTasks
 	Kubernetes     clients.Kubernetes
+	HTTP           clients.HTTP
 	Command        clients.Command
 }
 
@@ -39,11 +40,14 @@ func GenerateClients(l hclog.Logger) (*Clients, error) {
 
 	ct := clients.NewDockerTasks(dc, l)
 
+	hc := clients.NewHTTP(60*time.Second, l)
+
 	return &Clients{
 		ContainerTasks: ct,
 		Docker:         dc,
 		Kubernetes:     kc,
 		Command:        ec,
+		HTTP:           hc,
 	}, nil
 }
 
@@ -205,8 +209,8 @@ func generateProviders(c *config.Config, cc *Clients, l hclog.Logger) [][]provid
 	}
 
 	for _, c := range c.Clusters {
-		p := providers.NewCluster(*c, cc.ContainerTasks, cc.Kubernetes, l)
-		oc[2] = append(oc[2], p)
+		p := providers.NewCluster(*c, cc.ContainerTasks, cc.Kubernetes, cc.HTTP, l)
+		oc = append(oc, p)
 	}
 
 	for _, c := range c.HelmCharts {
