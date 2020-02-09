@@ -17,6 +17,8 @@ func setupNomadMocks() (config.Cluster, *mocks.MockContainerTasks, *mocks.MockHT
 	md.On("CreateContainer", mock.Anything).Return("", nil)
 
 	hc := &mocks.MockHTTP{}
+	hc.On("HealthCheckHTTP", mock.Anything, mock.Anything).Return(nil)
+	hc.On("HealthCheckNomad", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	nc := testNomadClusterConfig
 

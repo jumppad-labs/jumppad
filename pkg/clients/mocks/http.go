@@ -1,7 +1,7 @@
 package mocks
 
 import (
-	"net/http"
+	"time"
 
 	"github.com/stretchr/testify/mock"
 )
@@ -12,12 +12,14 @@ type MockHTTP struct {
 	mock.Mock
 }
 
-func (m *MockHTTP) Get(url string) (*http.Response, error) {
-	args := m.Called(url)
+func (m *MockHTTP) HealthCheckHTTP(uri string, timeout time.Duration) error {
+	args := m.Called(uri, timeout)
 
-	if r, ok := args.Get(0).(*http.Response); ok {
-		return r, args.Error(1)
-	}
+	return args.Error(0)
+}
 
-	return nil, args.Error(1)
+func (m *MockHTTP) HealthCheckNomad(api_addr string, nodeCount int, timeout time.Duration) error {
+	args := m.Called(api_addr, nodeCount, timeout)
+
+	return args.Error(0)
 }
