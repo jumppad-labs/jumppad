@@ -40,7 +40,7 @@ func GenerateClients(l hclog.Logger) (*Clients, error) {
 
 	ct := clients.NewDockerTasks(dc, l)
 
-	hc := clients.NewHTTP(60*time.Second, l)
+	hc := clients.NewHTTP(1*time.Second, l)
 
 	return &Clients{
 		ContainerTasks: ct,

@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -134,16 +135,24 @@ var runCmd = &cobra.Command{
 				openCommand = "xdg-open"
 			}
 
-			c := clients.NewHTTP(30*time.Second, hclog.Default())
+			c := clients.NewHTTP(1*time.Second, hclog.Default())
+			wg := sync.WaitGroup{}
 
 			for _, b := range e.Blueprint().BrowserWindows {
-				// health check the URL
-				err := c.HealthCheckHTTP(b, 30*time.Second)
-				if err != nil {
-					cmd := exec.Command(openCommand, b)
-					cmd.Run()
-				}
+				wg.Add(1)
+				go func(uri string) {
+					// health check the URL
+					err := c.HealthCheckHTTP(uri, 30*time.Second)
+					if err == nil {
+						cmd := exec.Command(openCommand, uri)
+						cmd.Run()
+					}
+
+					wg.Done()
+				}(b)
 			}
+
+			wg.Wait()
 		}
 	},
 }
