@@ -34,24 +34,24 @@ func TestCorrectlyGeneratesProviders(t *testing.T) {
 	oc := generateProviders(c, cl, hclog.NewNullLogger())
 
 	// first element should be a network
-	assert.Len(t, oc, 6)
+	assert.Len(t, oc, 7)
 
 	// WAN network
-	_, ok := oc[0].(*providers.Network)
+	_, ok := oc[0][0].(*providers.Network)
 	assert.True(t, ok)
 
-	_, ok = oc[1].(*providers.Network)
+	_, ok = oc[0][1].(*providers.Network)
 	assert.True(t, ok)
 
-	_, ok = oc[2].(*providers.Container)
+	_, ok = oc[1][0].(*providers.Container)
 	assert.True(t, ok)
 
-	_, ok = oc[3].(*providers.Cluster)
+	_, ok = oc[1][1].(*providers.Ingress)
 	assert.True(t, ok)
 
-	_, ok = oc[4].(*providers.Helm)
+	_, ok = oc[2][0].(*providers.Cluster)
 	assert.True(t, ok)
 
-	_, ok = oc[5].(*providers.Ingress)
+	_, ok = oc[3][0].(*providers.Helm)
 	assert.True(t, ok)
 }

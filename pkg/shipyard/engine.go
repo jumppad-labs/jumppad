@@ -208,6 +208,11 @@ func generateProviders(c *config.Config, cc *Clients, l hclog.Logger) [][]provid
 		oc[1] = append(oc[1], p)
 	}
 
+	for _, c := range c.Ingresses {
+		p := providers.NewIngress(*c, cc.ContainerTasks, l)
+		oc[1] = append(oc[1], p)
+	}
+
 	for _, c := range c.Clusters {
 		p := providers.NewCluster(*c, cc.ContainerTasks, cc.Kubernetes, cc.HTTP, l)
 		oc[2] = append(oc[2], p)
@@ -221,11 +226,6 @@ func generateProviders(c *config.Config, cc *Clients, l hclog.Logger) [][]provid
 	for _, c := range c.K8sConfig {
 		p := providers.NewK8sConfig(c, cc.Kubernetes, l)
 		oc[4] = append(oc[4], p)
-	}
-
-	for _, c := range c.Ingresses {
-		p := providers.NewIngress(*c, cc.ContainerTasks, l)
-		oc[1] = append(oc[1], p)
 	}
 
 	if c.Docs != nil {
