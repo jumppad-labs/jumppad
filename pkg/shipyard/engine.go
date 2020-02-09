@@ -210,7 +210,7 @@ func generateProviders(c *config.Config, cc *Clients, l hclog.Logger) [][]provid
 
 	for _, c := range c.Clusters {
 		p := providers.NewCluster(*c, cc.ContainerTasks, cc.Kubernetes, cc.HTTP, l)
-		oc = append(oc, p)
+		oc[2] = append(oc[2], p)
 	}
 
 	for _, c := range c.HelmCharts {

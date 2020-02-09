@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/otiai10/copy"
@@ -133,11 +134,11 @@ var runCmd = &cobra.Command{
 				openCommand = "xdg-open"
 			}
 
-			c := clients.NewHTTP(30*time.Seconds, hclog.Default())
+			c := clients.NewHTTP(30*time.Second, hclog.Default())
 
 			for _, b := range e.Blueprint().BrowserWindows {
 				// health check the URL
-				err := c.HealthCheckHTTP(b)
+				err := c.HealthCheckHTTP(b, 30*time.Second)
 				if err != nil {
 					cmd := exec.Command(openCommand, b)
 					cmd.Run()
