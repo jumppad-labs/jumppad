@@ -48,6 +48,7 @@ func setupClusterMocks() (config.Cluster, *mocks.MockContainerTasks, *mocks.Mock
 	kcf.WriteString(kubeconfig)
 	kcf.Close()
 
+	// create the Kubernetes client mock
 	mk := &mocks.MockKubernetes{}
 	mk.Mock.On("SetConfig", mock.Anything).Return(nil)
 	mk.Mock.On("HealthCheckPods", mock.Anything, mock.Anything).Return(nil)
@@ -68,7 +69,7 @@ func TestClusterK3ErrorsWhenUnableToLookupIDs(t *testing.T) {
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
 	mk := &mocks.MockKubernetes{}
-	p := NewCluster(clusterConfig, md, mk, hclog.NewNullLogger())
+	p := NewCluster(clusterConfig, md, mk, nil, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -79,7 +80,7 @@ func TestClusterK3ErrorsWhenClusterExists(t *testing.T) {
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
 
 	mk := &mocks.MockKubernetes{}
-	p := NewCluster(clusterConfig, md, mk, hclog.NewNullLogger())
+	p := NewCluster(clusterConfig, md, mk, nil, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -89,7 +90,7 @@ func TestClusterK3PullsImage(t *testing.T) {
 	cc, md, mk, cleanup := setupClusterMocks()
 	defer cleanup()
 
-	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+	p := NewCluster(cc, md, mk, nil, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -100,7 +101,7 @@ func TestClusterK3CreatesANewVolume(t *testing.T) {
 	cc, md, mk, cleanup := setupClusterMocks()
 	defer cleanup()
 
-	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+	p := NewCluster(cc, md, mk, nil, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -114,7 +115,7 @@ func TestClusterK3FailsWhenUnableToCreatesANewVolume(t *testing.T) {
 	removeOn(&md.Mock, "CreateVolume")
 	md.On("CreateVolume", mock.Anything, mock.Anything).Return("", fmt.Errorf("boom"))
 
-	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+	p := NewCluster(cc, md, mk, nil, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -125,7 +126,7 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 	cc, md, mk, cleanup := setupClusterMocks()
 	defer cleanup()
 
-	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+	p := NewCluster(cc, md, mk, nil, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -164,7 +165,7 @@ func TestClusterK3sErrorsIfServerNOTStart(t *testing.T) {
 		nil,
 	)
 
-	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+	p := NewCluster(cc, md, mk, nil, hclog.NewNullLogger())
 	startTimeout = 10 * time.Millisecond // reset the startTimeout, do not want to wait 120s
 
 	err := p.Create()
@@ -175,7 +176,7 @@ func TestClusterK3sDownloadsConfig(t *testing.T) {
 	cc, md, mk, cleanup := setupClusterMocks()
 	defer cleanup()
 
-	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+	p := NewCluster(cc, md, mk, nil, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -194,7 +195,7 @@ func TestClusterK3sRaisesErrorWhenUnableToDownloadConfig(t *testing.T) {
 	removeOn(&md.Mock, "CopyFromContainer")
 	md.On("CopyFromContainer", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
-	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+	p := NewCluster(cc, md, mk, nil, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -204,7 +205,7 @@ func TestClusterK3sCreatesDockerConfig(t *testing.T) {
 	cc, md, mk, cleanup := setupClusterMocks()
 	defer cleanup()
 
-	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+	p := NewCluster(cc, md, mk, nil, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -227,7 +228,7 @@ func TestClusterK3sCreatesKubeClient(t *testing.T) {
 	cc, md, mk, cleanup := setupClusterMocks()
 	defer cleanup()
 
-	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+	p := NewCluster(cc, md, mk, nil, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -241,7 +242,7 @@ func TestClusterK3sErrorsWhenFailedToCreateKubeClient(t *testing.T) {
 	removeOn(&mk.Mock, "SetConfig")
 	mk.Mock.On("SetConfig", mock.Anything).Return(fmt.Errorf("boom"))
 
-	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+	p := NewCluster(cc, md, mk, nil, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -251,7 +252,7 @@ func TestClusterK3sWaitsForPods(t *testing.T) {
 	cc, md, mk, cleanup := setupClusterMocks()
 	defer cleanup()
 
-	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+	p := NewCluster(cc, md, mk, nil, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -264,7 +265,7 @@ func TestClusterK3sErrorsWhenWaitsForPodsFail(t *testing.T) {
 	removeOn(&mk.Mock, "HealthCheckPods")
 	mk.On("HealthCheckPods", mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
-	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+	p := NewCluster(cc, md, mk, nil, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -274,7 +275,7 @@ func TestClusterK3sImportDockerImagesPullsImages(t *testing.T) {
 	cc, md, mk, cleanup := setupClusterMocks()
 	defer cleanup()
 
-	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+	p := NewCluster(cc, md, mk, nil, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -286,7 +287,7 @@ func TestClusterK3sImportDockerCopiesImages(t *testing.T) {
 	cc, md, mk, cleanup := setupClusterMocks()
 	defer cleanup()
 
-	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+	p := NewCluster(cc, md, mk, nil, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -298,7 +299,7 @@ func TestClusterK3sImportDockerCopyImageFailReturnsError(t *testing.T) {
 	md.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything).Return("", fmt.Errorf("boom"))
 	defer cleanup()
 
-	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+	p := NewCluster(cc, md, mk, nil, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -308,7 +309,7 @@ func TestClusterK3sImportDockerRunsExecCommand(t *testing.T) {
 	cc, md, mk, cleanup := setupClusterMocks()
 	defer cleanup()
 
-	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+	p := NewCluster(cc, md, mk, nil, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -321,7 +322,7 @@ func TestClusterK3sImportDockerExecFailReturnsError(t *testing.T) {
 	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 	defer cleanup()
 
-	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+	p := NewCluster(cc, md, mk, nil, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -332,7 +333,7 @@ func TestClusterK3sDestroyGetsIDr(t *testing.T) {
 	cc, md, mk, cleanup := setupClusterMocks()
 	defer cleanup()
 
-	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+	p := NewCluster(cc, md, mk, nil, hclog.NewNullLogger())
 
 	err := p.Destroy()
 	assert.NoError(t, err)
@@ -345,7 +346,7 @@ func TestClusterK3sDestroyWithFindIDErrorReturnsError(t *testing.T) {
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 	defer cleanup()
 
-	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+	p := NewCluster(cc, md, mk, nil, hclog.NewNullLogger())
 
 	err := p.Destroy()
 	assert.Error(t, err)
@@ -357,7 +358,7 @@ func TestClusterK3sDestroyWithNoIDReturns(t *testing.T) {
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, nil)
 	defer cleanup()
 
-	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+	p := NewCluster(cc, md, mk, nil, hclog.NewNullLogger())
 
 	err := p.Destroy()
 	assert.NoError(t, err)
@@ -370,7 +371,7 @@ func TestClusterK3sDestroyRemovesContainer(t *testing.T) {
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"found"}, nil)
 	defer cleanup()
 
-	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+	p := NewCluster(cc, md, mk, nil, hclog.NewNullLogger())
 
 	err := p.Destroy()
 	assert.NoError(t, err)
@@ -381,7 +382,7 @@ func TestClusterK3sDestroyRemovesVolume(t *testing.T) {
 	cc, md, mk, cleanup := setupClusterMocks()
 	defer cleanup()
 
-	p := NewCluster(cc, md, mk, hclog.NewNullLogger())
+	p := NewCluster(cc, md, mk, nil, hclog.NewNullLogger())
 
 	err := p.Destroy()
 	assert.NoError(t, err)

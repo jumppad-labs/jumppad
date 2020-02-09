@@ -18,12 +18,13 @@ type Cluster struct {
 	config     config.Cluster
 	client     clients.ContainerTasks
 	kubeClient clients.Kubernetes
+	httpClient clients.HTTP
 	log        hclog.Logger
 }
 
 // NewCluster creates a new
-func NewCluster(c config.Cluster, cc clients.ContainerTasks, kc clients.Kubernetes, l hclog.Logger) *Cluster {
-	return &Cluster{c, cc, kc, l}
+func NewCluster(c config.Cluster, cc clients.ContainerTasks, kc clients.Kubernetes, hc clients.HTTP, l hclog.Logger) *Cluster {
+	return &Cluster{c, cc, kc, hc, l}
 }
 
 // Create implements interface method to create a cluster of the specified type

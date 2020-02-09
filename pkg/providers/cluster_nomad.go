@@ -73,13 +73,13 @@ func (c *Cluster) createNomad() error {
 	}
 
 	// wait for nomad to start
-	err = healthCheckHTTP(fmt.Sprintf("http://localhost:%d/v1/status/leader", apiPort), 60*time.Second, c.log)
+	err = c.httpClient.HealthCheckHTTP(fmt.Sprintf("http://localhost:%d/v1/status/leader", apiPort), 60*time.Second)
 	if err != nil {
 		return err
 	}
 
 	// ensure all client nodes are up
-	err = healthCheckNomad(fmt.Sprintf("http://localhost:%d", apiPort), c.config.Nodes, 60*time.Second, c.log)
+	err = c.httpClient.HealthCheckNomad(fmt.Sprintf("http://localhost:%d", apiPort), c.config.Nodes, 60*time.Second)
 	if err != nil {
 		return err
 	}

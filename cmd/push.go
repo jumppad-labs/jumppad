@@ -46,6 +46,7 @@ var pushCmd = &cobra.Command{
 			pc,
 			dt,
 			nil,
+			nil,
 			createLogger(),
 		)
 
