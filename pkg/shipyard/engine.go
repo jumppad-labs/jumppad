@@ -2,6 +2,7 @@ package shipyard
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -91,8 +92,10 @@ func NewWithFolder(folder string, l hclog.Logger) (*Engine, error) {
 }
 
 // NewFromState creates an engine from the statefile rather than the provided blueprint
-func NewFromState(statePath string, l hclog.Logger) (*Engine, error) {
-	cc, err := configFromState(statePath)
+func NewFromState(l hclog.Logger) (*Engine, error) {
+	e := &Engine{}
+
+	cc, err := e.configFromState(utils.StatePath())
 	if err != nil {
 		return nil, err
 	}
@@ -108,107 +111,13 @@ func NewFromState(statePath string, l hclog.Logger) (*Engine, error) {
 		return nil, err
 	}
 
-	e := New(cc, cl, l)
+	e.clients = cl
+	e.config = cc
+	e.log = l
+	e.generateProviders = generateProvidersImpl
+	e.stateLock = sync.Mutex{}
 
 	return e, nil
-}
-
-func configFromState(path string) (*config.Config, error) {
-	cc, err := config.New()
-
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	s := []interface{}{}
-	jd := json.NewDecoder(f)
-	jd.Decode(&s)
-
-	// for each item set the config
-	for _, c := range s {
-		switch c.(map[string]interface{})["Type"].(string) {
-		case "config.Network":
-
-			n := &config.Network{}
-			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-			if err != nil {
-				return nil, err
-			}
-
-			// do not add the wan as this is automatically created
-			if n.Name != "wan" {
-				cc.Networks = append(cc.Networks, n)
-			}
-		case "config.Docs":
-			n := &config.Docs{}
-			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-			if err != nil {
-				return nil, err
-			}
-
-			cc.Docs = n
-		case "config.Cluster":
-			n := &config.Cluster{}
-			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-			if err != nil {
-				return nil, err
-			}
-
-			cc.Clusters = append(cc.Clusters, n)
-		case "config.Container":
-			n := &config.Container{}
-			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-			if err != nil {
-				return nil, err
-			}
-
-			cc.Containers = append(cc.Containers, n)
-		case "config.Helm":
-			n := &config.Helm{}
-			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-			if err != nil {
-				return nil, err
-			}
-
-			cc.HelmCharts = append(cc.HelmCharts, n)
-		case "config.K8sConfig":
-			n := &config.K8sConfig{}
-			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-			if err != nil {
-				return nil, err
-			}
-
-			cc.K8sConfig = append(cc.K8sConfig, n)
-		case "config.Ingress":
-			n := &config.Ingress{}
-			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-			if err != nil {
-				return nil, err
-			}
-
-			cc.Ingresses = append(cc.Ingresses, n)
-		case "config.LocalExec":
-			n := &config.LocalExec{}
-			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-			if err != nil {
-				return nil, err
-			}
-
-			cc.LocalExecs = append(cc.LocalExecs, n)
-		case "config.RemoteExec":
-			n := &config.RemoteExec{}
-			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-			if err != nil {
-				return nil, err
-			}
-
-			cc.RemoteExecs = append(cc.RemoteExecs, n)
-		}
-	}
-
-	return cc, nil
 }
 
 // New engine using the given configuration and clients
@@ -222,16 +131,24 @@ func New(c *config.Config, cc *Clients, l hclog.Logger) *Engine {
 		stateLock:         sync.Mutex{},
 	}
 
-	p := e.generateProviders(c, cc, l)
-	e.providers = p
-
 	return e
 }
 
 // Apply the current config creating the resources
 func (e *Engine) Apply() error {
+	// load the existing state
+	sc, err := e.configFromState(utils.StatePath())
+	if err != nil {
+		return err
+	}
 
-	var err error
+	stateProviders := e.generateProviders(sc, e.clients, e.log)
+
+	// remove resources already in the state from the new config
+	e.config = e.removeConfigItems(e.config, sc)
+
+	e.providers = e.generateProviders(e.config, e.clients, e.log)
+
 	// loop through each group
 	for _, g := range e.providers {
 		// apply the provider in parallel
@@ -239,6 +156,13 @@ func (e *Engine) Apply() error {
 		if createErr != nil {
 			err = createErr
 			break
+		}
+	}
+
+	// add existing serialized state
+	for _, g := range stateProviders {
+		for _, p := range g {
+			e.state = append(e.state, p.Config())
 		}
 	}
 
@@ -250,15 +174,20 @@ func (e *Engine) Apply() error {
 
 // Destroy the resources defined by the config
 func (e *Engine) Destroy() error {
+	e.providers = e.generateProviders(e.config, e.clients, e.log)
+
 	// should run through the providers in reverse order
 	// to ensure objects with dependencies are destroyed first
 	for i := len(e.providers) - 1; i > -1; i-- {
 
 		err := e.destroyParallel(e.providers[i])
 		if err != nil {
-			return err
+			e.log.Error("Error destroying resource", "error", err)
 		}
 	}
+
+	// remove the state
+	os.RemoveAll(utils.StatePath())
 
 	return nil
 }
@@ -362,6 +291,251 @@ func (e *Engine) saveState() error {
 	return ne.Encode(e.state)
 }
 
+func (e *Engine) configFromState(path string) (*config.Config, error) {
+	cc := &config.Config{}
+
+	// it is fine that the state might not exist
+	f, err := os.Open(path)
+	if err != nil {
+		e.log.Debug("State file does not exist", "err", err)
+		return cc, nil
+	}
+	defer f.Close()
+
+	s := []interface{}{}
+	jd := json.NewDecoder(f)
+	jd.Decode(&s)
+
+	// for each item set the config
+	for _, c := range s {
+		switch c.(map[string]interface{})["Type"].(string) {
+		case "config.Network":
+
+			n := &config.Network{}
+			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+			if err != nil {
+				return nil, err
+			}
+
+			// do not add the wan as this is automatically created
+			if n.Name == "wan" {
+				cc.WAN = n
+			} else {
+				cc.Networks = append(cc.Networks, n)
+			}
+		case "config.Docs":
+			n := &config.Docs{}
+			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+			if err != nil {
+				return nil, err
+			}
+
+			cc.Docs = n
+		case "config.Cluster":
+			fmt.Println("cluster")
+			n := &config.Cluster{}
+			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+			if err != nil {
+				return nil, err
+			}
+
+			cc.Clusters = append(cc.Clusters, n)
+		case "config.Container":
+			n := &config.Container{}
+			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+			if err != nil {
+				return nil, err
+			}
+
+			cc.Containers = append(cc.Containers, n)
+		case "config.Helm":
+			n := &config.Helm{}
+			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+			if err != nil {
+				return nil, err
+			}
+
+			cc.HelmCharts = append(cc.HelmCharts, n)
+		case "config.K8sConfig":
+			n := &config.K8sConfig{}
+			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+			if err != nil {
+				return nil, err
+			}
+
+			cc.K8sConfig = append(cc.K8sConfig, n)
+		case "config.Ingress":
+			n := &config.Ingress{}
+			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+			if err != nil {
+				return nil, err
+			}
+
+			cc.Ingresses = append(cc.Ingresses, n)
+		case "config.LocalExec":
+			n := &config.LocalExec{}
+			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+			if err != nil {
+				return nil, err
+			}
+
+			cc.LocalExecs = append(cc.LocalExecs, n)
+		case "config.RemoteExec":
+			n := &config.RemoteExec{}
+			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+			if err != nil {
+				return nil, err
+			}
+
+			cc.RemoteExecs = append(cc.RemoteExecs, n)
+		}
+	}
+
+	return cc, nil
+}
+
+// remove config items removes items from the new config which are already in the state
+func (e *Engine) removeConfigItems(c *config.Config, state *config.Config) *config.Config {
+	ns, _ := config.New()
+
+	for _, sc := range c.Clusters {
+		found := false
+		for _, i := range state.Clusters {
+			if i.Name == sc.Name {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			ns.Clusters = append(ns.Clusters, sc)
+		} else {
+			e.log.Debug("Cluster already exists in state, ignoring from apply", "name", sc.Name)
+		}
+	}
+	for _, sc := range c.Containers {
+		found := false
+		for _, i := range state.Containers {
+			if i.Name == sc.Name {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			ns.Containers = append(ns.Containers, sc)
+		} else {
+			e.log.Debug("Container already exists in state, ignoring from apply", "name", sc.Name)
+		}
+	}
+	for _, sc := range c.Networks {
+		found := false
+		for _, i := range state.Networks {
+			if i.Name == sc.Name {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			ns.Networks = append(ns.Networks, sc)
+		} else {
+			e.log.Debug("Network already exists in state, ignoring from apply", "name", sc.Name)
+		}
+	}
+	for _, sc := range c.HelmCharts {
+		found := false
+		for _, i := range state.HelmCharts {
+			if i.Name == sc.Name {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			ns.HelmCharts = append(ns.HelmCharts, sc)
+		} else {
+			e.log.Debug("Helm Chart already exists in state, ignoring from apply", "name", sc.Name)
+		}
+	}
+	for _, sc := range c.K8sConfig {
+		found := false
+		for _, i := range state.K8sConfig {
+			if i.Name == sc.Name {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			ns.K8sConfig = append(ns.K8sConfig, sc)
+		} else {
+			e.log.Debug("Kubernetes config already exists in state, ignoring from apply", "name", sc.Name)
+		}
+	}
+	for _, sc := range c.Ingresses {
+		found := false
+		for _, i := range state.Ingresses {
+			if i.Name == sc.Name {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			ns.Ingresses = append(ns.Ingresses, sc)
+		} else {
+			e.log.Debug("Ingress already exists in state, ignoring from apply", "name", sc.Name)
+		}
+	}
+	for _, sc := range c.LocalExecs {
+		found := false
+		for _, i := range state.LocalExecs {
+			if i.Name == sc.Name {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			ns.LocalExecs = append(ns.LocalExecs, sc)
+		} else {
+			e.log.Debug("LocalExec already exists in state, ignoring from apply", "name", sc.Name)
+		}
+	}
+	for _, sc := range c.RemoteExecs {
+		found := false
+		for _, i := range state.RemoteExecs {
+			if i.Name == sc.Name {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			ns.RemoteExecs = append(ns.RemoteExecs, sc)
+		} else {
+			e.log.Debug("RemoteExec already exists in state, ignoring from apply", "name", sc.Name)
+		}
+	}
+
+	if c.Docs != nil && state.Docs != nil {
+		if c.Docs.Name == state.Docs.Name {
+			e.log.Debug("Docs already exists in state, ignoring from apply", "name", c.Docs.Name)
+		} else {
+			ns.Docs = c.Docs
+		}
+	}
+
+	if state.WAN != nil {
+		e.log.Debug("WAN Network already exists in state, ignoring from apply", "name", state.WAN)
+	} else {
+		ns.WAN = c.WAN
+	}
+
+	return ns
+}
+
 // generateProviders returns providers grouped together in order of execution
 func generateProvidersImpl(c *config.Config, cc *Clients, l hclog.Logger) [][]providers.Provider {
 	oc := make([][]providers.Provider, 7)
@@ -373,8 +547,10 @@ func generateProvidersImpl(c *config.Config, cc *Clients, l hclog.Logger) [][]pr
 	oc[5] = make([]providers.Provider, 0)
 	oc[6] = make([]providers.Provider, 0)
 
-	p := providers.NewNetwork(c.WAN, cc.Docker, l)
-	oc[0] = append(oc[0], p)
+	if c.WAN != nil {
+		p := providers.NewNetwork(c.WAN, cc.Docker, l)
+		oc[0] = append(oc[0], p)
+	}
 
 	for _, n := range c.Networks {
 		p := providers.NewNetwork(n, cc.Docker, l)

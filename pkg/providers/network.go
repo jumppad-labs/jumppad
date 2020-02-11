@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
@@ -26,6 +27,18 @@ func NewNetwork(co *config.Network, cl clients.Docker, l hclog.Logger) *Network 
 func (n *Network) Create() error {
 	n.log.Info("Creating Network", "ref", n.config.Name)
 
+	// check if the network exists
+	ids, err := n.Lookup()
+	if err != nil {
+		return err
+	}
+
+	// exists do not create
+	if len(ids) > 0 {
+		n.log.Info("Network already exists, skip creation", "ref", n.config.Name)
+		return nil
+	}
+
 	opts := types.NetworkCreate{
 		CheckDuplicate: true,
 		Driver:         "bridge",
@@ -39,7 +52,7 @@ func (n *Network) Create() error {
 		Attachable: true,
 	}
 
-	_, err := n.client.NetworkCreate(context.Background(), n.config.Name, opts)
+	_, err = n.client.NetworkCreate(context.Background(), n.config.Name, opts)
 	return err
 }
 
@@ -52,7 +65,19 @@ func (n *Network) Destroy() error {
 
 // Lookup the ID for a network
 func (n *Network) Lookup() ([]string, error) {
-	return []string{}, nil
+	args := filters.NewArgs()
+	args.Add("name", n.config.Name)
+	nets, err := n.client.NetworkList(context.Background(), types.NetworkListOptions{Filters: args})
+	if err != nil {
+		return nil, err
+	}
+
+	ids := []string{}
+	for _, n := range nets {
+		ids = append(ids, n.ID)
+	}
+
+	return ids, nil
 }
 
 // Config returns the config for the provider

@@ -7,6 +7,11 @@ import (
 
 type MockProvider struct {
 	mock.Mock
+	config providers.ConfigWrapper
+}
+
+func New(c providers.ConfigWrapper) *MockProvider {
+	return &MockProvider{config: c}
 }
 
 func (m *MockProvider) Create() error {
@@ -25,11 +30,7 @@ func (m *MockProvider) Lookup() ([]string, error) {
 }
 
 func (m *MockProvider) Config() providers.ConfigWrapper {
-	args := m.Called()
+	m.Called()
 
-	if cw, ok := args.Get(0).(providers.ConfigWrapper); ok {
-		return cw
-	}
-
-	return providers.ConfigWrapper{}
+	return m.config
 }

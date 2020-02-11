@@ -3,6 +3,7 @@ package shipyard
 import (
 	"encoding/json"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/docker/docker/pkg/ioutils"
@@ -15,14 +16,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func setupTests() (*Engine, *config.Config, *mocks.MockProvider, func()) {
+func setupTests() (*Engine, *config.Config, func()) {
 	//md := &clients.MockDocker{}
-	w1 := &config.Network{Name: "wan"}
 	n1 := &config.Network{Name: "network1"}
-	c1 := &config.Container{Name: "container1", Network: "network.network1", NetworkRef: n1}
-	cl1 := &config.Cluster{Name: "cluster1", Network: "network.network1", NetworkRef: n1}
-	h1 := &config.Helm{Name: "helm1", Cluster: "cluster.cluster1", ClusterRef: cl1}
-	i1 := &config.Ingress{Name: "ingress1", Target: "cluster.cluster1", TargetRef: cl1}
+	c1 := &config.Container{Name: "container1", Network: "network.network1"}
+	cl1 := &config.Cluster{Name: "cluster1", Network: "network.network1"}
+	h1 := &config.Helm{Name: "helm1", Cluster: "cluster.cluster1"}
+	i1 := &config.Ingress{Name: "ingress1", Target: "cluster.cluster1"}
 
 	c, _ := config.New()
 	c.Containers = []*config.Container{c1}
@@ -31,18 +31,14 @@ func setupTests() (*Engine, *config.Config, *mocks.MockProvider, func()) {
 	c.Ingresses = []*config.Ingress{i1}
 	c.HelmCharts = []*config.Helm{h1}
 
-	mp := &mocks.MockProvider{}
-	mp.On("Create").Return(nil)
-	mp.On("Config").Return(providers.ConfigWrapper{Type: "config.Network", Value: w1}).Once()
-	mp.On("Config").Return(providers.ConfigWrapper{Type: "config.Network", Value: n1}).Once()
-	mp.On("Config").Return(providers.ConfigWrapper{Type: "config.Container", Value: c1}).Once()
-	mp.On("Config").Return(providers.ConfigWrapper{Type: "config.Cluster", Value: cl1}).Once()
-	mp.On("Config").Return(providers.ConfigWrapper{Type: "config.Helm", Value: h1}).Once()
-	mp.On("Config").Return(providers.ConfigWrapper{Type: "config.Ingress", Value: i1}).Once()
-
 	cl := &Clients{}
-	e := New(c, cl, hclog.NewNullLogger())
-	e.providers = generateProvidersMock(c, cl, mp, hclog.NewNullLogger())
+	e := &Engine{
+		clients:           cl,
+		config:            c,
+		log:               hclog.NewNullLogger(),
+		generateProviders: generateProvidersMock,
+		stateLock:         sync.Mutex{},
+	}
 
 	// set the home folder to a tmpFolder for the tests
 	dir, err := ioutils.TempDir("", "")
@@ -53,14 +49,14 @@ func setupTests() (*Engine, *config.Config, *mocks.MockProvider, func()) {
 	home := os.Getenv("HOME")
 	os.Setenv("HOME", dir)
 
-	return e, c, mp, func() {
+	return e, c, func() {
 		os.Setenv("HOME", home)
 		os.RemoveAll(dir)
 	}
 }
 
 func TestCorrectlyGeneratesProviders(t *testing.T) {
-	_, c, _, cleanup := setupTests()
+	_, c, cleanup := setupTests()
 	defer cleanup()
 
 	cl := &Clients{}
@@ -91,19 +87,33 @@ func TestCorrectlyGeneratesProviders(t *testing.T) {
 	assert.True(t, ok)
 }
 
-func TestApplyCallsProviderCreate(t *testing.T) {
-	e, _, mp, cleanup := setupTests()
+func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
+	e, _, cleanup := setupTests()
 	defer cleanup()
 
 	err := e.Apply()
 	assert.NoError(t, err)
 
 	// should have call create for each provider
-	mp.AssertNumberOfCalls(t, "Create", 6)
+	testAssertMethodCalled(t, e.providers, "Create", 6)
+}
+
+func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
+	e, _, cleanup := setupTests()
+	defer cleanup()
+
+	err := e.Apply()
+	assert.NoError(t, err)
+
+	err = e.Destroy()
+	assert.NoError(t, err)
+
+	// should have call create for each provider
+	testAssertMethodCalled(t, e.providers, "Destroy", 6)
 }
 
 func TestApplyGeneratesState(t *testing.T) {
-	e, _, _, cleanup := setupTests()
+	e, _, cleanup := setupTests()
 	defer cleanup()
 
 	err := e.Apply()
@@ -120,20 +130,61 @@ func TestApplyGeneratesState(t *testing.T) {
 	assert.Len(t, s, 6)
 }
 
+func TestApplyWithExistingStateDoesNotRecreateItems(t *testing.T) {
+	e, c, cleanup := setupTests()
+	defer cleanup()
+
+	// generate some state, use the initial network
+	ep := []providers.ConfigWrapper{providers.ConfigWrapper{Type: "config.Network", Value: c.Networks[0]}}
+	testCreateStateFile(ep)
+
+	err := e.Apply()
+	assert.NoError(t, err)
+
+	// should have call create for each provider
+	testAssertMethodCalled(t, e.providers, "Create", 5)
+}
+
+func testCreateStateFile(p []providers.ConfigWrapper) {
+	e := Engine{log: hclog.NewNullLogger()}
+	e.state = p
+	e.saveState()
+}
+
 func TestNewFromStateCreatesCorrectly(t *testing.T) {
-	e, _, _, cleanup := setupTests()
+	e, _, cleanup := setupTests()
 	defer cleanup()
 
 	err := e.Apply()
 	assert.NoError(t, err)
 
 	// load from the state
-	e, err = NewFromState(utils.StatePath(), hclog.NewNullLogger())
+	e, err = NewFromState(hclog.NewNullLogger())
 	assert.NoError(t, err)
 }
 
+func testAssertMethodCalled(t *testing.T, p [][]providers.Provider, method string, n int, args ...interface{}) {
+	callCount := 0
+
+	for _, pg := range p {
+		for _, p := range pg {
+			// cast the provider into a mock
+			pm := p.(*mocks.MockProvider)
+			for _, c := range pm.Calls {
+				if c.Method == method {
+					callCount++
+				}
+			}
+		}
+	}
+
+	if callCount != n {
+		t.Fatalf("Expected %d calls got %d", n, callCount)
+	}
+}
+
 // generate mock providers rathen than concrete implemetations
-func generateProvidersMock(c *config.Config, cc *Clients, p providers.Provider, l hclog.Logger) [][]providers.Provider {
+func generateProvidersMock(c *config.Config, cc *Clients, l hclog.Logger) [][]providers.Provider {
 	oc := make([][]providers.Provider, 7)
 	oc[0] = make([]providers.Provider, 0)
 	oc[1] = make([]providers.Provider, 0)
@@ -144,41 +195,101 @@ func generateProvidersMock(c *config.Config, cc *Clients, p providers.Provider, 
 	oc[6] = make([]providers.Provider, 0)
 
 	// add the wan
+	cw := providers.ConfigWrapper{Type: "config.Network", Value: c.WAN}
+	p := mocks.New(cw)
+	p.On("Create").Return(nil)
+	p.On("Destroy").Return(nil)
+	p.On("Config").Return(cw)
+
 	oc[0] = append(oc[0], p)
 
-	for _, _ = range c.Networks {
+	for _, n := range c.Networks {
+		cw = providers.ConfigWrapper{Type: "config.Network", Value: n}
+		p = mocks.New(cw)
+		p.On("Create").Return(nil)
+		p.On("Destroy").Return(nil)
+		p.On("Config").Return(cw)
+
 		oc[0] = append(oc[0], p)
 	}
 
-	for _, _ = range c.Containers {
+	for _, n := range c.Containers {
+		cw = providers.ConfigWrapper{Type: "config.Container", Value: n}
+		p = mocks.New(cw)
+		p.On("Create").Return(nil)
+		p.On("Destroy").Return(nil)
+		p.On("Config").Return(cw)
+
 		oc[1] = append(oc[1], p)
 	}
 
-	for _, _ = range c.Ingresses {
+	for _, n := range c.Ingresses {
+		cw = providers.ConfigWrapper{Type: "config.Ingress", Value: n}
+		p = mocks.New(cw)
+		p.On("Create").Return(nil)
+		p.On("Destroy").Return(nil)
+		p.On("Config").Return(cw)
+
 		oc[1] = append(oc[1], p)
 	}
 
 	if c.Docs != nil {
+		cw = providers.ConfigWrapper{Type: "config.Docs", Value: c.Docs}
+		p = mocks.New(cw)
+		p.On("Create").Return(nil)
+		p.On("Destroy").Return(nil)
+		p.On("Config").Return(cw)
+
 		oc[1] = append(oc[1], p)
 	}
 
-	for _, _ = range c.Clusters {
+	for _, n := range c.Clusters {
+		cw = providers.ConfigWrapper{Type: "config.Cluster", Value: n}
+		p = mocks.New(cw)
+		p.On("Create").Return(nil)
+		p.On("Destroy").Return(nil)
+		p.On("Config").Return(cw)
+
 		oc[2] = append(oc[2], p)
 	}
 
-	for _, _ = range c.HelmCharts {
+	for _, n := range c.HelmCharts {
+		cw = providers.ConfigWrapper{Type: "config.Helm", Value: n}
+		p = mocks.New(cw)
+		p.On("Create").Return(nil)
+		p.On("Destroy").Return(nil)
+		p.On("Config").Return(cw)
+
 		oc[3] = append(oc[3], p)
 	}
 
-	for _, _ = range c.K8sConfig {
+	for _, n := range c.K8sConfig {
+		cw = providers.ConfigWrapper{Type: "config.K8sConfig", Value: n}
+		p = mocks.New(cw)
+		p.On("Create").Return(nil)
+		p.On("Destroy").Return(nil)
+		p.On("Config").Return(cw)
+
 		oc[4] = append(oc[4], p)
 	}
 
-	for _, _ = range c.LocalExecs {
+	for _, n := range c.LocalExecs {
+		cw = providers.ConfigWrapper{Type: "config.LocalExec", Value: n}
+		p = mocks.New(cw)
+		p.On("Create").Return(nil)
+		p.On("Destroy").Return(nil)
+		p.On("Config").Return(cw)
+
 		oc[6] = append(oc[6], p)
 	}
 
-	for _, _ = range c.RemoteExecs {
+	for _, n := range c.RemoteExecs {
+		cw = providers.ConfigWrapper{Type: "config.RemoteExec", Value: n}
+		p = mocks.New(cw)
+		p.On("Create").Return(nil)
+		p.On("Destroy").Return(nil)
+		p.On("Config").Return(cw)
+
 		oc[6] = append(oc[6], p)
 	}
 

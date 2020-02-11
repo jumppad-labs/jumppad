@@ -21,7 +21,7 @@ var destroyCmd = &cobra.Command{
 		// When destroying a stack all the config
 		// which is created with apply is copied
 		// to the state folder
-		e, err := shipyard.NewFromState(utils.StatePath(), log)
+		e, err := shipyard.NewFromState(log)
 		if err != nil {
 			log.Error("Unable to load state", "error", err)
 			return
