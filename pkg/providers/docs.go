@@ -41,6 +41,9 @@ func (i *Docs) Create() error {
 		return err
 	}
 
+	// set the state
+	i.config.State = config.Applied
+
 	return nil
 }
 
@@ -199,4 +202,14 @@ func (i *Docs) Lookup() ([]string, error) {
 // Config returns the config for the provider
 func (c *Docs) Config() ConfigWrapper {
 	return ConfigWrapper{"config.Docs", c.config}
+}
+
+// State returns the state from the config
+func (c *Docs) State() config.State {
+	return c.config.State
+}
+
+// SetState updates the state in the config
+func (c *Docs) SetState(state config.State) {
+	c.config.State = state
 }

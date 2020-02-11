@@ -43,7 +43,7 @@ var runCmd = &cobra.Command{
 		// create the shipyard home
 		os.MkdirAll(utils.ShipyardHome(), os.FileMode(0755))
 
-		if !utils.IsLocalFolder(dst) {
+		if !utils.IsLocalFolder(dst) && !utils.IsHCLFile(dst) {
 			// fetch the remote server from github
 			dst, err = pullRemoteBlueprint(dst)
 			if err != nil {
@@ -53,9 +53,16 @@ var runCmd = &cobra.Command{
 		}
 
 		// Load the files
-		e, err := shipyard.NewWithFolder(dst, log)
+		var e *shipyard.Engine
+		e, err = shipyard.New(log)
 		if err != nil {
-			log.Error("Unable to load blueprint", "error", err)
+			log.Error("Unable to load config", "error", err)
+			return
+		}
+
+		err = e.Apply(dst)
+		if err != nil {
+			log.Error("Unable to apply blueprint", "error", err)
 			return
 		}
 
@@ -64,17 +71,7 @@ var runCmd = &cobra.Command{
 			fmt.Println("Title", e.Blueprint().Title)
 			fmt.Println("Author", e.Blueprint().Author)
 			fmt.Println("")
-		}
 
-		fmt.Printf("Creating %d resources\n\n", e.ResourceCount())
-
-		err = e.Apply()
-		if err != nil {
-			log.Error("Unable to apply blueprint", "error", err)
-			return
-		}
-
-		if e.Blueprint() != nil {
 			fmt.Println("")
 			fmt.Println(e.Blueprint().Intro)
 			fmt.Println("")

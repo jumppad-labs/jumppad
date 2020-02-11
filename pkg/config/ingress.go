@@ -3,6 +3,7 @@ package config
 // Ingress defines an ingress service mapping ports between local host or docker network and the target
 type Ingress struct {
 	Name       string
+	State      State
 	TargetRef  interface{}
 	NetworkRef *Network // automatically fetched from target
 	WANRef     *Network // automatically created

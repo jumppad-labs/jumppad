@@ -31,6 +31,10 @@ func (c *Container) Create() error {
 	}
 
 	_, err = c.client.CreateContainer(c.config)
+
+	// set the state
+	c.config.State = config.Applied
+
 	return err
 }
 
@@ -63,4 +67,14 @@ func (c *Container) Config() ConfigWrapper {
 // Lookup the ID based on the config
 func (c *Container) Lookup() ([]string, error) {
 	return c.client.FindContainerIDs(c.config.Name, c.config.NetworkRef.Name)
+}
+
+// State returns the state from the config
+func (c *Container) State() config.State {
+	return c.config.State
+}
+
+// SetState updates the state in the config
+func (c *Container) SetState(state config.State) {
+	c.config.State = state
 }

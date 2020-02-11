@@ -72,3 +72,13 @@ func (c *Cluster) Lookup() ([]string, error) {
 func (c *Cluster) Config() ConfigWrapper {
 	return ConfigWrapper{"config.Cluster", c.config}
 }
+
+// State returns the state from the config
+func (c *Cluster) State() config.State {
+	return c.config.State
+}
+
+// SetState updates the state in the config
+func (c *Cluster) SetState(state config.State) {
+	c.config.State = state
+}

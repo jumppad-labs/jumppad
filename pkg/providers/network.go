@@ -53,6 +53,13 @@ func (n *Network) Create() error {
 	}
 
 	_, err = n.client.NetworkCreate(context.Background(), n.config.Name, opts)
+	if err != nil {
+		return err
+	}
+
+	// set the state
+	n.config.State = config.Applied
+
 	return err
 }
 
@@ -83,4 +90,14 @@ func (n *Network) Lookup() ([]string, error) {
 // Config returns the config for the provider
 func (c *Network) Config() ConfigWrapper {
 	return ConfigWrapper{"config.Network", c.config}
+}
+
+// SetState updates the state in the config
+func (c *Network) SetState(state config.State) {
+	c.config.State = state
+}
+
+// State is the state from the config
+func (c *Network) State() config.State {
+	return c.config.State
 }

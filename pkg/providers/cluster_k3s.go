@@ -136,8 +136,14 @@ func (c *Cluster) createK3s() error {
 	// import the images to the servers container d instance
 	// importing images means that k3s does not need to pull from a remote docker hub
 	if c.config.Images != nil && len(c.config.Images) > 0 {
-		return c.ImportLocalDockerImages(c.config.Name, id, c.config.Images)
+		err := c.ImportLocalDockerImages(c.config.Name, id, c.config.Images)
+		if err != nil {
+			return xerrors.Errorf("Error importing Docker images: %w", err)
+		}
 	}
+
+	// set the state
+	c.config.State = config.Applied
 
 	return nil
 }

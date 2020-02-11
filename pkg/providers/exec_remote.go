@@ -74,6 +74,9 @@ func (c *RemoteExec) Create() error {
 		return c.client.RemoveContainer(targetID)
 	}
 
+	// set the state
+	c.config.State = config.Applied
+
 	return nil
 }
 
@@ -105,4 +108,14 @@ func (c *RemoteExec) Lookup() ([]string, error) {
 // Config returns the config for the provider
 func (c *RemoteExec) Config() ConfigWrapper {
 	return ConfigWrapper{"config.RemoteExec", c.config}
+}
+
+// State returns the state from the config
+func (c *RemoteExec) State() config.State {
+	return c.config.State
+}
+
+// SetState updates the state in the config
+func (c *RemoteExec) SetState(state config.State) {
+	c.config.State = state
 }

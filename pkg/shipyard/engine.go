@@ -65,108 +65,35 @@ func GenerateClients(l hclog.Logger) (*Clients, error) {
 	}, nil
 }
 
-// NewWithFolder creates a new shipyard engine with a given configuration folder
-func NewWithFolder(folder string, l hclog.Logger) (*Engine, error) {
+// New creates a new shipyard engine
+func New(l hclog.Logger) (*Engine, error) {
 	var err error
-
-	cc, err := config.New()
-	if err != nil {
-		return nil, err
-	}
-
-	err = config.ParseFolder(folder, cc)
-	if err != nil {
-		return nil, err
-	}
-
-	err = config.ParseReferences(cc)
-	if err != nil {
-		return nil, err
-	}
-
-	// create providers
-	cl, err := GenerateClients(l)
-	if err != nil {
-		return nil, err
-	}
-
-	e := New(cc, cl, l)
-
-	return e, nil
-}
-
-// NewFromState creates an engine from the statefile rather than the provided blueprint
-func NewFromState(l hclog.Logger) (*Engine, error) {
 	e := &Engine{}
+	e.log = l
+	e.generateProviders = generateProvidersImpl
 
-	cc, err := e.configFromState(utils.StatePath())
-	if err != nil {
-		return nil, err
-	}
-
-	err = config.ParseReferences(cc)
-	if err != nil {
-		return nil, err
-	}
-
-	// create providers
+	// create the clients
 	cl, err := GenerateClients(l)
 	if err != nil {
 		return nil, err
 	}
 
 	e.clients = cl
-	e.config = cc
-	e.log = l
-	e.generateProviders = generateProvidersImpl
-	e.stateLock = sync.Mutex{}
 
 	return e, nil
 }
 
-// New engine using the given configuration and clients
-func New(c *config.Config, cc *Clients, l hclog.Logger) *Engine {
-
-	e := &Engine{
-		clients:           cc,
-		config:            c,
-		log:               l,
-		generateProviders: generateProvidersImpl,
-		stateLock:         sync.Mutex{},
-	}
-
-	return e
-}
-
 // Apply the current config creating the resources
-func (e *Engine) Apply() error {
-	// load the existing state
-	sc, err := e.configFromState(utils.StatePath())
-	if err != nil {
-		return err
-	}
+func (e *Engine) Apply(path string) error {
+	err := e.readConfig(path, false)
 
-	stateProviders := e.generateProviders(sc, e.clients, e.log)
-
-	// remove resources already in the state from the new config
-	e.config = e.removeConfigItems(e.config, sc)
-
-	e.providers = e.generateProviders(e.config, e.clients, e.log)
-
-	// loop through each group
+	// loop through each group and apply
 	for _, g := range e.providers {
 		// apply the provider in parallel
 		createErr := e.createParallel(g)
 		if createErr != nil {
 			err = createErr
 			break
-		}
-	}
-
-	// add existing serialized state
-	for _, g := range stateProviders {
-		for _, p := range g {
-			e.state = append(e.state, p.Config())
 		}
 	}
 
@@ -177,21 +104,72 @@ func (e *Engine) Apply() error {
 }
 
 // Destroy the resources defined by the config
-func (e *Engine) Destroy() error {
-	e.providers = e.generateProviders(e.config, e.clients, e.log)
+func (e *Engine) Destroy(path string, allResources bool) error {
+	err := e.readConfig(path, true)
+	if err != nil {
+		return err
+	}
+
+	// if we are destroying all resources set the pending modification flag
+	if allResources {
+		for _, gp := range e.providers {
+			for _, p := range gp {
+				p.SetState(config.PendingModification)
+			}
+		}
+	}
 
 	// should run through the providers in reverse order
 	// to ensure objects with dependencies are destroyed first
 	for i := len(e.providers) - 1; i > -1; i-- {
-
 		err := e.destroyParallel(e.providers[i])
 		if err != nil {
 			e.log.Error("Error destroying resource", "error", err)
 		}
 	}
 
-	// remove the state
-	os.RemoveAll(utils.StatePath())
+	e.saveState()
+
+	return nil
+}
+
+func (e *Engine) readConfig(path string, delete bool) error {
+	// load the new config
+	cc, err := config.New()
+	if err != nil {
+		return err
+	}
+
+	if path != "" {
+		if utils.IsHCLFile(path) {
+			err = config.ParseHCLFile(path, cc)
+			if err != nil {
+				return err
+			}
+		} else {
+			err = config.ParseFolder(path, cc)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// load the existing state
+	sc, err := e.configFromState(utils.StatePath())
+	if err != nil {
+		return err
+	}
+
+	// merge the state and items to be created or deleted
+	e.config = e.mergeConfigItems(cc, sc, delete)
+
+	// parse the references for the config links
+	err = config.ParseReferences(e.config)
+	if err != nil {
+		return err
+	}
+
+	e.providers = e.generateProviders(e.config, e.clients, e.log)
 
 	return nil
 }
@@ -217,17 +195,24 @@ func (e *Engine) createParallel(p []providers.Provider) error {
 
 	for _, pr := range p {
 		go func(pr providers.Provider) {
-			err := pr.Create()
-			if err != nil {
-				errs <- err
+			defer wg.Done()
+
+			// only attempt to create if the state is awaiting creation
+			if pr.State() == config.PendingCreation {
+				err := pr.Create()
+				if err != nil {
+					errs <- err
+					return
+				}
 			}
+
+			// if an error happens then the state will end up incomplete
+			pr.SetState(config.Applied)
 
 			// append the state
 			e.stateLock.Lock()
 			defer e.stateLock.Unlock()
 			e.state = append(e.state, pr.Config())
-
-			wg.Done()
 		}(pr)
 	}
 
@@ -242,7 +227,6 @@ func (e *Engine) createParallel(p []providers.Provider) error {
 	case err := <-errs:
 		return err
 	}
-
 }
 
 // destroyParallel is just a quick implementation for now to test the UX
@@ -253,8 +237,17 @@ func (e *Engine) destroyParallel(p []providers.Provider) error {
 
 	for _, pr := range p {
 		go func(pr providers.Provider) {
-			pr.Destroy()
-			wg.Done()
+			defer wg.Done()
+
+			if pr.State() == config.PendingModification {
+				pr.Destroy()
+				return
+			}
+
+			// only add to the state if we did not delete
+			e.stateLock.Lock()
+			defer e.stateLock.Unlock()
+			e.state = append(e.state, pr.Config())
 		}(pr)
 	}
 
@@ -314,7 +307,6 @@ func (e *Engine) configFromState(path string) (*config.Config, error) {
 	for _, c := range s {
 		switch c.(map[string]interface{})["Type"].(string) {
 		case "config.Network":
-
 			n := &config.Network{}
 			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
 			if err != nil {
@@ -398,146 +390,181 @@ func (e *Engine) configFromState(path string) (*config.Config, error) {
 	return cc, nil
 }
 
-// remove config items removes items from the new config which are already in the state
-func (e *Engine) removeConfigItems(c *config.Config, state *config.Config) *config.Config {
-	ns, _ := config.New()
+// merge config items merges the two configs together removing duplicates
+func (e *Engine) mergeConfigItems(c *config.Config, state *config.Config, delete bool) *config.Config {
+	ns := *state
 
+	// process the clusters
 	for _, sc := range c.Clusters {
-		found := false
-		for _, i := range state.Clusters {
+		found := -1
+		for n, i := range state.Clusters {
 			if i.Name == sc.Name {
-				found = true
+				found = n
 				break
 			}
 		}
 
-		if !found {
-			ns.Clusters = append(ns.Clusters, sc)
+		if found == -1 {
+			// dont add to the collection if the item is not found and we are deleting
+			// else the the item will end up in the state
+			if !delete {
+				ns.Clusters = append(ns.Clusters, sc)
+			}
 		} else {
-			e.log.Debug("Cluster already exists in state, ignoring from apply", "name", sc.Name)
+			e.log.Debug("Cluster already exists in state, update status", "name", sc.Name)
+			ns.Clusters[found].State = config.PendingModification
 		}
 	}
+
+	// process the containers
 	for _, sc := range c.Containers {
-		found := false
-		for _, i := range state.Containers {
+		found := -1
+		for n, i := range state.Containers {
 			if i.Name == sc.Name {
-				found = true
+				found = n
 				break
 			}
 		}
 
-		if !found {
-			ns.Containers = append(ns.Containers, sc)
+		if found == -1 {
+			if !delete {
+				ns.Containers = append(ns.Containers, sc)
+			}
 		} else {
-			e.log.Debug("Container already exists in state, ignoring from apply", "name", sc.Name)
+			e.log.Debug("Container already exists in state, update status", "name", sc.Name)
+			ns.Containers[found].State = config.PendingModification
 		}
 	}
+
+	// process the networks
 	for _, sc := range c.Networks {
-		found := false
-		for _, i := range state.Networks {
+		found := -1
+		for n, i := range state.Networks {
 			if i.Name == sc.Name {
-				found = true
+				found = n
 				break
 			}
 		}
 
-		if !found {
-			ns.Networks = append(ns.Networks, sc)
+		if found == -1 {
+			if !delete {
+				ns.Networks = append(ns.Networks, sc)
+			}
 		} else {
-			e.log.Debug("Network already exists in state, ignoring from apply", "name", sc.Name)
+			e.log.Debug("Network already exists in state, update status", "name", sc.Name)
+			ns.Networks[found].State = config.PendingModification
 		}
 	}
+
+	// process the helm charts
 	for _, sc := range c.HelmCharts {
-		found := false
-		for _, i := range state.HelmCharts {
+		found := -1
+		for n, i := range state.HelmCharts {
 			if i.Name == sc.Name {
-				found = true
+				found = n
 				break
 			}
 		}
 
-		if !found {
-			ns.HelmCharts = append(ns.HelmCharts, sc)
+		if found == -1 {
+			if !delete {
+				ns.HelmCharts = append(ns.HelmCharts, sc)
+			}
 		} else {
-			e.log.Debug("Helm Chart already exists in state, ignoring from apply", "name", sc.Name)
+			e.log.Debug("Helm chart already exists in state, update status", "name", sc.Name)
+			ns.HelmCharts[found].State = config.PendingModification
 		}
 	}
+
+	// process the kube config
 	for _, sc := range c.K8sConfig {
-		found := false
-		for _, i := range state.K8sConfig {
+		found := -1
+		for n, i := range state.K8sConfig {
 			if i.Name == sc.Name {
-				found = true
+				found = n
 				break
 			}
 		}
 
-		if !found {
-			ns.K8sConfig = append(ns.K8sConfig, sc)
+		if found == -1 {
+			if !delete {
+				ns.K8sConfig = append(ns.K8sConfig, sc)
+			}
 		} else {
-			e.log.Debug("Kubernetes config already exists in state, ignoring from apply", "name", sc.Name)
+			e.log.Debug("Kubernetes config already exists in state, update status", "name", sc.Name)
+			ns.K8sConfig[found].State = config.PendingModification
 		}
 	}
+
+	// process the ingresses
 	for _, sc := range c.Ingresses {
-		found := false
-		for _, i := range state.Ingresses {
+		found := -1
+		for n, i := range state.Ingresses {
 			if i.Name == sc.Name {
-				found = true
+				found = n
 				break
 			}
 		}
 
-		if !found {
-			ns.Ingresses = append(ns.Ingresses, sc)
+		if found == -1 {
+			if !delete {
+				ns.Ingresses = append(ns.Ingresses, sc)
+			}
 		} else {
-			e.log.Debug("Ingress already exists in state, ignoring from apply", "name", sc.Name)
+			e.log.Debug("Ingress already exists in state, update status", "name", sc.Name)
+			ns.Ingresses[found].State = config.PendingModification
 		}
 	}
+
+	// process the local
 	for _, sc := range c.LocalExecs {
-		found := false
-		for _, i := range state.LocalExecs {
+		found := -1
+		for n, i := range state.LocalExecs {
 			if i.Name == sc.Name {
-				found = true
+				found = n
 				break
 			}
 		}
 
-		if !found {
-			ns.LocalExecs = append(ns.LocalExecs, sc)
+		if found == -1 {
+			if !delete {
+				ns.LocalExecs = append(ns.LocalExecs, sc)
+			}
 		} else {
-			e.log.Debug("LocalExec already exists in state, ignoring from apply", "name", sc.Name)
+			e.log.Debug("Ingress already exists in state, update status", "name", sc.Name)
+			ns.LocalExecs[found].State = config.PendingModification
 		}
 	}
+
+	// process the local
 	for _, sc := range c.RemoteExecs {
-		found := false
-		for _, i := range state.RemoteExecs {
+		found := -1
+		for n, i := range state.RemoteExecs {
 			if i.Name == sc.Name {
-				found = true
+				found = n
 				break
 			}
 		}
 
-		if !found {
-			ns.RemoteExecs = append(ns.RemoteExecs, sc)
+		if found == -1 {
+			if !delete {
+				ns.RemoteExecs = append(ns.RemoteExecs, sc)
+			}
 		} else {
-			e.log.Debug("RemoteExec already exists in state, ignoring from apply", "name", sc.Name)
-		}
-	}
-
-	if c.Docs != nil && state.Docs != nil {
-		if c.Docs.Name == state.Docs.Name {
-			e.log.Debug("Docs already exists in state, ignoring from apply", "name", c.Docs.Name)
-		} else {
-			ns.Docs = c.Docs
+			e.log.Debug("Ingress already exists in state, update status", "name", sc.Name)
+			ns.RemoteExecs[found].State = config.PendingModification
 		}
 	}
 
 	if state.WAN != nil {
-		e.log.Debug("WAN Network already exists in state, ignoring from apply", "name", state.WAN)
+		e.log.Debug("WAN Network already exists in state, ignoring from apply", "name", state.WAN.Name)
 	} else {
-		ns.WAN = c.WAN
+		if !delete {
+			ns.WAN = c.WAN
+		}
 	}
 
-	return ns
+	return &ns
 }
 
 // generateProviders returns providers grouped together in order of execution

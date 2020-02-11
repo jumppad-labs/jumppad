@@ -36,7 +36,15 @@ func (c *LocalExec) Create() error {
 		c.log.Error("Unable to set script permissions", "error", err)
 	}
 
-	return c.client.Execute(c.config.Script)
+	err = c.client.Execute(c.config.Script)
+	if err != nil {
+		return err
+	}
+
+	// set the state
+	c.config.State = config.Applied
+
+	return nil
 }
 
 // Destroy statisfies the interface method but is not implemented by LocalExec
@@ -52,4 +60,14 @@ func (c *LocalExec) Lookup() ([]string, error) {
 // Config returns the config for the provider
 func (c *LocalExec) Config() ConfigWrapper {
 	return ConfigWrapper{"config.LocalExec", c.config}
+}
+
+// State returns the state from the config
+func (c *LocalExec) State() config.State {
+	return c.config.State
+}
+
+// SetState updates the state in the config
+func (c *LocalExec) SetState(state config.State) {
+	c.config.State = state
 }

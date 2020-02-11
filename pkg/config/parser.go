@@ -113,6 +113,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case "cluster":
 			cl := &Cluster{}
 			cl.Name = b.Labels[0]
+			cl.State = PendingCreation
 
 			err := decodeBody(b, cl)
 			if err != nil {
@@ -128,6 +129,7 @@ func ParseHCLFile(file string, c *Config) error {
 
 			n := &Network{}
 			n.Name = b.Labels[0]
+			n.State = PendingCreation
 
 			err := decodeBody(b, n)
 			if err != nil {
@@ -139,6 +141,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case "helm":
 			h := &Helm{}
 			h.Name = b.Labels[0]
+			h.State = PendingCreation
 
 			err := decodeBody(b, h)
 			if err != nil {
@@ -153,6 +156,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case "k8s_config":
 			h := &K8sConfig{}
 			h.Name = b.Labels[0]
+			h.State = PendingCreation
 
 			err := decodeBody(b, h)
 			if err != nil {
@@ -169,6 +173,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case "ingress":
 			i := &Ingress{}
 			i.Name = b.Labels[0]
+			i.State = PendingCreation
 
 			err := decodeBody(b, i)
 			if err != nil {
@@ -180,6 +185,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case "container":
 			co := &Container{}
 			co.Name = b.Labels[0]
+			co.State = PendingCreation
 
 			err := decodeBody(b, co)
 			if err != nil {
@@ -197,6 +203,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case "docs":
 			do := &Docs{}
 			do.Name = b.Labels[0]
+			do.State = PendingCreation
 
 			err := decodeBody(b, do)
 			if err != nil {
@@ -210,6 +217,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case "local_exec":
 			h := &LocalExec{}
 			h.Name = b.Labels[0]
+			h.State = PendingCreation
 
 			err := decodeBody(b, h)
 			if err != nil {
@@ -223,6 +231,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case "remote_exec":
 			h := &RemoteExec{}
 			h.Name = b.Labels[0]
+			h.State = PendingCreation
 
 			err := decodeBody(b, h)
 			if err != nil {
@@ -422,6 +431,7 @@ func ensureAbsolute(path, file string) string {
 	}
 
 	// path is relative so make absolute using the current file path as base
+	file, _ = filepath.Abs(file)
 	baseDir := filepath.Dir(file)
 	return filepath.Join(baseDir, path)
 }

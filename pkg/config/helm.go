@@ -3,6 +3,7 @@ package config
 // Helm defines configuration for running Helm charts
 type Helm struct {
 	Name       string
+	State      State
 	ClusterRef *Cluster
 
 	Cluster string `hcl:"cluster"`

@@ -84,6 +84,9 @@ func (c *Cluster) createNomad() error {
 		return err
 	}
 
+	// set the state
+	c.config.State = config.Applied
+
 	return nil
 }
 

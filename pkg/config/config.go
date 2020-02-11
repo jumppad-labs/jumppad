@@ -6,8 +6,11 @@ type State string
 // Applied means the resrouce has been successfully created
 const Applied State = "applied"
 
-// Pending means the resource has not yet been created
-const Pending State = "pending"
+// PendingCreation means the resource has not yet been created
+const PendingCreation State = "pending_creation"
+
+// PendingModification means the resource has been created but is pending an update
+const PendingModification State = "pending_modification"
 
 // Failed means the resource failed during creation
 const Failed State = "failed"
@@ -37,7 +40,7 @@ func New() (*Config, error) {
 		Subnet: "10.200.0.0/16",
 	}
 
-	// TODO load wan settings from defaults
+	c.WAN.State = PendingCreation
 
 	return c, nil
 }

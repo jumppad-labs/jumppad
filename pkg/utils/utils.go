@@ -84,6 +84,20 @@ func IsLocalFolder(path string) bool {
 	return false
 }
 
+// IsHCLFile tests if the given path resolves to a HCL config file
+func IsHCLFile(path string) bool {
+	s, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+
+	if s.IsDir() {
+		return false
+	}
+
+	return true
+}
+
 // GetBlueprintFolder parses a blueprint uri and returns the top level
 // blueprint folder
 // if the URI is not a blueprint will return an error

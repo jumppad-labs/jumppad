@@ -51,6 +51,9 @@ func (h *Helm) Create() error {
 		}
 	}
 
+	// set the state
+	h.config.State = config.Applied
+
 	return nil
 }
 
@@ -66,4 +69,14 @@ func (h *Helm) Lookup() ([]string, error) {
 // Config returns the config for the provider
 func (c *Helm) Config() ConfigWrapper {
 	return ConfigWrapper{"config.Helm", c.config}
+}
+
+// State returns the state from the config
+func (c *Helm) State() config.State {
+	return c.config.State
+}
+
+// SetState updates the state in the config
+func (c *Helm) SetState(state config.State) {
+	c.config.State = state
 }

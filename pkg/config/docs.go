@@ -4,6 +4,7 @@ package config
 // online tutorials or documentation
 type Docs struct {
 	Name   string
+	State  State
 	WANRef *Network
 
 	Path  string `hcl:"path"`

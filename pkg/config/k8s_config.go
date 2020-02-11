@@ -3,6 +3,7 @@ package config
 // K8sConfig applies and deletes and deletes Kubernetes configuration
 type K8sConfig struct {
 	Name       string
+	State      State
 	ClusterRef *Cluster
 
 	// Cluster is the name of the cluster to apply configuration to

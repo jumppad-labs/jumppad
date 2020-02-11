@@ -28,7 +28,15 @@ func (c *K8sConfig) Create() error {
 		return err
 	}
 
-	return c.client.Apply(c.config.Paths, c.config.WaitUntilReady)
+	err = c.client.Apply(c.config.Paths, c.config.WaitUntilReady)
+	if err != nil {
+		return nil
+	}
+
+	// set the state
+	c.config.State = config.Applied
+
+	return nil
 }
 
 // Destroy the Kubernetes resources defined by the config
@@ -58,6 +66,16 @@ func (c *K8sConfig) Lookup() ([]string, error) {
 // Config returns the config for the provider
 func (c *K8sConfig) Config() ConfigWrapper {
 	return ConfigWrapper{"config.K8sConfig", c.config}
+}
+
+// State returns the state from the config
+func (c *K8sConfig) State() config.State {
+	return c.config.State
+}
+
+// SetState updates the state in the config
+func (c *K8sConfig) SetState(state config.State) {
+	c.config.State = state
 }
 
 func (c *K8sConfig) setup() error {

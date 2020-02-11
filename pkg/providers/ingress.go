@@ -89,7 +89,14 @@ func (i *Ingress) Create() error {
 	}
 
 	_, err := i.client.CreateContainer(c)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// set the state
+	i.config.State = config.Applied
+
+	return nil
 }
 
 // Destroy the ingress
@@ -120,4 +127,14 @@ func (i *Ingress) Lookup() ([]string, error) {
 // Config returns the config for the provider
 func (c *Ingress) Config() ConfigWrapper {
 	return ConfigWrapper{"config.Ingress", c.config}
+}
+
+// State returns the state from the config
+func (c *Ingress) State() config.State {
+	return c.config.State
+}
+
+// SetState updates the state in the config
+func (c *Ingress) SetState(state config.State) {
+	c.config.State = state
 }

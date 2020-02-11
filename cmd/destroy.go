@@ -1,35 +1,43 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
-	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 var destroyCmd = &cobra.Command{
-	Use:     "destroy [file] [directory] ...",
-	Short:   "Destroy the current stack",
-	Long:    `Destroy the current stack`,
+	Use:   "destroy [file]",
+	Short: "Destroy the current stack or file",
+	Long: `Destroy the current stack or file. 
+	If the optional parameter "file" is passed then only the resources contained
+	in the file will be destroyed`,
 	Example: `yard destroy`,
 	Run: func(cmd *cobra.Command, args []string) {
-
 		log := createLogger()
+
+		dst := ""
+		if len(args) > 0 {
+			dst = args[0]
+		}
 
 		// When destroying a stack all the config
 		// which is created with apply is copied
 		// to the state folder
-		e, err := shipyard.NewFromState(log)
+		var e *shipyard.Engine
+		var err error
+
+		e, err = shipyard.New(log)
 		if err != nil {
-			log.Error("Unable to load state", "error", err)
+			log.Error("Unable to load file", "error", err)
 			return
 		}
 
-		fmt.Printf("Destroying %d resources\n\n", e.ResourceCount())
+		if dst == "" {
+			err = e.Destroy(dst, true)
+		} else {
+			err = e.Destroy(dst, false)
+		}
 
-		err = e.Destroy()
 		if err != nil {
 			log.Error("Unable to destroy stack", "error", err)
 			return
@@ -51,12 +59,5 @@ var destroyCmd = &cobra.Command{
 				}
 			}
 		*/
-
-		// delete the contents of the state folder
-		err = os.RemoveAll(utils.StateDir())
-		if err != nil {
-			log.Error("Unable to delete state", "error", err)
-			return
-		}
 	},
 }

@@ -2,7 +2,8 @@ package config
 
 // Container defines a structure for creating Docker containers
 type Container struct {
-	Name       string   // name of the resource
+	Name       string // name of the resource
+	State      State
 	NetworkRef *Network // reference to a network resource, added automatically
 	WANRef     *Network // reference to the WAN network, added automatiacally
 

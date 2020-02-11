@@ -2,7 +2,8 @@ package config
 
 // LocalExec allows commands to be executed on the local machine
 type LocalExec struct {
-	Name string
+	Name  string
+	State State
 
 	// Either Script or Command must be specified
 	Script    string   `hcl:"script,optional"` // Path to a script to execute
@@ -14,7 +15,9 @@ type LocalExec struct {
 
 // RemoteExec allows commands to be executed in remote containers
 type RemoteExec struct {
-	Name       string
+	Name  string
+	State State
+
 	TargetRef  interface{}
 	NetworkRef *Network // Automatically fetched from target
 	WANRef     *Network // Automatically created
