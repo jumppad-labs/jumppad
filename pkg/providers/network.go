@@ -54,3 +54,8 @@ func (n *Network) Destroy() error {
 func (n *Network) Lookup() ([]string, error) {
 	return []string{}, nil
 }
+
+// Config returns the config for the provider
+func (c *Network) Config() ConfigWrapper {
+	return ConfigWrapper{"config.Network", c.config}
+}

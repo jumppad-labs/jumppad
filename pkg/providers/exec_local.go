@@ -48,3 +48,8 @@ func (c *LocalExec) Destroy() error {
 func (c *LocalExec) Lookup() ([]string, error) {
 	return []string{}, nil
 }
+
+// Config returns the config for the provider
+func (c *LocalExec) Config() ConfigWrapper {
+	return ConfigWrapper{"config.LocalExec", c.config}
+}

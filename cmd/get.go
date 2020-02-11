@@ -10,6 +10,7 @@ import (
 	"context"
 
 	getter "github.com/hashicorp/go-getter"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -35,9 +36,9 @@ var getCmd = &cobra.Command{
 		log := createLogger()
 
 		// create the shipyard home
-		os.MkdirAll(ShipyardHome(), os.FileMode(0755))
+		os.MkdirAll(utils.ShipyardHome(), os.FileMode(0755))
 
-		if IsLocalFolder(dst) {
+		if utils.IsLocalFolder(dst) {
 			log.Error("Parameter is not a remote blueprint, e.g. github.com/shipyard-run/blueprints//vault-k8s")
 			os.Exit(1)
 		}
@@ -57,7 +58,7 @@ var getCmd = &cobra.Command{
 // failure
 func pullRemoteBlueprint(uri string) (string, error) {
 
-	bpFolder, err := GetBlueprintFolder(uri)
+	bpFolder, err := utils.GetBlueprintFolder(uri)
 	if err != nil {
 		return "", err
 	}

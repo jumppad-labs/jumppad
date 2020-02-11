@@ -1,13 +1,17 @@
 package shipyard
 
 import (
+	"encoding/json"
+	"os"
 	"sync"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
+	"github.com/mitchellh/mapstructure"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/providers"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 )
 
 // Clients contains clients which are responsible for creating and destrying reources
@@ -21,11 +25,16 @@ type Clients struct {
 
 // Engine is responsible for creating and destroying resources
 type Engine struct {
-	providers [][]providers.Provider
-	clients   *Clients
-	config    *config.Config
-	log       hclog.Logger
+	providers         [][]providers.Provider
+	clients           *Clients
+	config            *config.Config
+	log               hclog.Logger
+	generateProviders generateProvidersFunc
+	stateLock         sync.Mutex
+	state             []providers.ConfigWrapper
 }
+
+type generateProvidersFunc func(c *config.Config, cl *Clients, l hclog.Logger) [][]providers.Provider
 
 // GenerateClients creates the various clients for creating and destroying resources
 func GenerateClients(l hclog.Logger) (*Clients, error) {
@@ -81,30 +90,162 @@ func NewWithFolder(folder string, l hclog.Logger) (*Engine, error) {
 	return e, nil
 }
 
+// NewFromState creates an engine from the statefile rather than the provided blueprint
+func NewFromState(statePath string, l hclog.Logger) (*Engine, error) {
+	cc, err := configFromState(statePath)
+	if err != nil {
+		return nil, err
+	}
+
+	err = config.ParseReferences(cc)
+	if err != nil {
+		return nil, err
+	}
+
+	// create providers
+	cl, err := GenerateClients(l)
+	if err != nil {
+		return nil, err
+	}
+
+	e := New(cc, cl, l)
+
+	return e, nil
+}
+
+func configFromState(path string) (*config.Config, error) {
+	cc, err := config.New()
+
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	s := []interface{}{}
+	jd := json.NewDecoder(f)
+	jd.Decode(&s)
+
+	// for each item set the config
+	for _, c := range s {
+		switch c.(map[string]interface{})["Type"].(string) {
+		case "config.Network":
+
+			n := &config.Network{}
+			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+			if err != nil {
+				return nil, err
+			}
+
+			// do not add the wan as this is automatically created
+			if n.Name != "wan" {
+				cc.Networks = append(cc.Networks, n)
+			}
+		case "config.Docs":
+			n := &config.Docs{}
+			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+			if err != nil {
+				return nil, err
+			}
+
+			cc.Docs = n
+		case "config.Cluster":
+			n := &config.Cluster{}
+			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+			if err != nil {
+				return nil, err
+			}
+
+			cc.Clusters = append(cc.Clusters, n)
+		case "config.Container":
+			n := &config.Container{}
+			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+			if err != nil {
+				return nil, err
+			}
+
+			cc.Containers = append(cc.Containers, n)
+		case "config.Helm":
+			n := &config.Helm{}
+			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+			if err != nil {
+				return nil, err
+			}
+
+			cc.HelmCharts = append(cc.HelmCharts, n)
+		case "config.K8sConfig":
+			n := &config.K8sConfig{}
+			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+			if err != nil {
+				return nil, err
+			}
+
+			cc.K8sConfig = append(cc.K8sConfig, n)
+		case "config.Ingress":
+			n := &config.Ingress{}
+			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+			if err != nil {
+				return nil, err
+			}
+
+			cc.Ingresses = append(cc.Ingresses, n)
+		case "config.LocalExec":
+			n := &config.LocalExec{}
+			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+			if err != nil {
+				return nil, err
+			}
+
+			cc.LocalExecs = append(cc.LocalExecs, n)
+		case "config.RemoteExec":
+			n := &config.RemoteExec{}
+			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+			if err != nil {
+				return nil, err
+			}
+
+			cc.RemoteExecs = append(cc.RemoteExecs, n)
+		}
+	}
+
+	return cc, nil
+}
+
 // New engine using the given configuration and clients
 func New(c *config.Config, cc *Clients, l hclog.Logger) *Engine {
-	p := generateProviders(c, cc, l)
 
-	return &Engine{
-		providers: p,
-		clients:   cc,
-		config:    c,
-		log:       l,
+	e := &Engine{
+		clients:           cc,
+		config:            c,
+		log:               l,
+		generateProviders: generateProvidersImpl,
+		stateLock:         sync.Mutex{},
 	}
+
+	p := e.generateProviders(c, cc, l)
+	e.providers = p
+
+	return e
 }
 
 // Apply the current config creating the resources
 func (e *Engine) Apply() error {
+
+	var err error
 	// loop through each group
 	for _, g := range e.providers {
 		// apply the provider in parallel
-		err := createParallel(g)
-		if err != nil {
-			return err
+		createErr := e.createParallel(g)
+		if createErr != nil {
+			err = createErr
+			break
 		}
 	}
 
-	return nil
+	// save the state regardless of error
+	e.saveState()
+
+	return err
 }
 
 // Destroy the resources defined by the config
@@ -113,7 +254,7 @@ func (e *Engine) Destroy() error {
 	// to ensure objects with dependencies are destroyed first
 	for i := len(e.providers) - 1; i > -1; i-- {
 
-		err := destroyParallel(e.providers[i])
+		err := e.destroyParallel(e.providers[i])
 		if err != nil {
 			return err
 		}
@@ -133,7 +274,7 @@ func (e *Engine) Blueprint() *config.Blueprint {
 }
 
 // createParallel is just a quick implementation for now to test the UX
-func createParallel(p []providers.Provider) error {
+func (e *Engine) createParallel(p []providers.Provider) error {
 	errs := make(chan error)
 	done := make(chan struct{})
 
@@ -147,6 +288,11 @@ func createParallel(p []providers.Provider) error {
 			if err != nil {
 				errs <- err
 			}
+
+			// append the state
+			e.stateLock.Lock()
+			defer e.stateLock.Unlock()
+			e.state = append(e.state, pr.Config())
 
 			wg.Done()
 		}(pr)
@@ -167,7 +313,7 @@ func createParallel(p []providers.Provider) error {
 }
 
 // destroyParallel is just a quick implementation for now to test the UX
-func destroyParallel(p []providers.Provider) error {
+func (e *Engine) destroyParallel(p []providers.Provider) error {
 	// create the wait group and set the size to the provider length
 	wg := sync.WaitGroup{}
 	wg.Add(len(p))
@@ -184,8 +330,40 @@ func destroyParallel(p []providers.Provider) error {
 	return nil
 }
 
+// save state serializes the state file into json formatted file
+func (e *Engine) saveState() error {
+	e.log.Info("Writing state file")
+
+	sd := utils.StateDir()
+	sp := utils.StatePath()
+
+	// if it does not exist create the state folder
+	_, err := os.Stat(sd)
+	if err != nil {
+		os.MkdirAll(sd, os.ModePerm)
+	}
+
+	// if the statefile exists overwrite it
+	_, err = os.Stat(sp)
+	if err == nil {
+		// delete the old state
+		os.Remove(sp)
+	}
+
+	// serialize the state to json and write to a file
+	f, err := os.Create(sp)
+	if err != nil {
+		e.log.Error("Unable to create state", "error", err)
+		return err
+	}
+	defer f.Close()
+
+	ne := json.NewEncoder(f)
+	return ne.Encode(e.state)
+}
+
 // generateProviders returns providers grouped together in order of execution
-func generateProviders(c *config.Config, cc *Clients, l hclog.Logger) [][]providers.Provider {
+func generateProvidersImpl(c *config.Config, cc *Clients, l hclog.Logger) [][]providers.Provider {
 	oc := make([][]providers.Provider, 7)
 	oc[0] = make([]providers.Provider, 0)
 	oc[1] = make([]providers.Provider, 0)
@@ -213,6 +391,11 @@ func generateProviders(c *config.Config, cc *Clients, l hclog.Logger) [][]provid
 		oc[1] = append(oc[1], p)
 	}
 
+	if c.Docs != nil {
+		p := providers.NewDocs(c.Docs, cc.ContainerTasks, l)
+		oc[1] = append(oc[1], p)
+	}
+
 	for _, c := range c.Clusters {
 		p := providers.NewCluster(*c, cc.ContainerTasks, cc.Kubernetes, cc.HTTP, l)
 		oc[2] = append(oc[2], p)
@@ -226,11 +409,6 @@ func generateProviders(c *config.Config, cc *Clients, l hclog.Logger) [][]provid
 	for _, c := range c.K8sConfig {
 		p := providers.NewK8sConfig(c, cc.Kubernetes, l)
 		oc[4] = append(oc[4], p)
-	}
-
-	if c.Docs != nil {
-		p := providers.NewDocs(c.Docs, cc.ContainerTasks, l)
-		oc[5] = append(oc[5], p)
 	}
 
 	for _, c := range c.LocalExecs {

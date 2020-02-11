@@ -116,3 +116,8 @@ func (i *Ingress) Destroy() error {
 func (i *Ingress) Lookup() ([]string, error) {
 	return []string{}, nil
 }
+
+// Config returns the config for the provider
+func (c *Ingress) Config() ConfigWrapper {
+	return ConfigWrapper{"config.Ingress", c.config}
+}

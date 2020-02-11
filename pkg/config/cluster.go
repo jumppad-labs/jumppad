@@ -2,8 +2,6 @@ package config
 
 // Cluster is a config stanza which defines a Kubernetes or a Nomad cluster
 type Cluster struct {
-	ID         string // unqique id for the resource
-	State      State  // current state
 	Name       string
 	NetworkRef *Network
 	WANRef     *Network

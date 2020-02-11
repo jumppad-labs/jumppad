@@ -108,3 +108,8 @@ func (h *Helm) Destroy() error {
 func (h *Helm) Lookup() ([]string, error) {
 	return []string{}, nil
 }
+
+// Config returns the config for the provider
+func (c *Helm) Config() ConfigWrapper {
+	return ConfigWrapper{"config.Helm", c.config}
+}

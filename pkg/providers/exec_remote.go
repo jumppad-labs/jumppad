@@ -100,3 +100,8 @@ func (c *RemoteExec) Destroy() error {
 func (c *RemoteExec) Lookup() ([]string, error) {
 	return []string{}, nil
 }
+
+// Config returns the config for the provider
+func (c *RemoteExec) Config() ConfigWrapper {
+	return ConfigWrapper{"config.RemoteExec", c.config}
+}

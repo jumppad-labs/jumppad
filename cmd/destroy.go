@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -20,7 +21,7 @@ var destroyCmd = &cobra.Command{
 		// When destroying a stack all the config
 		// which is created with apply is copied
 		// to the state folder
-		e, err := shipyard.NewWithFolder(StateDir(), log)
+		e, err := shipyard.NewFromState(utils.StatePath(), log)
 		if err != nil {
 			log.Error("Unable to load state", "error", err)
 			return
@@ -52,7 +53,7 @@ var destroyCmd = &cobra.Command{
 		*/
 
 		// delete the contents of the state folder
-		err = os.RemoveAll(StateDir())
+		err = os.RemoveAll(utils.StateDir())
 		if err != nil {
 			log.Error("Unable to delete state", "error", err)
 			return

@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -8,6 +9,9 @@ import (
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
 )
+
+const docsImageName = "shipyardrun/docs"
+const docsVersion = "v0.0.3"
 
 // Docs defines a provider for creating documentation containers
 type Docs struct {
@@ -45,7 +49,19 @@ func (i *Docs) createDocsContainer() error {
 	cc := config.Container{}
 	cc.Name = i.config.Name
 	cc.NetworkRef = i.config.WANRef
-	cc.Image = config.Image{Name: "shipyardrun/docs:latest"}
+
+	cc.Image = config.Image{Name: fmt.Sprintf("%s:%s", docsImageName, docsVersion)}
+
+	// if image is set override defaults
+	if i.config.Image != nil {
+		cc.Image = *i.config.Image
+	}
+
+	// pull the docker image
+	err := i.client.PullImage(cc.Image, false)
+	if err != nil {
+		return err
+	}
 
 	cc.Volumes = []config.Volume{}
 
@@ -99,7 +115,7 @@ func (i *Docs) createDocsContainer() error {
 		},
 	}
 
-	_, err := i.client.CreateContainer(cc)
+	_, err = i.client.CreateContainer(cc)
 	return err
 }
 
@@ -109,6 +125,12 @@ func (i *Docs) createTerminalContainer() error {
 	cc.Name = "terminal"
 	cc.NetworkRef = i.config.WANRef
 	cc.Image = config.Image{Name: "shipyardrun/terminal-server:latest"}
+
+	// pull the image
+	err := i.client.PullImage(cc.Image, false)
+	if err != nil {
+		return err
+	}
 
 	// TODO we are mounting the docker sock, need to look at how this works on Windows
 	cc.Volumes = make([]config.Volume, 0)
@@ -128,7 +150,7 @@ func (i *Docs) createTerminalContainer() error {
 		},
 	}
 
-	_, err := i.client.CreateContainer(cc)
+	_, err = i.client.CreateContainer(cc)
 	return err
 }
 
@@ -172,4 +194,9 @@ func (i *Docs) Lookup() ([]string, error) {
 	*/
 
 	return []string{}, nil
+}
+
+// Config returns the config for the provider
+func (c *Docs) Config() ConfigWrapper {
+	return ConfigWrapper{"config.Docs", c.config}
 }

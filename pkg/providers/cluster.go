@@ -67,3 +67,8 @@ func (c *Cluster) Lookup() ([]string, error) {
 	*/
 	return []string{}, nil
 }
+
+// Config returns the config for the provider
+func (c *Cluster) Config() ConfigWrapper {
+	return ConfigWrapper{"config.Cluster", c.config}
+}

@@ -55,6 +55,11 @@ func (c *K8sConfig) Lookup() ([]string, error) {
 	return []string{}, nil
 }
 
+// Config returns the config for the provider
+func (c *K8sConfig) Config() ConfigWrapper {
+	return ConfigWrapper{"config.K8sConfig", c.config}
+}
+
 func (c *K8sConfig) setup() error {
 	_, destPath, _ := utils.CreateKubeConfigPath(c.config.ClusterRef.Name)
 	err := c.client.SetConfig(destPath)

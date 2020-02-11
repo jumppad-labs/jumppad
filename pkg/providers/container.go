@@ -55,6 +55,11 @@ func (c *Container) Destroy() error {
 	return nil
 }
 
+// Config returns the config for the provider
+func (c *Container) Config() ConfigWrapper {
+	return ConfigWrapper{"config.Docs", c.config}
+}
+
 // Lookup the ID based on the config
 func (c *Container) Lookup() ([]string, error) {
 	return c.client.FindContainerIDs(c.config.Name, c.config.NetworkRef.Name)
