@@ -57,7 +57,7 @@ func (c *Container) Destroy() error {
 
 // Config returns the config for the provider
 func (c *Container) Config() ConfigWrapper {
-	return ConfigWrapper{"config.Docs", c.config}
+	return ConfigWrapper{"config.Container", c.config}
 }
 
 // Lookup the ID based on the config
