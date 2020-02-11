@@ -84,7 +84,8 @@ func (c *RemoteExec) createRemoteExecContainer() (string, error) {
 		Image:       *c.config.Image,
 		Command:     []string{"tail", "-f", "/dev/null"}, // ensure container does not immediately exit
 		Volumes:     c.config.Volumes,
-		NetworkRef:  c.config.WANRef, // seems like wan connections are not implemented //TODO fix
+		WANRef:      c.config.WANRef,
+		NetworkRef:  c.config.NetworkRef,
 		Environment: c.config.Environment,
 	}
 

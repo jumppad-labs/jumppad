@@ -133,6 +133,12 @@ func (d *DockerTasks) CreateContainer(c config.Container) (string, error) {
 
 		err := d.c.NetworkConnect(context.Background(), c.NetworkRef.Name, cont.ID, es)
 		if err != nil {
+			// if we fail to connect to the network roll back the container
+			errRemove := d.RemoveContainer(cont.ID)
+			if errRemove != nil {
+				return "", xerrors.Errorf("Unable to connect container to network %s, unable to roll back container: %w", c.NetworkRef.Name, err)
+			}
+
 			return "", xerrors.Errorf("Unable to connect container to network %s: %w", c.NetworkRef.Name, err)
 		}
 	}
@@ -144,6 +150,11 @@ func (d *DockerTasks) CreateContainer(c config.Container) (string, error) {
 
 		err := d.c.NetworkConnect(context.Background(), c.WANRef.Name, cont.ID, es)
 		if err != nil {
+			errRemove := d.RemoveContainer(cont.ID)
+			if errRemove != nil {
+				return "", xerrors.Errorf("Unable to connect container to wan network %s, unable to roll back container: %w", c.WANRef.Name, err)
+			}
+
 			return "", xerrors.Errorf("Unable to connect container to wan network %s: %w", c.WANRef.Name, err)
 		}
 	}

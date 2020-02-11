@@ -68,28 +68,30 @@ func setupContainerMocks() *clients.MockDocker {
 	md.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(container.ContainerCreateCreatedBody{ID: "test"}, nil)
 	md.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	md.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("NetworkConnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	return md
 }
 
-func setupContainer(t *testing.T, cc *config.Container, md *clients.MockDocker) {
+func setupContainer(t *testing.T, cc *config.Container, md *clients.MockDocker) error {
 	p := NewDockerTasks(md, hclog.NewNullLogger())
 
 	// create the container
 	_, err := p.CreateContainer(*cc)
+
+	return err
+}
+
+func TestContainerCreatesCorrectly(t *testing.T) {
+	cc, _, _, md := createContainerConfig()
+
+	err := setupContainer(t, cc, md)
 	assert.NoError(t, err)
 
 	// check that the docker api methods were called
 	md.AssertCalled(t, "ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	md.AssertCalled(t, "ContainerStart", mock.Anything, mock.Anything, mock.Anything)
-
-	return
-}
-
-func TestContainerCreatesCorrectly(t *testing.T) {
-	cc, _, _, md := createContainerConfig()
-	setupContainer(t, cc, md)
 
 	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
 
@@ -108,7 +110,9 @@ func TestContainerCreatesCorrectly(t *testing.T) {
 
 func TestContainerAttachesToUserNetwork(t *testing.T) {
 	cc, _, _, md := createContainerConfig()
-	setupContainer(t, cc, md)
+
+	err := setupContainer(t, cc, md)
+	assert.NoError(t, err)
 
 	params := getCalls(&md.Mock, "NetworkConnect")[0].Arguments
 	nc := params[3].(*network.EndpointSettings)
@@ -118,10 +122,23 @@ func TestContainerAttachesToUserNetwork(t *testing.T) {
 	assert.Nil(t, nc.IPAMConfig) // unless an IP address is set this will be nil
 }
 
+func TestContainerRollsbackWhenUnableToConnectToNetwork(t *testing.T) {
+	cc, _, _, md := createContainerConfig()
+	removeOn(&md.Mock, "NetworkConnect")
+	md.On("NetworkConnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
+
+	err := setupContainer(t, cc, md)
+	assert.Error(t, err)
+
+	md.AssertCalled(t, "ContainerRemove", mock.Anything, mock.Anything, mock.Anything)
+}
+
 func TestContainerDoesNOTAttachesToUserNetworkWhenNil(t *testing.T) {
 	cc, nc, _, md := createContainerConfig()
 	cc.NetworkRef = nil
-	setupContainer(t, cc, md)
+
+	err := setupContainer(t, cc, md)
+	assert.NoError(t, err)
 
 	md.AssertNumberOfCalls(t, "NetworkConnect", 1)
 	md.AssertNotCalled(t, "NetworkConnect", nc.Name, mock.Anything, mock.Anything, mock.Anything)
@@ -130,7 +147,9 @@ func TestContainerDoesNOTAttachesToUserNetworkWhenNil(t *testing.T) {
 func TestContainerAssignsIPToUserNetwork(t *testing.T) {
 	cc, _, _, md := createContainerConfig()
 	cc.IPAddress = "192.168.1.123"
-	setupContainer(t, cc, md)
+
+	err := setupContainer(t, cc, md)
+	assert.NoError(t, err)
 
 	params := getCalls(&md.Mock, "NetworkConnect")[0].Arguments
 	nc := params[3].(*network.EndpointSettings)
@@ -140,7 +159,9 @@ func TestContainerAssignsIPToUserNetwork(t *testing.T) {
 
 func TestContainerAttachesToWANNetwork(t *testing.T) {
 	cc, _, _, md := createContainerConfig()
-	setupContainer(t, cc, md)
+
+	err := setupContainer(t, cc, md)
+	assert.NoError(t, err)
 
 	// WAN is always the second call
 	params := getCalls(&md.Mock, "NetworkConnect")[1].Arguments
@@ -150,10 +171,24 @@ func TestContainerAttachesToWANNetwork(t *testing.T) {
 	assert.Nil(t, nc.IPAMConfig) // unless an IP address is set this will be nil
 }
 
+func TestContainerRollsbackWhenUnableToConnectToWANNetwork(t *testing.T) {
+	cc, _, _, md := createContainerConfig()
+	removeOn(&md.Mock, "NetworkConnect")
+	md.On("NetworkConnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+	md.On("NetworkConnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom")).Once()
+
+	err := setupContainer(t, cc, md)
+	assert.Error(t, err)
+
+	md.AssertCalled(t, "ContainerRemove", mock.Anything, mock.Anything, mock.Anything)
+}
+
 func TestContainerDoesNOTAttachesToWANNetworkWhenNil(t *testing.T) {
 	cc, _, wn, md := createContainerConfig()
 	cc.WANRef = nil
-	setupContainer(t, cc, md)
+
+	err := setupContainer(t, cc, md)
+	assert.NoError(t, err)
 
 	// should still conect to normal network
 	md.AssertNumberOfCalls(t, "NetworkConnect", 1)
@@ -162,7 +197,9 @@ func TestContainerDoesNOTAttachesToWANNetworkWhenNil(t *testing.T) {
 
 func TestContainerAttachesVolumeMounts(t *testing.T) {
 	cc, _, _, md := createContainerConfig()
-	setupContainer(t, cc, md)
+
+	err := setupContainer(t, cc, md)
+	assert.NoError(t, err)
 
 	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
 	hc := params[2].(*container.HostConfig)
@@ -175,7 +212,9 @@ func TestContainerAttachesVolumeMounts(t *testing.T) {
 
 func TestContainerPublishesPorts(t *testing.T) {
 	cc, _, _, md := createContainerConfig()
-	setupContainer(t, cc, md)
+
+	err := setupContainer(t, cc, md)
+	assert.NoError(t, err)
 
 	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
 	dc := params[1].(*container.Config)

@@ -71,13 +71,6 @@ var runCmd = &cobra.Command{
 		err = e.Apply()
 		if err != nil {
 			log.Error("Unable to apply blueprint", "error", err)
-
-			log.Info("Attempting to roll back state")
-			err := e.Destroy()
-			if err != nil {
-				log.Error("Unable to roll back state, you may need to manually remove Docker containers and networks", "error", err)
-			}
-
 			return
 		}
 

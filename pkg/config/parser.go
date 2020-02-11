@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/hcl2/hcl"
 	"github.com/hashicorp/hcl2/hcl/hclsyntax"
 	"github.com/hashicorp/hcl2/hclparse"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/function"
 )
@@ -380,10 +381,26 @@ func buildContext() *hcl.EvalContext {
 		},
 	})
 
+	var KubeConfigFunc = function.New(&function.Spec{
+		Params: []function.Parameter{
+			{
+				Name:             "k8s_config",
+				Type:             cty.String,
+				AllowDynamicType: true,
+			},
+		},
+		Type: function.StaticReturnType(cty.String),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			_, _, kcp := utils.CreateKubeConfigPath(args[0].AsString())
+			return cty.StringVal(kcp), nil
+		},
+	})
+
 	ctx := &hcl.EvalContext{
 		Functions: map[string]function.Function{},
 	}
 	ctx.Functions["env"] = EnvFunc
+	ctx.Functions["k8s_config"] = KubeConfigFunc
 
 	return ctx
 }
