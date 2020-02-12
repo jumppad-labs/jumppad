@@ -38,7 +38,7 @@ func NewDockerTasks(c Docker, l hclog.Logger) *DockerTasks {
 }
 
 // CreateContainer creates a new Docker container for the given configuation
-func (d *DockerTasks) CreateContainer(c config.Container) (string, error) {
+func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 	d.l.Info("Creating Container", "ref", c.Name)
 
 	// create a unique name based on service network [container].[network].shipyard
@@ -68,12 +68,6 @@ func (d *DockerTasks) CreateContainer(c config.Container) (string, error) {
 	nc := &network.NetworkingConfig{}
 
 	nc.EndpointsConfig = make(map[string]*network.EndpointSettings)
-
-	// attach the container to the network
-	networkName := ""
-	if c.NetworkRef != nil {
-		networkName = c.NetworkRef.Name
-	}
 
 	// Create volume mounts
 	mounts := make([]mount.Mount, 0)
@@ -114,50 +108,77 @@ func (d *DockerTasks) CreateContainer(c config.Container) (string, error) {
 		dc,
 		hc,
 		nc,
-		utils.FQDN(c.Name, networkName),
+		utils.FQDN(c.Name, string(c.Type)),
 	)
 	if err != nil {
 		return "", err
 	}
 
-	// attach the container to the network
-	if c.NetworkRef != nil {
-		d.l.Debug("Attaching container to network", "ref", c.Name, "network", c.NetworkRef.Name)
-		es := &network.EndpointSettings{NetworkID: c.NetworkRef.Name}
-
-		// are we binding to a specific ip
-		if c.IPAddress != "" {
-			d.l.Debug("Assigning static ip address", "ref", c.Name, "network", c.NetworkRef.Name, "ip_address", c.IPAddress)
-			es.IPAMConfig = &network.EndpointIPAMConfig{IPv4Address: c.IPAddress}
+	for _, n := range c.Networks {
+		net, err := c.FindDependentResource(n.Name)
+		if err != nil {
+			return "", xerrors.Errorf("Network not found: %w", err)
 		}
 
-		err := d.c.NetworkConnect(context.Background(), c.NetworkRef.Name, cont.ID, es)
+		d.l.Debug("Attaching container to network", "ref", c.Name, "network", n.Name)
+		es := &network.EndpointSettings{NetworkID: net.Info().Name}
+
+		// are we binding to a specific ip
+		if n.IPAddress != "" {
+			d.l.Debug("Assigning static ip address", "ref", c.Name, "network", n.Name, "ip_address", n.IPAddress)
+			es.IPAMConfig = &network.EndpointIPAMConfig{IPv4Address: n.IPAddress}
+		}
+
+		err = d.c.NetworkConnect(context.Background(), net.Info().Name, cont.ID, es)
 		if err != nil {
 			// if we fail to connect to the network roll back the container
 			errRemove := d.RemoveContainer(cont.ID)
 			if errRemove != nil {
-				return "", xerrors.Errorf("Unable to connect container to network %s, unable to roll back container: %w", c.NetworkRef.Name, err)
+				return "", xerrors.Errorf("Unable to connect container to network %s, unable to roll back container: %w", n.Name, err)
 			}
 
-			return "", xerrors.Errorf("Unable to connect container to network %s: %w", c.NetworkRef.Name, err)
+			return "", xerrors.Errorf("Unable to connect container to network %s: %w", n.Name, err)
 		}
 	}
+
+	// attach the container to the network
+	// if c.Network != nil {
+	// 	d.l.Debug("Attaching container to network", "ref", c.Name, "network", c.NetworkRef.Name)
+	// 	es := &network.EndpointSettings{NetworkID: c.NetworkRef.Name}
+
+	// 	// are we binding to a specific ip
+	// 	if c.IPAddress != "" {
+	// 		d.l.Debug("Assigning static ip address", "ref", c.Name, "network", c.NetworkRef.Name, "ip_address", c.IPAddress)
+	// 		es.IPAMConfig = &network.EndpointIPAMConfig{IPv4Address: c.IPAddress}
+	// 	}
+
+	// 	err := d.c.NetworkConnect(context.Background(), c.NetworkRef.Name, cont.ID, es)
+	// 	if err != nil {
+	// 		// if we fail to connect to the network roll back the container
+	// 		errRemove := d.RemoveContainer(cont.ID)
+	// 		if errRemove != nil {
+	// 			return "", xerrors.Errorf("Unable to connect container to network %s, unable to roll back container: %w", c.NetworkRef.Name, err)
+	// 		}
+
+	// 		return "", xerrors.Errorf("Unable to connect container to network %s: %w", c.NetworkRef.Name, err)
+	// 	}
+	// }
 
 	// attach the container to the WAN network
-	if c.WANRef != nil {
-		d.l.Debug("Attaching container to WAN network", "ref", c.Name, "network", c.WANRef.Name)
-		es := &network.EndpointSettings{NetworkID: c.WANRef.Name}
+	// if c.WANRef != nil {
+	// 	d.l.Debug("Attaching container to WAN network", "ref", c.Name, "network", c.WANRef.Name)
+	// 	es := &network.EndpointSettings{NetworkID: c.WANRef.Name}
 
-		err := d.c.NetworkConnect(context.Background(), c.WANRef.Name, cont.ID, es)
-		if err != nil {
-			errRemove := d.RemoveContainer(cont.ID)
-			if errRemove != nil {
-				return "", xerrors.Errorf("Unable to connect container to wan network %s, unable to roll back container: %w", c.WANRef.Name, err)
-			}
+	// 	err := d.c.NetworkConnect(context.Background(), c.WANRef.Name, cont.ID, es)
+	// 	if err != nil {
+	// 		errRemove := d.RemoveContainer(cont.ID)
+	// 		if errRemove != nil {
+	// 			return "", xerrors.Errorf("Unable to connect container to wan network %s, unable to roll back container: %w", c.WANRef.Name, err)
+	// 		}
 
-			return "", xerrors.Errorf("Unable to connect container to wan network %s: %w", c.WANRef.Name, err)
-		}
-	}
+	// 		return "", xerrors.Errorf("Unable to connect container to wan network %s: %w", c.WANRef.Name, err)
+	// 	}
+	// }
 
 	err = d.c.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
 	if err != nil {
@@ -377,18 +398,17 @@ func (d *DockerTasks) CopyLocalDockerImageToVolume(images []string, volume strin
 	tmpTarFile.Seek(0, 0)
 
 	// create a dummy container to import to volume
-	cc := config.Container{
-		Name:  "tmp.import",
-		Image: config.Image{Name: makeImageCanonical("alpine:latest")},
-		Volumes: []config.Volume{
-			config.Volume{
-				Source:      volume,
-				Destination: "/images",
-				Type:        "volume",
-			},
+	cc := config.NewContainer("temp-import")
+
+	cc.Image = config.Image{Name: makeImageCanonical("alpine:latest")}
+	cc.Volumes = []config.Volume{
+		config.Volume{
+			Source:      volume,
+			Destination: "/images",
+			Type:        "volume",
 		},
-		Command: []string{"tail", "-f", "/dev/null"},
 	}
+	cc.Command = []string{"tail", "-f", "/dev/null"}
 
 	tmpID, err := d.CreateContainer(cc)
 	if err != nil {

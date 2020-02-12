@@ -109,8 +109,17 @@ func ParseHCLFile(file string, c *Config) error {
 
 	for _, b := range body.Blocks {
 		switch b.Type {
-		case string(TypeCluster):
-			cl := NewCluster(b.Labels[0])
+		case string(TypeK8sCluster):
+			cl := NewK8sCluster(b.Labels[0])
+
+			err := decodeBody(b, cl)
+			if err != nil {
+				return err
+			}
+
+			c.AddResource(cl)
+		case string(TypeNomadCluster):
+			cl := NewNomadCluster(b.Labels[0])
 
 			err := decodeBody(b, cl)
 			if err != nil {

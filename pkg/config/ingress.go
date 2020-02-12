@@ -7,6 +7,8 @@ const TypeIngress ResourceType = "ingress"
 type Ingress struct {
 	ResourceInfo
 
+	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
+
 	TargetRef  interface{}
 	NetworkRef *Network // automatically fetched from target
 	WANRef     *Network // automatically created

@@ -7,8 +7,6 @@ const TypeK8sConfig ResourceType = "k8s_config"
 type K8sConfig struct {
 	ResourceInfo
 
-	ClusterRef *Cluster
-
 	// Cluster is the name of the cluster to apply configuration to
 	Cluster string `hcl:"cluster" json:"cluster"`
 	// Path of a file or directory of Kubernetes config files to apply

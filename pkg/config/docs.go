@@ -8,6 +8,8 @@ const TypeDocs ResourceType = "docs"
 type Docs struct {
 	ResourceInfo
 
+	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
+
 	Path  string `hcl:"path"`
 	Index string `hcl:"index,optional"`
 	Port  int    `hcl:"port"`

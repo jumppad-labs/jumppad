@@ -18,12 +18,12 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-var wanNetwork = &config.Network{Name: "wan", Subnet: "192.168.6.0/24"}
-var containerNetwork = &config.Network{Name: "testnet", Subnet: "192.168.4.0/24"}
+var wanNetwork = &config.Network{ResourceInfo: config.ResourceInfo{Name: "wan", Type: config.TypeNetwork}, Subnet: "192.168.6.0/24"}
+var containerNetwork = &config.Network{ResourceInfo: config.ResourceInfo{Name: "testnet", Type: config.TypeNetwork}, Subnet: "192.168.4.0/24"}
 var containerConfig = &config.Container{
-	Name:    "testcontainer",
-	Image:   config.Image{Name: "consul:v1.6.1"},
-	Command: []string{"tail", "-f", "/dev/null"},
+	ResourceInfo: config.ResourceInfo{Name: "testcontainer", Type: config.TypeContainer},
+	Image:        config.Image{Name: "consul:v1.6.1"},
+	Command:      []string{"tail", "-f", "/dev/null"},
 	Volumes: []config.Volume{
 		config.Volume{
 			Source:      "/mnt/data",
@@ -45,6 +45,10 @@ var containerConfig = &config.Container{
 			Protocol: "udp",
 		},
 	},
+	Networks: []config.NetworkAttachment{
+		config.NetworkAttachment{Name: "network.testnet"},
+		config.NetworkAttachment{Name: "network.wan"},
+	},
 }
 
 func createContainerConfig() (*config.Container, *config.Network, *config.Network, *clients.MockDocker) {
@@ -52,8 +56,10 @@ func createContainerConfig() (*config.Container, *config.Network, *config.Networ
 	cn := *containerNetwork
 	wn := *wanNetwork
 
-	cc.NetworkRef = &cn
-	cc.WANRef = &wn
+	c := config.New()
+	c.AddResource(&cc)
+	c.AddResource(&cn)
+	c.AddResource(&wn)
 
 	return &cc, &cn, &wn, setupContainerMocks()
 }
@@ -78,7 +84,7 @@ func setupContainer(t *testing.T, cc *config.Container, md *clients.MockDocker) 
 	p := NewDockerTasks(md, hclog.NewNullLogger())
 
 	// create the container
-	_, err := p.CreateContainer(*cc)
+	_, err := p.CreateContainer(cc)
 
 	return err
 }
@@ -97,7 +103,7 @@ func TestContainerCreatesCorrectly(t *testing.T) {
 
 	cfg := params[1].(*container.Config)
 
-	assert.Equal(t, cc.Name, cfg.Hostname)
+	assert.Equal(t, cc.Info().Name, cfg.Hostname)
 	assert.Equal(t, cc.Image.Name, cfg.Image)
 	assert.Equal(t, fmt.Sprintf("%s=%s", cc.Environment[0].Key, cc.Environment[0].Value), cfg.Env[0])
 	assert.Equal(t, cc.Command[0], cfg.Cmd[0])
@@ -109,7 +115,7 @@ func TestContainerCreatesCorrectly(t *testing.T) {
 }
 
 func TestContainerAttachesToUserNetwork(t *testing.T) {
-	cc, _, _, md := createContainerConfig()
+	cc, cn, _, md := createContainerConfig()
 
 	err := setupContainer(t, cc, md)
 	assert.NoError(t, err)
@@ -117,7 +123,7 @@ func TestContainerAttachesToUserNetwork(t *testing.T) {
 	params := getCalls(&md.Mock, "NetworkConnect")[0].Arguments
 	nc := params[3].(*network.EndpointSettings)
 
-	assert.Equal(t, cc.NetworkRef.Name, params[1])
+	assert.Equal(t, cn.Info().Name, params[1])
 	assert.Equal(t, "test", params[2])
 	assert.Nil(t, nc.IPAMConfig) // unless an IP address is set this will be nil
 }
@@ -135,18 +141,18 @@ func TestContainerRollsbackWhenUnableToConnectToNetwork(t *testing.T) {
 
 func TestContainerDoesNOTAttachesToUserNetworkWhenNil(t *testing.T) {
 	cc, nc, _, md := createContainerConfig()
-	cc.NetworkRef = nil
+	cc.Networks = []config.NetworkAttachment{}
 
 	err := setupContainer(t, cc, md)
 	assert.NoError(t, err)
 
-	md.AssertNumberOfCalls(t, "NetworkConnect", 1)
+	md.AssertNumberOfCalls(t, "NetworkConnect", 0)
 	md.AssertNotCalled(t, "NetworkConnect", nc.Name, mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestContainerAssignsIPToUserNetwork(t *testing.T) {
 	cc, _, _, md := createContainerConfig()
-	cc.IPAddress = "192.168.1.123"
+	cc.Networks[0].IPAddress = "192.168.1.123"
 
 	err := setupContainer(t, cc, md)
 	assert.NoError(t, err)
@@ -154,21 +160,7 @@ func TestContainerAssignsIPToUserNetwork(t *testing.T) {
 	params := getCalls(&md.Mock, "NetworkConnect")[0].Arguments
 	nc := params[3].(*network.EndpointSettings)
 
-	assert.Equal(t, cc.IPAddress, nc.IPAMConfig.IPv4Address)
-}
-
-func TestContainerAttachesToWANNetwork(t *testing.T) {
-	cc, _, _, md := createContainerConfig()
-
-	err := setupContainer(t, cc, md)
-	assert.NoError(t, err)
-
-	// WAN is always the second call
-	params := getCalls(&md.Mock, "NetworkConnect")[1].Arguments
-	nc := params[3].(*network.EndpointSettings)
-
-	assert.Equal(t, cc.WANRef.Name, params[1])
-	assert.Nil(t, nc.IPAMConfig) // unless an IP address is set this will be nil
+	assert.Equal(t, cc.Networks[0].IPAddress, nc.IPAMConfig.IPv4Address)
 }
 
 func TestContainerRollsbackWhenUnableToConnectToWANNetwork(t *testing.T) {
@@ -181,18 +173,6 @@ func TestContainerRollsbackWhenUnableToConnectToWANNetwork(t *testing.T) {
 	assert.Error(t, err)
 
 	md.AssertCalled(t, "ContainerRemove", mock.Anything, mock.Anything, mock.Anything)
-}
-
-func TestContainerDoesNOTAttachesToWANNetworkWhenNil(t *testing.T) {
-	cc, _, wn, md := createContainerConfig()
-	cc.WANRef = nil
-
-	err := setupContainer(t, cc, md)
-	assert.NoError(t, err)
-
-	// should still conect to normal network
-	md.AssertNumberOfCalls(t, "NetworkConnect", 1)
-	md.AssertNotCalled(t, "NetworkConnect", wn.Name, mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestContainerAttachesVolumeMounts(t *testing.T) {

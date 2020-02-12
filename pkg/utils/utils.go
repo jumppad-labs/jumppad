@@ -3,19 +3,37 @@ package utils
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"runtime"
 	"strings"
 )
 
-var ErrorInvalidBlueprintURI = fmt.Errorf("Inavlid blueprint URI")
+var InvalidBlueprintURIError = fmt.Errorf("Inavlid blueprint URI")
+var NameExceedsMaxLengthError = fmt.Errorf("Name exceeds the max length of 128 characters")
+var NameContainsInvalidCharactersError = fmt.Errorf("Name contains invalid characters characters must be either a-z, A-Z, 0-9, -, _")
 
-// FQDN generates the full qualified name for a container
-func FQDN(name string, networkName string) string {
-	if networkName == "" {
-		return fmt.Sprintf("%s.shipyard", name)
+// ValidateName ensures that the name for a resource is within certain boundaries
+// Valid characters: [a-z] [A-Z] _ - [0-9]
+// Max length: 128
+func ValidateName(name string) (bool, error) {
+	// check the length
+	if len(name) > 128 {
+		return false, NameExceedsMaxLengthError
 	}
 
-	return fmt.Sprintf("%s.%s.shipyard", name, networkName)
+	r := regexp.MustCompile(`^[a-zA-Z0-9\-_]+$`)
+	ok := r.MatchString(name)
+	if !ok {
+		return false, NameContainsInvalidCharactersError
+	}
+
+	return true, nil
+}
+
+// FQDN generates the full qualified name for a container
+func FQDN(name, typeName string) string {
+	fqdn := fmt.Sprintf("%s.%s.shipyard", name, typeName)
+	return fqdn
 }
 
 // CreateKubeConfigPath creates the file path for the KubeConfig file when
@@ -107,7 +125,7 @@ func GetBlueprintFolder(blueprint string) (string, error) {
 
 	if parts == nil || len(parts) != 2 {
 		fmt.Println(parts)
-		return "", ErrorInvalidBlueprintURI
+		return "", InvalidBlueprintURIError
 	}
 
 	return parts[1], nil

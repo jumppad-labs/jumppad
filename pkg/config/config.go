@@ -28,9 +28,10 @@ const Failed Status = "failed"
 
 type Resource interface {
 	Info() *ResourceInfo
+	FindDependentResource(string) (Resource, error)
 }
 
-// Resource is the embedded type for any config resources
+// ResourceInfo is the embedded type for any config resources
 type ResourceInfo struct {
 	// Name is the name of the resource
 	Name string `json:"name"`
@@ -40,10 +41,17 @@ type ResourceInfo struct {
 	Status Status `json:"status"`
 	// DependsOn is a list of objects which must exist before this resource can be applied
 	DependsOn []string `json:"depends_on"`
+
+	// parent container
+	Config *Config
 }
 
 func (r *ResourceInfo) Info() *ResourceInfo {
 	return r
+}
+
+func (r *ResourceInfo) FindDependentResource(name string) (Resource, error) {
+	return r.Config.FindResource(name)
 }
 
 // Config defines the stack config
@@ -109,6 +117,7 @@ func (c *Config) AddResource(r Resource) error {
 		}
 	}
 
+	r.Info().Config = c
 	c.Resources = append(c.Resources, r)
 
 	return nil

@@ -8,8 +8,7 @@ type K8sCluster struct {
 	// embedded type holding name, etc.
 	ResourceInfo
 
-	// Network is the reference to a Network resrouce
-	Network string `hcl:"network" json:"network,omitempty"`
+	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
 	Driver      string  `hcl:"driver" json:"driver,omitempty"`
 	Version     string  `hcl:"version,optional json:"version,omitempty"`

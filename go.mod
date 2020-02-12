@@ -9,6 +9,7 @@ require (
 	github.com/containerd/containerd v1.3.2 // indirect
 	github.com/docker/docker v1.4.2-0.20181221150755-2cb26cfe9cbf
 	github.com/docker/go-connections v0.4.0
+	github.com/gosuri/uitable v0.0.1
 	github.com/hashicorp/go-getter v1.4.2-0.20200106182914-9813cbd4eb02
 	github.com/hashicorp/go-hclog v0.10.1
 	github.com/hashicorp/hcl2 v0.0.0-20191002203319-fb75b3253c80

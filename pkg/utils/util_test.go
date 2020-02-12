@@ -3,6 +3,7 @@ package utils
 import (
 	"testing"
 
+	"github.com/gosuri/uitable/util/strutil"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,4 +42,25 @@ func TestArgIsNotBlueprintFolder(t *testing.T) {
 	_, err := GetBlueprintFolder("github.com/org/repo/folder")
 
 	assert.Error(t, err)
+}
+
+func TestValidatesNameCorrectly(t *testing.T) {
+	ok, err := ValidateName("abc-sdf")
+	assert.NoError(t, err)
+	assert.True(t, ok)
+}
+
+func TestValidatesNameAndReturnsErrorWhenInvalid(t *testing.T) {
+	ok, err := ValidateName("*$-abcd")
+	assert.Error(t, err)
+	assert.False(t, ok)
+}
+
+func TestValidatesNameAndReturnsErrorWhenTooLong(t *testing.T) {
+	dn := strutil.PadLeft("a", 128, 'a'))
+
+	ok, err := ValidateName(dn)
+
+	assert.Error(t, err)
+	assert.False(t, ok)
 }
