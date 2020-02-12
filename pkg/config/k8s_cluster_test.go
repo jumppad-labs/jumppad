@@ -14,13 +14,15 @@ func TestK8sClusterCreatesCorrectly(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, "testing", cl.Info().Name)
-	assert.Equal(t, TypeCluster, cl.Info().Type)
+	assert.Equal(t, TypeK8sCluster, cl.Info().Type)
 	assert.Equal(t, PendingCreation, cl.Info().Status)
 }
 
 const clusterDefault = `
 k8s_cluster "testing" {
-	network = "network.test"
+	network {
+		name = "network.test"
+	}
 	driver = "k3s"
 }
 `

@@ -9,15 +9,10 @@ type Ingress struct {
 
 	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
-	TargetRef  interface{}
-	NetworkRef *Network // automatically fetched from target
-	WANRef     *Network // automatically created
-
-	Target    string `hcl:"target"`
-	Service   string `hcl:"service,optional"`
-	Namespace string `hcl:"namespace,optional"`
-	Ports     []Port `hcl:"port,block"`
-	IPAddress string `hcl:"ip_address,optional"`
+	Target    string `hcl:"target" json:"target"`
+	Service   string `hcl:"service,optional" json"service,omitempty"`
+	Namespace string `hcl:"namespace,optional" json:"namespace,omitempty"`
+	Ports     []Port `hcl:"port,block" json:"ports,omitempty"`
 }
 
 // NewIngress creates a new ingress with the correct defaults

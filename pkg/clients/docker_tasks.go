@@ -416,7 +416,7 @@ func (d *DockerTasks) CopyLocalDockerImageToVolume(images []string, volume strin
 	}
 	defer d.RemoveContainer(tmpID)
 
-	err = d.c.CopyToContainer(context.Background(), utils.FQDN(cc.Name, ""), "/images", tmpTarFile, types.CopyToContainerOptions{})
+	err = d.c.CopyToContainer(context.Background(), utils.FQDN(cc.Name, string(cc.Type)), "/images", tmpTarFile, types.CopyToContainerOptions{})
 	if err != nil {
 		return "", xerrors.Errorf("unable to copy file to container: %w", err)
 	}

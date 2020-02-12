@@ -18,7 +18,7 @@ import (
 )
 
 // setupClusterMocks sets up a happy path for mocks
-func setupClusterMocks() (config.Cluster, *mocks.MockContainerTasks, *mocks.MockKubernetes, func()) {
+func setupClusterMocks() (config.K8sCluster, *mocks.MockContainerTasks, *mocks.MockKubernetes, func()) {
 	md := &mocks.MockContainerTasks{}
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{}, nil)
 	md.On("PullImage", mock.Anything, mock.Anything).Return(nil)
@@ -56,7 +56,10 @@ func setupClusterMocks() (config.Cluster, *mocks.MockContainerTasks, *mocks.Mock
 	// copy the config
 	cc := clusterConfig
 	cn := clusterNetwork
-	cc.NetworkRef = &cn
+
+	c := config.New()
+	c.AddResource(cc)
+	c.AddResource(cn)
 
 	return cc, md, mk, func() {
 		os.Setenv("HOME", currentHome)

@@ -24,7 +24,9 @@ network "test" {
 }
 
 container "testing" {
-	network = "network.test"
+	network {
+		name = "network.test"
+	}
 	image {
 		name = "consul"
 	}

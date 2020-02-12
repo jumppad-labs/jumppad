@@ -21,7 +21,7 @@ func TestResourceCount(t *testing.T) {
 func TestFindResourceFindsCluster(t *testing.T) {
 	c := testSetupConfig()
 
-	cl, err := c.FindResource("cluster.test")
+	cl, err := c.FindResource("k8s_cluster.test")
 	assert.NoError(t, err)
 	assert.Equal(t, c.Resources[0], cl)
 }
@@ -38,7 +38,7 @@ func TestFindResourceReturnsNotFoundError(t *testing.T) {
 func TestAddResourceAddsAResouce(t *testing.T) {
 	c := testSetupConfig()
 
-	cl := NewCluster("mikey")
+	cl := NewK8sCluster("mikey")
 	err := c.AddResource(cl)
 	assert.NoError(t, err)
 

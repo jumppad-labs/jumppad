@@ -37,12 +37,26 @@ func init() {
 
 func TestMain(m *testing.M) {
 	format := "progress"
+	run := false
+
 	for _, arg := range os.Args[1:] {
 		if arg == "-test.v=true" { // go test transforms -v option
 			format = "pretty"
 			break
 		}
+
+		// only run the tests if specific flag is specified
+		// this is to stop inadvertant executrion from go test ./...
+		if arg == "-run" {
+			run = true
+			break
+		}
 	}
+
+	if !run {
+		return
+	}
+
 	status := godog.RunWithOptions("godog", func(s *godog.Suite) {
 		FeatureContext(s)
 	}, godog.Options{

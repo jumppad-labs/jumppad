@@ -23,8 +23,10 @@ network "test" {
 	subnet = "10.0.0.0/24"
 }
 
-cluster "testing" {
-	network = "network.test"
+k8s_cluster "testing" {
+	network {
+		name = "network.test"
+	}
 	driver = "k3s"
 }
 
