@@ -6,27 +6,33 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCreatesCorrectly(t *testing.T) {
+func TestK8sConfigCreatesCorrectly(t *testing.T) {
 	c, _, cleanup := setupTestConfig(t, k8sConfigValid)
 	defer cleanup()
 
-	assert.Len(t, c.K8sConfig, 1)
+	cc, err := c.FindResource("k8s_config.cloud")
+	assert.NoError(t, err)
 
-	k8s := c.K8sConfig[0]
-	assert.Equal(t, c.Clusters[0], k8s.ClusterRef)
-	assert.Equal(t, "/tmp/files", k8s.Paths[0])
-	assert.True(t, k8s.WaitUntilReady)
+	assert.Equal(t, "test", cc.Info().Name)
+	assert.Equal(t, TypeK8sConfig, cc.Info().Type)
+	assert.Equal(t, PendingCreation, cc.Info().Status)
+
+	assert.Equal(t, "/tmp/files", cc.(*K8sConfig).Paths[0])
+	assert.True(t, cc.(*K8sConfig).WaitUntilReady)
 }
 
 func TestMakesPathAbsolute(t *testing.T) {
 	c, base, cleanup := setupTestConfig(t, k8sConfigValid)
 	defer cleanup()
 
-	assert.Contains(t, c.K8sConfig[0].Paths[1], base)
+	kc, err := c.FindResource("k8s_config.cloud")
+	assert.NoError(t, err)
+
+	assert.Contains(t, kc.(*K8sConfig).Paths[1], base)
 }
 
 var k8sConfigValid = `
-cluster "cloud" {
+k8s_cluster "cloud" {
   driver  = "k3s" // default
   version = "1.16.0"
 
