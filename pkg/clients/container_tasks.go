@@ -18,7 +18,7 @@ type ContainerTasks interface {
 	// CreateContainer creates a new container for the given configuration
 	// if successful CreateContainer returns the ID of the created container and a nil error
 	// if not successful CreateContainer returns a blank string for the id and an error message
-	CreateContainer(config.Container) (id string, err error)
+	CreateContainer(*config.Container) (id string, err error)
 	// RemoveContainer stops and removes a running container
 	RemoveContainer(id string) error
 	// CreateVolume creates a new volume with the given name.
@@ -34,7 +34,7 @@ type ContainerTasks interface {
 	// being cached locally.
 	PullImage(image config.Image, force bool) error
 	// FindContainerIDs returns the Container IDs for the given identifier
-	FindContainerIDs(name string, typeNane config.ResourceType) ([]string, error)
+	FindContainerIDs(name string, typeName config.ResourceType) ([]string, error)
 	// ContainerLogs attaches to the container and streams the logs to the returned
 	// io.ReadCloser.
 	// Returns an error if the container is not running

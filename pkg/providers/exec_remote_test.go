@@ -57,7 +57,6 @@ func TestRemoteExecCreatesContainerFailsReturnError(t *testing.T) {
 func TestRemoteExecWithTargetLooksupID(t *testing.T) {
 	md := testRemoteExecSetupMocks()
 	cc := testRemoteExecConfig
-	cc.TargetRef = &config.Container{Name: "test", NetworkRef: &config.Network{Name: "cloud"}}
 	p := NewRemoteExec(cc, md, hclog.NewNullLogger())
 
 	err := p.Create()
@@ -70,7 +69,6 @@ func TestRemoteExecWithTargetLooksupIDNotFoundReturnsError(t *testing.T) {
 	removeOn(&md.Mock, "FindContainerIDs")
 	md.On("FindContainerIDs", "test", "cloud").Return([]string{}, nil)
 	cc := testRemoteExecConfig
-	cc.TargetRef = &config.Container{Name: "test", NetworkRef: &config.Network{Name: "cloud"}}
 	p := NewRemoteExec(cc, md, hclog.NewNullLogger())
 
 	err := p.Create()
@@ -137,9 +135,9 @@ func TestRemoteExecDoesNOTRemovesContainerWhenTarget(t *testing.T) {
 	md.AssertNotCalled(t, "RemoveContainer", mock.Anything)
 }
 
-var testRemoteExecConfig = config.RemoteExec{
+var testRemoteExecConfig = config.ExecRemote{
 	Image:     &config.Image{Name: "tools:v1"},
-	WANRef:    &config.Network{Name: "WAN"},
+	Networks: []config.NetworkAttachment{config.NetworkAttachment{Name: "wan"}},
 	Command:   "tail",
 	Arguments: []string{"-f", "/dev/null"},
 }

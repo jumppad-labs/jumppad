@@ -22,7 +22,9 @@ func setupNetworkTests(c *config.Network) (*clients.MockDocker, *Network) {
 }
 
 func TestNetworkCreatesCorrectly(t *testing.T) {
-	c := &config.Network{Name: "testnet", Subnet: "10.1.2.0/24"}
+	c := config.NewNetwork("testnet")
+	c.Subnet = "10.1.2.0/24"
+
 	md, p := setupNetworkTests(c)
 
 	p.Create()
@@ -40,7 +42,9 @@ func TestNetworkCreatesCorrectly(t *testing.T) {
 }
 
 func TestNetworkDoesNOTCreateWhenExists(t *testing.T) {
-	c := &config.Network{Name: "testnet", Subnet: "10.1.2.0/24"}
+	c := config.NewNetwork("testnet")
+	c.Subnet = "10.1.2.0/24"
+
 	md, p := setupNetworkTests(c)
 	removeOn(&md.Mock, "NetworkList")
 	md.On("NetworkList", mock.Anything, mock.Anything).Return([]types.NetworkResource{types.NetworkResource{ID: "abc"}}, nil)
@@ -51,7 +55,9 @@ func TestNetworkDoesNOTCreateWhenExists(t *testing.T) {
 }
 
 func TestLookupReturnsID(t *testing.T) {
-	c := &config.Network{Name: "testnet", Subnet: "10.1.2.0/24"}
+	c := config.NewNetwork("testnet")
+	c.Subnet = "10.1.2.0/24"
+
 	md, p := setupNetworkTests(c)
 	removeOn(&md.Mock, "NetworkList")
 	md.On("NetworkList", mock.Anything, mock.Anything).Return([]types.NetworkResource{types.NetworkResource{ID: "abc"}}, nil)
@@ -62,7 +68,9 @@ func TestLookupReturnsID(t *testing.T) {
 }
 
 func TestLookupFailReturnsError(t *testing.T) {
-	c := &config.Network{Name: "testnet", Subnet: "10.1.2.0/24"}
+	c := config.NewNetwork("testnet")
+	c.Subnet = "10.1.2.0/24"
+	
 	md, p := setupNetworkTests(c)
 	removeOn(&md.Mock, "NetworkList")
 	md.On("NetworkList", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))

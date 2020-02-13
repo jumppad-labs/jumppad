@@ -30,7 +30,7 @@ func (c *Container) Create() error {
 		return err
 	}
 
-	_, err = c.client.CreateContainer(c.config)
+	_, err = c.client.CreateContainer(&c.config)
 
 	return err
 }
@@ -58,5 +58,5 @@ func (c *Container) Destroy() error {
 
 // Lookup the ID based on the config
 func (c *Container) Lookup() ([]string, error) {
-	return c.client.FindContainerIDs(c.config.Name, c.config.NetworkRef.Name)
+	return c.client.FindContainerIDs(c.config.Name, c.config.Type)
 }

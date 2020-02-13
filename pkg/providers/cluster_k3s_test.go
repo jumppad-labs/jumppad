@@ -18,7 +18,7 @@ import (
 )
 
 // setupClusterMocks sets up a happy path for mocks
-func setupClusterMocks() (config.K8sCluster, *mocks.MockContainerTasks, *mocks.MockKubernetes, func()) {
+func setupClusterMocks() (*config.K8sCluster, *mocks.MockContainerTasks, *mocks.MockKubernetes, func()) {
 	md := &mocks.MockContainerTasks{}
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{}, nil)
 	md.On("PullImage", mock.Anything, mock.Anything).Return(nil)
@@ -54,14 +54,14 @@ func setupClusterMocks() (config.K8sCluster, *mocks.MockContainerTasks, *mocks.M
 	mk.Mock.On("HealthCheckPods", mock.Anything, mock.Anything).Return(nil)
 
 	// copy the config
-	cc := clusterConfig
-	cn := clusterNetwork
+	cc := *clusterConfig
+	cn := *clusterNetwork
 
 	c := config.New()
-	c.AddResource(cc)
-	c.AddResource(cn)
+	c.AddResource(&cc)
+	c.AddResource(&cn)
 
-	return cc, md, mk, func() {
+	return &cc, md, mk, func() {
 		os.Setenv("HOME", currentHome)
 		os.RemoveAll(tmpDir)
 	}
@@ -139,7 +139,7 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 	// validate the basic details for the server container
 	assert.Contains(t, params.Name, "server")
 	assert.Contains(t, params.Image.Name, "rancher")
-	assert.Equal(t, &clusterNetwork, params.NetworkRef)
+	assert.Equal(t, &clusterNetwork.Name, params.Networks[0])
 	assert.True(t, params.Privileged)
 
 	// validate that the volume is correctly set
@@ -224,7 +224,7 @@ func TestClusterK3sCreatesDockerConfig(t *testing.T) {
 	// check file contains docker ip
 	d, err := ioutil.ReadAll(f)
 	assert.NoError(t, err)
-	assert.Contains(t, string(d), fmt.Sprintf("server.%s", utils.FQDN(clusterConfig.Name, clusterConfig.NetworkRef.Name)))
+	assert.Contains(t, string(d), fmt.Sprintf("server.%s", utils.FQDN(clusterConfig.Name, string(clusterConfig.Type))))
 }
 
 func TestClusterK3sCreatesKubeClient(t *testing.T) {
@@ -340,7 +340,7 @@ func TestClusterK3sDestroyGetsIDr(t *testing.T) {
 
 	err := p.Destroy()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "FindContainerIDs", clusterConfig.Name, clusterConfig.NetworkRef.Name)
+	md.AssertCalled(t, "FindContainerIDs", clusterConfig.Name, clusterConfig.Type)
 }
 
 func TestClusterK3sDestroyWithFindIDErrorReturnsError(t *testing.T) {
@@ -394,7 +394,7 @@ func TestClusterK3sDestroyRemovesVolume(t *testing.T) {
 
 var clusterNetwork = config.NewNetwork("cloud")
 
-var clusterConfig = config.K8sCluster{
+var clusterConfig = &config.K8sCluster{
 	ResourceInfo: config.ResourceInfo{Name: "test", Type: config.TypeK8sCluster},
 	Driver:       "k3s",
 	Version:      "v1.0.0",
@@ -402,7 +402,7 @@ var clusterConfig = config.K8sCluster{
 		config.Image{Name: "consul:1.6.1"},
 		config.Image{Name: "vault:1.6.1"},
 	},
-	Networks: []string{"network.cloud"},
+	Networks: []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}},
 }
 
 var kubeconfig = `

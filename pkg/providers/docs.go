@@ -42,15 +42,14 @@ func (i *Docs) Create() error {
 	}
 
 	// set the state
-	i.config.State = config.Applied
+	i.config.Status = config.Applied
 
 	return nil
 }
 
 func (i *Docs) createDocsContainer() error {
 	// create the container config
-	cc := config.Container{}
-	cc.Name = i.config.Name
+	cc := config.NewContainer(i.config.Name)
 	cc.Networks = i.config.Networks
 
 	cc.Image = config.Image{Name: fmt.Sprintf("%s:%s", docsImageName, docsVersion)}
@@ -124,8 +123,7 @@ func (i *Docs) createDocsContainer() error {
 
 func (i *Docs) createTerminalContainer() error {
 	// create the container config
-	cc := config.Container{}
-	cc.Name = "terminal"
+	cc := config.NewContainer("terminal")
 	cc.Networks = i.config.Networks
 	cc.Image = config.Image{Name: "shipyardrun/terminal-server:latest"}
 
@@ -162,7 +160,7 @@ func (i *Docs) Destroy() error {
 	i.log.Info("Destroy Documentation", "ref", i.config.Name)
 
 	// remove the docs
-	ids, err := i.client.FindContainerIDs(i.config.Name, i.config.WANRef.Name)
+	ids, err := i.client.FindContainerIDs(i.config.Name, i.config.Type)
 	if err != nil {
 		return err
 	}
@@ -175,7 +173,7 @@ func (i *Docs) Destroy() error {
 	}
 
 	// remove the terminal server
-	ids, err = i.client.FindContainerIDs("terminal", i.config.WANRef.Name)
+	ids, err = i.client.FindContainerIDs("terminal", i.config.Type)
 	for _, id := range ids {
 		err := i.client.RemoveContainer(id)
 		if err != nil {

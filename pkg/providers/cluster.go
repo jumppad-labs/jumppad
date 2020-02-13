@@ -15,7 +15,7 @@ var (
 
 // K8sCluster defines a provider which can create Kubernetes clusters
 type K8sCluster struct {
-	config     config.K8sCluster
+	config     *config.K8sCluster
 	client     clients.ContainerTasks
 	kubeClient clients.Kubernetes
 	httpClient clients.HTTP
@@ -23,7 +23,7 @@ type K8sCluster struct {
 }
 
 // NewK8sCluster creates a new Kubernetes cluster provider
-func NewK8sCluster(c config.K8sCluster, cc clients.ContainerTasks, kc clients.Kubernetes, hc clients.HTTP, l hclog.Logger) *K8sCluster {
+func NewK8sCluster(c *config.K8sCluster, cc clients.ContainerTasks, kc clients.Kubernetes, hc clients.HTTP, l hclog.Logger) *K8sCluster {
 	return &K8sCluster{c, cc, kc, hc, l}
 }
 

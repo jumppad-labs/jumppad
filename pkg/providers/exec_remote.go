@@ -85,15 +85,15 @@ func (c *ExecRemote) Create() error {
 
 func (c *ExecRemote) createRemoteExecContainer() (string, error) {
 	// first create a new container
-	cc := config.Container{
-		Name:        "remote_exec_temp",
-		Image:       *c.config.Image,
-		Command:     []string{"tail", "-f", "/dev/null"}, // ensure container does not immediately exit
-		Volumes:     c.config.Volumes,
-		WANRef:      c.config.WANRef,
-		NetworkRef:  c.config.NetworkRef,
-		Environment: c.config.Environment,
+	cc := config.NewContainer("remote_exec_temp")
+
+	for _, n := range c.config.Networks {
+		cc.Networks = append(cc.Networks, config.NetworkAttachment{Name: n.Name, IPAddress: n.IPAddress})
 	}
+	cc.Image =       *c.config.Image
+	cc.Command =     []string{"tail", "-f", "/dev/null"} // ensure container does not immediately exit
+	cc.Volumes =     c.config.Volumes
+	cc.Environment = c.config.Environment
 
 	return c.client.CreateContainer(cc)
 }

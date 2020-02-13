@@ -33,8 +33,8 @@ func (c *K8sConfig) Create() error {
 		return nil
 	}
 
-	// set the state
-	c.config.State = config.Applied
+	// set the status
+	c.config.Status = config.Applied
 
 	return nil
 }
@@ -68,18 +68,8 @@ func (c *K8sConfig) Config() ConfigWrapper {
 	return ConfigWrapper{"config.K8sConfig", c.config}
 }
 
-// State returns the state from the config
-func (c *K8sConfig) State() config.State {
-	return c.config.State
-}
-
-// SetState updates the state in the config
-func (c *K8sConfig) SetState(state config.State) {
-	c.config.State = state
-}
-
 func (c *K8sConfig) setup() error {
-	_, destPath, _ := utils.CreateKubeConfigPath(c.config.ClusterRef.Name)
+	_, destPath, _ := utils.CreateKubeConfigPath(c.config.Cluster)
 	err := c.client.SetConfig(destPath)
 	if err != nil {
 		return xerrors.Errorf("unable to create Kubernetes client: %w", err)

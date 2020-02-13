@@ -2,13 +2,13 @@ package shipyard
 
 import (
 	"encoding/json"
-	"fmt"
+	// "fmt"
 	"os"
 	"sync"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/mitchellh/mapstructure"
+	// "github.com/mitchellh/mapstructure"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/providers"
@@ -110,15 +110,6 @@ func (e *Engine) Destroy(path string, allResources bool) error {
 		return err
 	}
 
-	// if we are destroying all resources set the pending modification flag
-	if allResources {
-		for _, gp := range e.providers {
-			for _, p := range gp {
-				p.SetState(config.PendingModification)
-			}
-		}
-	}
-
 	// should run through the providers in reverse order
 	// to ensure objects with dependencies are destroyed first
 	for i := len(e.providers) - 1; i > -1; i-- {
@@ -135,19 +126,15 @@ func (e *Engine) Destroy(path string, allResources bool) error {
 
 func (e *Engine) readConfig(path string, delete bool) error {
 	// load the new config
-	cc, err := config.New()
-	if err != nil {
-		return err
-	}
-
+	cc := config.New()
 	if path != "" {
 		if utils.IsHCLFile(path) {
-			err = config.ParseHCLFile(path, cc)
+			err := config.ParseHCLFile(path, cc)
 			if err != nil {
 				return err
 			}
 		} else {
-			err = config.ParseFolder(path, cc)
+			err := config.ParseFolder(path, cc)
 			if err != nil {
 				return err
 			}
@@ -186,72 +173,73 @@ func (e *Engine) Blueprint() *config.Blueprint {
 
 // createParallel is just a quick implementation for now to test the UX
 func (e *Engine) createParallel(p []providers.Provider) error {
-	errs := make(chan error)
-	done := make(chan struct{})
+	// errs := make(chan error)
+	// done := make(chan struct{})
 
-	// create the wait group and set the size to the provider length
-	wg := sync.WaitGroup{}
-	wg.Add(len(p))
+	// // create the wait group and set the size to the provider length
+	// wg := sync.WaitGroup{}
+	// wg.Add(len(p))
 
-	for _, pr := range p {
-		go func(pr providers.Provider) {
-			defer wg.Done()
+	// for _, pr := range p {
+	// 	go func(pr providers.Provider) {
+	// 		defer wg.Done()
 
-			// only attempt to create if the state is awaiting creation
-			if pr.State() == config.PendingCreation {
-				err := pr.Create()
-				if err != nil {
-					errs <- err
-					return
-				}
-			}
+	// 		// only attempt to create if the state is awaiting creation
+	// 		if pr.State() == config.PendingCreation {
+	// 			err := pr.Create()
+	// 			if err != nil {
+	// 				errs <- err
+	// 				return
+	// 			}
+	// 		}
 
-			// if an error happens then the state will end up incomplete
-			pr.SetState(config.Applied)
+	// 		// if an error happens then the state will end up incomplete
+	// 		pr.SetState(config.Applied)
 
-			// append the state
-			e.stateLock.Lock()
-			defer e.stateLock.Unlock()
-			e.state = append(e.state, pr.Config())
-		}(pr)
-	}
+	// 		// append the state
+	// 		e.stateLock.Lock()
+	// 		defer e.stateLock.Unlock()
+	// 		e.state = append(e.state, pr.Config())
+	// 	}(pr)
+	// }
 
-	go func() {
-		wg.Wait()
-		done <- struct{}{}
-	}()
+	// go func() {
+	// 	wg.Wait()
+	// 	done <- struct{}{}
+	// }()
 
-	select {
-	case <-done:
-		return nil
-	case err := <-errs:
-		return err
-	}
+	// select {
+	// case <-done:
+	// 	return nil
+	// case err := <-errs:
+	// 	return err
+	// }
+	return nil
 }
 
 // destroyParallel is just a quick implementation for now to test the UX
 func (e *Engine) destroyParallel(p []providers.Provider) error {
 	// create the wait group and set the size to the provider length
-	wg := sync.WaitGroup{}
-	wg.Add(len(p))
+	// wg := sync.WaitGroup{}
+	// wg.Add(len(p))
 
-	for _, pr := range p {
-		go func(pr providers.Provider) {
-			defer wg.Done()
+	// for _, pr := range p {
+	// 	go func(pr providers.Provider) {
+	// 		defer wg.Done()
 
-			if pr.State() == config.PendingModification {
-				pr.Destroy()
-				return
-			}
+	// 		if pr.State() == config.PendingModification {
+	// 			pr.Destroy()
+	// 			return
+	// 		}
 
-			// only add to the state if we did not delete
-			e.stateLock.Lock()
-			defer e.stateLock.Unlock()
-			e.state = append(e.state, pr.Config())
-		}(pr)
-	}
+	// 		// only add to the state if we did not delete
+	// 		e.stateLock.Lock()
+	// 		defer e.stateLock.Unlock()
+	// 		e.state = append(e.state, pr.Config())
+	// 	}(pr)
+	// }
 
-	wg.Wait()
+	// wg.Wait()
 
 	return nil
 }
@@ -304,90 +292,91 @@ func (e *Engine) configFromState(path string) (*config.Config, error) {
 	jd.Decode(&s)
 
 	// for each item set the config
-	for _, c := range s {
-		switch c.(map[string]interface{})["Type"].(string) {
-		case "config.Network":
-			n := &config.Network{}
-			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-			if err != nil {
-				return nil, err
-			}
+	// for _, c := range s {
+		// switch c.(map[string]interface{})["Type"].(string) {
+		// case "config.Network":
+		// 	n := &config.Network{}
+		// 	err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+		// 	if err != nil {
+		// 		return nil, err
+		// 	}
 
-			// do not add the wan as this is automatically created
-			if n.Name == "wan" {
-				cc.WAN = n
-			} else {
-				cc.Networks = append(cc.Networks, n)
-			}
-		case "config.Docs":
-			n := &config.Docs{}
-			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-			if err != nil {
-				return nil, err
-			}
+		// 	// do not add the wan as this is automatically created
+		// 	if n.Name == "wan" {
+		// 		cc.WAN = n
+		// 	} else {
+		// 		cc.Networks = append(cc.Networks, n)
+		// 	}
+		// case "config.Docs":
+		// 	n := &config.Docs{}
+		// 	err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+		// 	if err != nil {
+		// 		return nil, err
+		// 	}
 
-			cc.Docs = n
-		case "config.Cluster":
-			fmt.Println("cluster")
-			n := &config.Cluster{}
-			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-			if err != nil {
-				return nil, err
-			}
+		// 	cc.Docs = n
+		// case "config.Cluster":
+		// 	fmt.Println("cluster")
+		// 	n := &config.Cluster{}
+		// 	err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+		// 	if err != nil {
+		// 		return nil, err
+		// 	}
 
-			cc.Clusters = append(cc.Clusters, n)
-		case "config.Container":
-			n := &config.Container{}
-			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-			if err != nil {
-				return nil, err
-			}
+		// 	cc.Clusters = append(cc.Clusters, n)
+		// case "config.Container":
+		// 	n := &config.Container{}
+		// 	err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+		// 	if err != nil {
+		// 		return nil, err
+		// 	}
 
-			cc.Containers = append(cc.Containers, n)
-		case "config.Helm":
-			n := &config.Helm{}
-			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-			if err != nil {
-				return nil, err
-			}
+		// 	cc.Containers = append(cc.Containers, n)
+		// case "config.Helm":
+		// 	n := &config.Helm{}
+		// 	err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+		// 	if err != nil {
+		// 		return nil, err
+		// 	}
 
-			cc.HelmCharts = append(cc.HelmCharts, n)
-		case "config.K8sConfig":
-			n := &config.K8sConfig{}
-			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-			if err != nil {
-				return nil, err
-			}
+		// 	cc.HelmCharts = append(cc.HelmCharts, n)
+		// case "config.K8sConfig":
+		// 	n := &config.K8sConfig{}
+		// 	err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+		// 	if err != nil {
+		// 		return nil, err
+		// 	}
 
-			cc.K8sConfig = append(cc.K8sConfig, n)
-		case "config.Ingress":
-			n := &config.Ingress{}
-			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-			if err != nil {
-				return nil, err
-			}
+		// 	cc.K8sConfig = append(cc.K8sConfig, n)
+		// case "config.Ingress":
+		// 	n := &config.Ingress{}
+		// 	err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+		// 	if err != nil {
+		// 		return nil, err
+		// 	}
 
-			cc.Ingresses = append(cc.Ingresses, n)
-		case "config.LocalExec":
-			n := &config.LocalExec{}
-			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-			if err != nil {
-				return nil, err
-			}
+		// 	cc.Ingresses = append(cc.Ingresses, n)
+		// case "config.LocalExec":
+		// 	n := &config.LocalExec{}
+		// 	err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+		// 	if err != nil {
+		// 		return nil, err
+		// 	}
 
-			cc.LocalExecs = append(cc.LocalExecs, n)
-		case "config.RemoteExec":
-			n := &config.RemoteExec{}
-			err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-			if err != nil {
-				return nil, err
-			}
+		// 	cc.LocalExecs = append(cc.LocalExecs, n)
+		// case "config.RemoteExec":
+		// 	n := &config.RemoteExec{}
+		// 	err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
+		// 	if err != nil {
+		// 		return nil, err
+		// 	}
 
-			cc.RemoteExecs = append(cc.RemoteExecs, n)
-		}
-	}
+		// 	cc.RemoteExecs = append(cc.RemoteExecs, n)
+		// }
+	// }
 
-	return cc, nil
+	// return cc, nil
+	return nil, nil
 }
 
 // merge config items merges the two configs together removing duplicates
@@ -395,174 +384,174 @@ func (e *Engine) mergeConfigItems(c *config.Config, state *config.Config, delete
 	ns := *state
 
 	// process the clusters
-	for _, sc := range c.Clusters {
-		found := -1
-		for n, i := range state.Clusters {
-			if i.Name == sc.Name {
-				found = n
-				break
-			}
-		}
+	// for _, sc := range c.Clusters {
+	// 	found := -1
+	// 	for n, i := range state.Clusters {
+	// 		if i.Name == sc.Name {
+	// 			found = n
+	// 			break
+	// 		}
+	// 	}
 
-		if found == -1 {
-			// dont add to the collection if the item is not found and we are deleting
-			// else the the item will end up in the state
-			if !delete {
-				ns.Clusters = append(ns.Clusters, sc)
-			}
-		} else {
-			e.log.Debug("Cluster already exists in state, update status", "name", sc.Name)
-			ns.Clusters[found].State = config.PendingModification
-		}
-	}
+	// 	if found == -1 {
+	// 		// dont add to the collection if the item is not found and we are deleting
+	// 		// else the the item will end up in the state
+	// 		if !delete {
+	// 			ns.Clusters = append(ns.Clusters, sc)
+	// 		}
+	// 	} else {
+	// 		e.log.Debug("Cluster already exists in state, update status", "name", sc.Name)
+	// 		ns.Clusters[found].State = config.PendingModification
+	// 	}
+	// }
 
-	// process the containers
-	for _, sc := range c.Containers {
-		found := -1
-		for n, i := range state.Containers {
-			if i.Name == sc.Name {
-				found = n
-				break
-			}
-		}
+	// // process the containers
+	// for _, sc := range c.Containers {
+	// 	found := -1
+	// 	for n, i := range state.Containers {
+	// 		if i.Name == sc.Name {
+	// 			found = n
+	// 			break
+	// 		}
+	// 	}
 
-		if found == -1 {
-			if !delete {
-				ns.Containers = append(ns.Containers, sc)
-			}
-		} else {
-			e.log.Debug("Container already exists in state, update status", "name", sc.Name)
-			ns.Containers[found].State = config.PendingModification
-		}
-	}
+	// 	if found == -1 {
+	// 		if !delete {
+	// 			ns.Containers = append(ns.Containers, sc)
+	// 		}
+	// 	} else {
+	// 		e.log.Debug("Container already exists in state, update status", "name", sc.Name)
+	// 		ns.Containers[found].State = config.PendingModification
+	// 	}
+	// }
 
-	// process the networks
-	for _, sc := range c.Networks {
-		found := -1
-		for n, i := range state.Networks {
-			if i.Name == sc.Name {
-				found = n
-				break
-			}
-		}
+	// // process the networks
+	// for _, sc := range c.Networks {
+	// 	found := -1
+	// 	for n, i := range state.Networks {
+	// 		if i.Name == sc.Name {
+	// 			found = n
+	// 			break
+	// 		}
+	// 	}
 
-		if found == -1 {
-			if !delete {
-				ns.Networks = append(ns.Networks, sc)
-			}
-		} else {
-			e.log.Debug("Network already exists in state, update status", "name", sc.Name)
-			ns.Networks[found].State = config.PendingModification
-		}
-	}
+	// 	if found == -1 {
+	// 		if !delete {
+	// 			ns.Networks = append(ns.Networks, sc)
+	// 		}
+	// 	} else {
+	// 		e.log.Debug("Network already exists in state, update status", "name", sc.Name)
+	// 		ns.Networks[found].State = config.PendingModification
+	// 	}
+	// }
 
-	// process the helm charts
-	for _, sc := range c.HelmCharts {
-		found := -1
-		for n, i := range state.HelmCharts {
-			if i.Name == sc.Name {
-				found = n
-				break
-			}
-		}
+	// // process the helm charts
+	// for _, sc := range c.HelmCharts {
+	// 	found := -1
+	// 	for n, i := range state.HelmCharts {
+	// 		if i.Name == sc.Name {
+	// 			found = n
+	// 			break
+	// 		}
+	// 	}
 
-		if found == -1 {
-			if !delete {
-				ns.HelmCharts = append(ns.HelmCharts, sc)
-			}
-		} else {
-			e.log.Debug("Helm chart already exists in state, update status", "name", sc.Name)
-			ns.HelmCharts[found].State = config.PendingModification
-		}
-	}
+	// 	if found == -1 {
+	// 		if !delete {
+	// 			ns.HelmCharts = append(ns.HelmCharts, sc)
+	// 		}
+	// 	} else {
+	// 		e.log.Debug("Helm chart already exists in state, update status", "name", sc.Name)
+	// 		ns.HelmCharts[found].State = config.PendingModification
+	// 	}
+	// }
 
-	// process the kube config
-	for _, sc := range c.K8sConfig {
-		found := -1
-		for n, i := range state.K8sConfig {
-			if i.Name == sc.Name {
-				found = n
-				break
-			}
-		}
+	// // process the kube config
+	// for _, sc := range c.K8sConfig {
+	// 	found := -1
+	// 	for n, i := range state.K8sConfig {
+	// 		if i.Name == sc.Name {
+	// 			found = n
+	// 			break
+	// 		}
+	// 	}
 
-		if found == -1 {
-			if !delete {
-				ns.K8sConfig = append(ns.K8sConfig, sc)
-			}
-		} else {
-			e.log.Debug("Kubernetes config already exists in state, update status", "name", sc.Name)
-			ns.K8sConfig[found].State = config.PendingModification
-		}
-	}
+	// 	if found == -1 {
+	// 		if !delete {
+	// 			ns.K8sConfig = append(ns.K8sConfig, sc)
+	// 		}
+	// 	} else {
+	// 		e.log.Debug("Kubernetes config already exists in state, update status", "name", sc.Name)
+	// 		ns.K8sConfig[found].State = config.PendingModification
+	// 	}
+	// }
 
-	// process the ingresses
-	for _, sc := range c.Ingresses {
-		found := -1
-		for n, i := range state.Ingresses {
-			if i.Name == sc.Name {
-				found = n
-				break
-			}
-		}
+	// // process the ingresses
+	// for _, sc := range c.Ingresses {
+	// 	found := -1
+	// 	for n, i := range state.Ingresses {
+	// 		if i.Name == sc.Name {
+	// 			found = n
+	// 			break
+	// 		}
+	// 	}
 
-		if found == -1 {
-			if !delete {
-				ns.Ingresses = append(ns.Ingresses, sc)
-			}
-		} else {
-			e.log.Debug("Ingress already exists in state, update status", "name", sc.Name)
-			ns.Ingresses[found].State = config.PendingModification
-		}
-	}
+	// 	if found == -1 {
+	// 		if !delete {
+	// 			ns.Ingresses = append(ns.Ingresses, sc)
+	// 		}
+	// 	} else {
+	// 		e.log.Debug("Ingress already exists in state, update status", "name", sc.Name)
+	// 		ns.Ingresses[found].State = config.PendingModification
+	// 	}
+	// }
 
-	// process the local
-	for _, sc := range c.LocalExecs {
-		found := -1
-		for n, i := range state.LocalExecs {
-			if i.Name == sc.Name {
-				found = n
-				break
-			}
-		}
+	// // process the local
+	// for _, sc := range c.LocalExecs {
+	// 	found := -1
+	// 	for n, i := range state.LocalExecs {
+	// 		if i.Name == sc.Name {
+	// 			found = n
+	// 			break
+	// 		}
+	// 	}
 
-		if found == -1 {
-			if !delete {
-				ns.LocalExecs = append(ns.LocalExecs, sc)
-			}
-		} else {
-			e.log.Debug("Ingress already exists in state, update status", "name", sc.Name)
-			ns.LocalExecs[found].State = config.PendingModification
-		}
-	}
+	// 	if found == -1 {
+	// 		if !delete {
+	// 			ns.LocalExecs = append(ns.LocalExecs, sc)
+	// 		}
+	// 	} else {
+	// 		e.log.Debug("Ingress already exists in state, update status", "name", sc.Name)
+	// 		ns.LocalExecs[found].State = config.PendingModification
+	// 	}
+	// }
 
-	// process the local
-	for _, sc := range c.RemoteExecs {
-		found := -1
-		for n, i := range state.RemoteExecs {
-			if i.Name == sc.Name {
-				found = n
-				break
-			}
-		}
+	// // process the local
+	// for _, sc := range c.RemoteExecs {
+	// 	found := -1
+	// 	for n, i := range state.RemoteExecs {
+	// 		if i.Name == sc.Name {
+	// 			found = n
+	// 			break
+	// 		}
+	// 	}
 
-		if found == -1 {
-			if !delete {
-				ns.RemoteExecs = append(ns.RemoteExecs, sc)
-			}
-		} else {
-			e.log.Debug("Ingress already exists in state, update status", "name", sc.Name)
-			ns.RemoteExecs[found].State = config.PendingModification
-		}
-	}
+	// 	if found == -1 {
+	// 		if !delete {
+	// 			ns.RemoteExecs = append(ns.RemoteExecs, sc)
+	// 		}
+	// 	} else {
+	// 		e.log.Debug("Ingress already exists in state, update status", "name", sc.Name)
+	// 		ns.RemoteExecs[found].State = config.PendingModification
+	// 	}
+	// }
 
-	if state.WAN != nil {
-		e.log.Debug("WAN Network already exists in state, ignoring from apply", "name", state.WAN.Name)
-	} else {
-		if !delete {
-			ns.WAN = c.WAN
-		}
-	}
+	// if state.WAN != nil {
+	// 	e.log.Debug("WAN Network already exists in state, ignoring from apply", "name", state.WAN.Name)
+	// } else {
+	// 	if !delete {
+	// 		ns.WAN = c.WAN
+	// 	}
+	// }
 
 	return &ns
 }
@@ -578,55 +567,55 @@ func generateProvidersImpl(c *config.Config, cc *Clients, l hclog.Logger) [][]pr
 	oc[5] = make([]providers.Provider, 0)
 	oc[6] = make([]providers.Provider, 0)
 
-	if c.WAN != nil {
-		p := providers.NewNetwork(c.WAN, cc.Docker, l)
-		oc[0] = append(oc[0], p)
-	}
+	// if c.WAN != nil {
+	// 	p := providers.NewNetwork(c.WAN, cc.Docker, l)
+	// 	oc[0] = append(oc[0], p)
+	// }
 
-	for _, n := range c.Networks {
-		p := providers.NewNetwork(n, cc.Docker, l)
-		oc[0] = append(oc[0], p)
-	}
+	// for _, n := range c.Networks {
+	// 	p := providers.NewNetwork(n, cc.Docker, l)
+	// 	oc[0] = append(oc[0], p)
+	// }
 
-	for _, c := range c.Containers {
-		p := providers.NewContainer(*c, cc.ContainerTasks, l)
-		oc[1] = append(oc[1], p)
-	}
+	// for _, c := range c.Containers {
+	// 	p := providers.NewContainer(*c, cc.ContainerTasks, l)
+	// 	oc[1] = append(oc[1], p)
+	// }
 
-	for _, c := range c.Ingresses {
-		p := providers.NewIngress(*c, cc.ContainerTasks, l)
-		oc[1] = append(oc[1], p)
-	}
+	// for _, c := range c.Ingresses {
+	// 	p := providers.NewIngress(*c, cc.ContainerTasks, l)
+	// 	oc[1] = append(oc[1], p)
+	// }
 
-	if c.Docs != nil {
-		p := providers.NewDocs(c.Docs, cc.ContainerTasks, l)
-		oc[1] = append(oc[1], p)
-	}
+	// if c.Docs != nil {
+	// 	p := providers.NewDocs(c.Docs, cc.ContainerTasks, l)
+	// 	oc[1] = append(oc[1], p)
+	// }
 
-	for _, c := range c.Clusters {
-		p := providers.NewCluster(*c, cc.ContainerTasks, cc.Kubernetes, cc.HTTP, l)
-		oc[2] = append(oc[2], p)
-	}
+	// for _, c := range c.Clusters {
+	// 	p := providers.NewCluster(*c, cc.ContainerTasks, cc.Kubernetes, cc.HTTP, l)
+	// 	oc[2] = append(oc[2], p)
+	// }
 
-	for _, c := range c.HelmCharts {
-		p := providers.NewHelm(c, cc.Kubernetes, cc.Helm, l)
-		oc[3] = append(oc[3], p)
-	}
+	// for _, c := range c.HelmCharts {
+	// 	p := providers.NewHelm(c, cc.Kubernetes, cc.Helm, l)
+	// 	oc[3] = append(oc[3], p)
+	// }
 
-	for _, c := range c.K8sConfig {
-		p := providers.NewK8sConfig(c, cc.Kubernetes, l)
-		oc[4] = append(oc[4], p)
-	}
+	// for _, c := range c.K8sConfig {
+	// 	p := providers.NewK8sConfig(c, cc.Kubernetes, l)
+	// 	oc[4] = append(oc[4], p)
+	// }
 
-	for _, c := range c.LocalExecs {
-		p := providers.NewLocalExec(c, cc.Command, l)
-		oc[6] = append(oc[6], p)
-	}
+	// for _, c := range c.LocalExecs {
+	// 	p := providers.NewLocalExec(c, cc.Command, l)
+	// 	oc[6] = append(oc[6], p)
+	// }
 
-	for _, c := range c.RemoteExecs {
-		p := providers.NewRemoteExec(*c, cc.ContainerTasks, l)
-		oc[6] = append(oc[6], p)
-	}
+	// for _, c := range c.RemoteExecs {
+	// 	p := providers.NewRemoteExec(*c, cc.ContainerTasks, l)
+	// 	oc[6] = append(oc[6], p)
+	// }
 
 	return oc
 }

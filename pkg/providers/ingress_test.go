@@ -125,19 +125,15 @@ func TestIngressK8sTargetDestroysContainer(t *testing.T) {
 
 var testIngressConfig = config.Ingress{
 	Service:    "svc/web",
-	Name:       "web-http",
-	NetworkRef: &config.Network{Name: "cloud"},
-	TargetRef: &config.Cluster{
-		Name:   "test",
-		Driver: "k3s",
+	ResourceInfo: config.ResourceInfo{
+		Name:       "web-http",
 	},
+	Networks: []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}},
+	Target: "k8s_cluster.test",
 }
 
 var testIngressContainerConfig = config.Ingress{
-	TargetRef: &config.Container{
-		Name:       "test",
-		NetworkRef: &config.Network{Name: "cloud"},
-	},
+	Target: "container.test",
 	Ports: []config.Port{
 		config.Port{
 			Local:  8080,

@@ -1,7 +1,6 @@
 package mocks
 
 import (
-	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/providers"
 	"github.com/stretchr/testify/mock"
 )
@@ -34,11 +33,4 @@ func (m *MockProvider) Config() providers.ConfigWrapper {
 	m.Called()
 
 	return m.config
-}
-
-// State is the state from the config
-func (m *MockProvider) State() config.State {
-	args := m.Called()
-
-	return args.Get(0).(config.State)
 }

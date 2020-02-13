@@ -26,7 +26,7 @@ func (c *K8sCluster) createK3s() error {
 	c.log.Info("Creating Cluster", "ref", c.config.Name)
 
 	// check the cluster does not already exist
-	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.NetworkRef.Name)
+	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.Type)
 	if err != nil {
 		return err
 	}
@@ -52,8 +52,7 @@ func (c *K8sCluster) createK3s() error {
 
 	// create the server
 	// since the server is just a container create the container config and provider
-	cc := config.Container{}
-	cc.Name = fmt.Sprintf("server.%s", c.config.Name)
+	cc := config.NewContainer(fmt.Sprintf("server.%s", c.config.Name))
 	cc.Image = config.Image{Name: image}
 	cc.Networks = c.config.Networks
 	cc.Privileged = true // k3s must run Privlidged
@@ -204,7 +203,7 @@ func (c *K8sCluster) createDockerKubeConfig(kubeconfig string) error {
 	newConfig := strings.Replace(
 		string(readBytes),
 		"server: https://127.0.0.1",
-		fmt.Sprintf("server: https://server.%s", utils.FQDN(c.config.Name, c.config.NetworkRef.Name)),
+		fmt.Sprintf("server: https://server.%s", utils.FQDN(c.config.Name, string(c.config.Type))),
 		-1,
 	)
 
@@ -253,7 +252,7 @@ func (c *K8sCluster) ImportLocalDockerImages(name string, id string, images []co
 
 func (c *K8sCluster) destroyK3s() error {
 	c.log.Info("Destroy Cluster", "ref", c.config.Name)
-	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.NetworkRef.Name)
+	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.Type)
 	if err != nil {
 		return err
 	}
