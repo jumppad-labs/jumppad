@@ -28,6 +28,9 @@ func TestCreatesConfigCorrectly(t *testing.T) {
 	kc := config.NewK8sConfig("config")
 	kc.Cluster = "k8s_cluster.testcluster"
 	kc.Paths = paths
+	cc := config.New()
+	cc.AddResource(kc)
+	cc.AddResource(c)
 	mk, p := setupK8sConfig(kc)
 
 	err := p.Create()

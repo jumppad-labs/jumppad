@@ -22,7 +22,7 @@ func setupTests() (*Engine, *config.Config, func()) {
 	c1 := config.NewContainer("container1")
 	c1.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "network.network1"}}
 	cl1 := config.NewK8sCluster("cluster1")
-	cl1.Networks =  []config.NetworkAttachment{config.NetworkAttachment{Name: "network.network1"}}
+	cl1.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "network.network1"}}
 	h1 := config.NewHelm("helm1")
 	h1.Cluster = "k8s_cluster.cluster1"
 	i1 := config.NewIngress("ingress1")
@@ -57,38 +57,6 @@ func setupTests() (*Engine, *config.Config, func()) {
 		os.Setenv("HOME", home)
 		os.RemoveAll(dir)
 	}
-}
-
-func TestCorrectlyGeneratesProviders(t *testing.T) {
-	_, c, cleanup := setupTests()
-	defer cleanup()
-
-	cl := &Clients{}
-
-	// process the config
-	oc := generateProvidersImpl(c, cl, hclog.NewNullLogger())
-
-	// first element should be a network
-	assert.Len(t, oc, 7)
-
-	// WAN network
-	_, ok := oc[0][0].(*providers.Network)
-	assert.True(t, ok)
-
-	_, ok = oc[0][1].(*providers.Network)
-	assert.True(t, ok)
-
-	_, ok = oc[1][0].(*providers.Container)
-	assert.True(t, ok)
-
-	_, ok = oc[1][1].(*providers.Ingress)
-	assert.True(t, ok)
-
-	_, ok = oc[2][0].(*providers.K8sCluster)
-	assert.True(t, ok)
-
-	_, ok = oc[3][0].(*providers.Helm)
-	assert.True(t, ok)
 }
 
 func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {

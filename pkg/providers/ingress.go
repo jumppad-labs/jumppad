@@ -34,11 +34,12 @@ func (i *Ingress) Create() error {
 		return err
 	}
 
-	switch v := target.(type) {
-	case *config.Container:
-		serviceName = utils.FQDN(v.Name, string(v.Type))
-	case *config.K8sCluster:
+	switch target.Info().Type {
+	case config.TypeContainer:
+		serviceName = utils.FQDN(target.Info().Name, string(target.Info().Type))
+	case config.TypeK8sCluster:
 
+		v := target.(*config.K8sCluster)
 		// determine the type of cluster
 		// if this is a k3s cluster we need to add the kubeconfig and
 		// make sure that the proxy runs in kube mode
@@ -88,10 +89,10 @@ func (i *Ingress) Create() error {
 		c.Networks = append(c.Networks, config.NetworkAttachment{Name: n.Name, IPAddress: n.IPAddress})
 	}
 
-	c.Ports =       i.config.Ports
-	c.Image =       config.Image{Name: image}
-	c.Command =     command
-	c.Volumes =     volumes
+	c.Ports = i.config.Ports
+	c.Image = config.Image{Name: image}
+	c.Command = command
+	c.Volumes = volumes
 	c.Environment = env
 
 	_, err = i.client.CreateContainer(c)

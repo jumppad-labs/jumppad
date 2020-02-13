@@ -69,8 +69,13 @@ func (c *K8sConfig) Config() ConfigWrapper {
 }
 
 func (c *K8sConfig) setup() error {
-	_, destPath, _ := utils.CreateKubeConfigPath(c.config.Cluster)
-	err := c.client.SetConfig(destPath)
+	cluster, err := c.config.FindDependentResource(c.config.Cluster)
+	if err != nil {
+		return xerrors.Errorf("Unable to find associated cluster: %w", cluster)
+	}
+
+	_, destPath, _ := utils.CreateKubeConfigPath(cluster.Info().Name)
+	err = c.client.SetConfig(destPath)
 	if err != nil {
 		return xerrors.Errorf("unable to create Kubernetes client: %w", err)
 	}

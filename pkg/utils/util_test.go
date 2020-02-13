@@ -57,7 +57,7 @@ func TestValidatesNameAndReturnsErrorWhenInvalid(t *testing.T) {
 }
 
 func TestValidatesNameAndReturnsErrorWhenTooLong(t *testing.T) {
-	dn := strutil.PadLeft("a", 128, 'a')
+	dn := strutil.PadLeft("a", 129, 'a')
 
 	ok, err := ValidateName(dn)
 
