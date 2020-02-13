@@ -32,7 +32,7 @@ func TestFindResourceReturnsNotFoundError(t *testing.T) {
 	cl, err := c.FindResource("cluster.notexist")
 	assert.Error(t, err)
 	assert.IsType(t, err, ResourceNotFoundError{})
-	assert.Equal(t, c.Resources[0], cl)
+	assert.Nil(t, cl)
 }
 
 func TestAddResourceAddsAResouce(t *testing.T) {

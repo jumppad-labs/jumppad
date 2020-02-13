@@ -9,21 +9,21 @@ import (
 	"github.com/shipyard-run/shipyard/pkg/config"
 )
 
-// LocalExec provider allows the execution of arbitrary commands
+// ExecLocal provider allows the execution of arbitrary commands
 // on the local machine
-type LocalExec struct {
-	config *config.LocalExec
+type ExecLocal struct {
+	config *config.ExecLocal
 	client clients.Command
 	log    hclog.Logger
 }
 
-// NewLocalExec creates a new LocalExec provider
-func NewLocalExec(c *config.LocalExec, ex clients.Command, l hclog.Logger) *LocalExec {
-	return &LocalExec{c, ex, l}
+// NewExecLocal creates a new Local Exec provider
+func NewExecLocal(c *config.ExecLocal, ex clients.Command, l hclog.Logger) *ExecLocal {
+	return &ExecLocal{c, ex, l}
 }
 
 // Create a new exec
-func (c *LocalExec) Create() error {
+func (c *ExecLocal) Create() error {
 	if c.config.Command != "" {
 		return fmt.Errorf("Only Script execution is currently implemented for Local Exec")
 	}
@@ -41,33 +41,15 @@ func (c *LocalExec) Create() error {
 		return err
 	}
 
-	// set the state
-	c.config.State = config.Applied
-
 	return nil
 }
 
 // Destroy statisfies the interface method but is not implemented by LocalExec
-func (c *LocalExec) Destroy() error {
+func (c *ExecLocal) Destroy() error {
 	return nil
 }
 
 // Lookup statisfies the interface method but is not implemented by LocalExec
-func (c *LocalExec) Lookup() ([]string, error) {
+func (c *ExecLocal) Lookup() ([]string, error) {
 	return []string{}, nil
-}
-
-// Config returns the config for the provider
-func (c *LocalExec) Config() ConfigWrapper {
-	return ConfigWrapper{"config.LocalExec", c.config}
-}
-
-// State returns the state from the config
-func (c *LocalExec) State() config.State {
-	return c.config.State
-}
-
-// SetState updates the state in the config
-func (c *LocalExec) SetState(state config.State) {
-	c.config.State = state
 }

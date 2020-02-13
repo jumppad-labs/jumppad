@@ -234,8 +234,8 @@ func (d *DockerTasks) PullImage(image config.Image, force bool) error {
 }
 
 // FindContainerIDs returns the Container IDs for the given identifier
-func (d *DockerTasks) FindContainerIDs(containerName string, networkName string) ([]string, error) {
-	fullName := utils.FQDN(containerName, networkName)
+func (d *DockerTasks) FindContainerIDs(containerName string, typeName config.Status) ([]string, error) {
+	fullName := utils.FQDN(containerName, string(typeName))
 
 	args := filters.NewArgs()
 	args.Add("name", fullName)

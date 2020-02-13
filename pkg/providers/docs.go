@@ -51,7 +51,7 @@ func (i *Docs) createDocsContainer() error {
 	// create the container config
 	cc := config.Container{}
 	cc.Name = i.config.Name
-	cc.NetworkRef = i.config.WANRef
+	cc.Networks = i.config.Networks
 
 	cc.Image = config.Image{Name: fmt.Sprintf("%s:%s", docsImageName, docsVersion)}
 
@@ -126,7 +126,7 @@ func (i *Docs) createTerminalContainer() error {
 	// create the container config
 	cc := config.Container{}
 	cc.Name = "terminal"
-	cc.NetworkRef = i.config.WANRef
+	cc.Networks = i.config.Networks
 	cc.Image = config.Image{Name: "shipyardrun/terminal-server:latest"}
 
 	// pull the image
@@ -197,19 +197,4 @@ func (i *Docs) Lookup() ([]string, error) {
 	*/
 
 	return []string{}, nil
-}
-
-// Config returns the config for the provider
-func (c *Docs) Config() ConfigWrapper {
-	return ConfigWrapper{"config.Docs", c.config}
-}
-
-// State returns the state from the config
-func (c *Docs) State() config.State {
-	return c.config.State
-}
-
-// SetState updates the state in the config
-func (c *Docs) SetState(state config.State) {
-	c.config.State = state
 }

@@ -24,11 +24,17 @@ func NewHelm(c *config.Helm, kc clients.Kubernetes, hc clients.Helm, l hclog.Log
 func (h *Helm) Create() error {
 	h.log.Info("Creating Helm chart", "ref", h.config.Name)
 
-	_, destPath, _ := utils.CreateKubeConfigPath(h.config.ClusterRef.Name)
+	// get the target cluster
+	target, err := h.config.FindDependentResource(h.config.Cluster)
+	if err != nil {
+		xerrors.Errorf("Unable to find cluster: %w", err)
+	}
+
+	_, destPath, _ := utils.CreateKubeConfigPath(target.Info().Name)
 
 	// set the KubeConfig for the kubernetes client
 	// this is used by the healthchecks
-	err := h.kubeClient.SetConfig(destPath)
+	err = h.kubeClient.SetConfig(destPath)
 	if err != nil {
 		xerrors.Errorf("unable to create Kubernetes client: %w", err)
 	}
@@ -51,9 +57,6 @@ func (h *Helm) Create() error {
 		}
 	}
 
-	// set the state
-	h.config.State = config.Applied
-
 	return nil
 }
 
@@ -64,19 +67,4 @@ func (h *Helm) Destroy() error {
 
 func (h *Helm) Lookup() ([]string, error) {
 	return []string{}, nil
-}
-
-// Config returns the config for the provider
-func (c *Helm) Config() ConfigWrapper {
-	return ConfigWrapper{"config.Helm", c.config}
-}
-
-// State returns the state from the config
-func (c *Helm) State() config.State {
-	return c.config.State
-}
-
-// SetState updates the state in the config
-func (c *Helm) SetState(state config.State) {
-	c.config.State = state
 }

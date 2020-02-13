@@ -10,7 +10,7 @@ func TestK8sConfigCreatesCorrectly(t *testing.T) {
 	c, _, cleanup := setupTestConfig(t, k8sConfigValid)
 	defer cleanup()
 
-	cc, err := c.FindResource("k8s_config.cloud")
+	cc, err := c.FindResource("k8s_config.test")
 	assert.NoError(t, err)
 
 	assert.Equal(t, "test", cc.Info().Name)
@@ -25,7 +25,7 @@ func TestMakesPathAbsolute(t *testing.T) {
 	c, base, cleanup := setupTestConfig(t, k8sConfigValid)
 	defer cleanup()
 
-	kc, err := c.FindResource("k8s_config.cloud")
+	kc, err := c.FindResource("k8s_config.test")
 	assert.NoError(t, err)
 
 	assert.Contains(t, kc.(*K8sConfig).Paths[1], base)
@@ -38,7 +38,9 @@ k8s_cluster "cloud" {
 
   nodes = 1 // default
 
-  network = "network.k8s"
+  network {
+	  name = "network.k8s"
+  }
 }
 
 k8s_config "test" {

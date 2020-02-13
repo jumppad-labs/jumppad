@@ -16,17 +16,13 @@ import (
 	"golang.org/x/xerrors"
 )
 
-var (
-	ErrorClusterInvalidName = errors.New("invalid cluster name")
-)
-
 // https://github.com/rancher/k3d/blob/master/cli/commands.go
 
 const k3sBaseImage = "rancher/k3s"
 
 var startTimeout = (120 * time.Second)
 
-func (c *Cluster) createK3s() error {
+func (c *K8sCluster) createK3s() error {
 	c.log.Info("Creating Cluster", "ref", c.config.Name)
 
 	// check the cluster does not already exist
@@ -59,7 +55,7 @@ func (c *Cluster) createK3s() error {
 	cc := config.Container{}
 	cc.Name = fmt.Sprintf("server.%s", c.config.Name)
 	cc.Image = config.Image{Name: image}
-	cc.NetworkRef = c.config.NetworkRef
+	cc.Networks = c.config.Networks
 	cc.Privileged = true // k3s must run Privlidged
 
 	// set the volume mount for the images
@@ -142,13 +138,10 @@ func (c *Cluster) createK3s() error {
 		}
 	}
 
-	// set the state
-	c.config.State = config.Applied
-
 	return nil
 }
 
-func (c *Cluster) waitForStart(id string) error {
+func (c *K8sCluster) waitForStart(id string) error {
 	start := time.Now()
 
 	for {
@@ -181,7 +174,7 @@ func (c *Cluster) waitForStart(id string) error {
 	return nil
 }
 
-func (c *Cluster) copyKubeConfig(id string) (string, error) {
+func (c *K8sCluster) copyKubeConfig(id string) (string, error) {
 	// create destination kubeconfig file paths
 	_, destPath, _ := utils.CreateKubeConfigPath(c.config.Name)
 
@@ -194,7 +187,7 @@ func (c *Cluster) copyKubeConfig(id string) (string, error) {
 	return destPath, nil
 }
 
-func (c *Cluster) createDockerKubeConfig(kubeconfig string) error {
+func (c *K8sCluster) createDockerKubeConfig(kubeconfig string) error {
 	// read the config into a string
 	f, err := os.OpenFile(kubeconfig, os.O_RDONLY, 0666)
 	if err != nil {
@@ -229,7 +222,7 @@ func (c *Cluster) createDockerKubeConfig(kubeconfig string) error {
 }
 
 // ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
-func (c *Cluster) ImportLocalDockerImages(name string, id string, images []config.Image) error {
+func (c *K8sCluster) ImportLocalDockerImages(name string, id string, images []config.Image) error {
 	imgs := []string{}
 
 	for _, i := range images {
@@ -258,7 +251,7 @@ func (c *Cluster) ImportLocalDockerImages(name string, id string, images []confi
 	return nil
 }
 
-func (c *Cluster) destroyK3s() error {
+func (c *K8sCluster) destroyK3s() error {
 	c.log.Info("Destroy Cluster", "ref", c.config.Name)
 	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.NetworkRef.Name)
 	if err != nil {

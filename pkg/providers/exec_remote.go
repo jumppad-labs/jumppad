@@ -9,21 +9,21 @@ import (
 	"golang.org/x/xerrors"
 )
 
-// RemoteExec provider allows the execution of arbitrary commands on an existing target or
+// ExecRemote provider allows the execution of arbitrary commands on an existing target or
 // can create a new container before running
-type RemoteExec struct {
-	config config.RemoteExec
+type ExecRemote struct {
+	config config.ExecRemote
 	client clients.ContainerTasks
 	log    hclog.Logger
 }
 
 // NewRemoteExec creates a new Exec provider
-func NewRemoteExec(c config.RemoteExec, ex clients.ContainerTasks, l hclog.Logger) *RemoteExec {
-	return &RemoteExec{c, ex, l}
+func NewRemoteExec(c config.ExecRemote, ex clients.ContainerTasks, l hclog.Logger) *ExecRemote {
+	return &ExecRemote{c, ex, l}
 }
 
 // Create a new execution instance
-func (c *RemoteExec) Create() error {
+func (c *ExecRemote) Create() error {
 	c.log.Info("Remote executing command", "ref", c.config.Name, "command", c.config.Command, "args", c.config.Arguments, "image", c.config.Image)
 
 	if c.config.Script != "" {
@@ -33,7 +33,7 @@ func (c *RemoteExec) Create() error {
 	// execution target id
 	targetID := ""
 
-	if c.config.TargetRef == nil {
+	if c.config.Target == "" {
 		// Not using existing target create new container
 		id, err := c.createRemoteExecContainer()
 		if err != nil {
@@ -43,9 +43,15 @@ func (c *RemoteExec) Create() error {
 		targetID = id
 	} else {
 		// Fetch the id for the target
-		switch v := c.config.TargetRef.(type) {
-		case *config.Container:
-			ids, err := c.client.FindContainerIDs(v.Name, v.NetworkRef.Name)
+		target, err := c.config.FindDependentResource(c.config.Target)
+		if err != nil {
+			// this should never happen
+			return xerrors.Errorf("Unable to find target: %w", err)
+		}
+
+		switch target.Info().Type {
+		case config.TypeContainer:
+			ids, err := c.client.FindContainerIDs(target.Info().Name, target.Info().Type)
 
 			if err != nil {
 				return xerrors.Errorf("Unable to find remote exec target: %w", err)
@@ -74,13 +80,10 @@ func (c *RemoteExec) Create() error {
 		return c.client.RemoveContainer(targetID)
 	}
 
-	// set the state
-	c.config.State = config.Applied
-
 	return nil
 }
 
-func (c *RemoteExec) createRemoteExecContainer() (string, error) {
+func (c *ExecRemote) createRemoteExecContainer() (string, error) {
 	// first create a new container
 	cc := config.Container{
 		Name:        "remote_exec_temp",
@@ -96,26 +99,11 @@ func (c *RemoteExec) createRemoteExecContainer() (string, error) {
 }
 
 // Destroy statisfies the interface requirements but is not used
-func (c *RemoteExec) Destroy() error {
+func (c *ExecRemote) Destroy() error {
 	return nil
 }
 
 // Lookup statisfies the interface requirements but is not used
-func (c *RemoteExec) Lookup() ([]string, error) {
+func (c *ExecRemote) Lookup() ([]string, error) {
 	return []string{}, nil
-}
-
-// Config returns the config for the provider
-func (c *RemoteExec) Config() ConfigWrapper {
-	return ConfigWrapper{"config.RemoteExec", c.config}
-}
-
-// State returns the state from the config
-func (c *RemoteExec) State() config.State {
-	return c.config.State
-}
-
-// SetState updates the state in the config
-func (c *RemoteExec) SetState(state config.State) {
-	c.config.State = state
 }
