@@ -12,13 +12,13 @@ import (
 // ExecRemote provider allows the execution of arbitrary commands on an existing target or
 // can create a new container before running
 type ExecRemote struct {
-	config config.ExecRemote
+	config *config.ExecRemote
 	client clients.ContainerTasks
 	log    hclog.Logger
 }
 
 // NewRemoteExec creates a new Exec provider
-func NewRemoteExec(c config.ExecRemote, ex clients.ContainerTasks, l hclog.Logger) *ExecRemote {
+func NewRemoteExec(c *config.ExecRemote, ex clients.ContainerTasks, l hclog.Logger) *ExecRemote {
 	return &ExecRemote{c, ex, l}
 }
 

@@ -134,12 +134,12 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 	err := p.Create()
 	assert.NoError(t, err)
 
-	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(config.Container)
+	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
 
 	// validate the basic details for the server container
 	assert.Contains(t, params.Name, "server")
 	assert.Contains(t, params.Image.Name, "rancher")
-	assert.Equal(t, &clusterNetwork.Name, params.Networks[0])
+	assert.Equal(t, clusterNetwork.Name, params.Networks[0].Name)
 	assert.True(t, params.Privileged)
 
 	// validate that the volume is correctly set

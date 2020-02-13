@@ -24,9 +24,9 @@ func testRemoteExecSetupMocks() *mocks.MockContainerTasks {
 
 func TestRemoteExecThrowsErrorIfScript(t *testing.T) {
 	md := testRemoteExecSetupMocks()
-	cc := testRemoteExecConfig
+	cc := *testRemoteExecConfig
 	cc.Script = "./script.sh"
-	p := NewRemoteExec(cc, md, hclog.NewNullLogger())
+	p := NewRemoteExec(&cc, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -56,18 +56,21 @@ func TestRemoteExecCreatesContainerFailsReturnError(t *testing.T) {
 
 func TestRemoteExecWithTargetLooksupID(t *testing.T) {
 	md := testRemoteExecSetupMocks()
-	cc := testRemoteExecConfig
-	p := NewRemoteExec(cc, md, hclog.NewNullLogger())
+	cc := *testRemoteExecConfig
+	cc.Target = "container.test"
+	c := config.New()
+	c.AddResource(&cc)
+	p := NewRemoteExec(&cc, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "FindContainerIDs", "test", "cloud")
+	md.AssertCalled(t, "FindContainerIDs", "test", config.TypeContainer)
 }
 
 func TestRemoteExecWithTargetLooksupIDNotFoundReturnsError(t *testing.T) {
 	md := testRemoteExecSetupMocks()
 	removeOn(&md.Mock, "FindContainerIDs")
-	md.On("FindContainerIDs", "test", "cloud").Return([]string{}, nil)
+	md.On("FindContainerIDs", "test", config.TypeContainer).Return([]string{}, nil)
 	cc := testRemoteExecConfig
 	p := NewRemoteExec(cc, md, hclog.NewNullLogger())
 
@@ -126,16 +129,16 @@ func TestRemoteExecRemoveContainerFailReturnsError(t *testing.T) {
 
 func TestRemoteExecDoesNOTRemovesContainerWhenTarget(t *testing.T) {
 	md := testRemoteExecSetupMocks()
-	cc := testRemoteExecConfig
+	cc := *testRemoteExecConfig
 	cc.Target = "container.test"
-	p := NewRemoteExec(cc, md, hclog.NewNullLogger())
+	p := NewRemoteExec(&cc, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
 	md.AssertNotCalled(t, "RemoveContainer", mock.Anything)
 }
 
-var testRemoteExecConfig = config.ExecRemote{
+var testRemoteExecConfig = &config.ExecRemote{
 	Image:     &config.Image{Name: "tools:v1"},
 	Networks: []config.NetworkAttachment{config.NetworkAttachment{Name: "wan"}},
 	Command:   "tail",
