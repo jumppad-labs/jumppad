@@ -250,7 +250,7 @@ func (c *Config) Merge(c2 *Config) {
 	for _, cc2 := range c2.Resources {
 		found := false
 		for _, cc := range c.Resources {
-			if cc2.Info().Name == cc.Info().Name {
+			if cc2.Info().Name == cc.Info().Name && cc2.Info().Type == cc.Info().Type {
 				// exists in the collection already set pending state
 				cc.Info().Status = PendingModification
 				found = true

@@ -117,6 +117,11 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 	for _, n := range c.Networks {
 		net, err := c.FindDependentResource(n.Name)
 		if err != nil {
+			errRemove := d.RemoveContainer(cont.ID)
+			if errRemove != nil {
+				return "", xerrors.Errorf("Unable to connect container to network %s, unable to roll back container: %w", n.Name, err)
+			}
+
 			return "", xerrors.Errorf("Network not found: %w", err)
 		}
 
@@ -140,45 +145,6 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 			return "", xerrors.Errorf("Unable to connect container to network %s: %w", n.Name, err)
 		}
 	}
-
-	// attach the container to the network
-	// if c.Network != nil {
-	// 	d.l.Debug("Attaching container to network", "ref", c.Name, "network", c.NetworkRef.Name)
-	// 	es := &network.EndpointSettings{NetworkID: c.NetworkRef.Name}
-
-	// 	// are we binding to a specific ip
-	// 	if c.IPAddress != "" {
-	// 		d.l.Debug("Assigning static ip address", "ref", c.Name, "network", c.NetworkRef.Name, "ip_address", c.IPAddress)
-	// 		es.IPAMConfig = &network.EndpointIPAMConfig{IPv4Address: c.IPAddress}
-	// 	}
-
-	// 	err := d.c.NetworkConnect(context.Background(), c.NetworkRef.Name, cont.ID, es)
-	// 	if err != nil {
-	// 		// if we fail to connect to the network roll back the container
-	// 		errRemove := d.RemoveContainer(cont.ID)
-	// 		if errRemove != nil {
-	// 			return "", xerrors.Errorf("Unable to connect container to network %s, unable to roll back container: %w", c.NetworkRef.Name, err)
-	// 		}
-
-	// 		return "", xerrors.Errorf("Unable to connect container to network %s: %w", c.NetworkRef.Name, err)
-	// 	}
-	// }
-
-	// attach the container to the WAN network
-	// if c.WANRef != nil {
-	// 	d.l.Debug("Attaching container to WAN network", "ref", c.Name, "network", c.WANRef.Name)
-	// 	es := &network.EndpointSettings{NetworkID: c.WANRef.Name}
-
-	// 	err := d.c.NetworkConnect(context.Background(), c.WANRef.Name, cont.ID, es)
-	// 	if err != nil {
-	// 		errRemove := d.RemoveContainer(cont.ID)
-	// 		if errRemove != nil {
-	// 			return "", xerrors.Errorf("Unable to connect container to wan network %s, unable to roll back container: %w", c.WANRef.Name, err)
-	// 		}
-
-	// 		return "", xerrors.Errorf("Unable to connect container to wan network %s: %w", c.WANRef.Name, err)
-	// 	}
-	// }
 
 	err = d.c.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
 	if err != nil {
