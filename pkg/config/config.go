@@ -138,7 +138,11 @@ func (c *Config) AddResource(r Resource) error {
 // DoYaLikeDAGs dags? yeah dags! oh, dogs.
 // https://www.youtube.com/watch?v=ZXILzUpVx7A&t=0s
 func (c *Config) DoYaLikeDAGs() (*dag.AcyclicGraph, error) {
+	// create root node
+	root := &Blueprint{}
+
 	graph := &dag.AcyclicGraph{}
+	graph.Add(root)
 
 	// Loop over all resources and add to dag
 	for _, resource := range c.Resources {
@@ -147,13 +151,20 @@ func (c *Config) DoYaLikeDAGs() (*dag.AcyclicGraph, error) {
 
 	// Add dependencies for all resources
 	for _, resource := range c.Resources {
+		hasDeps := false
 		for _, d := range resource.Info().DependsOn {
 			dependency, err := c.FindResource(d)
 			if xerrors.Is(err, ResourceNotFoundError{}) {
 				return nil, xerrors.Errorf("Could not build graph from resources: %w", err)
 			}
 
+			hasDeps = true
 			graph.Connect(dag.BasicEdge(dependency, resource))
+		}
+
+		// if no deps add to root node
+		if !hasDeps {
+			graph.Connect(dag.BasicEdge(root, resource))
 		}
 	}
 
