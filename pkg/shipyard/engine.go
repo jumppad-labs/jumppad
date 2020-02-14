@@ -4,7 +4,7 @@ import (
 
 	// "fmt"
 
-	"sync"
+	"fmt"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -34,12 +34,11 @@ type Engine struct {
 	config      *config.Config
 	log         hclog.Logger
 	getProvider getProviderFunc
-	stateLock   sync.Mutex
 }
 
 // defines a function which is used for generating providers
 // enables the replacement in tests to inject mocks
-type getProviderFunc func(c *config.Config, cl *Clients, l hclog.Logger) providers.Provider
+type getProviderFunc func(c config.Resource, cl *Clients) (providers.Provider, error)
 
 // GenerateClients creates the various clients for creating and destroying resources
 func GenerateClients(l hclog.Logger) (*Clients, error) {
@@ -73,7 +72,7 @@ func New(l hclog.Logger) (*Engine, error) {
 	var err error
 	e := &Engine{}
 	e.log = l
-	e.getProvider = generateProvidersImpl
+	e.getProvider = generateProviderImpl
 
 	// create the clients
 	cl, err := GenerateClients(l)
@@ -94,12 +93,27 @@ func (e *Engine) Apply(path string) error {
 	}
 
 	// walk the dag and apply the config
-	d.Walk(func(v dag.Vertex) tfdiags.Diagnostics {
+	d.Walk(func(v dag.Vertex) (diags tfdiags.Diagnostics) {
 		// check if the resource needs to be created and if so create
+		if r, ok := v.(config.Resource); ok && r.Info().Status == config.PendingCreation {
+			// get the provider to create the resource
+			p, err := e.getProvider(r, e.clients)
+			if err != nil {
+				r.Info().Status = config.Failed
+				return diags.Append(err)
+			}
 
-		// get the provider to create the resource
+			// execute
+			err = p.Create()
+			if err != nil {
+				r.Info().Status = config.Failed
+				return diags.Append(err)
+			}
 
-		// set the status
+			// set the status
+			r.Info().Status = config.Applied
+		}
+
 		return nil
 	})
 
@@ -114,7 +128,7 @@ func (e *Engine) Apply(path string) error {
 
 // Destroy the resources defined by the config
 func (e *Engine) Destroy(path string, allResources bool) error {
-	d, err := e.readConfig(path, false)
+	_, err := e.readConfig(path, false)
 	if err != nil {
 		return err
 	}
@@ -150,6 +164,7 @@ func (e *Engine) readConfig(path string, delete bool) (*dag.AcyclicGraph, error)
 				return nil, err
 			}
 		} else {
+			fmt.Println(path)
 			err := config.ParseFolder(path, cc)
 			if err != nil {
 				return nil, err
@@ -161,7 +176,8 @@ func (e *Engine) readConfig(path string, delete bool) (*dag.AcyclicGraph, error)
 	sc := config.New()
 	err := sc.FromJSON(utils.StatePath())
 	if err != nil {
-		return nil, err
+		// we do not have any state to create a new one
+		e.log.Debug("Statefile does not exist")
 	}
 
 	// merge the state and items to be created or deleted
@@ -184,8 +200,8 @@ func (e *Engine) Blueprint() *config.Blueprint {
 	return e.config.Blueprint
 }
 
-// generateProviders returns providers grouped together in order of execution
-func generateProvidersImpl(c *config.Config, cc *Clients, l hclog.Logger) providers.Provider {
+// generateProviderImpl returns providers grouped together in order of execution
+func generateProviderImpl(c config.Resource, cc *Clients) (providers.Provider, error) {
 
-	return nil
+	return nil, nil
 }

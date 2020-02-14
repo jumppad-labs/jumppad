@@ -1,17 +1,17 @@
 package mocks
 
 import (
-	"github.com/shipyard-run/shipyard/pkg/providers"
+	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/stretchr/testify/mock"
 )
 
 type MockProvider struct {
 	mock.Mock
-	config providers.ConfigWrapper
+	c config.Resource
 }
 
-func New(c providers.ConfigWrapper) *MockProvider {
-	return &MockProvider{config: c}
+func New(c config.Resource) *MockProvider {
+	return &MockProvider{c: c}
 }
 
 func (m *MockProvider) Create() error {
@@ -29,8 +29,6 @@ func (m *MockProvider) Lookup() ([]string, error) {
 	return args.Get(0).([]string), args.Error(1)
 }
 
-func (m *MockProvider) Config() providers.ConfigWrapper {
-	m.Called()
-
-	return m.config
+func (m *MockProvider) Config() config.Resource {
+	return m.c
 }
