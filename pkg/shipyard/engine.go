@@ -132,10 +132,12 @@ func (e *Engine) Apply(path string) error {
 		return tf.Err()
 	}
 
-	// save the state regardless of error
-	err = e.config.ToJSON(utils.StatePath())
-	if err != nil {
-		return err
+	if len(e.config.Resources) > 0 {
+		// save the state regardless of error
+		err = e.config.ToJSON(utils.StatePath())
+		if err != nil {
+			return err
+		}
 	}
 
 	return err

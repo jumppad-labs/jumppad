@@ -154,8 +154,8 @@ func (c *Config) DoYaLikeDAGs() (*dag.AcyclicGraph, error) {
 		hasDeps := false
 		for _, d := range resource.Info().DependsOn {
 			dependency, err := c.FindResource(d)
-			if xerrors.Is(err, ResourceNotFoundError{}) {
-				return nil, xerrors.Errorf("Could not build graph from resources: %w", err)
+			if err != nil {
+				return nil, err
 			}
 
 			hasDeps = true
