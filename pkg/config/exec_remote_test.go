@@ -47,7 +47,9 @@ exec_remote "setup_vault" {
   image {
 	  name = "hashicorp/vault:latest"
   }
-  network = "network.cloud"
+  network {
+	  name = "network.cloud"
+  }
   script = "./scripts/setup_vault.sh"
   volume {
 	  source = "./scripts"

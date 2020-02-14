@@ -17,6 +17,7 @@ func testIngressCreateMocks() *mocks.MockContainerTasks {
 	md.On("CreateContainer", mock.Anything).Return("ingress", nil)
 	md.On("RemoveContainer", mock.Anything).Return(nil)
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"ingress"}, nil)
+	md.On("DetachNetwork", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	testCluster.Driver = "k3s"
 
@@ -130,6 +131,7 @@ func TestIngressK8sTargetDestroysContainer(t *testing.T) {
 	err := p.Destroy()
 	assert.NoError(t, err)
 	md.AssertCalled(t, "RemoveContainer", "ingress")
+	md.AssertCalled(t, "DetachNetwork", mock.Anything, mock.Anything, mock.Anything)
 }
 
 var testIngressConfig = config.Ingress{

@@ -33,6 +33,7 @@ func setupClusterMocks() (*config.K8sCluster, *mocks.MockContainerTasks, *mocks.
 	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("RemoveContainer", mock.Anything).Return(nil)
 	md.On("RemoveVolume", mock.Anything).Return(nil)
+	md.On("DetachNetwork", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	// set the home folder to a temp folder
 	tmpDir, _ := ioutil.TempDir("", "")

@@ -8,6 +8,7 @@ import (
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestContainerCreatesSuccessfully(t *testing.T) {
@@ -49,6 +50,7 @@ func TestContainerDestroysCorrectlyWhenContainerExists(t *testing.T) {
 
 	md.On("FindContainerIDs", cc.Name, cc.Type).Return([]string{"abc"}, nil)
 	md.On("RemoveContainer", "abc").Return(nil)
+	md.On("DetachNetwork", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	err := c.Destroy()
 	assert.NoError(t, err)

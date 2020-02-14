@@ -80,7 +80,7 @@ func (d *MockContainerTasks) ExecuteCommand(id string, command []string, writer 
 }
 
 func (d *MockContainerTasks) DetachNetwork(network, containerid string) error {
-	args := d.Called(id, containerid)
+	args := d.Called(network, containerid)
 
 	return args.Error(0)
 }
