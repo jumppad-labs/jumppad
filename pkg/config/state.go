@@ -262,4 +262,9 @@ func (c *Config) Merge(c2 *Config) {
 			c.AddResource(cc2)
 		}
 	}
+
+	// also merge the blueprints
+	if c2.Blueprint != nil {
+		c.Blueprint = c2.Blueprint
+	}
 }

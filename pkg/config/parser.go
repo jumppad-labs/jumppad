@@ -4,7 +4,6 @@ package config
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -29,14 +28,12 @@ func ParseFolder(folder string, c *Config) error {
 	// pick up the blueprint file
 	yardFiles, err := filepath.Glob(path.Join(abs, "*.yard"))
 	if err != nil {
-		fmt.Println("err")
 		return err
 	}
 
 	if len(yardFiles) > 0 {
 		err := ParseYardFile(yardFiles[0], c)
 		if err != nil {
-			fmt.Println("err")
 			return err
 		}
 	}
@@ -44,14 +41,12 @@ func ParseFolder(folder string, c *Config) error {
 	// load files from the current folder
 	files, err := filepath.Glob(path.Join(abs, "*.hcl"))
 	if err != nil {
-		fmt.Println("err")
 		return err
 	}
 
 	// sub folders
 	filesDir, err := filepath.Glob(path.Join(abs, "**/*.hcl"))
 	if err != nil {
-		fmt.Println("err")
 		return err
 	}
 
@@ -69,6 +64,8 @@ func ParseFolder(folder string, c *Config) error {
 
 // ParseYardFile parses a blueprint configuration file
 func ParseYardFile(file string, c *Config) error {
+	ctx = buildContext()
+
 	parser := hclparse.NewParser()
 
 	f, diag := parser.ParseHCLFile(file)
@@ -95,6 +92,7 @@ func ParseYardFile(file string, c *Config) error {
 
 // ParseHCLFile parses a config file and adds it to the config
 func ParseHCLFile(file string, c *Config) error {
+	ctx = buildContext()
 	parser := hclparse.NewParser()
 
 	f, diag := parser.ParseHCLFile(file)

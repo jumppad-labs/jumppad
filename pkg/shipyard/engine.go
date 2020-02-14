@@ -129,7 +129,7 @@ func (e *Engine) Apply(path string) error {
 	w.Update(d)
 	tf := w.Wait()
 	if tf.Err() != nil {
-		return tf.Err()
+		err = tf.Err()
 	}
 
 	if len(e.config.Resources) > 0 {
@@ -187,7 +187,7 @@ func (e *Engine) Destroy(path string, allResources bool) error {
 	w.Update(d)
 	tf := w.Wait()
 	if tf.Err() != nil {
-		return tf.Err()
+		err = tf.Err()
 	}
 
 	// remove any destroyed nodes from the state
