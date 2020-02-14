@@ -8,6 +8,9 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/terraform/dag"
+	"github.com/hashicorp/terraform/tfdiags"
+
 	// "github.com/mitchellh/mapstructure"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
@@ -27,13 +30,11 @@ type Clients struct {
 
 // Engine is responsible for creating and destroying resources
 type Engine struct {
-	providers   [][]providers.Provider
 	clients     *Clients
 	config      *config.Config
 	log         hclog.Logger
 	getProvider getProviderFunc
 	stateLock   sync.Mutex
-	state       []providers.ConfigWrapper
 }
 
 // defines a function which is used for generating providers
@@ -72,7 +73,7 @@ func New(l hclog.Logger) (*Engine, error) {
 	var err error
 	e := &Engine{}
 	e.log = l
-	e.generateProviders = generateProvidersImpl
+	e.getProvider = generateProvidersImpl
 
 	// create the clients
 	cl, err := GenerateClients(l)
@@ -87,78 +88,90 @@ func New(l hclog.Logger) (*Engine, error) {
 
 // Apply the current config creating the resources
 func (e *Engine) Apply(path string) error {
-	err := e.readConfig(path, false)
-
-	// loop through each group and apply
-	for _, g := range e.providers {
-		// apply the provider in parallel
-		createErr := e.createParallel(g)
-		if createErr != nil {
-			err = createErr
-			break
-		}
+	d, err := e.readConfig(path, false)
+	if err != nil {
+		return err
 	}
 
+	// walk the dag and apply the config
+	d.Walk(func(v dag.Vertex) tfdiags.Diagnostics {
+		// check if the resource needs to be created and if so create
+
+		// get the provider to create the resource
+
+		// set the status
+		return nil
+	})
+
 	// save the state regardless of error
-	e.saveState()
+	err = e.config.ToJSON(utils.StatePath())
+	if err != nil {
+		return err
+	}
 
 	return err
 }
 
 // Destroy the resources defined by the config
 func (e *Engine) Destroy(path string, allResources bool) error {
-	err := e.readConfig(path, true)
+	d, err := e.readConfig(path, false)
 	if err != nil {
 		return err
 	}
 
-	// should run through the providers in reverse order
-	// to ensure objects with dependencies are destroyed first
-	for i := len(e.providers) - 1; i > -1; i-- {
-		err := e.destroyParallel(e.providers[i])
+	/*
+		// walk the dag and apply the config
+		r, err := d.Root()
 		if err != nil {
-			e.log.Error("Error destroying resource", "error", err)
+			return err
 		}
+
+		d.ReverseDepthFirstWalk(r, func(v dag.Vertex) tfdiags.Diagnostics {
+			// check if the resource needs to be created and if so create
+			return nil
+		})
+	*/
+	// save the state regardless of error
+	err = e.config.ToJSON(utils.StatePath())
+	if err != nil {
+		return err
 	}
 
-	e.saveState()
-
-	return nil
+	return err
 }
 
-func (e *Engine) readConfig(path string, delete bool) error {
+func (e *Engine) readConfig(path string, delete bool) (*dag.AcyclicGraph, error) {
 	// load the new config
 	cc := config.New()
 	if path != "" {
 		if utils.IsHCLFile(path) {
 			err := config.ParseHCLFile(path, cc)
 			if err != nil {
-				return err
+				return nil, err
 			}
 		} else {
 			err := config.ParseFolder(path, cc)
 			if err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
 
 	// load the existing state
-	sc, err := e.configFromState(utils.StatePath())
+	sc := config.New()
+	err := sc.FromJSON(utils.StatePath())
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// merge the state and items to be created or deleted
-	e.config = e.mergeConfigItems(cc, sc, delete)
+	sc.Merge(cc)
 
-	// parse the references for the config links
-	err = config.ParseReferences(e.config)
-	if err != nil {
-		return err
-	}
+	// set the config
+	e.config = sc
 
-	return nil
+	// build a DAG
+	return e.config.DoYaLikeDAGs()
 }
 
 // ResourceCount defines the number of resources in a plan
@@ -171,139 +184,8 @@ func (e *Engine) Blueprint() *config.Blueprint {
 	return e.config.Blueprint
 }
 
-// createParallel is just a quick implementation for now to test the UX
-func (e *Engine) createParallel(p []providers.Provider) error {
-	// errs := make(chan error)
-	// done := make(chan struct{})
-
-	// // create the wait group and set the size to the provider length
-	// wg := sync.WaitGroup{}
-	// wg.Add(len(p))
-
-	// for _, pr := range p {
-	// 	go func(pr providers.Provider) {
-	// 		defer wg.Done()
-
-	// 		// only attempt to create if the state is awaiting creation
-	// 		if pr.State() == config.PendingCreation {
-	// 			err := pr.Create()
-	// 			if err != nil {
-	// 				errs <- err
-	// 				return
-	// 			}
-	// 		}
-
-	// 		// if an error happens then the state will end up incomplete
-	// 		pr.SetState(config.Applied)
-
-	// 		// append the state
-	// 		e.stateLock.Lock()
-	// 		defer e.stateLock.Unlock()
-	// 		e.state = append(e.state, pr.Config())
-	// 	}(pr)
-	// }
-
-	// go func() {
-	// 	wg.Wait()
-	// 	done <- struct{}{}
-	// }()
-
-	// select {
-	// case <-done:
-	// 	return nil
-	// case err := <-errs:
-	// 	return err
-	// }
-	return nil
-}
-
-// destroyParallel is just a quick implementation for now to test the UX
-func (e *Engine) destroyParallel(p []providers.Provider) error {
-	// create the wait group and set the size to the provider length
-	// wg := sync.WaitGroup{}
-	// wg.Add(len(p))
-
-	// for _, pr := range p {
-	// 	go func(pr providers.Provider) {
-	// 		defer wg.Done()
-
-	// 		if pr.State() == config.PendingModification {
-	// 			pr.Destroy()
-	// 			return
-	// 		}
-
-	// 		// only add to the state if we did not delete
-	// 		e.stateLock.Lock()
-	// 		defer e.stateLock.Unlock()
-	// 		e.state = append(e.state, pr.Config())
-	// 	}(pr)
-	// }
-
-	// wg.Wait()
-
-	return nil
-}
-
 // generateProviders returns providers grouped together in order of execution
-func generateProvidersImpl(c *config.Config, cc *Clients, l hclog.Logger) [][]providers.Provider {
-	oc := make([][]providers.Provider, 7)
-	oc[0] = make([]providers.Provider, 0)
-	oc[1] = make([]providers.Provider, 0)
-	oc[2] = make([]providers.Provider, 0)
-	oc[3] = make([]providers.Provider, 0)
-	oc[4] = make([]providers.Provider, 0)
-	oc[5] = make([]providers.Provider, 0)
-	oc[6] = make([]providers.Provider, 0)
+func generateProvidersImpl(c *config.Config, cc *Clients, l hclog.Logger) providers.Provider {
 
-	// if c.WAN != nil {
-	// 	p := providers.NewNetwork(c.WAN, cc.Docker, l)
-	// 	oc[0] = append(oc[0], p)
-	// }
-
-	// for _, n := range c.Networks {
-	// 	p := providers.NewNetwork(n, cc.Docker, l)
-	// 	oc[0] = append(oc[0], p)
-	// }
-
-	// for _, c := range c.Containers {
-	// 	p := providers.NewContainer(*c, cc.ContainerTasks, l)
-	// 	oc[1] = append(oc[1], p)
-	// }
-
-	// for _, c := range c.Ingresses {
-	// 	p := providers.NewIngress(*c, cc.ContainerTasks, l)
-	// 	oc[1] = append(oc[1], p)
-	// }
-
-	// if c.Docs != nil {
-	// 	p := providers.NewDocs(c.Docs, cc.ContainerTasks, l)
-	// 	oc[1] = append(oc[1], p)
-	// }
-
-	// for _, c := range c.Clusters {
-	// 	p := providers.NewCluster(*c, cc.ContainerTasks, cc.Kubernetes, cc.HTTP, l)
-	// 	oc[2] = append(oc[2], p)
-	// }
-
-	// for _, c := range c.HelmCharts {
-	// 	p := providers.NewHelm(c, cc.Kubernetes, cc.Helm, l)
-	// 	oc[3] = append(oc[3], p)
-	// }
-
-	// for _, c := range c.K8sConfig {
-	// 	p := providers.NewK8sConfig(c, cc.Kubernetes, l)
-	// 	oc[4] = append(oc[4], p)
-	// }
-
-	// for _, c := range c.LocalExecs {
-	// 	p := providers.NewLocalExec(c, cc.Command, l)
-	// 	oc[6] = append(oc[6], p)
-	// }
-
-	// for _, c := range c.RemoteExecs {
-	// 	p := providers.NewRemoteExec(*c, cc.ContainerTasks, l)
-	// 	oc[6] = append(oc[6], p)
-	// }
-
-	return oc
+	return nil
 }
