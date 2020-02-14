@@ -1,9 +1,9 @@
 package shipyard
 
 import (
-	"encoding/json"
+
 	// "fmt"
-	"os"
+
 	"sync"
 	"time"
 
@@ -27,16 +27,18 @@ type Clients struct {
 
 // Engine is responsible for creating and destroying resources
 type Engine struct {
-	providers         [][]providers.Provider
-	clients           *Clients
-	config            *config.Config
-	log               hclog.Logger
-	generateProviders generateProvidersFunc
-	stateLock         sync.Mutex
-	state             []providers.ConfigWrapper
+	providers   [][]providers.Provider
+	clients     *Clients
+	config      *config.Config
+	log         hclog.Logger
+	getProvider getProviderFunc
+	stateLock   sync.Mutex
+	state       []providers.ConfigWrapper
 }
 
-type generateProvidersFunc func(c *config.Config, cl *Clients, l hclog.Logger) [][]providers.Provider
+// defines a function which is used for generating providers
+// enables the replacement in tests to inject mocks
+type getProviderFunc func(c *config.Config, cl *Clients, l hclog.Logger) providers.Provider
 
 // GenerateClients creates the various clients for creating and destroying resources
 func GenerateClients(l hclog.Logger) (*Clients, error) {
@@ -156,8 +158,6 @@ func (e *Engine) readConfig(path string, delete bool) error {
 		return err
 	}
 
-	e.providers = e.generateProviders(e.config, e.clients, e.log)
-
 	return nil
 }
 
@@ -242,318 +242,6 @@ func (e *Engine) destroyParallel(p []providers.Provider) error {
 	// wg.Wait()
 
 	return nil
-}
-
-// save state serializes the state file into json formatted file
-func (e *Engine) saveState() error {
-	e.log.Info("Writing state file")
-
-	sd := utils.StateDir()
-	sp := utils.StatePath()
-
-	// if it does not exist create the state folder
-	_, err := os.Stat(sd)
-	if err != nil {
-		os.MkdirAll(sd, os.ModePerm)
-	}
-
-	// if the statefile exists overwrite it
-	_, err = os.Stat(sp)
-	if err == nil {
-		// delete the old state
-		os.Remove(sp)
-	}
-
-	// serialize the state to json and write to a file
-	f, err := os.Create(sp)
-	if err != nil {
-		e.log.Error("Unable to create state", "error", err)
-		return err
-	}
-	defer f.Close()
-
-	ne := json.NewEncoder(f)
-	return ne.Encode(e.state)
-}
-
-func (e *Engine) configFromState(path string) (*config.Config, error) {
-	cc := &config.Config{}
-
-	// it is fine that the state might not exist
-	f, err := os.Open(path)
-	if err != nil {
-		e.log.Debug("State file does not exist", "err", err)
-		return cc, nil
-	}
-	defer f.Close()
-
-	s := []interface{}{}
-	jd := json.NewDecoder(f)
-	jd.Decode(&s)
-
-	// for each item set the config
-	// for _, c := range s {
-		// switch c.(map[string]interface{})["Type"].(string) {
-		// case "config.Network":
-		// 	n := &config.Network{}
-		// 	err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
-
-		// 	// do not add the wan as this is automatically created
-		// 	if n.Name == "wan" {
-		// 		cc.WAN = n
-		// 	} else {
-		// 		cc.Networks = append(cc.Networks, n)
-		// 	}
-		// case "config.Docs":
-		// 	n := &config.Docs{}
-		// 	err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
-
-		// 	cc.Docs = n
-		// case "config.Cluster":
-		// 	fmt.Println("cluster")
-		// 	n := &config.Cluster{}
-		// 	err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
-
-		// 	cc.Clusters = append(cc.Clusters, n)
-		// case "config.Container":
-		// 	n := &config.Container{}
-		// 	err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
-
-		// 	cc.Containers = append(cc.Containers, n)
-		// case "config.Helm":
-		// 	n := &config.Helm{}
-		// 	err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
-
-		// 	cc.HelmCharts = append(cc.HelmCharts, n)
-		// case "config.K8sConfig":
-		// 	n := &config.K8sConfig{}
-		// 	err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
-
-		// 	cc.K8sConfig = append(cc.K8sConfig, n)
-		// case "config.Ingress":
-		// 	n := &config.Ingress{}
-		// 	err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
-
-		// 	cc.Ingresses = append(cc.Ingresses, n)
-		// case "config.LocalExec":
-		// 	n := &config.LocalExec{}
-		// 	err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
-
-		// 	cc.LocalExecs = append(cc.LocalExecs, n)
-		// case "config.RemoteExec":
-		// 	n := &config.RemoteExec{}
-		// 	err := mapstructure.Decode(c.(map[string]interface{})["Value"].(interface{}), &n)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
-
-		// 	cc.RemoteExecs = append(cc.RemoteExecs, n)
-		// }
-	// }
-
-	// return cc, nil
-	return nil, nil
-}
-
-// merge config items merges the two configs together removing duplicates
-func (e *Engine) mergeConfigItems(c *config.Config, state *config.Config, delete bool) *config.Config {
-	ns := *state
-
-	// process the clusters
-	// for _, sc := range c.Clusters {
-	// 	found := -1
-	// 	for n, i := range state.Clusters {
-	// 		if i.Name == sc.Name {
-	// 			found = n
-	// 			break
-	// 		}
-	// 	}
-
-	// 	if found == -1 {
-	// 		// dont add to the collection if the item is not found and we are deleting
-	// 		// else the the item will end up in the state
-	// 		if !delete {
-	// 			ns.Clusters = append(ns.Clusters, sc)
-	// 		}
-	// 	} else {
-	// 		e.log.Debug("Cluster already exists in state, update status", "name", sc.Name)
-	// 		ns.Clusters[found].State = config.PendingModification
-	// 	}
-	// }
-
-	// // process the containers
-	// for _, sc := range c.Containers {
-	// 	found := -1
-	// 	for n, i := range state.Containers {
-	// 		if i.Name == sc.Name {
-	// 			found = n
-	// 			break
-	// 		}
-	// 	}
-
-	// 	if found == -1 {
-	// 		if !delete {
-	// 			ns.Containers = append(ns.Containers, sc)
-	// 		}
-	// 	} else {
-	// 		e.log.Debug("Container already exists in state, update status", "name", sc.Name)
-	// 		ns.Containers[found].State = config.PendingModification
-	// 	}
-	// }
-
-	// // process the networks
-	// for _, sc := range c.Networks {
-	// 	found := -1
-	// 	for n, i := range state.Networks {
-	// 		if i.Name == sc.Name {
-	// 			found = n
-	// 			break
-	// 		}
-	// 	}
-
-	// 	if found == -1 {
-	// 		if !delete {
-	// 			ns.Networks = append(ns.Networks, sc)
-	// 		}
-	// 	} else {
-	// 		e.log.Debug("Network already exists in state, update status", "name", sc.Name)
-	// 		ns.Networks[found].State = config.PendingModification
-	// 	}
-	// }
-
-	// // process the helm charts
-	// for _, sc := range c.HelmCharts {
-	// 	found := -1
-	// 	for n, i := range state.HelmCharts {
-	// 		if i.Name == sc.Name {
-	// 			found = n
-	// 			break
-	// 		}
-	// 	}
-
-	// 	if found == -1 {
-	// 		if !delete {
-	// 			ns.HelmCharts = append(ns.HelmCharts, sc)
-	// 		}
-	// 	} else {
-	// 		e.log.Debug("Helm chart already exists in state, update status", "name", sc.Name)
-	// 		ns.HelmCharts[found].State = config.PendingModification
-	// 	}
-	// }
-
-	// // process the kube config
-	// for _, sc := range c.K8sConfig {
-	// 	found := -1
-	// 	for n, i := range state.K8sConfig {
-	// 		if i.Name == sc.Name {
-	// 			found = n
-	// 			break
-	// 		}
-	// 	}
-
-	// 	if found == -1 {
-	// 		if !delete {
-	// 			ns.K8sConfig = append(ns.K8sConfig, sc)
-	// 		}
-	// 	} else {
-	// 		e.log.Debug("Kubernetes config already exists in state, update status", "name", sc.Name)
-	// 		ns.K8sConfig[found].State = config.PendingModification
-	// 	}
-	// }
-
-	// // process the ingresses
-	// for _, sc := range c.Ingresses {
-	// 	found := -1
-	// 	for n, i := range state.Ingresses {
-	// 		if i.Name == sc.Name {
-	// 			found = n
-	// 			break
-	// 		}
-	// 	}
-
-	// 	if found == -1 {
-	// 		if !delete {
-	// 			ns.Ingresses = append(ns.Ingresses, sc)
-	// 		}
-	// 	} else {
-	// 		e.log.Debug("Ingress already exists in state, update status", "name", sc.Name)
-	// 		ns.Ingresses[found].State = config.PendingModification
-	// 	}
-	// }
-
-	// // process the local
-	// for _, sc := range c.LocalExecs {
-	// 	found := -1
-	// 	for n, i := range state.LocalExecs {
-	// 		if i.Name == sc.Name {
-	// 			found = n
-	// 			break
-	// 		}
-	// 	}
-
-	// 	if found == -1 {
-	// 		if !delete {
-	// 			ns.LocalExecs = append(ns.LocalExecs, sc)
-	// 		}
-	// 	} else {
-	// 		e.log.Debug("Ingress already exists in state, update status", "name", sc.Name)
-	// 		ns.LocalExecs[found].State = config.PendingModification
-	// 	}
-	// }
-
-	// // process the local
-	// for _, sc := range c.RemoteExecs {
-	// 	found := -1
-	// 	for n, i := range state.RemoteExecs {
-	// 		if i.Name == sc.Name {
-	// 			found = n
-	// 			break
-	// 		}
-	// 	}
-
-	// 	if found == -1 {
-	// 		if !delete {
-	// 			ns.RemoteExecs = append(ns.RemoteExecs, sc)
-	// 		}
-	// 	} else {
-	// 		e.log.Debug("Ingress already exists in state, update status", "name", sc.Name)
-	// 		ns.RemoteExecs[found].State = config.PendingModification
-	// 	}
-	// }
-
-	// if state.WAN != nil {
-	// 	e.log.Debug("WAN Network already exists in state, ignoring from apply", "name", state.WAN.Name)
-	// } else {
-	// 	if !delete {
-	// 		ns.WAN = c.WAN
-	// 	}
-	// }
-
-	return &ns
 }
 
 // generateProviders returns providers grouped together in order of execution

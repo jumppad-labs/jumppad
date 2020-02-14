@@ -1,5 +1,10 @@
 package shipyard
 
+func testCreateStateFile(p []providers.ConfigWrapper) {
+	e := Engine{log: hclog.NewNullLogger()}
+	e.state = p
+	e.saveState()
+}
 import (
 	"encoding/json"
 	"os"
@@ -121,18 +126,6 @@ func testCreateStateFile(p []providers.ConfigWrapper) {
 	e := Engine{log: hclog.NewNullLogger()}
 	e.state = p
 	e.saveState()
-}
-
-func TestNewFromStateCreatesCorrectly(t *testing.T) {
-	e, _, cleanup := setupTests()
-	defer cleanup()
-
-	err := e.Apply("boom")
-	assert.NoError(t, err)
-
-	// load from the state
-	// e, err = NewFromState(hclog.NewNullLogger())
-	assert.NoError(t, err)
 }
 
 func testAssertMethodCalled(t *testing.T, p [][]providers.Provider, method string, n int, args ...interface{}) {

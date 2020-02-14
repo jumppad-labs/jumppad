@@ -8,7 +8,7 @@ import (
 
 func testSetupConfig() *Config {
 	c := New()
-	c.Resources = []Resource{NewK8sCluster("test")}
+	c.AddResource(NewK8sCluster("test"))
 
 	return c
 }

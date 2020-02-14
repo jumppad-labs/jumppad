@@ -38,12 +38,12 @@ type ResourceInfo struct {
 	// Type is the type of resource, this is the text representation of the golang type
 	Type ResourceType `json:"type"`
 	// Status is the current status of the resource, this is always PendingCreation initially
-	Status Status `json:"status"`
+	Status Status `json:"status,omitempty"`
 	// DependsOn is a list of objects which must exist before this resource can be applied
-	DependsOn []string `json:"depends_on"`
+	DependsOn []string `json:"depends_on,omitempty"`
 
 	// parent container
-	Config *Config
+	Config *Config `json:"_"`
 }
 
 func (r *ResourceInfo) Info() *ResourceInfo {
@@ -117,7 +117,7 @@ func (c *Config) AddResource(r Resource) error {
 		}
 	}
 
-	r.Info().Config = c
+	//r.Info().Config = c
 	c.Resources = append(c.Resources, r)
 
 	return nil
