@@ -70,6 +70,8 @@ func TestConfigDeSerializesFromJSON(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Len(t, c.Resources, 9)
+	assert.Equal(t, ResourceType("container"), c.Resources[0].Info().Type)
+	assert.Equal(t, "config", c.Resources[0].Info().Name)
 }
 
 func TestConfigMergesAddingItems(t *testing.T) {

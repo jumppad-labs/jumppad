@@ -482,6 +482,20 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, writer io.Writ
 	}
 }
 
+// DetachNetwork detaches a container from a network
+// TODO: Docker returns success before removing a container
+// tasks which depend on the network being removed may fail in the future
+// we need to check it has been removed before returning
+func (d *DockerTasks) DetachNetwork(network, containerid string) error {
+	network = strings.Replace(network, "network.", "", -1)
+	err := d.c.NetworkDisconnect(context.Background(), network, containerid, true)
+
+	// Hacky hack for now
+	//time.Sleep(1000 * time.Millisecond)
+
+	return err
+}
+
 // publishedPorts defines a Docker published port
 type publishedPorts struct {
 	ExposedPorts map[nat.Port]struct{}

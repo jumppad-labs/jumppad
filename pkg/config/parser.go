@@ -248,23 +248,22 @@ func ParseHCLFile(file string, c *Config) error {
 // ParseReferences links the object references in config elements
 func ParseReferences(c *Config) error {
 	for _, r := range c.Resources {
-		fmt.Printf("Ref: %#v", r)
 		switch r.Info().Type {
 		case TypeContainer:
 			c := r.(*Container)
 			for _, n := range c.Networks {
-				c.DependsOn = append(c.DependsOn, fmt.Sprintf("%s.%s", TypeNetwork, n.Name))
+				c.DependsOn = append(c.DependsOn, n.Name)
 			}
 
 		case TypeDocs:
 			c := r.(*Docs)
 			for _, n := range c.Networks {
-				c.DependsOn = append(c.DependsOn, fmt.Sprintf("%s.%s", TypeNetwork, n.Name))
+				c.DependsOn = append(c.DependsOn, n.Name)
 			}
 		case TypeExecRemote:
 			c := r.(*ExecRemote)
 			for _, n := range c.Networks {
-				c.DependsOn = append(c.DependsOn, fmt.Sprintf("%s.%s", TypeNetwork, n.Name))
+				c.DependsOn = append(c.DependsOn, n.Name)
 			}
 
 			// target is optional
@@ -282,18 +281,18 @@ func ParseReferences(c *Config) error {
 		case TypeIngress:
 			c := r.(*Ingress)
 			for _, n := range c.Networks {
-				c.DependsOn = append(c.DependsOn, fmt.Sprintf("%s.%s", TypeNetwork, n.Name))
+				c.DependsOn = append(c.DependsOn, n.Name)
 			}
 			c.DependsOn = append(c.DependsOn, c.Target)
 		case TypeK8sCluster:
 			c := r.(*K8sCluster)
 			for _, n := range c.Networks {
-				c.DependsOn = append(c.DependsOn, fmt.Sprintf("%s.%s", TypeNetwork, n.Name))
+				c.DependsOn = append(c.DependsOn, n.Name)
 			}
 		case TypeNomadCluster:
 			c := r.(*NomadCluster)
 			for _, n := range c.Networks {
-				c.DependsOn = append(c.DependsOn, fmt.Sprintf("%s.%s", TypeNetwork, n.Name))
+				c.DependsOn = append(c.DependsOn, n.Name)
 			}
 		}
 	}

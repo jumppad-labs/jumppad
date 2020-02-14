@@ -254,12 +254,21 @@ func (c *K8sCluster) ImportLocalDockerImages(name string, id string, images []co
 
 func (c *K8sCluster) destroyK3s() error {
 	c.log.Info("Destroy Cluster", "ref", c.config.Name)
+
 	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.Type)
 	if err != nil {
 		return err
 	}
 
 	for _, i := range ids {
+		// remove from the networks
+		for _, n := range c.config.Networks {
+			err := c.client.DetachNetwork(n.Name, i)
+			if err != nil {
+				return err
+			}
+		}
+
 		err := c.client.RemoveContainer(i)
 		if err != nil {
 			return err

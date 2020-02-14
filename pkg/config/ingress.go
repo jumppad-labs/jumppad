@@ -10,7 +10,7 @@ type Ingress struct {
 	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
 	Target    string `hcl:"target" json:"target"`
-	Service   string `hcl:"service,optional" json"service,omitempty"`
+	Service   string `hcl:"service,optional" json:"service,omitempty"`
 	Namespace string `hcl:"namespace,optional" json:"namespace,omitempty"`
 	Ports     []Port `hcl:"port,block" json:"ports,omitempty"`
 }

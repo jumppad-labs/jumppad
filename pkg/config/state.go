@@ -81,77 +81,167 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 		switch t {
 		case TypeContainer:
 			t := Container{}
-			c.addStructure(mm, &t)
+			err := mapstructure.Decode(mm, &t)
 			if err != nil {
 				return err
 			}
+			t.Name = mm["name"].(string)
+			t.Type = ResourceType(mm["type"].(string))
+			t.Status = Status(mm["status"].(string))
+
+			if d, ok := mm["depends_on"].([]interface{}); ok {
+				for _, i := range d {
+					t.DependsOn = append(t.DependsOn, i.(string))
+				}
+			}
+			c.AddResource(&t)
 		case TypeDocs:
 			t := Docs{}
-			c.addStructure(mm, &t)
+			err := mapstructure.Decode(mm, &t)
 			if err != nil {
 				return err
 			}
+			t.Name = mm["name"].(string)
+			t.Type = ResourceType(mm["type"].(string))
+			t.Status = Status(mm["status"].(string))
+
+			if d, ok := mm["depends_on"].([]interface{}); ok {
+				for _, i := range d {
+					t.DependsOn = append(t.DependsOn, i.(string))
+				}
+			}
+			c.AddResource(&t)
 		case TypeExecRemote:
 			t := ExecRemote{}
-			c.addStructure(mm, &t)
+			err := mapstructure.Decode(mm, &t)
 			if err != nil {
 				return err
 			}
+			t.Name = mm["name"].(string)
+			t.Type = ResourceType(mm["type"].(string))
+			t.Status = Status(mm["status"].(string))
+
+			if d, ok := mm["depends_on"].([]interface{}); ok {
+				for _, i := range d {
+					t.DependsOn = append(t.DependsOn, i.(string))
+				}
+			}
+			c.AddResource(&t)
 		case TypeExecLocal:
 			t := ExecLocal{}
-			c.addStructure(mm, &t)
+			err := mapstructure.Decode(mm, &t)
 			if err != nil {
 				return err
 			}
+			t.Name = mm["name"].(string)
+			t.Type = ResourceType(mm["type"].(string))
+			t.Status = Status(mm["status"].(string))
+
+			if d, ok := mm["depends_on"].([]interface{}); ok {
+				for _, i := range d {
+					t.DependsOn = append(t.DependsOn, i.(string))
+				}
+			}
+			c.AddResource(&t)
 		case TypeHelm:
 			t := Helm{}
-			c.addStructure(mm, &t)
+			err := mapstructure.Decode(mm, &t)
 			if err != nil {
 				return err
 			}
+			t.Name = mm["name"].(string)
+			t.Type = ResourceType(mm["type"].(string))
+			t.Status = Status(mm["status"].(string))
+
+			if d, ok := mm["depends_on"].([]interface{}); ok {
+				for _, i := range d {
+					t.DependsOn = append(t.DependsOn, i.(string))
+				}
+			}
+			c.AddResource(&t)
 		case TypeIngress:
 			t := Ingress{}
-			c.addStructure(mm, &t)
+			err := mapstructure.Decode(mm, &t)
 			if err != nil {
 				return err
 			}
+			t.Name = mm["name"].(string)
+			t.Type = ResourceType(mm["type"].(string))
+			t.Status = Status(mm["status"].(string))
+
+			if d, ok := mm["depends_on"].([]interface{}); ok {
+				for _, i := range d {
+					t.DependsOn = append(t.DependsOn, i.(string))
+				}
+			}
+			c.AddResource(&t)
 		case TypeK8sCluster:
 			t := K8sCluster{}
-			c.addStructure(mm, &t)
+			err := mapstructure.Decode(mm, &t)
 			if err != nil {
 				return err
 			}
+			t.Name = mm["name"].(string)
+			t.Type = ResourceType(mm["type"].(string))
+			t.Status = Status(mm["status"].(string))
+
+			if d, ok := mm["depends_on"].([]interface{}); ok {
+				for _, i := range d {
+					t.DependsOn = append(t.DependsOn, i.(string))
+				}
+			}
+			c.AddResource(&t)
 		case TypeK8sConfig:
 			t := K8sConfig{}
-			c.addStructure(mm, &t)
+			err := mapstructure.Decode(mm, &t)
 			if err != nil {
 				return err
 			}
+			t.Name = mm["name"].(string)
+			t.Type = ResourceType(mm["type"].(string))
+			t.Status = Status(mm["status"].(string))
+
+			if d, ok := mm["depends_on"].([]interface{}); ok {
+				for _, i := range d {
+					t.DependsOn = append(t.DependsOn, i.(string))
+				}
+			}
+			c.AddResource(&t)
 		case TypeNetwork:
 			t := Network{}
-			c.addStructure(mm, &t)
+			err := mapstructure.Decode(mm, &t)
 			if err != nil {
 				return err
 			}
+			t.Name = mm["name"].(string)
+			t.Type = ResourceType(mm["type"].(string))
+			t.Status = Status(mm["status"].(string))
+
+			if d, ok := mm["depends_on"].([]interface{}); ok {
+				for _, i := range d {
+					t.DependsOn = append(t.DependsOn, i.(string))
+				}
+			}
+			c.AddResource(&t)
 		case TypeNomadCluster:
 			t := NomadCluster{}
-			c.addStructure(mm, &t)
+			err := mapstructure.Decode(mm, &t)
 			if err != nil {
 				return err
 			}
+			t.Name = mm["name"].(string)
+			t.Type = ResourceType(mm["type"].(string))
+			t.Status = Status(mm["status"].(string))
+
+			if d, ok := mm["depends_on"].([]interface{}); ok {
+				for _, i := range d {
+					t.DependsOn = append(t.DependsOn, i.(string))
+				}
+			}
+			c.AddResource(&t)
 		}
 	}
 
-	return nil
-}
-
-func (c *Config) addStructure(data map[string]interface{}, dst interface{}) error {
-	err := mapstructure.Decode(data, dst)
-	if err != nil {
-		return err
-	}
-
-	c.AddResource(dst.(Resource))
 	return nil
 }
 

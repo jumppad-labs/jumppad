@@ -114,6 +114,13 @@ func (i *Ingress) Destroy() error {
 	}
 
 	for _, id := range ids {
+		for _, n := range i.config.Networks {
+			err := i.client.DetachNetwork(n.Name, id)
+			if err != nil {
+				return err
+			}
+		}
+
 		err := i.client.RemoveContainer(id)
 		if err != nil {
 			return err

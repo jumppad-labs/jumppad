@@ -46,6 +46,13 @@ func (c *Container) Destroy() error {
 
 	if len(ids) > 0 {
 		for _, id := range ids {
+			for _, n := range c.config.Networks {
+				err := c.client.DetachNetwork(n.Name, id)
+				if err != nil {
+					return err
+				}
+			}
+
 			err := c.client.RemoveContainer(id)
 			if err != nil {
 				return err

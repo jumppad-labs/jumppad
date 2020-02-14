@@ -4,11 +4,14 @@ import (
 
 	// "fmt"
 
+	"log"
+	"os"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/terraform/dag"
 	"github.com/hashicorp/terraform/tfdiags"
+	"golang.org/x/xerrors"
 
 	// "github.com/mitchellh/mapstructure"
 	"github.com/shipyard-run/shipyard/pkg/clients"
@@ -75,6 +78,8 @@ func New(l hclog.Logger) (*Engine, error) {
 	e.log = l
 	e.getProvider = generateProviderImpl
 
+	log.SetOutput(l.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Trace}))
+
 	// create the clients
 	cl, err := GenerateClients(l)
 	if err != nil {
@@ -88,13 +93,14 @@ func New(l hclog.Logger) (*Engine, error) {
 
 // Apply the current config creating the resources
 func (e *Engine) Apply(path string) error {
-	d, err := e.readConfig(path, false)
+	d, err := e.readConfig(path)
 	if err != nil {
 		return err
 	}
 
 	// walk the dag and apply the config
-	tf := d.Walk(func(v dag.Vertex) (diags tfdiags.Diagnostics) {
+	w := dag.Walker{}
+	w.Callback = func(v dag.Vertex) (diags tfdiags.Diagnostics) {
 		// check if the resource needs to be created and if so create
 		if r, ok := v.(config.Resource); ok && r.Info().Status == config.PendingCreation {
 			// get the provider to create the resource
@@ -116,8 +122,10 @@ func (e *Engine) Apply(path string) error {
 		}
 
 		return nil
-	})
+	}
 
+	w.Update(d)
+	tf := w.Wait()
 	if tf.Err() != nil {
 		return tf.Err()
 	}
@@ -133,33 +141,74 @@ func (e *Engine) Apply(path string) error {
 
 // Destroy the resources defined by the config
 func (e *Engine) Destroy(path string, allResources bool) error {
-	_, err := e.readConfig(path, false)
+	d, err := e.readConfig(path)
 	if err != nil {
 		return err
 	}
 
-	/*
-		// walk the dag and apply the config
-		r, err := d.Root()
+	// make sure we destroy everything
+	if allResources {
+		for _, i := range e.config.Resources {
+			i.Info().Status = config.PendingModification
+		}
+	}
+
+	// walk the dag and apply the config
+	w := dag.Walker{}
+	w.Reverse = true
+	w.Callback = func(v dag.Vertex) (diags tfdiags.Diagnostics) {
+		// check if the resource needs to be created and if so create
+		if r, ok := v.(config.Resource); ok && r.Info().Status == config.PendingModification {
+			// get the provider to create the resource
+			p := e.getProvider(r, e.clients)
+			if p == nil {
+				r.Info().Status = config.Failed
+				return diags.Append(err)
+			}
+
+			// execute
+			err = p.Destroy()
+			if err != nil {
+				r.Info().Status = config.Failed
+				return diags.Append(err)
+			}
+
+			// set the status
+			r.Info().Status = config.Destroyed
+		}
+
+		return nil
+	}
+
+	w.Update(d)
+	tf := w.Wait()
+	if tf.Err() != nil {
+		return tf.Err()
+	}
+
+	// remove any destroyed nodes from the state
+	cn := config.New()
+	for _, i := range e.config.Resources {
+		if i.Info().Status != config.Destroyed {
+			cn.AddResource(i)
+		}
+	}
+
+	// save the state regardless of error
+	if len(cn.Resources) > 0 {
+		err = cn.ToJSON(utils.StatePath())
 		if err != nil {
 			return err
 		}
-
-		d.ReverseDepthFirstWalk(r, func(v dag.Vertex) tfdiags.Diagnostics {
-			// check if the resource needs to be created and if so create
-			return nil
-		})
-	*/
-	// save the state regardless of error
-	err = e.config.ToJSON(utils.StatePath())
-	if err != nil {
-		return err
+	} else {
+		// if no resources in the state delete
+		os.RemoveAll(utils.StatePath())
 	}
 
 	return err
 }
 
-func (e *Engine) readConfig(path string, delete bool) (*dag.AcyclicGraph, error) {
+func (e *Engine) readConfig(path string) (*dag.AcyclicGraph, error) {
 	// load the new config
 	cc := config.New()
 	if path != "" {
@@ -194,7 +243,19 @@ func (e *Engine) readConfig(path string, delete bool) (*dag.AcyclicGraph, error)
 	e.config = sc
 
 	// build a DAG
-	return e.config.DoYaLikeDAGs()
+	d, err := e.config.DoYaLikeDAGs()
+	if err != nil {
+		return nil, xerrors.Errorf("Unable to create dependency graph: %w", err)
+	}
+
+	d.TransitiveReduction()
+
+	err = d.Validate()
+	if err != nil {
+		return nil, xerrors.Errorf("Unable to validate dependency graph: %w", err)
+	}
+
+	return d, nil
 }
 
 // ResourceCount defines the number of resources in a plan

@@ -1,7 +1,6 @@
 package shipyard
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -13,7 +12,6 @@ import (
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/providers"
 	"github.com/shipyard-run/shipyard/pkg/providers/mocks"
-	"github.com/shipyard-run/shipyard/pkg/utils"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -48,6 +46,7 @@ func generateProviderMock(mp *[]*mocks.MockProvider, returnVals map[string]error
 		m := mocks.New(c)
 
 		m.On("Create").Return(returnVals[c.Info().Name])
+		m.On("Destroy").Return(returnVals[c.Info().Name])
 
 		*mp = append(*mp, m)
 		return m
@@ -101,20 +100,35 @@ func TestApplyCallsProviderCreateErrorStopsExecution(t *testing.T) {
 	testAssertMethodCalled(t, mp, "Create", 1)
 }
 
-func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
+func TestApplyCallsProviderDestroyForEachProvider(t *testing.T) {
 	e, _, mp, cleanup := setupTests(nil)
 	defer cleanup()
 
-	err := e.Apply("boom")
-	assert.NoError(t, err)
-
-	err = e.Destroy("boom", true)
+	err := e.Destroy("../../functional_tests/test_fixtures/single_k3s_cluster", true)
 	assert.NoError(t, err)
 
 	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 6)
+	testAssertMethodCalled(t, mp, "Destroy", 4)
 }
 
+func TestApplyCallsProviderDestroyInCorrectOrder(t *testing.T) {
+	e, _, mp, cleanup := setupTests(nil)
+	defer cleanup()
+
+	err := e.Destroy("../../functional_tests/test_fixtures/single_k3s_cluster", true)
+	assert.NoError(t, err)
+
+	// due to paralel nature of the DAG, these two elements can appear in any order
+	assert.Contains(t, []string{"consul-http", "consul"}, (*mp)[0].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul"}, (*mp)[1].Config().Info().Name)
+
+	// should have called in order
+	assert.Equal(t, "k3s", (*mp)[2].Config().Info().Name)
+	assert.Equal(t, "cloud", (*mp)[3].Config().Info().Name)
+
+}
+
+/*
 func TestApplyGeneratesState(t *testing.T) {
 	e, _, _, cleanup := setupTests(nil)
 	defer cleanup()
@@ -148,6 +162,7 @@ func TestApplyWithExistingStateDoesNotRecreateItems(t *testing.T) {
 	testAssertMethodCalled(t, mp, "Create", 5)
 }
 
+*/
 func testAssertMethodCalled(t *testing.T, p *[]*mocks.MockProvider, method string, n int, args ...interface{}) {
 	callCount := 0
 

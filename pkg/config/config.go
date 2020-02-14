@@ -26,6 +26,9 @@ const PendingModification Status = "pending_modification"
 // Failed means the resource failed during creation
 const Failed Status = "failed"
 
+// Destroyed means the resource has been destroyed
+const Destroyed Status = "destroyed"
+
 type Resource interface {
 	Info() *ResourceInfo
 	FindDependentResource(string) (Resource, error)
@@ -150,7 +153,7 @@ func (c *Config) DoYaLikeDAGs() (*dag.AcyclicGraph, error) {
 				return nil, xerrors.Errorf("Could not build graph from resources: %w", err)
 			}
 
-			graph.Connect(dag.BasicEdge(resource, dependency))
+			graph.Connect(dag.BasicEdge(dependency, resource))
 		}
 	}
 

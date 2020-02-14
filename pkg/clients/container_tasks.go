@@ -51,4 +51,6 @@ type ContainerTasks interface {
 	// command is a slice of strings to execute
 	// writer [optional] will be used to write any output from the command execution.
 	ExecuteCommand(id string, command []string, writer io.Writer) error
+	// NetworkDisconnect disconnects a container from the network
+	DetachNetwork(network, containerid string) error
 }

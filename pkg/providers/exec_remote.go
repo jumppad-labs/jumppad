@@ -88,9 +88,7 @@ func (c *ExecRemote) createRemoteExecContainer() (string, error) {
 	cc := config.NewContainer("remote_exec_temp")
 	c.config.ResourceInfo.AddChild(cc)
 
-	for _, n := range c.config.Networks {
-		cc.Networks = append(cc.Networks, config.NetworkAttachment{Name: n.Name, IPAddress: n.IPAddress})
-	}
+	cc.Networks = c.config.Networks
 	cc.Image = *c.config.Image
 	cc.Command = []string{"tail", "-f", "/dev/null"} // ensure container does not immediately exit
 	cc.Volumes = c.config.Volumes
