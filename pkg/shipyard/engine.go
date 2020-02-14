@@ -140,7 +140,7 @@ func (e *Engine) Apply(path string) error {
 		}
 	}
 
-	return err
+	return tf.Err()
 }
 
 // Destroy the resources defined by the config
@@ -209,7 +209,7 @@ func (e *Engine) Destroy(path string, allResources bool) error {
 		os.RemoveAll(utils.StatePath())
 	}
 
-	return err
+	return tf.Err()
 }
 
 func (e *Engine) readConfig(path string) (*dag.AcyclicGraph, error) {
