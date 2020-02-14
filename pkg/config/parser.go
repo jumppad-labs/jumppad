@@ -266,6 +266,8 @@ func ParseReferences(c *Config) error {
 				c.DependsOn = append(c.DependsOn, n.Name)
 			}
 
+			c.DependsOn = append(c.DependsOn, c.Depends...)
+
 			// target is optional
 			if c.Target != "" {
 				c.DependsOn = append(c.DependsOn, c.Target)

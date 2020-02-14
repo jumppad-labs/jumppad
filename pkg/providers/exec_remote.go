@@ -72,15 +72,15 @@ func (c *ExecRemote) Create() error {
 
 	err := c.client.ExecuteCommand(targetID, command, c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
 	if err != nil {
-		return xerrors.Errorf("Unable to execute command in remote container: %w", err)
+		err = xerrors.Errorf("Unable to execute command in remote container: %w", err)
 	}
 
 	// destroy the container if we created one
 	if c.config.Target == "" {
-		return c.client.RemoveContainer(targetID)
+		c.client.RemoveContainer(targetID)
 	}
 
-	return nil
+	return err
 }
 
 func (c *ExecRemote) createRemoteExecContainer() (string, error) {

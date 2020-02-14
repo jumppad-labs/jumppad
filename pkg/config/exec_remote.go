@@ -7,6 +7,8 @@ const TypeExecRemote ResourceType = "exec_remote"
 type ExecRemote struct {
 	ResourceInfo
 
+	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
+
 	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
 	// Either Image or Target must be specified
