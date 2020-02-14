@@ -8,6 +8,8 @@ type Container struct {
 	// embedded type holding name, etc
 	ResourceInfo
 
+	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
+
 	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
 	Image       Image    `hcl:"image,block" json"image"`                   // image to use for the container

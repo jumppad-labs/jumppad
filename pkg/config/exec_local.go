@@ -7,6 +7,8 @@ const TypeExecLocal ResourceType = "exec_local"
 type ExecLocal struct {
 	ResourceInfo
 
+	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
+
 	// Either Script or Command must be specified
 	Script    string   `hcl:"script,optional" json:"script,omitempty"` // Path to a script to execute
 	Command   string   `hcl:"cmd,optional" json:"cmd,omitempty"`       // Command to execute

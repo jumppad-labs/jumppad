@@ -7,6 +7,8 @@ const TypeHelm ResourceType = "helm"
 type Helm struct {
 	ResourceInfo
 
+	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
+
 	Cluster string `hcl:"cluster"`
 	Chart   string `hcl:"chart"`
 	Values  string `hcl:"values,optional"`

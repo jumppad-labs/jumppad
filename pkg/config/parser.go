@@ -254,12 +254,13 @@ func ParseReferences(c *Config) error {
 			for _, n := range c.Networks {
 				c.DependsOn = append(c.DependsOn, n.Name)
 			}
-
+			c.DependsOn = append(c.DependsOn, c.Depends...)
 		case TypeDocs:
 			c := r.(*Docs)
 			for _, n := range c.Networks {
 				c.DependsOn = append(c.DependsOn, n.Name)
 			}
+			c.DependsOn = append(c.DependsOn, c.Depends...)
 		case TypeExecRemote:
 			c := r.(*ExecRemote)
 			for _, n := range c.Networks {
@@ -275,10 +276,12 @@ func ParseReferences(c *Config) error {
 		case TypeHelm:
 			c := r.(*Helm)
 			c.DependsOn = append(c.DependsOn, c.Cluster)
+			c.DependsOn = append(c.DependsOn, c.Depends...)
 
 		case TypeK8sConfig:
 			c := r.(*K8sConfig)
 			c.DependsOn = append(c.DependsOn, c.Cluster)
+			c.DependsOn = append(c.DependsOn, c.Depends...)
 
 		case TypeIngress:
 			c := r.(*Ingress)
@@ -286,16 +289,19 @@ func ParseReferences(c *Config) error {
 				c.DependsOn = append(c.DependsOn, n.Name)
 			}
 			c.DependsOn = append(c.DependsOn, c.Target)
+			c.DependsOn = append(c.DependsOn, c.Depends...)
 		case TypeK8sCluster:
 			c := r.(*K8sCluster)
 			for _, n := range c.Networks {
 				c.DependsOn = append(c.DependsOn, n.Name)
 			}
+			c.DependsOn = append(c.DependsOn, c.Depends...)
 		case TypeNomadCluster:
 			c := r.(*NomadCluster)
 			for _, n := range c.Networks {
 				c.DependsOn = append(c.DependsOn, n.Name)
 			}
+			c.DependsOn = append(c.DependsOn, c.Depends...)
 		}
 	}
 
