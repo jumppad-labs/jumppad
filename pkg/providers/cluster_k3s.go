@@ -53,6 +53,8 @@ func (c *K8sCluster) createK3s() error {
 	// create the server
 	// since the server is just a container create the container config and provider
 	cc := config.NewContainer(fmt.Sprintf("server.%s", c.config.Name))
+	c.config.ResourceInfo.AddChild(cc)
+
 	cc.Image = config.Image{Name: image}
 	cc.Networks = c.config.Networks
 	cc.Privileged = true // k3s must run Privlidged

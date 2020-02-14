@@ -31,7 +31,7 @@ func testIngressCreateMocks() *mocks.MockContainerTasks {
 
 func TestIngressK8sTargetConfiguresCommand(t *testing.T) {
 	md := testIngressCreateMocks()
-	p := NewIngress(testIngressConfig, md, hclog.NewNullLogger())
+	p := NewIngress(&testIngressConfig, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -51,7 +51,7 @@ func TestIngressK8sTargetConfiguresCommand(t *testing.T) {
 
 func TestIngressK8sTargetConfiguresKubeConfig(t *testing.T) {
 	md := testIngressCreateMocks()
-	p := NewIngress(testIngressConfig, md, hclog.NewNullLogger())
+	p := NewIngress(&testIngressConfig, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -71,7 +71,7 @@ func TestIngressK8sTargetWithNamespaceConfiguresCommand(t *testing.T) {
 	md := testIngressCreateMocks()
 	tc := testIngressConfig
 	tc.Namespace = "mine"
-	p := NewIngress(tc, md, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -84,7 +84,7 @@ func TestIngressK8sTargetWithNamespaceConfiguresCommand(t *testing.T) {
 
 func TestIngressContainerTargetConfiguresCommand(t *testing.T) {
 	md := testIngressCreateMocks()
-	p := NewIngress(testIngressContainerConfig, md, hclog.NewNullLogger())
+	p := NewIngress(&testIngressContainerConfig, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -97,7 +97,7 @@ func TestIngressContainerTargetConfiguresCommand(t *testing.T) {
 
 func TestIngressContainerAddsPorts(t *testing.T) {
 	md := testIngressCreateMocks()
-	p := NewIngress(testIngressContainerConfig, md, hclog.NewNullLogger())
+	p := NewIngress(&testIngressContainerConfig, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -117,7 +117,7 @@ func TestIngressContainerFailReturnsError(t *testing.T) {
 	md := testIngressCreateMocks()
 	removeOn(&md.Mock, "CreateContainer")
 	md.On("CreateContainer", mock.Anything).Return("", fmt.Errorf("boom"))
-	p := NewIngress(testIngressContainerConfig, md, hclog.NewNullLogger())
+	p := NewIngress(&testIngressContainerConfig, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -125,7 +125,7 @@ func TestIngressContainerFailReturnsError(t *testing.T) {
 
 func TestIngressK8sTargetDestroysContainer(t *testing.T) {
 	md := testIngressCreateMocks()
-	p := NewIngress(testIngressConfig, md, hclog.NewNullLogger())
+	p := NewIngress(&testIngressConfig, md, hclog.NewNullLogger())
 
 	err := p.Destroy()
 	assert.NoError(t, err)

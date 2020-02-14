@@ -247,71 +247,56 @@ func ParseHCLFile(file string, c *Config) error {
 
 // ParseReferences links the object references in config elements
 func ParseReferences(c *Config) error {
-	/*
-		for _, co := range c.Containers {
-			co.WANRef = c.WAN
-			co.NetworkRef = findNetworkRef(co.Network, c)
-
-			if co.NetworkRef == nil {
-				return fmt.Errorf("Unable to assign network '%s' for container '%s'", co.Network, co.Name)
-			}
-		}
-
-		// link the networks in the clusters
-		for _, cl := range c.Clusters {
-			cl.WANRef = c.WAN
-			cl.NetworkRef = findNetworkRef(cl.Network, c)
-		}
-
-		for _, hc := range c.HelmCharts {
-			hc.ClusterRef = findClusterRef(hc.Cluster, c)
-		}
-
-		for _, k8s := range c.K8sConfig {
-			k8s.ClusterRef = findClusterRef(k8s.Cluster, c)
-		}
-
-		for _, in := range c.Ingresses {
-			in.WANRef = c.WAN
-			in.TargetRef = findTargetRef(in.Target, c)
-
-			if in.TargetRef == nil {
-				return fmt.Errorf("Unable to find target '%s' for ingress '%s'", in.Target, in.Name)
+	for _, r := range c.Resources {
+		fmt.Printf("Ref: %#v", r)
+		switch r.Info().Type {
+		case TypeContainer:
+			c := r.(*Container)
+			for _, n := range c.Networks {
+				c.DependsOn = append(c.DependsOn, fmt.Sprintf("%s.%s", TypeNetwork, n.Name))
 			}
 
-			if c, ok := in.TargetRef.(*Cluster); ok {
-				in.NetworkRef = c.NetworkRef
-			} else {
-				in.NetworkRef = in.TargetRef.(*Container).NetworkRef
+		case TypeDocs:
+			c := r.(*Docs)
+			for _, n := range c.Networks {
+				c.DependsOn = append(c.DependsOn, fmt.Sprintf("%s.%s", TypeNetwork, n.Name))
+			}
+		case TypeExecRemote:
+			c := r.(*ExecRemote)
+			for _, n := range c.Networks {
+				c.DependsOn = append(c.DependsOn, fmt.Sprintf("%s.%s", TypeNetwork, n.Name))
 			}
 
-			if in.NetworkRef == nil {
-				return fmt.Errorf("Unable to assign network from target '%s' for ingress '%s'", in.Target, in.Name)
+			// target is optional
+			if c.Target != "" {
+				c.DependsOn = append(c.DependsOn, c.Target)
+			}
+		case TypeHelm:
+			c := r.(*Helm)
+			c.DependsOn = append(c.DependsOn, c.Cluster)
+
+		case TypeK8sConfig:
+			c := r.(*K8sConfig)
+			c.DependsOn = append(c.DependsOn, c.Cluster)
+
+		case TypeIngress:
+			c := r.(*Ingress)
+			for _, n := range c.Networks {
+				c.DependsOn = append(c.DependsOn, fmt.Sprintf("%s.%s", TypeNetwork, n.Name))
+			}
+			c.DependsOn = append(c.DependsOn, c.Target)
+		case TypeK8sCluster:
+			c := r.(*K8sCluster)
+			for _, n := range c.Networks {
+				c.DependsOn = append(c.DependsOn, fmt.Sprintf("%s.%s", TypeNetwork, n.Name))
+			}
+		case TypeNomadCluster:
+			c := r.(*NomadCluster)
+			for _, n := range c.Networks {
+				c.DependsOn = append(c.DependsOn, fmt.Sprintf("%s.%s", TypeNetwork, n.Name))
 			}
 		}
-
-		for _, in := range c.RemoteExecs {
-			in.WANRef = c.WAN
-
-			if in.Target != "" {
-				// if we are using a target get the network from the target
-				in.TargetRef = findTargetRef(in.Target, c)
-
-				if c, ok := in.TargetRef.(*Cluster); ok {
-					in.NetworkRef = c.NetworkRef
-				} else {
-					in.NetworkRef = in.TargetRef.(*Container).NetworkRef
-				}
-			} else {
-				// if not using a target then network should be set
-				in.NetworkRef = findNetworkRef(in.Network, c)
-			}
-		}
-
-		if c.Docs != nil {
-			c.Docs.WANRef = c.WAN
-		}
-	*/
+	}
 
 	return nil
 }

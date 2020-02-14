@@ -10,9 +10,7 @@ type ExecRemote struct {
 	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
 	// Either Image or Target must be specified
-	Image   *Image `hcl:"image,block" json:"image,omitempty"`        // Create a new container and exec
-	Network string `hcl:"network,optional" json:"network,omitempty"` // Attach to the correct network // only when Image is specified
-
+	Image  *Image `hcl:"image,block" json:"image,omitempty"`      // Create a new container and exec
 	Target string `hcl:"target,optional" json:"target,omitempty"` // Attach to a running target and exec
 
 	// Either Script or Command must be specified

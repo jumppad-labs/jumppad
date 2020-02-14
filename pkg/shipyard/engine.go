@@ -4,7 +4,6 @@ import (
 
 	// "fmt"
 
-	"fmt"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -26,6 +25,7 @@ type Clients struct {
 	Helm           clients.Helm
 	HTTP           clients.HTTP
 	Command        clients.Command
+	Logger         hclog.Logger
 }
 
 // Engine is responsible for creating and destroying resources
@@ -38,7 +38,7 @@ type Engine struct {
 
 // defines a function which is used for generating providers
 // enables the replacement in tests to inject mocks
-type getProviderFunc func(c config.Resource, cl *Clients) (providers.Provider, error)
+type getProviderFunc func(c config.Resource, cl *Clients) providers.Provider
 
 // GenerateClients creates the various clients for creating and destroying resources
 func GenerateClients(l hclog.Logger) (*Clients, error) {
@@ -64,6 +64,7 @@ func GenerateClients(l hclog.Logger) (*Clients, error) {
 		Helm:           hec,
 		Command:        ec,
 		HTTP:           hc,
+		Logger:         l,
 	}, nil
 }
 
@@ -93,12 +94,12 @@ func (e *Engine) Apply(path string) error {
 	}
 
 	// walk the dag and apply the config
-	d.Walk(func(v dag.Vertex) (diags tfdiags.Diagnostics) {
+	tf := d.Walk(func(v dag.Vertex) (diags tfdiags.Diagnostics) {
 		// check if the resource needs to be created and if so create
 		if r, ok := v.(config.Resource); ok && r.Info().Status == config.PendingCreation {
 			// get the provider to create the resource
-			p, err := e.getProvider(r, e.clients)
-			if err != nil {
+			p := e.getProvider(r, e.clients)
+			if p == nil {
 				r.Info().Status = config.Failed
 				return diags.Append(err)
 			}
@@ -116,6 +117,10 @@ func (e *Engine) Apply(path string) error {
 
 		return nil
 	})
+
+	if tf.Err() != nil {
+		return tf.Err()
+	}
 
 	// save the state regardless of error
 	err = e.config.ToJSON(utils.StatePath())
@@ -164,12 +169,14 @@ func (e *Engine) readConfig(path string, delete bool) (*dag.AcyclicGraph, error)
 				return nil, err
 			}
 		} else {
-			fmt.Println(path)
 			err := config.ParseFolder(path, cc)
 			if err != nil {
 				return nil, err
 			}
 		}
+
+		// if we are loading from files create the deps
+		config.ParseReferences(cc)
 	}
 
 	// load the existing state
@@ -201,7 +208,29 @@ func (e *Engine) Blueprint() *config.Blueprint {
 }
 
 // generateProviderImpl returns providers grouped together in order of execution
-func generateProviderImpl(c config.Resource, cc *Clients) (providers.Provider, error) {
+func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
+	switch c.Info().Type {
+	case config.TypeContainer:
+		return providers.NewContainer(c.(*config.Container), cc.ContainerTasks, cc.Logger)
+	case config.TypeDocs:
+		return providers.NewDocs(c.(*config.Docs), cc.ContainerTasks, cc.Logger)
+	case config.TypeExecRemote:
+		return providers.NewRemoteExec(c.(*config.ExecRemote), cc.ContainerTasks, cc.Logger)
+	case config.TypeExecLocal:
+		return providers.NewExecLocal(c.(*config.ExecLocal), cc.Command, cc.Logger)
+	case config.TypeHelm:
+		return providers.NewHelm(c.(*config.Helm), cc.Kubernetes, cc.Helm, cc.Logger)
+	case config.TypeIngress:
+		return providers.NewIngress(c.(*config.Ingress), cc.ContainerTasks, cc.Logger)
+	case config.TypeK8sCluster:
+		return providers.NewK8sCluster(c.(*config.K8sCluster), cc.ContainerTasks, cc.Kubernetes, cc.HTTP, cc.Logger)
+	case config.TypeK8sConfig:
+		return providers.NewK8sConfig(c.(*config.K8sConfig), cc.Kubernetes, cc.Logger)
+	case config.TypeNetwork:
+		return providers.NewNetwork(c.(*config.Network), cc.Docker, cc.Logger)
+	case config.TypeNomadCluster:
+		return nil //providers.NewNomadCluster(c, cc.ContainerTasks, cc.Logger)
+	}
 
-	return nil, nil
+	return nil
 }

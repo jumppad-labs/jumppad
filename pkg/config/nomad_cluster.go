@@ -1,7 +1,7 @@
 package config
 
 // TypeCluster is the resource string for a Cluster resource
-const TypeNomadCluster ResourceType = "cluster"
+const TypeNomadCluster ResourceType = "nomad_cluster"
 
 // Cluster is a config stanza which defines a Kubernetes or a Nomad cluster
 type NomadCluster struct {

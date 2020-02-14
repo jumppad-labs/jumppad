@@ -50,6 +50,8 @@ func (i *Docs) Create() error {
 func (i *Docs) createDocsContainer() error {
 	// create the container config
 	cc := config.NewContainer(i.config.Name)
+	i.config.ResourceInfo.AddChild(cc)
+
 	cc.Networks = i.config.Networks
 
 	cc.Image = config.Image{Name: fmt.Sprintf("%s:%s", docsImageName, docsVersion)}
@@ -124,6 +126,8 @@ func (i *Docs) createDocsContainer() error {
 func (i *Docs) createTerminalContainer() error {
 	// create the container config
 	cc := config.NewContainer("terminal")
+	i.config.ResourceInfo.AddChild(cc)
+
 	cc.Networks = i.config.Networks
 	cc.Image = config.Image{Name: "shipyardrun/terminal-server:latest"}
 

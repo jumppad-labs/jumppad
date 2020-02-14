@@ -10,13 +10,13 @@ import (
 )
 
 type Ingress struct {
-	config config.Ingress
+	config *config.Ingress
 	client clients.ContainerTasks
 	log    hclog.Logger
 }
 
 // NewIngress creates a new ingress provider
-func NewIngress(c config.Ingress, cc clients.ContainerTasks, l hclog.Logger) *Ingress {
+func NewIngress(c *config.Ingress, cc clients.ContainerTasks, l hclog.Logger) *Ingress {
 	return &Ingress{c, cc, l}
 }
 
@@ -84,11 +84,9 @@ func (i *Ingress) Create() error {
 
 	// ingress simply crease a container with specific options
 	c := config.NewContainer(i.config.Name)
+	i.config.ResourceInfo.AddChild(c)
 
-	for _, n := range i.config.Networks {
-		c.Networks = append(c.Networks, config.NetworkAttachment{Name: n.Name, IPAddress: n.IPAddress})
-	}
-
+	c.Networks = i.config.Networks
 	c.Ports = i.config.Ports
 	c.Image = config.Image{Name: image}
 	c.Command = command

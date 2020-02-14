@@ -29,6 +29,7 @@ const Failed Status = "failed"
 type Resource interface {
 	Info() *ResourceInfo
 	FindDependentResource(string) (Resource, error)
+	AddChild(Resource)
 }
 
 // ResourceInfo is the embedded type for any config resources
@@ -43,7 +44,7 @@ type ResourceInfo struct {
 	DependsOn []string `json:"depends_on,omitempty"`
 
 	// parent container
-	Config *Config `json:"_"`
+	Config *Config `json:"-"`
 }
 
 func (r *ResourceInfo) Info() *ResourceInfo {
@@ -52,6 +53,14 @@ func (r *ResourceInfo) Info() *ResourceInfo {
 
 func (r *ResourceInfo) FindDependentResource(name string) (Resource, error) {
 	return r.Config.FindResource(name)
+}
+
+func (r *ResourceInfo) AddChild(c Resource) {
+	// copy the config reference so the child can lookup resources
+	c.Info().Config = r.Config
+
+	// override the childs type so that the names are created correctly
+	c.Info().Type = r.Type
 }
 
 // Config defines the stack config
@@ -117,7 +126,7 @@ func (c *Config) AddResource(r Resource) error {
 		}
 	}
 
-	//r.Info().Config = c
+	r.Info().Config = c
 	c.Resources = append(c.Resources, r)
 
 	return nil
@@ -141,7 +150,7 @@ func (c *Config) DoYaLikeDAGs() (*dag.AcyclicGraph, error) {
 				return nil, xerrors.Errorf("Could not build graph from resources: %w", err)
 			}
 
-			graph.Connect(dag.BasicEdge(dependency, resource))
+			graph.Connect(dag.BasicEdge(resource, dependency))
 		}
 	}
 

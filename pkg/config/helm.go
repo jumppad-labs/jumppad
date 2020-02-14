@@ -7,8 +7,6 @@ const TypeHelm ResourceType = "helm"
 type Helm struct {
 	ResourceInfo
 
-	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
-
 	Cluster string `hcl:"cluster"`
 	Chart   string `hcl:"chart"`
 	Values  string `hcl:"values,optional"`

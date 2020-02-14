@@ -121,6 +121,12 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 			if err != nil {
 				return err
 			}
+		case TypeK8sConfig:
+			t := K8sConfig{}
+			c.addStructure(mm, &t)
+			if err != nil {
+				return err
+			}
 		case TypeNetwork:
 			t := Network{}
 			c.addStructure(mm, &t)

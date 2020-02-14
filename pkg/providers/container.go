@@ -8,13 +8,13 @@ import (
 
 // Container is a provider for creating and destroying Docker containers
 type Container struct {
-	config config.Container
+	config *config.Container
 	client clients.ContainerTasks
 	log    hclog.Logger
 }
 
 // NewContainer creates a new container with the given config and Docker client
-func NewContainer(co config.Container, cl clients.ContainerTasks, l hclog.Logger) *Container {
+func NewContainer(co *config.Container, cl clients.ContainerTasks, l hclog.Logger) *Container {
 	return &Container{co, cl, l}
 }
 
@@ -30,7 +30,7 @@ func (c *Container) Create() error {
 		return err
 	}
 
-	_, err = c.client.CreateContainer(&c.config)
+	_, err = c.client.CreateContainer(c.config)
 
 	return err
 }

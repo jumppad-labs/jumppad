@@ -13,7 +13,7 @@ import (
 func TestContainerCreatesSuccessfully(t *testing.T) {
 	cc := config.NewContainer("tests")
 	md := &mocks.MockContainerTasks{}
-	c := NewContainer(*cc, md, hclog.NewNullLogger())
+	c := NewContainer(cc, md, hclog.NewNullLogger())
 
 	// check pulls image before creating container
 	md.On("PullImage", cc.Image, false).Once().Return(nil)
@@ -28,7 +28,7 @@ func TestContainerCreatesSuccessfully(t *testing.T) {
 func TestContainerDoesNOTCreateWhenPullImageFail(t *testing.T) {
 	cc := config.NewContainer("tests")
 	md := &mocks.MockContainerTasks{}
-	c := NewContainer(*cc, md, hclog.NewNullLogger())
+	c := NewContainer(cc, md, hclog.NewNullLogger())
 
 	// check pulls image before creating container and return an erro
 	imageErr := fmt.Errorf("Unable to pull image")
@@ -43,9 +43,9 @@ func TestContainerDoesNOTCreateWhenPullImageFail(t *testing.T) {
 
 func TestContainerDestroysCorrectlyWhenContainerExists(t *testing.T) {
 	cc := config.NewContainer("tests")
-	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{ Name: "cloud" }}
+	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}}
 	md := &mocks.MockContainerTasks{}
-	c := NewContainer(*cc, md, hclog.NewNullLogger())
+	c := NewContainer(cc, md, hclog.NewNullLogger())
 
 	md.On("FindContainerIDs", cc.Name, cc.Type).Return([]string{"abc"}, nil)
 	md.On("RemoveContainer", "abc").Return(nil)
@@ -56,9 +56,9 @@ func TestContainerDestroysCorrectlyWhenContainerExists(t *testing.T) {
 
 func TestContainerDoesNotDestroysWhenNotExists(t *testing.T) {
 	cc := config.NewContainer("tests")
-	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{ Name: "cloud" }}
+	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}}
 	md := &mocks.MockContainerTasks{}
-	c := NewContainer(*cc, md, hclog.NewNullLogger())
+	c := NewContainer(cc, md, hclog.NewNullLogger())
 
 	md.On("FindContainerIDs", cc.Name, cc.Type).Return(nil, nil)
 
@@ -69,9 +69,9 @@ func TestContainerDoesNotDestroysWhenNotExists(t *testing.T) {
 
 func TestContainerDoesNotDestroysWhenLookupError(t *testing.T) {
 	cc := config.NewContainer("tests")
-	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{ Name: "cloud" }}
+	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}}
 	md := &mocks.MockContainerTasks{}
-	c := NewContainer(*cc, md, hclog.NewNullLogger())
+	c := NewContainer(cc, md, hclog.NewNullLogger())
 
 	md.On("FindContainerIDs", cc.Name, cc.Type).Return(nil, fmt.Errorf("boom"))
 
@@ -82,9 +82,9 @@ func TestContainerDoesNotDestroysWhenLookupError(t *testing.T) {
 
 func TestContainerLooksupIDs(t *testing.T) {
 	cc := config.NewContainer("tests")
-	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{ Name: "cloud" }}
+	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}}
 	md := &mocks.MockContainerTasks{}
-	c := NewContainer(*cc, md, hclog.NewNullLogger())
+	c := NewContainer(cc, md, hclog.NewNullLogger())
 
 	md.On("FindContainerIDs", cc.Name, cc.Type).Return([]string{"abc"}, nil)
 
