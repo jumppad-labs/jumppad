@@ -6,6 +6,7 @@ import (
 
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -37,6 +38,7 @@ type Engine struct {
 	config      *config.Config
 	log         hclog.Logger
 	getProvider getProviderFunc
+	sync        sync.Mutex
 }
 
 // defines a function which is used for generating providers

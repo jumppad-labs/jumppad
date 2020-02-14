@@ -1,10 +1,15 @@
+// +build !race
+
 package shipyard
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/docker/docker/pkg/ioutils"
@@ -16,7 +21,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var lock = sync.Mutex{}
+
 func setupTests(returnVals map[string]error) (*Engine, *config.Config, *[]*mocks.MockProvider, func()) {
+	log.SetOutput(ioutil.Discard)
+
 	p := &[]*mocks.MockProvider{}
 
 	cl := &Clients{}
@@ -43,10 +52,14 @@ func setupTests(returnVals map[string]error) (*Engine, *config.Config, *[]*mocks
 
 func generateProviderMock(mp *[]*mocks.MockProvider, returnVals map[string]error) getProviderFunc {
 	return func(c config.Resource, cc *Clients) providers.Provider {
+		lock.Lock()
+		defer lock.Unlock()
+
 		m := mocks.New(c)
 
-		m.On("Create").Return(returnVals[c.Info().Name])
-		m.On("Destroy").Return(returnVals[c.Info().Name])
+		val := returnVals[c.Info().Name]
+		m.On("Create").Return(val)
+		m.On("Destroy").Return(val)
 
 		*mp = append(*mp, m)
 		return m

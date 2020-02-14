@@ -2,6 +2,7 @@ git_commit = $(shell git log -1 --pretty=format:"%H")
 
 test_unit:
 	go test -v -race $(shell go list ./... | grep -v /functional_tests)
+	go test -v ./pkg/shipyard
 
 test_functional:
 	cd ./functional_tests && go test -v ./...
