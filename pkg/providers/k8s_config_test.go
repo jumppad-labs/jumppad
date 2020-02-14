@@ -24,8 +24,13 @@ func setupK8sConfig(c *config.K8sConfig) (*clients.MockKubernetes, *K8sConfig) {
 
 func TestCreatesConfigCorrectly(t *testing.T) {
 	paths := []string{"/tmp/something"}
-	c := &config.Cluster{Name: "testcluster"}
-	kc := &config.K8sConfig{ClusterRef: c, Paths: paths}
+	c := config.NewK8sCluster("testcluster")
+	kc := config.NewK8sConfig("config")
+	kc.Cluster = "k8s_cluster.testcluster"
+	kc.Paths = paths
+	cc := config.New()
+	cc.AddResource(kc)
+	cc.AddResource(c)
 	mk, p := setupK8sConfig(kc)
 
 	err := p.Create()
@@ -41,8 +46,9 @@ func TestDestroysCorrectly(t *testing.T) {
 	t.SkipNow()
 
 	paths := []string{"/tmp/something"}
-	c := &config.Cluster{Name: "testcluster"}
-	kc := &config.K8sConfig{ClusterRef: c, Paths: paths}
+	kc := config.NewK8sConfig("config")
+	kc.Cluster = "k8s_cluster.testcluster"
+	kc.Paths = paths
 	mk, p := setupK8sConfig(kc)
 
 	err := p.Destroy()

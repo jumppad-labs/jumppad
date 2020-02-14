@@ -13,57 +13,41 @@ var (
 	ErrorClusterExists               = errors.New("cluster exists")
 )
 
-// Cluster defines a provider which can create a cluster
-type Cluster struct {
-	config     config.Cluster
+// K8sCluster defines a provider which can create Kubernetes clusters
+type K8sCluster struct {
+	config     *config.K8sCluster
 	client     clients.ContainerTasks
 	kubeClient clients.Kubernetes
 	httpClient clients.HTTP
 	log        hclog.Logger
 }
 
-// NewCluster creates a new
-func NewCluster(c config.Cluster, cc clients.ContainerTasks, kc clients.Kubernetes, hc clients.HTTP, l hclog.Logger) *Cluster {
-	return &Cluster{c, cc, kc, hc, l}
+// NewK8sCluster creates a new Kubernetes cluster provider
+func NewK8sCluster(c *config.K8sCluster, cc clients.ContainerTasks, kc clients.Kubernetes, hc clients.HTTP, l hclog.Logger) *K8sCluster {
+	return &K8sCluster{c, cc, kc, hc, l}
 }
 
 // Create implements interface method to create a cluster of the specified type
-func (c *Cluster) Create() error {
+func (c *K8sCluster) Create() error {
 	switch c.config.Driver {
 	case "k3s":
 		return c.createK3s()
-	case "nomad":
-		return c.createNomad()
 	default:
 		return ErrorClusterDriverNotImplemented
 	}
 }
 
 // Destroy implements interface method to destroy a cluster
-func (c *Cluster) Destroy() error {
+func (c *K8sCluster) Destroy() error {
 	switch c.config.Driver {
 	case "k3s":
 		return c.destroyK3s()
-	case "nomad":
-		return c.destroyNomad()
 	default:
 		return ErrorClusterDriverNotImplemented
 	}
 }
 
 // Lookup the a clusters current state
-func (c *Cluster) Lookup() ([]string, error) {
-	/*
-		// lookup the server id
-		// base of cluster is a container
-		co := &config.Container{
-			Name:       c.config.Name,
-			NetworkRef: c.config.NetworkRef,
-		}
-
-		p := NewContainer(co, c.client, c.log.With("parent_ref", c.config.Name))
-
-		return p.Lookup()
-	*/
+func (c *K8sCluster) Lookup() ([]string, error) {
 	return []string{}, nil
 }

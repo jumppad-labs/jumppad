@@ -10,13 +10,13 @@ import (
 )
 
 type Ingress struct {
-	config config.Ingress
+	config *config.Ingress
 	client clients.ContainerTasks
 	log    hclog.Logger
 }
 
 // NewIngress creates a new ingress provider
-func NewIngress(c config.Ingress, cc clients.ContainerTasks, l hclog.Logger) *Ingress {
+func NewIngress(c *config.Ingress, cc clients.ContainerTasks, l hclog.Logger) *Ingress {
 	return &Ingress{c, cc, l}
 }
 
@@ -29,11 +29,17 @@ func (i *Ingress) Create() error {
 	var env []config.KV
 	command := make([]string, 0)
 
-	switch v := i.config.TargetRef.(type) {
-	case *config.Container:
-		serviceName = utils.FQDN(v.Name, v.NetworkRef.Name)
-	case *config.Cluster:
+	target, err := i.config.FindDependentResource(i.config.Target)
+	if err != nil {
+		return err
+	}
 
+	switch target.Info().Type {
+	case config.TypeContainer:
+		serviceName = utils.FQDN(target.Info().Name, string(target.Info().Type))
+	case config.TypeK8sCluster:
+
+		v := target.(*config.K8sCluster)
 		// determine the type of cluster
 		// if this is a k3s cluster we need to add the kubeconfig and
 		// make sure that the proxy runs in kube mode
@@ -58,7 +64,7 @@ func (i *Ingress) Create() error {
 			command = append(command, "--namespace")
 			command = append(command, i.config.Namespace)
 		} else {
-			serviceName = fmt.Sprintf("server.%s", utils.FQDN(v.Name, v.NetworkRef.Name))
+			serviceName = fmt.Sprintf("server.%s", utils.FQDN(v.Name, string(v.Type)))
 		}
 
 	default:
@@ -77,31 +83,44 @@ func (i *Ingress) Create() error {
 	}
 
 	// ingress simply crease a container with specific options
-	c := config.Container{
-		Name:        i.config.Name,
-		NetworkRef:  i.config.NetworkRef,
-		Ports:       i.config.Ports,
-		Image:       config.Image{Name: image},
-		Command:     command,
-		Volumes:     volumes,
-		Environment: env,
-		IPAddress:   i.config.IPAddress,
+	c := config.NewContainer(i.config.Name)
+	i.config.ResourceInfo.AddChild(c)
+
+	c.Networks = i.config.Networks
+	c.Ports = i.config.Ports
+	c.Image = config.Image{Name: image}
+	c.Command = command
+	c.Volumes = volumes
+	c.Environment = env
+
+	_, err = i.client.CreateContainer(c)
+	if err != nil {
+		return err
 	}
 
-	_, err := i.client.CreateContainer(c)
-	return err
+	// set the state
+	i.config.Status = config.Applied
+
+	return nil
 }
 
 // Destroy the ingress
 func (i *Ingress) Destroy() error {
 	i.log.Info("Destroy Ingress", "ref", i.config.Name)
 
-	ids, err := i.client.FindContainerIDs(i.config.Name, i.config.NetworkRef.Name)
+	ids, err := i.client.FindContainerIDs(i.config.Name, i.config.Type)
 	if err != nil {
 		return err
 	}
 
 	for _, id := range ids {
+		for _, n := range i.config.Networks {
+			err := i.client.DetachNetwork(n.Name, id)
+			if err != nil {
+				return err
+			}
+		}
+
 		err := i.client.RemoveContainer(id)
 		if err != nil {
 			return err
@@ -115,4 +134,9 @@ func (i *Ingress) Destroy() error {
 // Lookup the id of the ingress
 func (i *Ingress) Lookup() ([]string, error) {
 	return []string{}, nil
+}
+
+// Config returns the config for the provider
+func (c *Ingress) Config() ConfigWrapper {
+	return ConfigWrapper{"config.Ingress", c.config}
 }

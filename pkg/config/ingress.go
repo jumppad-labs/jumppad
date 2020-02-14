@@ -1,15 +1,21 @@
 package config
 
+// TypeIngress is the resource string for the type
+const TypeIngress ResourceType = "ingress"
+
 // Ingress defines an ingress service mapping ports between local host or docker network and the target
 type Ingress struct {
-	Name       string
-	TargetRef  interface{}
-	NetworkRef *Network // automatically fetched from target
-	WANRef     *Network // automatically created
+	ResourceInfo
 
-	Target    string `hcl:"target"`
-	Service   string `hcl:"service,optional"`
-	Namespace string `hcl:"namespace,optional"`
-	Ports     []Port `hcl:"port,block"`
-	IPAddress string `hcl:"ip_address,optional"`
+	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
+
+	Target    string `hcl:"target" json:"target"`
+	Service   string `hcl:"service,optional" json:"service,omitempty"`
+	Namespace string `hcl:"namespace,optional" json:"namespace,omitempty"`
+	Ports     []Port `hcl:"port,block" json:"ports,omitempty"`
+}
+
+// NewIngress creates a new ingress with the correct defaults
+func NewIngress(name string) *Ingress {
+	return &Ingress{ResourceInfo: ResourceInfo{Name: name, Type: TypeIngress, Status: PendingCreation}}
 }

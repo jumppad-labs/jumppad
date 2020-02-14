@@ -11,7 +11,7 @@ container "consul" {
   }
 
   network    = "network.onprem"
-  ip_address = "10.5.0.2" // optional
+  ip_address = "10.5.0.200" // optional
 
   resources {
     # Max CPU to consume, 1024 is one core, default unlimited

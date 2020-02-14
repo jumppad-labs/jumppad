@@ -37,12 +37,26 @@ func init() {
 
 func TestMain(m *testing.M) {
 	format := "progress"
+	run := false
+
 	for _, arg := range os.Args[1:] {
 		if arg == "-test.v=true" { // go test transforms -v option
 			format = "pretty"
 			break
 		}
+
+		// only run the tests if specific flag is specified
+		// this is to stop inadvertant executrion from go test ./...
+		if arg == "-run" {
+			run = true
+			break
+		}
 	}
+
+	if !run {
+		return
+	}
+
 	status := godog.RunWithOptions("godog", func(s *godog.Suite) {
 		FeatureContext(s)
 	}, godog.Options{
@@ -67,7 +81,7 @@ func FeatureContext(s *godog.Suite) {
 	})
 
 	s.AfterScenario(func(interface{}, error) {
-		err := currentEngine.Destroy()
+		err := currentEngine.Destroy("boom", true)
 		if err != nil {
 			panic(err)
 		}
@@ -79,7 +93,7 @@ func theConfig(arg1 string) error {
 	// so we can obtain references to the clients for checks
 
 	var err error
-	currentConfig, err = config.New()
+	currentConfig = config.New()
 	if err != nil {
 		return err
 	}
@@ -103,13 +117,13 @@ func theConfig(arg1 string) error {
 	}
 
 	currentClients = cc
-	currentEngine = shipyard.New(currentConfig, cc, l)
+	// currentEngine = shipyard.New(currentConfig, cc, l)
 
 	return nil
 }
 
 func iRunApply() error {
-	return currentEngine.Apply()
+	return currentEngine.Apply("boom")
 }
 
 func thereShouldBeContainerRunningCalled(arg1 int, arg2 string) error {

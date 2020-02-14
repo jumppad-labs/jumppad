@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func testRemoteExecSetupMocks() *mocks.MockContainerTasks {
+func testRemoteExecSetupMocks() (*config.ExecRemote, *config.Network, *mocks.MockContainerTasks) {
 	md := &mocks.MockContainerTasks{}
 	md.On("CreateContainer", mock.Anything).Return("1234", nil)
 	md.On("FindContainerIDs", mock.Anything).Return([]string{"1234"}, nil)
@@ -19,23 +19,38 @@ func testRemoteExecSetupMocks() *mocks.MockContainerTasks {
 	md.On("RemoveContainer", mock.Anything).Return(nil)
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"1234"}, nil)
 
-	return md
+	trex := &config.ExecRemote{
+		Image:     &config.Image{Name: "tools:v1"},
+		Networks:  []config.NetworkAttachment{config.NetworkAttachment{Name: "wan"}},
+		Command:   "tail",
+		Arguments: []string{"-f", "/dev/null"},
+	}
+
+	net := config.NewNetwork("wan")
+
+	cont := config.NewContainer("test")
+	cont.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "network.wan"}}
+
+	c := config.New()
+	c.AddResource(net)
+	c.AddResource(trex)
+	c.AddResource(cont)
+
+	return trex, net, md
 }
 
 func TestRemoteExecThrowsErrorIfScript(t *testing.T) {
-	md := testRemoteExecSetupMocks()
-	cc := testRemoteExecConfig
-	cc.Script = "./script.sh"
-	p := NewRemoteExec(cc, md, hclog.NewNullLogger())
+	trex, _, md := testRemoteExecSetupMocks()
+	trex.Script = "./script.sh"
+	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
 }
 
 func TestRemoteExecCreatesContainerWhenNoTarget(t *testing.T) {
-	md := testRemoteExecSetupMocks()
-	cc := testRemoteExecConfig
-	p := NewRemoteExec(cc, md, hclog.NewNullLogger())
+	trex, _, md := testRemoteExecSetupMocks()
+	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -43,71 +58,65 @@ func TestRemoteExecCreatesContainerWhenNoTarget(t *testing.T) {
 }
 
 func TestRemoteExecCreatesContainerFailsReturnError(t *testing.T) {
-	md := testRemoteExecSetupMocks()
+	trex, _, md := testRemoteExecSetupMocks()
 	removeOn(&md.Mock, "CreateContainer")
 	md.On("CreateContainer", mock.Anything).Return("", fmt.Errorf("boom"))
 
-	cc := testRemoteExecConfig
-	p := NewRemoteExec(cc, md, hclog.NewNullLogger())
+	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
 }
 
 func TestRemoteExecWithTargetLooksupID(t *testing.T) {
-	md := testRemoteExecSetupMocks()
-	cc := testRemoteExecConfig
-	cc.TargetRef = &config.Container{Name: "test", NetworkRef: &config.Network{Name: "cloud"}}
-	p := NewRemoteExec(cc, md, hclog.NewNullLogger())
+	trex, _, md := testRemoteExecSetupMocks()
+	trex.Target = "container.test"
+	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "FindContainerIDs", "test", "cloud")
+	md.AssertCalled(t, "FindContainerIDs", "test", config.TypeContainer)
 }
 
 func TestRemoteExecWithTargetLooksupIDNotFoundReturnsError(t *testing.T) {
-	md := testRemoteExecSetupMocks()
+	trex, _, md := testRemoteExecSetupMocks()
+	trex.Target = "container.test"
 	removeOn(&md.Mock, "FindContainerIDs")
-	md.On("FindContainerIDs", "test", "cloud").Return([]string{}, nil)
-	cc := testRemoteExecConfig
-	cc.TargetRef = &config.Container{Name: "test", NetworkRef: &config.Network{Name: "cloud"}}
-	p := NewRemoteExec(cc, md, hclog.NewNullLogger())
+	md.On("FindContainerIDs", "test", config.TypeContainer).Return([]string{}, nil)
+	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
 }
 
 func TestRemoteExecExecutesCommand(t *testing.T) {
-	md := testRemoteExecSetupMocks()
-	cc := testRemoteExecConfig
-	p := NewRemoteExec(cc, md, hclog.NewNullLogger())
+	trex, _, md := testRemoteExecSetupMocks()
+	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
 	md.AssertCalled(t, "ExecuteCommand", mock.Anything, mock.Anything, mock.Anything)
 
 	params := getCalls(&md.Mock, "ExecuteCommand")[0].Arguments[1].([]string)
-	assert.Equal(t, testRemoteExecConfig.Command, params[0])
-	assert.Equal(t, testRemoteExecConfig.Arguments[0], params[1])
-	assert.Equal(t, testRemoteExecConfig.Arguments[1], params[2])
+	assert.Equal(t, trex.Command, params[0])
+	assert.Equal(t, trex.Arguments[0], params[1])
+	assert.Equal(t, trex.Arguments[1], params[2])
 }
 
 func TestRemoteExecExecutesCommandFailReturnsError(t *testing.T) {
-	md := testRemoteExecSetupMocks()
+	trex, _, md := testRemoteExecSetupMocks()
 	removeOn(&md.Mock, "ExecuteCommand")
 	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
-	cc := testRemoteExecConfig
-	p := NewRemoteExec(cc, md, hclog.NewNullLogger())
+	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
 }
 
 func TestRemoteExecRemovesContainer(t *testing.T) {
-	md := testRemoteExecSetupMocks()
-	cc := testRemoteExecConfig
-	p := NewRemoteExec(cc, md, hclog.NewNullLogger())
+	trex, _, md := testRemoteExecSetupMocks()
+	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -115,31 +124,22 @@ func TestRemoteExecRemovesContainer(t *testing.T) {
 }
 
 func TestRemoteExecRemoveContainerFailReturnsError(t *testing.T) {
-	md := testRemoteExecSetupMocks()
+	trex, _, md := testRemoteExecSetupMocks()
 	removeOn(&md.Mock, "RemoveContainer")
 	md.On("RemoveContainer", "1234").Return(fmt.Errorf("boom"))
 
-	cc := testRemoteExecConfig
-	p := NewRemoteExec(cc, md, hclog.NewNullLogger())
+	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
 }
 
 func TestRemoteExecDoesNOTRemovesContainerWhenTarget(t *testing.T) {
-	md := testRemoteExecSetupMocks()
-	cc := testRemoteExecConfig
-	cc.Target = "container.test"
-	p := NewRemoteExec(cc, md, hclog.NewNullLogger())
+	trex, _, md := testRemoteExecSetupMocks()
+	trex.Target = "container.test"
+	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
 	md.AssertNotCalled(t, "RemoveContainer", mock.Anything)
-}
-
-var testRemoteExecConfig = config.RemoteExec{
-	Image:     &config.Image{Name: "tools:v1"},
-	WANRef:    &config.Network{Name: "WAN"},
-	Command:   "tail",
-	Arguments: []string{"-f", "/dev/null"},
 }

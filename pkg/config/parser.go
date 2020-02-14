@@ -8,12 +8,12 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 
 	"github.com/hashicorp/hcl2/gohcl"
 	"github.com/hashicorp/hcl2/hcl"
 	"github.com/hashicorp/hcl2/hcl/hclsyntax"
 	"github.com/hashicorp/hcl2/hclparse"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/function"
 )
@@ -109,35 +109,41 @@ func ParseHCLFile(file string, c *Config) error {
 
 	for _, b := range body.Blocks {
 		switch b.Type {
-		case "cluster":
-			cl := &Cluster{}
-			cl.Name = b.Labels[0]
+		case string(TypeK8sCluster):
+			cl := NewK8sCluster(b.Labels[0])
 
 			err := decodeBody(b, cl)
 			if err != nil {
 				return err
 			}
 
-			c.Clusters = append(c.Clusters, cl)
+			c.AddResource(cl)
+		case string(TypeNomadCluster):
+			cl := NewNomadCluster(b.Labels[0])
 
-		case "network":
+			err := decodeBody(b, cl)
+			if err != nil {
+				return err
+			}
+
+			c.AddResource(cl)
+
+		case string(TypeNetwork):
 			if b.Labels[0] == "wan" {
 				return ErrorWANExists
 			}
 
-			n := &Network{}
-			n.Name = b.Labels[0]
+			n := NewNetwork(b.Labels[0])
 
 			err := decodeBody(b, n)
 			if err != nil {
 				return err
 			}
 
-			c.Networks = append(c.Networks, n)
+			c.AddResource(n)
 
-		case "helm":
-			h := &Helm{}
-			h.Name = b.Labels[0]
+		case string(TypeHelm):
+			h := NewHelm(b.Labels[0])
 
 			err := decodeBody(b, h)
 			if err != nil {
@@ -147,11 +153,10 @@ func ParseHCLFile(file string, c *Config) error {
 			h.Chart = ensureAbsolute(h.Chart, file)
 			h.Values = ensureAbsolute(h.Values, file)
 
-			c.HelmCharts = append(c.HelmCharts, h)
+			c.AddResource(h)
 
-		case "k8s_config":
-			h := &K8sConfig{}
-			h.Name = b.Labels[0]
+		case string(TypeK8sConfig):
+			h := NewK8sConfig(b.Labels[0])
 
 			err := decodeBody(b, h)
 			if err != nil {
@@ -163,22 +168,20 @@ func ParseHCLFile(file string, c *Config) error {
 				h.Paths[i] = ensureAbsolute(p, file)
 			}
 
-			c.K8sConfig = append(c.K8sConfig, h)
+			c.AddResource(h)
 
-		case "ingress":
-			i := &Ingress{}
-			i.Name = b.Labels[0]
+		case string(TypeIngress):
+			i := NewIngress(b.Labels[0])
 
 			err := decodeBody(b, i)
 			if err != nil {
 				return err
 			}
 
-			c.Ingresses = append(c.Ingresses, i)
+			c.AddResource(i)
 
-		case "container":
-			co := &Container{}
-			co.Name = b.Labels[0]
+		case string(TypeContainer):
+			co := NewContainer(b.Labels[0])
 
 			err := decodeBody(b, co)
 			if err != nil {
@@ -191,11 +194,10 @@ func ParseHCLFile(file string, c *Config) error {
 				co.Volumes[i].Source = ensureAbsolute(v.Source, file)
 			}
 
-			c.Containers = append(c.Containers, co)
+			c.AddResource(co)
 
-		case "docs":
-			do := &Docs{}
-			do.Name = b.Labels[0]
+		case string(TypeDocs):
+			do := NewDocs(b.Labels[0])
 
 			err := decodeBody(b, do)
 			if err != nil {
@@ -204,11 +206,10 @@ func ParseHCLFile(file string, c *Config) error {
 
 			do.Path = ensureAbsolute(do.Path, file)
 
-			c.Docs = do
+			c.AddResource(do)
 
-		case "local_exec":
-			h := &LocalExec{}
-			h.Name = b.Labels[0]
+		case string(TypeExecLocal):
+			h := NewExecLocal(b.Labels[0])
 
 			err := decodeBody(b, h)
 			if err != nil {
@@ -217,11 +218,10 @@ func ParseHCLFile(file string, c *Config) error {
 
 			h.Script = ensureAbsolute(h.Script, file)
 
-			c.LocalExecs = append(c.LocalExecs, h)
+			c.AddResource(h)
 
-		case "remote_exec":
-			h := &RemoteExec{}
-			h.Name = b.Labels[0]
+		case string(TypeExecRemote):
+			h := NewExecRemote(b.Labels[0])
 
 			err := decodeBody(b, h)
 			if err != nil {
@@ -238,7 +238,7 @@ func ParseHCLFile(file string, c *Config) error {
 				h.Volumes[i].Source = ensureAbsolute(v.Source, file)
 			}
 
-			c.RemoteExecs = append(c.RemoteExecs, h)
+			c.AddResource(h)
 		}
 	}
 
@@ -247,119 +247,54 @@ func ParseHCLFile(file string, c *Config) error {
 
 // ParseReferences links the object references in config elements
 func ParseReferences(c *Config) error {
-	for _, co := range c.Containers {
-		co.WANRef = c.WAN
-		co.NetworkRef = findNetworkRef(co.Network, c)
-
-		if co.NetworkRef == nil {
-			return fmt.Errorf("Unable to assign network '%s' for container '%s'", co.Network, co.Name)
-		}
-	}
-
-	// link the networks in the clusters
-	for _, cl := range c.Clusters {
-		cl.WANRef = c.WAN
-		cl.NetworkRef = findNetworkRef(cl.Network, c)
-	}
-
-	for _, hc := range c.HelmCharts {
-		hc.ClusterRef = findClusterRef(hc.Cluster, c)
-	}
-
-	for _, k8s := range c.K8sConfig {
-		k8s.ClusterRef = findClusterRef(k8s.Cluster, c)
-	}
-
-	for _, in := range c.Ingresses {
-		in.WANRef = c.WAN
-		in.TargetRef = findTargetRef(in.Target, c)
-
-		if in.TargetRef == nil {
-			return fmt.Errorf("Unable to find target '%s' for ingress '%s'", in.Target, in.Name)
-		}
-
-		if c, ok := in.TargetRef.(*Cluster); ok {
-			in.NetworkRef = c.NetworkRef
-		} else {
-			in.NetworkRef = in.TargetRef.(*Container).NetworkRef
-		}
-
-		if in.NetworkRef == nil {
-			return fmt.Errorf("Unable to assign network from target '%s' for ingress '%s'", in.Target, in.Name)
-		}
-	}
-
-	for _, in := range c.RemoteExecs {
-		in.WANRef = c.WAN
-
-		if in.Target != "" {
-			// if we are using a target get the network from the target
-			in.TargetRef = findTargetRef(in.Target, c)
-
-			if c, ok := in.TargetRef.(*Cluster); ok {
-				in.NetworkRef = c.NetworkRef
-			} else {
-				in.NetworkRef = in.TargetRef.(*Container).NetworkRef
+	for _, r := range c.Resources {
+		switch r.Info().Type {
+		case TypeContainer:
+			c := r.(*Container)
+			for _, n := range c.Networks {
+				c.DependsOn = append(c.DependsOn, n.Name)
 			}
-		} else {
-			// if not using a target then network should be set
-			in.NetworkRef = findNetworkRef(in.Network, c)
+
+		case TypeDocs:
+			c := r.(*Docs)
+			for _, n := range c.Networks {
+				c.DependsOn = append(c.DependsOn, n.Name)
+			}
+		case TypeExecRemote:
+			c := r.(*ExecRemote)
+			for _, n := range c.Networks {
+				c.DependsOn = append(c.DependsOn, n.Name)
+			}
+
+			// target is optional
+			if c.Target != "" {
+				c.DependsOn = append(c.DependsOn, c.Target)
+			}
+		case TypeHelm:
+			c := r.(*Helm)
+			c.DependsOn = append(c.DependsOn, c.Cluster)
+
+		case TypeK8sConfig:
+			c := r.(*K8sConfig)
+			c.DependsOn = append(c.DependsOn, c.Cluster)
+
+		case TypeIngress:
+			c := r.(*Ingress)
+			for _, n := range c.Networks {
+				c.DependsOn = append(c.DependsOn, n.Name)
+			}
+			c.DependsOn = append(c.DependsOn, c.Target)
+		case TypeK8sCluster:
+			c := r.(*K8sCluster)
+			for _, n := range c.Networks {
+				c.DependsOn = append(c.DependsOn, n.Name)
+			}
+		case TypeNomadCluster:
+			c := r.(*NomadCluster)
+			for _, n := range c.Networks {
+				c.DependsOn = append(c.DependsOn, n.Name)
+			}
 		}
-	}
-
-	if c.Docs != nil {
-		c.Docs.WANRef = c.WAN
-	}
-
-	return nil
-}
-
-func findNetworkRef(name string, c *Config) *Network {
-	nn := strings.Split(name, ".")[1]
-
-	for _, n := range c.Networks {
-		if n.Name == nn {
-			return n
-		}
-	}
-
-	return nil
-}
-
-func findClusterRef(name string, c *Config) *Cluster {
-	nn := strings.Split(name, ".")[1]
-
-	for _, c := range c.Clusters {
-		if c.Name == nn {
-			return c
-		}
-	}
-
-	return nil
-}
-
-func findContainerRef(name string, c *Config) *Container {
-	nn := strings.Split(name, ".")[1]
-
-	for _, c := range c.Containers {
-		if c.Name == nn {
-			return c
-		}
-	}
-
-	return nil
-}
-
-func findTargetRef(name string, c *Config) interface{} {
-	// target can be either a cluster or a container
-	cl := findClusterRef(name, c)
-	if cl != nil {
-		return cl
-	}
-
-	co := findContainerRef(name, c)
-	if co != nil {
-		return co
 	}
 
 	return nil
@@ -380,10 +315,26 @@ func buildContext() *hcl.EvalContext {
 		},
 	})
 
+	var KubeConfigFunc = function.New(&function.Spec{
+		Params: []function.Parameter{
+			{
+				Name:             "k8s_config",
+				Type:             cty.String,
+				AllowDynamicType: true,
+			},
+		},
+		Type: function.StaticReturnType(cty.String),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			_, _, kcp := utils.CreateKubeConfigPath(args[0].AsString())
+			return cty.StringVal(kcp), nil
+		},
+	})
+
 	ctx := &hcl.EvalContext{
 		Functions: map[string]function.Function{},
 	}
 	ctx.Functions["env"] = EnvFunc
+	ctx.Functions["k8s_config"] = KubeConfigFunc
 
 	return ctx
 }
@@ -405,6 +356,7 @@ func ensureAbsolute(path, file string) string {
 	}
 
 	// path is relative so make absolute using the current file path as base
+	file, _ = filepath.Abs(file)
 	baseDir := filepath.Dir(file)
 	return filepath.Join(baseDir, path)
 }

@@ -1,7 +1,6 @@
 package providers
 
 import (
-	"fmt"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -9,79 +8,40 @@ import (
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"golang.org/x/xerrors"
-	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/chart/loader"
-	"helm.sh/helm/v3/pkg/cli"
-	"helm.sh/helm/v3/pkg/cli/values"
-	"helm.sh/helm/v3/pkg/getter"
-	"helm.sh/helm/v3/pkg/kube"
 )
 
 type Helm struct {
 	config     *config.Helm
 	kubeClient clients.Kubernetes
+	helmClient clients.Helm
 	log        hclog.Logger
 }
 
-func NewHelm(c *config.Helm, kc clients.Kubernetes, l hclog.Logger) *Helm {
-	return &Helm{c, kc, l}
+func NewHelm(c *config.Helm, kc clients.Kubernetes, hc clients.Helm, l hclog.Logger) *Helm {
+	return &Helm{c, kc, hc, l}
 }
 
 func (h *Helm) Create() error {
 	h.log.Info("Creating Helm chart", "ref", h.config.Name)
 
-	_, destPath, _ := utils.CreateKubeConfigPath(h.config.ClusterRef.Name)
+	// get the target cluster
+	target, err := h.config.FindDependentResource(h.config.Cluster)
+	if err != nil {
+		xerrors.Errorf("Unable to find cluster: %w", err)
+	}
+
+	_, destPath, _ := utils.CreateKubeConfigPath(target.Info().Name)
 
 	// set the KubeConfig for the kubernetes client
 	// this is used by the healthchecks
-	err := h.kubeClient.SetConfig(destPath)
+	err = h.kubeClient.SetConfig(destPath)
 	if err != nil {
 		xerrors.Errorf("unable to create Kubernetes client: %w", err)
 	}
 
-	// set the kubeclient for Helm
-	s := kube.GetConfig(destPath, "default", "default")
-	cfg := &action.Configuration{}
-	err = cfg.Init(s, "default", "", func(format string, v ...interface{}) {
-		h.log.Debug("Helm debug message", "message", fmt.Sprintf(format, v...))
-	})
-
+	err = h.helmClient.Create(destPath, h.config.Name, h.config.Chart, h.config.Values)
 	if err != nil {
-		return xerrors.Errorf("unalbe to iniailize Helm: %w", err)
-	}
-
-	client := action.NewInstall(cfg)
-	client.ReleaseName = h.config.Name
-	client.Namespace = "default"
-
-	settings := cli.EnvSettings{}
-	p := getter.All(&settings)
-	vo := values.Options{}
-
-	// if we have an overriden values file set it
-	if h.config.Values != "" {
-		vo.ValueFiles = []string{h.config.Values}
-	}
-
-	vals, err := vo.MergeValues(p)
-	if err != nil {
-		return xerrors.Errorf("Error merging Helm values: %w", err)
-	}
-
-	cp, err := client.ChartPathOptions.LocateChart(h.config.Chart, &settings)
-	if err != nil {
-		return xerrors.Errorf("Error locating chart: %w", err)
-	}
-
-	chartRequested, err := loader.Load(cp)
-	if err != nil {
-		return xerrors.Errorf("Error loading chart: %w", err)
-	}
-
-	// merge values
-	_, err = client.Run(chartRequested, vals)
-	if err != nil {
-		return xerrors.Errorf("Error running chart: %w", err)
+		return err
 	}
 
 	// we can now health check the install

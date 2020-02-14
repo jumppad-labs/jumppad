@@ -8,10 +8,11 @@ import (
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestContainerCreatesSuccessfully(t *testing.T) {
-	cc := config.Container{Name: "tests"}
+	cc := config.NewContainer("tests")
 	md := &mocks.MockContainerTasks{}
 	c := NewContainer(cc, md, hclog.NewNullLogger())
 
@@ -26,7 +27,7 @@ func TestContainerCreatesSuccessfully(t *testing.T) {
 }
 
 func TestContainerDoesNOTCreateWhenPullImageFail(t *testing.T) {
-	cc := config.Container{Name: "tests"}
+	cc := config.NewContainer("tests")
 	md := &mocks.MockContainerTasks{}
 	c := NewContainer(cc, md, hclog.NewNullLogger())
 
@@ -42,23 +43,26 @@ func TestContainerDoesNOTCreateWhenPullImageFail(t *testing.T) {
 }
 
 func TestContainerDestroysCorrectlyWhenContainerExists(t *testing.T) {
-	cc := config.Container{Name: "tests", NetworkRef: &config.Network{Name: "cloud"}}
+	cc := config.NewContainer("tests")
+	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}}
 	md := &mocks.MockContainerTasks{}
 	c := NewContainer(cc, md, hclog.NewNullLogger())
 
-	md.On("FindContainerIDs", cc.Name, cc.NetworkRef.Name).Return([]string{"abc"}, nil)
+	md.On("FindContainerIDs", cc.Name, cc.Type).Return([]string{"abc"}, nil)
 	md.On("RemoveContainer", "abc").Return(nil)
+	md.On("DetachNetwork", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	err := c.Destroy()
 	assert.NoError(t, err)
 }
 
 func TestContainerDoesNotDestroysWhenNotExists(t *testing.T) {
-	cc := config.Container{Name: "tests", NetworkRef: &config.Network{Name: "cloud"}}
+	cc := config.NewContainer("tests")
+	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}}
 	md := &mocks.MockContainerTasks{}
 	c := NewContainer(cc, md, hclog.NewNullLogger())
 
-	md.On("FindContainerIDs", cc.Name, cc.NetworkRef.Name).Return(nil, nil)
+	md.On("FindContainerIDs", cc.Name, cc.Type).Return(nil, nil)
 
 	err := c.Destroy()
 	assert.NoError(t, err)
@@ -66,11 +70,12 @@ func TestContainerDoesNotDestroysWhenNotExists(t *testing.T) {
 }
 
 func TestContainerDoesNotDestroysWhenLookupError(t *testing.T) {
-	cc := config.Container{Name: "tests", NetworkRef: &config.Network{Name: "cloud"}}
+	cc := config.NewContainer("tests")
+	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}}
 	md := &mocks.MockContainerTasks{}
 	c := NewContainer(cc, md, hclog.NewNullLogger())
 
-	md.On("FindContainerIDs", cc.Name, cc.NetworkRef.Name).Return(nil, fmt.Errorf("boom"))
+	md.On("FindContainerIDs", cc.Name, cc.Type).Return(nil, fmt.Errorf("boom"))
 
 	err := c.Destroy()
 	assert.Error(t, err)
@@ -78,11 +83,12 @@ func TestContainerDoesNotDestroysWhenLookupError(t *testing.T) {
 }
 
 func TestContainerLooksupIDs(t *testing.T) {
-	cc := config.Container{Name: "tests", NetworkRef: &config.Network{Name: "cloud"}}
+	cc := config.NewContainer("tests")
+	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}}
 	md := &mocks.MockContainerTasks{}
 	c := NewContainer(cc, md, hclog.NewNullLogger())
 
-	md.On("FindContainerIDs", cc.Name, cc.NetworkRef.Name).Return([]string{"abc"}, nil)
+	md.On("FindContainerIDs", cc.Name, cc.Type).Return([]string{"abc"}, nil)
 
 	ids, err := c.Lookup()
 	assert.NoError(t, err)

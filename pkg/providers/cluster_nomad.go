@@ -1,15 +1,8 @@
 package providers
 
-import (
-	"fmt"
-	"math/rand"
-	"time"
-
-	"github.com/shipyard-run/shipyard/pkg/config"
-)
-
 const nomadBaseImage = "shipyardrun/nomad"
 
+/*
 // TODO tidy code, add tests like k3s cluster
 func (c *Cluster) createNomad() error {
 	c.log.Info("Creating Cluster", "ref", c.config.Name)
@@ -84,9 +77,13 @@ func (c *Cluster) createNomad() error {
 		return err
 	}
 
+	// set the state
+	c.config.State = config.Applied
+
 	return nil
 }
 
 func (c *Cluster) destroyNomad() error {
 	return c.destroyK3s()
 }
+*/

@@ -8,13 +8,13 @@ import (
 
 // Container is a provider for creating and destroying Docker containers
 type Container struct {
-	config config.Container
+	config *config.Container
 	client clients.ContainerTasks
 	log    hclog.Logger
 }
 
 // NewContainer creates a new container with the given config and Docker client
-func NewContainer(co config.Container, cl clients.ContainerTasks, l hclog.Logger) *Container {
+func NewContainer(co *config.Container, cl clients.ContainerTasks, l hclog.Logger) *Container {
 	return &Container{co, cl, l}
 }
 
@@ -31,13 +31,14 @@ func (c *Container) Create() error {
 	}
 
 	_, err = c.client.CreateContainer(c.config)
+
 	return err
 }
 
 // Destroy stops and removes the container
 func (c *Container) Destroy() error {
 	c.log.Info("Destroy Container", "ref", c.config.Name)
-	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.NetworkRef.Name)
+	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.Type)
 
 	if err != nil {
 		return err
@@ -45,6 +46,13 @@ func (c *Container) Destroy() error {
 
 	if len(ids) > 0 {
 		for _, id := range ids {
+			for _, n := range c.config.Networks {
+				err := c.client.DetachNetwork(n.Name, id)
+				if err != nil {
+					return err
+				}
+			}
+
 			err := c.client.RemoveContainer(id)
 			if err != nil {
 				return err
@@ -57,5 +65,5 @@ func (c *Container) Destroy() error {
 
 // Lookup the ID based on the config
 func (c *Container) Lookup() ([]string, error) {
-	return c.client.FindContainerIDs(c.config.Name, c.config.NetworkRef.Name)
+	return c.client.FindContainerIDs(c.config.Name, c.config.Type)
 }

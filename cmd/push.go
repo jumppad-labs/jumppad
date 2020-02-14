@@ -28,11 +28,8 @@ var pushCmd = &cobra.Command{
 
 		fmt.Printf("Pushing image %s to cluster %s\n\n", image, cluster)
 
-		pc := config.Cluster{
-			Name:       cluster,
-			Driver:     "k3s",
-			NetworkRef: &config.Network{Name: network},
-		}
+		pc := config.NewK8sCluster(cluster)
+		pc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: network}}
 
 		dc, err := clients.NewDocker()
 		if err != nil {
@@ -42,7 +39,7 @@ var pushCmd = &cobra.Command{
 
 		dt := clients.NewDockerTasks(dc, hclog.Default())
 
-		p := providers.NewCluster(
+		p := providers.NewK8sCluster(
 			pc,
 			dt,
 			nil,

@@ -6,17 +6,43 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestResourceCount(t *testing.T) {
-	c, _ := New()
-	c.Docs = &Docs{}
-	c.Clusters = []*Cluster{&Cluster{}}
-	c.Containers = []*Container{&Container{}}
-	c.Networks = []*Network{&Network{}}
-	c.HelmCharts = []*Helm{&Helm{}}
-	c.K8sConfig = []*K8sConfig{&K8sConfig{}}
-	c.Ingresses = []*Ingress{&Ingress{}}
-	c.LocalExecs = []*LocalExec{&LocalExec{}}
-	c.RemoteExecs = []*RemoteExec{&RemoteExec{}}
+func testSetupConfig() *Config {
+	c := New()
+	c.AddResource(NewK8sCluster("test"))
 
-	assert.Equal(t, 10, c.ResourceCount())
+	return c
+}
+
+func TestResourceCount(t *testing.T) {
+
+	//assert.Equal(t, 10, c.ResourceCount())
+}
+
+func TestFindResourceFindsCluster(t *testing.T) {
+	c := testSetupConfig()
+
+	cl, err := c.FindResource("k8s_cluster.test")
+	assert.NoError(t, err)
+	assert.Equal(t, c.Resources[0], cl)
+}
+
+func TestFindResourceReturnsNotFoundError(t *testing.T) {
+	c := testSetupConfig()
+
+	cl, err := c.FindResource("cluster.notexist")
+	assert.Error(t, err)
+	assert.IsType(t, err, ResourceNotFoundError{})
+	assert.Nil(t, cl)
+}
+
+func TestAddResourceAddsAResouce(t *testing.T) {
+	c := testSetupConfig()
+
+	cl := NewK8sCluster("mikey")
+	err := c.AddResource(cl)
+	assert.NoError(t, err)
+
+	cl2, err := c.FindResource("k8s_cluster.mikey")
+	assert.NoError(t, err)
+	assert.Equal(t, cl, cl2)
 }

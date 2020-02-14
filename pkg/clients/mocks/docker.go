@@ -165,6 +165,12 @@ func (m *MockDocker) NetworkConnect(ctx context.Context, networkID, containerID 
 	return args.Error(0)
 }
 
+func (m *MockDocker) NetworkDisconnect(ctx context.Context, networkID, containerID string, force bool) error {
+	args := m.Called(ctx, networkID, containerID, force)
+
+	return args.Error(0)
+}
+
 func (m *MockDocker) VolumeCreate(ctx context.Context, options volumetypes.VolumeCreateBody) (types.Volume, error) {
 	args := m.Called(ctx, options)
 
