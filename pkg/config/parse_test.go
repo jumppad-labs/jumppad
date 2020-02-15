@@ -2,10 +2,6 @@ package config
 
 import (
 	"os"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-	errors "golang.org/x/xerrors"
 )
 
 func setup() func() {
@@ -14,17 +10,6 @@ func setup() func() {
 	return func() {
 		os.Unsetenv("SHIPYARD_CONFIG")
 	}
-}
-
-func TestReturnsErrorIfUserNetworkWAN(t *testing.T) {
-	c := New()
-	err := ParseFolder("./examples/network-wan-error", c)
-
-	assert.True(t, errors.Is(err, ErrorWANExists))
-}
-
-func TestReturnsErrorIfDefaultWANInUse(t *testing.T) {
-	// t.Fatal("Pending")
 }
 
 /*
