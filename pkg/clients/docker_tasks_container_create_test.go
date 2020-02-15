@@ -76,6 +76,7 @@ func setupContainerMocks() *clients.MockDocker {
 	md.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("NetworkConnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	md.On("NetworkDisconnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	return md
 }
@@ -112,6 +113,26 @@ func TestContainerCreatesCorrectly(t *testing.T) {
 	assert.True(t, cfg.AttachStdin)
 	assert.True(t, cfg.AttachStdout)
 	assert.True(t, cfg.AttachStderr)
+}
+
+func TestContainerRemovesBridgeBeforeAttachingToUserNetwork(t *testing.T) {
+	cc, _, _, md := createContainerConfig()
+
+	err := setupContainer(t, cc, md)
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "NetworkDisconnect")[0].Arguments
+
+	assert.Equal(t, "bridge", params[1])
+}
+
+func TestContainerReturnsErrorIfErrorRemovingBridge(t *testing.T) {
+	cc, _, _, md := createContainerConfig()
+	removeOn(&md.Mock, "NetworkDisconnect")
+	md.On("NetworkDisconnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
+
+	err := setupContainer(t, cc, md)
+	assert.Error(t, err)
 }
 
 func TestContainerAttachesToUserNetwork(t *testing.T) {
