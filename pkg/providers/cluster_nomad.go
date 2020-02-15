@@ -1,20 +1,67 @@
 package providers
 
+import (
+	"fmt"
+	"math/rand"
+
+	"github.com/hashicorp/go-hclog"
+	"github.com/shipyard-run/shipyard/pkg/clients"
+	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/utils"
+	"golang.org/x/xerrors"
+)
+
 const nomadBaseImage = "shipyardrun/nomad"
 
-/*
-// TODO tidy code, add tests like k3s cluster
-func (c *Cluster) createNomad() error {
+// NomadCluster defines a provider which can create Kubernetes clusters
+type NomadCluster struct {
+	config     *config.NomadCluster
+	client     clients.ContainerTasks
+	httpClient clients.HTTP
+	log        hclog.Logger
+}
+
+// NewNomadCluster creates a new Nomad cluster provider
+func NewNomadCluster(c *config.NomadCluster, cc clients.ContainerTasks, hc clients.HTTP, l hclog.Logger) *NomadCluster {
+	return &NomadCluster{c, cc, hc, l}
+}
+
+// Create implements interface method to create a cluster of the specified type
+func (c *NomadCluster) Create() error {
+	return c.createNomad()
+}
+
+// Destroy implements interface method to destroy a cluster
+func (c *NomadCluster) Destroy() error {
+	return c.destroyNomad()
+}
+
+// Lookup the a clusters current state
+func (c *NomadCluster) Lookup() ([]string, error) {
+	return []string{}, nil
+}
+
+func (c *NomadCluster) createNomad() error {
 	c.log.Info("Creating Cluster", "ref", c.config.Name)
 
 	// check the cluster does not already exist
-	ids, _ := c.client.FindContainerIDs(c.config.Name, c.config.NetworkRef.Name)
+	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.Type)
 	if len(ids) > 0 {
 		return ErrorClusterExists
 	}
 
+	if err != nil {
+		return xerrors.Errorf("Unable to lookup cluster id: %w", err)
+	}
+
 	// set the image
 	image := fmt.Sprintf("%s:%s", nomadBaseImage, c.config.Version)
+
+	// pull the container image
+	err = c.client.PullImage(config.Image{Name: image}, false)
+	if err != nil {
+		return err
+	}
 
 	// create the volume for the cluster
 	volID, err := c.client.CreateVolume(c.config.Name)
@@ -24,10 +71,11 @@ func (c *Cluster) createNomad() error {
 
 	// create the server
 	// since the server is just a container create the container config and provider
-	cc := config.Container{}
-	cc.Name = fmt.Sprintf("server.%s", c.config.Name)
+	cc := config.NewContainer(fmt.Sprintf("server.%s", c.config.Name))
+	c.config.ResourceInfo.AddChild(cc)
+
 	cc.Image = config.Image{Name: image}
-	cc.NetworkRef = c.config.NetworkRef
+	cc.Networks = c.config.Networks
 	cc.Privileged = true // nomad must run Privileged as Docker needs to manipulate ip tables and stuff
 
 	// set the volume mount for the images
@@ -54,7 +102,7 @@ func (c *Cluster) createNomad() error {
 		},
 	}
 
-	_, err = c.client.CreateContainer(cc)
+	id, err := c.client.CreateContainer(cc)
 	if err != nil {
 		return err
 	}
@@ -66,24 +114,84 @@ func (c *Cluster) createNomad() error {
 	}
 
 	// wait for nomad to start
-	err = c.httpClient.HealthCheckHTTP(fmt.Sprintf("http://localhost:%d/v1/status/leader", apiPort), 60*time.Second)
+	err = c.httpClient.HealthCheckHTTP(fmt.Sprintf("http://localhost:%d/v1/status/leader", apiPort), startTimeout)
 	if err != nil {
 		return err
 	}
 
 	// ensure all client nodes are up
-	err = c.httpClient.HealthCheckNomad(fmt.Sprintf("http://localhost:%d", apiPort), c.config.Nodes, 60*time.Second)
+	err = c.httpClient.HealthCheckNomad(fmt.Sprintf("http://localhost:%d", apiPort), c.config.Nodes, startTimeout)
 	if err != nil {
 		return err
 	}
 
-	// set the state
-	c.config.State = config.Applied
+	// import the images to the servers container d instance
+	// importing images means that k3s does not need to pull from a remote docker hub
+	if c.config.Images != nil && len(c.config.Images) > 0 {
+		err := c.ImportLocalDockerImages(c.config.Name, id, c.config.Images)
+		if err != nil {
+			return xerrors.Errorf("Error importing Docker images: %w", err)
+		}
+	}
 
 	return nil
 }
 
-func (c *Cluster) destroyNomad() error {
-	return c.destroyK3s()
+// ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
+func (c *NomadCluster) ImportLocalDockerImages(name string, id string, images []config.Image) error {
+	imgs := []string{}
+
+	for _, i := range images {
+		err := c.client.PullImage(i, false)
+		if err != nil {
+			return err
+		}
+
+		imgs = append(imgs, i.Name)
+	}
+
+	// import to volume
+	vn := utils.FQDNVolumeName(name)
+	_, err := c.client.CopyLocalDockerImageToVolume(imgs, vn)
+	if err != nil {
+		return err
+	}
+
+	/*
+		// execute the command to import the image
+		// write any command output to the logger
+		err = c.client.ExecuteCommand(id, []string{"ctr", "image", "import", "/images/" + imageFile}, c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
+		if err != nil {
+			return err
+		}
+	*/
+
+	return nil
 }
-*/
+
+func (c *NomadCluster) destroyNomad() error {
+	c.log.Info("Destroy Cluster", "ref", c.config.Name)
+
+	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.Type)
+	if err != nil {
+		return err
+	}
+
+	for _, i := range ids {
+		// remove from the networks
+		for _, n := range c.config.Networks {
+			err := c.client.DetachNetwork(n.Name, i)
+			if err != nil {
+				return err
+			}
+		}
+
+		err := c.client.RemoveContainer(i)
+		if err != nil {
+			return err
+		}
+	}
+
+	// delete the volume
+	return c.client.RemoveVolume(c.config.Name)
+}

@@ -12,7 +12,6 @@ type NomadCluster struct {
 
 	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
-	Driver      string  `hcl:"driver" json:"driver,omitempty"`
 	Version     string  `hcl:"version,optional" json:"version,omitempty"`
 	Nodes       int     `hcl:"nodes,optional" json:"nodes,omitempty"`
 	Config      []KV    `hcl:"config,block" json:"config,omitempty"`

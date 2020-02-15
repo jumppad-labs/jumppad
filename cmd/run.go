@@ -68,6 +68,9 @@ var runCmd = &cobra.Command{
 
 		// if we have a blueprint show the header
 		if e.Blueprint() != nil {
+			fmt.Println("")
+			fmt.Println("########################################################")
+			fmt.Println("")
 			fmt.Println("Title", e.Blueprint().Title)
 			fmt.Println("Author", e.Blueprint().Author)
 			fmt.Println("")

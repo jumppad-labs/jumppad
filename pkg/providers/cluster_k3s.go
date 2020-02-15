@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"golang.org/x/xerrors"
@@ -21,6 +22,45 @@ import (
 const k3sBaseImage = "rancher/k3s"
 
 var startTimeout = (120 * time.Second)
+
+// K8sCluster defines a provider which can create Kubernetes clusters
+type K8sCluster struct {
+	config     *config.K8sCluster
+	client     clients.ContainerTasks
+	kubeClient clients.Kubernetes
+	httpClient clients.HTTP
+	log        hclog.Logger
+}
+
+// NewK8sCluster creates a new Kubernetes cluster provider
+func NewK8sCluster(c *config.K8sCluster, cc clients.ContainerTasks, kc clients.Kubernetes, hc clients.HTTP, l hclog.Logger) *K8sCluster {
+	return &K8sCluster{c, cc, kc, hc, l}
+}
+
+// Create implements interface method to create a cluster of the specified type
+func (c *K8sCluster) Create() error {
+	switch c.config.Driver {
+	case "k3s":
+		return c.createK3s()
+	default:
+		return ErrorClusterDriverNotImplemented
+	}
+}
+
+// Destroy implements interface method to destroy a cluster
+func (c *K8sCluster) Destroy() error {
+	switch c.config.Driver {
+	case "k3s":
+		return c.destroyK3s()
+	default:
+		return ErrorClusterDriverNotImplemented
+	}
+}
+
+// Lookup the a clusters current state
+func (c *K8sCluster) Lookup() ([]string, error) {
+	return []string{}, nil
+}
 
 func (c *K8sCluster) createK3s() error {
 	c.log.Info("Creating Cluster", "ref", c.config.Name)
@@ -35,8 +75,11 @@ func (c *K8sCluster) createK3s() error {
 		return ErrorClusterExists
 	}
 
+	// set the image
+	image := fmt.Sprintf("%s:%s", k3sBaseImage, c.config.Version)
+
 	// pull the container image
-	err = c.client.PullImage(config.Image{Name: fmt.Sprintf("%s:%s", k3sBaseImage, c.config.Version)}, false)
+	err = c.client.PullImage(config.Image{Name: image}, false)
 	if err != nil {
 		return err
 	}
@@ -46,9 +89,6 @@ func (c *K8sCluster) createK3s() error {
 	if err != nil {
 		return err
 	}
-
-	// set the image
-	image := fmt.Sprintf("%s:%s", k3sBaseImage, c.config.Version)
 
 	// create the server
 	// since the server is just a container create the container config and provider

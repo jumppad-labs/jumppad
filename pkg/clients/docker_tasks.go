@@ -67,6 +67,7 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 	hc := &container.HostConfig{}
 	nc := &network.NetworkingConfig{}
 
+	// by default the container should NOT be attached to a network
 	nc.EndpointsConfig = make(map[string]*network.EndpointSettings)
 
 	// Create volume mounts
@@ -112,6 +113,15 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 	)
 	if err != nil {
 		return "", err
+	}
+
+	// first remove the container from the bridge network if we are adding custom networks
+	// all containers should have custom networks
+	if len(c.Networks) > 0 {
+		err := d.c.NetworkDisconnect(context.Background(), "bridge", cont.ID, true)
+		if err != nil {
+			return "", xerrors.Errorf("Unable to remove container from the default bridge network: %w", err)
+		}
 	}
 
 	for _, n := range c.Networks {

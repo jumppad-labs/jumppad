@@ -4,6 +4,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -18,6 +19,15 @@ import (
 )
 
 var ctx *hcl.EvalContext
+
+type ResourceTypeNotExistError struct {
+	Type string
+	File string
+}
+
+func (r ResourceTypeNotExistError) Error() string {
+	return fmt.Sprintf("Resource type %s defined in file %s, does not exist. Please check the documentation for supported resources. We love PRs if you would like to create a resource of this type :)", r.Type, r.File)
+}
 
 // ParseFolder for config entries
 func ParseFolder(folder string, c *Config) error {
@@ -127,10 +137,6 @@ func ParseHCLFile(file string, c *Config) error {
 			c.AddResource(cl)
 
 		case string(TypeNetwork):
-			if b.Labels[0] == "wan" {
-				return ErrorWANExists
-			}
-
 			n := NewNetwork(b.Labels[0])
 
 			err := decodeBody(b, n)
@@ -237,6 +243,8 @@ func ParseHCLFile(file string, c *Config) error {
 			}
 
 			c.AddResource(h)
+		default:
+			return ResourceTypeNotExistError{string(b.Type), file}
 		}
 	}
 

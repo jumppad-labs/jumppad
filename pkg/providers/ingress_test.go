@@ -14,9 +14,10 @@ import (
 
 func testIngressCreateMocks() *mocks.MockContainerTasks {
 	md := &mocks.MockContainerTasks{}
+	md.On("PullImage", mock.Anything, mock.Anything).Return(nil)
 	md.On("CreateContainer", mock.Anything).Return("ingress", nil)
 	md.On("RemoveContainer", mock.Anything).Return(nil)
-	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"ingress"}, nil)
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{}, nil)
 	md.On("DetachNetwork", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	testCluster.Driver = "k3s"
@@ -28,6 +29,35 @@ func testIngressCreateMocks() *mocks.MockContainerTasks {
 	c.AddResource(testContainer)
 
 	return md
+}
+
+func TestIngressK8sErrorsWhenUnableToLookupIDs(t *testing.T) {
+	md := &mocks.MockContainerTasks{}
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
+
+	p := NewIngress(&testIngressConfig, md, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.Error(t, err)
+}
+
+func TestIngressK8sErrorsWhenClusterExists(t *testing.T) {
+	md := &mocks.MockContainerTasks{}
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
+
+	p := NewIngress(&testIngressConfig, md, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.Error(t, err)
+}
+
+func TestIngressK8sTargetPullsImage(t *testing.T) {
+	md := testIngressCreateMocks()
+	p := NewIngress(&testIngressConfig, md, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+	md.AssertCalled(t, "PullImage", config.Image{Name: ingressImage}, false)
 }
 
 func TestIngressK8sTargetConfiguresCommand(t *testing.T) {
@@ -126,6 +156,8 @@ func TestIngressContainerFailReturnsError(t *testing.T) {
 
 func TestIngressK8sTargetDestroysContainer(t *testing.T) {
 	md := testIngressCreateMocks()
+	removeOn(&md.Mock, "FindContainerIDs")
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"ingress"}, nil)
 	p := NewIngress(&testIngressConfig, md, hclog.NewNullLogger())
 
 	err := p.Destroy()
