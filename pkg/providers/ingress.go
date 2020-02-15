@@ -7,7 +7,10 @@ import (
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/utils"
+	"golang.org/x/xerrors"
 )
+
+const ingressImage = "shipyardrun/ingress:latest"
 
 type Ingress struct {
 	config *config.Ingress
@@ -24,6 +27,25 @@ func NewIngress(c *config.Ingress, cc clients.ContainerTasks, l hclog.Logger) *I
 func (i *Ingress) Create() error {
 	i.log.Info("Creating Ingress", "ref", i.config.Name)
 
+	// check the ingress does not already exist
+	// TODO, we can probably extract all of the check and pull logic into a common function
+	ids, err := i.client.FindContainerIDs(i.config.Name, i.config.Type)
+	if len(ids) > 0 {
+		return xerrors.Errorf("Unable to create ingress, and ingress with the name %s already exists: %w", i.config.Name, err)
+	}
+
+	if err != nil {
+		return xerrors.Errorf("Unable to lookup ingress id: %w", err)
+	}
+
+	// pull any images needed for this container
+	err = i.client.PullImage(config.Image{Name: ingressImage}, false)
+	if err != nil {
+		i.log.Error("Error pulling container image", "ref", i.config.Name, "image", ingressImage)
+
+		return err
+	}
+
 	var serviceName string
 	var volumes []config.Volume
 	var env []config.KV
@@ -37,8 +59,9 @@ func (i *Ingress) Create() error {
 	switch target.Info().Type {
 	case config.TypeContainer:
 		serviceName = utils.FQDN(target.Info().Name, string(target.Info().Type))
+	case config.TypeNomadCluster:
+		serviceName = utils.FQDN(fmt.Sprintf("server.%s", target.Info().Name), string(target.Info().Type))
 	case config.TypeK8sCluster:
-
 		v := target.(*config.K8sCluster)
 		// determine the type of cluster
 		// if this is a k3s cluster we need to add the kubeconfig and
@@ -68,10 +91,8 @@ func (i *Ingress) Create() error {
 		}
 
 	default:
-		return fmt.Errorf("Only Container ingress and K3s are supported at present")
+		return fmt.Errorf("Only Containers, Kubernetes clusters, and Nomad clusters are supported at present")
 	}
-
-	image := "shipyardrun/ingress:latest"
 
 	command = append(command, "--service-name")
 	command = append(command, serviceName)
@@ -88,7 +109,7 @@ func (i *Ingress) Create() error {
 
 	c.Networks = i.config.Networks
 	c.Ports = i.config.Ports
-	c.Image = config.Image{Name: image}
+	c.Image = config.Image{Name: ingressImage}
 	c.Command = command
 	c.Volumes = volumes
 	c.Environment = env
