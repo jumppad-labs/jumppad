@@ -4,6 +4,7 @@ import (
 
 	// "fmt"
 
+	"fmt"
 	"log"
 	"os"
 	"sync"
@@ -80,6 +81,7 @@ func New(l hclog.Logger) (*Engine, error) {
 	e.log = l
 	e.getProvider = generateProviderImpl
 
+	// Set the standard writer to our logger as the DAG uses the standard library log.
 	log.SetOutput(l.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Trace}))
 
 	// create the clients
@@ -109,7 +111,7 @@ func (e *Engine) Apply(path string) error {
 			p := e.getProvider(r, e.clients)
 			if p == nil {
 				r.Info().Status = config.Failed
-				return diags.Append(err)
+				return diags.Append(fmt.Errorf("Unable to create provider for resource Name: %s, Type: %s", r.Info().Name, r.Info().Type))
 			}
 
 			// execute
@@ -289,12 +291,12 @@ func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
 		return providers.NewIngress(c.(*config.Ingress), cc.ContainerTasks, cc.Logger)
 	case config.TypeK8sCluster:
 		return providers.NewK8sCluster(c.(*config.K8sCluster), cc.ContainerTasks, cc.Kubernetes, cc.HTTP, cc.Logger)
+	case config.TypeNomadCluster:
+		return providers.NewNomadCluster(c.(*config.NomadCluster), cc.ContainerTasks, cc.HTTP, cc.Logger)
 	case config.TypeK8sConfig:
 		return providers.NewK8sConfig(c.(*config.K8sConfig), cc.Kubernetes, cc.Logger)
 	case config.TypeNetwork:
 		return providers.NewNetwork(c.(*config.Network), cc.Docker, cc.Logger)
-	case config.TypeNomadCluster:
-		return nil //providers.NewNomadCluster(c, cc.ContainerTasks, cc.Logger)
 	}
 
 	return nil
