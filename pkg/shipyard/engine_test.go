@@ -17,6 +17,7 @@ import (
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/providers"
 	"github.com/shipyard-run/shipyard/pkg/providers/mocks"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -24,6 +25,44 @@ import (
 var lock = sync.Mutex{}
 
 func setupTests(returnVals map[string]error) (*Engine, *config.Config, *[]*mocks.MockProvider, func()) {
+	return setupTestsBase(returnVals, "")
+}
+
+func setupTestsWithState(returnVals map[string]error, state string) (*Engine, *config.Config, *[]*mocks.MockProvider, func()) {
+	return setupTestsBase(returnVals, state)
+}
+
+func setupState(state string) func() {
+	// set the home folder to a tmpFolder for the tests
+	dir, err := ioutils.TempDir("", "")
+	if err != nil {
+		panic(err)
+	}
+
+	home := os.Getenv("HOME")
+	os.Setenv("HOME", dir)
+
+	// write the state file
+	if state != "" {
+		os.MkdirAll(utils.StateDir(), os.ModePerm)
+		f, err := os.Create(utils.StatePath())
+		if err != nil {
+			panic(err)
+		}
+		defer f.Close()
+		_, err = f.WriteString(state)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	return func() {
+		os.Setenv("HOME", home)
+		os.RemoveAll(dir)
+	}
+}
+
+func setupTestsBase(returnVals map[string]error, state string) (*Engine, *config.Config, *[]*mocks.MockProvider, func()) {
 	log.SetOutput(ioutil.Discard)
 
 	p := &[]*mocks.MockProvider{}
@@ -35,19 +74,7 @@ func setupTests(returnVals map[string]error) (*Engine, *config.Config, *[]*mocks
 		getProvider: generateProviderMock(p, returnVals),
 	}
 
-	// set the home folder to a tmpFolder for the tests
-	dir, err := ioutils.TempDir("", "")
-	if err != nil {
-		panic(err)
-	}
-
-	home := os.Getenv("HOME")
-	os.Setenv("HOME", dir)
-
-	return e, nil, p, func() {
-		os.Setenv("HOME", home)
-		os.RemoveAll(dir)
-	}
+	return e, nil, p, setupState(state)
 }
 
 func generateProviderMock(mp *[]*mocks.MockProvider, returnVals map[string]error) getProviderFunc {
@@ -102,6 +129,44 @@ func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
 	testAssertMethodCalled(t, mp, "Create", 4)
 }
 
+func TestApplyCallsProviderDestroyForResourcesPendingorFailed(t *testing.T) {
+	e, _, mp, cleanup := setupTestsWithState(nil, failedState)
+	defer cleanup()
+
+	err := e.Apply("")
+	assert.NoError(t, err)
+
+	// should have call create for each provider
+	testAssertMethodCalled(t, mp, "Destroy", 1)
+	testAssertMethodCalled(t, mp, "Create", 1)
+}
+
+func TestApplyReturnsErrorWhenProviderDestroyForResourcesPendingorFailed(t *testing.T) {
+	e, _, mp, cleanup := setupTestsWithState(map[string]error{"dc1": fmt.Errorf("boom")}, failedState)
+	defer cleanup()
+
+	err := e.Apply("")
+	assert.Error(t, err)
+
+	// should have call create for each provider
+	testAssertMethodCalled(t, mp, "Destroy", 1)
+	testAssertMethodCalled(t, mp, "Create", 0)
+}
+
+func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
+	e, _, mp, cleanup := setupTests(map[string]error{"cloud": fmt.Errorf("boom")})
+	defer cleanup()
+	e.getProvider = func(c config.Resource, cc *Clients) providers.Provider {
+		return nil
+	}
+
+	err := e.Apply("../../functional_tests/test_fixtures/single_k3s_cluster")
+	assert.Error(t, err)
+
+	// should have call create for each provider
+	testAssertMethodCalled(t, mp, "Create", 0)
+}
+
 func TestApplyCallsProviderCreateErrorStopsExecution(t *testing.T) {
 	e, _, mp, cleanup := setupTests(map[string]error{"cloud": fmt.Errorf("boom")})
 	defer cleanup()
@@ -113,7 +178,19 @@ func TestApplyCallsProviderCreateErrorStopsExecution(t *testing.T) {
 	testAssertMethodCalled(t, mp, "Create", 1)
 }
 
-func TestApplyCallsProviderDestroyForEachProvider(t *testing.T) {
+func TestApplySetsStatusForEachResource(t *testing.T) {
+	e, _, mp, cleanup := setupTestsWithState(nil, mergedState)
+	defer cleanup()
+
+	err := e.Apply("")
+	assert.NoError(t, err)
+
+	// should not call create as this is pending update
+	testAssertMethodCalled(t, mp, "Create", 0)
+	assert.Equal(t, config.Applied, e.config.Resources[0].Info().Status)
+}
+
+func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
 	e, _, mp, cleanup := setupTests(nil)
 	defer cleanup()
 
@@ -124,7 +201,34 @@ func TestApplyCallsProviderDestroyForEachProvider(t *testing.T) {
 	testAssertMethodCalled(t, mp, "Destroy", 4)
 }
 
-func TestApplyCallsProviderDestroyInCorrectOrder(t *testing.T) {
+func TestDestroyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
+	e, _, mp, cleanup := setupTests(map[string]error{"cloud": fmt.Errorf("boom")})
+	defer cleanup()
+	e.getProvider = func(c config.Resource, cc *Clients) providers.Provider {
+		return nil
+	}
+
+	err := e.Destroy("../../functional_tests/test_fixtures/single_k3s_cluster", true)
+	assert.Error(t, err)
+
+	// should have call create for each provider
+	testAssertMethodCalled(t, mp, "Destroy", 0)
+}
+
+func TestDestroyFailSetsStatus(t *testing.T) {
+	e, _, mp, cleanup := setupTests(map[string]error{"cloud": fmt.Errorf("boom")})
+	defer cleanup()
+
+	err := e.Destroy("../../functional_tests/test_fixtures/single_k3s_cluster", true)
+	assert.Error(t, err)
+
+	// should have call create for each provider
+	testAssertMethodCalled(t, mp, "Destroy", 4)
+	r, _ := e.config.FindResource("network.cloud")
+	assert.Equal(t, config.Failed, r.Info().Status)
+}
+
+func TestDestroyCallsProviderDestroyInCorrectOrder(t *testing.T) {
 	e, _, mp, cleanup := setupTests(nil)
 	defer cleanup()
 
@@ -141,41 +245,6 @@ func TestApplyCallsProviderDestroyInCorrectOrder(t *testing.T) {
 
 }
 
-/*
-func TestApplyGeneratesState(t *testing.T) {
-	e, _, _, cleanup := setupTests(nil)
-	defer cleanup()
-
-	err := e.Apply("boom")
-	assert.NoError(t, err)
-
-	// state should be saved to a file in json format
-	f, err := os.Open(utils.StatePath())
-	assert.NoError(t, err)
-
-	s := []map[string]interface{}{}
-	jd := json.NewDecoder(f)
-	jd.Decode(&s)
-
-	assert.Len(t, s, 6)
-}
-
-func TestApplyWithExistingStateDoesNotRecreateItems(t *testing.T) {
-	e, _, mp, cleanup := setupTests(nil)
-	defer cleanup()
-
-	// generate some state, use the initial network
-	// ep := []providers.ConfigWrapper{providers.ConfigWrapper{Type: "config.Network", Value: c.Networks[0]}}
-	// testCreateStateFile(ep)
-
-	err := e.Apply("boom")
-	assert.NoError(t, err)
-
-	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Create", 5)
-}
-
-*/
 func testAssertMethodCalled(t *testing.T, p *[]*mocks.MockProvider, method string, n int, args ...interface{}) {
 	callCount := 0
 
@@ -192,3 +261,31 @@ func testAssertMethodCalled(t *testing.T, p *[]*mocks.MockProvider, method strin
 		t.Fatalf("Expected %d calls got %d", n, callCount)
 	}
 }
+
+var failedState = `
+{
+  "blueprint": null,
+  "resources": [
+	{
+      "name": "dc1",
+      "status": "failed",
+      "subnet": "10.15.0.0/16",
+      "type": "network"
+	}
+  ]
+}
+`
+
+var mergedState = `
+{
+  "blueprint": null,
+  "resources": [
+	{
+      "name": "dc1",
+      "status": "pending_update",
+      "subnet": "10.15.0.0/16",
+      "type": "network"
+	}
+  ]
+}
+`
