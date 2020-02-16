@@ -249,10 +249,16 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 func (c *Config) Merge(c2 *Config) {
 	for _, cc2 := range c2.Resources {
 		found := false
-		for _, cc := range c.Resources {
+		for i, cc := range c.Resources {
 			if cc2.Info().Name == cc.Info().Name && cc2.Info().Type == cc.Info().Type {
-				// exists in the collection already set pending state
-				cc.Info().Status = PendingModification
+				// Exists in the collection already
+				// Replace the resource with the new one and set pending state only if it is not marked for modification.
+				// If marked for modification then the user has specifically tained the resource
+				c.Resources[i] = cc2
+				if c.Resources[i].Info().Status != PendingModification {
+					c.Resources[i].Info().Status = PendingUpdate
+				}
+
 				found = true
 				break
 			}

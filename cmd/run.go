@@ -33,22 +33,28 @@ var runCmd = &cobra.Command{
 	Args: cobra.ArbitraryArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		var err error
-		dst := args[0]
-		fmt.Println("Running configuration from: ", dst)
-		fmt.Println("")
+		dst := ""
+		if len(args) == 1 {
+			dst = args[0]
+		}
 
 		// create a logger
 		log := createLogger()
 
-		// create the shipyard home
-		os.MkdirAll(utils.ShipyardHome(), os.FileMode(0755))
+		if dst != "" {
+			fmt.Println("Running configuration from: ", dst)
+			fmt.Println("")
 
-		if !utils.IsLocalFolder(dst) && !utils.IsHCLFile(dst) {
-			// fetch the remote server from github
-			dst, err = pullRemoteBlueprint(dst)
-			if err != nil {
-				log.Error("Unable to retrieve blueprint", "error", err)
-				return
+			// create the shipyard home
+			os.MkdirAll(utils.ShipyardHome(), os.FileMode(0755))
+
+			if !utils.IsLocalFolder(dst) && !utils.IsHCLFile(dst) {
+				// fetch the remote server from github
+				dst, err = pullRemoteBlueprint(dst)
+				if err != nil {
+					log.Error("Unable to retrieve blueprint", "error", err)
+					return
+				}
 			}
 		}
 

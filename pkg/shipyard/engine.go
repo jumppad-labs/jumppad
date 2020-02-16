@@ -106,7 +106,10 @@ func (e *Engine) Apply(path string) error {
 	w := dag.Walker{}
 	w.Callback = func(v dag.Vertex) (diags tfdiags.Diagnostics) {
 		// check if the resource needs to be created and if so create
-		if r, ok := v.(config.Resource); ok && r.Info().Status == config.PendingCreation {
+		if r, ok := v.(config.Resource); ok &&
+			(r.Info().Status == config.PendingCreation ||
+				r.Info().Status == config.PendingModification ||
+				r.Info().Status == config.Failed) {
 			// get the provider to create the resource
 			p := e.getProvider(r, e.clients)
 			if p == nil {
@@ -114,7 +117,17 @@ func (e *Engine) Apply(path string) error {
 				return diags.Append(fmt.Errorf("Unable to create provider for resource Name: %s, Type: %s", r.Info().Name, r.Info().Type))
 			}
 
-			// execute
+			// if we are pending modification or failed try remove the old instance and
+			// create again
+			if r.Info().Status == config.PendingModification || r.Info().Status == config.Failed {
+				err = p.Destroy()
+				if err != nil {
+					r.Info().Status = config.Failed
+					return diags.Append(err)
+				}
+			}
+
+			// create the resource
 			err = p.Create()
 			if err != nil {
 				r.Info().Status = config.Failed
@@ -132,6 +145,13 @@ func (e *Engine) Apply(path string) error {
 	tf := w.Wait()
 	if tf.Err() != nil {
 		err = tf.Err()
+	}
+
+	// update the satus of any pending updates
+	for _, i := range e.config.Resources {
+		if i.Info().Status != config.Failed {
+			i.Info().Status = config.Applied
+		}
 	}
 
 	if len(e.config.Resources) > 0 {
@@ -155,7 +175,7 @@ func (e *Engine) Destroy(path string, allResources bool) error {
 	// make sure we destroy everything
 	if allResources {
 		for _, i := range e.config.Resources {
-			i.Info().Status = config.PendingModification
+			i.Info().Status = config.PendingUpdate
 		}
 	}
 
@@ -164,12 +184,12 @@ func (e *Engine) Destroy(path string, allResources bool) error {
 	w.Reverse = true
 	w.Callback = func(v dag.Vertex) (diags tfdiags.Diagnostics) {
 		// check if the resource needs to be created and if so create
-		if r, ok := v.(config.Resource); ok && r.Info().Status == config.PendingModification {
+		if r, ok := v.(config.Resource); ok && r.Info().Status == config.PendingUpdate {
 			// get the provider to create the resource
 			p := e.getProvider(r, e.clients)
 			if p == nil {
 				r.Info().Status = config.Failed
-				return diags.Append(err)
+				return diags.Append(fmt.Errorf("Unable to create provider for resource Name: %s, Type: %s", r.Info().Name, r.Info().Type))
 			}
 
 			// execute

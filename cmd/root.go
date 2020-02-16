@@ -32,6 +32,7 @@ func init() {
 	rootCmd.AddCommand(getCmd)
 	rootCmd.AddCommand(destroyCmd)
 	rootCmd.AddCommand(statusCmd)
+	rootCmd.AddCommand(taintCmd)
 	rootCmd.AddCommand(exposeCmd)
 	rootCmd.AddCommand(containerCmd)
 	rootCmd.AddCommand(codeCmd)
