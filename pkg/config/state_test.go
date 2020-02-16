@@ -86,9 +86,11 @@ func TestConfigMergesAddingItems(t *testing.T) {
 	assert.Len(t, c.Resources, 10)
 }
 
-func TestConfigMergesWithExistingItemSetsPending(t *testing.T) {
+func TestConfigMergesWithExistingItemSetsPendingUpdateWhenApplied(t *testing.T) {
 	c, cleanup := setupConfigTests(t)
 	defer cleanup()
+
+	c.Resources[0].Info().Status = Applied
 
 	c2 := New()
 	c2.AddResource(NewContainer("config"))
@@ -96,5 +98,20 @@ func TestConfigMergesWithExistingItemSetsPending(t *testing.T) {
 	c.Merge(c2)
 
 	assert.Len(t, c.Resources, 9)
-	assert.Equal(t, c.Resources[0].Info().Status, PendingModification)
+	assert.Equal(t, c.Resources[0].Info().Status, PendingUpdate)
+}
+
+func TestConfigMergesWithExistingItemDoesNOTSetsPendingUpdateWhenOtherStatus(t *testing.T) {
+	c, cleanup := setupConfigTests(t)
+	defer cleanup()
+
+	c.Resources[0].Info().Status = PendingCreation
+
+	c2 := New()
+	c2.AddResource(NewContainer("config"))
+
+	c.Merge(c2)
+
+	assert.Len(t, c.Resources, 9)
+	assert.Equal(t, c.Resources[0].Info().Status, PendingCreation)
 }

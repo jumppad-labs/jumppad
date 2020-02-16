@@ -56,7 +56,8 @@ func (c *Config) FromJSON(path string) error {
 	return nil
 }
 
-// UnmarshalJSON unmarshals the Config from a JSON string
+// UnmarshalJSON is a cusom Unmarshaler to deal with
+// converting the objects back into their main type
 func (c *Config) UnmarshalJSON(b []byte) error {
 	var objMap map[string]*json.RawMessage
 	err := json.Unmarshal(b, &objMap)
@@ -249,10 +250,20 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 func (c *Config) Merge(c2 *Config) {
 	for _, cc2 := range c2.Resources {
 		found := false
-		for _, cc := range c.Resources {
+		for i, cc := range c.Resources {
 			if cc2.Info().Name == cc.Info().Name && cc2.Info().Type == cc.Info().Type {
-				// exists in the collection already set pending state
-				cc.Info().Status = PendingModification
+				// Exists in the collection already
+				// Replace the resource with the new one and set pending state only if it is not marked for modification.
+				// If marked for modification then the user has specifically tained the resource
+				status := c.Resources[i].Info().Status
+				// do not update the status for resources we need to re-create or have not yet been created
+				if status == Applied {
+					status = PendingUpdate
+				}
+
+				c.Resources[i] = cc2
+				c.Resources[i].Info().Status = status
+
 				found = true
 				break
 			}

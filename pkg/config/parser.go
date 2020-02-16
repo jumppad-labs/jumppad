@@ -54,14 +54,6 @@ func ParseFolder(folder string, c *Config) error {
 		return err
 	}
 
-	// sub folders
-	filesDir, err := filepath.Glob(path.Join(abs, "**/*.hcl"))
-	if err != nil {
-		return err
-	}
-
-	files = append(files, filesDir...)
-
 	for _, f := range files {
 		err := ParseHCLFile(f, c)
 		if err != nil {

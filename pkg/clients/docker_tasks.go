@@ -237,7 +237,15 @@ func (d *DockerTasks) FindContainerIDs(containerName string, typeName config.Res
 
 // RemoveContainer with the given id
 func (d *DockerTasks) RemoveContainer(id string) error {
-	return d.c.ContainerRemove(context.Background(), id, types.ContainerRemoveOptions{Force: true, RemoveVolumes: true})
+	// try and shutdown graceful
+	err := d.c.ContainerRemove(context.Background(), id, types.ContainerRemoveOptions{Force: false, RemoveVolumes: true})
+
+	// unable to shutdown graceful try force
+	if err != nil {
+		return d.c.ContainerRemove(context.Background(), id, types.ContainerRemoveOptions{Force: true, RemoveVolumes: true})
+	}
+
+	return nil
 }
 
 // CreateVolume creates a Docker volume for a cluster
