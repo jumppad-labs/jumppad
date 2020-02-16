@@ -257,7 +257,7 @@ func (c *Config) Merge(c2 *Config) {
 				// If marked for modification then the user has specifically tained the resource
 				status := c.Resources[i].Info().Status
 				// do not update the status for resources we need to re-create or have not yet been created
-				if status != PendingModification && status != Failed && status != PendingCreation {
+				if status == Applied {
 					status = PendingUpdate
 				}
 
