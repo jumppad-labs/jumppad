@@ -14,3 +14,8 @@ to destroy the stack and then `shipyard run` to re-create. Now it is possible to
 
 Previously `shipyard run` would recurse into folders, this behaviour causes problems when the sub-folders contain `*.hcl` files which are not
 Shipyard resources. `shipyard run` now only process the top level folder. Sub folder support will be added when we add the `module` feature.
+
+### Improve handling for failed resources
+
+Resources which fail to create can now be retired by re-running `shipyard run`, any depended resources which were not created due to the failure
+will also be created when the command is run.

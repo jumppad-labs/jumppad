@@ -110,6 +110,7 @@ func (e *Engine) Apply(path string) error {
 			(r.Info().Status == config.PendingCreation ||
 				r.Info().Status == config.PendingModification ||
 				r.Info().Status == config.Failed) {
+
 			// get the provider to create the resource
 			p := e.getProvider(r, e.clients)
 			if p == nil {
@@ -147,9 +148,11 @@ func (e *Engine) Apply(path string) error {
 		err = tf.Err()
 	}
 
-	// update the satus of any pending updates
+	// update the status of anything which is pending update as this
+	// is not currently implemented
+	// eventually we should compare resources and update as required
 	for _, i := range e.config.Resources {
-		if i.Info().Status != config.Failed {
+		if i.Info().Status == config.PendingUpdate {
 			i.Info().Status = config.Applied
 		}
 	}
