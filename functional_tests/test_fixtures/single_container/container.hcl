@@ -10,8 +10,10 @@ container "consul" {
     destination = "/config"
   }
 
-  network    = "network.onprem"
-  ip_address = "10.5.0.200" // optional
+  network {
+    name = "network.onprem"
+    ip_address = "10.5.0.200" // optional
+  }
 
   resources {
     # Max CPU to consume, 1024 is one core, default unlimited
@@ -20,5 +22,10 @@ container "consul" {
     cpu_pin = [1,2]
     # max memory in MB to consume, default unlimited
     memory = 1024
+  }
+
+  env {
+    key ="abc"
+    value = "123"
   }
 }
