@@ -51,7 +51,7 @@ func TestHTTPHealthErrorsOnClientError(t *testing.T) {
 
 	c := NewHTTP(1*time.Millisecond, hclog.NewNullLogger())
 
-	err := c.HealthCheckHTTP("http://127.0.0.2:9090", 10*time.Millisecond)
+	err := c.HealthCheckHTTP("http://127.0.0.2:19091", 10*time.Millisecond)
 	assert.Error(t, err)
 	assert.Len(t, *reqs, 0)
 }
