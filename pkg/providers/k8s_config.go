@@ -43,29 +43,17 @@ func (c *K8sConfig) Create() error {
 func (c *K8sConfig) Destroy() error {
 	c.log.Info("Destroy Kubernetes configuration", "ref", c.config.Name, "config", c.config.Paths)
 
-	// Not sure we should do this at the moment, since it is not possible to partially destroy.
-	// Destruction of a K8s cluster will delete any config associated
-	// When we implement the DAG for state re-imnplement this code
-	/*
-		err := c.setup()
-		if err != nil {
-			return err
-		}
+	err := c.setup()
+	if err != nil {
+		return err
+	}
 
-		return c.client.Delete(c.config.Paths)
-	*/
-
-	return nil
+	return c.client.Delete(c.config.Paths)
 }
 
 // Lookup the Kubernetes resources defined by the config
 func (c *K8sConfig) Lookup() ([]string, error) {
 	return []string{}, nil
-}
-
-// Config returns the config for the provider
-func (c *K8sConfig) Config() ConfigWrapper {
-	return ConfigWrapper{"config.K8sConfig", c.config}
 }
 
 func (c *K8sConfig) setup() error {

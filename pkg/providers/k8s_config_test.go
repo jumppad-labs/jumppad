@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"fmt"
 	"testing"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -11,48 +12,68 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func setupK8sConfig(c *config.K8sConfig) (*clients.MockKubernetes, *K8sConfig) {
+func setupK8sConfig() (*clients.MockKubernetes, *K8sConfig) {
 	mk := &clients.MockKubernetes{}
 	mk.On("SetConfig", mock.Anything).Return(nil)
 	mk.On("Apply", mock.Anything, mock.Anything).Return(nil)
 	mk.On("Delete", mock.Anything, mock.Anything).Return(nil)
 
-	p := NewK8sConfig(c, mk, hclog.Default())
+	c := config.NewK8sCluster("testcluster")
+	kc := config.NewK8sConfig("config")
+	kc.Cluster = "k8s_cluster.testcluster"
+	kc.Paths = []string{"/tmp/something"}
+
+	cc := config.New()
+	cc.AddResource(kc)
+	cc.AddResource(c)
+
+	p := NewK8sConfig(kc, mk, hclog.Default())
 
 	return mk, p
 }
 
-func TestCreatesConfigCorrectly(t *testing.T) {
-	paths := []string{"/tmp/something"}
-	c := config.NewK8sCluster("testcluster")
-	kc := config.NewK8sConfig("config")
-	kc.Cluster = "k8s_cluster.testcluster"
-	kc.Paths = paths
-	cc := config.New()
-	cc.AddResource(kc)
-	cc.AddResource(c)
-	mk, p := setupK8sConfig(kc)
+func TestCreatesCorrectly(t *testing.T) {
+	mk, p := setupK8sConfig()
 
 	err := p.Create()
 	assert.NoError(t, err)
 
-	_, destPath, _ := utils.CreateKubeConfigPath(c.Name)
+	_, destPath, _ := utils.CreateKubeConfigPath("testcluster")
 	mk.AssertCalled(t, "SetConfig", destPath)
-	mk.AssertCalled(t, "Apply", paths, kc.WaitUntilReady)
+	mk.AssertCalled(t, "Apply", p.config.Paths, p.config.WaitUntilReady)
+}
+
+func TestCreateSetupErrorReturnsError(t *testing.T) {
+	mk, p := setupK8sConfig()
+	removeOn(&mk.Mock, "SetConfig")
+	mk.On("SetConfig", mock.Anything).Return(fmt.Errorf("boom"))
+
+	err := p.Create()
+	assert.Error(t, err)
+}
+
+func TestCreateNoClusterErrorReturnsError(t *testing.T) {
+	_, p := setupK8sConfig()
+	p.config.Config.RemoveResource(p.config.Config.Resources[1])
+
+	err := p.Create()
+	assert.Error(t, err)
 }
 
 func TestDestroysCorrectly(t *testing.T) {
-	//skip this test as functionality has been removed until we implement a DAG
-	t.SkipNow()
-
-	paths := []string{"/tmp/something"}
-	kc := config.NewK8sConfig("config")
-	kc.Cluster = "k8s_cluster.testcluster"
-	kc.Paths = paths
-	mk, p := setupK8sConfig(kc)
+	mk, p := setupK8sConfig()
 
 	err := p.Destroy()
 	assert.NoError(t, err)
 
-	mk.AssertCalled(t, "Delete", paths)
+	mk.AssertCalled(t, "Delete", p.config.Paths)
+}
+
+func TestDestroySetupErrorReturnsError(t *testing.T) {
+	mk, p := setupK8sConfig()
+	removeOn(&mk.Mock, "SetConfig")
+	mk.On("SetConfig", mock.Anything).Return(fmt.Errorf("boom"))
+
+	err := p.Destroy()
+	assert.Error(t, err)
 }
