@@ -7,9 +7,13 @@ import (
 )
 
 func testSetupConfig() *Config {
+	net1 := NewNetwork("cloud")
+	cl1 := NewK8sCluster("test")
+	cl1.DependsOn = []string{"network.cloud"}
+
 	c := New()
-	c.AddResource(NewK8sCluster("test"))
-	c.AddResource(NewK8sCluster("test2"))
+	c.AddResource(net1)
+	c.AddResource(cl1)
 
 	return c
 }
@@ -34,7 +38,7 @@ func TestFindResourceFindsCluster(t *testing.T) {
 
 	cl, err := c.FindResource("k8s_cluster.test")
 	assert.NoError(t, err)
-	assert.Equal(t, c.Resources[0], cl)
+	assert.Equal(t, c.Resources[1], cl)
 }
 
 func TestFindResourceReturnsNotFoundError(t *testing.T) {
@@ -44,6 +48,14 @@ func TestFindResourceReturnsNotFoundError(t *testing.T) {
 	assert.Error(t, err)
 	assert.IsType(t, err, ResourceNotFoundError{})
 	assert.Nil(t, cl)
+}
+
+func TestFindDependentResourceFindsResource(t *testing.T) {
+	c := testSetupConfig()
+
+	r, err := c.Resources[0].FindDependentResource("k8s_cluster.test")
+	assert.NoError(t, err)
+	assert.Equal(t, c.Resources[1], r)
 }
 
 func TestAddResourceAddsAResouce(t *testing.T) {
@@ -79,4 +91,41 @@ func TestRemoveResourceNotFoundReturnsError(t *testing.T) {
 	err := c.RemoveResource(nil)
 	assert.Error(t, err)
 	assert.Len(t, c.Resources, 2)
+}
+
+func TestDoYaLikeDAGGeneratesAGraph(t *testing.T) {
+	c := testSetupConfig()
+
+	d, err := c.DoYaLikeDAGs()
+	assert.NoError(t, err)
+
+	// check that all resources are added and dependencies created
+	assert.Len(t, d.Edges(), 2)
+}
+
+// TODO: investigate this seems flakey on CI
+func TestDoYaLikeDAGAddsDependencies(t *testing.T) {
+	c := testSetupConfig()
+
+	g, err := c.DoYaLikeDAGs()
+	assert.NoError(t, err)
+
+	// check the dependency tree
+	s, err := g.Descendents(c.Resources[1])
+	assert.NoError(t, err)
+
+	// check that all resources are added to the graph
+	assert.Equal(t, c.Resources[0], s.List()[0])
+}
+
+func TestDoYaLikeDAGWithUnresolvedDependencyReturnsError(t *testing.T) {
+	c := testSetupConfig()
+
+	con := NewContainer("test")
+	con.DependsOn = []string{"doesnot.exist"}
+
+	c.AddResource(con)
+
+	_, err := c.DoYaLikeDAGs()
+	assert.Error(t, err)
 }

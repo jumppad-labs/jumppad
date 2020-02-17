@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
@@ -36,6 +37,11 @@ func FQDN(name, typeName string) string {
 	return fqdn
 }
 
+// FQDNVolumeName creates a full qualified volume name
+func FQDNVolumeName(name string) string {
+	return fmt.Sprintf("%s.volume.shipyard", name)
+}
+
 // CreateKubeConfigPath creates the file path for the KubeConfig file when
 // using Kubernetes cluster
 func CreateKubeConfigPath(name string) (dir, filePath string, dockerPath string) {
@@ -50,11 +56,6 @@ func CreateKubeConfigPath(name string) (dir, filePath string, dockerPath string)
 	}
 
 	return
-}
-
-// FQDNVolumeName creates a full qualified volume name
-func FQDNVolumeName(name string) string {
-	return fmt.Sprintf("%s.volume.shipyard", name)
 }
 
 // HomeFolder returns the users homefolder this will be $HOME on windows and mac and
@@ -110,6 +111,10 @@ func IsHCLFile(path string) bool {
 	}
 
 	if s.IsDir() {
+		return false
+	}
+
+	if filepath.Ext(s.Name()) != ".hcl" {
 		return false
 	}
 
