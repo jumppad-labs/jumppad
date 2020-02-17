@@ -103,6 +103,7 @@ func TestDoYaLikeDAGGeneratesAGraph(t *testing.T) {
 	assert.Len(t, d.Edges(), 2)
 }
 
+// TODO: investigate this seems flakey on CI
 func TestDoYaLikeDAGAddsDependencies(t *testing.T) {
 	c := testSetupConfig()
 
