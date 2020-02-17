@@ -27,7 +27,7 @@ func (h *Helm) Create() error {
 	// get the target cluster
 	target, err := h.config.FindDependentResource(h.config.Cluster)
 	if err != nil {
-		xerrors.Errorf("Unable to find cluster: %w", err)
+		return xerrors.Errorf("Unable to find cluster: %w", err)
 	}
 
 	_, destPath, _ := utils.CreateKubeConfigPath(target.Info().Name)
@@ -36,7 +36,7 @@ func (h *Helm) Create() error {
 	// this is used by the healthchecks
 	err = h.kubeClient.SetConfig(destPath)
 	if err != nil {
-		xerrors.Errorf("unable to create Kubernetes client: %w", err)
+		return xerrors.Errorf("unable to create Kubernetes client: %w", err)
 	}
 
 	err = h.helmClient.Create(destPath, h.config.Name, h.config.Chart, h.config.Values)
@@ -48,12 +48,12 @@ func (h *Helm) Create() error {
 	if h.config.HealthCheck != nil && len(h.config.HealthCheck.Pods) > 0 {
 		to, err := time.ParseDuration(h.config.HealthCheck.Timeout)
 		if err != nil {
-			xerrors.Errorf("unable to parse healthcheck duration: %w", err)
+			return xerrors.Errorf("unable to parse healthcheck duration: %w", err)
 		}
 
 		err = h.kubeClient.HealthCheckPods(h.config.HealthCheck.Pods, to)
 		if err != nil {
-			xerrors.Errorf("healthcheck failed after helm chart setup: %w", err)
+			return xerrors.Errorf("healthcheck failed after helm chart setup: %w", err)
 		}
 	}
 
