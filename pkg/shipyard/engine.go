@@ -53,7 +53,7 @@ func GenerateClients(l hclog.Logger) (*Clients, error) {
 		return nil, err
 	}
 
-	kc := clients.NewKubernetes(60 * time.Second)
+	kc := clients.NewKubernetes(60*time.Second, l)
 
 	hec := clients.NewHelm(l)
 

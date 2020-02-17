@@ -381,6 +381,12 @@ func (d *DockerTasks) CopyLocalDockerImageToVolume(images []string, volume strin
 	// reset the file seek so we can copy to the container
 	tmpTarFile.Seek(0, 0)
 
+	// make sure we have the alpine image needed to copy
+	err = d.PullImage(config.Image{Name: makeImageCanonical("alpine:latest")}, false)
+	if err != nil {
+		return "", xerrors.Errorf("Unable pull alpine:latest for importing images: %w", err)
+	}
+
 	// create a dummy container to import to volume
 	cc := config.NewContainer("temp-import")
 
