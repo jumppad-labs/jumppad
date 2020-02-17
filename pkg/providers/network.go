@@ -9,6 +9,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
+	"golang.org/x/xerrors"
 )
 
 // Network is a provider for creating docker networks
@@ -67,7 +68,17 @@ func (n *Network) Create() error {
 func (n *Network) Destroy() error {
 	n.log.Info("Destroy Network", "ref", n.config.Name)
 
-	return n.client.NetworkRemove(context.Background(), n.config.Name)
+	// check network exists if so remove
+	ids, err := n.Lookup()
+	if err != nil {
+		return xerrors.Errorf("Unable to list networks: %w", err)
+	}
+
+	if len(ids) == 1 {
+		return n.client.NetworkRemove(context.Background(), n.config.Name)
+	}
+
+	return nil
 }
 
 // Lookup the ID for a network

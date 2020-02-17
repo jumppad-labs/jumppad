@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"testing"
 
 	"github.com/docker/docker/api/types/container"
@@ -29,6 +30,12 @@ func testCreateCopyLocalMocks() *mocks.MockDocker {
 	mk.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mk.On("CopyToContainer", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mk.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	mk.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+	mk.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).Return(
+		ioutil.NopCloser(strings.NewReader("hello world")),
+		nil,
+	)
 
 	return mk
 }
@@ -87,6 +94,15 @@ func TestCopyLocalTempContainerFailsReturnError(t *testing.T) {
 
 	_, err := dt.CopyLocalDockerImageToVolume(testCopyLocalImages, testCopyLocalVolume)
 	assert.Error(t, err)
+}
+
+func TestCopyLocalPullsImportImage(t *testing.T) {
+	mk := testCreateCopyLocalMocks()
+	dt := NewDockerTasks(mk, hclog.NewNullLogger())
+
+	_, err := dt.CopyLocalDockerImageToVolume(testCopyLocalImages, testCopyLocalVolume)
+	assert.NoError(t, err)
+	mk.AssertCalled(t, "ImagePull", mock.Anything, makeImageCanonical("alpine:latest"), mock.Anything)
 }
 
 func TestCopyLocalCopiesArchive(t *testing.T) {

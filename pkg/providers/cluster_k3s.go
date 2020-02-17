@@ -21,7 +21,7 @@ import (
 
 const k3sBaseImage = "rancher/k3s"
 
-var startTimeout = (120 * time.Second)
+var startTimeout = (300 * time.Second)
 
 // K8sCluster defines a provider which can create Kubernetes clusters
 type K8sCluster struct {

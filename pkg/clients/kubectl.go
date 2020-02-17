@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"golang.org/x/xerrors"
 	"helm.sh/helm/v3/pkg/kube"
 	v1 "k8s.io/api/core/v1"
@@ -31,11 +32,12 @@ type KubernetesImpl struct {
 	client     corev1.CoreV1Interface
 	configPath string
 	timeout    time.Duration
+	l          hclog.Logger
 }
 
 // NewKubernetes creates a new client for interacting with Kubernetes clusters
-func NewKubernetes(t time.Duration) Kubernetes {
-	return &KubernetesImpl{timeout: t}
+func NewKubernetes(t time.Duration, l hclog.Logger) Kubernetes {
+	return &KubernetesImpl{timeout: t, l: l}
 }
 
 // SetConfig for the Kubernetes cluster
@@ -137,6 +139,8 @@ func (k *KubernetesImpl) Delete(files []string) error {
 func (k *KubernetesImpl) HealthCheckPods(selectors []string, timeout time.Duration) error {
 	// check all pods are running
 	for _, s := range selectors {
+		k.l.Debug("Health checking pods", "selector", s)
+
 		err := k.healthCheckSingle(s, timeout)
 		if err != nil {
 			return err
@@ -170,6 +174,14 @@ func (k *KubernetesImpl) healthCheckSingle(selector string, timeout time.Duratio
 			if pod.Status.Phase != "Running" {
 				allRunning = false
 				break
+			}
+
+			// check the individual status
+			for _, s := range pod.Status.ContainerStatuses {
+				if !s.Ready {
+					allRunning = false
+					break
+				}
 			}
 		}
 
