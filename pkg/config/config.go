@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform/dag"
-	"golang.org/x/xerrors"
 )
 
 // Status defines the current state of a resource
@@ -132,16 +131,34 @@ func (c *Config) FindResource(name string) (Resource, error) {
 // AddResource adds a given resource to the resource list
 // if the resource already exists an error will be returned
 func (c *Config) AddResource(r Resource) error {
-	if _, err := c.FindResource(fmt.Sprintf("%s.%s", r.Info().Type, r.Info().Name)); err != nil {
-		if xerrors.Is(err, ResourceNotFoundError{}) {
-			return ResourceExistsError{r.Info().Name}
-		}
+	rf, err := c.FindResource(fmt.Sprintf("%s.%s", r.Info().Type, r.Info().Name))
+	if err == nil && rf != nil {
+		return ResourceExistsError{r.Info().Name}
 	}
 
 	r.Info().Config = c
 	c.Resources = append(c.Resources, r)
 
 	return nil
+}
+
+func (c *Config) RemoveResource(rf Resource) error {
+	pos := -1
+	for i, r := range c.Resources {
+		if rf == r {
+			pos = i
+			break
+		}
+	}
+
+	// found the resource remove from the collection
+	// preserve order
+	if pos > -1 {
+		c.Resources = append(c.Resources[:pos], c.Resources[pos+1:]...)
+		return nil
+	}
+
+	return ResourceNotFoundError{}
 }
 
 // DoYaLikeDAGs dags? yeah dags! oh, dogs.
