@@ -1,5 +1,11 @@
 # Change Log
 
+## Version 0.0.0-beta.6
+
+### Bug fixes
+* Alpine container not pulled when copying images to cluster
+* Health check for pod was only looking at status not ready checks
+
 ## Version 0.0.0-beta.5
 
 ### Introduce taint command and the ability to re-create resources.
