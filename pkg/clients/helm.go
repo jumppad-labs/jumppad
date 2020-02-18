@@ -14,25 +14,32 @@ import (
 	"helm.sh/helm/v3/pkg/kube"
 )
 
+var helmLock sync.Mutex
+
+func init() {
+	// create a global lock as it seems map write in Helm is not thread safe
+	helmLock = sync.Mutex{}
+}
+
 type Helm interface {
 	Create(kubeConfig, name, chartPath, valuesPath string) error
+	Destroy(kubeConfif, name string) error
 }
 
 type HelmImpl struct {
-	log  hclog.Logger
-	lock sync.Mutex
+	log hclog.Logger
 }
 
 func NewHelm(l hclog.Logger) Helm {
-	return &HelmImpl{l, sync.Mutex{}}
+	return &HelmImpl{l}
 }
 
 func (h *HelmImpl) Create(kubeConfig, name, chartPath, valuesPath string) error {
 	// set the kubeclient for Helm
 
 	// possible race condition on GetConfig so aquire a lock
-	h.lock.Lock()
-	defer h.lock.Unlock()
+	//helmLock.Lock()
+	//defer helmLock.Unlock()
 
 	s := kube.GetConfig(kubeConfig, "default", "default")
 	cfg := &action.Configuration{}
@@ -76,6 +83,28 @@ func (h *HelmImpl) Create(kubeConfig, name, chartPath, valuesPath string) error 
 	_, err = client.Run(chartRequested, vals)
 	if err != nil {
 		return xerrors.Errorf("Error running chart: %w", err)
+	}
+
+	return nil
+}
+
+// Destroy removes an installed Helm chart from the system
+func (h *HelmImpl) Destroy(kubeConfig, name string) error {
+	s := kube.GetConfig(kubeConfig, "default", "default")
+	cfg := &action.Configuration{}
+	err := cfg.Init(s, "default", "", func(format string, v ...interface{}) {
+		h.log.Debug("Helm debug message", "message", fmt.Sprintf(format, v...))
+	})
+
+	//settings := cli.EnvSettings{}
+	//p := getter.All(&settings)
+	//vo := values.Options{}
+
+	client := action.NewChartRemove(cfg)
+	err = client.Run(h.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}), name)
+	if err != nil {
+		h.log.Debug("Unable to remove chart, exit silently", "err", err)
+		return err
 	}
 
 	return nil

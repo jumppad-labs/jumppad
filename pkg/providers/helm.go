@@ -25,21 +25,19 @@ func (h *Helm) Create() error {
 	h.log.Info("Creating Helm chart", "ref", h.config.Name)
 
 	// get the target cluster
-	target, err := h.config.FindDependentResource(h.config.Cluster)
+	kcPath, err := h.getKubeConfigPath()
 	if err != nil {
-		return xerrors.Errorf("Unable to find cluster: %w", err)
+		return err
 	}
-
-	_, destPath, _ := utils.CreateKubeConfigPath(target.Info().Name)
 
 	// set the KubeConfig for the kubernetes client
 	// this is used by the healthchecks
-	err = h.kubeClient.SetConfig(destPath)
+	err = h.kubeClient.SetConfig(kcPath)
 	if err != nil {
 		return xerrors.Errorf("unable to create Kubernetes client: %w", err)
 	}
 
-	err = h.helmClient.Create(destPath, h.config.Name, h.config.Chart, h.config.Values)
+	err = h.helmClient.Create(kcPath, h.config.Name, h.config.Chart, h.config.Values)
 	if err != nil {
 		return err
 	}
@@ -62,7 +60,24 @@ func (h *Helm) Create() error {
 
 func (h *Helm) Destroy() error {
 	h.log.Info("Destroy Helm chart", "ref", h.config.Name)
+	kcPath, err := h.getKubeConfigPath()
+	if err != nil {
+		return err
+	}
+
+	// get the target cluster
+	h.helmClient.Destroy(kcPath, h.config.Name)
 	return nil
+}
+
+func (h *Helm) getKubeConfigPath() (string, error) {
+	target, err := h.config.FindDependentResource(h.config.Cluster)
+	if err != nil {
+		return "", xerrors.Errorf("Unable to find cluster: %w", err)
+	}
+
+	_, destPath, _ := utils.CreateKubeConfigPath(target.Info().Name)
+	return destPath, nil
 }
 
 func (h *Helm) Lookup() ([]string, error) {

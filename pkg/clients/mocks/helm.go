@@ -13,3 +13,9 @@ func (h*MockHelm) Create(kubeConfig, name, chartPath, valuesPath string) error {
 
 	return args.Error(0)
 }
+
+func (h*MockHelm) Destroy(kubeConfig, name string) error{
+	args := h.Called(kubeConfig, name)
+
+	return args.Error(0)
+}
