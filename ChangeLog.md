@@ -1,6 +1,15 @@
 # Change Log
 
-## Version 0.0.0-beta.6
+## version 0.0.0-beta.7
+
+### Helm provider
+* Helm provider now uninstalls the chart when deleting a resource, previousuly it was assumed that a chart and cluster would be deleted together
+
+### Bug fixes
+* Improve test quality
+
+
+## version 0.0.0-beta.6
 
 ### Bug fixes
 * Alpine container not pulled when copying images to cluster
