@@ -99,9 +99,8 @@ func (h *HelmImpl) Destroy(kubeConfig, name string) error {
 	//settings := cli.EnvSettings{}
 	//p := getter.All(&settings)
 	//vo := values.Options{}
-
-	client := action.NewChartRemove(cfg)
-	err = client.Run(h.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}), name)
+	client := action.NewUninstall(cfg)
+	_, err = client.Run(name)
 	if err != nil {
 		h.log.Debug("Unable to remove chart, exit silently", "err", err)
 		return err
