@@ -18,6 +18,7 @@ total 68
      4 drwxr-xr-x    1 root     root          4096 Sep 13 06:21 bin
 ```
 * Added `version` command to return the current application verion
+* When restarting from pause, health check all containers, helm charts and k8s config
 
 ### Bug fixes
 * Improve test quality

@@ -29,7 +29,7 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(pauseCmd)
-	rootCmd.AddCommand(restartCmd)
+	rootCmd.AddCommand(resumeCmd)
 	//rootCmd.AddCommand(getCmd)
 	rootCmd.AddCommand(destroyCmd)
 	rootCmd.AddCommand(statusCmd)

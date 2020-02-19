@@ -10,15 +10,15 @@ import (
 )
 
 var taintCmd = &cobra.Command{
-	Use:   "taint [type] [name]",
+	Use:   "taint [type].[name]",
 	Short: "Taint a resource e.g. 'shipyard taint container test'",
 	Long: `Taint a resouce and mark is to be re-created on the next Apply
 	Example use to remove a container named test
-	shipyard taint container test	
+	shipyard taint container.test	
 	`,
 	Args: cobra.ArbitraryArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 2 {
+		if len(args) != 1 {
 			fmt.Println("The resource to taint must be specified as an argument")
 			os.Exit(1)
 		}
@@ -30,9 +30,9 @@ var taintCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		r, err := c.FindResource(fmt.Sprintf("%s.%s", args[0], args[1]))
+		r, err := c.FindResource(args[0])
 		if err != nil || r == nil {
-			fmt.Println("Unable to locate resource in the state with name", args[1])
+			fmt.Println("Unable to locate resource in the state with name", args[0])
 			os.Exit(1)
 		}
 
