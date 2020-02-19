@@ -13,7 +13,7 @@ type Status string
 // ResourceType is the type of the resource
 type ResourceType string
 
-// Applied means the resrouce has been successfully created
+// Applied means the resource has been successfully created
 const Applied Status = "applied"
 
 // PendingCreation means the resource has not yet been created
@@ -27,7 +27,7 @@ const PendingModification Status = "pending_modification"
 
 // PendingUpdate means the resource has been requested to be updated
 // if the action is Apply then the resource will be ignored with the next run
-// if the action is Delete then the resrouce will be removed with the next run
+// if the action is Delete then the resource will be removed with the next run
 const PendingUpdate Status = "pending_update"
 
 // Failed means the resource failed during creation

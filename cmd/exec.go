@@ -13,8 +13,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var cluster string
-
 var execCmd = &cobra.Command{
 	Use:                "exec",
 	Short:              "Execute a command in a Resource",
@@ -167,8 +165,4 @@ func parseParameters(args []string) ([]string, []string) {
 	}
 
 	return args[0:commandIndex], args[commandIndex:]
-}
-
-func init() {
-	execCmd.PersistentFlags().StringVarP(&cluster, "cluster", "c", "default", "the cluster to attach to")
 }

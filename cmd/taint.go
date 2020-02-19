@@ -32,7 +32,7 @@ var taintCmd = &cobra.Command{
 
 		r, err := c.FindResource(args[0])
 		if err != nil || r == nil {
-			fmt.Println("Unable to locate resource in the state with name", args[0])
+			fmt.Println("Unable to locate resource in the state", args[0])
 			os.Exit(1)
 		}
 
