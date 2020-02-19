@@ -5,6 +5,8 @@
   
 [![codecov](https://codecov.io/gh/shipyard-run/shipyard/branch/master/graph/badge.svg)](https://codecov.io/gh/shipyard-run/shipyard)
 
+![](./shipyard_horizontal.png)
+
 ## Contributing
 
 We love contributions to the project, to contribute, first ensure that there is an issue and that it has been acknoledged by one of the maintainers of the project. Ensuring an issue exists and has been acknowledged ensures that the work you are about to submit will not be rejected due to specifications or duplicate work.
