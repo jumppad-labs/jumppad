@@ -19,6 +19,7 @@ total 68
 ```
 * Added `version` command to return the current application verion
 * When restarting from pause, health check all containers, helm charts and k8s config
+* Update status command to pretty print status and add `--json` flag for detail
 
 ### Bug fixes
 * Improve test quality
