@@ -19,6 +19,7 @@ var rootCmd = &cobra.Command{
 }
 
 var engine *shipyard.Engine
+var version string
 
 func init() {
 	cobra.OnInitialize(configure)
@@ -29,16 +30,18 @@ func init() {
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(pauseCmd)
 	rootCmd.AddCommand(restartCmd)
-	rootCmd.AddCommand(getCmd)
+	//rootCmd.AddCommand(getCmd)
 	rootCmd.AddCommand(destroyCmd)
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(taintCmd)
-	rootCmd.AddCommand(exposeCmd)
-	rootCmd.AddCommand(containerCmd)
-	rootCmd.AddCommand(codeCmd)
-	rootCmd.AddCommand(docsCmd)
-	rootCmd.AddCommand(toolsCmd)
-	rootCmd.AddCommand(upgradeCmd)
+	rootCmd.AddCommand(execCmd)
+	rootCmd.AddCommand(versionCmd)
+	//rootCmd.AddCommand(exposeCmd)
+	//rootCmd.AddCommand(containerCmd)
+	//rootCmd.AddCommand(codeCmd)
+	//rootCmd.AddCommand(docsCmd)
+	//rootCmd.AddCommand(toolsCmd)
+	//rootCmd.AddCommand(upgradeCmd)
 	rootCmd.AddCommand(uninstallCmd)
 	rootCmd.AddCommand(pushCmd)
 }
@@ -67,6 +70,7 @@ func configure() {
 }
 
 // Execute the root command
-func Execute(version string) error {
+func Execute(v string) error {
+	version = v
 	return rootCmd.Execute()
 }
