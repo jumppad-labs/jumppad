@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	gosignal "os/signal"
 	"strconv"
 	"strings"
 	"time"
@@ -19,8 +20,10 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
+	"github.com/docker/docker/pkg/signal"
 	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/go-hclog"
+	"github.com/shipyard-run/shipyard/pkg/clients/streams"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"golang.org/x/xerrors"
@@ -470,6 +473,125 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, writer io.Writ
 
 		time.Sleep(1 * time.Second)
 	}
+}
+
+// TODO: this is all exploritory, works but needs a major tidy
+
+// CreateShell creates an interactive shell inside a container
+// https://github.com/docker/cli/blob/ae1618713f83e7da07317d579d0675f578de22fa/cli/command/container/exec.go
+func (d *DockerTasks) CreateShell(id string, command []string, stdin io.ReadCloser, stdout io.Writer, stderr io.Writer) error {
+	execid, err := d.c.ContainerExecCreate(context.Background(), id, types.ExecConfig{
+		Cmd:          command,
+		WorkingDir:   "/",
+		AttachStdin:  true,
+		AttachStdout: true,
+		AttachStderr: true,
+		Tty:          true,
+	})
+
+	if err != nil {
+		return xerrors.Errorf("unable to create container exec: %w", err)
+	}
+
+	// err = d.c.ContainerExecStart(context.Background(), execid.ID, types.ExecStartCheck{})
+	// if err != nil {
+	// 	return xerrors.Errorf("unable to start exec process: %w", err)
+	// }
+
+	resp, err := d.c.ContainerExecAttach(context.Background(), execid.ID, types.ExecStartCheck{Tty: true})
+	if err != nil {
+		return err
+	}
+
+	// wrap the standard streams
+	ttyIn := streams.NewIn(stdin)
+	ttyOut := streams.NewOut(stdout)
+	ttyErr := streams.NewOut(stderr)
+
+	defer resp.Close()
+
+	errCh := make(chan error, 1)
+
+	go func() {
+		defer close(errCh)
+		errCh <- func() error {
+
+			streamer := streams.NewHijackedStreamer(ttyIn, ttyOut, ttyIn, ttyOut, ttyErr, resp, true, "", d.l)
+
+			return streamer.Stream(context.Background())
+		}()
+	}()
+
+	// init the TTY
+	d.initTTY(execid.ID, ttyOut)
+
+	// monitor for TTY changes
+	sigchan := make(chan os.Signal, 1)
+	gosignal.Notify(sigchan, signal.SIGWINCH)
+	go func() {
+		for range sigchan {
+			d.resizeTTY(execid.ID, ttyOut)
+		}
+	}()
+
+	// loop until the container finishes execution
+	for {
+		i, err := d.c.ContainerExecInspect(context.Background(), execid.ID)
+		if err != nil {
+			return xerrors.Errorf("unable to determine status of exec process: %w", err)
+		}
+
+		if !i.Running {
+			if i.ExitCode == 0 {
+				return nil
+			}
+
+			return xerrors.Errorf("container exec failed with exit code %d", i.ExitCode)
+		}
+
+		time.Sleep(1 * time.Second)
+	}
+}
+
+func (d *DockerTasks) initTTY(id string, out *streams.Out) error {
+	if err := d.resizeTTY(id, out); err != nil {
+		go func() {
+			var err error
+			for retry := 0; retry < 5; retry++ {
+				time.Sleep(10 * time.Millisecond)
+				if err = d.resizeTTY(id, out); err == nil {
+					break
+				}
+			}
+			if err != nil {
+				//something
+				d.l.Error("Unable to resize TTY use default", "error", err)
+			}
+		}()
+	}
+
+	return nil
+}
+
+func (d *DockerTasks) resizeTTY(id string, out *streams.Out) error {
+	h, w := out.GetTtySize()
+
+	if h == 0 && w == 0 {
+		return nil
+	}
+
+	options := types.ResizeOptions{
+		Height: uint(h),
+		Width:  uint(w),
+	}
+
+	// resize the contiainer
+	err := d.c.ContainerExecResize(context.Background(), id, options)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // DetachNetwork detaches a container from a network

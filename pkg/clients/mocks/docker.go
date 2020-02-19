@@ -115,6 +115,12 @@ func (m *MockDocker) ContainerExecInspect(ctx context.Context, execID string) (t
 	return types.ContainerExecInspect{}, args.Error(1)
 }
 
+func (m *MockDocker) ContainerExecResize(ctx context.Context, execID string, config types.ResizeOptions) error {
+	args := m.Called(ctx, execID, config)
+
+	return args.Error(0)
+}
+
 func (m *MockDocker) CopyFromContainer(ctx context.Context, containerID, srcPath string) (io.ReadCloser, types.ContainerPathStat, error) {
 	args := m.Called(ctx, containerID, srcPath)
 
