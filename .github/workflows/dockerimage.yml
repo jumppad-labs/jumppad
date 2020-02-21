@@ -12,3 +12,9 @@ jobs:
     - uses: actions/checkout@v2
     - name: Build and Install 
       run: make install_local
+    
+    - name: Start Stack
+      run: yard-dev run ./functional_tests/test_fixtures/single_container
+    
+    - name: Stop stack
+      run: yard-dev destroy
