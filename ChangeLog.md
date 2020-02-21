@@ -1,5 +1,11 @@
 # Change Log
 
+## version 0.0.0-beta.8
+
+### Bug fixes
+* alpine/linux was pulled every time when importing images regardless of local cache
+* fix `push` to use new configuration
+
 ## version 0.0.0-beta.7
 
 ### Helm provider

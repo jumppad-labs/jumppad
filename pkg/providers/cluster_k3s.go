@@ -59,7 +59,7 @@ func (c *K8sCluster) Destroy() error {
 
 // Lookup the a clusters current state
 func (c *K8sCluster) Lookup() ([]string, error) {
-	return []string{}, nil
+	return c.client.FindContainerIDs(c.config.Name, c.config.Type)
 }
 
 func (c *K8sCluster) createK3s() error {
