@@ -2,6 +2,25 @@
 
 ## version 0.0.0-beta.8
 
+### Updated status command
+The status command now pretty prints the resources
+
+```shell
+➜ shipyard status
+
+ [ CREATED ] docs.docs
+ [ CREATED ] container.tools
+ [ CREATED ] helm.consul
+ [ CREATED ] ingress.consul-http
+ [ CREATED ] k8s_cluster.k3s
+ [ CREATED ] network.cloud
+ [ CREATED ] container.vscode
+
+Pending: 0 Created: 7 Failed: 0
+```
+
+To view status in json format use the `--json` flag
+
 ### Bug fixes
 * alpine/linux was pulled every time when importing images regardless of local cache
 * fix `push` to use new configuration
