@@ -103,19 +103,20 @@ func TestDoYaLikeDAGGeneratesAGraph(t *testing.T) {
 	assert.Len(t, d.Edges(), 2)
 }
 
-// TODO: investigate this seems flakey on CI
 func TestDoYaLikeDAGAddsDependencies(t *testing.T) {
 	c := testSetupConfig()
 
 	g, err := c.DoYaLikeDAGs()
 	assert.NoError(t, err)
 
-	// check the dependency tree
+	// check the dependency tree of a cluster
 	s, err := g.Descendents(c.Resources[1])
 	assert.NoError(t, err)
 
-	// check that all resources are added to the graph
-	assert.Equal(t, c.Resources[0], s.List()[0])
+	// check that the network and a blueprint is returned
+	list := s.List()
+	assert.Contains(t, list, c.Resources[0])
+	assert.Contains(t, list, &Blueprint{})
 }
 
 func TestDoYaLikeDAGWithUnresolvedDependencyReturnsError(t *testing.T) {
