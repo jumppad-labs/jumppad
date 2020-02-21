@@ -17,14 +17,14 @@ import (
 	"github.com/DATA-DOG/godog/colors"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
-	hclog "github.com/hashicorp/go-hclog"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
+	"k8s.io/utils/exec"
 )
 
 var currentClients *shipyard.Clients
-var currentConfig *config.Config
-var currentEngine *shipyard.Engine
+
+var runTest *bool = flag.Bool("run.test", false, "Should we run the tests")
 
 var opt = godog.Options{
 	Output: colors.Colored(os.Stdout),
@@ -36,25 +36,18 @@ func init() {
 }
 
 func TestMain(m *testing.M) {
-	format := "progress"
-	run := false
+	flag.Parse()
+	if !*runTest {
+		return
+	}
 
+	format := "progress"
 	for _, arg := range os.Args[1:] {
+		fmt.Println(arg)
 		if arg == "-test.v=true" { // go test transforms -v option
 			format = "pretty"
 			break
 		}
-
-		// only run the tests if specific flag is specified
-		// this is to stop inadvertant executrion from go test ./...
-		if arg == "-run" {
-			run = true
-			break
-		}
-	}
-
-	if !run {
-		return
 	}
 
 	status := godog.RunWithOptions("godog", func(s *godog.Suite) {
@@ -71,8 +64,7 @@ func TestMain(m *testing.M) {
 }
 
 func FeatureContext(s *godog.Suite) {
-	s.Step(`^the config "([^"]*)"$`, theConfig)
-	s.Step(`^I run apply$`, iRunApply)
+	s.Step(`^I apply the config "([^"]*)"$`, iRunApply)
 	s.Step(`^there should be (\d+) container running called "([^"]*)"$`, thereShouldBeContainerRunningCalled)
 	s.Step(`^there should be 1 network called "([^"]*)"$`, thereShouldBe1NetworkCalled)
 	s.Step(`^a call to "([^"]*)" should result in status (\d+)$`, aCallToShouldResultInStatus)
@@ -81,49 +73,24 @@ func FeatureContext(s *godog.Suite) {
 	})
 
 	s.AfterScenario(func(interface{}, error) {
-		err := currentEngine.Destroy("boom", true)
-		if err != nil {
-			panic(err)
-		}
+		ex := exec.New()
+		cmd := ex.Command("yard-dev", []string{"destroy"}...)
+		cmd.Run()
 	})
 }
 
-func theConfig(arg1 string) error {
-	// we are creating this manually rather than using NewWithFolder
-	// so we can obtain references to the clients for checks
-
+func iRunApply(config string) error {
+	// create the clients
 	var err error
-	currentConfig = config.New()
+	currentClients, err = shipyard.GenerateClients(hclog.Default())
 	if err != nil {
 		return err
 	}
 
-	err = config.ParseFolder(arg1, currentConfig)
-	if err != nil {
-		return err
-	}
-
-	err = config.ParseReferences(currentConfig)
-	if err != nil {
-		return err
-	}
-
-	l := hclog.New(&hclog.LoggerOptions{Level: hclog.Debug})
-
-	// create providers
-	cc, err := shipyard.GenerateClients(l)
-	if err != nil {
-		return err
-	}
-
-	currentClients = cc
-	// currentEngine = shipyard.New(currentConfig, cc, l)
-
-	return nil
-}
-
-func iRunApply() error {
-	return currentEngine.Apply("boom")
+	// run the shipyard executable
+	ex := exec.New()
+	cmd := ex.Command("yard-dev", []string{"run", config}...)
+	return cmd.Run()
 }
 
 func thereShouldBeContainerRunningCalled(arg1 int, arg2 string) error {
@@ -132,7 +99,7 @@ func thereShouldBeContainerRunningCalled(arg1 int, arg2 string) error {
 	time.Sleep(5 * time.Second)
 
 	// we need to check this a number of times to make sure it is not just a slow starting container
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 50; i++ {
 		args := filters.NewArgs()
 		args.Add("name", arg2)
 		opts := types.ContainerListOptions{Filters: args, All: true}
@@ -180,7 +147,7 @@ func thereShouldBe1NetworkCalled(arg1 string) error {
 func aCallToShouldResultInStatus(arg1 string, arg2 int) error {
 	// try 10 times
 	var err error
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 100; i++ {
 		var resp *http.Response
 		resp, err = http.Get(arg1)
 
