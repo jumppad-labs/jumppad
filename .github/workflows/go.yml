@@ -33,8 +33,17 @@ jobs:
         uses: codecov/codecov-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }} #required
-      
-     # - name: Run Snyk to check for vulnerabilities
-     #   uses: snyk/actions/golang@master
-     #   env:
-     #     SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+  
+  functional_test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build and install 
+      run: make install_local
+    
+    - name: Run tests
+      run: make test_functional
+    
+    - name: Stop stack
+      run: yard-dev destroy
