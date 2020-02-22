@@ -2,6 +2,12 @@
 
 ## version 0.0.0-beta.9
 
+### Added no-browser to `run` command
+The `run` command now has a `no-browser` flag which supresses any browser windows from opening if they are defined in the stack
+
+
+## version 0.0.0-beta.9
+
 ### Updated exec command
 Exec command now uses lighter ingress container instead of tools
 

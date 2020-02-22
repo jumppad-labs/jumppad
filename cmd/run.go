@@ -16,6 +16,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var noOpen bool
+
 var runCmd = &cobra.Command{
 	Use:   "run [file] [directory] ...",
 	Short: "Run the supplied stack configuration",
@@ -85,6 +87,11 @@ var runCmd = &cobra.Command{
 			fmt.Println(e.Blueprint().Intro)
 			fmt.Println("")
 
+			// do not open the browser windows
+			if noOpen == true {
+				return
+			}
+
 			openCommand := "open"
 			if runtime.GOOS == "linux" {
 				openCommand = "xdg-open"
@@ -110,4 +117,8 @@ var runCmd = &cobra.Command{
 			wg.Wait()
 		}
 	},
+}
+
+func init() {
+	runCmd.Flags().BoolVarP(&noOpen, "no-browser", "", false, "When set to true Shipyard does not open the browser windows defined in the blueprint")
 }

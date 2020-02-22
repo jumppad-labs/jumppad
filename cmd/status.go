@@ -80,5 +80,5 @@ var statusCmd = &cobra.Command{
 }
 
 func init() {
-	statusCmd.Flags().BoolVarP(&json, "json", "", false, "Out the status as JSON")
+	statusCmd.Flags().BoolVarP(&json, "json", "", false, "Output the status as JSON")
 }
