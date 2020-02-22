@@ -16,7 +16,7 @@ var pushCmd = &cobra.Command{
 	Use:                   "push [image] [cluster]",
 	Short:                 "Push a local Docker image to a cluster",
 	Long:                  `Push a local Docker image to a cluster`,
-	Example:               `yard push nicholasjackson/fake-service:v0.1.3 k3s cloud`,
+	Example:               `yard push nicholasjackson/fake-service:v0.1.3 k8s_cluster.k3s`,
 	DisableFlagsInUseLine: true,
 	Args:                  cobra.MaximumNArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {

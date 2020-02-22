@@ -61,6 +61,7 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 		Image:        c.Image.Name,
 		Env:          env,
 		Cmd:          c.Command,
+		Entrypoint:   c.Entrypoint,
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,

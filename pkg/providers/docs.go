@@ -11,7 +11,7 @@ import (
 )
 
 const docsImageName = "shipyardrun/docs"
-const docsVersion = "v0.0.3"
+const docsVersion = "v0.0.4"
 
 // Docs defines a provider for creating documentation containers
 type Docs struct {
@@ -107,8 +107,8 @@ func (i *Docs) createDocsContainer() error {
 	cc.Ports = []config.Port{
 		// set the doumentation port
 		config.Port{
-			Local:  3000,
-			Remote: 3000,
+			Local:  80,
+			Remote: 80,
 			Host:   i.config.Port,
 		},
 		// set the livereload port

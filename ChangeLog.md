@@ -1,5 +1,14 @@
 # Change Log
 
+## version 0.0.0-beta.9
+
+### Updated exec command
+Exec command now uses lighter ingress container instead of tools
+
+### Container resource
+Add "entrypoint" configuration to set the containers entrypoint
+
+
 ## version 0.0.0-beta.8
 
 ### Updated status command

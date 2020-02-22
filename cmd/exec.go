@@ -93,16 +93,17 @@ var execCmd = &cobra.Command{
 			}
 
 			// start a tools container
-			i := config.Image{Name: "shipyardrun/tools:latest"}
+			i := config.Image{Name: "shipyardrun/ingress:latest"}
 			err = dt.PullImage(i, false)
 			if err != nil {
-				l.Error("Could pull tools image", "error", err)
+				l.Error("Could pull ingress image", "error", err)
 				return
 			}
 
 			c := config.NewContainer(fmt.Sprintf("exec-%d", time.Now().Nanosecond()))
 			sc.AddResource(c)
 			c.Image = i
+			c.Entrypoint = []string{} // overide the entrypoint
 			c.Command = []string{"tail", "-f", "/dev/null"}
 
 			c.Networks = cluster.(*config.K8sCluster).Networks
@@ -133,7 +134,7 @@ var execCmd = &cobra.Command{
 
 			tools, err := dt.CreateContainer(c)
 			if err != nil {
-				l.Error("Could not create tools container", "error", err)
+				l.Error("Could not create exec container", "error", err)
 				return
 			}
 			defer dt.RemoveContainer(tools)
