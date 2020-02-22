@@ -1,6 +1,6 @@
 # Change Log
 
-## version 0.0.0-beta.9
+## version 0.0.0-beta.10
 
 ### Added no-browser to `run` command
 The `run` command now has a `no-browser` flag which supresses any browser windows from opening if they are defined in the stack
