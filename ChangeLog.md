@@ -14,6 +14,10 @@ Exec command now uses lighter ingress container instead of tools
 ### Container resource
 Add "entrypoint" configuration to set the containers entrypoint
 
+### Docs
+New documentation contianer which proxies terminal websockets using Envoy. This was an issue when the docs site was 
+running behind a proxy server such as Instruqt.
+
 
 ## version 0.0.0-beta.8
 
