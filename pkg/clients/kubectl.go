@@ -105,6 +105,7 @@ func (k *KubernetesImpl) Apply(files []string, waitUntilReady bool) error {
 
 	// process the files
 	for _, f := range allFiles {
+		k.l.Debug("Applying Kubernetes config", "file", f)
 		err := applyFile(f, waitUntilReady, kc)
 		if err != nil {
 			return err
@@ -237,16 +238,16 @@ func applyFile(path string, waitUntilReady bool, kc *kube.Client) error {
 
 	r, err := kc.Build(f, true)
 	if err != nil {
-		return xerrors.Errorf("Unable to build resources: %w", err)
+		return xerrors.Errorf("Unable to build resources for file %s: %w", path, err)
 	}
 
 	_, err = kc.Create(r)
 	if err != nil {
-		return xerrors.Errorf("Unable to create resources: %w", err)
+		return xerrors.Errorf("Unable to create resources for file %s: %w", path, err)
 	}
 
 	if waitUntilReady {
-		kc.WatchUntilReady(r, 30*time.Second)
+		return kc.WatchUntilReady(r, 30*time.Second)
 	}
 
 	return nil
@@ -267,7 +268,7 @@ func deleteFile(path string, kc *kube.Client) error {
 	_, errs := kc.Delete(r)
 	if errs != nil {
 		//TODO need to handle this better
-		return fmt.Errorf("Error deleting configuration: %v", errs)
+		return xerrors.Errorf("Error deleting configuration for file %s: %w", path, errs)
 	}
 
 	return nil

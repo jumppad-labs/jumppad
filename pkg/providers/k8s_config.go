@@ -30,7 +30,7 @@ func (c *K8sConfig) Create() error {
 
 	err = c.client.Apply(c.config.Paths, c.config.WaitUntilReady)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	// set the status

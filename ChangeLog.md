@@ -1,5 +1,10 @@
 # Change Log
 
+## version 0.0.0-beta.11
+
+### Bugfixes
+* Fix bug where Kubernetes Config was not returning an error when applying bad config
+
 ## version 0.0.0-beta.10
 
 ### Added no-browser to `run` command
