@@ -4,6 +4,7 @@
 
 ### Bugfixes
 * Fix bug where Kubernetes Config was not returning an error when applying bad config
+* Add log output for Helm charts and Kubernetes config
 
 ## version 0.0.0-beta.10
 

@@ -67,6 +67,10 @@ func (h *Helm) Destroy() error {
 
 	// get the target cluster
 	h.helmClient.Destroy(kcPath, h.config.Name)
+	if err != nil {
+		h.log.Debug("There was a problem destroying Helm chart, logging message but ignoring error", "ref", h.config.Name, "error", err)
+	}
+
 	return nil
 }
 

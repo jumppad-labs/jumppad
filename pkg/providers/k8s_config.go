@@ -48,7 +48,11 @@ func (c *K8sConfig) Destroy() error {
 		return err
 	}
 
-	return c.client.Delete(c.config.Paths)
+	err = c.client.Delete(c.config.Paths)
+	if err != nil {
+		c.log.Debug("There was a problem destroying Kuberntes config, logging message but ignoring error", "ref", c.config.Name, "error", err)
+	}
+	return nil
 }
 
 // Lookup the Kubernetes resources defined by the config

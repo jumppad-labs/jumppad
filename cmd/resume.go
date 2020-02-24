@@ -87,7 +87,7 @@ var resumeCmd = &cobra.Command{
 				hc := co.HealthCheck
 
 				if hc != nil && len(hc.Pods) != 0 {
-					l.Debug("Health check pods in Helm chart", "chart", co.Info().Name)
+					l.Debug("Health check pods in Kubernetes config", "chart", co.Info().Name)
 					err := healthCheckK8sConfig(co)
 					if err != nil {
 						l.Error("Unable to check health of k8s_config chart", "error", err)
