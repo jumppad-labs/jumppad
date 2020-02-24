@@ -3,6 +3,11 @@
 ## version 0.0.0-beta.11
 
 ### Bugfixes
+* Correct log line in Kubernetes controller
+
+## version 0.0.0-beta.11
+
+### Bugfixes
 * Fix bug where Kubernetes Config was not returning an error when applying bad config
 * Add log output for Helm charts and Kubernetes config
 

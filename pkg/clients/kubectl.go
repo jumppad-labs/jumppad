@@ -127,7 +127,7 @@ func (k *KubernetesImpl) Delete(files []string) error {
 
 	// process the files
 	for _, f := range allFiles {
-		k.l.Debug("Applying Kubernetes config", "file", f)
+		k.l.Debug("Removing Kubernetes config", "file", f)
 
 		err := deleteFile(f, kc)
 		if err != nil {
