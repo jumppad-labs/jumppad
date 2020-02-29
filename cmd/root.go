@@ -2,8 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -18,19 +21,38 @@ var rootCmd = &cobra.Command{
 	Long:  `Shipyard is a tool that helps you create and run demo and tutorial environments`,
 }
 
-var engine *shipyard.Engine
+var engine shipyard.Engine
+var logger hclog.Logger
+var engineClients *shipyard.Clients
+
 var version string
 
 func init() {
+	// create the shipyard home
+	os.MkdirAll(utils.ShipyardHome(), os.FileMode(0755))
+
+	// setup dependencies
+	var err error
+	logger = createLogger()
+	engine, err = shipyard.New(logger)
+	if err != nil {
+		panic(err)
+	}
+
+	engineClients, err = shipyard.GenerateClients(logger)
+	if err != nil {
+		panic(err)
+	}
+
 	cobra.OnInitialize(configure)
 
 	rootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.shipyard/config)")
 
 	rootCmd.AddCommand(initCmd)
-	rootCmd.AddCommand(runCmd)
+	rootCmd.AddCommand(newRunCmd(engine, engineClients.Blueprints, engineClients.HTTP, engineClients.Browser, logger))
 	rootCmd.AddCommand(pauseCmd)
 	rootCmd.AddCommand(resumeCmd)
-	//rootCmd.AddCommand(getCmd)
+	rootCmd.AddCommand(newGetCmd(engineClients.Blueprints))
 	rootCmd.AddCommand(destroyCmd)
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(taintCmd)

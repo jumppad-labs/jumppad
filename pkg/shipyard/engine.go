@@ -31,10 +31,20 @@ type Clients struct {
 	HTTP           clients.HTTP
 	Command        clients.Command
 	Logger         hclog.Logger
+	Blueprints     clients.Blueprints
+	Browser        clients.Browser
 }
 
-// Engine is responsible for creating and destroying resources
-type Engine struct {
+// Engine defines an interface for the Shipyard engine
+type Engine interface {
+	Apply(string) error
+	Destroy(string, bool) error
+	ResourceCount() int
+	Blueprint() *config.Blueprint
+}
+
+// EngineImpl is responsible for creating and destroying resources
+type EngineImpl struct {
 	clients     *Clients
 	config      *config.Config
 	log         hclog.Logger
@@ -63,6 +73,10 @@ func GenerateClients(l hclog.Logger) (*Clients, error) {
 
 	hc := clients.NewHTTP(1*time.Second, l)
 
+	bp := &clients.BlueprintsImpl{}
+
+	bc := &clients.BrowserImpl{}
+
 	return &Clients{
 		ContainerTasks: ct,
 		Docker:         dc,
@@ -71,13 +85,15 @@ func GenerateClients(l hclog.Logger) (*Clients, error) {
 		Command:        ec,
 		HTTP:           hc,
 		Logger:         l,
+		Blueprints:     bp,
+		Browser:        bc,
 	}, nil
 }
 
 // New creates a new shipyard engine
-func New(l hclog.Logger) (*Engine, error) {
+func New(l hclog.Logger) (Engine, error) {
 	var err error
-	e := &Engine{}
+	e := &EngineImpl{}
 	e.log = l
 	e.getProvider = generateProviderImpl
 
@@ -96,7 +112,7 @@ func New(l hclog.Logger) (*Engine, error) {
 }
 
 // Apply the current config creating the resources
-func (e *Engine) Apply(path string) error {
+func (e *EngineImpl) Apply(path string) error {
 	d, err := e.readConfig(path)
 	if err != nil {
 		return err
@@ -169,7 +185,7 @@ func (e *Engine) Apply(path string) error {
 }
 
 // Destroy the resources defined by the config
-func (e *Engine) Destroy(path string, allResources bool) error {
+func (e *EngineImpl) Destroy(path string, allResources bool) error {
 	d, err := e.readConfig(path)
 	if err != nil {
 		return err
@@ -237,7 +253,17 @@ func (e *Engine) Destroy(path string, allResources bool) error {
 	return tf.Err()
 }
 
-func (e *Engine) readConfig(path string) (*dag.AcyclicGraph, error) {
+// ResourceCount defines the number of resources in a plan
+func (e *EngineImpl) ResourceCount() int {
+	return e.config.ResourceCount()
+}
+
+// Blueprint returns the blueprint for the current config
+func (e *EngineImpl) Blueprint() *config.Blueprint {
+	return e.config.Blueprint
+}
+
+func (e *EngineImpl) readConfig(path string) (*dag.AcyclicGraph, error) {
 	// load the new config
 	cc := config.New()
 	if path != "" {
@@ -285,16 +311,6 @@ func (e *Engine) readConfig(path string) (*dag.AcyclicGraph, error) {
 	}
 
 	return d, nil
-}
-
-// ResourceCount defines the number of resources in a plan
-func (e *Engine) ResourceCount() int {
-	return e.config.ResourceCount()
-}
-
-// Blueprint returns the blueprint for the current config
-func (e *Engine) Blueprint() *config.Blueprint {
-	return e.config.Blueprint
 }
 
 // generateProviderImpl returns providers grouped together in order of execution

@@ -24,11 +24,11 @@ import (
 
 var lock = sync.Mutex{}
 
-func setupTests(returnVals map[string]error) (*Engine, *config.Config, *[]*mocks.MockProvider, func()) {
+func setupTests(returnVals map[string]error) (Engine, *config.Config, *[]*mocks.MockProvider, func()) {
 	return setupTestsBase(returnVals, "")
 }
 
-func setupTestsWithState(returnVals map[string]error, state string) (*Engine, *config.Config, *[]*mocks.MockProvider, func()) {
+func setupTestsWithState(returnVals map[string]error, state string) (Engine, *config.Config, *[]*mocks.MockProvider, func()) {
 	return setupTestsBase(returnVals, state)
 }
 
@@ -62,13 +62,13 @@ func setupState(state string) func() {
 	}
 }
 
-func setupTestsBase(returnVals map[string]error, state string) (*Engine, *config.Config, *[]*mocks.MockProvider, func()) {
+func setupTestsBase(returnVals map[string]error, state string) (Engine, *config.Config, *[]*mocks.MockProvider, func()) {
 	log.SetOutput(ioutil.Discard)
 
 	p := &[]*mocks.MockProvider{}
 
 	cl := &Clients{}
-	e := &Engine{
+	e := &EngineImpl{
 		clients:     cl,
 		log:         hclog.NewNullLogger(),
 		getProvider: generateProviderMock(p, returnVals),
@@ -156,15 +156,12 @@ func TestApplyReturnsErrorWhenProviderDestroyForResourcesPendingorFailed(t *test
 func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 	e, _, mp, cleanup := setupTests(map[string]error{"cloud": fmt.Errorf("boom")})
 	defer cleanup()
-	e.getProvider = func(c config.Resource, cc *Clients) providers.Provider {
-		return nil
-	}
 
 	err := e.Apply("../../functional_tests/test_fixtures/single_k3s_cluster")
 	assert.Error(t, err)
 
 	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Create", 0)
+	testAssertMethodCalled(t, mp, "Create", 1)
 }
 
 func TestApplyCallsProviderCreateErrorStopsExecution(t *testing.T) {
@@ -187,7 +184,7 @@ func TestApplySetsStatusForEachResource(t *testing.T) {
 
 	// should not call create as this is pending update
 	testAssertMethodCalled(t, mp, "Create", 0)
-	assert.Equal(t, config.Applied, e.config.Resources[0].Info().Status)
+	assert.Len(t, *mp, 0)
 }
 
 func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
@@ -202,17 +199,14 @@ func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
 }
 
 func TestDestroyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
-	e, _, mp, cleanup := setupTests(map[string]error{"cloud": fmt.Errorf("boom")})
+	e, _, mp, cleanup := setupTests(map[string]error{"k3s": fmt.Errorf("boom")})
 	defer cleanup()
-	e.getProvider = func(c config.Resource, cc *Clients) providers.Provider {
-		return nil
-	}
 
 	err := e.Destroy("../../functional_tests/test_fixtures/single_k3s_cluster", true)
 	assert.Error(t, err)
 
 	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 0)
+	testAssertMethodCalled(t, mp, "Destroy", 3)
 }
 
 func TestDestroyFailSetsStatus(t *testing.T) {
@@ -224,8 +218,7 @@ func TestDestroyFailSetsStatus(t *testing.T) {
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 4)
-	r, _ := e.config.FindResource("network.cloud")
-	assert.Equal(t, config.Failed, r.Info().Status)
+	assert.Equal(t, config.Failed, (*mp)[3].Config().Info().Status)
 }
 
 func TestDestroyCallsProviderDestroyInCorrectOrder(t *testing.T) {

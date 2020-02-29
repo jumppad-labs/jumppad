@@ -135,3 +135,9 @@ func GetBlueprintFolder(blueprint string) (string, error) {
 
 	return parts[1], nil
 }
+
+// GetBlueprintLocalFolder returns the full storage path
+// for the given blueprint URI
+func GetBlueprintLocalFolder(blueprint string) string {
+	return filepath.Join(ShipyardHome(), "blueprints", blueprint)
+}

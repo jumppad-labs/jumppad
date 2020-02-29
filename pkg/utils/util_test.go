@@ -144,3 +144,9 @@ func TestIsHCLFile(t *testing.T) {
 		})
 	}
 }
+
+func TestBlueprintLocalFolder(t *testing.T) {
+	dst := GetBlueprintLocalFolder("github.com/shipyard-run/blueprints//vault-k8s")
+
+	assert.Equal(t, ShipyardHome()+"/blueprints/github.com/shipyard-run/blueprints/vault-k8s", dst)
+}
