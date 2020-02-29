@@ -3,7 +3,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/utils"
@@ -23,29 +22,28 @@ func newGetCmd(bp clients.Blueprints) *cobra.Command {
   yard get github.com/shipyard-run/blueprints//vault-k8s
 	`,
 		Args: cobra.ArbitraryArgs,
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// check the number of args
+			if len(args) != 1 {
+				return fmt.Errorf("Command takes a single argument")
+			}
+
 			var err error
 			dst := args[0]
-			fmt.Println("Fetching blueprint from: ", dst)
-			fmt.Println("")
-
-			// create a logger
-			log := createLogger()
-
-			// create the shipyard home
-			os.MkdirAll(utils.ShipyardHome(), os.FileMode(0755))
+			cmd.Println("Fetching blueprint from: ", dst)
+			cmd.Println("")
 
 			if utils.IsLocalFolder(dst) {
-				log.Error("Parameter is not a remote blueprint, e.g. github.com/shipyard-run/blueprints//vault-k8s")
-				os.Exit(1)
+				return fmt.Errorf("Parameter is not a remote blueprint, e.g. github.com/shipyard-run/blueprints//vault-k8s")
 			}
 
 			// fetch the remote server from github
 			err = bp.Get(dst, utils.GetBlueprintLocalFolder(dst))
 			if err != nil {
-				log.Error("Unable to retrieve blueprint", "error", err)
-				os.Exit(1)
+				return fmt.Errorf("Unable to retrieve blueprint: %s", err)
 			}
+
+			return nil
 		},
 	}
 }
