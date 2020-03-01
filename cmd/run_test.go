@@ -2,12 +2,14 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
 	clientmocks "github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/shipyard/mocks"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -38,6 +40,16 @@ func TestRunSetsDestinationFromArgsWhenPresent(t *testing.T) {
 	assert.NoError(t, err)
 
 	me.AssertCalled(t, "Apply", "/tmp")
+}
+
+func TestRunSetsDestinationToDownloadedBlueprintFromArgsWhenRemote(t *testing.T) {
+	rf, me, _, _, _ := setupRun(t)
+	rf.SetArgs([]string{"github.com/shipyard-run/blueprints//vault-k8s"})
+
+	err := rf.Execute()
+	assert.NoError(t, err)
+
+	me.AssertCalled(t, "Apply", filepath.Join(utils.ShipyardHome(), "blueprints/github.com/shipyard-run/blueprints/vault-k8s"))
 }
 
 func TestRunFetchesBlueprint(t *testing.T) {

@@ -1,5 +1,11 @@
 # Change Log
 
+## version 0.0.0-beta.12
+
+### Bugfixes
+* Ensure downloaded blueprints are stored with their full path
+* Increase test coverage
+
 ## version 0.0.0-beta.11
 
 ### Bugfixes

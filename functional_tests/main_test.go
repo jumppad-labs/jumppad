@@ -155,6 +155,10 @@ func aCallToShouldResultInStatus(arg1 string, arg2 int) error {
 			return nil
 		}
 
+		if err == nil {
+			err = fmt.Errorf("Expected status code %d, got %d", arg2, resp.StatusCode)
+		}
+
 		time.Sleep(2 * time.Second)
 	}
 

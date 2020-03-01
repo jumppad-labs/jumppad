@@ -55,6 +55,8 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc
 				if err != nil {
 					return fmt.Errorf("Unable to retrieve blueprint: %s", err)
 				}
+
+				dst = utils.GetBlueprintLocalFolder(dst)
 			}
 		}
 
