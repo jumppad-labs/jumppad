@@ -53,4 +53,7 @@ type ContainerTasks interface {
 	ExecuteCommand(id string, command []string, writer io.Writer) error
 	// NetworkDisconnect disconnects a container from the network
 	DetachNetwork(network, containerid string) error
+
+	// CreateShell in the running container and attach
+	CreateShell(id string, command []string, stdin io.ReadCloser, stdout io.Writer, stderr io.Writer) error
 }

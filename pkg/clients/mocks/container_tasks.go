@@ -84,3 +84,8 @@ func (d *MockContainerTasks) DetachNetwork(network, containerid string) error {
 
 	return args.Error(0)
 }
+func (d *MockContainerTasks) CreateShell(id string, command []string, stdin io.ReadCloser, stdout io.Writer, stderr io.Writer) error {
+	args := d.Called(id, command, stdin, stdout, stderr)
+
+	return args.Error(0)
+}

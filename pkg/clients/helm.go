@@ -69,17 +69,25 @@ func (h *HelmImpl) Create(kubeConfig, name, chartPath, valuesPath string) error 
 		return xerrors.Errorf("Error merging Helm values: %w", err)
 	}
 
+	h.log.Debug("Creating chart from config", "ref", name, "path", chartPath)
 	cp, err := client.ChartPathOptions.LocateChart(chartPath, &settings)
 	if err != nil {
 		return xerrors.Errorf("Error locating chart: %w", err)
 	}
 
+	h.log.Debug("Loading chart", "ref", name, "path", cp)
 	chartRequested, err := loader.Load(cp)
 	if err != nil {
 		return xerrors.Errorf("Error loading chart: %w", err)
 	}
 
-	// merge values
+	h.log.Debug("Validate chart", "ref", name)
+	err = chartRequested.Validate()
+	if err != nil {
+		return xerrors.Errorf("Error validating chart: %w", err)
+	}
+
+	h.log.Debug("Run chart", "ref", name)
 	_, err = client.Run(chartRequested, vals)
 	if err != nil {
 		return xerrors.Errorf("Error running chart: %w", err)

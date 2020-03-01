@@ -56,7 +56,7 @@ func init() {
 	rootCmd.AddCommand(destroyCmd)
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(taintCmd)
-	rootCmd.AddCommand(execCmd)
+	rootCmd.AddCommand(newExecCmd(engineClients.ContainerTasks))
 	rootCmd.AddCommand(versionCmd)
 	//rootCmd.AddCommand(exposeCmd)
 	//rootCmd.AddCommand(containerCmd)
