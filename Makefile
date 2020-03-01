@@ -4,7 +4,7 @@ test_unit:
 	go test -v -race $(shell go list ./... | grep -v /functional_tests)
 	go test -v ./pkg/shipyard
 
-test_functional:
+test_functional: install_local
 	cd ./functional_tests && go test -v -run.test true ./...
 
 test: test_unit test_functional

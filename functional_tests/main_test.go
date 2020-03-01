@@ -99,7 +99,7 @@ func thereShouldBeContainerRunningCalled(arg1 int, arg2 string) error {
 	time.Sleep(5 * time.Second)
 
 	// we need to check this a number of times to make sure it is not just a slow starting container
-	for i := 0; i < 50; i++ {
+	for i := 0; i < 100; i++ {
 		args := filters.NewArgs()
 		args.Add("name", arg2)
 		opts := types.ContainerListOptions{Filters: args, All: true}
@@ -145,7 +145,7 @@ func thereShouldBe1NetworkCalled(arg1 string) error {
 
 // test making a HTTP call, for testing Ingress
 func aCallToShouldResultInStatus(arg1 string, arg2 int) error {
-	// try 10 times
+	// try 100 times
 	var err error
 	for i := 0; i < 100; i++ {
 		var resp *http.Response
