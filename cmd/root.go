@@ -2,11 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
-	"github.com/shipyard-run/shipyard/pkg/utils"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -28,9 +26,6 @@ var engineClients *shipyard.Clients
 var version string
 
 func init() {
-	// create the shipyard home
-	os.MkdirAll(utils.ShipyardHome(), os.FileMode(0755))
-
 	// setup dependencies
 	var err error
 	logger = createLogger()

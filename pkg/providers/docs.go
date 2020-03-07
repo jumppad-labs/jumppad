@@ -2,16 +2,21 @@ package providers
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
+	"html/template"
+	"io/ioutil"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/utils"
+	"golang.org/x/xerrors"
 )
 
 const docsImageName = "shipyardrun/docs"
 const docsVersion = "v0.0.4"
+
+const terminalImageName = "shipyardrun/terminal-server"
+const terminalVersion = "latest"
 
 // Docs defines a provider for creating documentation containers
 type Docs struct {
@@ -73,35 +78,26 @@ func (i *Docs) createDocsContainer() error {
 		cc.Volumes = append(
 			cc.Volumes,
 			config.Volume{
-				Source:      i.config.Path + "/docs",
+				Source:      i.config.Path,
 				Destination: "/shipyard/docs",
 			},
 		)
-
-		siteConfigPath := filepath.Join(i.config.Path, "siteConfig.js")
-		_, err := os.Stat(siteConfigPath)
-		if err == nil {
-			cc.Volumes = append(
-				cc.Volumes,
-				config.Volume{
-					Source:      i.config.Path + "/siteConfig.js",
-					Destination: "/shipyard/siteConfig.js",
-				},
-			)
-		}
-
-		sidebarsPath := filepath.Join(i.config.Path, "sidebars.js")
-		_, err = os.Stat(sidebarsPath)
-		if err == nil {
-			cc.Volumes = append(
-				cc.Volumes,
-				config.Volume{
-					Source:      i.config.Path + "/sidebars.js",
-					Destination: "/shipyard/sidebars.js",
-				},
-			)
-		}
 	}
+
+	// if the index pages have been set
+	// generate the javascript
+	indexPath, err := i.generateDocusaursIndex(i.config.IndexTitle, i.config.IndexPages)
+	if err != nil {
+		return xerrors.Errorf("Unable to generate index for documentation: %w", err)
+	}
+
+	cc.Volumes = append(
+		cc.Volumes,
+		config.Volume{
+			Source:      indexPath,
+			Destination: "/shipyard/sidebars.js",
+		},
+	)
 
 	// add the ports
 	cc.Ports = []config.Port{
@@ -129,7 +125,7 @@ func (i *Docs) createTerminalContainer() error {
 	i.config.ResourceInfo.AddChild(cc)
 
 	cc.Networks = i.config.Networks
-	cc.Image = config.Image{Name: "shipyardrun/terminal-server:latest"}
+	cc.Image = config.Image{Name: fmt.Sprintf("%s:%s", terminalImageName, terminalVersion)}
 
 	// pull the image
 	err := i.client.PullImage(cc.Image, false)
@@ -142,8 +138,8 @@ func (i *Docs) createTerminalContainer() error {
 	cc.Volumes = append(
 		cc.Volumes,
 		config.Volume{
-			Source:      "/var/run/docker.sock",
-			Destination: "/var/run/docker.sock",
+			Source:      utils.GetDockerSock(),
+			Destination: utils.GetDockerSock(),
 		},
 	)
 
@@ -200,3 +196,44 @@ func (i *Docs) Lookup() ([]string, error) {
 
 	return []string{}, nil
 }
+
+func (i *Docs) generateDocusaursIndex(title string, pages []string) (string, error) {
+	tmpFile, err := ioutil.TempFile("", "*.json")
+	if err != nil {
+		return "", err
+	}
+
+	data := struct {
+		Title string
+		Pages []string
+	}{
+		title,
+		pages,
+	}
+
+	t := template.Must(template.New("pages").Parse(sideBarsTemplate))
+	err = t.Execute(tmpFile, data)
+	if err != nil {
+		return "", err
+	}
+
+	return tmpFile.Name(), nil
+}
+
+var sideBarsTemplate = `
+module.exports = {
+    docs: {
+      {{.Title}}: [
+		{{- $first := true -}}
+		{{- range .Pages -}}
+	 		{{- if $first -}}
+        		{{- $first = false -}}
+    		{{- else -}}
+        		,
+			{{- end}}
+			"{{- .}}"
+		{{- end}}	
+	  ]
+    },
+  }
+`

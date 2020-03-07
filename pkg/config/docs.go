@@ -12,11 +12,13 @@ type Docs struct {
 
 	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
-	Path  string `hcl:"path"`
-	Index string `hcl:"index,optional"`
-	Port  int    `hcl:"port"`
+	Image *Image `hcl:"image,block" json:"image,omitempty"` // image to use for the container
 
-	Image *Image `hcl:"image,block"` // image to use for the container
+	Path string `hcl:"path" json:"path"`
+	Port int    `hcl:"port" json:"port"`
+
+	IndexTitle string   `hcl:"index_title" json:"index_title"`
+	IndexPages []string `hcl:"index_pages" json:"index_pages,omitempty"`
 }
 
 // NewDocs creates a new Docs config resource

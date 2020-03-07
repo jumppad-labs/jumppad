@@ -1,5 +1,14 @@
 # Change Log
 
+## version 0.0.0-beta.13
+
+## Docs
+Improve UX with documentation, Shipyard now autogenerates the JSON files required for Docusarus, the user
+only needs to author the markdown
+
+### Bugfixes
+* Move create shipyard home directory to run or get, this was generating with invalid permissions when using the quick install
+
 ## version 0.0.0-beta.12
 
 ### Bugfixes

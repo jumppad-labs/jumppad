@@ -22,5 +22,7 @@ const docsDefault = `
 docs "testing" {
 	path = "/"
 	port = "80"
+	index_title = "test"
+	index_pages = ["test"]
 }
 `

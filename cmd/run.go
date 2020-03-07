@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -39,6 +40,9 @@ func newRunCmd(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc cli
 
 func newRunCmdFunc(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc clients.Browser, noOpen *bool, l hclog.Logger) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
+		// create the shipyard home
+		os.MkdirAll(utils.ShipyardHome(), os.FileMode(0755))
+
 		var err error
 		dst := ""
 		if len(args) == 1 {

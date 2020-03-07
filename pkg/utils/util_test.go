@@ -150,3 +150,8 @@ func TestBlueprintLocalFolder(t *testing.T) {
 
 	assert.Equal(t, ShipyardHome()+"/blueprints/github.com/shipyard-run/blueprints/vault-k8s", dst)
 }
+
+func TestDockerSockReturnsCorrectValue(t *testing.T) {
+	ds := GetDockerSock()
+	assert.Equal(t, "/var/run/docker.sock", ds)
+}

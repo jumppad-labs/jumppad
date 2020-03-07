@@ -3,6 +3,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/utils"
@@ -23,6 +24,9 @@ func newGetCmd(bp clients.Blueprints) *cobra.Command {
 	`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// create the shipyard home
+			os.MkdirAll(utils.ShipyardHome(), os.FileMode(0755))
+
 			// check the number of args
 			if len(args) != 1 {
 				return fmt.Errorf("Command takes a single argument")
