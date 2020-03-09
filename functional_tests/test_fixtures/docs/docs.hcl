@@ -7,6 +7,5 @@ docs "docs" {
   }
 
   index_title = "Test"
-
   index_pages = ["index", "other"]
 }
