@@ -8,6 +8,7 @@ only needs to author the markdown
 
 # Nomad
 Implmeneted ability to push a local container to the Nomad cluster
+Allow mounting of custom volumes for Nomad clusters
 
 ### Bugfixes
 * Move create shipyard home directory to run or get, this was generating with invalid permissions when using the quick install

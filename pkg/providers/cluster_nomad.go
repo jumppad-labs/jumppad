@@ -87,6 +87,11 @@ func (c *NomadCluster) createNomad() error {
 		},
 	}
 
+	// if there are any custom volumes to mount
+	for _, v := range c.config.Volumes {
+		cc.Volumes = append(cc.Volumes, v)
+	}
+
 	// set the environment variables for the K3S_KUBECONFIG_OUTPUT and K3S_CLUSTER_SECRET
 	cc.Environment = c.config.Environment
 

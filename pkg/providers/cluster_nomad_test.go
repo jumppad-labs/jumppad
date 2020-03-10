@@ -116,6 +116,8 @@ func TestClusterNomadCreatesAServer(t *testing.T) {
 	cc, md, mh, cleanup := setupNomadClusterMocks()
 	defer cleanup()
 
+	cc.Volumes = []config.Volume{config.Volume{Source: "./files", Destination: "/files"}}
+
 	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
 
 	err := p.Create()
@@ -133,6 +135,10 @@ func TestClusterNomadCreatesAServer(t *testing.T) {
 	assert.Equal(t, "123", params.Volumes[0].Source)
 	assert.Equal(t, "/images", params.Volumes[0].Destination)
 	assert.Equal(t, "volume", params.Volumes[0].Type)
+
+	// validate that the custom volume has been added
+	assert.Equal(t, "./files", params.Volumes[1].Source)
+	assert.Equal(t, "/files", params.Volumes[1].Destination)
 
 	// validate the API port is set
 	assert.GreaterOrEqual(t, params.Ports[0].Local, 4646)
