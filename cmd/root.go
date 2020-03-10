@@ -60,7 +60,7 @@ func init() {
 	//rootCmd.AddCommand(toolsCmd)
 	//rootCmd.AddCommand(upgradeCmd)
 	rootCmd.AddCommand(uninstallCmd)
-	rootCmd.AddCommand(pushCmd)
+	rootCmd.AddCommand(newPushCmd(engineClients.ContainerTasks, engineClients.Kubernetes, engineClients.HTTP, logger))
 }
 
 func configure() {

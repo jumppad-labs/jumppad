@@ -8,6 +8,7 @@ require (
 	github.com/docker/docker v1.4.2-0.20200203170920-46ec8731fbce
 	github.com/docker/go-connections v0.4.0
 	github.com/fatih/color v1.9.0 // indirect
+	github.com/google/martian v2.1.0+incompatible
 	github.com/gosuri/uitable v0.0.4
 	github.com/hashicorp/go-getter v1.4.2-0.20200106182914-9813cbd4eb02
 	github.com/hashicorp/go-hclog v0.10.1

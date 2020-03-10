@@ -38,7 +38,7 @@ func (c *NomadCluster) Destroy() error {
 
 // Lookup the a clusters current state
 func (c *NomadCluster) Lookup() ([]string, error) {
-	return []string{}, nil
+	return c.client.FindContainerIDs(c.config.Name, c.config.Type)
 }
 
 func (c *NomadCluster) createNomad() error {
