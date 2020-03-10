@@ -1,13 +1,14 @@
-cluster "nomad" {
-  driver  = "nomad" // default
+nomad_cluster "dev" {
   version = "v0.10.2"
 
   nodes = 1 // default
 
-  network = "network.cloud"
+  network {
+    name = "network.cloud"
+  }
 
   image {
-    name = "consul:1.6.1"
+    name = "consul:1.7.1"
   }
 
   env {

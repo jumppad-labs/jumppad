@@ -1,6 +1,6 @@
 container "consul" {
   image   {
-    name = "consul:1.6.1"
+    name = "consul:1.7.1"
   }
 
   command = ["consul", "agent", "-config-file=/config/consul.hcl"]
@@ -10,6 +10,7 @@ container "consul" {
     destination = "/config"
   }
 
-  network    = "network.cloud"
-  ip_address = "10.5.0.2" // optional
+  network  {
+    name = "network.cloud"
+  }
 }

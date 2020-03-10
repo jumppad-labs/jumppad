@@ -152,19 +152,17 @@ func (c *NomadCluster) ImportLocalDockerImages(name string, id string, images []
 
 	// import to volume
 	vn := utils.FQDNVolumeName(name)
-	_, err := c.client.CopyLocalDockerImageToVolume(imgs, vn)
+	imageFile, err := c.client.CopyLocalDockerImageToVolume(imgs, vn)
 	if err != nil {
 		return err
 	}
 
-	/*
-		// execute the command to import the image
-		// write any command output to the logger
-		err = c.client.ExecuteCommand(id, []string{"ctr", "image", "import", "/images/" + imageFile}, c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
-		if err != nil {
-			return err
-		}
-	*/
+	// execute the command to import the image
+	// write any command output to the logger
+	err = c.client.ExecuteCommand(id, []string{"docker", "load", "-i", "/images/" + imageFile}, c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

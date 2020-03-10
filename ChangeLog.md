@@ -6,6 +6,9 @@
 Improve UX with documentation, Shipyard now autogenerates the JSON files required for Docusarus, the user
 only needs to author the markdown
 
+# Nomad
+Implmeneted ability to push a local container to the Nomad cluster
+
 ### Bugfixes
 * Move create shipyard home directory to run or get, this was generating with invalid permissions when using the quick install
 
