@@ -4,7 +4,7 @@ on:
   pull_request:
   push:
     tags:
-       - '*'
+       - 'v*'
 
 jobs:
   goreleaser:
@@ -39,3 +39,46 @@ jobs:
           key: ${{ secrets.GPG_PRIVATE_KEY }}
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+  
+  choco:
+    needs: goreleaser
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+        with:
+          repository: 'shipyard-run/choco-package'
+
+      - name: Tag
+        id: tag
+        uses: ashley-taylor/regex-property-action@v1.0
+        with:
+          value: ${{ github.ref }}
+          regex: "v"
+          replacement: "" 
+
+      - 
+        name: Find and Replace
+        uses: jacobtomlinson/gha-find-replace@master
+        with:
+          find: "__version__"
+          replace: "${{ steps.tag.outputs.value }}"
+
+      -
+        name: Choco login
+        uses: crazy-max/ghaction-chocolatey@v1
+        with:
+          args: apikey -k ${{ secrets.CHOCO_API_KEY }} -s https://push.chocolatey.org/
+      
+      -
+        name: Choco build
+        uses: crazy-max/ghaction-chocolatey@v1
+        with:
+          args: pack
+      
+      -
+        name: Choco push
+        uses: crazy-max/ghaction-chocolatey@v1
+        with:
+          args: push
