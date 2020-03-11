@@ -59,11 +59,10 @@ jobs:
           replacement: "" 
 
       - 
-        name: Find and Replace
-        uses: jacobtomlinson/gha-find-replace@master
-        with:
-          find: "__version__"
-          replace: "${{ steps.tag.outputs.value }}"
+        name: Find and Replace version
+        run: | 
+          powershell -Command "(gc shipyard.nuspec) -replace '__version__', '${{ steps.tag.outputs.value }}' | Out-File -encoding ASCII shipyard.nuspec"
+          powershell -Command "(gc tools/chocolateyinstall.ps1) -replace '__version__', '${{ steps.tag.outputs.value }}' | Out-File -encoding ASCII tools\chocolateyinstall.ps1" 
 
       -
         name: Choco login
