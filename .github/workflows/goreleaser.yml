@@ -42,7 +42,7 @@ jobs:
   
   choco:
     needs: goreleaser
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       -
         name: Checkout
@@ -55,7 +55,7 @@ jobs:
         uses: ashley-taylor/regex-property-action@v1.0
         with:
           value: ${{ github.ref }}
-          regex: "v"
+          regex: "refs/tags/v"
           replacement: "" 
 
       - 
@@ -67,18 +67,12 @@ jobs:
 
       -
         name: Choco login
-        uses: crazy-max/ghaction-chocolatey@v1
-        with:
-          args: apikey -k ${{ secrets.CHOCO_API_KEY }} -s https://push.chocolatey.org/
+        run: choco apikey -k ${{ secrets.CHOCO_API_KEY }} -s https://push.chocolatey.org/
       
       -
         name: Choco build
-        uses: crazy-max/ghaction-chocolatey@v1
-        with:
-          args: pack
+        run: choco pack
       
       -
         name: Choco push
-        uses: crazy-max/ghaction-chocolatey@v1
-        with:
-          args: push
+        run: choco push
