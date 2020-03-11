@@ -15,7 +15,7 @@ Once an issue exists, you can modify the code and raise a PR against this repo. 
 
 ## Testing:
 
-The project has two types of test, pure code Unit tests and, Functional tests which apply real blueprints to a locally running Docker engine and test output.  Currently only Unit tests are running in CI.
+The project has two types of test, pure code Unit tests and, Functional tests which apply real blueprints to a locally running Docker engine and test output.
 
 ### Unit tests:
 
@@ -45,7 +45,7 @@ ok      github.com/shipyard-run/shipyard        (cached) [no tests to run]
 
 ### Functional tests:
 
-To run the functional tests ensure that Docker is running in your environment then run `make test_functional` functional tests are executed with GoDog cucumber test runner for Go. Note: These tests create real blueprints and can a few minutes to run.
+To run the functional tests ensure that Docker is running in your environment then run `make test_functional`. unctional tests are executed with GoDog cucumber test runner for Go. Note: These tests execute real blueprints and can a few minutes to run.
 
 ```shell
 ➜ make test_functional 
