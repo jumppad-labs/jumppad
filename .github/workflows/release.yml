@@ -48,7 +48,7 @@ jobs:
         name: Checkout
         uses: actions/checkout@v2
         with:
-          repository: 'shipyard-run/choco-package'
+          repository: 'shipyard-run/choco'
 
       - name: Tag
         id: tag
