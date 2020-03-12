@@ -1,14 +1,17 @@
 # Change Log
 
-## version 0.0.0-beta.13
+## version 0.0.2
 
 ## Docs
 Improve UX with documentation, Shipyard now autogenerates the JSON files required for Docusarus, the user
 only needs to author the markdown
 
-# Nomad
+## Nomad
 Implmeneted ability to push a local container to the Nomad cluster
 Allow mounting of custom volumes for Nomad clusters
+
+## Build process
+Added Chocolatey and Brew, deb and rpm instalation sources
 
 ### Bugfixes
 * Move create shipyard home directory to run or get, this was generating with invalid permissions when using the quick install
