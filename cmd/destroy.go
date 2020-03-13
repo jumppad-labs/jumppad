@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/prometheus/common/log"
+	"github.com/hashicorp/go-hclog"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +29,7 @@ var destroyCmd = &cobra.Command{
 		}
 
 		if err != nil {
-			log.Error("Unable to destroy stack", "error", err)
+			hclog.Default().Error("Unable to destroy stack", "error", err)
 			return
 		}
 	},

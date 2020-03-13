@@ -11,7 +11,47 @@ Implmeneted ability to push a local container to the Nomad cluster
 Allow mounting of custom volumes for Nomad clusters
 
 ## Build process
-Added Chocolatey and Brew, deb and rpm instalation sources
+Added Chocolatey and Brew, Deb and Rpm instalation sources
+
+## Yard files
+Yard files are to be depricated in favor of Markdown files for blueprints.
+The information which was previously added to the .yard file can now be added as frontdown in a `README.md` file which resides in the root of your blueprint.
+
+````
+---
+title: Single Container Example
+author: Nic Jackson
+slug: single_container
+browser_windows: http://localhost:8080
+---
+
+# Single Container
+
+This blueprint shows how you can create a single container with Shipyard
+
+```shell
+curl localhost:8080
+```
+````
+
+When the user runs `shipyard run`, this renders to the terminal as:
+
+```
+########################################################
+
+Title Single Container Example
+Author Nic Jackson
+
+########################################################
+
+
+1 Single Container
+────────────────────────────────────────────────────────────────────────────────
+
+This blueprint shows how you can create a single container with Shipyard
+
+┃ curl localhost:8080
+```
 
 ### Bugfixes
 * Move create shipyard home directory to run or get, this was generating with invalid permissions when using the quick install

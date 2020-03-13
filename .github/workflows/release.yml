@@ -84,4 +84,4 @@ jobs:
       
       -
         name: Choco push
-        run: choco push
+        run: choco push -f

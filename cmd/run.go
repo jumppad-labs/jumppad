@@ -12,6 +12,8 @@ import (
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
+
+	markdown "github.com/MichaelMure/go-term-markdown"
 )
 
 func newRunCmd(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc clients.Browser, l hclog.Logger) *cobra.Command {
@@ -72,38 +74,43 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc
 
 		// if we have a blueprint show the header
 		if e.Blueprint() != nil {
+
+			// do not open the browser windows
+			if *noOpen == false {
+
+				wg := sync.WaitGroup{}
+
+				for _, b := range e.Blueprint().BrowserWindows {
+					wg.Add(1)
+					go func(uri string) {
+						// health check the URL
+						err := hc.HealthCheckHTTP(uri, 30*time.Second)
+						if err == nil {
+							bc.Open(uri)
+						}
+
+						wg.Done()
+					}(b)
+				}
+
+				wg.Wait()
+			}
+
 			cmd.Println("")
 			cmd.Println("########################################################")
 			cmd.Println("")
 			cmd.Println("Title", e.Blueprint().Title)
 			cmd.Println("Author", e.Blueprint().Author)
 			cmd.Println("")
+			cmd.Println("########################################################")
+
+			// parse the body as markdown and print
+			intro := markdown.Render(e.Blueprint().Intro, 80, 0)
 
 			cmd.Println("")
-			cmd.Println(e.Blueprint().Intro)
 			cmd.Println("")
-
-			// do not open the browser windows
-			if *noOpen == true {
-				return nil
-			}
-
-			wg := sync.WaitGroup{}
-
-			for _, b := range e.Blueprint().BrowserWindows {
-				wg.Add(1)
-				go func(uri string) {
-					// health check the URL
-					err := hc.HealthCheckHTTP(uri, 30*time.Second)
-					if err == nil {
-						bc.Open(uri)
-					}
-
-					wg.Done()
-				}(b)
-			}
-
-			wg.Wait()
+			cmd.Print(string(intro))
+			cmd.Println("")
 		}
 
 		return nil

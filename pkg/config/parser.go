@@ -8,7 +8,9 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
+	"github.com/gernest/front"
 	"github.com/hashicorp/hcl2/gohcl"
 	"github.com/hashicorp/hcl2/hcl"
 	"github.com/hashicorp/hcl2/hcl/hclsyntax"
@@ -36,10 +38,19 @@ func ParseFolder(folder string, c *Config) error {
 	abs, _ := filepath.Abs(folder)
 
 	// pick up the blueprint file
-	yardFiles, err := filepath.Glob(path.Join(abs, "*.yard"))
+	yardFilesHCL, err := filepath.Glob(path.Join(abs, "*.yard"))
 	if err != nil {
 		return err
 	}
+
+	yardFilesMD, err := filepath.Glob(path.Join(abs, "*.md"))
+	if err != nil {
+		return err
+	}
+
+	yardFiles := []string{}
+	yardFiles = append(yardFiles, yardFilesHCL...)
+	yardFiles = append(yardFiles, yardFilesMD...)
 
 	if len(yardFiles) > 0 {
 		err := ParseYardFile(yardFiles[0], c)
@@ -66,6 +77,14 @@ func ParseFolder(folder string, c *Config) error {
 
 // ParseYardFile parses a blueprint configuration file
 func ParseYardFile(file string, c *Config) error {
+	if filepath.Ext(file) == ".yard" {
+		return parseYardHCL(file, c)
+	}
+
+	return parseYardMarkdown(file, c)
+}
+
+func parseYardHCL(file string, c *Config) error {
 	ctx = buildContext()
 
 	parser := hclparse.NewParser()
@@ -89,6 +108,47 @@ func ParseYardFile(file string, c *Config) error {
 
 	c.Blueprint = bp
 
+	return nil
+}
+
+// parseYardMarkdown extracts the blueprint information from the frontmatter
+// when a blueprint file is of type markdown
+func parseYardMarkdown(file string, c *Config) error {
+	f, err := os.Open(file)
+	if err != nil {
+		return err
+	}
+
+	m := front.NewMatter()
+	m.Handle("---", front.YAMLHandler)
+
+	fr, body, err := m.Parse(f)
+	if err != nil {
+
+		return err
+	}
+
+	bp := &Blueprint{}
+
+	if a, ok := fr["author"].(string); ok {
+		bp.Author = a
+	}
+
+	if a, ok := fr["title"].(string); ok {
+		bp.Title = a
+	}
+
+	if a, ok := fr["slug"].(string); ok {
+		bp.Slug = a
+	}
+
+	if a, ok := fr["browser_windows"].(string); ok {
+		bp.BrowserWindows = strings.Split(a, ",")
+	}
+
+	bp.Intro = body
+
+	c.Blueprint = bp
 	return nil
 }
 
