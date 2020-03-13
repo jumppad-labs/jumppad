@@ -66,7 +66,7 @@ jobs:
       - name: Replace checksum
         run: |
           wget "https://github.com/shipyard-run/shipyard/releases/download/v${{ steps.tag.outputs.value }}/shipyard_${{ steps.tag.outputs.value }}_Windows_x86_64.zip"
-          powershell -Command "(gc tools/chocolateyinstall.ps1) -replace '__checksum__', $(checksum -t sha256 -f shipyard_${{ steps.tag.outputs.value }}_Windows_x86_64.zip) | Out-File -encoding ASCII tools/chocolateyinstall.ps1"
+          powershell -Command "(gc tools/chocolateyinstall.ps1) -replace '__checksum__', '$(checksum -t sha256 -f shipyard_${{ steps.tag.outputs.value }}_Windows_x86_64.zip)' | Out-File -encoding ASCII tools/chocolateyinstall.ps1"
 
       - 
         name: Replace version
