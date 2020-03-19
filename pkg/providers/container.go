@@ -1,6 +1,8 @@
 package providers
 
 import (
+	"time"
+
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
@@ -8,14 +10,15 @@ import (
 
 // Container is a provider for creating and destroying Docker containers
 type Container struct {
-	config *config.Container
-	client clients.ContainerTasks
-	log    hclog.Logger
+	config     *config.Container
+	client     clients.ContainerTasks
+	httpClient clients.HTTP
+	log        hclog.Logger
 }
 
 // NewContainer creates a new container with the given config and Docker client
-func NewContainer(co *config.Container, cl clients.ContainerTasks, l hclog.Logger) *Container {
-	return &Container{co, cl, l}
+func NewContainer(co *config.Container, cl clients.ContainerTasks, hc clients.HTTP, l hclog.Logger) *Container {
+	return &Container{co, cl, hc, l}
 }
 
 // Create implements provider method and creates a Docker container with the given config
@@ -32,7 +35,21 @@ func (c *Container) Create() error {
 
 	_, err = c.client.CreateContainer(c.config)
 
-	return err
+	if c.config.HealthCheck == nil {
+		return err
+	}
+
+	// check the health of the container
+	if hc := c.config.HealthCheck.HTTP; hc != "" {
+		d, err := time.ParseDuration(c.config.HealthCheck.Timeout)
+		if err != nil {
+			return err
+		}
+
+		return c.httpClient.HealthCheckHTTP(hc, d)
+	}
+
+	return nil
 }
 
 // Destroy stops and removes the container

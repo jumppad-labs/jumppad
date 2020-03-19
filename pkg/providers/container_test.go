@@ -3,6 +3,7 @@ package providers
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
@@ -14,7 +15,8 @@ import (
 func TestContainerCreatesSuccessfully(t *testing.T) {
 	cc := config.NewContainer("tests")
 	md := &mocks.MockContainerTasks{}
-	c := NewContainer(cc, md, hclog.NewNullLogger())
+	hc := &mocks.MockHTTP{}
+	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
 	// check pulls image before creating container
 	md.On("PullImage", cc.Image, false).Once().Return(nil)
@@ -24,12 +26,37 @@ func TestContainerCreatesSuccessfully(t *testing.T) {
 
 	err := c.Create()
 	assert.NoError(t, err)
+
+	hc.AssertNotCalled(t, "HealthCheckHTTP", mock.Anything, mock.Anything)
+}
+
+func TestContainerRunsHTTPChecks(t *testing.T) {
+	cc := config.NewContainer("tests")
+	cc.HealthCheck = &config.HealthCheck{
+		Timeout: "30s",
+		HTTP:    "http://localhost:8500",
+	}
+
+	md := &mocks.MockContainerTasks{}
+	hc := &mocks.MockHTTP{}
+	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
+
+	md.On("PullImage", cc.Image, false).Once().Return(nil)
+	md.On("CreateContainer", cc).Once().Return("", nil)
+
+	hc.On("HealthCheckHTTP", mock.Anything, mock.Anything).Return(nil)
+
+	err := c.Create()
+	assert.NoError(t, err)
+
+	hc.AssertCalled(t, "HealthCheckHTTP", "http://localhost:8500", 30*time.Second)
 }
 
 func TestContainerDoesNOTCreateWhenPullImageFail(t *testing.T) {
 	cc := config.NewContainer("tests")
 	md := &mocks.MockContainerTasks{}
-	c := NewContainer(cc, md, hclog.NewNullLogger())
+	hc := &mocks.MockHTTP{}
+	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
 	// check pulls image before creating container and return an erro
 	imageErr := fmt.Errorf("Unable to pull image")
@@ -46,7 +73,8 @@ func TestContainerDestroysCorrectlyWhenContainerExists(t *testing.T) {
 	cc := config.NewContainer("tests")
 	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}}
 	md := &mocks.MockContainerTasks{}
-	c := NewContainer(cc, md, hclog.NewNullLogger())
+	hc := &mocks.MockHTTP{}
+	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
 	md.On("FindContainerIDs", cc.Name, cc.Type).Return([]string{"abc"}, nil)
 	md.On("RemoveContainer", "abc").Return(nil)
@@ -60,7 +88,8 @@ func TestContainerDoesNotDestroysWhenNotExists(t *testing.T) {
 	cc := config.NewContainer("tests")
 	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}}
 	md := &mocks.MockContainerTasks{}
-	c := NewContainer(cc, md, hclog.NewNullLogger())
+	hc := &mocks.MockHTTP{}
+	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
 	md.On("FindContainerIDs", cc.Name, cc.Type).Return(nil, nil)
 
@@ -73,7 +102,8 @@ func TestContainerDoesNotDestroysWhenLookupError(t *testing.T) {
 	cc := config.NewContainer("tests")
 	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}}
 	md := &mocks.MockContainerTasks{}
-	c := NewContainer(cc, md, hclog.NewNullLogger())
+	hc := &mocks.MockHTTP{}
+	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
 	md.On("FindContainerIDs", cc.Name, cc.Type).Return(nil, fmt.Errorf("boom"))
 
@@ -86,7 +116,8 @@ func TestContainerLooksupIDs(t *testing.T) {
 	cc := config.NewContainer("tests")
 	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}}
 	md := &mocks.MockContainerTasks{}
-	c := NewContainer(cc, md, hclog.NewNullLogger())
+	hc := &mocks.MockHTTP{}
+	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
 	md.On("FindContainerIDs", cc.Name, cc.Type).Return([]string{"abc"}, nil)
 

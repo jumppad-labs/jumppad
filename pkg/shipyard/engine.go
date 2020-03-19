@@ -317,7 +317,7 @@ func (e *EngineImpl) readConfig(path string) (*dag.AcyclicGraph, error) {
 func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
 	switch c.Info().Type {
 	case config.TypeContainer:
-		return providers.NewContainer(c.(*config.Container), cc.ContainerTasks, cc.Logger)
+		return providers.NewContainer(c.(*config.Container), cc.ContainerTasks, cc.HTTP, cc.Logger)
 	case config.TypeDocs:
 		return providers.NewDocs(c.(*config.Docs), cc.ContainerTasks, cc.Logger)
 	case config.TypeExecRemote:
