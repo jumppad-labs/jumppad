@@ -37,17 +37,13 @@ brews:
     name: shipyard
     github:
       owner: shipyard-run
-      name: brew
+      name: homebrew-repo
 
     commit_author:
       name: shipyardbot
       email: mail@shipyard.run
 
     homepage: "https://shipyard.run/"
-
-    dependencies:
-      - git
-      - docker
 
 nfpms:
   -
