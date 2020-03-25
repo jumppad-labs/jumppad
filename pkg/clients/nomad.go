@@ -1,10 +1,15 @@
 package clients
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 
 	"github.com/hashicorp/go-hclog"
+	"golang.org/x/xerrors"
 )
 
 // Nomad defines an interface for a Nomad client
@@ -18,20 +23,91 @@ type Nomad interface {
 type NomadImpl struct {
 	httpClient HTTP
 	l          hclog.Logger
+	c          *NomadConfig
 }
 
 // NewNomad creates a new Nomad client
 func NewNomad(c HTTP, l hclog.Logger) Nomad {
-	return &NomadImpl{c, l}
+	return &NomadImpl{httpClient: c, l: l}
+}
+
+type validateRequest struct {
+	JobHCL       string
+	Canonicalize bool
+}
+
+type createRequest struct {
+	Job string
 }
 
 // SetConfig loads the Nomad config from a file
 func (n *NomadImpl) SetConfig(nomadconfig string) error {
+	c := &NomadConfig{}
+	err := c.Load(nomadconfig)
+	if err != nil {
+		return err
+	}
+
+	n.c = c
+
 	return nil
 }
 
 // Apply the files to the nomad cluster and wait until all jobs are running
 func (n *NomadImpl) Apply(files []string, waitUntilReady bool) error {
+	for _, f := range files {
+		// load the file
+		d, err := ioutil.ReadFile(f)
+		if err != nil {
+			return xerrors.Errorf("Unable to read file %s: %w", f, err)
+		}
+
+		// build the request object
+		rd := validateRequest{
+			JobHCL: string(d),
+		}
+		jobData, _ := json.Marshal(rd)
+
+		// validate the config with the Nomad API
+		r, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/v1/jobs/parse", n.c.Location), bytes.NewReader(jobData))
+		if err != nil {
+			return xerrors.Errorf("Unable to create http request: %w", err)
+		}
+
+		resp, err := n.httpClient.Do(r)
+		if err != nil {
+			return xerrors.Errorf("Unable to validate job: %w", err)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			return xerrors.Errorf("Error validating job, got status code %d", resp.StatusCode)
+		}
+
+		// job is valid submit to the server
+		defer resp.Body.Close()
+		jsonJob, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return xerrors.Errorf("Unable to read job from validate response: %w", err)
+		}
+
+		cr := createRequest{Job: string(jsonJob)}
+		crData, _ := json.Marshal(cr)
+
+		r, err = http.NewRequest(http.MethodPost, fmt.Sprintf("%s/v1/jobs", n.c.Location), bytes.NewReader(crData))
+		if err != nil {
+			return xerrors.Errorf("Unable to create http request: %w", err)
+		}
+
+		resp, err = n.httpClient.Do(r)
+		if err != nil {
+			return xerrors.Errorf("Unable to submit job: %w", err)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			return xerrors.Errorf("Error submitting job, got status code %d", resp.StatusCode)
+		}
+	}
+
 	return nil
 }
 

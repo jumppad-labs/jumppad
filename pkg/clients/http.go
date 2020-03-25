@@ -19,7 +19,9 @@ type HTTP interface {
 	// HealthCheckNomad uses the Nomad API to check that all servers and nodes
 	// are ready. The function will block until either all nodes are healthy or the
 	// timeout period elapses.
-	HealthCheckNomad(api_addr string, nodeCount int, timeout time.Duration) error
+	HealthCheckNomad(apiAddr string, nodeCount int, timeout time.Duration) error
+	// Do executes a HTTP request and returns the response
+	Do(r *http.Request) (*http.Response, error)
 }
 
 type HTTPImpl struct {
@@ -52,6 +54,8 @@ func (h *HTTPImpl) HealthCheckHTTP(address string, timeout time.Duration) error 
 	}
 }
 
+// HealthCheckNomad executes a HTTP heathcheck for a Nomad cluster
+// TODO: move this function to the Nomad client
 func (h *HTTPImpl) HealthCheckNomad(address string, nodeCount int, timeout time.Duration) error {
 	h.l.Debug("Performing Nomad health check for address", "address", address)
 	st := time.Now()
@@ -85,4 +89,9 @@ func (h *HTTPImpl) HealthCheckNomad(address string, nodeCount int, timeout time.
 		// backoff
 		time.Sleep(h.backoff)
 	}
+}
+
+// Do executes a HTTP request and returns the response
+func (h *HTTPImpl) Do(r *http.Request) (*http.Response, error) {
+	return http.DefaultClient.Do(r)
 }
