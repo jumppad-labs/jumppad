@@ -21,3 +21,9 @@ nomad_cluster "dev" {
     value = "dc1"
   }
 }
+
+nomad_job "redis" {
+  cluster = "nomad_cluster.dev"
+
+  paths = ["./app_config/example2.nomad"]
+}

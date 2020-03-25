@@ -330,10 +330,12 @@ func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
 		return providers.NewIngress(c.(*config.Ingress), cc.ContainerTasks, cc.Logger)
 	case config.TypeK8sCluster:
 		return providers.NewK8sCluster(c.(*config.K8sCluster), cc.ContainerTasks, cc.Kubernetes, cc.HTTP, cc.Logger)
-	case config.TypeNomadCluster:
-		return providers.NewNomadCluster(c.(*config.NomadCluster), cc.ContainerTasks, cc.HTTP, cc.Logger)
 	case config.TypeK8sConfig:
 		return providers.NewK8sConfig(c.(*config.K8sConfig), cc.Kubernetes, cc.Logger)
+	case config.TypeNomadCluster:
+		return providers.NewNomadCluster(c.(*config.NomadCluster), cc.ContainerTasks, cc.HTTP, cc.Logger)
+	case config.TypeNomadJob:
+		return providers.NewNomadJob(c.(*config.NomadJob), cc.HTTP, cc.Logger)
 	case config.TypeNetwork:
 		return providers.NewNetwork(c.(*config.Network), cc.Docker, cc.Logger)
 	}

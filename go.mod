@@ -7,6 +7,7 @@ require (
 	github.com/MichaelMure/go-term-markdown v0.1.3
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/docker/docker v1.4.2-0.20200203170920-46ec8731fbce
+	github.com/docker/go v1.5.1-1 // indirect
 	github.com/docker/go-connections v0.4.0
 	github.com/gernest/front v0.0.0-20181129160812-ed80ca338b88
 	github.com/gosuri/uitable v0.0.4
@@ -23,6 +24,7 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.5.0
 	github.com/stretchr/testify v1.5.1
+	github.com/theupdateframework/notary v0.6.1 // indirect
 	github.com/zclconf/go-cty v1.2.1
 	golang.org/x/sys v0.0.0-20200212091648-12a6c2dcc1e4 // indirect
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543

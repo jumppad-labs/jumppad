@@ -1,5 +1,11 @@
 # Change Log
 
+## version 0.0.4
+
+### Container
+Allow HTTP health checks to be added to containers
+
+
 ## version 0.0.2
 
 ## Docs

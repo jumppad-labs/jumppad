@@ -188,6 +188,21 @@ func ParseHCLFile(file string, c *Config) error {
 
 			c.AddResource(cl)
 
+		case string(TypeNomadJob):
+			h := NewNomadJob(b.Labels[0])
+
+			err := decodeBody(b, h)
+			if err != nil {
+				return err
+			}
+
+			// make all the paths absolute
+			for i, p := range h.Paths {
+				h.Paths[i] = ensureAbsolute(p, file)
+			}
+
+			c.AddResource(h)
+
 		case string(TypeNetwork):
 			n := NewNetwork(b.Labels[0])
 
@@ -359,6 +374,10 @@ func ParseReferences(c *Config) error {
 			for _, n := range c.Networks {
 				c.DependsOn = append(c.DependsOn, n.Name)
 			}
+			c.DependsOn = append(c.DependsOn, c.Depends...)
+		case TypeNomadJob:
+			c := r.(*NomadJob)
+			c.DependsOn = append(c.DependsOn, c.Cluster)
 			c.DependsOn = append(c.DependsOn, c.Depends...)
 		}
 	}

@@ -240,6 +240,22 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 				}
 			}
 			c.AddResource(&t)
+		case TypeNomadJob:
+			t := NomadJob{}
+			err := mapstructure.Decode(mm, &t)
+			if err != nil {
+				return err
+			}
+			t.Name = mm["name"].(string)
+			t.Type = ResourceType(mm["type"].(string))
+			t.Status = Status(mm["status"].(string))
+
+			if d, ok := mm["depends_on"].([]interface{}); ok {
+				for _, i := range d {
+					t.DependsOn = append(t.DependsOn, i.(string))
+				}
+			}
+			c.AddResource(&t)
 		}
 	}
 
