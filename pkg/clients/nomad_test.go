@@ -35,7 +35,7 @@ func createTestFile(t *testing.T) (string, string, *mocks.MockHTTP) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte("testing"))),
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte(validateResponse))),
 		},
 		nil,
 	)
@@ -43,29 +43,29 @@ func createTestFile(t *testing.T) (string, string, *mocks.MockHTTP) {
 	return fp, tmpDir, mh
 }
 
-func TestNomadApplyReturnsErrorWhenFileNotExist(t *testing.T) {
+func TestNomadCreateReturnsErrorWhenFileNotExist(t *testing.T) {
 	_, tmpDir, mh := createTestFile(t)
 	defer os.RemoveAll(tmpDir)
 
 	c := NewNomad(mh, hclog.NewNullLogger())
-	err := c.Apply([]string{"../../functional_tests/test_fixtures/nomad/example.nomad"}, false)
+	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/example.nomad"}, false)
 	assert.Error(t, err)
 }
 
-func TestNomadApplyValidatesConfig(t *testing.T) {
+func TestNomadCreateValidatesConfig(t *testing.T) {
 	fp, tmpDir, mh := createTestFile(t)
 	defer os.RemoveAll(tmpDir)
 
 	c := NewNomad(mh, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	err := c.Apply([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"}, false)
+	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"}, false)
 	assert.NoError(t, err)
 
 	mh.AssertCalled(t, "Do", mock.Anything)
 }
 
-func TestNomadApplyValidateErrorReturnsError(t *testing.T) {
+func TestNomadCreateValidateErrorReturnsError(t *testing.T) {
 	fp, tmpDir, mh := createTestFile(t)
 	defer os.RemoveAll(tmpDir)
 
@@ -75,11 +75,11 @@ func TestNomadApplyValidateErrorReturnsError(t *testing.T) {
 	c := NewNomad(mh, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	err := c.Apply([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"}, false)
+	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"}, false)
 	assert.Error(t, err)
 }
 
-func TestNomadApplyValidateNot200ReturnsError(t *testing.T) {
+func TestNomadCreateValidateNot200ReturnsError(t *testing.T) {
 	fp, tmpDir, mh := createTestFile(t)
 	defer os.RemoveAll(tmpDir)
 
@@ -89,24 +89,24 @@ func TestNomadApplyValidateNot200ReturnsError(t *testing.T) {
 	c := NewNomad(mh, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	err := c.Apply([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"}, false)
+	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"}, false)
 	assert.Error(t, err)
 }
 
-func TestNomadApplySubmitsJob(t *testing.T) {
+func TestNomadCreateSubmitsJob(t *testing.T) {
 	fp, tmpDir, mh := createTestFile(t)
 	defer os.RemoveAll(tmpDir)
 
 	c := NewNomad(mh, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	err := c.Apply([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"}, false)
+	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"}, false)
 	assert.NoError(t, err)
 
 	mh.AssertNumberOfCalls(t, "Do", 2)
 }
 
-func TestNomadApplySubmitErrorReturnsError(t *testing.T) {
+func TestNomadCreateSubmitErrorReturnsError(t *testing.T) {
 	fp, tmpDir, mh := createTestFile(t)
 	defer os.RemoveAll(tmpDir)
 
@@ -123,11 +123,11 @@ func TestNomadApplySubmitErrorReturnsError(t *testing.T) {
 	c := NewNomad(mh, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	err := c.Apply([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"}, false)
+	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"}, false)
 	assert.Error(t, err)
 }
 
-func TestNomadApplySubmitNot200ReturnsError(t *testing.T) {
+func TestNomadCreateSubmitNot200ReturnsError(t *testing.T) {
 	fp, tmpDir, mh := createTestFile(t)
 	defer os.RemoveAll(tmpDir)
 
@@ -144,10 +144,91 @@ func TestNomadApplySubmitNot200ReturnsError(t *testing.T) {
 	c := NewNomad(mh, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	err := c.Apply([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"}, false)
+	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"}, false)
 	assert.Error(t, err)
 }
 
+func TestNomadStopValidatesConfig(t *testing.T) {
+	fp, tmpDir, mh := createTestFile(t)
+	defer os.RemoveAll(tmpDir)
+
+	c := NewNomad(mh, hclog.NewNullLogger())
+	c.SetConfig(fp)
+
+	err := c.Stop([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"})
+	assert.NoError(t, err)
+
+	mh.AssertCalled(t, "Do", mock.Anything)
+}
+
+func TestNomadStopValidateErrorReturnsError(t *testing.T) {
+	fp, tmpDir, mh := createTestFile(t)
+	defer os.RemoveAll(tmpDir)
+
+	removeOn(&mh.Mock, "Do")
+	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("Boom"))
+
+	c := NewNomad(mh, hclog.NewNullLogger())
+	c.SetConfig(fp)
+
+	err := c.Stop([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"})
+	assert.Error(t, err)
+}
+
+func TestNomadStopStopsJob(t *testing.T) {
+	fp, tmpDir, mh := createTestFile(t)
+	defer os.RemoveAll(tmpDir)
+
+	c := NewNomad(mh, hclog.NewNullLogger())
+	c.SetConfig(fp)
+
+	err := c.Stop([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"})
+	assert.NoError(t, err)
+
+	mh.AssertNumberOfCalls(t, "Do", 2)
+}
+
+func TestNomadStopErrorReturnsError(t *testing.T) {
+	fp, tmpDir, mh := createTestFile(t)
+	defer os.RemoveAll(tmpDir)
+
+	removeOn(&mh.Mock, "Do")
+	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
+		&http.Response{
+			StatusCode: http.StatusOK,
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte("testing"))),
+		},
+		nil,
+	).Once()
+	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
+
+	c := NewNomad(mh, hclog.NewNullLogger())
+	c.SetConfig(fp)
+
+	err := c.Stop([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"})
+	assert.Error(t, err)
+}
+
+func TestNomadStopNoStatus200ReturnsError(t *testing.T) {
+	fp, tmpDir, mh := createTestFile(t)
+	defer os.RemoveAll(tmpDir)
+
+	removeOn(&mh.Mock, "Do")
+	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
+		&http.Response{
+			StatusCode: http.StatusOK,
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte("testing"))),
+		},
+		nil,
+	).Once()
+	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusInternalServerError}, nil)
+
+	c := NewNomad(mh, hclog.NewNullLogger())
+	c.SetConfig(fp)
+
+	err := c.Stop([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"})
+	assert.Error(t, err)
+}
 func TestNomadConfigLoadsCorrectly(t *testing.T) {
 	fp, tmpDir, _ := createTestFile(t)
 	defer os.RemoveAll(tmpDir)
@@ -187,3 +268,14 @@ func getNomadConfig(l string) string {
 		"location": "http://%s"
 	}`, l)
 }
+
+var validateResponse = `
+{
+  "AllAtOnce": false,
+  "Constraints": null,
+  "Affinities": null,
+  "CreateIndex": 0,
+  "Datacenters": null,
+	"ID": "my-job"
+}
+`

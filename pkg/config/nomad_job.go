@@ -1,7 +1,7 @@
 package config
 
 // TypeNomadJob defines the string type for the Kubernetes config resource
-const TypeNomadJob ResourceType = "nomad_config"
+const TypeNomadJob ResourceType = "nomad_job"
 
 // NomadJob applies and deletes and deletes Nomad cluster jobs
 type NomadJob struct {
@@ -22,7 +22,7 @@ type NomadJob struct {
 
 // NewNomadJob creates a kubernetes config resource with the correct defaults
 func NewNomadJob(name string) *NomadJob {
-	return &NomadJob{ResourceInfo: ResourceInfo{Name: name, Type: TypeK8sConfig, Status: PendingCreation}}
+	return &NomadJob{ResourceInfo: ResourceInfo{Name: name, Type: TypeNomadJob, Status: PendingCreation}}
 }
 
 // Validate the K8sConfig and return errors

@@ -178,6 +178,22 @@ func ParseHCLFile(file string, c *Config) error {
 			}
 
 			c.AddResource(cl)
+
+		case string(TypeK8sConfig):
+			h := NewK8sConfig(b.Labels[0])
+
+			err := decodeBody(b, h)
+			if err != nil {
+				return err
+			}
+
+			// make all the paths absolute
+			for i, p := range h.Paths {
+				h.Paths[i] = ensureAbsolute(p, file)
+			}
+
+			c.AddResource(h)
+
 		case string(TypeNomadCluster):
 			cl := NewNomadCluster(b.Labels[0])
 
@@ -223,21 +239,6 @@ func ParseHCLFile(file string, c *Config) error {
 
 			h.Chart = ensureAbsolute(h.Chart, file)
 			h.Values = ensureAbsolute(h.Values, file)
-
-			c.AddResource(h)
-
-		case string(TypeK8sConfig):
-			h := NewK8sConfig(b.Labels[0])
-
-			err := decodeBody(b, h)
-			if err != nil {
-				return err
-			}
-
-			// make all the paths absolute
-			for i, p := range h.Paths {
-				h.Paths[i] = ensureAbsolute(p, file)
-			}
 
 			c.AddResource(h)
 

@@ -15,8 +15,9 @@ import (
 // Nomad defines an interface for a Nomad client
 type Nomad interface {
 	SetConfig(string) error
-	Apply(files []string, waitUntilReady bool) error
-	Delete(files []string) error
+	Create(files []string, waitUntilReady bool) error
+	Stop(files []string) error
+	ParseJob(file string) ([]byte, error)
 }
 
 // NomadImpl is an implementation of the Nomad interface
@@ -53,52 +54,25 @@ func (n *NomadImpl) SetConfig(nomadconfig string) error {
 	return nil
 }
 
-// Apply the files to the nomad cluster and wait until all jobs are running
-func (n *NomadImpl) Apply(files []string, waitUntilReady bool) error {
+// Create jobs in the Nomad cluster for the given files and wait until all jobs are running
+func (n *NomadImpl) Create(files []string, waitUntilReady bool) error {
 	for _, f := range files {
-		// load the file
-		d, err := ioutil.ReadFile(f)
+		// parse the job
+		jsonJob, err := n.ParseJob(f)
 		if err != nil {
-			return xerrors.Errorf("Unable to read file %s: %w", f, err)
+			return err
 		}
 
-		// build the request object
-		rd := validateRequest{
-			JobHCL: string(d),
-		}
-		jobData, _ := json.Marshal(rd)
+		// submit the job top the API
+		cr := createRequest{Job: string(jsonJob)}
+		crData, _ := json.Marshal(cr)
 
-		// validate the config with the Nomad API
-		r, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/v1/jobs/parse", n.c.Location), bytes.NewReader(jobData))
+		r, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/v1/jobs", n.c.Location), bytes.NewReader(crData))
 		if err != nil {
 			return xerrors.Errorf("Unable to create http request: %w", err)
 		}
 
 		resp, err := n.httpClient.Do(r)
-		if err != nil {
-			return xerrors.Errorf("Unable to validate job: %w", err)
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			return xerrors.Errorf("Error validating job, got status code %d", resp.StatusCode)
-		}
-
-		// job is valid submit to the server
-		defer resp.Body.Close()
-		jsonJob, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return xerrors.Errorf("Unable to read job from validate response: %w", err)
-		}
-
-		cr := createRequest{Job: string(jsonJob)}
-		crData, _ := json.Marshal(cr)
-
-		r, err = http.NewRequest(http.MethodPost, fmt.Sprintf("%s/v1/jobs", n.c.Location), bytes.NewReader(crData))
-		if err != nil {
-			return xerrors.Errorf("Unable to create http request: %w", err)
-		}
-
-		resp, err = n.httpClient.Do(r)
 		if err != nil {
 			return xerrors.Errorf("Unable to submit job: %w", err)
 		}
@@ -111,9 +85,80 @@ func (n *NomadImpl) Apply(files []string, waitUntilReady bool) error {
 	return nil
 }
 
-// Delete the files to the nomad cluster and wait until all jobs are running
-func (n *NomadImpl) Delete(files []string) error {
+// Stop the jobs defined in the files for the referenced Nomad cluster
+func (n *NomadImpl) Stop(files []string) error {
+	for _, f := range files {
+		// parse the job
+		jsonJob, err := n.ParseJob(f)
+		if err != nil {
+			return err
+		}
+
+		// convert to a map to read the ID
+		jobMap := make(map[string]interface{})
+		err = json.Unmarshal(jsonJob, &jobMap)
+		if err != nil {
+			return err
+		}
+
+		// stop the job
+		r, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/v1/job/%s", n.c.Location, jobMap["ID"].(string)), nil)
+		if err != nil {
+			return xerrors.Errorf("Unable to create http request: %w", err)
+		}
+
+		resp, err := n.httpClient.Do(r)
+		if err != nil {
+			return xerrors.Errorf("Unable to submit job: %w", err)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			return xerrors.Errorf("Error submitting job, got status code %d", resp.StatusCode)
+		}
+	}
+
 	return nil
+}
+
+// ParseJob validates a HCL job file with the Nomad API and returns a slice of
+// bytes representing the JSON payload.
+func (n *NomadImpl) ParseJob(file string) ([]byte, error) {
+	// load the file
+	d, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil, xerrors.Errorf("Unable to read file %s: %w", file, err)
+	}
+
+	// build the request object
+	rd := validateRequest{
+		JobHCL: string(d),
+	}
+	jobData, _ := json.Marshal(rd)
+
+	// validate the config with the Nomad API
+	r, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/v1/jobs/parse", n.c.Location), bytes.NewReader(jobData))
+	if err != nil {
+		return nil, xerrors.Errorf("Unable to create http request: %w", err)
+	}
+
+	resp, err := n.httpClient.Do(r)
+	if err != nil {
+		return nil, xerrors.Errorf("Unable to validate job: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, xerrors.Errorf("Error validating job, got status code %d", resp.StatusCode)
+	}
+
+	// job is valid submit to the server
+	defer resp.Body.Close()
+	jsonJob, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, xerrors.Errorf("Unable to read job from validate response: %w", err)
+	}
+
+	// return the job as a map
+	return jsonJob, nil
 }
 
 // NomadConfig defines a config file which is used to store Nomad cluster
