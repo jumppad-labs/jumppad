@@ -229,6 +229,38 @@ func TestNomadStopNoStatus200ReturnsError(t *testing.T) {
 	err := c.Stop([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
 }
+
+func TestNomadAllocationsRunningReturnsRunningAllocations(t *testing.T) {
+	fp, tmpDir, mh := createTestFile(t)
+	defer os.RemoveAll(tmpDir)
+
+	removeOn(&mh.Mock, "Do")
+	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
+		&http.Response{
+			StatusCode: http.StatusOK,
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte(validateResponse))),
+		},
+		nil,
+	).Once()
+
+	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
+		&http.Response{
+			StatusCode: http.StatusOK,
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte(allocationsResponse))),
+		},
+		nil,
+	)
+
+	c := NewNomad(mh, hclog.NewNullLogger())
+	c.SetConfig(fp)
+
+	s, err := c.AllocationsRunning("../../functional_tests/test_fixtures/nomad/app_config/example.nomad")
+	assert.NoError(t, err)
+
+	assert.True(t, s["ed344e0a-7290-d117-41d3-a64f853ca3c2"])
+	assert.False(t, s["ed344e0a-7290-d117-41d3-a64f853ca3c3"])
+}
+
 func TestNomadConfigLoadsCorrectly(t *testing.T) {
 	fp, tmpDir, _ := createTestFile(t)
 	defer os.RemoveAll(tmpDir)
@@ -278,4 +310,34 @@ var validateResponse = `
   "Datacenters": null,
 	"ID": "my-job"
 }
+`
+var allocationsResponse = `
+[
+  {
+    "ID": "ed344e0a-7290-d117-41d3-a64f853ca3c2",
+    "JobID": "example",
+    "TaskGroup": "cache",
+    "TaskStates": {
+      "redis": {
+				"State": "running"
+			},
+      "web": {
+				"State": "running"
+			}
+		}
+	},
+  {
+    "ID": "ed344e0a-7290-d117-41d3-a64f853ca3c3",
+    "JobID": "example",
+    "TaskGroup": "cache",
+    "TaskStates": {
+      "redis": {
+				"State": "running"
+			},
+      "web": {
+				"State": "stopped"
+			}
+		}
+	}
+]
 `

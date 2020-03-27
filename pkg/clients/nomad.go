@@ -18,6 +18,7 @@ type Nomad interface {
 	Create(files []string, waitUntilReady bool) error
 	Stop(files []string) error
 	ParseJob(file string) ([]byte, error)
+	AllocationsRunning(file string) (map[string]bool, error)
 }
 
 // NomadImpl is an implementation of the Nomad interface
@@ -88,21 +89,13 @@ func (n *NomadImpl) Create(files []string, waitUntilReady bool) error {
 // Stop the jobs defined in the files for the referenced Nomad cluster
 func (n *NomadImpl) Stop(files []string) error {
 	for _, f := range files {
-		// parse the job
-		jsonJob, err := n.ParseJob(f)
-		if err != nil {
-			return err
-		}
-
-		// convert to a map to read the ID
-		jobMap := make(map[string]interface{})
-		err = json.Unmarshal(jsonJob, &jobMap)
+		id, err := n.getJobID(f)
 		if err != nil {
 			return err
 		}
 
 		// stop the job
-		r, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/v1/job/%s", n.c.Location, jobMap["ID"].(string)), nil)
+		r, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/v1/job/%s", n.c.Location, id), nil)
 		if err != nil {
 			return xerrors.Errorf("Unable to create http request: %w", err)
 		}
@@ -159,6 +152,68 @@ func (n *NomadImpl) ParseJob(file string) ([]byte, error) {
 
 	// return the job as a map
 	return jsonJob, nil
+}
+
+// AllocationsRunning returns a map of allocations and if all the tasks within the job
+// are running
+func (n *NomadImpl) AllocationsRunning(file string) (map[string]bool, error) {
+	id, err := n.getJobID(file)
+	if err != nil {
+		return nil, err
+	}
+
+	// get the allocations for the job
+	r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v1/job/%s/allocations", n.c.Location, id), nil)
+	if err != nil {
+		return nil, xerrors.Errorf("Unable to create http request: %w", err)
+	}
+
+	resp, err := n.httpClient.Do(r)
+	if err != nil {
+		return nil, xerrors.Errorf("Unable to validate job: %w", err)
+	}
+	defer resp.Body.Close()
+
+	allocs := make([]map[string]interface{}, 0)
+	err = json.NewDecoder(resp.Body).Decode(&allocs)
+	if err != nil {
+		return nil, err
+	}
+
+	retData := map[string]bool{}
+
+	for _, a := range allocs {
+		running := true
+
+		// check the status of all the tasks
+		for _, t := range a["TaskStates"].(map[string]interface{}) {
+			if t.(map[string]interface{})["State"].(string) != "running" {
+				running = false
+				break
+			}
+		}
+
+		retData[a["ID"].(string)] = running
+	}
+
+	return retData, nil
+}
+
+func (n *NomadImpl) getJobID(file string) (string, error) {
+	// parse the job
+	jsonJob, err := n.ParseJob(file)
+	if err != nil {
+		return "", err
+	}
+
+	// convert to a map to read the ID
+	jobMap := make(map[string]interface{})
+	err = json.Unmarshal(jsonJob, &jobMap)
+	if err != nil {
+		return "", err
+	}
+
+	return jobMap["ID"].(string), nil
 }
 
 // NomadConfig defines a config file which is used to store Nomad cluster
