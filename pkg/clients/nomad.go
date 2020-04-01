@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"golang.org/x/xerrors"
@@ -19,6 +19,10 @@ type Nomad interface {
 	Stop(files []string) error
 	ParseJob(file string) ([]byte, error)
 	AllocationsRunning(file string) (map[string]bool, error)
+	// HealthCheckAPI uses the Nomad API to check that all servers and nodes
+	// are ready. The function will block until either all nodes are healthy or the
+	// timeout period elapses.
+	HealthCheckAPI(time.Duration) error
 }
 
 // NomadImpl is an implementation of the Nomad interface
@@ -26,11 +30,12 @@ type NomadImpl struct {
 	httpClient HTTP
 	l          hclog.Logger
 	c          *NomadConfig
+	backoff    time.Duration
 }
 
 // NewNomad creates a new Nomad client
-func NewNomad(c HTTP, l hclog.Logger) Nomad {
-	return &NomadImpl{httpClient: c, l: l}
+func NewNomad(c HTTP, backoff time.Duration, l hclog.Logger) Nomad {
+	return &NomadImpl{httpClient: c, l: l, backoff: backoff}
 }
 
 type validateRequest struct {
@@ -53,6 +58,51 @@ func (n *NomadImpl) SetConfig(nomadconfig string) error {
 	n.c = c
 
 	return nil
+}
+
+// HealthCheckAPI executes a HTTP heathcheck for a Nomad cluster
+func (n *NomadImpl) HealthCheckAPI(timeout time.Duration) error {
+	// get the address and the nodecount from the config
+	address := n.c.Location
+	nodeCount := n.c.NodeCount
+
+	n.l.Debug("Performing Nomad health check for address", "address", address)
+	st := time.Now()
+	for {
+		if time.Now().Sub(st) > timeout {
+			n.l.Error("Timeout wating for Nomad healthcheck", "address", address)
+
+			return fmt.Errorf("Timeout waiting for Nomad healthcheck %s", address)
+		}
+
+		rq, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v1/nodes", address), nil)
+		if err != nil {
+			return err
+		}
+
+		resp, err := n.httpClient.Do(rq)
+		if err == nil && resp.StatusCode == 200 {
+			nodes := []map[string]interface{}{}
+			// check number of nodes
+			json.NewDecoder(resp.Body).Decode(&nodes)
+
+			// loop nodes and check ready
+			readyCount := 0
+			for _, node := range nodes {
+				if node["Status"].(string) == "ready" {
+					readyCount++
+				}
+			}
+
+			if readyCount == nodeCount {
+				n.l.Debug("Nomad check complete", "address", address)
+				return nil
+			}
+		}
+
+		// backoff
+		time.Sleep(n.backoff)
+	}
 }
 
 // Create jobs in the Nomad cluster for the given files and wait until all jobs are running
@@ -214,40 +264,4 @@ func (n *NomadImpl) getJobID(file string) (string, error) {
 	}
 
 	return jobMap["ID"].(string), nil
-}
-
-// NomadConfig defines a config file which is used to store Nomad cluster
-// connection info
-type NomadConfig struct {
-	// Location of the Nomad cluster
-	Location string `json:"location"`
-}
-
-// Load the config from a file
-func (n *NomadConfig) Load(file string) error {
-	f, err := os.Open(file)
-	if err != nil {
-		return err
-	}
-
-	return json.NewDecoder(f).Decode(n)
-}
-
-// Save the config to a file
-func (n *NomadConfig) Save(file string) error {
-	// if the file exists delete
-	fs, err := os.Stat(file)
-	if err != nil && fs != nil {
-		err := os.Remove(file)
-		if err != nil {
-			return err
-		}
-	}
-
-	f, err := os.Create(file)
-	if err != nil {
-		return err
-	}
-
-	return json.NewEncoder(f).Encode(n)
 }

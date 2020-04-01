@@ -19,12 +19,6 @@ func (m *MockHTTP) HealthCheckHTTP(uri string, timeout time.Duration) error {
 	return args.Error(0)
 }
 
-func (m *MockHTTP) HealthCheckNomad(api_addr string, nodeCount int, timeout time.Duration) error {
-	args := m.Called(api_addr, nodeCount, timeout)
-
-	return args.Error(0)
-}
-
 func (m *MockHTTP) Do(r *http.Request) (*http.Response, error) {
 	args := m.Called(r)
 
