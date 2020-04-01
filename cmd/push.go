@@ -13,7 +13,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func newPushCmd(ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTTP, log hclog.Logger) *cobra.Command {
+func newPushCmd(ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTTP, nc clients.Nomad, l hclog.Logger) *cobra.Command {
 	return &cobra.Command{
 		Use:                   "push [image] [cluster]",
 		Short:                 "Push a local Docker image to a cluster",
@@ -50,9 +50,9 @@ func newPushCmd(ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTT
 
 			switch p.Info().Type {
 			case config.TypeK8sCluster:
-				return pushK8sCluster(image, p.(*config.K8sCluster), ct, kc, ht, log)
+				return pushK8sCluster(image, p.(*config.K8sCluster), ct, kc, ht, l)
 			case config.TypeNomadCluster:
-				return pushNomadCluster(image, p.(*config.NomadCluster), ct, ht, log)
+				return pushNomadCluster(image, p.(*config.NomadCluster), ct, nc, l)
 			}
 
 			return nil
@@ -80,7 +80,7 @@ func pushK8sCluster(image string, c *config.K8sCluster, ct clients.ContainerTask
 	return nil
 }
 
-func pushNomadCluster(image string, c *config.NomadCluster, ct clients.ContainerTasks, ht clients.HTTP, log hclog.Logger) error {
+func pushNomadCluster(image string, c *config.NomadCluster, ct clients.ContainerTasks, ht clients.Nomad, log hclog.Logger) error {
 	cl := providers.NewNomadCluster(c, ct, ht, log)
 
 	// get the id of the cluster

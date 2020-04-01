@@ -10,8 +10,14 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
 
+      - name: Setup Go version
+        uses: actions/setup-go@v2-beta
+        with:
+          go-version: '1.13.9' # The Go version to download (if necessary) and use.
+
       - name: Get dependencies
         run: |
+          go version
           go get -v -t ./...
 
       - name: Unit Test
@@ -32,9 +38,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Build and install 
-      run: make install_local
+      - uses: actions/checkout@v2
+      
+      - name: Setup Go version
+        uses: actions/setup-go@v2-beta
+        with:
+          go-version: '1.13.9' # The Go version to download (if necessary) and use.
+      
+      - name: Build and install 
+        run: make install_local
     
-    - name: Run tests
-      run: make test_functional
+      - name: Run tests
+        run: make test_functional

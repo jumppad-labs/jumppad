@@ -1,6 +1,9 @@
 package mocks
 
 import (
+	"bytes"
+	"io/ioutil"
+	"net/http"
 	"time"
 
 	"github.com/stretchr/testify/mock"
@@ -18,8 +21,15 @@ func (m *MockHTTP) HealthCheckHTTP(uri string, timeout time.Duration) error {
 	return args.Error(0)
 }
 
-func (m *MockHTTP) HealthCheckNomad(api_addr string, nodeCount int, timeout time.Duration) error {
-	args := m.Called(api_addr, nodeCount, timeout)
+func (m *MockHTTP) Do(r *http.Request) (*http.Response, error) {
+	args := m.Called(r)
 
-	return args.Error(0)
+	if rr, ok := args.Get(0).(*http.Response); ok {
+		return rr, args.Error(1)
+	}
+
+	return &http.Response{
+		StatusCode: http.StatusTeapot,
+		Body:       ioutil.NopCloser(bytes.NewReader([]byte(""))),
+	}, args.Error(1)
 }

@@ -161,7 +161,7 @@ func (c *Config) RemoveResource(rf Resource) error {
 	return ResourceNotFoundError{}
 }
 
-// DoYaLikeDAGs dags? yeah dags! oh, dogs.
+// DoYaLikeDAGs? dags? yeah dags! oh dogs.
 // https://www.youtube.com/watch?v=ZXILzUpVx7A&t=0s
 func (c *Config) DoYaLikeDAGs() (*dag.AcyclicGraph, error) {
 	// create root node

@@ -15,14 +15,14 @@ const nomadBaseImage = "shipyardrun/nomad"
 
 // NomadCluster defines a provider which can create Kubernetes clusters
 type NomadCluster struct {
-	config     *config.NomadCluster
-	client     clients.ContainerTasks
-	httpClient clients.HTTP
-	log        hclog.Logger
+	config      *config.NomadCluster
+	client      clients.ContainerTasks
+	nomadClient clients.Nomad
+	log         hclog.Logger
 }
 
 // NewNomadCluster creates a new Nomad cluster provider
-func NewNomadCluster(c *config.NomadCluster, cc clients.ContainerTasks, hc clients.HTTP, l hclog.Logger) *NomadCluster {
+func NewNomadCluster(c *config.NomadCluster, cc clients.ContainerTasks, hc clients.Nomad, l hclog.Logger) *NomadCluster {
 	return &NomadCluster{c, cc, hc, l}
 }
 
@@ -112,20 +112,18 @@ func (c *NomadCluster) createNomad() error {
 		return err
 	}
 
-	// import the images to the servers docker instance
-	// importing images means that Nomad does not need to pull from a remote docker hub
-	if c.config.Images != nil && len(c.config.Images) > 0 {
-		//return c.ImportLocalDockerImages(c.config.Images)
-	}
+	// generate the config file
+	nomadConfig := clients.NomadConfig{Location: fmt.Sprintf("http://localhost:%d", apiPort), NodeCount: 1}
+	_, configPath := utils.CreateNomadConfigPath(c.config.Name)
 
-	// wait for nomad to start
-	err = c.httpClient.HealthCheckHTTP(fmt.Sprintf("http://localhost:%d/v1/status/leader", apiPort), startTimeout)
+	err = nomadConfig.Save(configPath)
 	if err != nil {
-		return err
+		return xerrors.Errorf("Unable to generate Nomad config: %w", err)
 	}
 
 	// ensure all client nodes are up
-	err = c.httpClient.HealthCheckNomad(fmt.Sprintf("http://localhost:%d", apiPort), c.config.Nodes, startTimeout)
+	c.nomadClient.SetConfig(configPath)
+	err = c.nomadClient.HealthCheckAPI(startTimeout)
 	if err != nil {
 		return err
 	}

@@ -111,6 +111,23 @@ func TestCreateKubeConfigPathReturnsCorrectValues(t *testing.T) {
 	assert.True(t, s.IsDir())
 }
 
+func TestCreateNomadConfigPathReturnsCorrectValues(t *testing.T) {
+	home := os.Getenv("HOME")
+	tmp, _ := ioutil.TempDir("", "")
+	os.Setenv("HOME", tmp)
+	defer os.Setenv("HOME", home)
+
+	d, f := CreateNomadConfigPath("testing")
+
+	assert.Equal(t, filepath.Join(tmp, ".shipyard", "config", "testing"), d)
+	assert.Equal(t, filepath.Join(tmp, ".shipyard", "config", "testing", "nomad.json"), f)
+
+	// check creates folder
+	s, err := os.Stat(d)
+	assert.NoError(t, err)
+	assert.True(t, s.IsDir())
+}
+
 func TestIsHCLFile(t *testing.T) {
 	tests := []struct {
 		name string

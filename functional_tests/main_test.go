@@ -13,13 +13,14 @@ import (
 	"testing"
 	"time"
 
+	"os/exec"
+
 	"github.com/DATA-DOG/godog"
 	"github.com/DATA-DOG/godog/colors"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
-	"k8s.io/utils/exec"
 )
 
 var currentClients *shipyard.Clients
@@ -73,8 +74,10 @@ func FeatureContext(s *godog.Suite) {
 	})
 
 	s.AfterScenario(func(interface{}, error) {
-		ex := exec.New()
-		cmd := ex.Command("yard-dev", []string{"destroy"}...)
+		fmt.Println("")
+		cmd := exec.Command("yard-dev", []string{"destroy"}...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 		cmd.Run()
 	})
 }
@@ -88,9 +91,19 @@ func iRunApply(config string) error {
 	}
 
 	// run the shipyard executable
-	ex := exec.New()
-	cmd := ex.Command("yard-dev", []string{"run", config}...)
-	return cmd.Run()
+	cmd := exec.Command("yard-dev", []string{"run", "--no-browser", config}...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	runErr := cmd.Run()
+
+	if runErr != nil {
+		if exitError, ok := runErr.(*exec.ExitError); ok {
+			return fmt.Errorf("Shipyard command exited with status code %d", exitError.ExitCode())
+		}
+	}
+
+	return nil
 }
 
 func thereShouldBeContainerRunningCalled(arg1 int, arg2 string) error {
@@ -147,7 +160,7 @@ func thereShouldBe1NetworkCalled(arg1 string) error {
 func aCallToShouldResultInStatus(arg1 string, arg2 int) error {
 	// try 100 times
 	var err error
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 200; i++ {
 		var resp *http.Response
 		resp, err = http.Get(arg1)
 

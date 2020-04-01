@@ -1,7 +1,6 @@
 package clients
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -16,10 +15,8 @@ type HTTP interface {
 	// If it is not possible to contact the URI or if any status other than 200 is returned
 	// by the upstream, then the URI is retried until the timeout elapses.
 	HealthCheckHTTP(uri string, timeout time.Duration) error
-	// HealthCheckNomad uses the Nomad API to check that all servers and nodes
-	// are ready. The function will block until either all nodes are healthy or the
-	// timeout period elapses.
-	HealthCheckNomad(api_addr string, nodeCount int, timeout time.Duration) error
+	// Do executes a HTTP request and returns the response
+	Do(r *http.Request) (*http.Response, error)
 }
 
 type HTTPImpl struct {
@@ -52,37 +49,7 @@ func (h *HTTPImpl) HealthCheckHTTP(address string, timeout time.Duration) error 
 	}
 }
 
-func (h *HTTPImpl) HealthCheckNomad(address string, nodeCount int, timeout time.Duration) error {
-	h.l.Debug("Performing Nomad health check for address", "address", address)
-	st := time.Now()
-	for {
-		if time.Now().Sub(st) > timeout {
-			h.l.Error("Timeout wating for Nomad healthcheck", "address", address)
-
-			return fmt.Errorf("Timeout waiting for Nomad healthcheck %s", address)
-		}
-
-		resp, err := http.Get(fmt.Sprintf("%s/v1/nodes", address))
-		if err == nil && resp.StatusCode == 200 {
-			nodes := []map[string]interface{}{}
-			// check number of nodes
-			json.NewDecoder(resp.Body).Decode(&nodes)
-
-			// loop nodes and check ready
-			readyCount := 0
-			for _, n := range nodes {
-				if n["Status"].(string) == "ready" {
-					readyCount++
-				}
-			}
-
-			if readyCount == nodeCount {
-				h.l.Debug("Nomad check complete", "address", address)
-				return nil
-			}
-		}
-
-		// backoff
-		time.Sleep(h.backoff)
-	}
+// Do executes a HTTP request and returns the response
+func (h *HTTPImpl) Do(r *http.Request) (*http.Response, error) {
+	return http.DefaultClient.Do(r)
 }

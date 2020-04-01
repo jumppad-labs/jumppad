@@ -123,8 +123,7 @@ func parseYardMarkdown(file string, c *Config) error {
 	m.Handle("---", front.YAMLHandler)
 
 	fr, body, err := m.Parse(f)
-	if err != nil {
-
+	if err != nil && err != front.ErrIsEmpty {
 		return err
 	}
 
@@ -178,6 +177,22 @@ func ParseHCLFile(file string, c *Config) error {
 			}
 
 			c.AddResource(cl)
+
+		case string(TypeK8sConfig):
+			h := NewK8sConfig(b.Labels[0])
+
+			err := decodeBody(b, h)
+			if err != nil {
+				return err
+			}
+
+			// make all the paths absolute
+			for i, p := range h.Paths {
+				h.Paths[i] = ensureAbsolute(p, file)
+			}
+
+			c.AddResource(h)
+
 		case string(TypeNomadCluster):
 			cl := NewNomadCluster(b.Labels[0])
 
@@ -187,6 +202,21 @@ func ParseHCLFile(file string, c *Config) error {
 			}
 
 			c.AddResource(cl)
+
+		case string(TypeNomadJob):
+			h := NewNomadJob(b.Labels[0])
+
+			err := decodeBody(b, h)
+			if err != nil {
+				return err
+			}
+
+			// make all the paths absolute
+			for i, p := range h.Paths {
+				h.Paths[i] = ensureAbsolute(p, file)
+			}
+
+			c.AddResource(h)
 
 		case string(TypeNetwork):
 			n := NewNetwork(b.Labels[0])
@@ -208,21 +238,6 @@ func ParseHCLFile(file string, c *Config) error {
 
 			h.Chart = ensureAbsolute(h.Chart, file)
 			h.Values = ensureAbsolute(h.Values, file)
-
-			c.AddResource(h)
-
-		case string(TypeK8sConfig):
-			h := NewK8sConfig(b.Labels[0])
-
-			err := decodeBody(b, h)
-			if err != nil {
-				return err
-			}
-
-			// make all the paths absolute
-			for i, p := range h.Paths {
-				h.Paths[i] = ensureAbsolute(p, file)
-			}
 
 			c.AddResource(h)
 
@@ -359,6 +374,10 @@ func ParseReferences(c *Config) error {
 			for _, n := range c.Networks {
 				c.DependsOn = append(c.DependsOn, n.Name)
 			}
+			c.DependsOn = append(c.DependsOn, c.Depends...)
+		case TypeNomadJob:
+			c := r.(*NomadJob)
+			c.DependsOn = append(c.DependsOn, c.Cluster)
 			c.DependsOn = append(c.DependsOn, c.Depends...)
 		}
 	}
