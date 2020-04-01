@@ -113,7 +113,7 @@ func (c *NomadCluster) createNomad() error {
 	}
 
 	// generate the config file
-	nomadConfig := clients.NomadConfig{Location: fmt.Sprintf("https://localhost:%d", apiPort), NodeCount: 1}
+	nomadConfig := clients.NomadConfig{Location: fmt.Sprintf("http://localhost:%d", apiPort), NodeCount: 1}
 	_, configPath := utils.CreateNomadConfigPath(c.config.Name)
 
 	err = nomadConfig.Save(configPath)

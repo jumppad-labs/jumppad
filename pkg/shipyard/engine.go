@@ -339,7 +339,7 @@ func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
 	case config.TypeNomadCluster:
 		return providers.NewNomadCluster(c.(*config.NomadCluster), cc.ContainerTasks, cc.Nomad, cc.Logger)
 	case config.TypeNomadJob:
-		return providers.NewNomadJob(c.(*config.NomadJob), cc.HTTP, cc.Logger)
+		return providers.NewNomadJob(c.(*config.NomadJob), cc.Nomad, cc.Logger)
 	case config.TypeNetwork:
 		return providers.NewNetwork(c.(*config.Network), cc.Docker, cc.Logger)
 	}

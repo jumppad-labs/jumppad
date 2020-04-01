@@ -13,8 +13,6 @@ type NomadJob struct {
 	Cluster string `hcl:"cluster" json:"cluster"`
 	// Path of a file or directory of Job files to apply
 	Paths []string `hcl:"paths" validator:"filepath" json:"paths"`
-	// WaitUntilReady when set to true waits until all resources have been created and are in a "Running" state
-	WaitUntilReady bool `hcl:"wait_until_ready"`
 
 	// HealthCheck defines a health check for the resource
 	HealthCheck *HealthCheck `hcl:"health_check,block"`

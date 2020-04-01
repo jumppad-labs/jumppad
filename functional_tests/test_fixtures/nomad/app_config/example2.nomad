@@ -30,7 +30,7 @@ job "example_2" {
     }
     
     ephemeral_disk {
-      size = 30
+      size = 200
     }
 
     task "redis" {

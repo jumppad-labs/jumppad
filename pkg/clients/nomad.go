@@ -17,13 +17,13 @@ type Nomad interface {
 	// SetConfig for the client, path is a valid Nomad JSON config file
 	SetConfig(string) error
 	// Create jobs in the provided files
-	Create(files []string, waitUntilReady bool) error
+	Create(files []string) error
 	// Stop jobs in the provided files
 	Stop(files []string) error
 	// ParseJob in the given file and return a JSON blob representing the HCL job
 	ParseJob(file string) ([]byte, error)
-	// AllocationsRunning in the job specifed by file
-	AllocationsRunning(file string) (map[string]bool, error)
+	// JobStatus returns the status for the given job
+	JobStatus(job string) (string, error)
 	// HealthCheckAPI uses the Nomad API to check that all servers and nodes
 	// are ready. The function will block until either all nodes are healthy or the
 	// timeout period elapses.
@@ -111,7 +111,7 @@ func (n *NomadImpl) HealthCheckAPI(timeout time.Duration) error {
 }
 
 // Create jobs in the Nomad cluster for the given files and wait until all jobs are running
-func (n *NomadImpl) Create(files []string, waitUntilReady bool) error {
+func (n *NomadImpl) Create(files []string) error {
 	for _, f := range files {
 		// parse the job
 		jsonJob, err := n.ParseJob(f)
@@ -120,10 +120,9 @@ func (n *NomadImpl) Create(files []string, waitUntilReady bool) error {
 		}
 
 		// submit the job top the API
-		cr := createRequest{Job: string(jsonJob)}
-		crData, _ := json.Marshal(cr)
+		cr := fmt.Sprintf(`{"Job": %s}`, string(jsonJob))
 
-		r, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/v1/jobs", n.c.Location), bytes.NewReader(crData))
+		r, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/v1/jobs", n.c.Location), bytes.NewReader([]byte(cr)))
 		if err != nil {
 			return xerrors.Errorf("Unable to create http request: %w", err)
 		}
@@ -132,9 +131,12 @@ func (n *NomadImpl) Create(files []string, waitUntilReady bool) error {
 		if err != nil {
 			return xerrors.Errorf("Unable to submit job: %w", err)
 		}
+		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			return xerrors.Errorf("Error submitting job, got status code %d", resp.StatusCode)
+			// try to read the body for the error
+			d, _ := ioutil.ReadAll(resp.Body)
+			return xerrors.Errorf("Error submitting job, got status code %d, error: %s", resp.StatusCode, string(d))
 		}
 	}
 
@@ -209,49 +211,27 @@ func (n *NomadImpl) ParseJob(file string) ([]byte, error) {
 	return jsonJob, nil
 }
 
-// AllocationsRunning returns a map of allocations and if all the tasks within the job
-// are running
-func (n *NomadImpl) AllocationsRunning(file string) (map[string]bool, error) {
-	id, err := n.getJobID(file)
-	if err != nil {
-		return nil, err
-	}
-
+// JobStatus returns a string status for the given job
+func (n *NomadImpl) JobStatus(job string) (string, error) {
 	// get the allocations for the job
-	r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v1/job/%s/allocations", n.c.Location, id), nil)
+	r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v1/job/%s", n.c.Location, job), nil)
 	if err != nil {
-		return nil, xerrors.Errorf("Unable to create http request: %w", err)
+		return "", xerrors.Errorf("Unable to create http request: %w", err)
 	}
 
 	resp, err := n.httpClient.Do(r)
 	if err != nil {
-		return nil, xerrors.Errorf("Unable to validate job: %w", err)
+		return "", xerrors.Errorf("Unable to validate job: %w", err)
 	}
 	defer resp.Body.Close()
 
-	allocs := make([]map[string]interface{}, 0)
-	err = json.NewDecoder(resp.Body).Decode(&allocs)
+	jobDetail := make(map[string]interface{}, 0)
+	err = json.NewDecoder(resp.Body).Decode(&jobDetail)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	retData := map[string]bool{}
-
-	for _, a := range allocs {
-		running := true
-
-		// check the status of all the tasks
-		for _, t := range a["TaskStates"].(map[string]interface{}) {
-			if t.(map[string]interface{})["State"].(string) != "running" {
-				running = false
-				break
-			}
-		}
-
-		retData[a["ID"].(string)] = running
-	}
-
-	return retData, nil
+	return jobDetail["Status"].(string), nil
 }
 
 func (n *NomadImpl) getJobID(file string) (string, error) {

@@ -26,5 +26,8 @@ nomad_job "redis" {
   cluster = "nomad_cluster.dev"
 
   paths = ["./app_config/example2.nomad"]
-  wait_until_ready = false
+  health_check {
+    timeout = "60s"
+    nomad_jobs = ["example_2"]
+  }
 }

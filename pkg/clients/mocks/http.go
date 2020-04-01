@@ -1,6 +1,8 @@
 package mocks
 
 import (
+	"bytes"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -26,5 +28,8 @@ func (m *MockHTTP) Do(r *http.Request) (*http.Response, error) {
 		return rr, args.Error(1)
 	}
 
-	return nil, args.Error(1)
+	return &http.Response{
+		StatusCode: http.StatusTeapot,
+		Body:       ioutil.NopCloser(bytes.NewReader([]byte(""))),
+	}, args.Error(1)
 }

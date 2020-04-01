@@ -49,7 +49,7 @@ func TestNomadCreateReturnsErrorWhenFileNotExist(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
-	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/example.nomad"}, false)
+	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/example.nomad"})
 	assert.Error(t, err)
 }
 
@@ -60,7 +60,7 @@ func TestNomadCreateValidatesConfig(t *testing.T) {
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"}, false)
+	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"})
 	assert.NoError(t, err)
 
 	mh.AssertCalled(t, "Do", mock.Anything)
@@ -76,7 +76,7 @@ func TestNomadCreateValidateErrorReturnsError(t *testing.T) {
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"}, false)
+	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
 }
 
@@ -90,7 +90,7 @@ func TestNomadCreateValidateNot200ReturnsError(t *testing.T) {
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"}, false)
+	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
 }
 
@@ -101,7 +101,7 @@ func TestNomadCreateSubmitsJob(t *testing.T) {
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"}, false)
+	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"})
 	assert.NoError(t, err)
 
 	mh.AssertNumberOfCalls(t, "Do", 2)
@@ -125,7 +125,7 @@ func TestNomadCreateSubmitErrorReturnsError(t *testing.T) {
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"}, false)
+	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
 }
 
@@ -142,12 +142,18 @@ func TestNomadCreateSubmitNot200ReturnsError(t *testing.T) {
 		nil,
 	).Once()
 
-	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusInternalServerError}, nil)
+	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
+		&http.Response{
+			StatusCode: http.StatusInternalServerError,
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte("testing"))),
+		},
+		nil,
+	)
 
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"}, false)
+	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
 }
 
@@ -234,19 +240,11 @@ func TestNomadStopNoStatus200ReturnsError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestNomadAllocationsRunningReturnsRunningAllocations(t *testing.T) {
+func TestNomadJobStatusReturnsStatus(t *testing.T) {
 	fp, tmpDir, mh := setupNomadTests(t)
 	defer os.RemoveAll(tmpDir)
 
 	removeOn(&mh.Mock, "Do")
-	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
-		&http.Response{
-			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(validateResponse))),
-		},
-		nil,
-	).Once()
-
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusOK,
@@ -258,11 +256,10 @@ func TestNomadAllocationsRunningReturnsRunningAllocations(t *testing.T) {
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	s, err := c.AllocationsRunning("../../functional_tests/test_fixtures/nomad/app_config/example.nomad")
+	s, err := c.JobStatus("test")
 	assert.NoError(t, err)
 
-	assert.True(t, s["ed344e0a-7290-d117-41d3-a64f853ca3c2"])
-	assert.False(t, s["ed344e0a-7290-d117-41d3-a64f853ca3c3"])
+	assert.Equal(t, "running", s)
 }
 
 func TestNomadHealthCallsAPI(t *testing.T) {
@@ -365,10 +362,10 @@ var validateResponse = `
 }
 `
 var allocationsResponse = `
-[
-  {
+{
     "ID": "ed344e0a-7290-d117-41d3-a64f853ca3c2",
-    "JobID": "example",
+		"JobID": "example",
+		"Status": "running",
     "TaskGroup": "cache",
     "TaskStates": {
       "redis": {
@@ -379,18 +376,5 @@ var allocationsResponse = `
 			}
 		}
 	},
-  {
-    "ID": "ed344e0a-7290-d117-41d3-a64f853ca3c3",
-    "JobID": "example",
-    "TaskGroup": "cache",
-    "TaskStates": {
-      "redis": {
-				"State": "running"
-			},
-      "web": {
-				"State": "stopped"
-			}
-		}
-	}
-]
+}
 `

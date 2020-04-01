@@ -123,8 +123,7 @@ func parseYardMarkdown(file string, c *Config) error {
 	m.Handle("---", front.YAMLHandler)
 
 	fr, body, err := m.Parse(f)
-	if err != nil {
-
+	if err != nil && err != front.ErrIsEmpty {
 		return err
 	}
 
