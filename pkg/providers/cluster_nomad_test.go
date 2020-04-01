@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -34,6 +35,7 @@ func setupNomadClusterMocks() (*config.NomadCluster, *mocks.MockContainerTasks, 
 	md.On("DetachNetwork", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	mh := &mocks.MockNomad{}
+	mh.On("SetConfig", mock.Anything).Return(nil)
 	mh.On("HealthCheckAPI", mock.Anything).Return(nil)
 
 	// set the home folder to a temp folder
@@ -143,6 +145,19 @@ func TestClusterNomadCreatesAServer(t *testing.T) {
 	assert.GreaterOrEqual(t, params.Ports[0].Local, 4646)
 	assert.GreaterOrEqual(t, params.Ports[0].Host, 64000)
 	assert.Equal(t, "tcp", params.Ports[0].Protocol)
+}
+
+func TestClusterNomadGeneratesConfig(t *testing.T) {
+	cc, md, mh, cleanup := setupNomadClusterMocks()
+	defer cleanup()
+
+	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	_, configPath := utils.CreateNomadConfigPath(cc.Name)
+	assert.FileExists(t, configPath)
 }
 
 func TestClusterNomadHealthChecksAPI(t *testing.T) {

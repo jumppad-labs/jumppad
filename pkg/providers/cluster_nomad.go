@@ -112,7 +112,17 @@ func (c *NomadCluster) createNomad() error {
 		return err
 	}
 
+	// generate the config file
+	nomadConfig := clients.NomadConfig{Location: fmt.Sprintf("https://localhost:%d", apiPort), NodeCount: 1}
+	_, configPath := utils.CreateNomadConfigPath(c.config.Name)
+
+	err = nomadConfig.Save(configPath)
+	if err != nil {
+		return xerrors.Errorf("Unable to generate Nomad config: %w", err)
+	}
+
 	// ensure all client nodes are up
+	c.nomadClient.SetConfig(configPath)
 	err = c.nomadClient.HealthCheckAPI(startTimeout)
 	if err != nil {
 		return err

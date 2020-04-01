@@ -39,6 +39,7 @@ func (n *NomadConfig) Save(file string) error {
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
 	return json.NewEncoder(f).Encode(n)
 }
