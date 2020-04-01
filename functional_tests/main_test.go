@@ -73,8 +73,11 @@ func FeatureContext(s *godog.Suite) {
 	})
 
 	s.AfterScenario(func(interface{}, error) {
+		fmt.Println("")
 		ex := exec.New()
 		cmd := ex.Command("yard-dev", []string{"destroy"}...)
+		cmd.SetStdout(os.Stdout)
+		cmd.SetStderr(os.Stderr)
 		cmd.Run()
 	})
 }
@@ -89,7 +92,9 @@ func iRunApply(config string) error {
 
 	// run the shipyard executable
 	ex := exec.New()
-	cmd := ex.Command("yard-dev", []string{"run", config}...)
+	cmd := ex.Command("yard-dev", []string{"run", "--no-browser", config}...)
+	cmd.SetStdout(os.Stdout)
+	cmd.SetStderr(os.Stderr)
 	return cmd.Run()
 }
 
