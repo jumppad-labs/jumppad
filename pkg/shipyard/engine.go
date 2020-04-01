@@ -29,6 +29,7 @@ type Clients struct {
 	Kubernetes     clients.Kubernetes
 	Helm           clients.Helm
 	HTTP           clients.HTTP
+	Nomad          clients.Nomad
 	Command        clients.Command
 	Logger         hclog.Logger
 	Blueprints     clients.Blueprints
@@ -73,6 +74,8 @@ func GenerateClients(l hclog.Logger) (*Clients, error) {
 
 	hc := clients.NewHTTP(1*time.Second, l)
 
+	nc := clients.NewNomad(hc, 1*time.Second, l)
+
 	bp := &clients.BlueprintsImpl{}
 
 	bc := &clients.BrowserImpl{}
@@ -84,6 +87,7 @@ func GenerateClients(l hclog.Logger) (*Clients, error) {
 		Helm:           hec,
 		Command:        ec,
 		HTTP:           hc,
+		Nomad:          nc,
 		Logger:         l,
 		Blueprints:     bp,
 		Browser:        bc,
@@ -333,7 +337,7 @@ func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
 	case config.TypeK8sConfig:
 		return providers.NewK8sConfig(c.(*config.K8sConfig), cc.Kubernetes, cc.Logger)
 	case config.TypeNomadCluster:
-		return providers.NewNomadCluster(c.(*config.NomadCluster), cc.ContainerTasks, cc.HTTP, cc.Logger)
+		return providers.NewNomadCluster(c.(*config.NomadCluster), cc.ContainerTasks, cc.Nomad, cc.Logger)
 	case config.TypeNomadJob:
 		return providers.NewNomadJob(c.(*config.NomadJob), cc.HTTP, cc.Logger)
 	case config.TypeNetwork:

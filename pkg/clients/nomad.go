@@ -14,10 +14,15 @@ import (
 
 // Nomad defines an interface for a Nomad client
 type Nomad interface {
+	// SetConfig for the client, path is a valid Nomad JSON config file
 	SetConfig(string) error
+	// Create jobs in the provided files
 	Create(files []string, waitUntilReady bool) error
+	// Stop jobs in the provided files
 	Stop(files []string) error
+	// ParseJob in the given file and return a JSON blob representing the HCL job
 	ParseJob(file string) ([]byte, error)
+	// AllocationsRunning in the job specifed by file
 	AllocationsRunning(file string) (map[string]bool, error)
 	// HealthCheckAPI uses the Nomad API to check that all servers and nodes
 	// are ready. The function will block until either all nodes are healthy or the

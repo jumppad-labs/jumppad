@@ -20,8 +20,9 @@ func setupPush(state string) (*cobra.Command, *mocks.MockContainerTasks, func())
 
 	mk := &mocks.MockKubernetes{}
 	mh := &mocks.MockHTTP{}
+	mn := &mocks.MockNomad{}
 
-	return newPushCmd(mt, mk, mh, hclog.NewNullLogger()), mt, setupState(state)
+	return newPushCmd(mt, mk, mh, mn, hclog.NewNullLogger()), mt, setupState(state)
 }
 
 func TestPushInvalidArgsReturnsError(t *testing.T) {
