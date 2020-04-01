@@ -147,7 +147,7 @@ func thereShouldBe1NetworkCalled(arg1 string) error {
 func aCallToShouldResultInStatus(arg1 string, arg2 int) error {
 	// try 100 times
 	var err error
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 200; i++ {
 		var resp *http.Response
 		resp, err = http.Get(arg1)
 
