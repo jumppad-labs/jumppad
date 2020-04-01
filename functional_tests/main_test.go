@@ -13,13 +13,14 @@ import (
 	"testing"
 	"time"
 
+	"os/exec"
+
 	"github.com/DATA-DOG/godog"
 	"github.com/DATA-DOG/godog/colors"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
-	"k8s.io/utils/exec"
 )
 
 var currentClients *shipyard.Clients
@@ -74,10 +75,9 @@ func FeatureContext(s *godog.Suite) {
 
 	s.AfterScenario(func(interface{}, error) {
 		fmt.Println("")
-		ex := exec.New()
-		cmd := ex.Command("yard-dev", []string{"destroy"}...)
-		cmd.SetStdout(os.Stdout)
-		cmd.SetStderr(os.Stderr)
+		cmd := exec.Command("yard-dev", []string{"destroy"}...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 		cmd.Run()
 	})
 }
@@ -91,11 +91,19 @@ func iRunApply(config string) error {
 	}
 
 	// run the shipyard executable
-	ex := exec.New()
-	cmd := ex.Command("yard-dev", []string{"run", "--no-browser", config}...)
-	cmd.SetStdout(os.Stdout)
-	cmd.SetStderr(os.Stderr)
-	return cmd.Run()
+	cmd := exec.Command("yard-dev", []string{"run", "--no-browser", config}...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	runErr := cmd.Run()
+
+	if runErr != nil {
+		if exitError, ok := runErr.(*exec.ExitError); ok {
+			return fmt.Errorf("Shipyard command exited with status code %d", exitError.ExitCode())
+		}
+	}
+
+	return nil
 }
 
 func thereShouldBeContainerRunningCalled(arg1 int, arg2 string) error {
