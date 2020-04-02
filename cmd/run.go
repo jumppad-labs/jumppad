@@ -49,6 +49,12 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc
 		dst := ""
 		if len(args) == 1 {
 			dst = args[0]
+		} else {
+			dst = "./"
+		}
+
+		if dst == "." {
+			dst = "./"
 		}
 
 		if dst != "" {
