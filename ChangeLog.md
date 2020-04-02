@@ -1,5 +1,11 @@
 # Change Log
 
+## version 0.0.6
+
+### Bug fixes
+* Fix bug where heirachy in state was lost on incremental applies
+* Minor UX tweak for run command, use current directory as default 
+
 ## version 0.0.5
 
 ### Container
