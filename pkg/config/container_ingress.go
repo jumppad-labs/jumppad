@@ -27,6 +27,6 @@ type ContainerIngress struct {
 }
 
 // NewContainerIngress creates a new ingress for standard docker containers with the correct defaults
-func NewContainerIngress(name string) *Ingress {
-	return &Ingress{ResourceInfo: ResourceInfo{Name: name, Type: TypeContainerIngress, Status: PendingCreation}}
+func NewContainerIngress(name string) *ContainerIngress {
+	return &ContainerIngress{ResourceInfo: ResourceInfo{Name: name, Type: TypeContainerIngress, Status: PendingCreation}}
 }

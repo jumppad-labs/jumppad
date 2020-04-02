@@ -1,4 +1,4 @@
-ingress "consul-http" {
+container_ingress "consul-http" {
   target  = "container.consul"
 
   network {

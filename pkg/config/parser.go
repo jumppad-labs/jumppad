@@ -193,6 +193,29 @@ func ParseHCLFile(file string, c *Config) error {
 
 			c.AddResource(h)
 
+		case string(TypeHelm):
+			h := NewHelm(b.Labels[0])
+
+			err := decodeBody(b, h)
+			if err != nil {
+				return err
+			}
+
+			h.Chart = ensureAbsolute(h.Chart, file)
+			h.Values = ensureAbsolute(h.Values, file)
+
+			c.AddResource(h)
+
+		case string(TypeK8sIngress):
+			i := NewK8sIngress(b.Labels[0])
+
+			err := decodeBody(b, i)
+			if err != nil {
+				return err
+			}
+
+			c.AddResource(i)
+
 		case string(TypeNomadCluster):
 			cl := NewNomadCluster(b.Labels[0])
 
@@ -218,6 +241,16 @@ func ParseHCLFile(file string, c *Config) error {
 
 			c.AddResource(h)
 
+		case string(TypeNomadIngress):
+			i := NewNomadIngress(b.Labels[0])
+
+			err := decodeBody(b, i)
+			if err != nil {
+				return err
+			}
+
+			c.AddResource(i)
+
 		case string(TypeNetwork):
 			n := NewNetwork(b.Labels[0])
 
@@ -227,19 +260,6 @@ func ParseHCLFile(file string, c *Config) error {
 			}
 
 			c.AddResource(n)
-
-		case string(TypeHelm):
-			h := NewHelm(b.Labels[0])
-
-			err := decodeBody(b, h)
-			if err != nil {
-				return err
-			}
-
-			h.Chart = ensureAbsolute(h.Chart, file)
-			h.Values = ensureAbsolute(h.Values, file)
-
-			c.AddResource(h)
 
 		case string(TypeIngress):
 			i := NewIngress(b.Labels[0])
@@ -266,6 +286,16 @@ func ParseHCLFile(file string, c *Config) error {
 			}
 
 			c.AddResource(co)
+
+		case string(TypeContainerIngress):
+			i := NewContainerIngress(b.Labels[0])
+
+			err := decodeBody(b, i)
+			if err != nil {
+				return err
+			}
+
+			c.AddResource(i)
 
 		case string(TypeDocs):
 			do := NewDocs(b.Labels[0])

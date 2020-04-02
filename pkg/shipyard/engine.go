@@ -322,6 +322,8 @@ func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
 	switch c.Info().Type {
 	case config.TypeContainer:
 		return providers.NewContainer(c.(*config.Container), cc.ContainerTasks, cc.HTTP, cc.Logger)
+	case config.TypeContainerIngress:
+		return providers.NewContainerIngress(c.(*config.ContainerIngress), cc.ContainerTasks, cc.Logger)
 	case config.TypeDocs:
 		return providers.NewDocs(c.(*config.Docs), cc.ContainerTasks, cc.Logger)
 	case config.TypeExecRemote:
@@ -336,6 +338,8 @@ func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
 		return providers.NewK8sCluster(c.(*config.K8sCluster), cc.ContainerTasks, cc.Kubernetes, cc.HTTP, cc.Logger)
 	case config.TypeK8sConfig:
 		return providers.NewK8sConfig(c.(*config.K8sConfig), cc.Kubernetes, cc.Logger)
+	case config.TypeK8sIngress:
+		return providers.NewK8sIngress(c.(*config.K8sIngress), cc.ContainerTasks, cc.Logger)
 	case config.TypeNomadCluster:
 		return providers.NewNomadCluster(c.(*config.NomadCluster), cc.ContainerTasks, cc.Nomad, cc.Logger)
 	case config.TypeNomadJob:

@@ -23,6 +23,7 @@ func testIngressCreateMocks() *mocks.MockContainerTasks {
 	testCluster.Driver = "k3s"
 
 	c := config.New()
+	c.AddResource(&testK8sIngressConfig)
 	c.AddResource(&testIngressConfig)
 	c.AddResource(&testIngressContainerConfig)
 	c.AddResource(testCluster)
@@ -35,7 +36,7 @@ func TestIngressK8sErrorsWhenUnableToLookupIDs(t *testing.T) {
 	md := &mocks.MockContainerTasks{}
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
-	p := NewIngress(&testIngressConfig, md, hclog.NewNullLogger())
+	p := NewK8sIngress(&testK8sIngressConfig, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -45,7 +46,7 @@ func TestIngressK8sErrorsWhenClusterExists(t *testing.T) {
 	md := &mocks.MockContainerTasks{}
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
 
-	p := NewIngress(&testIngressConfig, md, hclog.NewNullLogger())
+	p := NewK8sIngress(&testK8sIngressConfig, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -53,7 +54,7 @@ func TestIngressK8sErrorsWhenClusterExists(t *testing.T) {
 
 func TestIngressK8sTargetPullsImage(t *testing.T) {
 	md := testIngressCreateMocks()
-	p := NewIngress(&testIngressConfig, md, hclog.NewNullLogger())
+	p := NewK8sIngress(&testK8sIngressConfig, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -62,7 +63,7 @@ func TestIngressK8sTargetPullsImage(t *testing.T) {
 
 func TestIngressK8sTargetConfiguresCommand(t *testing.T) {
 	md := testIngressCreateMocks()
-	p := NewIngress(&testIngressConfig, md, hclog.NewNullLogger())
+	p := NewK8sIngress(&testK8sIngressConfig, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -82,7 +83,7 @@ func TestIngressK8sTargetConfiguresCommand(t *testing.T) {
 
 func TestIngressK8sTargetConfiguresKubeConfig(t *testing.T) {
 	md := testIngressCreateMocks()
-	p := NewIngress(&testIngressConfig, md, hclog.NewNullLogger())
+	p := NewK8sIngress(&testK8sIngressConfig, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -100,9 +101,9 @@ func TestIngressK8sTargetConfiguresKubeConfig(t *testing.T) {
 
 func TestIngressK8sTargetWithNamespaceConfiguresCommand(t *testing.T) {
 	md := testIngressCreateMocks()
-	tc := testIngressConfig
+	tc := testK8sIngressConfig
 	tc.Namespace = "mine"
-	p := NewIngress(&tc, md, hclog.NewNullLogger())
+	p := NewK8sIngress(&tc, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -113,9 +114,56 @@ func TestIngressK8sTargetWithNamespaceConfiguresCommand(t *testing.T) {
 	assert.Equal(t, "mine", params.Command[3])
 }
 
+func TestIngressK8sTargetWithServiceConfiguresCommand(t *testing.T) {
+	md := testIngressCreateMocks()
+	tc := testK8sIngressConfig
+	tc.Service = "myservice"
+	p := NewK8sIngress(&tc, md, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+
+	// namespace should be same as custom
+	assert.Equal(t, "svc/myservice", params.Command[5])
+}
+
+func TestIngressK8sTargetWithPodConfiguresCommand(t *testing.T) {
+	md := testIngressCreateMocks()
+	tc := testK8sIngressConfig
+	tc.Service = ""
+	tc.Pod = "mypod"
+	p := NewK8sIngress(&tc, md, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+
+	// namespace should be same as custom
+	assert.Equal(t, "mypod", params.Command[5])
+}
+
+func TestIngressK8sTargetWithDeploymentConfiguresCommand(t *testing.T) {
+	md := testIngressCreateMocks()
+	tc := testK8sIngressConfig
+	tc.Service = ""
+	tc.Deployment = "mydeployment"
+	p := NewK8sIngress(&tc, md, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+
+	// namespace should be same as custom
+	assert.Equal(t, "deployment/mydeployment", params.Command[5])
+}
+
 func TestIngressContainerTargetConfiguresCommand(t *testing.T) {
 	md := testIngressCreateMocks()
-	p := NewIngress(&testIngressContainerConfig, md, hclog.NewNullLogger())
+	p := NewContainerIngress(&testIngressContainerConfig, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -128,7 +176,7 @@ func TestIngressContainerTargetConfiguresCommand(t *testing.T) {
 
 func TestIngressContainerAddsPorts(t *testing.T) {
 	md := testIngressCreateMocks()
-	p := NewIngress(&testIngressContainerConfig, md, hclog.NewNullLogger())
+	p := NewContainerIngress(&testIngressContainerConfig, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -148,7 +196,7 @@ func TestIngressContainerFailReturnsError(t *testing.T) {
 	md := testIngressCreateMocks()
 	removeOn(&md.Mock, "CreateContainer")
 	md.On("CreateContainer", mock.Anything).Return("", fmt.Errorf("boom"))
-	p := NewIngress(&testIngressContainerConfig, md, hclog.NewNullLogger())
+	p := NewContainerIngress(&testIngressContainerConfig, md, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -175,7 +223,16 @@ var testIngressConfig = config.Ingress{
 	Target:   "k8s_cluster.test",
 }
 
-var testIngressContainerConfig = config.Ingress{
+var testK8sIngressConfig = config.K8sIngress{
+	Service: "web",
+	ResourceInfo: config.ResourceInfo{
+		Name: "web-http",
+	},
+	Networks: []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}},
+	Cluster:  "k8s_cluster.test",
+}
+
+var testIngressContainerConfig = config.ContainerIngress{
 	Target: "container.test",
 	Ports: []config.Port{
 		config.Port{

@@ -23,6 +23,47 @@ func NewIngress(c *config.Ingress, cc clients.ContainerTasks, l hclog.Logger) *I
 	return &Ingress{c, cc, l}
 }
 
+// NewContainerIngress creates a new ingress provider for a container
+func NewContainerIngress(ci *config.ContainerIngress, cc clients.ContainerTasks, l hclog.Logger) *Ingress {
+	c := config.NewIngress(ci.Name)
+	c.Depends = ci.Depends
+	c.Networks = ci.Networks
+	c.Target = ci.Target
+	c.Ports = ci.Ports
+	c.Config = ci.Config
+
+	return &Ingress{c, cc, l}
+}
+
+// NewK8sIngress creates an Ingress from Kubernetes config
+func NewK8sIngress(kc *config.K8sIngress, cc clients.ContainerTasks, l hclog.Logger) *Ingress {
+	// convert the config
+	c := config.NewIngress(kc.Name)
+
+	c.Depends = kc.Depends
+	c.Networks = kc.Networks
+	c.Target = kc.Cluster
+
+	if kc.Deployment != "" {
+		c.Service = fmt.Sprintf("deployment/%s", kc.Deployment)
+	}
+
+	if kc.Service != "" {
+		c.Service = fmt.Sprintf("svc/%s", kc.Service)
+	}
+
+	if kc.Pod != "" {
+		c.Service = kc.Pod
+	}
+
+	c.Namespace = kc.Namespace
+	c.Ports = kc.Ports
+
+	c.Config = kc.Config
+
+	return &Ingress{c, cc, l}
+}
+
 // Create the ingress
 func (i *Ingress) Create() error {
 	i.log.Info("Creating Ingress", "ref", i.config.Name)
