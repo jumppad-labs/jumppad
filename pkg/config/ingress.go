@@ -4,6 +4,11 @@ package config
 const TypeIngress ResourceType = "ingress"
 
 // Ingress defines an ingress service mapping ports between local host or docker network and the target
+// Note: This type is Deprecated and will be removed in a later version
+//       Please use one of the new specific types:
+//       * K8sIngress
+//       * NomadIngress
+//       * ContainerIngress
 type Ingress struct {
 	ResourceInfo
 
