@@ -63,13 +63,14 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	var rawBlueprint *json.RawMessage
-	json.Unmarshal(*objMap["blueprint"], &rawBlueprint)
-
-	bp := &Blueprint{}
-	err = json.Unmarshal(*rawBlueprint, &bp)
-	if err == nil {
-		c.Blueprint = bp
+	if objMap["blueprint"] != nil {
+		var rawBlueprint *json.RawMessage
+		json.Unmarshal(*objMap["blueprint"], &rawBlueprint)
+		bp := &Blueprint{}
+		err = json.Unmarshal(*rawBlueprint, &bp)
+		if err == nil {
+			c.Blueprint = bp
+		}
 	}
 
 	var rawMessagesForResources []*json.RawMessage

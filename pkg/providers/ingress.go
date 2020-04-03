@@ -35,6 +35,18 @@ func NewContainerIngress(ci *config.ContainerIngress, cc clients.ContainerTasks,
 	return &Ingress{c, cc, l}
 }
 
+// NewNomadIngress creates an ingress type for resources in a Nomad cluster
+func NewNomadIngress(ci *config.NomadIngress, cc clients.ContainerTasks, l hclog.Logger) *Ingress {
+	c := config.NewIngress(ci.Name)
+	c.Depends = ci.Depends
+	c.Networks = ci.Networks
+	c.Target = ci.Cluster
+	c.Ports = ci.Ports
+	c.Config = ci.Config
+
+	return &Ingress{c, cc, l}
+}
+
 // NewK8sIngress creates an Ingress from Kubernetes config
 func NewK8sIngress(kc *config.K8sIngress, cc clients.ContainerTasks, l hclog.Logger) *Ingress {
 	// convert the config

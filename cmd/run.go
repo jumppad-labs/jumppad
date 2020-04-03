@@ -109,6 +109,27 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc
 								browserList = append(browserList, fmt.Sprintf("http://localhost:%s", p.Host))
 							}
 						}
+					case config.TypeContainerIngress:
+						c := r.(*config.ContainerIngress)
+						for _, p := range c.Ports {
+							if p.Host != "" && p.OpenInBrowser {
+								browserList = append(browserList, fmt.Sprintf("http://localhost:%s", p.Host))
+							}
+						}
+					case config.TypeNomadIngress:
+						c := r.(*config.NomadIngress)
+						for _, p := range c.Ports {
+							if p.Host != "" && p.OpenInBrowser {
+								browserList = append(browserList, fmt.Sprintf("http://localhost:%s", p.Host))
+							}
+						}
+					case config.TypeK8sIngress:
+						c := r.(*config.K8sIngress)
+						for _, p := range c.Ports {
+							if p.Host != "" && p.OpenInBrowser {
+								browserList = append(browserList, fmt.Sprintf("http://localhost:%s", p.Host))
+							}
+						}
 					case config.TypeDocs:
 						c := r.(*config.Docs)
 						if c.OpenInBrowser {

@@ -1,4 +1,4 @@
-ingress "consul-http" {
+container_ingress "consul-http" {
   target  = "container.consul"
 
   port {
@@ -12,8 +12,11 @@ ingress "consul-http" {
   }
 }
 
-ingress "nomad-http" {
-  target  = "nomad_cluster.dev"
+nomad_ingress "nomad-http" {
+  cluster  = "nomad_cluster.dev"
+  job = ""
+  group = ""
+  task = ""
 
   port {
     local  = 4646

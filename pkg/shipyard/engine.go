@@ -345,6 +345,8 @@ func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
 		return providers.NewK8sIngress(c.(*config.K8sIngress), cc.ContainerTasks, cc.Logger)
 	case config.TypeNomadCluster:
 		return providers.NewNomadCluster(c.(*config.NomadCluster), cc.ContainerTasks, cc.Nomad, cc.Logger)
+	case config.TypeNomadIngress:
+		return providers.NewNomadIngress(c.(*config.NomadIngress), cc.ContainerTasks, cc.Logger)
 	case config.TypeNomadJob:
 		return providers.NewNomadJob(c.(*config.NomadJob), cc.Nomad, cc.Logger)
 	case config.TypeNetwork:
