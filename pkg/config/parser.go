@@ -461,13 +461,6 @@ func buildContext() *hcl.EvalContext {
 	})
 
 	var HomeFunc = function.New(&function.Spec{
-		Params: []function.Parameter{
-			{
-				Name:             "home",
-				Type:             cty.NilType,
-				AllowDynamicType: true,
-			},
-		},
 		Type: function.StaticReturnType(cty.String),
 		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
 			return cty.StringVal(utils.HomeFolder()), nil
@@ -475,13 +468,6 @@ func buildContext() *hcl.EvalContext {
 	})
 
 	var ShipyardFunc = function.New(&function.Spec{
-		Params: []function.Parameter{
-			{
-				Name:             "shipyard",
-				Type:             cty.NilType,
-				AllowDynamicType: true,
-			},
-		},
 		Type: function.StaticReturnType(cty.String),
 		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
 			return cty.StringVal(utils.ShipyardHome()), nil

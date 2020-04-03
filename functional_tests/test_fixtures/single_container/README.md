@@ -2,7 +2,7 @@
 title: Single Container Example
 author: Nic Jackson
 slug: single_container
-browser_windows: http://localhost:8080
+browser_windows: http://localhost:8500
 ---
 
 # Single Container
@@ -10,5 +10,5 @@ browser_windows: http://localhost:8080
 This blueprint shows how you can create a single container with Shipyard
 
 ```shell
-curl localhost:8080
+curl localhost:8500
 ```

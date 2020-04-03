@@ -8,6 +8,6 @@ container_ingress "consul-http" {
   port {
     local  = 8500
     remote = 8500
-    host   = 18500
+    host   = 8500
   }
 }

@@ -28,4 +28,9 @@ container "consul" {
     key ="abc"
     value = "123"
   }
+  
+  env {
+    key ="abc"
+    value = "${shipyard()}"
+  }
 }

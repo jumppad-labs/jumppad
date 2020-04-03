@@ -1,5 +1,12 @@
 # Change Log
 
+## version 0.0.8
+
+## Bugfixes
+
+* Fix problem with home folder resolution on Windows
+* Add ipv6 DNS entries for resources
+
 ## version 0.0.7
 
 ## Ingress

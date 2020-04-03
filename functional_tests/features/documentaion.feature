@@ -7,4 +7,4 @@ Feature: Docmentation
     Given I apply the config "./test_fixtures/docs"
     And there should be 1 container running called "docs.docs.shipyard.run"
     And there should be 1 container running called "terminal.docs.shipyard.run"
-    And a call to "http://localhost:8080/" should result in status 200
+    And a call to "http://docs.docs.shipyard.run:8080/" should result in status 200
