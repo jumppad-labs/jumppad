@@ -7,12 +7,12 @@ import (
 
 // Blueprint defines a stack blueprint for defining yard configs
 type Blueprint struct {
-	Title          string   `hcl:"title,optional"`
-	Author         string   `hcl:"author,optional"`
-	Slug           string   `hcl:"slug,optional"`
-	Intro          string   `hcl:"intro,optional"`
-	BrowserWindows []string `hcl:"browser_windows,optional"`
-	Environment    []KV     `hcl:"env,block"`
+	Title          string   `hcl:"title,optional" json:"title,omitempty"`
+	Author         string   `hcl:"author,optional" json:"author,omitempty"`
+	Slug           string   `hcl:"slug,optional" json:"slug,omitempty"`
+	Intro          string   `hcl:"intro,optional" json:"intro,omitempty"`
+	BrowserWindows []string `hcl:"browser_windows,optional" json:"browser_windows,omitempty"`
+	Environment    []KV     `hcl:"env,block" json:"environment,omitempty"`
 }
 
 // Validate the Blueprint and return errors

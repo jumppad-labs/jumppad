@@ -1,6 +1,6 @@
-ingress "consul-http" {
-  target = "k8s_cluster.k3s"
-  service  = "svc/consul-consul-server"
+k8s_ingress "consul-http" {
+  cluster = "k8s_cluster.k3s"
+  service  = "consul-consul-server"
 
   network {
     name = "network.cloud"

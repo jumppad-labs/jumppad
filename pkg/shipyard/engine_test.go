@@ -106,7 +106,7 @@ func TestApplyCallsProviderInCorrectOrder(t *testing.T) {
 	e, _, mp, cleanup := setupTests(nil)
 	defer cleanup()
 
-	err := e.Apply("../../functional_tests/test_fixtures/single_k3s_cluster")
+	_, err := e.Apply("../../functional_tests/test_fixtures/single_k3s_cluster")
 	assert.NoError(t, err)
 
 	// should have called in order
@@ -122,18 +122,19 @@ func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
 	e, _, mp, cleanup := setupTests(nil)
 	defer cleanup()
 
-	err := e.Apply("../../functional_tests/test_fixtures/single_k3s_cluster")
+	_, err := e.Apply("../../functional_tests/test_fixtures/single_k3s_cluster")
 	assert.NoError(t, err)
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Create", 4)
+	//assert.Len(t, res, 4)
 }
 
 func TestApplyCallsProviderDestroyForResourcesPendingorFailed(t *testing.T) {
 	e, _, mp, cleanup := setupTestsWithState(nil, failedState)
 	defer cleanup()
 
-	err := e.Apply("")
+	_, err := e.Apply("")
 	assert.NoError(t, err)
 
 	// should have call create for each provider
@@ -145,7 +146,7 @@ func TestApplyReturnsErrorWhenProviderDestroyForResourcesPendingorFailed(t *test
 	e, _, mp, cleanup := setupTestsWithState(map[string]error{"dc1": fmt.Errorf("boom")}, failedState)
 	defer cleanup()
 
-	err := e.Apply("")
+	_, err := e.Apply("")
 	assert.Error(t, err)
 
 	// should have call create for each provider
@@ -157,7 +158,7 @@ func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 	e, _, mp, cleanup := setupTests(map[string]error{"cloud": fmt.Errorf("boom")})
 	defer cleanup()
 
-	err := e.Apply("../../functional_tests/test_fixtures/single_k3s_cluster")
+	_, err := e.Apply("../../functional_tests/test_fixtures/single_k3s_cluster")
 	assert.Error(t, err)
 
 	// should have call create for each provider
@@ -168,7 +169,7 @@ func TestApplyCallsProviderCreateErrorStopsExecution(t *testing.T) {
 	e, _, mp, cleanup := setupTests(map[string]error{"cloud": fmt.Errorf("boom")})
 	defer cleanup()
 
-	err := e.Apply("../../functional_tests/test_fixtures/single_k3s_cluster")
+	_, err := e.Apply("../../functional_tests/test_fixtures/single_k3s_cluster")
 	assert.Error(t, err)
 
 	// should have call create for each provider
@@ -179,7 +180,7 @@ func TestApplySetsStatusForEachResource(t *testing.T) {
 	e, _, mp, cleanup := setupTestsWithState(nil, mergedState)
 	defer cleanup()
 
-	err := e.Apply("")
+	_, err := e.Apply("")
 	assert.NoError(t, err)
 
 	// should not call create as this is pending update

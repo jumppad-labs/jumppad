@@ -111,7 +111,7 @@ func TestCopyLocalCopiesArchive(t *testing.T) {
 
 	_, err := dt.CopyLocalDockerImageToVolume(testCopyLocalImages, testCopyLocalVolume)
 	assert.NoError(t, err)
-	mk.AssertCalled(t, "CopyToContainer", mock.Anything, "temp-import.container.shipyard", "/images", mock.Anything, mock.Anything)
+	mk.AssertCalled(t, "CopyToContainer", mock.Anything, "temp-import.container.shipyard.run", "/images", mock.Anything, mock.Anything)
 }
 
 func TestCopyLocalCopiesArchiveFailReturnsError(t *testing.T) {

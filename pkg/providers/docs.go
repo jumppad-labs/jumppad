@@ -86,32 +86,34 @@ func (i *Docs) createDocsContainer() error {
 
 	// if the index pages have been set
 	// generate the javascript
-	indexPath, err := i.generateDocusaursIndex(i.config.IndexTitle, i.config.IndexPages)
-	if err != nil {
-		return xerrors.Errorf("Unable to generate index for documentation: %w", err)
-	}
+	if i.config.IndexTitle != "" && len(i.config.IndexPages) > 0 {
+		indexPath, err := i.generateDocusaursIndex(i.config.IndexTitle, i.config.IndexPages)
+		if err != nil {
+			return xerrors.Errorf("Unable to generate index for documentation: %w", err)
+		}
 
-	cc.Volumes = append(
-		cc.Volumes,
-		config.Volume{
-			Source:      indexPath,
-			Destination: "/shipyard/sidebars.js",
-		},
-	)
+		cc.Volumes = append(
+			cc.Volumes,
+			config.Volume{
+				Source:      indexPath,
+				Destination: "/shipyard/sidebars.js",
+			},
+		)
+	}
 
 	// add the ports
 	cc.Ports = []config.Port{
 		// set the doumentation port
 		config.Port{
-			Local:  80,
-			Remote: 80,
-			Host:   i.config.Port,
+			Local:  "80",
+			Remote: "80",
+			Host:   fmt.Sprintf("%d", i.config.Port),
 		},
 		// set the livereload port
 		config.Port{
-			Local:  37950,
-			Remote: 37950,
-			Host:   37950,
+			Local:  "37950",
+			Remote: "37950",
+			Host:   "37950",
 		},
 	}
 
@@ -146,8 +148,8 @@ func (i *Docs) createTerminalContainer() error {
 	cc.Ports = []config.Port{
 		config.Port{
 			Protocol: "tcp",
-			Host:     27950,
-			Local:    27950,
+			Host:     "27950",
+			Local:    "27950",
 		},
 	}
 

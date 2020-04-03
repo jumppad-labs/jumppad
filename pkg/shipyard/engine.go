@@ -38,7 +38,7 @@ type Clients struct {
 
 // Engine defines an interface for the Shipyard engine
 type Engine interface {
-	Apply(string) error
+	Apply(string) ([]config.Resource, error)
 	Destroy(string, bool) error
 	ResourceCount() int
 	Blueprint() *config.Blueprint
@@ -116,11 +116,13 @@ func New(l hclog.Logger) (Engine, error) {
 }
 
 // Apply the current config creating the resources
-func (e *EngineImpl) Apply(path string) error {
+func (e *EngineImpl) Apply(path string) ([]config.Resource, error) {
 	d, err := e.readConfig(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	createdResource := []config.Resource{}
 
 	// walk the dag and apply the config
 	w := dag.Walker{}
@@ -157,6 +159,7 @@ func (e *EngineImpl) Apply(path string) error {
 
 			// set the status
 			r.Info().Status = config.Applied
+			createdResource = append(createdResource, r)
 		}
 
 		return nil
@@ -179,13 +182,15 @@ func (e *EngineImpl) Apply(path string) error {
 
 	if len(e.config.Resources) > 0 {
 		// save the state regardless of error
-		err = e.config.ToJSON(utils.StatePath())
-		if err != nil {
-			return err
+		jerr := e.config.ToJSON(utils.StatePath())
+		if jerr != nil {
+			return createdResource, jerr
 		}
+
+		return createdResource, err
 	}
 
-	return tf.Err()
+	return nil, tf.Err()
 }
 
 // Destroy the resources defined by the config
@@ -322,6 +327,8 @@ func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
 	switch c.Info().Type {
 	case config.TypeContainer:
 		return providers.NewContainer(c.(*config.Container), cc.ContainerTasks, cc.HTTP, cc.Logger)
+	case config.TypeContainerIngress:
+		return providers.NewContainerIngress(c.(*config.ContainerIngress), cc.ContainerTasks, cc.Logger)
 	case config.TypeDocs:
 		return providers.NewDocs(c.(*config.Docs), cc.ContainerTasks, cc.Logger)
 	case config.TypeExecRemote:
@@ -336,8 +343,12 @@ func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
 		return providers.NewK8sCluster(c.(*config.K8sCluster), cc.ContainerTasks, cc.Kubernetes, cc.HTTP, cc.Logger)
 	case config.TypeK8sConfig:
 		return providers.NewK8sConfig(c.(*config.K8sConfig), cc.Kubernetes, cc.Logger)
+	case config.TypeK8sIngress:
+		return providers.NewK8sIngress(c.(*config.K8sIngress), cc.ContainerTasks, cc.Logger)
 	case config.TypeNomadCluster:
 		return providers.NewNomadCluster(c.(*config.NomadCluster), cc.ContainerTasks, cc.Nomad, cc.Logger)
+	case config.TypeNomadIngress:
+		return providers.NewNomadIngress(c.(*config.NomadIngress), cc.ContainerTasks, cc.Logger)
 	case config.TypeNomadJob:
 		return providers.NewNomadJob(c.(*config.NomadJob), cc.Nomad, cc.Logger)
 	case config.TypeNetwork:

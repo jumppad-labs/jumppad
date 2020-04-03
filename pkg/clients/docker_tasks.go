@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"os"
 	gosignal "os/signal"
-	"strconv"
 	"strings"
 	"time"
 
@@ -623,13 +622,13 @@ func createPublishedPorts(ps []config.Port) publishedPorts {
 	}
 
 	for _, p := range ps {
-		dp, _ := nat.NewPort(p.Protocol, strconv.Itoa(p.Local))
+		dp, _ := nat.NewPort(p.Protocol, p.Local)
 		pp.ExposedPorts[dp] = struct{}{}
 
 		pb := []nat.PortBinding{
 			nat.PortBinding{
 				HostIP:   "0.0.0.0",
-				HostPort: strconv.Itoa(p.Host),
+				HostPort: p.Host,
 			},
 		}
 

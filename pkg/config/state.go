@@ -51,9 +51,7 @@ func (c *Config) FromJSON(path string) error {
 	defer f.Close()
 
 	jd := json.NewDecoder(f)
-	jd.Decode(c)
-
-	return nil
+	return jd.Decode(c)
 }
 
 // UnmarshalJSON is a cusom Unmarshaler to deal with
@@ -63,6 +61,16 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 	err := json.Unmarshal(b, &objMap)
 	if err != nil {
 		return err
+	}
+
+	if objMap["blueprint"] != nil {
+		var rawBlueprint *json.RawMessage
+		json.Unmarshal(*objMap["blueprint"], &rawBlueprint)
+		bp := &Blueprint{}
+		err = json.Unmarshal(*rawBlueprint, &bp)
+		if err == nil {
+			c.Blueprint = bp
+		}
 	}
 
 	var rawMessagesForResources []*json.RawMessage
@@ -96,6 +104,24 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 				}
 			}
 			c.AddResource(&t)
+
+		case TypeContainerIngress:
+			t := ContainerIngress{}
+			err := mapstructure.Decode(mm, &t)
+			if err != nil {
+				return err
+			}
+			t.Name = mm["name"].(string)
+			t.Type = ResourceType(mm["type"].(string))
+			t.Status = Status(mm["status"].(string))
+
+			if d, ok := mm["depends_on"].([]interface{}); ok {
+				for _, i := range d {
+					t.DependsOn = append(t.DependsOn, i.(string))
+				}
+			}
+			c.AddResource(&t)
+
 		case TypeDocs:
 			t := Docs{}
 			err := mapstructure.Decode(mm, &t)
@@ -112,6 +138,7 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 				}
 			}
 			c.AddResource(&t)
+
 		case TypeExecRemote:
 			t := ExecRemote{}
 			err := mapstructure.Decode(mm, &t)
@@ -128,6 +155,7 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 				}
 			}
 			c.AddResource(&t)
+
 		case TypeExecLocal:
 			t := ExecLocal{}
 			err := mapstructure.Decode(mm, &t)
@@ -144,6 +172,7 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 				}
 			}
 			c.AddResource(&t)
+
 		case TypeHelm:
 			t := Helm{}
 			err := mapstructure.Decode(mm, &t)
@@ -160,6 +189,7 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 				}
 			}
 			c.AddResource(&t)
+
 		case TypeIngress:
 			t := Ingress{}
 			err := mapstructure.Decode(mm, &t)
@@ -176,6 +206,7 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 				}
 			}
 			c.AddResource(&t)
+
 		case TypeK8sCluster:
 			t := K8sCluster{}
 			err := mapstructure.Decode(mm, &t)
@@ -192,6 +223,7 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 				}
 			}
 			c.AddResource(&t)
+
 		case TypeK8sConfig:
 			t := K8sConfig{}
 			err := mapstructure.Decode(mm, &t)
@@ -208,6 +240,24 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 				}
 			}
 			c.AddResource(&t)
+
+		case TypeK8sIngress:
+			t := K8sIngress{}
+			err := mapstructure.Decode(mm, &t)
+			if err != nil {
+				return err
+			}
+			t.Name = mm["name"].(string)
+			t.Type = ResourceType(mm["type"].(string))
+			t.Status = Status(mm["status"].(string))
+
+			if d, ok := mm["depends_on"].([]interface{}); ok {
+				for _, i := range d {
+					t.DependsOn = append(t.DependsOn, i.(string))
+				}
+			}
+			c.AddResource(&t)
+
 		case TypeNetwork:
 			t := Network{}
 			err := mapstructure.Decode(mm, &t)
@@ -224,6 +274,7 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 				}
 			}
 			c.AddResource(&t)
+
 		case TypeNomadCluster:
 			t := NomadCluster{}
 			err := mapstructure.Decode(mm, &t)
@@ -240,6 +291,7 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 				}
 			}
 			c.AddResource(&t)
+
 		case TypeNomadJob:
 			t := NomadJob{}
 			err := mapstructure.Decode(mm, &t)
@@ -256,6 +308,24 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 				}
 			}
 			c.AddResource(&t)
+
+		case TypeNomadIngress:
+			t := NomadIngress{}
+			err := mapstructure.Decode(mm, &t)
+			if err != nil {
+				return err
+			}
+			t.Name = mm["name"].(string)
+			t.Type = ResourceType(mm["type"].(string))
+			t.Status = Status(mm["status"].(string))
+
+			if d, ok := mm["depends_on"].([]interface{}); ok {
+				for _, i := range d {
+					t.DependsOn = append(t.DependsOn, i.(string))
+				}
+			}
+			c.AddResource(&t)
+
 		}
 	}
 

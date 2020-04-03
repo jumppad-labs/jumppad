@@ -66,7 +66,7 @@ Feature: Docmentation
 2020-02-08T17:03:41.271Z [DEBUG] Attaching container to network: ref=terminal network=wan
     When I run apply                                                   # main_test.go:111 -> iRunApply
     Then there should be 1 network called "wan"                        # main_test.go:149 -> thereShouldBe1NetworkCalled
-    And there should be 1 container running called "docs.wan.shipyard" # main_test.go:115 -> thereShouldBeContainerRunningCalled
+    And there should be 1 container running called "docs.docs.shipyard.run" # main_test.go:115 -> thereShouldBeContainerRunningCalled
     And a call to "http://localhost:8080/" should result in status 200 #
     
 # ...

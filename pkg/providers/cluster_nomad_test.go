@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -142,8 +143,10 @@ func TestClusterNomadCreatesAServer(t *testing.T) {
 	assert.Equal(t, "/files", params.Volumes[1].Destination)
 
 	// validate the API port is set
-	assert.GreaterOrEqual(t, params.Ports[0].Local, 4646)
-	assert.GreaterOrEqual(t, params.Ports[0].Host, 64000)
+	intLocal, _ := strconv.Atoi(params.Ports[0].Local)
+	intHost, _ := strconv.Atoi(params.Ports[0].Host)
+	assert.GreaterOrEqual(t, intLocal, 4646)
+	assert.GreaterOrEqual(t, intHost, 64000)
 	assert.Equal(t, "tcp", params.Ports[0].Protocol)
 }
 
@@ -207,7 +210,7 @@ func TestClusterNomadImportDockerCopiesImages(t *testing.T) {
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "CopyLocalDockerImageToVolume", []string{"consul:1.6.1", "vault:1.6.1"}, "test.volume.shipyard")
+	md.AssertCalled(t, "CopyLocalDockerImageToVolume", []string{"consul:1.6.1", "vault:1.6.1"}, "test.volume.shipyard.run")
 }
 func TestClusterNomadImportDockerCopyImageFailReturnsError(t *testing.T) {
 	cc, md, mh, cleanup := setupNomadClusterMocks()

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strconv"
 	"testing"
 	"time"
 
@@ -149,13 +148,13 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 	assert.Equal(t, "volume", params.Volumes[0].Type)
 
 	// validate the API port is set
-	assert.GreaterOrEqual(t, params.Ports[0].Local, 64000)
+	assert.GreaterOrEqual(t, params.Ports[0].Local, "64000")
 	assert.GreaterOrEqual(t, params.Ports[0].Local, params.Ports[0].Host)
 	assert.Equal(t, "tcp", params.Ports[0].Protocol)
 
 	// validate the command
 	assert.Equal(t, "server", params.Command[0])
-	assert.Contains(t, params.Command[1], strconv.Itoa(params.Ports[0].Local))
+	assert.Contains(t, params.Command[1], params.Ports[0].Local)
 	assert.Contains(t, params.Command[2], "traefik")
 }
 
@@ -295,7 +294,7 @@ func TestClusterK3sImportDockerCopiesImages(t *testing.T) {
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "CopyLocalDockerImageToVolume", []string{"consul:1.6.1", "vault:1.6.1"}, "test.volume.shipyard")
+	md.AssertCalled(t, "CopyLocalDockerImageToVolume", []string{"consul:1.6.1", "vault:1.6.1"}, "test.volume.shipyard.run")
 }
 func TestClusterK3sImportDockerCopyImageFailReturnsError(t *testing.T) {
 	cc, md, mk, cleanup := setupClusterMocks()

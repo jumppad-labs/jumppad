@@ -193,6 +193,29 @@ func ParseHCLFile(file string, c *Config) error {
 
 			c.AddResource(h)
 
+		case string(TypeHelm):
+			h := NewHelm(b.Labels[0])
+
+			err := decodeBody(b, h)
+			if err != nil {
+				return err
+			}
+
+			h.Chart = ensureAbsolute(h.Chart, file)
+			h.Values = ensureAbsolute(h.Values, file)
+
+			c.AddResource(h)
+
+		case string(TypeK8sIngress):
+			i := NewK8sIngress(b.Labels[0])
+
+			err := decodeBody(b, i)
+			if err != nil {
+				return err
+			}
+
+			c.AddResource(i)
+
 		case string(TypeNomadCluster):
 			cl := NewNomadCluster(b.Labels[0])
 
@@ -218,6 +241,16 @@ func ParseHCLFile(file string, c *Config) error {
 
 			c.AddResource(h)
 
+		case string(TypeNomadIngress):
+			i := NewNomadIngress(b.Labels[0])
+
+			err := decodeBody(b, i)
+			if err != nil {
+				return err
+			}
+
+			c.AddResource(i)
+
 		case string(TypeNetwork):
 			n := NewNetwork(b.Labels[0])
 
@@ -227,19 +260,6 @@ func ParseHCLFile(file string, c *Config) error {
 			}
 
 			c.AddResource(n)
-
-		case string(TypeHelm):
-			h := NewHelm(b.Labels[0])
-
-			err := decodeBody(b, h)
-			if err != nil {
-				return err
-			}
-
-			h.Chart = ensureAbsolute(h.Chart, file)
-			h.Values = ensureAbsolute(h.Values, file)
-
-			c.AddResource(h)
 
 		case string(TypeIngress):
 			i := NewIngress(b.Labels[0])
@@ -266,6 +286,16 @@ func ParseHCLFile(file string, c *Config) error {
 			}
 
 			c.AddResource(co)
+
+		case string(TypeContainerIngress):
+			i := NewContainerIngress(b.Labels[0])
+
+			err := decodeBody(b, i)
+			if err != nil {
+				return err
+			}
+
+			c.AddResource(i)
 
 		case string(TypeDocs):
 			do := NewDocs(b.Labels[0])
@@ -328,12 +358,22 @@ func ParseReferences(c *Config) error {
 				c.DependsOn = append(c.DependsOn, n.Name)
 			}
 			c.DependsOn = append(c.DependsOn, c.Depends...)
+
+		case TypeContainerIngress:
+			c := r.(*ContainerIngress)
+			for _, n := range c.Networks {
+				c.DependsOn = append(c.DependsOn, n.Name)
+			}
+			c.DependsOn = append(c.DependsOn, c.Target)
+			c.DependsOn = append(c.DependsOn, c.Depends...)
+
 		case TypeDocs:
 			c := r.(*Docs)
 			for _, n := range c.Networks {
 				c.DependsOn = append(c.DependsOn, n.Name)
 			}
 			c.DependsOn = append(c.DependsOn, c.Depends...)
+
 		case TypeExecRemote:
 			c := r.(*ExecRemote)
 			for _, n := range c.Networks {
@@ -346,6 +386,22 @@ func ParseReferences(c *Config) error {
 			if c.Target != "" {
 				c.DependsOn = append(c.DependsOn, c.Target)
 			}
+
+		case TypeIngress:
+			c := r.(*Ingress)
+			for _, n := range c.Networks {
+				c.DependsOn = append(c.DependsOn, n.Name)
+			}
+			c.DependsOn = append(c.DependsOn, c.Target)
+			c.DependsOn = append(c.DependsOn, c.Depends...)
+
+		case TypeK8sCluster:
+			c := r.(*K8sCluster)
+			for _, n := range c.Networks {
+				c.DependsOn = append(c.DependsOn, n.Name)
+			}
+			c.DependsOn = append(c.DependsOn, c.Depends...)
+
 		case TypeHelm:
 			c := r.(*Helm)
 			c.DependsOn = append(c.DependsOn, c.Cluster)
@@ -356,25 +412,29 @@ func ParseReferences(c *Config) error {
 			c.DependsOn = append(c.DependsOn, c.Cluster)
 			c.DependsOn = append(c.DependsOn, c.Depends...)
 
-		case TypeIngress:
-			c := r.(*Ingress)
+		case TypeK8sIngress:
+			c := r.(*K8sIngress)
 			for _, n := range c.Networks {
 				c.DependsOn = append(c.DependsOn, n.Name)
 			}
-			c.DependsOn = append(c.DependsOn, c.Target)
+			c.DependsOn = append(c.DependsOn, c.Cluster)
 			c.DependsOn = append(c.DependsOn, c.Depends...)
-		case TypeK8sCluster:
-			c := r.(*K8sCluster)
-			for _, n := range c.Networks {
-				c.DependsOn = append(c.DependsOn, n.Name)
-			}
-			c.DependsOn = append(c.DependsOn, c.Depends...)
+
 		case TypeNomadCluster:
 			c := r.(*NomadCluster)
 			for _, n := range c.Networks {
 				c.DependsOn = append(c.DependsOn, n.Name)
 			}
 			c.DependsOn = append(c.DependsOn, c.Depends...)
+
+		case TypeNomadIngress:
+			c := r.(*NomadIngress)
+			for _, n := range c.Networks {
+				c.DependsOn = append(c.DependsOn, n.Name)
+			}
+			c.DependsOn = append(c.DependsOn, c.Cluster)
+			c.DependsOn = append(c.DependsOn, c.Depends...)
+
 		case TypeNomadJob:
 			c := r.(*NomadJob)
 			c.DependsOn = append(c.DependsOn, c.Cluster)
@@ -400,6 +460,34 @@ func buildContext() *hcl.EvalContext {
 		},
 	})
 
+	var HomeFunc = function.New(&function.Spec{
+		Params: []function.Parameter{
+			{
+				Name:             "home",
+				Type:             cty.NilType,
+				AllowDynamicType: true,
+			},
+		},
+		Type: function.StaticReturnType(cty.String),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			return cty.StringVal(utils.HomeFolder()), nil
+		},
+	})
+
+	var ShipyardFunc = function.New(&function.Spec{
+		Params: []function.Parameter{
+			{
+				Name:             "shipyard",
+				Type:             cty.NilType,
+				AllowDynamicType: true,
+			},
+		},
+		Type: function.StaticReturnType(cty.String),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			return cty.StringVal(utils.ShipyardHome()), nil
+		},
+	})
+
 	var KubeConfigFunc = function.New(&function.Spec{
 		Params: []function.Parameter{
 			{
@@ -420,6 +508,8 @@ func buildContext() *hcl.EvalContext {
 	}
 	ctx.Functions["env"] = EnvFunc
 	ctx.Functions["k8s_config"] = KubeConfigFunc
+	ctx.Functions["home"] = HomeFunc
+	ctx.Functions["shipyard"] = ShipyardFunc
 
 	return ctx
 }

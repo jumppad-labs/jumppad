@@ -17,6 +17,6 @@ container "tools" {
   
   env {
     key = "NOMAD_ADDR"
-    value = "http://server.dev.nomad_cluster.shipyard:4646"
+    value = "http://server.dev.nomad_cluster.shipyard.run:4646"
   }
 }

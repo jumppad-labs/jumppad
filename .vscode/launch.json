@@ -13,7 +13,7 @@
       "env": {},
       "args": [
         "run",
-        "/home/nicj/go/src/github.com/eveld/hashidays/v2"
+        "./functional_tests/test_fixtures/nomad"
       ]
     }
   ]

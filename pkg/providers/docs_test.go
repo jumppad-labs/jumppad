@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"fmt"
 	"io/ioutil"
 	"testing"
 
@@ -85,14 +86,14 @@ func TestDocsSetsDocsPorts(t *testing.T) {
 	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
 
 	// main port
-	assert.Equal(t, 80, params.Ports[0].Local)
-	assert.Equal(t, 80, params.Ports[0].Remote)
-	assert.Equal(t, d.config.Port, params.Ports[0].Host)
+	assert.Equal(t, "80", params.Ports[0].Local)
+	assert.Equal(t, "80", params.Ports[0].Remote)
+	assert.Equal(t, fmt.Sprintf("%d", d.config.Port), params.Ports[0].Host)
 
 	// livereload
-	assert.Equal(t, 37950, params.Ports[1].Local)
-	assert.Equal(t, 37950, params.Ports[1].Remote)
-	assert.Equal(t, 37950, params.Ports[1].Host)
+	assert.Equal(t, "37950", params.Ports[1].Local)
+	assert.Equal(t, "37950", params.Ports[1].Remote)
+	assert.Equal(t, "37950", params.Ports[1].Host)
 }
 
 func TestDocsPullsTerminalContainer(t *testing.T) {
@@ -128,8 +129,8 @@ func TestDocsSetsTerminalPorts(t *testing.T) {
 	params := getCalls(&md.Mock, "CreateContainer")[1].Arguments[0].(*config.Container)
 
 	// main port
-	assert.Equal(t, 27950, params.Ports[0].Host)
-	assert.Equal(t, 27950, params.Ports[0].Local)
+	assert.Equal(t, "27950", params.Ports[0].Host)
+	assert.Equal(t, "27950", params.Ports[0].Local)
 }
 
 func TestDestroyRemovesContainers(t *testing.T) {

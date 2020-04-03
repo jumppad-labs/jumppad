@@ -23,6 +23,59 @@ func NewIngress(c *config.Ingress, cc clients.ContainerTasks, l hclog.Logger) *I
 	return &Ingress{c, cc, l}
 }
 
+// NewContainerIngress creates a new ingress provider for a container
+func NewContainerIngress(ci *config.ContainerIngress, cc clients.ContainerTasks, l hclog.Logger) *Ingress {
+	c := config.NewIngress(ci.Name)
+	c.Depends = ci.Depends
+	c.Networks = ci.Networks
+	c.Target = ci.Target
+	c.Ports = ci.Ports
+	c.Config = ci.Config
+
+	return &Ingress{c, cc, l}
+}
+
+// NewNomadIngress creates an ingress type for resources in a Nomad cluster
+func NewNomadIngress(ci *config.NomadIngress, cc clients.ContainerTasks, l hclog.Logger) *Ingress {
+	c := config.NewIngress(ci.Name)
+	c.Depends = ci.Depends
+	c.Networks = ci.Networks
+	c.Target = ci.Cluster
+	c.Ports = ci.Ports
+	c.Config = ci.Config
+
+	return &Ingress{c, cc, l}
+}
+
+// NewK8sIngress creates an Ingress from Kubernetes config
+func NewK8sIngress(kc *config.K8sIngress, cc clients.ContainerTasks, l hclog.Logger) *Ingress {
+	// convert the config
+	c := config.NewIngress(kc.Name)
+
+	c.Depends = kc.Depends
+	c.Networks = kc.Networks
+	c.Target = kc.Cluster
+
+	if kc.Deployment != "" {
+		c.Service = fmt.Sprintf("deployment/%s", kc.Deployment)
+	}
+
+	if kc.Service != "" {
+		c.Service = fmt.Sprintf("svc/%s", kc.Service)
+	}
+
+	if kc.Pod != "" {
+		c.Service = kc.Pod
+	}
+
+	c.Namespace = kc.Namespace
+	c.Ports = kc.Ports
+
+	c.Config = kc.Config
+
+	return &Ingress{c, cc, l}
+}
+
 // Create the ingress
 func (i *Ingress) Create() error {
 	i.log.Info("Creating Ingress", "ref", i.config.Name)
@@ -100,7 +153,7 @@ func (i *Ingress) Create() error {
 	// add the ports
 	for _, p := range i.config.Ports {
 		command = append(command, "--ports")
-		command = append(command, fmt.Sprintf("%d:%d", p.Local, p.Remote))
+		command = append(command, fmt.Sprintf("%s:%s", p.Local, p.Remote))
 	}
 
 	// ingress simply crease a container with specific options
@@ -138,7 +191,7 @@ func (i *Ingress) Destroy() error {
 		for _, n := range i.config.Networks {
 			err := i.client.DetachNetwork(n.Name, id)
 			if err != nil {
-				return err
+				i.log.Error("Unable to detach network", "ref", i.config.Name, "network", n.Name)
 			}
 		}
 

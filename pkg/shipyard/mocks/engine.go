@@ -11,10 +11,14 @@ type Engine struct {
 	mock.Mock
 }
 
-func (e *Engine) Apply(path string) error {
+func (e *Engine) Apply(path string) ([]config.Resource, error) {
 	args := e.Called(path)
 
-	return args.Error(0)
+	if r, ok := args.Get(0).([]config.Resource); ok {
+		return r, args.Error(1)
+	}
+
+	return nil, args.Error(1)
 }
 
 func (e *Engine) Destroy(path string, all bool) error {

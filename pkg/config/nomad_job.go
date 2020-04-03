@@ -15,7 +15,7 @@ type NomadJob struct {
 	Paths []string `hcl:"paths" validator:"filepath" json:"paths"`
 
 	// HealthCheck defines a health check for the resource
-	HealthCheck *HealthCheck `hcl:"health_check,block"`
+	HealthCheck *HealthCheck `hcl:"health_check,block" json:"health_check,omitempty"`
 }
 
 // NewNomadJob creates a kubernetes config resource with the correct defaults
