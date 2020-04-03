@@ -31,6 +31,8 @@ func ValidateName(name string) (bool, error) {
 	return true, nil
 }
 
+// ReplaceNonURIChars replaces any characters in the resrouce name which
+// can not be used in a URI
 func ReplaceNonURIChars(s string) (string, error) {
 	reg, err := regexp.Compile(`[^a-zA-Z0-9\-\.]+`)
 	if err != nil {
@@ -66,7 +68,7 @@ func FQDNVolumeName(name string) string {
 // CreateKubeConfigPath creates the file path for the KubeConfig file when
 // using Kubernetes cluster
 func CreateKubeConfigPath(name string) (dir, filePath string, dockerPath string) {
-	dir = fmt.Sprintf("%s/.shipyard/config/%s", os.Getenv("HOME"), name)
+	dir = fmt.Sprintf("%s/.shipyard/config/%s", HomeFolder(), name)
 	filePath = fmt.Sprintf("%s/kubeconfig.yaml", dir)
 	dockerPath = fmt.Sprintf("%s/kubeconfig-docker.yaml", dir)
 
@@ -82,7 +84,7 @@ func CreateKubeConfigPath(name string) (dir, filePath string, dockerPath string)
 // CreateNomadConfigPath creates the file path for the Nomad config file when
 // using Kubernetes cluster
 func CreateNomadConfigPath(name string) (dir, filePath string) {
-	dir = fmt.Sprintf("%s/.shipyard/config/%s", os.Getenv("HOME"), name)
+	dir = fmt.Sprintf("%s/.shipyard/config/%s", HomeFolder(), name)
 	filePath = fmt.Sprintf("%s/nomad.json", dir)
 
 	// create the folders
