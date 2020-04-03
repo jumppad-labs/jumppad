@@ -25,7 +25,7 @@ type Container struct {
 	Resources *Resources `hcl:"resources,block" json:"resources,omitempty"` // resource constraints for the container
 
 	// health checks for the container
-	HealthCheck *HealthCheck `hcl:"health_check,block"`
+	HealthCheck *HealthCheck `hcl:"health_check,block" json:"health_check,omitempty"`
 }
 
 // NewContainer returns a new Container resource with the correct default options

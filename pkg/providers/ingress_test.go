@@ -171,7 +171,7 @@ func TestIngressContainerTargetConfiguresCommand(t *testing.T) {
 	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
 
 	assert.Equal(t, "--service-name", params.Command[0])
-	assert.Equal(t, "test.container.shipyard", params.Command[1])
+	assert.Equal(t, "test.container.shipyard.run", params.Command[1])
 }
 
 func TestIngressContainerAddsPorts(t *testing.T) {
@@ -236,14 +236,14 @@ var testIngressContainerConfig = config.ContainerIngress{
 	Target: "container.test",
 	Ports: []config.Port{
 		config.Port{
-			Local:  8080,
-			Remote: 8081,
-			Host:   8082,
+			Local:  "8080",
+			Remote: "8081",
+			Host:   "8082",
 		},
 		config.Port{
-			Local:  9080,
-			Remote: 9081,
-			Host:   9082,
+			Local:  "9080",
+			Remote: "9081",
+			Host:   "9082",
 		},
 	},
 }

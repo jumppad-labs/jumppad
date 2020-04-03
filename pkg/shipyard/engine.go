@@ -38,7 +38,7 @@ type Clients struct {
 
 // Engine defines an interface for the Shipyard engine
 type Engine interface {
-	Apply(string) error
+	Apply(string) ([]config.Resource, error)
 	Destroy(string, bool) error
 	ResourceCount() int
 	Blueprint() *config.Blueprint
@@ -116,11 +116,13 @@ func New(l hclog.Logger) (Engine, error) {
 }
 
 // Apply the current config creating the resources
-func (e *EngineImpl) Apply(path string) error {
+func (e *EngineImpl) Apply(path string) ([]config.Resource, error) {
 	d, err := e.readConfig(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	createdResource := []config.Resource{}
 
 	// walk the dag and apply the config
 	w := dag.Walker{}
@@ -157,6 +159,7 @@ func (e *EngineImpl) Apply(path string) error {
 
 			// set the status
 			r.Info().Status = config.Applied
+			createdResource = append(createdResource, r)
 		}
 
 		return nil
@@ -180,12 +183,12 @@ func (e *EngineImpl) Apply(path string) error {
 	if len(e.config.Resources) > 0 {
 		// save the state regardless of error
 		err = e.config.ToJSON(utils.StatePath())
-		if err != nil {
-			return err
+		if err == nil {
+			return createdResource, err
 		}
 	}
 
-	return tf.Err()
+	return nil, tf.Err()
 }
 
 // Destroy the resources defined by the config

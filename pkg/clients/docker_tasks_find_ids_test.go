@@ -31,7 +31,7 @@ func TestFindContainerIDsReturnsID(t *testing.T) {
 
 	// ensure that the FQDN was passed as an argument
 	args := getCalls(&md.Mock, "ContainerList")[0].Arguments[1].(types.ContainerListOptions)
-	assert.Equal(t, "test.cloud.shipyard", args.Filters.Get("name")[0])
+	assert.Equal(t, "test.cloud.shipyard.run", args.Filters.Get("name")[0])
 
 	// ensure that the id has been returned
 	assert.Len(t, ids, 2)

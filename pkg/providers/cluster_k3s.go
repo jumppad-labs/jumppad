@@ -121,8 +121,8 @@ func (c *K8sCluster) createK3s() error {
 	// expose the API server port
 	cc.Ports = []config.Port{
 		config.Port{
-			Local:    apiPort,
-			Host:     apiPort,
+			Local:    fmt.Sprintf("%d", apiPort),
+			Host:     fmt.Sprintf("%d", apiPort),
 			Protocol: "tcp",
 		},
 	}

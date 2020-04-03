@@ -51,9 +51,7 @@ func (c *Config) FromJSON(path string) error {
 	defer f.Close()
 
 	jd := json.NewDecoder(f)
-	jd.Decode(c)
-
-	return nil
+	return jd.Decode(c)
 }
 
 // UnmarshalJSON is a cusom Unmarshaler to deal with
@@ -63,6 +61,15 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 	err := json.Unmarshal(b, &objMap)
 	if err != nil {
 		return err
+	}
+
+	var rawBlueprint *json.RawMessage
+	json.Unmarshal(*objMap["blueprint"], &rawBlueprint)
+
+	bp := &Blueprint{}
+	err = json.Unmarshal(*rawBlueprint, &bp)
+	if err == nil {
+		c.Blueprint = bp
 	}
 
 	var rawMessagesForResources []*json.RawMessage

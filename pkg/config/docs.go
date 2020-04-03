@@ -14,11 +14,12 @@ type Docs struct {
 
 	Image *Image `hcl:"image,block" json:"image,omitempty"` // image to use for the container
 
-	Path string `hcl:"path" json:"path"`
-	Port int    `hcl:"port" json:"port"`
+	Path          string `hcl:"path" json:"path"`
+	Port          int    `hcl:"port" json:"port"`
+	OpenInBrowser bool   `hcl:"open_in_browser,optional" json:"open_in_browser"`
 
-	IndexTitle string   `hcl:"index_title" json:"index_title"`
-	IndexPages []string `hcl:"index_pages" json:"index_pages,omitempty"`
+	IndexTitle string   `hcl:"index_title,optional" json:"index_title"`
+	IndexPages []string `hcl:"index_pages,optional" json:"index_pages,omitempty"`
 }
 
 // NewDocs creates a new Docs config resource

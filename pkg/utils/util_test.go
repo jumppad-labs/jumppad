@@ -70,12 +70,17 @@ func TestValidatesNameAndReturnsErrorWhenTooLong(t *testing.T) {
 
 func TestFQDNReturnsCorrectValue(t *testing.T) {
 	fq := FQDN("test", "type")
-	assert.Equal(t, "test.type.shipyard", fq)
+	assert.Equal(t, "test.type.shipyard.run", fq)
+}
+
+func TestFQDNReplacesInvalidChars(t *testing.T) {
+	fq := FQDN("tes&t", "type")
+	assert.Equal(t, "tes-t.type.shipyard.run", fq)
 }
 
 func TestFQDNVolumeReturnsCorrectValue(t *testing.T) {
 	fq := FQDNVolumeName("test")
-	assert.Equal(t, "test.volume.shipyard", fq)
+	assert.Equal(t, "test.volume.shipyard.run", fq)
 }
 
 func TestHomeReturnsCorrectValue(t *testing.T) {

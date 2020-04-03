@@ -24,8 +24,8 @@ type HTTPImpl struct {
 	l       hclog.Logger
 }
 
-func NewHTTP(d time.Duration, l hclog.Logger) HTTP {
-	return &HTTPImpl{d, l}
+func NewHTTP(backoff time.Duration, l hclog.Logger) HTTP {
+	return &HTTPImpl{backoff, l}
 }
 
 func (h *HTTPImpl) HealthCheckHTTP(address string, timeout time.Duration) error {

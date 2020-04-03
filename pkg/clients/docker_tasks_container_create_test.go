@@ -3,7 +3,6 @@ package clients
 import (
 	"fmt"
 	"io/ioutil"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -35,13 +34,13 @@ var containerConfig = &config.Container{
 	},
 	Ports: []config.Port{
 		config.Port{
-			Local:    8080,
-			Host:     9080,
+			Local:    "8080",
+			Host:     "9080",
 			Protocol: "tcp",
 		},
 		config.Port{
-			Local:    8081,
-			Host:     9081,
+			Local:    "8081",
+			Host:     "9081",
 			Protocol: "udp",
 		},
 	},
@@ -222,21 +221,21 @@ func TestContainerPublishesPorts(t *testing.T) {
 	hc := params[2].(*container.HostConfig)
 
 	// check the first port mapping
-	exp, err := nat.NewPort(cc.Ports[0].Protocol, strconv.Itoa(cc.Ports[0].Local))
+	exp, err := nat.NewPort(cc.Ports[0].Protocol, cc.Ports[0].Local)
 	assert.NoError(t, err)
 	assert.NotNil(t, dc.ExposedPorts[exp])
 
 	// check the port bindings for the local machine
-	assert.Equal(t, strconv.Itoa(cc.Ports[0].Host), hc.PortBindings[exp][0].HostPort)
+	assert.Equal(t, cc.Ports[0].Host, hc.PortBindings[exp][0].HostPort)
 	assert.Equal(t, "0.0.0.0", hc.PortBindings[exp][0].HostIP)
 
 	// check the second port mapping
-	exp, err = nat.NewPort(cc.Ports[1].Protocol, strconv.Itoa(cc.Ports[1].Local))
+	exp, err = nat.NewPort(cc.Ports[1].Protocol, cc.Ports[1].Local)
 	assert.NoError(t, err)
 	assert.NotNil(t, dc.ExposedPorts[exp])
 
 	// check the port bindings for the local machine
-	assert.Equal(t, strconv.Itoa(cc.Ports[1].Host), hc.PortBindings[exp][0].HostPort)
+	assert.Equal(t, cc.Ports[1].Host, hc.PortBindings[exp][0].HostPort)
 	assert.Equal(t, "0.0.0.0", hc.PortBindings[exp][0].HostIP)
 }
 

@@ -141,7 +141,7 @@ func (i *Ingress) Create() error {
 	// add the ports
 	for _, p := range i.config.Ports {
 		command = append(command, "--ports")
-		command = append(command, fmt.Sprintf("%d:%d", p.Local, p.Remote))
+		command = append(command, fmt.Sprintf("%s:%s", p.Local, p.Remote))
 	}
 
 	// ingress simply crease a container with specific options
@@ -179,7 +179,7 @@ func (i *Ingress) Destroy() error {
 		for _, n := range i.config.Networks {
 			err := i.client.DetachNetwork(n.Name, id)
 			if err != nil {
-				return err
+				i.log.Error("Unable to detach network", "ref", i.config.Name, "network", n.Name)
 			}
 		}
 

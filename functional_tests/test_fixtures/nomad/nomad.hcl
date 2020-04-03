@@ -13,7 +13,7 @@ nomad_cluster "dev" {
 
   env {
     key = "CONSUL_SERVER"
-    value = "consul.cloud.shipyard"
+    value = "consul.container.shipyard.run"
   }
   
   env {

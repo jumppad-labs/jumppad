@@ -17,7 +17,7 @@ import (
 
 func setupRun(t *testing.T) (*cobra.Command, *mocks.Engine, *clientmocks.Blueprints, *clientmocks.MockHTTP, *clientmocks.Browser) {
 	mockEngine := &mocks.Engine{}
-	mockEngine.On("Apply", mock.Anything).Return(nil)
+	mockEngine.On("Apply", mock.Anything).Return(nil, nil)
 	mockEngine.On("Blueprint").Return(&config.Blueprint{BrowserWindows: []string{"http://localhost", "http://localhost2"}})
 
 	mockHTTP := &clientmocks.MockHTTP{}
@@ -84,6 +84,41 @@ func TestRunOpensBrowserWindow(t *testing.T) {
 
 	mh.AssertNumberOfCalls(t, "HealthCheckHTTP", 2)
 	mb.AssertNumberOfCalls(t, "Open", 2)
+}
+
+func TestRunOpensBrowserWindowForResources(t *testing.T) {
+	rf, me, _, mh, mb := setupRun(t)
+	rf.SetArgs([]string{"/tmp"})
+
+	removeOn(&me.Mock, "Apply")
+
+	d := config.NewDocs("test")
+	d.OpenInBrowser = true
+
+	i := config.NewIngress("test")
+	i.Ports = []config.Port{config.Port{Host: "8080", OpenInBrowser: true}}
+
+	c := config.NewContainer("test")
+	c.Ports = []config.Port{config.Port{Host: "8080", OpenInBrowser: true}}
+
+	d2 := config.NewDocs("test")
+
+	i2 := config.NewIngress("test")
+	i2.Ports = []config.Port{config.Port{Host: "8080", OpenInBrowser: false}}
+
+	c2 := config.NewContainer("test")
+	c2.Ports = []config.Port{config.Port{OpenInBrowser: true}}
+
+	me.On("Apply", mock.Anything).Return(
+		[]config.Resource{d, i, c, d2, i2, c2},
+		nil,
+	)
+
+	err := rf.Execute()
+	assert.NoError(t, err)
+
+	mh.AssertNumberOfCalls(t, "HealthCheckHTTP", 5)
+	mb.AssertNumberOfCalls(t, "Open", 5)
 }
 
 func TestRunDoesNotOpensBrowserWindowWhenCheckError(t *testing.T) {

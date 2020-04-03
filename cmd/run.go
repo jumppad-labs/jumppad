@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 
 	"github.com/shipyard-run/shipyard/pkg/clients"
+	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
@@ -66,8 +67,14 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc
 			}
 		}
 
+		// have we already got a blueprint in the state
+		blueprintExists := false
+		if bluePrintInState() {
+			blueprintExists = true
+		}
+
 		// Load the files
-		err = e.Apply(dst)
+		res, err := e.Apply(dst)
 		if err != nil {
 			return fmt.Errorf("Unable to apply blueprint: %s", err)
 		}
@@ -78,15 +85,51 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc
 			// do not open the browser windows
 			if *noOpen == false {
 
+				browserList := e.Blueprint().BrowserWindows
+
+				// check if blueprint is in the state, if so do not open these windows again
+				if blueprintExists {
+					browserList = []string{}
+				}
+
+				// check for browser windows in the applied resources
+				for _, r := range res {
+					switch r.Info().Type {
+					case config.TypeContainer:
+						c := r.(*config.Container)
+						for _, p := range c.Ports {
+							if p.Host != "" && p.OpenInBrowser {
+								browserList = append(browserList, fmt.Sprintf("http://localhost:%s", p.Host))
+							}
+						}
+					case config.TypeIngress:
+						c := r.(*config.Ingress)
+						for _, p := range c.Ports {
+							if p.Host != "" && p.OpenInBrowser {
+								browserList = append(browserList, fmt.Sprintf("http://localhost:%s", p.Host))
+							}
+						}
+					case config.TypeDocs:
+						c := r.(*config.Docs)
+						if c.OpenInBrowser {
+							browserList = append(browserList, fmt.Sprintf("http://localhost:%d", c.Port))
+						}
+					}
+				}
+
+				// check the browser windows in the blueprint file
 				wg := sync.WaitGroup{}
 
-				for _, b := range e.Blueprint().BrowserWindows {
+				for _, b := range browserList {
 					wg.Add(1)
 					go func(uri string) {
 						// health check the URL
 						err := hc.HealthCheckHTTP(uri, 30*time.Second)
 						if err == nil {
-							bc.Open(uri)
+							be := bc.Open(uri)
+							if be != nil {
+								l.Error("Unable to open browser", "error", be)
+							}
 						}
 
 						wg.Done()
@@ -94,6 +137,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc
 				}
 
 				wg.Wait()
+
 			}
 
 			cmd.Println("")
@@ -115,4 +159,12 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc
 
 		return nil
 	}
+}
+
+func bluePrintInState() bool {
+	//load the state
+	sc := config.New()
+	sc.FromJSON(utils.StatePath())
+
+	return sc.Blueprint != nil
 }

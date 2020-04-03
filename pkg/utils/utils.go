@@ -31,15 +31,36 @@ func ValidateName(name string) (bool, error) {
 	return true, nil
 }
 
+func ReplaceNonURIChars(s string) (string, error) {
+	reg, err := regexp.Compile(`[^a-zA-Z0-9\-\.]+`)
+	if err != nil {
+		return "", err
+	}
+
+	return reg.ReplaceAllString(s, "-"), nil
+}
+
 // FQDN generates the full qualified name for a container
 func FQDN(name, typeName string) string {
-	fqdn := fmt.Sprintf("%s.%s.shipyard", name, typeName)
+	// ensure that the name is valid for URI schema
+	cleanName, err := ReplaceNonURIChars(name)
+	if err != nil {
+		panic(err)
+	}
+
+	fqdn := fmt.Sprintf("%s.%s.shipyard.run", cleanName, typeName)
 	return fqdn
 }
 
 // FQDNVolumeName creates a full qualified volume name
 func FQDNVolumeName(name string) string {
-	return fmt.Sprintf("%s.volume.shipyard", name)
+	// ensure that the name is valid for URI schema
+	cleanName, err := ReplaceNonURIChars(name)
+	if err != nil {
+		panic(err)
+	}
+
+	return fmt.Sprintf("%s.volume.shipyard.run", cleanName)
 }
 
 // CreateKubeConfigPath creates the file path for the KubeConfig file when

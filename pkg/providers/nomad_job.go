@@ -90,12 +90,14 @@ func (n *NomadJob) Destroy() error {
 	_, configPath := utils.CreateNomadConfigPath(cc.Info().Name)
 	err = n.client.SetConfig(configPath)
 	if err != nil {
-		return xerrors.Errorf("Unable to load nomad config %s: %w", configPath, err)
+		n.log.Error("Unable to load Nomad config", "config", configPath, "error", err)
+		return nil
 	}
 
 	err = n.client.Stop(n.config.Paths)
 	if err != nil {
-		return xerrors.Errorf("Unable to create Nomad jobs: %w", err)
+		n.log.Error("Unable to destroy Nomad job", "config", configPath, "error", err)
+		return nil
 	}
 
 	return nil

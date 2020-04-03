@@ -460,6 +460,34 @@ func buildContext() *hcl.EvalContext {
 		},
 	})
 
+	var HomeFunc = function.New(&function.Spec{
+		Params: []function.Parameter{
+			{
+				Name:             "home",
+				Type:             cty.NilType,
+				AllowDynamicType: true,
+			},
+		},
+		Type: function.StaticReturnType(cty.String),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			return cty.StringVal(utils.HomeFolder()), nil
+		},
+	})
+
+	var ShipyardFunc = function.New(&function.Spec{
+		Params: []function.Parameter{
+			{
+				Name:             "shipyard",
+				Type:             cty.NilType,
+				AllowDynamicType: true,
+			},
+		},
+		Type: function.StaticReturnType(cty.String),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			return cty.StringVal(utils.ShipyardHome()), nil
+		},
+	})
+
 	var KubeConfigFunc = function.New(&function.Spec{
 		Params: []function.Parameter{
 			{
@@ -480,6 +508,8 @@ func buildContext() *hcl.EvalContext {
 	}
 	ctx.Functions["env"] = EnvFunc
 	ctx.Functions["k8s_config"] = KubeConfigFunc
+	ctx.Functions["home"] = HomeFunc
+	ctx.Functions["shipyard"] = ShipyardFunc
 
 	return ctx
 }

@@ -66,7 +66,7 @@ func (c *Container) Destroy() error {
 			for _, n := range c.config.Networks {
 				err := c.client.DetachNetwork(n.Name, id)
 				if err != nil {
-					return err
+					c.log.Error("Unable to detach network", "ref", c.config.Name, "network", n.Name)
 				}
 			}
 

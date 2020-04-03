@@ -13,7 +13,7 @@ type Helm struct {
 	Chart   string `hcl:"chart"`
 	Values  string `hcl:"values,optional"`
 
-	HealthCheck *HealthCheck `hcl:"health_check,block"`
+	HealthCheck *HealthCheck `hcl:"health_check,block" json:"health_check,omitempty"`
 }
 
 // NewHelm creates a new Helm resource with the correct detaults

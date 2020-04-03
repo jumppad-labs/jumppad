@@ -101,8 +101,8 @@ func (c *NomadCluster) createNomad() error {
 	// expose the API server port
 	cc.Ports = []config.Port{
 		config.Port{
-			Local:    4646,
-			Host:     apiPort,
+			Local:    "4646",
+			Host:     fmt.Sprintf("%d", apiPort),
 			Protocol: "tcp",
 		},
 	}

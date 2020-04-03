@@ -6,6 +6,10 @@ ingress "consul-http" {
     remote = 8500
     host   = 18500
   }
+
+  network  {
+    name = "network.cloud"
+  }
 }
 
 ingress "nomad-http" {
@@ -15,5 +19,10 @@ ingress "nomad-http" {
     local  = 4646
     remote = 4646
     host   = 14646
+    open_in_browser = true
+  }
+
+  network  {
+    name = "network.cloud"
   }
 }
