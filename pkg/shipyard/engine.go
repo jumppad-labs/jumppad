@@ -182,10 +182,12 @@ func (e *EngineImpl) Apply(path string) ([]config.Resource, error) {
 
 	if len(e.config.Resources) > 0 {
 		// save the state regardless of error
-		err = e.config.ToJSON(utils.StatePath())
-		if err == nil {
-			return createdResource, err
+		jerr := e.config.ToJSON(utils.StatePath())
+		if jerr != nil {
+			return createdResource, jerr
 		}
+
+		return createdResource, err
 	}
 
 	return nil, tf.Err()
