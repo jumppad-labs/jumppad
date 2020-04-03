@@ -350,6 +350,9 @@ func (c *Config) Merge(c2 *Config) {
 				c.Resources[i] = cc2
 				c.Resources[i].Info().Status = status
 
+				// make sure the reference is the world view not the local view
+				c.Resources[i].Info().Config = c
+
 				found = true
 				break
 			}

@@ -1,10 +1,85 @@
 # Change Log
 
+## version 0.0.6
+
+### Bug fixes
+* Fix bug where heirachy in state was lost on incremental applies
+* Minor UX tweak for run command, use current directory as default 
+
+## version 0.0.5
+
+### Container
+HTTP health checks can now be defined for containers. At present HTTP health checks are executed on the client and 
+require forwarded ports or an ingress to be configured. Future updates will move this functionality to the network
+removing the requirement for external access.
+
+```javascript
+container "vault" {
+  image {
+    name = "hashicorp/vault-enterprise:1.4.0-rc1_ent"
+  }
+
+  command = [
+    "vault",
+    "server",
+    "-dev",
+    "-dev-root-token-id=root",
+    "-dev-listen-address=0.0.0.0:8200",
+  ]
+
+  port {
+    local = 8200
+    remote = 8200
+    host = 8200
+  }
+
+  health_check {
+    timeout = "30s"
+    http = "http://localhost:8200/v1/sys/health"
+  }
+}
+```
+
+### Nomad Job
+Nomad job is a new resource type which allows the running of Nomad Jobs on a cluster. Health checks can be applied to jobs
+a health check will only be marked as passed when all the tasks in side the job are reported as "Running".
+
+Nomad job is a dependent resource and will not apply until the cluster is up and healthy.
+
+```javascript
+nomad_cluster "dev" {
+  version = "v0.10.2"
+
+  nodes = 1 // default
+
+  network {
+    name = "network.cloud"
+  }
+
+  image {
+    name = "consul:1.7.1"
+  }
+}
+
+nomad_job "redis" {
+  cluster = "nomad_cluster.dev"
+
+  paths = ["./app_config/example2.nomad"]
+  
+  health_check {
+    timeout = "60s"
+    nomad_jobs = ["example_2"]
+  }
+}
+```
+
 ## version 0.0.4
 
 ### Container
 Allow HTTP health checks to be added to containers
 
+## version 0.0.3
+This version was skipped due to issues getting Chocolately distributions setup
 
 ## version 0.0.2
 
