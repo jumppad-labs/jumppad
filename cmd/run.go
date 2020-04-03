@@ -85,88 +85,87 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc
 			return fmt.Errorf("Unable to apply blueprint: %s", err)
 		}
 
-		// if we have a blueprint show the header
-		if e.Blueprint() != nil {
+		// do not open the browser windows
+		if *noOpen == false {
 
-			// do not open the browser windows
-			if *noOpen == false {
+			browserList := []string{}
 
-				browserList := e.Blueprint().BrowserWindows
-
-				// check if blueprint is in the state, if so do not open these windows again
-				if blueprintExists {
-					browserList = []string{}
-				}
-
-				// check for browser windows in the applied resources
-				for _, r := range res {
-					switch r.Info().Type {
-					case config.TypeContainer:
-						c := r.(*config.Container)
-						for _, p := range c.Ports {
-							if p.Host != "" && p.OpenInBrowser {
-								browserList = append(browserList, fmt.Sprintf("http://localhost:%s", p.Host))
-							}
-						}
-					case config.TypeIngress:
-						c := r.(*config.Ingress)
-						for _, p := range c.Ports {
-							if p.Host != "" && p.OpenInBrowser {
-								browserList = append(browserList, fmt.Sprintf("http://localhost:%s", p.Host))
-							}
-						}
-					case config.TypeContainerIngress:
-						c := r.(*config.ContainerIngress)
-						for _, p := range c.Ports {
-							if p.Host != "" && p.OpenInBrowser {
-								browserList = append(browserList, fmt.Sprintf("http://localhost:%s", p.Host))
-							}
-						}
-					case config.TypeNomadIngress:
-						c := r.(*config.NomadIngress)
-						for _, p := range c.Ports {
-							if p.Host != "" && p.OpenInBrowser {
-								browserList = append(browserList, fmt.Sprintf("http://localhost:%s", p.Host))
-							}
-						}
-					case config.TypeK8sIngress:
-						c := r.(*config.K8sIngress)
-						for _, p := range c.Ports {
-							if p.Host != "" && p.OpenInBrowser {
-								browserList = append(browserList, fmt.Sprintf("http://localhost:%s", p.Host))
-							}
-						}
-					case config.TypeDocs:
-						c := r.(*config.Docs)
-						if c.OpenInBrowser {
-							browserList = append(browserList, fmt.Sprintf("http://localhost:%d", c.Port))
-						}
-					}
-				}
-
-				// check the browser windows in the blueprint file
-				wg := sync.WaitGroup{}
-
-				for _, b := range browserList {
-					wg.Add(1)
-					go func(uri string) {
-						// health check the URL
-						err := hc.HealthCheckHTTP(uri, 30*time.Second)
-						if err == nil {
-							be := bc.Open(uri)
-							if be != nil {
-								l.Error("Unable to open browser", "error", be)
-							}
-						}
-
-						wg.Done()
-					}(b)
-				}
-
-				wg.Wait()
-
+			// check if blueprint is in the state, if so do not open these windows again
+			if !blueprintExists && e.Blueprint() != nil {
+				browserList = e.Blueprint().BrowserWindows
 			}
 
+			// check for browser windows in the applied resources
+			for _, r := range res {
+				switch r.Info().Type {
+				case config.TypeContainer:
+					c := r.(*config.Container)
+					for _, p := range c.Ports {
+						if p.Host != "" && p.OpenInBrowser {
+							browserList = append(browserList, fmt.Sprintf("http://localhost:%s", p.Host))
+						}
+					}
+				case config.TypeIngress:
+					c := r.(*config.Ingress)
+					for _, p := range c.Ports {
+						if p.Host != "" && p.OpenInBrowser {
+							browserList = append(browserList, fmt.Sprintf("http://localhost:%s", p.Host))
+						}
+					}
+				case config.TypeContainerIngress:
+					c := r.(*config.ContainerIngress)
+					for _, p := range c.Ports {
+						if p.Host != "" && p.OpenInBrowser {
+							browserList = append(browserList, fmt.Sprintf("http://localhost:%s", p.Host))
+						}
+					}
+				case config.TypeNomadIngress:
+					c := r.(*config.NomadIngress)
+					for _, p := range c.Ports {
+						if p.Host != "" && p.OpenInBrowser {
+							browserList = append(browserList, fmt.Sprintf("http://localhost:%s", p.Host))
+						}
+					}
+				case config.TypeK8sIngress:
+					c := r.(*config.K8sIngress)
+					for _, p := range c.Ports {
+						if p.Host != "" && p.OpenInBrowser {
+							browserList = append(browserList, fmt.Sprintf("http://localhost:%s", p.Host))
+						}
+					}
+				case config.TypeDocs:
+					c := r.(*config.Docs)
+					if c.OpenInBrowser {
+						browserList = append(browserList, fmt.Sprintf("http://localhost:%d", c.Port))
+					}
+				}
+			}
+
+			// check the browser windows in the blueprint file
+			wg := sync.WaitGroup{}
+
+			for _, b := range browserList {
+				wg.Add(1)
+				go func(uri string) {
+					// health check the URL
+					err := hc.HealthCheckHTTP(uri, 30*time.Second)
+					if err == nil {
+						be := bc.Open(uri)
+						if be != nil {
+							l.Error("Unable to open browser", "error", be)
+						}
+					}
+
+					wg.Done()
+				}(b)
+			}
+
+			wg.Wait()
+
+		}
+
+		// if we have a blueprint show the header
+		if e.Blueprint() != nil {
 			cmd.Println("")
 			cmd.Println("########################################################")
 			cmd.Println("")

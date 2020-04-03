@@ -17,7 +17,7 @@ type K8sConfig struct {
 	WaitUntilReady bool `hcl:"wait_until_ready"`
 
 	// HealthCheck defines a health check for the resource
-	HealthCheck *HealthCheck `hcl:"health_check,block" json:"health_check,omitempty"`
+	HealthCheck *HealthCheck `hcl:"health_check,block" json:"health_check,omitempty" mapstructure:"health_check"`
 }
 
 // NewK8sConfig creates a kubernetes config resource with the correct defaults

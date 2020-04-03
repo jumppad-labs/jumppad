@@ -14,5 +14,5 @@ type HealthCheck struct {
 	TCP       string   `hcl:"tcp,optional" json:"tcp,omitempty"`
 	Services  []string `hcl:"services,optional" json:"services,omitempty"`
 	Pods      []string `hcl:"pods,optional" json:"pods,omitempty"`
-	NomadJobs []string `hcl:"nomad_jobs,optional" json:"nomad_jobs,omitempty"`
+	NomadJobs []string `hcl:"nomad_jobs,optional" json:"nomad_jobs,omitempty" mapstructure:"nomad_jobs"`
 }

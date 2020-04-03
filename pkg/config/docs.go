@@ -16,10 +16,10 @@ type Docs struct {
 
 	Path          string `hcl:"path" json:"path"`
 	Port          int    `hcl:"port" json:"port"`
-	OpenInBrowser bool   `hcl:"open_in_browser,optional" json:"open_in_browser"`
+	OpenInBrowser bool   `hcl:"open_in_browser,optional" json:"open_in_browser" mapstructure:"open_in_browser"` // When a host port is defined open the location in a browser
 
-	IndexTitle string   `hcl:"index_title,optional" json:"index_title"`
-	IndexPages []string `hcl:"index_pages,optional" json:"index_pages,omitempty"`
+	IndexTitle string   `hcl:"index_title,optional" json:"index_title" mapstructure:"index_title"`
+	IndexPages []string `hcl:"index_pages,optional" json:"index_pages,omitempty" mapstructure:"index_pages"`
 }
 
 // NewDocs creates a new Docs config resource

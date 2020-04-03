@@ -11,7 +11,7 @@ type Blueprint struct {
 	Author         string   `hcl:"author,optional" json:"author,omitempty"`
 	Slug           string   `hcl:"slug,optional" json:"slug,omitempty"`
 	Intro          string   `hcl:"intro,optional" json:"intro,omitempty"`
-	BrowserWindows []string `hcl:"browser_windows,optional" json:"browser_windows,omitempty"`
+	BrowserWindows []string `hcl:"browser_windows,optional" json:"browser_windows,omitempty" mapstructure:"browser_windows"`
 	Environment    []KV     `hcl:"env,block" json:"environment,omitempty"`
 }
 

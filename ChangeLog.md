@@ -1,5 +1,78 @@
 # Change Log
 
+## version 0.0.7
+
+## Ingress
+Add three new ingress types `nomad_ingress`, `k8s_ingress`, `container_ingress`, these new type have cluster specific options
+rather than trying to shoehorn all into `ingress`. For now `ingress` exists and is backward compatible.
+
+```
+k8s_ingress "consul-http" {
+  cluster = "k8s_cluster.k3s"
+  service  = "consul-consul-server"
+
+  network {
+    name = "network.cloud"
+  }
+
+  port {
+    local  = 8500
+    remote = 8500
+    host   = 18500
+  }
+}
+
+container_ingress "consul-http" {
+  target  = "container.consul"
+
+  port {
+    local  = 8500
+    remote = 8500
+    host   = 18500
+  }
+
+  network  {
+    name = "network.cloud"
+  }
+}
+
+nomad_ingress "nomad-http" {
+  cluster  = "nomad_cluster.dev"
+  job = ""
+  group = ""
+  task = ""
+
+  port {
+    local  = 4646
+    remote = 4646
+    host   = 14646
+    open_in_browser = true
+  }
+
+  network  {
+    name = "network.cloud"
+  }
+}
+```
+
+## Browser Windows
+* Added ability to open browser windows to ingress, containers, docs
+* Only open browser windows if they have not been opened
+
+## General
+* Can now do `shipyard run` or `shipyard run .` and this equals `shipyard run ./`
+* Sidebar configuration is now optional in docs
+* Changed names of Docker resources and FQDN for resources to `[name].[type].shipyard.run`
+* Resources are now resolvable via DNS
+* Added interpolation helper `${home()}` to resolve the home folder from config
+* Added interpolation helper `${shipyard()}` to resolve the shipyard folder from config
+
+### Bug fixes
+* Fix serialisation of blueprint in state
+* Fix bug with rolled back resources being in an inconsistent state
+* Fix bug with state not serialzing correctly
+
+
 ## version 0.0.6
 
 ### Bug fixes
