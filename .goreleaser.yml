@@ -53,8 +53,6 @@ nfpms:
     formats:
       - deb
       - rpm
-    dependencies:
-      - git
 
 snapcrafts:
   -

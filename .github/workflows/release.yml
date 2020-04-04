@@ -101,10 +101,10 @@ jobs:
         regex: "refs/tags/v"
         replacement: "" 
 
-      - name: Download release
-        run: |
-          wget "https://github.com/shipyard-run/shipyard/releases/download/v${{ steps.tag.outputs.value }}/shipyard_${{ steps.tag.outputs.value }}_linux_${{ matrix.arch }}"
+    - name: Download release
+      run: |
+        wget "https://github.com/shipyard-run/shipyard/releases/download/v${{ steps.tag.outputs.value }}/shipyard_${{ steps.tag.outputs.value }}_linux_${{ matrix.arch }}"
 
-      - name: Upload release
-        run: |
-          curl -F package=@shipyard_${{ steps.tag.outputs.value }}_linux_${{ matrix.arch }} https://${{ secrets.FURY_TOKEN }}@push.fury.io/shipyard-run/
+    - name: Upload release
+      run: |
+        curl -F package=@shipyard_${{ steps.tag.outputs.value }}_linux_${{ matrix.arch }} https://${{ secrets.FURY_TOKEN }}@push.fury.io/shipyard-run/
