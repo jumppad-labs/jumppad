@@ -17,7 +17,7 @@ import (
 	markdown "github.com/MichaelMure/go-term-markdown"
 )
 
-func newRunCmd(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc clients.Browser, l hclog.Logger) *cobra.Command {
+func newRunCmd(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc clients.System, l hclog.Logger) *cobra.Command {
 	var noOpen bool
 	runCmd := &cobra.Command{
 		Use:   "run [file] [directory] ...",
@@ -33,20 +33,30 @@ func newRunCmd(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc cli
   # Create a stack from a blueprint in GitHub
   yard run github.com/shipyard-run/blueprints//vault-k8s
 	`,
-		Args: cobra.ArbitraryArgs,
-		RunE: newRunCmdFunc(e, bp, hc, bc, &noOpen, l),
+		Args:         cobra.ArbitraryArgs,
+		RunE:         newRunCmdFunc(e, bp, hc, bc, &noOpen, l),
+		SilenceUsage: true,
 	}
 	runCmd.Flags().BoolVarP(&noOpen, "no-browser", "", false, "When set to true Shipyard does not open the browser windows defined in the blueprint")
 
 	return runCmd
 }
 
-func newRunCmdFunc(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc clients.Browser, noOpen *bool, l hclog.Logger) func(cmd *cobra.Command, args []string) error {
+func newRunCmdFunc(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc clients.System, noOpen *bool, l hclog.Logger) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
+
+		// Check the system to see if Docker is running and everything is installed
+		s, err := bc.Preflight()
+		if err != nil {
+			fmt.Println("")
+			fmt.Println("###### SYSTEM DIAGNOSTICS ######")
+			fmt.Println(s)
+			return err
+		}
+
 		// create the shipyard home
 		os.MkdirAll(utils.ShipyardHome(), os.FileMode(0755))
 
-		var err error
 		dst := ""
 		if len(args) == 1 {
 			dst = args[0]
@@ -150,7 +160,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc
 					// health check the URL
 					err := hc.HealthCheckHTTP(uri, 30*time.Second)
 					if err == nil {
-						be := bc.Open(uri)
+						be := bc.OpenBrowser(uri)
 						if be != nil {
 							l.Error("Unable to open browser", "error", be)
 						}

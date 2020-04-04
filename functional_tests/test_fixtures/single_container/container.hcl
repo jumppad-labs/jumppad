@@ -30,7 +30,12 @@ container "consul" {
   }
   
   env {
-    key ="abc"
+    key ="SHIPYARD_FOLDER"
     value = "${shipyard()}"
+  }
+  
+  env {
+    key ="HOME_FOLDER"
+    value = "${home()}"
   }
 }

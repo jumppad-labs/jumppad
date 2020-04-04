@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func setupRun(t *testing.T) (*cobra.Command, *mocks.Engine, *clientmocks.Blueprints, *clientmocks.MockHTTP, *clientmocks.Browser) {
+func setupRun(t *testing.T) (*cobra.Command, *mocks.Engine, *clientmocks.Blueprints, *clientmocks.MockHTTP, *clientmocks.System) {
 	mockEngine := &mocks.Engine{}
 	mockEngine.On("Apply", mock.Anything).Return(nil, nil)
 	mockEngine.On("Blueprint").Return(&config.Blueprint{BrowserWindows: []string{"http://localhost", "http://localhost2"}})
@@ -26,10 +26,21 @@ func setupRun(t *testing.T) (*cobra.Command, *mocks.Engine, *clientmocks.Bluepri
 	mockBlueprints := &clientmocks.Blueprints{}
 	mockBlueprints.On("Get", mock.Anything, mock.Anything).Return(nil)
 
-	mockBrowser := &clientmocks.Browser{}
-	mockBrowser.On("Open", mock.Anything).Return(nil)
+	mockBrowser := &clientmocks.System{}
+	mockBrowser.On("OpenBrowser", mock.Anything).Return(nil)
+	mockBrowser.On("Preflight").Return(nil)
 
 	return newRunCmd(mockEngine, mockBlueprints, mockHTTP, mockBrowser, hclog.Default()), mockEngine, mockBlueprints, mockHTTP, mockBrowser
+}
+
+func TestRunPreflightsSystem(t *testing.T) {
+	rf, _, _, _, mb := setupRun(t)
+	rf.SetArgs([]string{"/tmp"})
+
+	err := rf.Execute()
+	assert.NoError(t, err)
+
+	mb.AssertCalled(t, "Preflight")
 }
 
 func TestRunSetsDestinationFromArgsWhenPresent(t *testing.T) {
@@ -83,7 +94,7 @@ func TestRunOpensBrowserWindow(t *testing.T) {
 	assert.NoError(t, err)
 
 	mh.AssertNumberOfCalls(t, "HealthCheckHTTP", 2)
-	mb.AssertNumberOfCalls(t, "Open", 2)
+	mb.AssertNumberOfCalls(t, "OpenBrowser", 2)
 }
 
 func TestRunOpensBrowserWindowForResources(t *testing.T) {
@@ -118,7 +129,7 @@ func TestRunOpensBrowserWindowForResources(t *testing.T) {
 	assert.NoError(t, err)
 
 	mh.AssertNumberOfCalls(t, "HealthCheckHTTP", 5)
-	mb.AssertNumberOfCalls(t, "Open", 5)
+	mb.AssertNumberOfCalls(t, "OpenBrowser", 5)
 }
 
 func TestRunDoesNotOpensBrowserWindowWhenCheckError(t *testing.T) {
@@ -131,5 +142,5 @@ func TestRunDoesNotOpensBrowserWindowWhenCheckError(t *testing.T) {
 	err := rf.Execute()
 	assert.NoError(t, err)
 
-	mb.AssertNumberOfCalls(t, "Open", 0)
+	mb.AssertNumberOfCalls(t, "OpenBrowser", 0)
 }

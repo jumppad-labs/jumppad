@@ -33,7 +33,7 @@ type Clients struct {
 	Command        clients.Command
 	Logger         hclog.Logger
 	Blueprints     clients.Blueprints
-	Browser        clients.Browser
+	Browser        clients.System
 }
 
 // Engine defines an interface for the Shipyard engine
@@ -78,7 +78,7 @@ func GenerateClients(l hclog.Logger) (*Clients, error) {
 
 	bp := &clients.BlueprintsImpl{}
 
-	bc := &clients.BrowserImpl{}
+	bc := &clients.SystemImpl{}
 
 	return &Clients{
 		ContainerTasks: ct,

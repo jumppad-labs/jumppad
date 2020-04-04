@@ -1,5 +1,14 @@
 # Change Log
 
+## version 0.0.9
+
+## Browser windows
+Ensure that browser windows are openened correctly on Windows platforms.
+
+## Preflight
+Check that Docker is installed and running
+
+
 ## version 0.0.8
 
 ## Bugfixes
