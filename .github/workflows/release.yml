@@ -84,3 +84,27 @@ jobs:
       -
         name: Choco push
         run: choco push -f
+
+  apt:
+    needs: goreleaser
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: ["amd64.deb", "arm64.deb", "armv7.deb","amd64.rpm", "arm64.rpm", "armv7.rpm"]
+    
+    steps:
+    - name: Tag
+      id: tag
+      uses: ashley-taylor/regex-property-action@v1.0
+      with:
+        value: ${{ github.ref }}
+        regex: "refs/tags/v"
+        replacement: "" 
+
+      - name: Download release
+        run: |
+          wget "https://github.com/shipyard-run/shipyard/releases/download/v${{ steps.tag.outputs.value }}/shipyard_${{ steps.tag.outputs.value }}_linux_${{ matrix.arch }}"
+
+      - name: Upload release
+        run: |
+          curl -F package=@shipyard_${{ steps.tag.outputs.value }}_linux_${{ matrix.arch }} https://${{ secrets.FURY_TOKEN }}@push.fury.io/shipyard-run/
