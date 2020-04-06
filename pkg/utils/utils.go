@@ -217,7 +217,7 @@ func CheckVersion(current string) (string, bool) {
 	ver := strings.TrimSpace(string(d))
 
 	// check the version
-	if current != string(d) {
+	if current != ver {
 		return fmt.Sprintf(
 			fmt.Sprintf("\033[1;31m%s\033[0m", updateText),
 			ver, current,
