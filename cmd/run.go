@@ -54,6 +54,14 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc
 			return err
 		}
 
+		// check the shipyard version
+		text, ok := utils.CheckVersion(version)
+		if !ok {
+			fmt.Println("")
+			fmt.Println(text)
+			fmt.Println("")
+		}
+
 		// create the shipyard home
 		os.MkdirAll(utils.ShipyardHome(), os.FileMode(0755))
 

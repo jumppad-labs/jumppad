@@ -108,3 +108,32 @@ jobs:
     - name: Upload release
       run: |
         curl -F package=@shipyard_${{ steps.tag.outputs.value }}_linux_${{ matrix.arch }} https://${{ secrets.FURY_TOKEN }}@push.fury.io/shipyard-run/
+
+  latest:
+    needs: goreleaser
+    runs-on: ubuntu-latest
+
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+        with:
+          repository: 'shipyard-run/shipyard-website'
+    
+      - name: Tag
+        id: tag
+        uses: ashley-taylor/regex-property-action@v1.0
+        with:
+          value: ${{ github.ref }}
+          regex: "refs/tags/v"
+          replacement: "" 
+
+      - name: Write version
+        run: |
+          echo "${{ steps.tag.outputs.value }}" > ./static/install
+      
+      - name: Push update
+        run: |
+          git add .
+          git commit -m "Update version to ${{ steps.tag.outputs.value}}"
+          git push
