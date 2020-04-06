@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -119,42 +120,42 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc
 				case config.TypeContainer:
 					c := r.(*config.Container)
 					for _, p := range c.Ports {
-						if p.Host != "" && p.OpenInBrowser {
-							browserList = append(browserList, fmt.Sprintf("http://localhost:%s", p.Host))
+						if p.Host != "" && p.OpenInBrowser != "" {
+							browserList = append(browserList, buildBrowserPath(r.Info().Name, p.Host, r.Info().Type, p.OpenInBrowser))
 						}
 					}
 				case config.TypeIngress:
 					c := r.(*config.Ingress)
 					for _, p := range c.Ports {
-						if p.Host != "" && p.OpenInBrowser {
-							browserList = append(browserList, fmt.Sprintf("http://localhost:%s", p.Host))
+						if p.Host != "" && p.OpenInBrowser != "" {
+							browserList = append(browserList, buildBrowserPath(r.Info().Name, p.Host, r.Info().Type, p.OpenInBrowser))
 						}
 					}
 				case config.TypeContainerIngress:
 					c := r.(*config.ContainerIngress)
 					for _, p := range c.Ports {
-						if p.Host != "" && p.OpenInBrowser {
-							browserList = append(browserList, fmt.Sprintf("http://localhost:%s", p.Host))
+						if p.Host != "" && p.OpenInBrowser != "" {
+							browserList = append(browserList, buildBrowserPath(r.Info().Name, p.Host, r.Info().Type, p.OpenInBrowser))
 						}
 					}
 				case config.TypeNomadIngress:
 					c := r.(*config.NomadIngress)
 					for _, p := range c.Ports {
-						if p.Host != "" && p.OpenInBrowser {
-							browserList = append(browserList, fmt.Sprintf("http://localhost:%s", p.Host))
+						if p.Host != "" && p.OpenInBrowser != "" {
+							browserList = append(browserList, buildBrowserPath(r.Info().Name, p.Host, r.Info().Type, p.OpenInBrowser))
 						}
 					}
 				case config.TypeK8sIngress:
 					c := r.(*config.K8sIngress)
 					for _, p := range c.Ports {
-						if p.Host != "" && p.OpenInBrowser {
-							browserList = append(browserList, fmt.Sprintf("http://localhost:%s", p.Host))
+						if p.Host != "" && p.OpenInBrowser != "" {
+							browserList = append(browserList, buildBrowserPath(r.Info().Name, p.Host, r.Info().Type, p.OpenInBrowser))
 						}
 					}
 				case config.TypeDocs:
 					c := r.(*config.Docs)
 					if c.OpenInBrowser {
-						browserList = append(browserList, fmt.Sprintf("http://localhost:%d", c.Port))
+						browserList = append(browserList, buildBrowserPath(r.Info().Name, strconv.Itoa(c.Port), r.Info().Type, ""))
 					}
 				}
 			}
@@ -203,6 +204,15 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc
 
 		return nil
 	}
+}
+
+func buildBrowserPath(n, p string, t config.ResourceType, path string) string {
+	ty := t
+	if t == config.TypeNomadIngress || t == config.TypeContainerIngress || t == config.TypeK8sIngress {
+		ty = config.TypeIngress
+	}
+
+	return fmt.Sprintf("http://%s.%s.shipyard.run:%s%s", n, ty, p, path)
 }
 
 func bluePrintInState() bool {

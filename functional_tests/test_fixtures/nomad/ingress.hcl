@@ -22,7 +22,7 @@ nomad_ingress "nomad-http" {
     local  = 4646
     remote = 4646
     host   = 14646
-    open_in_browser = true
+    open_in_browser = "/"
   }
 
   network  {

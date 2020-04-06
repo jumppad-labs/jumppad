@@ -107,18 +107,19 @@ func TestRunOpensBrowserWindowForResources(t *testing.T) {
 	d.OpenInBrowser = true
 
 	i := config.NewIngress("test")
-	i.Ports = []config.Port{config.Port{Host: "8080", OpenInBrowser: true}}
+	i.Ports = []config.Port{config.Port{Host: "8080", OpenInBrowser: "/"}}
 
 	c := config.NewContainer("test")
-	c.Ports = []config.Port{config.Port{Host: "8080", OpenInBrowser: true}}
+	c.Ports = []config.Port{config.Port{Host: "8080", OpenInBrowser: "/"}}
 
+	// should not be opened
 	d2 := config.NewDocs("test")
 
 	i2 := config.NewIngress("test")
-	i2.Ports = []config.Port{config.Port{Host: "8080", OpenInBrowser: false}}
+	i2.Ports = []config.Port{config.Port{Host: "8080", OpenInBrowser: ""}}
 
-	c2 := config.NewContainer("test")
-	c2.Ports = []config.Port{config.Port{OpenInBrowser: true}}
+	c2 := config.NewContainer("test2")
+	c2.Ports = []config.Port{config.Port{OpenInBrowser: ""}}
 
 	me.On("Apply", mock.Anything).Return(
 		[]config.Resource{d, i, c, d2, i2, c2},

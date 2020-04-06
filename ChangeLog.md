@@ -1,24 +1,45 @@
 # Change Log
 
+## version 0.0.11
+
+### Browser windows
+Change `OpenInBrowser` to a string so that the user can specify the path
+
+### Version check
+Check the latest verison on startup
+
+```
+########################################################
+                   SHIPYARD UPDATE
+########################################################
+
+The current version of shipyard is "0.0.10", you have "841f3b0445cc01f44ea2728dd5113f6b0f611e1f".
+
+To upgrade Shipyard please use your package manager or, 
+see the documentation at:
+https://shipyard.run/docs/install for other options.
+```
+
+
 ## version 0.0.9
 
-## Browser windows
+### Browser windows
 Ensure that browser windows are openened correctly on Windows platforms.
 
-## Preflight
+### Preflight
 Check that Docker is installed and running
 
 
 ## version 0.0.8
 
-## Bugfixes
+### Bugfixes
 
 * Fix problem with home folder resolution on Windows
 * Add ipv6 DNS entries for resources
 
 ## version 0.0.7
 
-## Ingress
+### Ingress
 Add three new ingress types `nomad_ingress`, `k8s_ingress`, `container_ingress`, these new type have cluster specific options
 rather than trying to shoehorn all into `ingress`. For now `ingress` exists and is backward compatible.
 
