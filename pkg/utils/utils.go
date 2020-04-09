@@ -114,6 +114,17 @@ func ShipyardHome() string {
 	return fmt.Sprintf("%s/.shipyard", HomeFolder())
 }
 
+// ShipyardTemp returns a temporary folder
+func ShipyardTemp() string {
+	dir := filepath.Join(ShipyardHome(), "/tmp")
+	err := os.MkdirAll(dir, 0755)
+	if err != nil {
+		panic(err)
+	}
+
+	return dir
+}
+
 // StateDir returns the location of the shipyard
 // state, usually $HOME/.shipyard/state
 func StateDir() string {

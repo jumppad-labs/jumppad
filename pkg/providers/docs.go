@@ -200,7 +200,7 @@ func (i *Docs) Lookup() ([]string, error) {
 }
 
 func (i *Docs) generateDocusaursIndex(title string, pages []string) (string, error) {
-	tmpFile, err := ioutil.TempFile("", "*.json")
+	tmpFile, err := ioutil.TempFile(utils.ShipyardTemp(), "*.json")
 	if err != nil {
 		return "", err
 	}
