@@ -1,5 +1,12 @@
 # Change Log
 
+## version 0.0.14
+
+### Bugfixes
+* Fix bug where Documentation resource was failing to create on OSX. Docker could not read temporary file. 
+  Moved temp files to .shipyard folder to avoid conflict.
+
+
 ## version 0.0.11
 
 ### Browser windows
