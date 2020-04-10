@@ -1,5 +1,11 @@
 # Change Log
 
+## version 0.0.15
+
+### General
+* When defining a volume mount for a container, if the source does not exist, creat it rather than erroring
+
+
 ## version 0.0.14
 
 ### Bugfixes

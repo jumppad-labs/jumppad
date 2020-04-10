@@ -3,8 +3,10 @@ package clients
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
@@ -13,6 +15,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -25,7 +28,7 @@ var containerConfig = &config.Container{
 	Command:      []string{"tail", "-f", "/dev/null"},
 	Volumes: []config.Volume{
 		config.Volume{
-			Source:      "/mnt/data",
+			Source:      "/tmp",
 			Destination: "/data",
 		},
 	},
@@ -208,6 +211,19 @@ func TestContainerAttachesVolumeMounts(t *testing.T) {
 	assert.Equal(t, cc.Volumes[0].Source, hc.Mounts[0].Source)
 	assert.Equal(t, cc.Volumes[0].Destination, hc.Mounts[0].Target)
 	assert.Equal(t, mount.TypeBind, hc.Mounts[0].Type)
+}
+
+func TestContainerCreatesDirectoryForVolume(t *testing.T) {
+	tmpFolder := fmt.Sprintf("%s/%d", utils.ShipyardTemp(), time.Now().UnixNano())
+	defer os.RemoveAll(tmpFolder)
+
+	cc, _, _, md := createContainerConfig()
+	cc.Volumes[0].Source = tmpFolder
+
+	err := setupContainer(t, cc, md)
+	assert.NoError(t, err)
+
+	assert.DirExists(t, tmpFolder)
 }
 
 func TestContainerPublishesPorts(t *testing.T) {
