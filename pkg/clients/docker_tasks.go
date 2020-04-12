@@ -77,17 +77,6 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 	mounts := make([]mount.Mount, 0)
 	for _, vc := range c.Volumes {
 
-		// check to see id the source exists
-		_, err := os.Stat(vc.Source)
-		if err != nil {
-			d.l.Debug("Creating directory for container volume", "ref", c.Name, "directory", vc.Source, "volume", vc.Destination)
-			// source does not exist, create the source as a directory
-			err := os.MkdirAll(vc.Source, os.ModePerm)
-			if err != nil {
-				return "", xerrors.Errorf("Source for Volume %s does not exist, error creating directory: %w", err)
-			}
-		}
-
 		// default mount type to bind
 		t := mount.TypeBind
 
@@ -101,6 +90,22 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 			t = mount.TypeTmpfs
 		}
 
+		// if we have a bind type mount then ensure that the local folder exists or
+		// an error will be raised when creating
+		if t == mount.TypeBind {
+			// check to see id the source exists
+			_, err := os.Stat(vc.Source)
+			if err != nil {
+				d.l.Debug("Creating directory for container volume", "ref", c.Name, "directory", vc.Source, "volume", vc.Destination)
+				// source does not exist, create the source as a directory
+				err := os.MkdirAll(vc.Source, os.ModePerm)
+				if err != nil {
+					return "", xerrors.Errorf("Source for Volume %s does not exist, error creating directory: %w", err)
+				}
+			}
+		}
+
+		// create the mount
 		mounts = append(mounts, mount.Mount{
 			Type:   t,
 			Source: vc.Source,

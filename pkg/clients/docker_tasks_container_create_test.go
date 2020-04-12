@@ -226,6 +226,20 @@ func TestContainerCreatesDirectoryForVolume(t *testing.T) {
 	assert.DirExists(t, tmpFolder)
 }
 
+func TestContainerDoesNotCreatesDirectoryForVolumeWhenNotBind(t *testing.T) {
+	tmpFolder := fmt.Sprintf("%s/%d", utils.ShipyardTemp(), time.Now().UnixNano())
+	defer os.RemoveAll(tmpFolder)
+
+	cc, _, _, md := createContainerConfig()
+	cc.Volumes[0].Source = tmpFolder
+	cc.Volumes[0].Type = "volume"
+
+	err := setupContainer(t, cc, md)
+	assert.NoError(t, err)
+
+	assert.NoDirExists(t, tmpFolder)
+}
+
 func TestContainerPublishesPorts(t *testing.T) {
 	cc, _, _, md := createContainerConfig()
 

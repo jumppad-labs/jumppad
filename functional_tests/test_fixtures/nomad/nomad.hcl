@@ -11,6 +11,11 @@ nomad_cluster "dev" {
     name = "consul:1.7.1"
   }
 
+  volume {
+    source = "/tmp"
+    destination = "/files"
+  }
+
   env {
     key = "CONSUL_SERVER"
     value = "consul.container.shipyard.run"

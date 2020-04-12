@@ -1,5 +1,11 @@
 # Change Log
 
+## version 0.0.16
+
+### Bugfixes
+* Fixes a bug where local folders were being created for types other than `bind`
+* Fix a bug where Volumes for Nomad Clusters were not changed to absolute paths
+
 ## version 0.0.15
 
 ### General
