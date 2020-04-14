@@ -137,7 +137,7 @@ jobs:
 
       - name: Write version
         run: |
-          echo "${{ steps.tag.outputs.value }}" > ./static/install
+          echo "${{ steps.tag.outputs.value }}" > ./static/latest
       
       - name: Push update
         run: |
