@@ -50,6 +50,8 @@ nfpms:
     package_name: shipyard
     vendor: Shipyard Inc
     homepage: https://shipyard.run
+    maintainer: Nic Jackson and Eric Veld <mail@shipyard.run>
+    licence: Mozilla Public License, version 2.0
     formats:
       - deb
       - rpm
