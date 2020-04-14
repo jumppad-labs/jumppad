@@ -70,7 +70,7 @@ func TestClusterNomadErrorsWhenUnableToLookupIDs(t *testing.T) {
 
 func TestClusterNomadErrorsWhenClusterExists(t *testing.T) {
 	md := &mocks.MockContainerTasks{}
-	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
+	md.On("FindContainerIDs", "server."+clusterNomadConfig.Name, mock.Anything).Return([]string{"abc"}, nil)
 
 	p := NewNomadCluster(clusterNomadConfig, md, nil, hclog.NewNullLogger())
 
@@ -260,7 +260,7 @@ func TestClusterNomadDestroyGetsIDr(t *testing.T) {
 
 	err := p.Destroy()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "FindContainerIDs", clusterNomadConfig.Name, clusterNomadConfig.Type)
+	md.AssertCalled(t, "FindContainerIDs", "server."+clusterNomadConfig.Name, clusterNomadConfig.Type)
 }
 
 func TestClusterNomadDestroyWithFindIDErrorReturnsError(t *testing.T) {

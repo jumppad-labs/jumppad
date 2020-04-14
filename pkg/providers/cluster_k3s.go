@@ -66,7 +66,7 @@ func (c *K8sCluster) createK3s() error {
 	c.log.Info("Creating Cluster", "ref", c.config.Name)
 
 	// check the cluster does not already exist
-	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.Type)
+	ids, err := c.client.FindContainerIDs(fmt.Sprintf("server.%s", c.config.Name), c.config.Type)
 	if err != nil {
 		return err
 	}
@@ -295,7 +295,7 @@ func (c *K8sCluster) ImportLocalDockerImages(name string, id string, images []co
 func (c *K8sCluster) destroyK3s() error {
 	c.log.Info("Destroy Cluster", "ref", c.config.Name)
 
-	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.Type)
+	ids, err := c.client.FindContainerIDs(fmt.Sprintf("server.%s", c.config.Name), c.config.Type)
 	if err != nil {
 		return err
 	}

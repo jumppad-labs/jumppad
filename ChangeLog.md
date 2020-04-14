@@ -3,6 +3,11 @@
 ## version 0.0.16
 
 ### Bugfixes
+* By default when looking up the id of a Docker container Docker does a greedy match, this caused issues where we would grab an incorrect id on destroy. Changed to use a regex.
+
+## version 0.0.16
+
+### Bugfixes
 * Fixes a bug where local folders were being created for types other than `bind`
 * Fix a bug where Volumes for Nomad Clusters were not changed to absolute paths
 

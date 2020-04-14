@@ -180,7 +180,7 @@ func (i *Ingress) Create() error {
 
 // Destroy the ingress
 func (i *Ingress) Destroy() error {
-	i.log.Info("Destroy Ingress", "ref", i.config.Name)
+	i.log.Info("Destroy Ingress", "ref", i.config.Name, "type", i.config.Type)
 
 	ids, err := i.client.FindContainerIDs(i.config.Name, i.config.Type)
 	if err != nil {
@@ -189,9 +189,10 @@ func (i *Ingress) Destroy() error {
 
 	for _, id := range ids {
 		for _, n := range i.config.Networks {
+			i.log.Debug("Detaching container from network", "ref", i.config.Name, "id", id, "network", n.Name)
 			err := i.client.DetachNetwork(n.Name, id)
 			if err != nil {
-				i.log.Error("Unable to detach network", "ref", i.config.Name, "network", n.Name)
+				i.log.Error("Unable to detach network", "ref", i.config.Name, "network", n.Name, "error", err)
 			}
 		}
 

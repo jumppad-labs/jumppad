@@ -124,7 +124,8 @@ func parseYardMarkdown(file string, c *Config) error {
 
 	fr, body, err := m.Parse(f)
 	if err != nil && err != front.ErrIsEmpty {
-		return err
+		fmt.Println("Error parsing README.md", err)
+		return nil
 	}
 
 	bp := &Blueprint{}

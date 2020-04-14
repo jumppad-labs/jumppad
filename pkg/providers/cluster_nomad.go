@@ -45,7 +45,7 @@ func (c *NomadCluster) createNomad() error {
 	c.log.Info("Creating Cluster", "ref", c.config.Name)
 
 	// check the cluster does not already exist
-	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.Type)
+	ids, err := c.client.FindContainerIDs(fmt.Sprintf("server.%s", c.config.Name), c.config.Type)
 	if len(ids) > 0 {
 		return ErrorClusterExists
 	}
@@ -171,9 +171,11 @@ func (c *NomadCluster) ImportLocalDockerImages(name string, id string, images []
 }
 
 func (c *NomadCluster) destroyNomad() error {
-	c.log.Info("Destroy Cluster", "ref", c.config.Name)
+	c.log.Info("Destroy Nomad Cluster", "ref", c.config.Name)
 
-	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.Type)
+	// FindContainerIDs works on absolute addresses, we need to append the server
+
+	ids, err := c.client.FindContainerIDs(fmt.Sprintf("server.%s", c.config.Name), c.config.Type)
 	if err != nil {
 		return err
 	}
@@ -181,9 +183,10 @@ func (c *NomadCluster) destroyNomad() error {
 	for _, i := range ids {
 		// remove from the networks
 		for _, n := range c.config.Networks {
+			c.log.Debug("Detaching container from network", "ref", c.config.Name, "id", i, "network", n.Name)
 			err := c.client.DetachNetwork(n.Name, i)
 			if err != nil {
-				return err
+				c.log.Error("Unable to detach network", "ref", c.config.Name, "network", n.Name, "error", err)
 			}
 		}
 

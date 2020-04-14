@@ -233,7 +233,8 @@ func (d *DockerTasks) FindContainerIDs(containerName string, typeName config.Res
 	fullName := utils.FQDN(containerName, string(typeName))
 
 	args := filters.NewArgs()
-	args.Add("name", fullName)
+	// By default Docker will wildcard searches, use regex to return the absolute
+	args.Add("name", fmt.Sprintf("^/%s$", fullName))
 
 	opts := types.ContainerListOptions{Filters: args, All: true}
 

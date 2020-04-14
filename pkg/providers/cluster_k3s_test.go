@@ -80,7 +80,7 @@ func TestClusterK3ErrorsWhenUnableToLookupIDs(t *testing.T) {
 
 func TestClusterK3ErrorsWhenClusterExists(t *testing.T) {
 	md := &mocks.MockContainerTasks{}
-	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
+	md.On("FindContainerIDs", "server."+clusterConfig.Name, mock.Anything).Return([]string{"abc"}, nil)
 
 	mk := &mocks.MockKubernetes{}
 	p := NewK8sCluster(clusterConfig, md, mk, nil, hclog.NewNullLogger())
@@ -340,7 +340,7 @@ func TestClusterK3sDestroyGetsIDr(t *testing.T) {
 
 	err := p.Destroy()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "FindContainerIDs", clusterConfig.Name, clusterConfig.Type)
+	md.AssertCalled(t, "FindContainerIDs", "server."+clusterConfig.Name, clusterConfig.Type)
 }
 
 func TestClusterK3sDestroyWithFindIDErrorReturnsError(t *testing.T) {

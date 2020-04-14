@@ -18,7 +18,7 @@ job "example_2" {
     healthy_deadline = "5m"
   }
   
-  group "cache" {
+  group "consul" {
     count = 1
 
     restart {
@@ -33,16 +33,16 @@ job "example_2" {
       size = 200
     }
 
-    task "redis" {
+    task "consul" {
       # The "driver" parameter specifies the task driver that should be used to
       # run the task.
       driver = "docker"
 
       config {
-        image = "redis:3.2"
+        image = "consul:1.7.1"
 
         port_map {
-          db = 6380
+          http = 8500
         }
       }
 
@@ -52,20 +52,7 @@ job "example_2" {
 
         network {
           mbits = 10
-          port  "db"  {}
-        }
-      }
-      
-      service {
-        name = "redis-cache"
-        tags = ["global", "cache"]
-        port = "db"
-
-        check {
-          name     = "alive"
-          type     = "tcp"
-          interval = "10s"
-          timeout  = "2s"
+          port  "http"  {}
         }
       }
     }
