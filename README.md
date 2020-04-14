@@ -27,8 +27,9 @@ Shipyard v0.2.0 will ship with a remote connection capability, it will allow you
 Yes, Shipyard can be used to create interactive documentation for your applications and redistributable demo environments to show off your tool or product.
 
 ## Example Shipyard Config
+The following snippets are examples of things you can build with Shipyard, for more detailed examples please see the Blueprints repo [https://github.com/shipyard-run/blueprints](https://github.com/shipyard-run/blueprints)
 
-## Kubernetes cluster
+## Kubernetes Cluster
 
 ```
 k8s_cluster "k3s" {
@@ -156,8 +157,6 @@ container "consul" {
   }
 }
 ```
-
-For more examples please see the Blueprints repo [https://github.com/shipyard-run/blueprints](https://github.com/shipyard-run/blueprints)
 
 ## Contributing
 
