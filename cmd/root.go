@@ -34,10 +34,7 @@ func init() {
 		panic(err)
 	}
 
-	engineClients, err = shipyard.GenerateClients(logger)
-	if err != nil {
-		panic(err)
-	}
+	engineClients = engine.GetClients()
 
 	cobra.OnInitialize(configure)
 
@@ -45,10 +42,10 @@ func init() {
 
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(checkCmd)
-	rootCmd.AddCommand(newRunCmd(engine, engineClients.Blueprints, engineClients.HTTP, engineClients.Browser, logger))
+	rootCmd.AddCommand(newRunCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, logger))
 	rootCmd.AddCommand(pauseCmd)
 	rootCmd.AddCommand(resumeCmd)
-	rootCmd.AddCommand(newGetCmd(engineClients.Blueprints))
+	rootCmd.AddCommand(newGetCmd(engineClients.Getter))
 	rootCmd.AddCommand(destroyCmd)
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(taintCmd)

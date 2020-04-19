@@ -2,6 +2,7 @@ package mocks
 
 import (
 	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -9,6 +10,16 @@ import (
 // CLI commands
 type Engine struct {
 	mock.Mock
+}
+
+func (e *Engine) GetClients() *shipyard.Clients {
+	args := e.Called()
+
+	if e, ok := args.Get(0).(*shipyard.Clients); ok {
+		return e
+	}
+
+	return nil
 }
 
 func (e *Engine) Apply(path string) ([]config.Resource, error) {

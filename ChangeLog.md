@@ -1,5 +1,34 @@
 # Change Log
 
+## version 0.0.18
+
+### Helm charts
+* Added capability to reference a github repo as well as local charts
+* Added the ability to specify values as a map addition to a local file
+
+```
+helm "vault" {
+  cluster = "k8s_cluster.k3s"
+  chart = "github.com/hashicorp/vault-helm"
+
+  values_string = {
+    "server.dataStorage.size" = "128Mb",
+    "server.dev.enabled" = "true",
+    "server.standalone.enabled" = "true",
+    "server.authDelegator.enabled" = "true"
+  }
+
+  health_check {
+    timeout = "120s"
+    pods = ["app.kubernetes.io/name=vault"]
+  } 
+}
+```
+
+### General
+* Added `--force-update` flag to `run` and `get`. The user can specify that any local cache for images and helm charts is ignored at runtime.
+
+
 ## version 0.0.16
 
 ### Bugfixes

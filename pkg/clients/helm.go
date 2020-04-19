@@ -22,7 +22,7 @@ func init() {
 }
 
 type Helm interface {
-	Create(kubeConfig, name, chartPath, valuesPath string) error
+	Create(kubeConfig, name, chartPath, valuesPath string, valuesString map[string]string) error
 	Destroy(kubeConfif, name string) error
 }
 
@@ -34,7 +34,7 @@ func NewHelm(l hclog.Logger) Helm {
 	return &HelmImpl{l}
 }
 
-func (h *HelmImpl) Create(kubeConfig, name, chartPath, valuesPath string) error {
+func (h *HelmImpl) Create(kubeConfig, name, chartPath, valuesPath string, valuesString map[string]string) error {
 	// set the kubeclient for Helm
 
 	// possible race condition on GetConfig so aquire a lock
@@ -58,15 +58,16 @@ func (h *HelmImpl) Create(kubeConfig, name, chartPath, valuesPath string) error 
 	settings := cli.EnvSettings{}
 	p := getter.All(&settings)
 	vo := values.Options{}
+	vo.StringValues = []string{}
+
+	// add the string values to the collection
+	for k, v := range valuesString {
+		vo.StringValues = append(vo.StringValues, fmt.Sprintf("%s=%s", k, v))
+	}
 
 	// if we have an overriden values file set it
 	if valuesPath != "" {
 		vo.ValueFiles = []string{valuesPath}
-	}
-
-	vals, err := vo.MergeValues(p)
-	if err != nil {
-		return xerrors.Errorf("Error merging Helm values: %w", err)
 	}
 
 	h.log.Debug("Creating chart from config", "ref", name, "path", chartPath)
@@ -79,6 +80,11 @@ func (h *HelmImpl) Create(kubeConfig, name, chartPath, valuesPath string) error 
 	chartRequested, err := loader.Load(cp)
 	if err != nil {
 		return xerrors.Errorf("Error loading chart: %w", err)
+	}
+
+	vals, err := vo.MergeValues(p)
+	if err != nil {
+		return xerrors.Errorf("Error merging Helm values: %w", err)
 	}
 
 	h.log.Debug("Validate chart", "ref", name)

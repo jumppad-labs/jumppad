@@ -32,12 +32,13 @@ type Clients struct {
 	Nomad          clients.Nomad
 	Command        clients.Command
 	Logger         hclog.Logger
-	Blueprints     clients.Blueprints
+	Getter         clients.Getter
 	Browser        clients.System
 }
 
 // Engine defines an interface for the Shipyard engine
 type Engine interface {
+	GetClients() *Clients
 	Apply(string) ([]config.Resource, error)
 	Destroy(string, bool) error
 	ResourceCount() int
@@ -76,7 +77,7 @@ func GenerateClients(l hclog.Logger) (*Clients, error) {
 
 	nc := clients.NewNomad(hc, 1*time.Second, l)
 
-	bp := &clients.BlueprintsImpl{}
+	bp := &clients.GetterImpl{}
 
 	bc := &clients.SystemImpl{}
 
@@ -89,7 +90,7 @@ func GenerateClients(l hclog.Logger) (*Clients, error) {
 		HTTP:           hc,
 		Nomad:          nc,
 		Logger:         l,
-		Blueprints:     bp,
+		Getter:         bp,
 		Browser:        bc,
 	}, nil
 }
@@ -113,6 +114,11 @@ func New(l hclog.Logger) (Engine, error) {
 	e.clients = cl
 
 	return e, nil
+}
+
+// GetClients returns the clients from the engine
+func (e *EngineImpl) GetClients() *Clients {
+	return e.clients
 }
 
 // Apply the current config creating the resources
@@ -336,7 +342,7 @@ func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
 	case config.TypeExecLocal:
 		return providers.NewExecLocal(c.(*config.ExecLocal), cc.Command, cc.Logger)
 	case config.TypeHelm:
-		return providers.NewHelm(c.(*config.Helm), cc.Kubernetes, cc.Helm, cc.Logger)
+		return providers.NewHelm(c.(*config.Helm), cc.Kubernetes, cc.Helm, cc.Getter, cc.Logger)
 	case config.TypeIngress:
 		return providers.NewIngress(c.(*config.Ingress), cc.ContainerTasks, cc.Logger)
 	case config.TypeK8sCluster:

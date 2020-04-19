@@ -2,6 +2,8 @@ package providers
 
 import (
 	"fmt"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
@@ -12,14 +14,17 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func setupHelm() (*clients.MockHelm, *clients.MockKubernetes, *config.Config, *Helm) {
+func setupHelm() (*clients.MockHelm, *clients.MockKubernetes, *clients.Getter, *config.Config, *Helm) {
 	mh := &clients.MockHelm{}
-	mh.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	mh.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mh.On("Destroy", mock.Anything, mock.Anything).Return(nil)
 
 	kc := &clients.MockKubernetes{}
 	kc.On("SetConfig", mock.Anything).Return(nil)
 	kc.On("HealthCheckPods", mock.Anything, mock.Anything).Return(nil)
+
+	mg := &clients.Getter{}
+	mg.On("Get", mock.Anything, mock.Anything).Return(nil)
 
 	cl := config.NewK8sCluster("tester")
 	ch := config.NewHelm("test")
@@ -29,31 +34,45 @@ func setupHelm() (*clients.MockHelm, *clients.MockKubernetes, *config.Config, *H
 	c.AddResource(cl)
 	c.AddResource(ch)
 
-	p := NewHelm(ch, kc, mh, hclog.NewNullLogger())
+	p := NewHelm(ch, kc, mh, mg, hclog.NewNullLogger())
 
-	return mh, kc, c, p
+	return mh, kc, mg, c, p
 }
 
 func TestHelmCreateCantFindClusterReturnsError(t *testing.T) {
-	_, _, c, p := setupHelm()
+	_, _, _, c, p := setupHelm()
 	c.RemoveResource(c.Resources[0])
 
 	err := p.Create()
 	assert.Error(t, err)
 }
 
+func TestHelmCreateGetsRemoteRepo(t *testing.T) {
+	mh, _, mg, c, p := setupHelm()
+	hc, _ := c.FindResource("helm.test")
+	hc.(*config.Helm).Chart = "github.com/shipyard-run/blueprints//vault-k8s"
+	helmFolder := filepath.Join(utils.ShipyardHome(), "helm_charts", strings.Replace(hc.(*config.Helm).Chart, "//", "/", -1))
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	mg.AssertCalled(t, "Get", mock.Anything, helmFolder)
+	mh.AssertCalled(t, "Create", mock.Anything, mock.Anything, helmFolder, mock.Anything, mock.Anything)
+}
+
 func TestHelmCreateSetsConfig(t *testing.T) {
-	_, kc, _, p := setupHelm()
+	_, kc, mg, _, p := setupHelm()
 
 	err := p.Create()
 	assert.NoError(t, err)
 
 	_, fp, _ := utils.CreateKubeConfigPath("tester")
 	kc.AssertCalled(t, "SetConfig", fp)
+	mg.AssertNotCalled(t, "Get")
 }
 
 func TestHelmCreateConfigSetFailReturnsError(t *testing.T) {
-	_, kc, _, p := setupHelm()
+	_, kc, _, _, p := setupHelm()
 	removeOn(&kc.Mock, "SetConfig")
 	kc.On("SetConfig", mock.Anything).Return(fmt.Errorf("boom"))
 
@@ -62,25 +81,25 @@ func TestHelmCreateConfigSetFailReturnsError(t *testing.T) {
 }
 
 func TestHelmCreateCallsCreate(t *testing.T) {
-	hm, _, _, p := setupHelm()
+	hm, _, _, _, p := setupHelm()
 
 	err := p.Create()
 	assert.NoError(t, err)
 
-	hm.AssertCalled(t, "Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	hm.AssertCalled(t, "Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestHelmCreateCallCreateFailReturnsError(t *testing.T) {
-	hm, _, _, p := setupHelm()
+	hm, _, _, _, p := setupHelm()
 	removeOn(&hm.Mock, "Create")
-	hm.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
+	hm.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
 	err := p.Create()
 	assert.Error(t, err)
 }
 
 func TestHelmDoesNotHealthChecksPodswhenNotSet(t *testing.T) {
-	_, kc, _, p := setupHelm()
+	_, kc, _, _, p := setupHelm()
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -89,7 +108,7 @@ func TestHelmDoesNotHealthChecksPodswhenNotSet(t *testing.T) {
 }
 
 func TestHelmHealthChecksPodswhenSet(t *testing.T) {
-	_, kc, _, p := setupHelm()
+	_, kc, _, _, p := setupHelm()
 	p.config.HealthCheck = &config.HealthCheck{Timeout: "1s", Pods: []string{"consul=release"}}
 
 	err := p.Create()
@@ -99,7 +118,7 @@ func TestHelmHealthChecksPodswhenSet(t *testing.T) {
 }
 
 func TestHelmCreateHealthCheckPodsFailReturnsError(t *testing.T) {
-	_, kc, _, p := setupHelm()
+	_, kc, _, _, p := setupHelm()
 	p.config.HealthCheck = &config.HealthCheck{Timeout: "1s", Pods: []string{"consul=release"}}
 	removeOn(&kc.Mock, "HealthCheckPods")
 	kc.On("HealthCheckPods", mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
@@ -108,7 +127,7 @@ func TestHelmCreateHealthCheckPodsFailReturnsError(t *testing.T) {
 	assert.Error(t, err)
 }
 func TestHelmDestroyCantFindClusterReturnsError(t *testing.T) {
-	_, _, c, p := setupHelm()
+	_, _, _, c, p := setupHelm()
 	c.RemoveResource(c.Resources[0])
 
 	err := p.Destroy()
@@ -116,7 +135,7 @@ func TestHelmDestroyCantFindClusterReturnsError(t *testing.T) {
 }
 
 func TestHelmDestroyCallsDestroy(t *testing.T) {
-	hm, _, _, p := setupHelm()
+	hm, _, _, _, p := setupHelm()
 
 	err := p.Destroy()
 	assert.NoError(t, err)
@@ -124,7 +143,7 @@ func TestHelmDestroyCallsDestroy(t *testing.T) {
 }
 
 func TestHelmDestroyWithErrorSwallowsError(t *testing.T) {
-	hm, _, _, p := setupHelm()
+	hm, _, _, _, p := setupHelm()
 	removeOn(&hm.Mock, "Destroy")
 	hm.On("Destroy", mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 

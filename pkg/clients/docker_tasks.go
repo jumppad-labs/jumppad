@@ -30,13 +30,20 @@ import (
 
 // DockerTasks is a concrete implementation of ContainerTasks which uses the Docker SDK
 type DockerTasks struct {
-	c Docker
-	l hclog.Logger
+	c     Docker
+	force bool
+	l     hclog.Logger
 }
 
 // NewDockerTasks creates a DockerTasks with the given Docker client
 func NewDockerTasks(c Docker, l hclog.Logger) *DockerTasks {
-	return &DockerTasks{c, l}
+	return &DockerTasks{c: c, l: l}
+}
+
+// SetForcePull sets a global override for the DockerTasks, when set to true
+// Images will always be pulled from remote registries
+func (d *DockerTasks) SetForcePull(force bool) {
+	d.force = force
 }
 
 // CreateContainer creates a new Docker container for the given configuation
@@ -192,7 +199,7 @@ func (d *DockerTasks) PullImage(image config.Image, force bool) error {
 
 	// only pull if image is not in current registry so check to see if the image is present
 	// if force then skil this check
-	if !force {
+	if !force && !d.force {
 		sum, err := d.c.ImageList(context.Background(), types.ImageListOptions{Filters: args})
 		if err != nil {
 			return xerrors.Errorf("unable to list images in local Docker cache: %w", err)

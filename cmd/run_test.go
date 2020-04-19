@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	clientmocks "github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/shipyard-run/shipyard/pkg/shipyard/mocks"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
@@ -15,22 +16,45 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func setupRun(t *testing.T) (*cobra.Command, *mocks.Engine, *clientmocks.Blueprints, *clientmocks.MockHTTP, *clientmocks.System) {
-	mockEngine := &mocks.Engine{}
-	mockEngine.On("Apply", mock.Anything).Return(nil, nil)
-	mockEngine.On("Blueprint").Return(&config.Blueprint{BrowserWindows: []string{"http://localhost", "http://localhost2"}})
+func setupRun(t *testing.T) (*cobra.Command, *mocks.Engine, *clientmocks.Getter, *clientmocks.MockHTTP, *clientmocks.System) {
 
 	mockHTTP := &clientmocks.MockHTTP{}
 	mockHTTP.On("HealthCheckHTTP", mock.Anything, mock.Anything).Return(nil)
 
-	mockBlueprints := &clientmocks.Blueprints{}
-	mockBlueprints.On("Get", mock.Anything, mock.Anything).Return(nil)
+	mockGetter := &clientmocks.Getter{}
+	mockGetter.On("Get", mock.Anything, mock.Anything).Return(nil)
+	mockGetter.On("SetForce", mock.Anything)
 
 	mockBrowser := &clientmocks.System{}
 	mockBrowser.On("OpenBrowser", mock.Anything).Return(nil)
 	mockBrowser.On("Preflight").Return(nil)
 
-	return newRunCmd(mockEngine, mockBlueprints, mockHTTP, mockBrowser, hclog.Default()), mockEngine, mockBlueprints, mockHTTP, mockBrowser
+	mockTasks := &clientmocks.MockContainerTasks{}
+	mockTasks.On("SetForcePull", mock.Anything)
+
+	clients := &shipyard.Clients{
+		HTTP:           mockHTTP,
+		Getter:         mockGetter,
+		Browser:        mockBrowser,
+		ContainerTasks: mockTasks,
+	}
+
+	mockEngine := &mocks.Engine{}
+	mockEngine.On("Apply", mock.Anything).Return(nil, nil)
+	mockEngine.On("GetClients", mock.Anything).Return(clients)
+	mockEngine.On("Blueprint").Return(&config.Blueprint{BrowserWindows: []string{"http://localhost", "http://localhost2"}})
+
+	return newRunCmd(mockEngine, mockGetter, mockHTTP, mockBrowser, hclog.Default()), mockEngine, mockGetter, mockHTTP, mockBrowser
+}
+
+func TestRunSetsForceOnGetter(t *testing.T) {
+	rf, _, mg, _, _ := setupRun(t)
+	rf.Flags().Set("force-update", "true")
+
+	err := rf.Execute()
+	assert.NoError(t, err)
+
+	mg.AssertCalled(t, "SetForce", true)
 }
 
 func TestRunPreflightsSystem(t *testing.T) {

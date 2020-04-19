@@ -11,6 +11,10 @@ type MockContainerTasks struct {
 	mock.Mock
 }
 
+func (m *MockContainerTasks) SetForcePull(f bool) {
+	m.Called(f)
+}
+
 func (m *MockContainerTasks) CreateContainer(c *config.Container) (id string, err error) {
 	args := m.Called(c)
 

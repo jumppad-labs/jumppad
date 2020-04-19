@@ -13,8 +13,9 @@ import (
 // ErrorInvalidBlueprintURI is returned when the URI for a blueprint can not be parsed
 var ErrorInvalidBlueprintURI = errors.New("error invalid Blueprint URI, blueprints should be formatted 'github.com/org/repo//blueprint'")
 
-func newGetCmd(bp clients.Blueprints) *cobra.Command {
-	return &cobra.Command{
+func newGetCmd(bp clients.Getter) *cobra.Command {
+	var force bool
+	cmd := &cobra.Command{
 		Use:   "get [remote blueprint]",
 		Short: "Download the blueprint to the Shipyard config folder",
 		Long:  `Download the blueprint to the Shipyard configuration folder`,
@@ -31,6 +32,8 @@ func newGetCmd(bp clients.Blueprints) *cobra.Command {
 			if len(args) != 1 {
 				return fmt.Errorf("Command takes a single argument")
 			}
+
+			bp.SetForce(force)
 
 			var err error
 			dst := args[0]
@@ -50,4 +53,7 @@ func newGetCmd(bp clients.Blueprints) *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVarP(&force, "force-update", "", false, "When set to true Shipyard will ignore cached images, or files and will download")
+	return cmd
 }

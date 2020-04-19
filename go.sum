@@ -371,8 +371,11 @@ github.com/golang/protobuf v1.3.1/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5y
 github.com/golang/protobuf v1.3.2 h1:6nsPYzhq5kReh6QImI3k5qWzO4PEbvbIW2cwSfR/6xs=
 github.com/golang/protobuf v1.3.2/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEWrmP2Q=
+github.com/golangplus/bytes v0.0.0-20160111154220-45c989fe5450 h1:7xqw01UYS+KCI25bMrPxwNYkSns2Db1ziQPpVq99FpE=
 github.com/golangplus/bytes v0.0.0-20160111154220-45c989fe5450/go.mod h1:Bk6SMAONeMXrxql8uvOKuAZSu8aM5RUGv+1C6IJaEho=
+github.com/golangplus/fmt v0.0.0-20150411045040-2a5d6d7d2995 h1:f5gsjBiF9tRRVomCvrkGMMWI8W1f2OBFar2c5oakAP0=
 github.com/golangplus/fmt v0.0.0-20150411045040-2a5d6d7d2995/go.mod h1:lJgMEyOkYFkPcDKwRXegd+iM6E7matEszMG5HhwytU8=
+github.com/golangplus/testing v0.0.0-20180327235837-af21d9c3145e h1:KhcknUwkWHKZPbFy2P7jH5LKJ3La+0ZeknkkmrSgqb0=
 github.com/golangplus/testing v0.0.0-20180327235837-af21d9c3145e/go.mod h1:0AA//k/eakGydO4jKRoRL2j92ZKSzTgj9tclaCrvXHk=
 github.com/gomarkdown/markdown v0.0.0-20191123064959-2c17d62f5098 h1:Qxs3bNRWe8GTcKMxYOSXm0jx6j0de8XUtb/fsP3GZ0I=
 github.com/gomarkdown/markdown v0.0.0-20191123064959-2c17d62f5098/go.mod h1:aii0r/K0ZnHv7G0KF7xy1v0A7s2Ljrb5byB7MO5p6TU=

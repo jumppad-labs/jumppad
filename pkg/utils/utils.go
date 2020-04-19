@@ -143,7 +143,7 @@ func StatePath() string {
 func IsLocalFolder(path string) bool {
 	if strings.HasPrefix(path, "/") || strings.HasPrefix(path, "./") {
 		// test to see if the folder or file exists
-		f, err := os.Open(path)
+		f, err := os.Stat(path)
 		if err != nil || f == nil {
 			return false
 		}

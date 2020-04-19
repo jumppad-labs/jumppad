@@ -10,11 +10,23 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func setupGet(t *testing.T) (*cobra.Command, *mocks.Blueprints) {
-	bp := &mocks.Blueprints{}
+func setupGet(t *testing.T) (*cobra.Command, *mocks.Getter) {
+	bp := &mocks.Getter{}
 	bp.On("Get", mock.Anything, mock.Anything).Return(nil)
+	bp.On("SetForce", mock.Anything)
 
 	return newGetCmd(bp), bp
+}
+
+func TestGetWithForceSetsForce(t *testing.T) {
+	c, bp := setupGet(t)
+	c.SetArgs([]string{"github.com/shipyard-run/blueprints//vault-k8s"})
+	c.Flags().Set("force-update", "true")
+
+	err := c.Execute()
+	assert.NoError(t, err)
+
+	bp.AssertCalled(t, "SetForce", true)
 }
 
 func TestGetWithNoArgsReturnsError(t *testing.T) {

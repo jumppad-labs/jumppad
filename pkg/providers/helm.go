@@ -1,6 +1,8 @@
 package providers
 
 import (
+	"path/filepath"
+	"strings"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -11,16 +13,19 @@ import (
 )
 
 type Helm struct {
-	config     *config.Helm
-	kubeClient clients.Kubernetes
-	helmClient clients.Helm
-	log        hclog.Logger
+	config       *config.Helm
+	kubeClient   clients.Kubernetes
+	helmClient   clients.Helm
+	getterClient clients.Getter
+	log          hclog.Logger
 }
 
-func NewHelm(c *config.Helm, kc clients.Kubernetes, hc clients.Helm, l hclog.Logger) *Helm {
-	return &Helm{c, kc, hc, l}
+// NewHelm creates a new Helm provider
+func NewHelm(c *config.Helm, kc clients.Kubernetes, hc clients.Helm, g clients.Getter, l hclog.Logger) *Helm {
+	return &Helm{c, kc, hc, g, l}
 }
 
+// Create implements the provider Create method
 func (h *Helm) Create() error {
 	h.log.Info("Creating Helm chart", "ref", h.config.Name)
 
@@ -28,6 +33,21 @@ func (h *Helm) Create() error {
 	kcPath, err := h.getKubeConfigPath()
 	if err != nil {
 		return err
+	}
+
+	// is the source a helm repo which should be downloaded?
+	if !utils.IsLocalFolder(h.config.Chart) {
+		h.log.Debug("Fetching remote Helm chart", "ref", h.config.Name, "chart", h.config.Chart)
+
+		helmFolder := filepath.Join(utils.ShipyardHome(), "helm_charts", strings.Replace(h.config.Chart, "//", "/", -1))
+
+		err := h.getterClient.Get(h.config.Chart, helmFolder)
+		if err != nil {
+			return xerrors.Errorf("Unable to download remote chart: %w", err)
+		}
+
+		// set the config to the local path
+		h.config.Chart = helmFolder
 	}
 
 	// set the KubeConfig for the kubernetes client
@@ -38,7 +58,7 @@ func (h *Helm) Create() error {
 		return xerrors.Errorf("unable to create Kubernetes client: %w", err)
 	}
 
-	err = h.helmClient.Create(kcPath, h.config.Name, h.config.Chart, h.config.Values)
+	err = h.helmClient.Create(kcPath, h.config.Name, h.config.Chart, h.config.Values, h.config.ValuesString)
 	if err != nil {
 		return err
 	}
@@ -59,6 +79,7 @@ func (h *Helm) Create() error {
 	return nil
 }
 
+// Destroy implements the provider Destroy method
 func (h *Helm) Destroy() error {
 	h.log.Info("Destroy Helm chart", "ref", h.config.Name)
 	kcPath, err := h.getKubeConfigPath()
@@ -75,6 +96,11 @@ func (h *Helm) Destroy() error {
 	return nil
 }
 
+// Lookup implements the provider Lookup method
+func (h *Helm) Lookup() ([]string, error) {
+	return []string{}, nil
+}
+
 func (h *Helm) getKubeConfigPath() (string, error) {
 	target, err := h.config.FindDependentResource(h.config.Cluster)
 	if err != nil {
@@ -83,8 +109,4 @@ func (h *Helm) getKubeConfigPath() (string, error) {
 
 	_, destPath, _ := utils.CreateKubeConfigPath(target.Info().Name)
 	return destPath, nil
-}
-
-func (h *Helm) Lookup() ([]string, error) {
-	return []string{}, nil
 }

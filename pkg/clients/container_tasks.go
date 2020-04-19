@@ -15,6 +15,7 @@ import (
 // is design is centered around performing a task such as CreateContainer,
 // this may be composed of many individual SDK calls.
 type ContainerTasks interface {
+	SetForcePull(bool)
 	// CreateContainer creates a new container for the given configuration
 	// if successful CreateContainer returns the ID of the created container and a nil error
 	// if not successful CreateContainer returns a blank string for the id and an error message

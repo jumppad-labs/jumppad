@@ -18,8 +18,9 @@ import (
 	markdown "github.com/MichaelMure/go-term-markdown"
 )
 
-func newRunCmd(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc clients.System, l hclog.Logger) *cobra.Command {
+func newRunCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, l hclog.Logger) *cobra.Command {
 	var noOpen bool
+	var force bool
 	runCmd := &cobra.Command{
 		Use:   "run [file] [directory] ...",
 		Short: "Run the supplied stack configuration",
@@ -35,16 +36,21 @@ func newRunCmd(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc cli
   yard run github.com/shipyard-run/blueprints//vault-k8s
 	`,
 		Args:         cobra.ArbitraryArgs,
-		RunE:         newRunCmdFunc(e, bp, hc, bc, &noOpen, l),
+		RunE:         newRunCmdFunc(e, bp, hc, bc, &noOpen, &force, l),
 		SilenceUsage: true,
 	}
 	runCmd.Flags().BoolVarP(&noOpen, "no-browser", "", false, "When set to true Shipyard does not open the browser windows defined in the blueprint")
+	runCmd.Flags().BoolVarP(&force, "force-update", "", false, "When set to true Shipyard will ignore cached images or files and will download all resources")
 
 	return runCmd
 }
 
-func newRunCmdFunc(e shipyard.Engine, bp clients.Blueprints, hc clients.HTTP, bc clients.System, noOpen *bool, l hclog.Logger) func(cmd *cobra.Command, args []string) error {
+func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, noOpen *bool, force *bool, l hclog.Logger) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
+		if *force == true {
+			bp.SetForce(true)
+			e.GetClients().ContainerTasks.SetForcePull(true)
+		}
 
 		// Check the system to see if Docker is running and everything is installed
 		s, err := bc.Preflight()

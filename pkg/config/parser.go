@@ -202,8 +202,14 @@ func ParseHCLFile(file string, c *Config) error {
 				return err
 			}
 
-			h.Chart = ensureAbsolute(h.Chart, file)
-			h.Values = ensureAbsolute(h.Values, file)
+			// only set absolute if is local folder
+			if h.Chart != "" && utils.IsLocalFolder(ensureAbsolute(h.Chart, file)) {
+				h.Chart = ensureAbsolute(h.Chart, file)
+			}
+
+			if h.Values != "" && utils.IsLocalFolder(ensureAbsolute(h.Values, file)) {
+				h.Values = ensureAbsolute(h.Values, file)
+			}
 
 			c.AddResource(h)
 
