@@ -179,6 +179,7 @@ func (k *KubernetesImpl) healthCheckSingle(selector string, timeout time.Duratio
 		for _, pod := range pl.Items {
 			if pod.Status.Phase != "Running" {
 				allRunning = false
+				k.l.Debug("Pod not running", "pod", pod.Name, "namespace", pod.Namespace)
 				break
 			}
 
@@ -186,6 +187,7 @@ func (k *KubernetesImpl) healthCheckSingle(selector string, timeout time.Duratio
 			for _, s := range pod.Status.ContainerStatuses {
 				if !s.Ready {
 					allRunning = false
+					k.l.Debug("Pod not ready", "pod", pod.Name, "namespace", pod.Namespace)
 					break
 				}
 			}
