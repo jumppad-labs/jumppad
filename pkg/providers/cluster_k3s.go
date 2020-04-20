@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -167,6 +168,15 @@ func (c *K8sCluster) createK3s() error {
 
 	err = c.kubeClient.HealthCheckPods([]string{""}, startTimeout)
 	if err != nil {
+		// fetch the logs from the container before exit
+		lr, err := c.client.ContainerLogs(id, true, true)
+		if err != nil {
+			c.log.Error("Unable to get logs from container", "error", err)
+		}
+
+		// copy the logs to the output
+		io.Copy(c.log.StandardWriter(&hclog.StandardLoggerOptions{}), lr)
+
 		return xerrors.Errorf("Error while waiting for Kubernetes default pods: %w", err)
 	}
 
