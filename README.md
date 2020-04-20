@@ -15,7 +15,7 @@ Shipyard is a tool for building modern cloud native development environments. Us
 Kind of but more about local environments rather than infrastructure
 
 ## Why not use Docker Compose? 
-Docker Comopose is one of our favourite tools but we found it does not manage dependencies particulary well. Compose also works on a really low level of abstraction. Shipyard addresses these missing features.
+Docker Compose is one of our favourite tools but we found it does not manage dependencies particulary well. Compose also works on a really low level of abstraction. Shipyard addresses these missing features.
 
 ## Is Shipyard just for Docker?
 No, Shipyard is designed to work with Docker, Podman, Raw binaries, etc. At present we only have a Driver for Docker containers but others are on our Roadmap.
