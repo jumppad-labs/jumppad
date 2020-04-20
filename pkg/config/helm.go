@@ -14,6 +14,9 @@ type Helm struct {
 	Values       string            `hcl:"values,optional" json:"values"`
 	ValuesString map[string]string `hcl:"values_string,optional" json:"values_string"`
 
+	// Namespace is the Kubernetes namespace
+	Namespace string `hcl:"namespace,optional" json:"namespace,omitempty"`
+
 	HealthCheck *HealthCheck `hcl:"health_check,block" json:"health_check,omitempty" mapstructure:"health_check"`
 }
 

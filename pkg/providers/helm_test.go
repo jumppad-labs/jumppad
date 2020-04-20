@@ -16,8 +16,8 @@ import (
 
 func setupHelm() (*clients.MockHelm, *clients.MockKubernetes, *clients.Getter, *config.Config, *Helm) {
 	mh := &clients.MockHelm{}
-	mh.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	mh.On("Destroy", mock.Anything, mock.Anything).Return(nil)
+	mh.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	mh.On("Destroy", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	kc := &clients.MockKubernetes{}
 	kc.On("SetConfig", mock.Anything).Return(nil)
@@ -57,7 +57,7 @@ func TestHelmCreateGetsRemoteRepo(t *testing.T) {
 	assert.NoError(t, err)
 
 	mg.AssertCalled(t, "Get", mock.Anything, helmFolder)
-	mh.AssertCalled(t, "Create", mock.Anything, mock.Anything, helmFolder, mock.Anything, mock.Anything)
+	mh.AssertCalled(t, "Create", mock.Anything, mock.Anything, mock.Anything, helmFolder, mock.Anything, mock.Anything)
 }
 
 func TestHelmCreateSetsConfig(t *testing.T) {
@@ -80,19 +80,47 @@ func TestHelmCreateConfigSetFailReturnsError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestHelmCreateCallsCreate(t *testing.T) {
+func TestHelmCreateCallsCreateWithDefaultNamespace(t *testing.T) {
 	hm, _, _, _, p := setupHelm()
 
 	err := p.Create()
 	assert.NoError(t, err)
 
-	hm.AssertCalled(t, "Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	hm.AssertCalled(
+		t,
+		"Create",
+		mock.Anything,
+		p.config.Name,
+		"default",
+		p.config.Chart,
+		p.config.Values,
+		p.config.ValuesString,
+	)
+}
+
+func TestHelmCreateCallsCreateWithCustomNamespace(t *testing.T) {
+	hm, _, _, _, p := setupHelm()
+	p.config.Namespace = "custom"
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	hm.AssertCalled(
+		t,
+		"Create",
+		mock.Anything,
+		p.config.Name,
+		"custom",
+		p.config.Chart,
+		p.config.Values,
+		p.config.ValuesString,
+	)
 }
 
 func TestHelmCreateCallCreateFailReturnsError(t *testing.T) {
 	hm, _, _, _, p := setupHelm()
 	removeOn(&hm.Mock, "Create")
-	hm.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
+	hm.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -134,20 +162,21 @@ func TestHelmDestroyCantFindClusterReturnsError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestHelmDestroyCallsDestroy(t *testing.T) {
+func TestHelmDestroyCallsDestroyWithDefaultNamespace(t *testing.T) {
 	hm, _, _, _, p := setupHelm()
 
 	err := p.Destroy()
 	assert.NoError(t, err)
-	hm.AssertCalled(t, "Destroy", mock.Anything, mock.Anything)
+	hm.AssertCalled(t, "Destroy", mock.Anything, mock.Anything, "default")
 }
 
 func TestHelmDestroyWithErrorSwallowsError(t *testing.T) {
 	hm, _, _, _, p := setupHelm()
+	p.config.Namespace = "custom"
 	removeOn(&hm.Mock, "Destroy")
-	hm.On("Destroy", mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
+	hm.On("Destroy", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
 	err := p.Destroy()
 	assert.NoError(t, err)
-	hm.AssertCalled(t, "Destroy", mock.Anything, mock.Anything)
+	hm.AssertCalled(t, "Destroy", mock.Anything, mock.Anything, "custom")
 }

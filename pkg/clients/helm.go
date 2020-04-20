@@ -22,8 +22,8 @@ func init() {
 }
 
 type Helm interface {
-	Create(kubeConfig, name, chartPath, valuesPath string, valuesString map[string]string) error
-	Destroy(kubeConfif, name string) error
+	Create(kubeConfig, name, namespace, chartPath, valuesPath string, valuesString map[string]string) error
+	Destroy(kubeConfig, name, namespace string) error
 }
 
 type HelmImpl struct {
@@ -34,16 +34,11 @@ func NewHelm(l hclog.Logger) Helm {
 	return &HelmImpl{l}
 }
 
-func (h *HelmImpl) Create(kubeConfig, name, chartPath, valuesPath string, valuesString map[string]string) error {
+func (h *HelmImpl) Create(kubeConfig, name, namespace, chartPath, valuesPath string, valuesString map[string]string) error {
 	// set the kubeclient for Helm
-
-	// possible race condition on GetConfig so aquire a lock
-	//helmLock.Lock()
-	//defer helmLock.Unlock()
-
-	s := kube.GetConfig(kubeConfig, "default", "default")
+	s := kube.GetConfig(kubeConfig, "default", namespace)
 	cfg := &action.Configuration{}
-	err := cfg.Init(s, "default", "", func(format string, v ...interface{}) {
+	err := cfg.Init(s, namespace, "", func(format string, v ...interface{}) {
 		h.log.Debug("Helm debug message", "message", fmt.Sprintf(format, v...))
 	})
 
@@ -53,7 +48,7 @@ func (h *HelmImpl) Create(kubeConfig, name, chartPath, valuesPath string, values
 
 	client := action.NewInstall(cfg)
 	client.ReleaseName = name
-	client.Namespace = "default"
+	client.Namespace = namespace
 
 	settings := cli.EnvSettings{}
 	p := getter.All(&settings)
@@ -103,10 +98,10 @@ func (h *HelmImpl) Create(kubeConfig, name, chartPath, valuesPath string, values
 }
 
 // Destroy removes an installed Helm chart from the system
-func (h *HelmImpl) Destroy(kubeConfig, name string) error {
-	s := kube.GetConfig(kubeConfig, "default", "default")
+func (h *HelmImpl) Destroy(kubeConfig, name, namespace string) error {
+	s := kube.GetConfig(kubeConfig, "default", namespace)
 	cfg := &action.Configuration{}
-	err := cfg.Init(s, "default", "", func(format string, v ...interface{}) {
+	err := cfg.Init(s, namespace, "", func(format string, v ...interface{}) {
 		h.log.Debug("Helm debug message", "message", fmt.Sprintf(format, v...))
 	})
 
