@@ -130,6 +130,33 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 	// is this a privlidged container
 	hc.Privileged = c.Privileged
 
+	// are we attaching the container to a sidecar network?
+	for _, n := range c.Networks {
+		net, err := c.FindDependentResource(n.Name)
+		if err != nil {
+			return "", xerrors.Errorf("Network not found: %w", err)
+		}
+
+		if net.Info().Type == config.TypeContainer {
+			// find the id of the container
+			ids, err := d.FindContainerIDs(net.Info().Name, net.Info().Type)
+			if err != nil {
+				return "", xerrors.Errorf("Unable to attach to container network, ID for container not found: %w", err)
+			}
+
+			if len(ids) != 1 {
+				return "", xerrors.Errorf("Unable to attach to container network, ID for container not found")
+			}
+
+			d.l.Debug("Attaching container as sidecar", "ref", c.Name, "container", n.Name)
+
+			// set the container network
+			hc.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", ids[0]))
+			// when using container networking can not use a hostname
+			dc.Hostname = ""
+		}
+	}
+
 	cont, err := d.c.ContainerCreate(
 		context.Background(),
 		dc,
@@ -143,42 +170,43 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 
 	// first remove the container from the bridge network if we are adding custom networks
 	// all containers should have custom networks
-	if len(c.Networks) > 0 {
+	// only add networks if we are not adding the container network
+	if len(c.Networks) > 0 && !hc.NetworkMode.IsContainer() {
 		err := d.c.NetworkDisconnect(context.Background(), "bridge", cont.ID, true)
 		if err != nil {
 			return "", xerrors.Errorf("Unable to remove container from the default bridge network: %w", err)
 		}
-	}
 
-	for _, n := range c.Networks {
-		net, err := c.FindDependentResource(n.Name)
-		if err != nil {
-			errRemove := d.RemoveContainer(cont.ID)
-			if errRemove != nil {
-				return "", xerrors.Errorf("Unable to connect container to network %s, unable to roll back container: %w", n.Name, err)
+		for _, n := range c.Networks {
+			net, err := c.FindDependentResource(n.Name)
+			if err != nil {
+				errRemove := d.RemoveContainer(cont.ID)
+				if errRemove != nil {
+					return "", xerrors.Errorf("Unable to connect container to network %s, unable to roll back container: %w", n.Name, err)
+				}
+
+				return "", xerrors.Errorf("Network not found: %w", err)
 			}
 
-			return "", xerrors.Errorf("Network not found: %w", err)
-		}
+			d.l.Debug("Attaching container to network", "ref", c.Name, "network", n.Name)
+			es := &network.EndpointSettings{NetworkID: net.Info().Name}
 
-		d.l.Debug("Attaching container to network", "ref", c.Name, "network", n.Name)
-		es := &network.EndpointSettings{NetworkID: net.Info().Name}
-
-		// are we binding to a specific ip
-		if n.IPAddress != "" {
-			d.l.Debug("Assigning static ip address", "ref", c.Name, "network", n.Name, "ip_address", n.IPAddress)
-			es.IPAMConfig = &network.EndpointIPAMConfig{IPv4Address: n.IPAddress}
-		}
-
-		err = d.c.NetworkConnect(context.Background(), net.Info().Name, cont.ID, es)
-		if err != nil {
-			// if we fail to connect to the network roll back the container
-			errRemove := d.RemoveContainer(cont.ID)
-			if errRemove != nil {
-				return "", xerrors.Errorf("Unable to connect container to network %s, unable to roll back container: %w", n.Name, err)
+			// are we binding to a specific ip
+			if n.IPAddress != "" {
+				d.l.Debug("Assigning static ip address", "ref", c.Name, "network", n.Name, "ip_address", n.IPAddress)
+				es.IPAMConfig = &network.EndpointIPAMConfig{IPv4Address: n.IPAddress}
 			}
 
-			return "", xerrors.Errorf("Unable to connect container to network %s: %w", n.Name, err)
+			err = d.c.NetworkConnect(context.Background(), net.Info().Name, cont.ID, es)
+			if err != nil {
+				// if we fail to connect to the network roll back the container
+				errRemove := d.RemoveContainer(cont.ID)
+				if errRemove != nil {
+					return "", xerrors.Errorf("Unable to connect container to network %s, unable to roll back container: %w", n.Name, err)
+				}
+
+				return "", xerrors.Errorf("Unable to connect container to network %s: %w", n.Name, err)
+			}
 		}
 	}
 

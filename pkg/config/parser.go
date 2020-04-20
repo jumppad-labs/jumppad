@@ -310,6 +310,20 @@ func ParseHCLFile(file string, c *Config) error {
 
 			c.AddResource(i)
 
+		case string(TypeSidecar):
+			s := NewSidecar(b.Labels[0])
+
+			err := decodeBody(b, s)
+			if err != nil {
+				return err
+			}
+
+			for i, v := range s.Volumes {
+				s.Volumes[i].Source = ensureAbsolute(v.Source, file)
+			}
+
+			c.AddResource(s)
+
 		case string(TypeDocs):
 			do := NewDocs(b.Labels[0])
 
@@ -378,6 +392,11 @@ func ParseReferences(c *Config) error {
 			for _, n := range c.Networks {
 				c.DependsOn = append(c.DependsOn, n.Name)
 			}
+			c.DependsOn = append(c.DependsOn, c.Target)
+			c.DependsOn = append(c.DependsOn, c.Depends...)
+
+		case TypeSidecar:
+			c := r.(*Sidecar)
 			c.DependsOn = append(c.DependsOn, c.Target)
 			c.DependsOn = append(c.DependsOn, c.Depends...)
 

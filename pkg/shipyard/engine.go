@@ -335,6 +335,8 @@ func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
 		return providers.NewContainer(c.(*config.Container), cc.ContainerTasks, cc.HTTP, cc.Logger)
 	case config.TypeContainerIngress:
 		return providers.NewContainerIngress(c.(*config.ContainerIngress), cc.ContainerTasks, cc.Logger)
+	case config.TypeSidecar:
+		return providers.NewContainerSidecar(c.(*config.Sidecar), cc.ContainerTasks, cc.HTTP, cc.Logger)
 	case config.TypeDocs:
 		return providers.NewDocs(c.(*config.Docs), cc.ContainerTasks, cc.Logger)
 	case config.TypeExecRemote:

@@ -17,7 +17,7 @@ func setup() func() {
 }
 
 func TestRunParsesBlueprintInMarkdownFormat(t *testing.T) {
-	absoluteFolderPath, err := filepath.Abs("../../functional_tests/test_fixtures/single_container")
+	absoluteFolderPath, err := filepath.Abs("../../functional_tests/test_fixtures/container")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,7 +30,7 @@ func TestRunParsesBlueprintInMarkdownFormat(t *testing.T) {
 
 	assert.Equal(t, "Nic Jackson", c.Blueprint.Author)
 	assert.Equal(t, "Single Container Example", c.Blueprint.Title)
-	assert.Equal(t, "single_container", c.Blueprint.Slug)
+	assert.Equal(t, "container", c.Blueprint.Slug)
 	assert.Equal(t, []string{"http://consul-http.ingress.shipyard.run:8500"}, c.Blueprint.BrowserWindows)
 	assert.Contains(t, c.Blueprint.Intro, "# Single Container")
 }

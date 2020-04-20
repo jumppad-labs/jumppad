@@ -39,3 +39,18 @@ container "consul" {
     value = "${home()}"
   }
 }
+
+sidecar "consul" {
+  target = "container.consul"
+
+  image   {
+    name = "consul:1.6.1"
+  }
+
+  command = ["tail", "-f", "/dev/null"]
+  
+  volume {
+    source      = "./consul_config"
+    destination = "/config"
+  }
+}

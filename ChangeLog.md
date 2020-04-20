@@ -1,5 +1,34 @@
 # Change Log
 
+## version 0.0.19
+
+### Sidecar resource
+Added a new resource `sidecar`. A `sidecar` is a special container which shares the network and ip address of the target container.
+
+```ruby
+container "consul" {
+  image   {
+    name = "consul:1.6.1"
+  }
+
+  command = ["consul", "agent", "-config-file=/config/consul.hcl"]
+}
+
+sidecar "consul" {
+  target = "container.consul"
+
+  image   {
+    name = "consul:1.6.1"
+  }
+
+  command = ["consul", "connect", "envoy", "-sidecar-for", "myservice"]
+}
+```
+
+### Helm charts
+* Added ability to set the namespace
+
+
 ## version 0.0.18
 
 ### Helm charts
@@ -265,7 +294,7 @@ The information which was previously added to the .yard file can now be added as
 ---
 title: Single Container Example
 author: Nic Jackson
-slug: single_container
+slug: container
 browser_windows: http://localhost:8080
 ---
 

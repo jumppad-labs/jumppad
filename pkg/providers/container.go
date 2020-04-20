@@ -21,6 +21,24 @@ func NewContainer(co *config.Container, cl clients.ContainerTasks, hc clients.HT
 	return &Container{co, cl, hc, l}
 }
 
+func NewContainerSidecar(cs *config.Sidecar, cl clients.ContainerTasks, hc clients.HTTP, l hclog.Logger) *Container {
+	co := config.NewContainer(cs.Name)
+	co.Depends = cs.Depends
+	co.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: cs.Target}}
+	co.Volumes = cs.Volumes
+	co.Command = cs.Command
+	co.Entrypoint = cs.Entrypoint
+	co.Environment = cs.Environment
+	co.HealthCheck = cs.HealthCheck
+	co.Image = cs.Image
+	co.Privileged = cs.Privileged
+	co.Resources = cs.Resources
+	co.Type = cs.Type
+	co.Config = cs.Config
+
+	return &Container{co, cl, hc, l}
+}
+
 // Create implements provider method and creates a Docker container with the given config
 func (c *Container) Create() error {
 	c.log.Info("Creating Container", "ref", c.config.Name)
@@ -63,10 +81,12 @@ func (c *Container) Destroy() error {
 
 	if len(ids) > 0 {
 		for _, id := range ids {
-			for _, n := range c.config.Networks {
-				err := c.client.DetachNetwork(n.Name, id)
-				if err != nil {
-					c.log.Error("Unable to detach network", "ref", c.config.Name, "network", n.Name)
+			if c.config.Type == config.TypeContainer {
+				for _, n := range c.config.Networks {
+					err := c.client.DetachNetwork(n.Name, id)
+					if err != nil {
+						c.log.Error("Unable to detach network", "ref", c.config.Name, "network", n.Name)
+					}
 				}
 			}
 

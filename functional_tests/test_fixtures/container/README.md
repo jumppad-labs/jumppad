@@ -1,7 +1,7 @@
 ---
 title: Single Container Example
 author: Nic Jackson
-slug: single_container
+slug: container
 browser_windows: http://consul-http.ingress.shipyard.run:8500
 ---
 

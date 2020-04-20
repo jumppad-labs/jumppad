@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
@@ -55,11 +56,15 @@ var containerConfig = &config.Container{
 
 func createContainerConfig() (*config.Container, *config.Network, *config.Network, *clients.MockDocker) {
 	cc := *containerConfig
+	cc2 := *containerConfig
 	cn := *containerNetwork
 	wn := *wanNetwork
 
+	cc2.Name = "testcontainer2"
+
 	c := config.New()
 	c.AddResource(&cc)
+	c.AddResource(&cc2)
 	c.AddResource(&cn)
 	c.AddResource(&wn)
 
@@ -149,6 +154,40 @@ func TestContainerAttachesToUserNetwork(t *testing.T) {
 	assert.Equal(t, cn.Info().Name, params[1])
 	assert.Equal(t, "test", params[2])
 	assert.Nil(t, nc.IPAMConfig) // unless an IP address is set this will be nil
+}
+
+func TestContainerAttachesToContainerNetwork(t *testing.T) {
+	cc, _, _, md := createContainerConfig()
+	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "container.testcontainer2"}}
+	md.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{types.Container{ID: "abc"}})
+
+	err := setupContainer(t, cc, md)
+	assert.NoError(t, err)
+
+	md.AssertNotCalled(t, "NetworkConnect")
+
+	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
+	hc := params[2].(*container.HostConfig)
+
+	assert.Equal(t, hc.NetworkMode, container.NetworkMode("container:abc"))
+}
+
+func TestContainerAttachesToContainerNetworkReturnsErrorWhenListError(t *testing.T) {
+	cc, _, _, md := createContainerConfig()
+	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "container.testcontainer2"}}
+	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
+
+	err := setupContainer(t, cc, md)
+	assert.Error(t, err)
+}
+
+func TestContainerAttachesToContainerNetworkReturnsErrorWhenContainerNotFound(t *testing.T) {
+	cc, _, _, md := createContainerConfig()
+	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "container.testcontainer2"}}
+	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, nil)
+
+	err := setupContainer(t, cc, md)
+	assert.Error(t, err)
 }
 
 func TestContainerRollsbackWhenUnableToConnectToNetwork(t *testing.T) {
