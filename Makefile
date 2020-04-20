@@ -5,7 +5,7 @@ test_unit:
 	go test -v ./pkg/shipyard
 
 test_functional: install_local
-	cd ./functional_tests && go test -v -run.test true ./...
+	cd ./functional_tests && go test -timeout 20m -v -run.test true ./...
 
 test: test_unit test_functional
 
