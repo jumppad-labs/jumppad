@@ -14,3 +14,8 @@ func (b *System) Preflight() (string, error) {
 	args := b.Called()
 	return "", args.Error(0)
 }
+
+func (b *System) CheckVersion(current string) (string, bool) {
+	args := b.Called()
+	return args.String(0), args.Bool(1)
+}

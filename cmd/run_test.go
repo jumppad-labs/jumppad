@@ -28,6 +28,7 @@ func setupRun(t *testing.T) (*cobra.Command, *mocks.Engine, *clientmocks.Getter,
 	mockBrowser := &clientmocks.System{}
 	mockBrowser.On("OpenBrowser", mock.Anything).Return(nil)
 	mockBrowser.On("Preflight").Return(nil)
+	mockBrowser.On("CheckVersion", mock.Anything).Return("", false)
 
 	mockTasks := &clientmocks.MockContainerTasks{}
 	mockTasks.On("SetForcePull", mock.Anything)

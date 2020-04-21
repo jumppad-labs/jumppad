@@ -62,7 +62,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 		}
 
 		// check the shipyard version
-		text, ok := utils.CheckVersion(version)
+		text, ok := bc.CheckVersion(version)
 		if !ok {
 			fmt.Println("")
 			fmt.Println(text)

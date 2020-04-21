@@ -14,8 +14,6 @@ import (
 
 // Docker defines an interface for a Docker client
 type Docker interface {
-	ImagePull(ctx context.Context, refStr string, options types.ImagePullOptions) (io.ReadCloser, error)
-
 	ContainerCreate(
 		ctx context.Context,
 		config *container.Config,
@@ -46,8 +44,10 @@ type Docker interface {
 	VolumeCreate(ctx context.Context, options volumetypes.VolumeCreateBody) (types.Volume, error)
 	VolumeRemove(ctx context.Context, volumeID string, force bool) error
 
+	ImagePull(ctx context.Context, refStr string, options types.ImagePullOptions) (io.ReadCloser, error)
 	ImageList(ctx context.Context, options types.ImageListOptions) ([]types.ImageSummary, error)
 	ImageSave(ctx context.Context, imageIDs []string) (io.ReadCloser, error)
+	ImageRemove(ctx context.Context, imageID string, options types.ImageRemoveOptions) ([]types.ImageDeleteResponseItem, error)
 }
 
 // NewDocker creates a new Docker client

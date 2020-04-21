@@ -21,6 +21,7 @@ func newPushCmd(ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTT
 		Example:               `yard push nicholasjackson/fake-service:v0.1.3 k8s_cluster.k3s`,
 		DisableFlagsInUseLine: true,
 		Args:                  cobra.MaximumNArgs(3),
+		SilenceUsage:          true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 2 {
 				return xerrors.Errorf("Push requires two arguments [image] [cluster]")

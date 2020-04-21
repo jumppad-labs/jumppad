@@ -28,6 +28,11 @@ sidecar "consul" {
 ### Helm charts
 * Added ability to set the namespace
 
+### Purge Command
+* Added `shipyard purge` command to remove all cached images, blueprints, and helm charts
+
+### Bugfixes
+* Remote exec now correctly pulls a container
 
 ## version 0.0.18
 

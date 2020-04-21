@@ -212,3 +212,13 @@ func (m *MockDocker) ImageList(ctx context.Context, options types.ImageListOptio
 
 	return []types.ImageSummary{}, args.Error(1)
 }
+
+func (m *MockDocker) ImageRemove(ctx context.Context, imageID string, options types.ImageRemoveOptions) ([]types.ImageDeleteResponseItem, error) {
+	args := m.Called(ctx, imageID, options)
+
+	if is, ok := args.Get(0).([]types.ImageDeleteResponseItem); ok {
+		return is, args.Error(1)
+	}
+
+	return nil, args.Error(1)
+}

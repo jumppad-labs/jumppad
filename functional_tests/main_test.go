@@ -79,6 +79,12 @@ func FeatureContext(s *godog.Suite) {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Run()
+
+		// purge the cache
+		cmd = exec.Command("yard-dev", []string{"purge"}...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmd.Run()
 	})
 }
 

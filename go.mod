@@ -20,6 +20,7 @@ require (
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.1.2
+	github.com/opencontainers/runtime-tools v0.0.0-20181011054405-1d69bd0f9c39
 	github.com/prometheus/common v0.7.0 // indirect
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.5.0

@@ -33,6 +33,7 @@ func newExecCmd(dt clients.ContainerTasks) *cobra.Command {
 		`,
 		Args:               cobra.MinimumNArgs(1),
 		DisableFlagParsing: true,
+		SilenceUsage:       true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			parameters, command := parseParameters(args)
 

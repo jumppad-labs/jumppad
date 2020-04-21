@@ -23,7 +23,8 @@ func newGetCmd(bp clients.Getter) *cobra.Command {
   # Fetch a blueprint from GitHub
   yard get github.com/shipyard-run/blueprints//vault-k8s
 	`,
-		Args: cobra.ArbitraryArgs,
+		Args:         cobra.ArbitraryArgs,
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// create the shipyard home
 			os.MkdirAll(utils.ShipyardHome(), os.FileMode(0755))

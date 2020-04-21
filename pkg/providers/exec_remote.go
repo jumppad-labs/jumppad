@@ -50,6 +50,10 @@ func (c *ExecRemote) Create() error {
 		}
 
 		switch target.Info().Type {
+		case config.TypeK8sCluster:
+			fallthrough
+		case config.TypeNomadCluster:
+			fallthrough
 		case config.TypeContainer:
 			ids, err := c.client.FindContainerIDs(target.Info().Name, target.Info().Type)
 
@@ -93,6 +97,14 @@ func (c *ExecRemote) createRemoteExecContainer() (string, error) {
 	cc.Command = []string{"tail", "-f", "/dev/null"} // ensure container does not immediately exit
 	cc.Volumes = c.config.Volumes
 	cc.Environment = c.config.Environment
+
+	// pull any images needed for this container
+	err := c.client.PullImage(cc.Image, false)
+	if err != nil {
+		c.log.Error("Error pulling container image", "ref", cc.Name, "image", cc.Image.Name)
+
+		return "", err
+	}
 
 	return c.client.CreateContainer(cc)
 }

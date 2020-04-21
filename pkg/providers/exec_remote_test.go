@@ -14,6 +14,7 @@ import (
 func testRemoteExecSetupMocks() (*config.ExecRemote, *config.Network, *mocks.MockContainerTasks) {
 	md := &mocks.MockContainerTasks{}
 	md.On("CreateContainer", mock.Anything).Return("1234", nil)
+	md.On("PullImage", mock.Anything, mock.Anything).Return(nil)
 	md.On("FindContainerIDs", mock.Anything).Return([]string{"1234"}, nil)
 	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("RemoveContainer", mock.Anything).Return(nil)
@@ -42,6 +43,26 @@ func testRemoteExecSetupMocks() (*config.ExecRemote, *config.Network, *mocks.Moc
 func TestRemoteExecThrowsErrorIfScript(t *testing.T) {
 	trex, _, md := testRemoteExecSetupMocks()
 	trex.Script = "./script.sh"
+	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.Error(t, err)
+}
+
+func TestRemoteExecPullsImageWhenNoTarget(t *testing.T) {
+	trex, _, md := testRemoteExecSetupMocks()
+	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+	md.AssertCalled(t, "PullImage", mock.Anything, mock.Anything)
+}
+
+func TestRemoteExecPullsImageReturnsErrorWhenError(t *testing.T) {
+	trex, _, md := testRemoteExecSetupMocks()
+	removeOn(&md.Mock, "PullImage")
+	md.On("PullImage", mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
+
 	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
 
 	err := p.Create()

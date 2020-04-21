@@ -30,10 +30,8 @@ func NewImageFileLog(file string) *ImageFileLog {
 // Log an image has been downloaded by Shypyard
 func (i *ImageFileLog) Log(name, t string) error {
 	// check the existing entries do not add if allready in there
-	entries, err := i.Read(t)
-	if err != nil {
-		return err
-	}
+	// ignore errors as the file may not exist
+	entries, _ := i.Read(t)
 
 	for _, v := range entries {
 		// found just exit
@@ -48,14 +46,16 @@ func (i *ImageFileLog) Log(name, t string) error {
 	}
 	defer f.Close()
 
-	n, err := f.WriteString(fmt.Sprintf("%s,%s\n", name, t))
-	fmt.Println(n)
+	_, err = f.WriteString(fmt.Sprintf("%s,%s\n", name, t))
 	return err
 }
 
 // Read a list of images which have been downloaded by Shipyard
 func (i *ImageFileLog) Read(t string) ([]string, error) {
-	f, _ := os.Open(i.f)
+	f, err := os.Open(i.f)
+	if err != nil {
+		return nil, err
+	}
 	defer f.Close()
 
 	output := []string{}

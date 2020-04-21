@@ -2,8 +2,6 @@ package utils
 
 import (
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -209,48 +207,3 @@ func GetDockerSock() string {
 
 	return "/var/run/docker.sock"
 }
-
-// CheckVersion checks the current version against the latest online version
-// if an update is required the function returns a string with the upgrade text
-// and a boolean value set to false.
-// If no upgrade is reuquired then the boolean will be set to true and the string
-// will be empty.
-func CheckVersion(current string) (string, bool) {
-	// try and get the latest version
-	resp, err := http.DefaultClient.Get("https://shipyard.run/latest")
-	if err != nil || resp.StatusCode != http.StatusOK {
-		// if we fail just return
-		return "", true
-	}
-	defer resp.Body.Close()
-
-	// get the version
-	d, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", true
-	}
-
-	ver := strings.TrimSpace(string(d))
-
-	// check the version
-	if current != ver {
-		return fmt.Sprintf(
-			fmt.Sprintf("\033[1;31m%s\033[0m", updateText),
-			ver, current,
-		), false
-	}
-
-	return "", true
-}
-
-var updateText = `
-########################################################
-                   SHIPYARD UPDATE
-########################################################
-
-The current version of shipyard is "%s", you have "%s".
-
-To upgrade Shipyard please use your package manager or, 
-see the documentation at:
-https://shipyard.run/docs/install for other options.
-`
