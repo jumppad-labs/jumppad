@@ -136,6 +136,11 @@ func StatePath() string {
 	return fmt.Sprintf("%s/state.json", StateDir())
 }
 
+// ImageCacheLog returns the location of the image cache log
+func ImageCacheLog() string {
+	return fmt.Sprintf("%s/images.log", ShipyardHome())
+}
+
 // IsLocalFolder tests if the given path is a localfolder and can
 // exist in the current filesystem
 // TODO make more robust with error messages

@@ -18,7 +18,9 @@ func TestContainerLogsCalled(t *testing.T) {
 		ioutil.NopCloser(bytes.NewBufferString("test")),
 		fmt.Errorf("boom"),
 	)
-	dt := NewDockerTasks(md, hclog.NewNullLogger())
+	mic := &mocks.ImageLog{}
+
+	dt := NewDockerTasks(md, mic, hclog.NewNullLogger())
 
 	rc, err := dt.ContainerLogs("123", true, true)
 	assert.NotNil(t, rc)

@@ -26,7 +26,10 @@ func setupShellMocks() (*DockerTasks, *clients.MockDocker) {
 		}, nil)
 	md.On("ContainerExecInspect", mock.Anything, mock.Anything).Return(types.ContainerExecInspect{ExitCode: 0}, nil)
 
-	p := NewDockerTasks(md, hclog.NewNullLogger())
+	mic := &clients.ImageLog{}
+	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
+
+	p := NewDockerTasks(md, mic, hclog.NewNullLogger())
 
 	return p, md
 }

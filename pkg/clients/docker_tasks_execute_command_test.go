@@ -10,11 +10,12 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
+	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-func testExecCommandMockSetup() *mocks.MockDocker {
+func testExecCommandMockSetup() (*mocks.MockDocker, *mocks.ImageLog) {
 	mk := &mocks.MockDocker{}
 	mk.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(types.IDResponse{ID: "abc"}, nil)
 	mk.On("ContainerExecAttach", mock.Anything, "abc", mock.Anything).Return(
@@ -29,12 +30,12 @@ func testExecCommandMockSetup() *mocks.MockDocker {
 	mk.On("ContainerExecStart", mock.Anything, "abc", mock.Anything).Return(nil)
 	mk.On("ContainerExecInspect", mock.Anything, "abc", mock.Anything).Return(types.ContainerExecInspect{Running: false, ExitCode: 0}, nil)
 
-	return mk
+	return mk, &clients.ImageLog{}
 }
 
 func TestExecuteCommandCreatesExec(t *testing.T) {
-	mk := testExecCommandMockSetup()
-	md := NewDockerTasks(mk, hclog.NewNullLogger())
+	mk, mic := testExecCommandMockSetup()
+	md := NewDockerTasks(mk, mic, hclog.NewNullLogger())
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}
@@ -47,11 +48,11 @@ func TestExecuteCommandCreatesExec(t *testing.T) {
 }
 
 func TestExecuteCommandExecFailReturnError(t *testing.T) {
-	mk := testExecCommandMockSetup()
+	mk, mic := testExecCommandMockSetup()
 	removeOn(&mk.Mock, "ContainerExecCreate")
 	mk.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
-	md := NewDockerTasks(mk, hclog.NewNullLogger())
+	md := NewDockerTasks(mk, mic, hclog.NewNullLogger())
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}
@@ -60,8 +61,8 @@ func TestExecuteCommandExecFailReturnError(t *testing.T) {
 }
 
 func TestExecuteCommandAttachesToExec(t *testing.T) {
-	mk := testExecCommandMockSetup()
-	md := NewDockerTasks(mk, hclog.NewNullLogger())
+	mk, mic := testExecCommandMockSetup()
+	md := NewDockerTasks(mk, mic, hclog.NewNullLogger())
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}
@@ -72,10 +73,10 @@ func TestExecuteCommandAttachesToExec(t *testing.T) {
 }
 
 func TestExecuteCommandAttachFailReturnError(t *testing.T) {
-	mk := testExecCommandMockSetup()
+	mk, mic := testExecCommandMockSetup()
 	removeOn(&mk.Mock, "ContainerExecAttach")
 	mk.On("ContainerExecAttach", mock.Anything, "abc", mock.Anything).Return(nil, fmt.Errorf("boom"))
-	md := NewDockerTasks(mk, hclog.NewNullLogger())
+	md := NewDockerTasks(mk, mic, hclog.NewNullLogger())
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}
@@ -84,8 +85,8 @@ func TestExecuteCommandAttachFailReturnError(t *testing.T) {
 }
 
 func TestExecuteCommandStartsExec(t *testing.T) {
-	mk := testExecCommandMockSetup()
-	md := NewDockerTasks(mk, hclog.NewNullLogger())
+	mk, mic := testExecCommandMockSetup()
+	md := NewDockerTasks(mk, mic, hclog.NewNullLogger())
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}
@@ -96,10 +97,10 @@ func TestExecuteCommandStartsExec(t *testing.T) {
 }
 
 func TestExecuteStartsFailReturnsError(t *testing.T) {
-	mk := testExecCommandMockSetup()
+	mk, mic := testExecCommandMockSetup()
 	removeOn(&mk.Mock, "ContainerExecStart")
 	mk.On("ContainerExecStart", mock.Anything, "abc", mock.Anything).Return(fmt.Errorf("boom"))
-	md := NewDockerTasks(mk, hclog.NewNullLogger())
+	md := NewDockerTasks(mk, mic, hclog.NewNullLogger())
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}
@@ -108,10 +109,10 @@ func TestExecuteStartsFailReturnsError(t *testing.T) {
 }
 
 func TestExecuteCommandInspectsExecAndReturnsErrorOnFail(t *testing.T) {
-	mk := testExecCommandMockSetup()
+	mk, mic := testExecCommandMockSetup()
 	removeOn(&mk.Mock, "ContainerExecInspect")
 	mk.On("ContainerExecInspect", mock.Anything, "abc", mock.Anything).Return(types.ContainerExecInspect{Running: false, ExitCode: 1}, nil)
-	md := NewDockerTasks(mk, hclog.NewNullLogger())
+	md := NewDockerTasks(mk, mic, hclog.NewNullLogger())
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}

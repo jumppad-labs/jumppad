@@ -31,13 +31,14 @@ import (
 // DockerTasks is a concrete implementation of ContainerTasks which uses the Docker SDK
 type DockerTasks struct {
 	c     Docker
+	il    ImageLog
 	force bool
 	l     hclog.Logger
 }
 
 // NewDockerTasks creates a DockerTasks with the given Docker client
-func NewDockerTasks(c Docker, l hclog.Logger) *DockerTasks {
-	return &DockerTasks{c: c, l: l}
+func NewDockerTasks(c Docker, il ImageLog, l hclog.Logger) *DockerTasks {
+	return &DockerTasks{c: c, il: il, l: l}
 }
 
 // SetForcePull sets a global override for the DockerTasks, when set to true
@@ -254,6 +255,12 @@ func (d *DockerTasks) PullImage(image config.Image, force bool) error {
 	out, err := d.c.ImagePull(context.Background(), in, ipo)
 	if err != nil {
 		return xerrors.Errorf("Error pulling image: %w", err)
+	}
+
+	// update the image log
+	err = d.il.Log(in, ImageTypeDocker)
+	if err != nil {
+		d.l.Error("Unable to add image name to cache", "error", err)
 	}
 
 	// write the output to /dev/null

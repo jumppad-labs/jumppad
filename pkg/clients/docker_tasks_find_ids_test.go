@@ -21,7 +21,7 @@ func TestFindContainerIDsReturnsID(t *testing.T) {
 		nil,
 	)
 
-	dt := NewDockerTasks(md, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, nil, hclog.NewNullLogger())
 
 	ids, err := dt.FindContainerIDs("test", "cloud")
 	assert.NoError(t, err)
@@ -43,7 +43,7 @@ func TestFindContainerIDsReturnsErrorWhenDockerFail(t *testing.T) {
 	md := &mocks.MockDocker{}
 	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
-	dt := NewDockerTasks(md, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, nil, hclog.NewNullLogger())
 
 	_, err := dt.FindContainerIDs("test", "cloud")
 	assert.Error(t, err)
@@ -53,7 +53,7 @@ func TestFindContainerIDsReturnsNilWhenNoIDs(t *testing.T) {
 	md := &mocks.MockDocker{}
 	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, nil)
 
-	dt := NewDockerTasks(md, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, nil, hclog.NewNullLogger())
 
 	ids, err := dt.FindContainerIDs("test", "cloud")
 	assert.NoError(t, err)
@@ -64,7 +64,7 @@ func TestFindContainerIDsReturnsNilWhenEmpty(t *testing.T) {
 	md := &mocks.MockDocker{}
 	md.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{}, nil)
 
-	dt := NewDockerTasks(md, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, nil, hclog.NewNullLogger())
 
 	ids, err := dt.FindContainerIDs("test", "cloud")
 	assert.NoError(t, err)

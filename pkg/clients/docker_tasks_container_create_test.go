@@ -54,7 +54,7 @@ var containerConfig = &config.Container{
 	},
 }
 
-func createContainerConfig() (*config.Container, *config.Network, *config.Network, *clients.MockDocker) {
+func createContainerConfig() (*config.Container, *config.Network, *config.Network, *clients.MockDocker, *clients.ImageLog) {
 	cc := *containerConfig
 	cc2 := *containerConfig
 	cn := *containerNetwork
@@ -68,10 +68,12 @@ func createContainerConfig() (*config.Container, *config.Network, *config.Networ
 	c.AddResource(&cn)
 	c.AddResource(&wn)
 
-	return &cc, &cn, &wn, setupContainerMocks()
+	mc, mic := setupContainerMocks()
+
+	return &cc, &cn, &wn, mc, mic
 }
 
-func setupContainerMocks() *clients.MockDocker {
+func setupContainerMocks() (*clients.MockDocker, *clients.ImageLog) {
 	md := &clients.MockDocker{}
 	md.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 	md.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).Return(
@@ -85,11 +87,14 @@ func setupContainerMocks() *clients.MockDocker {
 	md.On("NetworkConnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("NetworkDisconnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	return md
+	mic := &clients.ImageLog{}
+	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
+
+	return md, mic
 }
 
-func setupContainer(t *testing.T, cc *config.Container, md *clients.MockDocker) error {
-	p := NewDockerTasks(md, hclog.NewNullLogger())
+func setupContainer(t *testing.T, cc *config.Container, md *clients.MockDocker, mic *clients.ImageLog) error {
+	p := NewDockerTasks(md, mic, hclog.NewNullLogger())
 
 	// create the container
 	_, err := p.CreateContainer(cc)
@@ -98,9 +103,9 @@ func setupContainer(t *testing.T, cc *config.Container, md *clients.MockDocker) 
 }
 
 func TestContainerCreatesCorrectly(t *testing.T) {
-	cc, _, _, md := createContainerConfig()
+	cc, _, _, md, mic := createContainerConfig()
 
-	err := setupContainer(t, cc, md)
+	err := setupContainer(t, cc, md, mic)
 	assert.NoError(t, err)
 
 	// check that the docker api methods were called
@@ -123,9 +128,9 @@ func TestContainerCreatesCorrectly(t *testing.T) {
 }
 
 func TestContainerRemovesBridgeBeforeAttachingToUserNetwork(t *testing.T) {
-	cc, _, _, md := createContainerConfig()
+	cc, _, _, md, mic := createContainerConfig()
 
-	err := setupContainer(t, cc, md)
+	err := setupContainer(t, cc, md, mic)
 	assert.NoError(t, err)
 
 	params := getCalls(&md.Mock, "NetworkDisconnect")[0].Arguments
@@ -134,18 +139,18 @@ func TestContainerRemovesBridgeBeforeAttachingToUserNetwork(t *testing.T) {
 }
 
 func TestContainerReturnsErrorIfErrorRemovingBridge(t *testing.T) {
-	cc, _, _, md := createContainerConfig()
+	cc, _, _, md, mic := createContainerConfig()
 	removeOn(&md.Mock, "NetworkDisconnect")
 	md.On("NetworkDisconnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
-	err := setupContainer(t, cc, md)
+	err := setupContainer(t, cc, md, mic)
 	assert.Error(t, err)
 }
 
 func TestContainerAttachesToUserNetwork(t *testing.T) {
-	cc, cn, _, md := createContainerConfig()
+	cc, cn, _, md, mic := createContainerConfig()
 
-	err := setupContainer(t, cc, md)
+	err := setupContainer(t, cc, md, mic)
 	assert.NoError(t, err)
 
 	params := getCalls(&md.Mock, "NetworkConnect")[0].Arguments
@@ -157,11 +162,11 @@ func TestContainerAttachesToUserNetwork(t *testing.T) {
 }
 
 func TestContainerAttachesToContainerNetwork(t *testing.T) {
-	cc, _, _, md := createContainerConfig()
+	cc, _, _, md, mic := createContainerConfig()
 	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "container.testcontainer2"}}
 	md.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{types.Container{ID: "abc"}})
 
-	err := setupContainer(t, cc, md)
+	err := setupContainer(t, cc, md, mic)
 	assert.NoError(t, err)
 
 	md.AssertNotCalled(t, "NetworkConnect")
@@ -173,39 +178,39 @@ func TestContainerAttachesToContainerNetwork(t *testing.T) {
 }
 
 func TestContainerAttachesToContainerNetworkReturnsErrorWhenListError(t *testing.T) {
-	cc, _, _, md := createContainerConfig()
+	cc, _, _, md, mic := createContainerConfig()
 	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "container.testcontainer2"}}
 	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
-	err := setupContainer(t, cc, md)
+	err := setupContainer(t, cc, md, mic)
 	assert.Error(t, err)
 }
 
 func TestContainerAttachesToContainerNetworkReturnsErrorWhenContainerNotFound(t *testing.T) {
-	cc, _, _, md := createContainerConfig()
+	cc, _, _, md, mic := createContainerConfig()
 	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "container.testcontainer2"}}
 	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, nil)
 
-	err := setupContainer(t, cc, md)
+	err := setupContainer(t, cc, md, mic)
 	assert.Error(t, err)
 }
 
 func TestContainerRollsbackWhenUnableToConnectToNetwork(t *testing.T) {
-	cc, _, _, md := createContainerConfig()
+	cc, _, _, md, mic := createContainerConfig()
 	removeOn(&md.Mock, "NetworkConnect")
 	md.On("NetworkConnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
-	err := setupContainer(t, cc, md)
+	err := setupContainer(t, cc, md, mic)
 	assert.Error(t, err)
 
 	md.AssertCalled(t, "ContainerRemove", mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestContainerDoesNOTAttachesToUserNetworkWhenNil(t *testing.T) {
-	cc, nc, _, md := createContainerConfig()
+	cc, nc, _, md, mic := createContainerConfig()
 	cc.Networks = []config.NetworkAttachment{}
 
-	err := setupContainer(t, cc, md)
+	err := setupContainer(t, cc, md, mic)
 	assert.NoError(t, err)
 
 	md.AssertNumberOfCalls(t, "NetworkConnect", 0)
@@ -213,10 +218,10 @@ func TestContainerDoesNOTAttachesToUserNetworkWhenNil(t *testing.T) {
 }
 
 func TestContainerAssignsIPToUserNetwork(t *testing.T) {
-	cc, _, _, md := createContainerConfig()
+	cc, _, _, md, mic := createContainerConfig()
 	cc.Networks[0].IPAddress = "192.168.1.123"
 
-	err := setupContainer(t, cc, md)
+	err := setupContainer(t, cc, md, mic)
 	assert.NoError(t, err)
 
 	params := getCalls(&md.Mock, "NetworkConnect")[0].Arguments
@@ -226,21 +231,21 @@ func TestContainerAssignsIPToUserNetwork(t *testing.T) {
 }
 
 func TestContainerRollsbackWhenUnableToConnectToWANNetwork(t *testing.T) {
-	cc, _, _, md := createContainerConfig()
+	cc, _, _, md, mic := createContainerConfig()
 	removeOn(&md.Mock, "NetworkConnect")
 	md.On("NetworkConnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 	md.On("NetworkConnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom")).Once()
 
-	err := setupContainer(t, cc, md)
+	err := setupContainer(t, cc, md, mic)
 	assert.Error(t, err)
 
 	md.AssertCalled(t, "ContainerRemove", mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestContainerAttachesVolumeMounts(t *testing.T) {
-	cc, _, _, md := createContainerConfig()
+	cc, _, _, md, mic := createContainerConfig()
 
-	err := setupContainer(t, cc, md)
+	err := setupContainer(t, cc, md, mic)
 	assert.NoError(t, err)
 
 	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
@@ -256,10 +261,10 @@ func TestContainerCreatesDirectoryForVolume(t *testing.T) {
 	tmpFolder := fmt.Sprintf("%s/%d", utils.ShipyardTemp(), time.Now().UnixNano())
 	defer os.RemoveAll(tmpFolder)
 
-	cc, _, _, md := createContainerConfig()
+	cc, _, _, md, mic := createContainerConfig()
 	cc.Volumes[0].Source = tmpFolder
 
-	err := setupContainer(t, cc, md)
+	err := setupContainer(t, cc, md, mic)
 	assert.NoError(t, err)
 
 	assert.DirExists(t, tmpFolder)
@@ -269,20 +274,20 @@ func TestContainerDoesNotCreatesDirectoryForVolumeWhenNotBind(t *testing.T) {
 	tmpFolder := fmt.Sprintf("%s/%d", utils.ShipyardTemp(), time.Now().UnixNano())
 	defer os.RemoveAll(tmpFolder)
 
-	cc, _, _, md := createContainerConfig()
+	cc, _, _, md, mic := createContainerConfig()
 	cc.Volumes[0].Source = tmpFolder
 	cc.Volumes[0].Type = "volume"
 
-	err := setupContainer(t, cc, md)
+	err := setupContainer(t, cc, md, mic)
 	assert.NoError(t, err)
 
 	assert.NoDirExists(t, tmpFolder)
 }
 
 func TestContainerPublishesPorts(t *testing.T) {
-	cc, _, _, md := createContainerConfig()
+	cc, _, _, md, mic := createContainerConfig()
 
-	err := setupContainer(t, cc, md)
+	err := setupContainer(t, cc, md, mic)
 	assert.NoError(t, err)
 
 	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments

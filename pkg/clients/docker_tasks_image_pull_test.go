@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func setupImagePullMocks() *mocks.MockDocker {
+func setupImagePullMocks() (*mocks.MockDocker, *mocks.ImageLog) {
 	md := &mocks.MockDocker{}
 	md.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 	md.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).Return(
@@ -23,19 +23,24 @@ func setupImagePullMocks() *mocks.MockDocker {
 		nil,
 	)
 
-	return md
+	mic := &mocks.ImageLog{}
+	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
+	mic.On("Read", mock.Anything, mock.Anything).Return([]string{}, nil)
+
+	return md, mic
 }
 
-func createImagePullConfig() (config.Image, *mocks.MockDocker) {
+func createImagePullConfig() (config.Image, *mocks.MockDocker, *mocks.ImageLog) {
 	ic := config.Image{
 		Name: "consul:1.6.1",
 	}
 
-	return ic, setupImagePullMocks()
+	mk, mic := setupImagePullMocks()
+	return ic, mk, mic
 }
 
-func setupImagePull(t *testing.T, cc config.Image, md *mocks.MockDocker, force bool) {
-	p := NewDockerTasks(md, hclog.NewNullLogger())
+func setupImagePull(t *testing.T, cc config.Image, md *mocks.MockDocker, mic *mocks.ImageLog, force bool) {
+	p := NewDockerTasks(md, mic, hclog.NewNullLogger())
 
 	// create the container
 	err := p.PullImage(cc, force)
@@ -45,8 +50,8 @@ func setupImagePull(t *testing.T, cc config.Image, md *mocks.MockDocker, force b
 }
 
 func TestPullImageWhenNOTCached(t *testing.T) {
-	cc, md := createImagePullConfig()
-	setupImagePull(t, cc, md, false)
+	cc, md, mic := createImagePullConfig()
+	setupImagePull(t, cc, md, mic, false)
 
 	// test calls list image with a canonical image reference
 	args := filters.NewArgs(filters.KeyValuePair{Key: "reference", Value: cc.Name})
@@ -54,14 +59,17 @@ func TestPullImageWhenNOTCached(t *testing.T) {
 
 	// test pulls image replacing the short name with the canonical registry name
 	md.AssertCalled(t, "ImagePull", mock.Anything, makeImageCanonical(cc.Name), types.ImagePullOptions{})
+
+	// test adds to the cache log
+	mic.AssertCalled(t, "Log", mock.Anything, mock.Anything)
 }
 
 func TestPullImageWithCredentialsWhenNOTCached(t *testing.T) {
-	cc, md := createImagePullConfig()
+	cc, md, mic := createImagePullConfig()
 	cc.Username = "nicjackson"
 	cc.Password = "S3cur1t11"
 
-	setupImagePull(t, cc, md, false)
+	setupImagePull(t, cc, md, mic, false)
 
 	// test calls list image with a canonical image reference
 	args := filters.NewArgs(filters.KeyValuePair{Key: "reference", Value: cc.Name})
@@ -75,11 +83,11 @@ func TestPullImageWithCredentialsWhenNOTCached(t *testing.T) {
 }
 
 func TestPullImageWithValidCredentials(t *testing.T) {
-	cc, md := createImagePullConfig()
+	cc, md, mic := createImagePullConfig()
 	cc.Username = "nicjackson"
 	cc.Password = "S3cur1t11"
 
-	setupImagePull(t, cc, md, false)
+	setupImagePull(t, cc, md, mic, false)
 
 	ipo := getCalls(&md.Mock, "ImagePull")[0].Arguments[2].(types.ImagePullOptions)
 
@@ -90,22 +98,24 @@ func TestPullImageWithValidCredentials(t *testing.T) {
 
 // validate the registry auth is in the correct format
 func TestPullImageNothingWhenCached(t *testing.T) {
-	cc, md := createImagePullConfig()
+	cc, md, mic := createImagePullConfig()
 
 	// remove the default image list which returns 0 cached images
 	removeOn(&md.Mock, "ImageList")
 	md.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return([]types.ImageSummary{types.ImageSummary{}}, nil)
 
-	setupImagePull(t, cc, md, false)
+	setupImagePull(t, cc, md, mic, false)
 
 	md.AssertNotCalled(t, "ImagePull", mock.Anything, mock.Anything, mock.Anything)
+	mic.AssertNotCalled(t, "Log", mock.Anything, mock.Anything)
 }
 
 func TestPullImageAlwaysWhenForce(t *testing.T) {
-	cc, md := createImagePullConfig()
+	cc, md, mic := createImagePullConfig()
 
-	setupImagePull(t, cc, md, true)
+	setupImagePull(t, cc, md, mic, true)
 
 	md.AssertNotCalled(t, "ImageList", mock.Anything, mock.Anything)
 	md.AssertCalled(t, "ImagePull", mock.Anything, mock.Anything, mock.Anything)
+	mic.AssertCalled(t, "Log", mock.Anything, mock.Anything)
 }

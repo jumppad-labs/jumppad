@@ -1,8 +1,8 @@
 git_commit = $(shell git log -1 --pretty=format:"%H")
 
 test_unit:
-	go test -v -race $(shell go list ./... | grep -v /functional_tests)
-	go test -v ./pkg/shipyard
+	go test -race $(shell go list ./... | grep -v /functional_tests)
+	go test ./pkg/shipyard
 
 test_functional: install_local
 	cd ./functional_tests && go test -timeout 20m -v -run.test true ./...

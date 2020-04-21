@@ -10,6 +10,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
+	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -21,12 +22,13 @@ func TestCopyFromContainerCopiesFile(t *testing.T) {
 	src := "/output/file.hcl"
 
 	md := &mocks.MockDocker{}
+	mic := &clients.ImageLog{}
 	md.On("CopyFromContainer", mock.Anything, id, src).Return(
 		ioutil.NopCloser(bytes.NewBufferString(fileContent)),
 		types.ContainerPathStat{},
 		nil,
 	)
-	dt := NewDockerTasks(md, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, mic, hclog.NewNullLogger())
 
 	tmpDir, _ := ioutil.TempDir("", "")
 	defer os.RemoveAll(tmpDir)
@@ -45,12 +47,13 @@ func TestCopyFromContainerReturnsErrorOnDockerError(t *testing.T) {
 	src := "/output/file.hcl"
 
 	md := &mocks.MockDocker{}
+	mic := &clients.ImageLog{}
 	md.On("CopyFromContainer", mock.Anything, id, src).Return(
 		nil,
 		types.ContainerPathStat{},
 		fmt.Errorf("boom"),
 	)
-	dt := NewDockerTasks(md, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, mic, hclog.NewNullLogger())
 
 	err := dt.CopyFromContainer(id, src, "/new.hcl")
 	assert.Error(t, err)
