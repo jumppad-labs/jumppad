@@ -29,7 +29,7 @@ func setupNomadClusterMocks() (*config.NomadCluster, *mocks.MockContainerTasks, 
 		nil,
 	)
 	md.On("CopyFromContainer", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	md.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything).Return("file.tar.gz", nil)
+	md.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything).Return([]string{"file.tar.gz"}, nil)
 	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("RemoveContainer", mock.Anything).Return(nil)
 	md.On("RemoveVolume", mock.Anything).Return(nil)
@@ -97,7 +97,7 @@ func TestClusterNomadCreatesANewVolume(t *testing.T) {
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "CreateVolume", clusterConfig.Name)
+	md.AssertCalled(t, "CreateVolume", utils.ImageVolumeName)
 }
 
 func TestClusterNomadFailsWhenUnableToCreatesANewVolume(t *testing.T) {
@@ -111,7 +111,7 @@ func TestClusterNomadFailsWhenUnableToCreatesANewVolume(t *testing.T) {
 
 	err := p.Create()
 	assert.Error(t, err)
-	md.AssertCalled(t, "CreateVolume", clusterConfig.Name)
+	md.AssertCalled(t, "CreateVolume", utils.ImageVolumeName)
 }
 
 func TestClusterNomadCreatesAServer(t *testing.T) {
@@ -210,12 +210,12 @@ func TestClusterNomadImportDockerCopiesImages(t *testing.T) {
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "CopyLocalDockerImageToVolume", []string{"consul:1.6.1", "vault:1.6.1"}, "test.volume.shipyard.run")
+	md.AssertCalled(t, "CopyLocalDockerImageToVolume", []string{"consul:1.6.1", "vault:1.6.1"}, "images.volume.shipyard.run")
 }
 func TestClusterNomadImportDockerCopyImageFailReturnsError(t *testing.T) {
 	cc, md, mh, cleanup := setupNomadClusterMocks()
 	removeOn(&md.Mock, "CopyLocalDockerImageToVolume")
-	md.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything).Return("", fmt.Errorf("boom"))
+	md.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 	defer cleanup()
 
 	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
@@ -299,17 +299,6 @@ func TestClusterNomadDestroyRemovesContainer(t *testing.T) {
 	err := p.Destroy()
 	assert.NoError(t, err)
 	md.AssertCalled(t, "RemoveContainer", mock.Anything)
-}
-
-func TestClusterNomadDestroyRemovesVolume(t *testing.T) {
-	cc, md, mh, cleanup := setupNomadClusterMocks()
-	defer cleanup()
-
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
-
-	err := p.Destroy()
-	assert.NoError(t, err)
-	md.AssertCalled(t, "RemoveVolume", "test")
 }
 
 var clusterNomadConfig = &config.NomadCluster{

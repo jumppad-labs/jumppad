@@ -15,8 +15,9 @@ func setupPush(state string) (*cobra.Command, *mocks.MockContainerTasks, func())
 	mt := &mocks.MockContainerTasks{}
 	mt.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
 	mt.On("PullImage", mock.Anything, false).Return(nil)
-	mt.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything).Return("", nil)
+	mt.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything).Return([]string{"/images/file.tar"}, nil)
 	mt.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	mt.On("SetForcePull", mock.Anything).Return(nil)
 
 	mk := &mocks.MockKubernetes{}
 	mh := &mocks.MockHTTP{}
@@ -75,6 +76,18 @@ func TestPushK8sClusterIDNotFoundReturnsError(t *testing.T) {
 	assert.NoError(t, err)
 
 	mt.AssertNotCalled(t, "ExecuteCommand", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestPushWithForceSetsFlag(t *testing.T) {
+	c, mt, cleanup := setupPush(clusterState)
+	defer cleanup()
+
+	c.SetArgs([]string{"consul:v1.6.1", "k8s_cluster.k3s"})
+	c.Flags().Set("force-update", "true")
+	err := c.Execute()
+	assert.NoError(t, err)
+
+	mt.AssertCalled(t, "SetForcePull", mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestPushK8sClusterPushesImage(t *testing.T) {

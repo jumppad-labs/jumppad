@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/docker/docker/api/types"
 	"github.com/hashicorp/go-hclog"
@@ -43,14 +42,20 @@ func newPurgeCmdFunc(dt clients.Docker, il clients.ImageLog, l hclog.Logger) fun
 		}
 		il.Clear()
 
-		hcp := filepath.Join(utils.ShipyardHome(), "helm_charts")
+		l.Info("Removing cached images for clusters")
+		err := dt.VolumeRemove(context.Background(), utils.FQDNVolumeName("images"), true)
+		if err != nil {
+			return fmt.Errorf("Unable to remove cached image volume, error: %s", err)
+		}
+
+		hcp := utils.GetBlueprintLocalFolder("")
 		l.Info("Removing Helm charts", "path", hcp)
-		err := os.RemoveAll(hcp)
+		err = os.RemoveAll(hcp)
 		if err != nil {
 			return fmt.Errorf("Unable to remove cached Helm charts: %s", err)
 		}
 
-		bcp := filepath.Join(utils.ShipyardHome(), "helm_charts")
+		bcp := utils.GetHelmLocalFolder("")
 		l.Info("Removing Blueprints", "path", bcp)
 		err = os.RemoveAll(bcp)
 		if err != nil {

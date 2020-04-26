@@ -28,7 +28,7 @@ func setupClusterMocks() (*config.K8sCluster, *mocks.MockContainerTasks, *mocks.
 		nil,
 	)
 	md.On("CopyFromContainer", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	md.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything).Return("/images/file.tar.gz", nil)
+	md.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything).Return([]string{"/images/file.tar.gz"}, nil)
 	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("RemoveContainer", mock.Anything).Return(nil)
 	md.On("RemoveVolume", mock.Anything).Return(nil)
@@ -108,7 +108,7 @@ func TestClusterK3CreatesANewVolume(t *testing.T) {
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "CreateVolume", clusterConfig.Name)
+	md.AssertCalled(t, "CreateVolume", utils.ImageVolumeName)
 }
 
 func TestClusterK3FailsWhenUnableToCreatesANewVolume(t *testing.T) {
@@ -122,7 +122,7 @@ func TestClusterK3FailsWhenUnableToCreatesANewVolume(t *testing.T) {
 
 	err := p.Create()
 	assert.Error(t, err)
-	md.AssertCalled(t, "CreateVolume", clusterConfig.Name)
+	md.AssertCalled(t, "CreateVolume", utils.ImageVolumeName)
 }
 
 func TestClusterK3CreatesAServer(t *testing.T) {
@@ -294,7 +294,7 @@ func TestClusterK3sImportDockerCopiesImages(t *testing.T) {
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "CopyLocalDockerImageToVolume", []string{"consul:1.6.1", "vault:1.6.1"}, "test.volume.shipyard.run")
+	md.AssertCalled(t, "CopyLocalDockerImageToVolume", []string{"consul:1.6.1", "vault:1.6.1"}, utils.FQDNVolumeName(utils.ImageVolumeName))
 }
 func TestClusterK3sImportDockerCopyImageFailReturnsError(t *testing.T) {
 	cc, md, mk, cleanup := setupClusterMocks()
@@ -313,8 +313,8 @@ func TestClusterK3sImportDockerRunsExecCommand(t *testing.T) {
 	defer cleanup()
 
 	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
-
 	err := p.Create()
+
 	assert.NoError(t, err)
 	md.AssertCalled(t, "ExecuteCommand", "containerid", mock.Anything, mock.Anything)
 }
@@ -381,15 +381,17 @@ func TestClusterK3sDestroyRemovesContainer(t *testing.T) {
 	md.AssertCalled(t, "RemoveContainer", mock.Anything)
 }
 
-func TestClusterK3sDestroyRemovesVolume(t *testing.T) {
+func TestLookupReturnsIDs(t *testing.T) {
 	cc, md, mk, cleanup := setupClusterMocks()
+	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	removeOn(&md.Mock, "FindContainerIDs")
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"found"}, nil)
 	defer cleanup()
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	ids, err := p.Lookup()
 
-	err := p.Destroy()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "RemoveVolume", "test")
+	assert.Equal(t, []string{"found"}, ids)
 }
 
 var clusterNetwork = config.NewNetwork("cloud")

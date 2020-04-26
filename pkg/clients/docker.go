@@ -7,6 +7,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
@@ -41,6 +42,7 @@ type Docker interface {
 	NetworkConnect(ctx context.Context, networkID, containerID string, config *network.EndpointSettings) error
 	NetworkDisconnect(ctx context.Context, networkID, containerID string, force bool) error
 
+	VolumeList(ctx context.Context, filter filters.Args) (volumetypes.VolumeListOKBody, error)
 	VolumeCreate(ctx context.Context, options volumetypes.VolumeCreateBody) (types.Volume, error)
 	VolumeRemove(ctx context.Context, volumeID string, force bool) error
 

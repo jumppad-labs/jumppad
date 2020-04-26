@@ -46,7 +46,7 @@ type ContainerTasks interface {
 	// compressed archive.
 	// the path in the docker volume where the archive is created is returned
 	// along with any errors.
-	CopyLocalDockerImageToVolume(images []string, volume string) (string, error)
+	CopyLocalDockerImageToVolume(images []string, volume string) ([]string, error)
 	// Execute command allows the execution of commands in a running docker container
 	// id is the id of the container to execute the command in
 	// command is a slice of strings to execute

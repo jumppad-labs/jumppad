@@ -13,6 +13,9 @@ var InvalidBlueprintURIError = fmt.Errorf("Inavlid blueprint URI")
 var NameExceedsMaxLengthError = fmt.Errorf("Name exceeds the max length of 128 characters")
 var NameContainsInvalidCharactersError = fmt.Errorf("Name contains invalid characters characters must be either a-z, A-Z, 0-9, -, _")
 
+// ImageVolumeName is the name of the volume which stores the images for clusters
+const ImageVolumeName string = "images"
+
 // ValidateName ensures that the name for a resource is within certain boundaries
 // Valid characters: [a-z] [A-Z] _ - [0-9]
 // Max length: 128
@@ -194,6 +197,12 @@ func GetBlueprintFolder(blueprint string) (string, error) {
 // for the given blueprint URI
 func GetBlueprintLocalFolder(blueprint string) string {
 	return filepath.Join(ShipyardHome(), "blueprints", blueprint)
+}
+
+// GetHelmLocalFolder returns the full storage path
+// for the given blueprint URI
+func GetHelmLocalFolder(blueprint string) string {
+	return filepath.Join(ShipyardHome(), "helm_charts", blueprint)
 }
 
 // GetDockerSock returns the location of the Docker sock depending on the platform

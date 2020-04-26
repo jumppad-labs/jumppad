@@ -14,7 +14,9 @@ import (
 )
 
 func newPushCmd(ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTTP, nc clients.Nomad, l hclog.Logger) *cobra.Command {
-	return &cobra.Command{
+	var force bool
+
+	pushCmd := &cobra.Command{
 		Use:                   "push [image] [cluster]",
 		Short:                 "Push a local Docker image to a cluster",
 		Long:                  `Push a local Docker image to a cluster`,
@@ -25,6 +27,11 @@ func newPushCmd(ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTT
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 2 {
 				return xerrors.Errorf("Push requires two arguments [image] [cluster]")
+			}
+
+			// are we forcing the update
+			if force {
+				ct.SetForcePull(true)
 			}
 
 			image := args[0]
@@ -59,6 +66,10 @@ func newPushCmd(ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTT
 			return nil
 		},
 	}
+
+	pushCmd.Flags().BoolVarP(&force, "force-update", "", false, "When set to true Shipyard will ignore cached images or files and will download all resources")
+
+	return pushCmd
 }
 
 func pushK8sCluster(image string, c *config.K8sCluster, ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTTP, log hclog.Logger) error {
@@ -72,7 +83,7 @@ func pushK8sCluster(image string, c *config.K8sCluster, ct clients.ContainerTask
 
 	for _, id := range ids {
 		log.Info("Pushing to container", "id", id, "image", image)
-		err = cl.ImportLocalDockerImages(c.Name, id, []config.Image{config.Image{Name: strings.Trim(image, " ")}})
+		err = cl.ImportLocalDockerImages("images", id, []config.Image{config.Image{Name: strings.Trim(image, " ")}})
 		if err != nil {
 			return xerrors.Errorf("Error pushing image: %w ", err)
 		}
@@ -92,7 +103,7 @@ func pushNomadCluster(image string, c *config.NomadCluster, ct clients.Container
 
 	for _, id := range ids {
 		log.Info("Pushing to container", "id", id, "image", image)
-		err = cl.ImportLocalDockerImages(c.Name, id, []config.Image{config.Image{Name: strings.Trim(image, " ")}})
+		err = cl.ImportLocalDockerImages("images", id, []config.Image{config.Image{Name: strings.Trim(image, " ")}})
 		if err != nil {
 			return xerrors.Errorf("Error pushing image: %w ", err)
 		}

@@ -1,5 +1,13 @@
 # Change Log
 
+## version 0.0.20
+
+## Clusters
+* New feature to persist and share cache for importing images for clusters. Previously each cluster has its own cache which was created every time 
+  the cluster was started. Images were copied from the local machine to a Docker volume before being imported to the clsuter. If multiple clusters were
+  defined in a config this process would run for each cluster unecessarilly slowed the startup time. Now images are cached in a persistant volume `images.volume.shipyard.run` improving startup times. When a cluster starts it first checks to see if an image exits, if it does not it will import the image from the local Docker instance. 
+* Added a new feature to the `purge` command which removes the persistent image cache.
+
 ## version 0.0.19
 
 ### Sidecar resource

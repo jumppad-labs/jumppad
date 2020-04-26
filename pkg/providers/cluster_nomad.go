@@ -38,7 +38,7 @@ func (c *NomadCluster) Destroy() error {
 
 // Lookup the a clusters current state
 func (c *NomadCluster) Lookup() ([]string, error) {
-	return c.client.FindContainerIDs(c.config.Name, c.config.Type)
+	return c.client.FindContainerIDs(fmt.Sprintf("server.%s", c.config.Name), c.config.Type)
 }
 
 func (c *NomadCluster) createNomad() error {
@@ -64,7 +64,7 @@ func (c *NomadCluster) createNomad() error {
 	}
 
 	// create the volume for the cluster
-	volID, err := c.client.CreateVolume(c.config.Name)
+	volID, err := c.client.CreateVolume(utils.ImageVolumeName)
 	if err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func (c *NomadCluster) createNomad() error {
 	// import the images to the servers container d instance
 	// importing images means that k3s does not need to pull from a remote docker hub
 	if c.config.Images != nil && len(c.config.Images) > 0 {
-		err := c.ImportLocalDockerImages(c.config.Name, id, c.config.Images)
+		err := c.ImportLocalDockerImages("images", id, c.config.Images)
 		if err != nil {
 			return xerrors.Errorf("Error importing Docker images: %w", err)
 		}
@@ -155,16 +155,18 @@ func (c *NomadCluster) ImportLocalDockerImages(name string, id string, images []
 
 	// import to volume
 	vn := utils.FQDNVolumeName(name)
-	imageFile, err := c.client.CopyLocalDockerImageToVolume(imgs, vn)
+	imagesFile, err := c.client.CopyLocalDockerImageToVolume(imgs, vn)
 	if err != nil {
 		return err
 	}
 
 	// execute the command to import the image
 	// write any command output to the logger
-	err = c.client.ExecuteCommand(id, []string{"docker", "load", "-i", "/images/" + imageFile}, c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
-	if err != nil {
-		return err
+	for _, i := range imagesFile {
+		err = c.client.ExecuteCommand(id, []string{"docker", "load", "-i", "/images/" + i}, c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -196,6 +198,8 @@ func (c *NomadCluster) destroyNomad() error {
 		}
 	}
 
+	return nil
+
 	// delete the volume
-	return c.client.RemoveVolume(c.config.Name)
+	//return c.client.RemoveVolume(c.config.Name)
 }

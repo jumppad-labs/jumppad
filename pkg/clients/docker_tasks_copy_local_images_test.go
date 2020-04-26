@@ -1,14 +1,19 @@
 package clients
 
 import (
+	"bufio"
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"strings"
 	"testing"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/api/types/volume"
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
@@ -27,7 +32,7 @@ func testCreateCopyLocalMocks() *mocks.MockDocker {
 		nil,
 	)
 	mk.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(container.ContainerCreateCreatedBody{}, nil)
+		Return(container.ContainerCreateCreatedBody{ID: "myid"}, nil)
 	mk.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mk.On("CopyToContainer", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mk.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -38,7 +43,46 @@ func testCreateCopyLocalMocks() *mocks.MockDocker {
 		nil,
 	)
 
+	mk.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(types.IDResponse{ID: "abc"}, nil)
+	mk.On("ContainerExecAttach", mock.Anything, "abc", mock.Anything).Return(
+		types.HijackedResponse{
+			Conn: &net.TCPConn{},
+			Reader: bufio.NewReader(
+				bytes.NewReader([]byte("log output")),
+			),
+		},
+		nil,
+	)
+	mk.On("ContainerExecStart", mock.Anything, "abc", mock.Anything).Return(nil)
+	mk.On("ContainerExecInspect", mock.Anything, "abc", mock.Anything).Return(types.ContainerExecInspect{Running: false, ExitCode: 0}, nil)
+
+	mk.On("VolumeList", mock.Anything, mock.Anything).Return(volume.VolumeListOKBody{Volumes: []*types.Volume{&types.Volume{}}})
+
 	return mk
+}
+
+func TestCopyLocalDoesNothingWhenCached(t *testing.T) {
+	mk := testCreateCopyLocalMocks()
+	mic := &clients.ImageLog{}
+	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
+	dt := NewDockerTasks(mk, mic, hclog.NewNullLogger())
+
+	_, err := dt.CopyLocalDockerImageToVolume(testCopyLocalImages, testCopyLocalVolume)
+	assert.NoError(t, err)
+
+	args := types.ExecConfig{
+		Cmd: []string{
+			"find",
+			"/images/" +
+				base64.StdEncoding.EncodeToString([]byte(testCopyLocalImages[0])) + ".tar",
+		},
+		WorkingDir:   "/",
+		AttachStdout: true,
+		AttachStderr: true,
+	}
+
+	mk.AssertCalled(t, "ContainerExecCreate", mock.Anything, "myid", args)
+	mk.AssertNotCalled(t, "ImageSave")
 }
 
 func TestCopyLocalSavesImages(t *testing.T) {
@@ -46,6 +90,7 @@ func TestCopyLocalSavesImages(t *testing.T) {
 	mic := &clients.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
 	dt := NewDockerTasks(mk, mic, hclog.NewNullLogger())
+	dt.SetForcePull(true) // set force pull to avoid execute command block
 
 	_, err := dt.CopyLocalDockerImageToVolume(testCopyLocalImages, testCopyLocalVolume)
 	assert.NoError(t, err)
@@ -62,6 +107,7 @@ func TestCopyLocalSavesImageFailReturnsError(t *testing.T) {
 	mic := &clients.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
 	dt := NewDockerTasks(mk, mic, hclog.NewNullLogger())
+	dt.SetForcePull(true) // set force pull to avoid execute command block
 
 	_, err := dt.CopyLocalDockerImageToVolume(testCopyLocalImages, testCopyLocalVolume)
 	assert.Error(t, err)
@@ -72,6 +118,7 @@ func TestCopyLocalCreatesTempContainer(t *testing.T) {
 	mic := &clients.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
 	dt := NewDockerTasks(mk, mic, hclog.NewNullLogger())
+	dt.SetForcePull(true) // set force pull to avoid execute command block
 
 	_, err := dt.CopyLocalDockerImageToVolume(testCopyLocalImages, testCopyLocalVolume)
 	assert.NoError(t, err)
@@ -100,6 +147,7 @@ func TestCopyLocalTempContainerFailsReturnError(t *testing.T) {
 	mic := &clients.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
 	dt := NewDockerTasks(mk, mic, hclog.NewNullLogger())
+	dt.SetForcePull(true) // set force pull to avoid execute command block
 
 	_, err := dt.CopyLocalDockerImageToVolume(testCopyLocalImages, testCopyLocalVolume)
 	assert.Error(t, err)
@@ -110,6 +158,7 @@ func TestCopyLocalPullsImportImage(t *testing.T) {
 	mic := &clients.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
 	dt := NewDockerTasks(mk, mic, hclog.NewNullLogger())
+	dt.SetForcePull(true) // set force pull to avoid execute command block
 
 	_, err := dt.CopyLocalDockerImageToVolume(testCopyLocalImages, testCopyLocalVolume)
 	assert.NoError(t, err)
@@ -121,6 +170,7 @@ func TestCopyLocalCopiesArchive(t *testing.T) {
 	mic := &clients.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
 	dt := NewDockerTasks(mk, mic, hclog.NewNullLogger())
+	dt.SetForcePull(true) // set force pull to avoid execute command block
 
 	_, err := dt.CopyLocalDockerImageToVolume(testCopyLocalImages, testCopyLocalVolume)
 	assert.NoError(t, err)
@@ -133,7 +183,9 @@ func TestCopyLocalCopiesArchiveFailReturnsError(t *testing.T) {
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
 	removeOn(&mk.Mock, "CopyToContainer")
 	mk.On("CopyToContainer", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
+
 	dt := NewDockerTasks(mk, mic, hclog.NewNullLogger())
+	dt.SetForcePull(true) // set force pull to avoid execute command block
 
 	_, err := dt.CopyLocalDockerImageToVolume(testCopyLocalImages, testCopyLocalVolume)
 	assert.Error(t, err)
@@ -143,7 +195,9 @@ func TestCopyLocalRemovesTempContainer(t *testing.T) {
 	mk := testCreateCopyLocalMocks()
 	mic := &clients.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
+
 	dt := NewDockerTasks(mk, mic, hclog.NewNullLogger())
+	dt.SetForcePull(true) // set force pull to avoid execute command block
 
 	_, err := dt.CopyLocalDockerImageToVolume(testCopyLocalImages, testCopyLocalVolume)
 	assert.NoError(t, err)

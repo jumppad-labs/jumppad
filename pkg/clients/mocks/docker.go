@@ -7,7 +7,9 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/volume"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/stretchr/testify/mock"
 )
@@ -188,9 +190,19 @@ func (m *MockDocker) VolumeCreate(ctx context.Context, options volumetypes.Volum
 }
 
 func (m *MockDocker) VolumeRemove(ctx context.Context, volumeID string, force bool) error {
-	args := m.Called(ctx, volumeID)
+	args := m.Called(ctx, volumeID, force)
 
 	return args.Error(0)
+}
+
+func (m *MockDocker) VolumeList(ctx context.Context, filters filters.Args) (volume.VolumeListOKBody, error) {
+	args := m.Called(ctx, filters)
+
+	if vl, ok := args.Get(0).(volume.VolumeListOKBody); ok {
+		return vl, args.Error(1)
+	}
+
+	return volumetypes.VolumeListOKBody{}, args.Error(1)
 }
 
 func (m *MockDocker) ImageSave(ctx context.Context, imageIDs []string) (io.ReadCloser, error) {

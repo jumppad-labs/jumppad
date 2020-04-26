@@ -6,10 +6,12 @@ require (
 	github.com/DATA-DOG/godog v0.7.13
 	github.com/MichaelMure/go-term-markdown v0.1.3
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
+	github.com/alecthomas/assert v0.0.0-20170929043011-405dbfeb8e38
 	github.com/docker/docker v1.4.2-0.20200203170920-46ec8731fbce
 	github.com/docker/go v1.5.1-1 // indirect
 	github.com/docker/go-connections v0.4.0
 	github.com/gernest/front v0.0.0-20181129160812-ed80ca338b88
+	github.com/go-noisegate/noisegate v0.0.0-20200426084925-117e8e7980ca // indirect
 	github.com/gosuri/uitable v0.0.4
 	github.com/hashicorp/go-getter v1.4.2-0.20200106182914-9813cbd4eb02
 	github.com/hashicorp/go-hclog v0.10.1
@@ -28,6 +30,7 @@ require (
 	github.com/theupdateframework/notary v0.6.1 // indirect
 	github.com/zclconf/go-cty v1.2.1
 	golang.org/x/sys v0.0.0-20200212091648-12a6c2dcc1e4 // indirect
+	golang.org/x/tools v0.0.0-20200426102838-f3a5411a4c3b // indirect
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
 	helm.sh/helm/v3 v3.1.1
 	k8s.io/api v0.17.2

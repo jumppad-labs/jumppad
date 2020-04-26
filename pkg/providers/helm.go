@@ -44,7 +44,7 @@ func (h *Helm) Create() error {
 	if !utils.IsLocalFolder(h.config.Chart) {
 		h.log.Debug("Fetching remote Helm chart", "ref", h.config.Name, "chart", h.config.Chart)
 
-		helmFolder := filepath.Join(utils.ShipyardHome(), "helm_charts", strings.Replace(h.config.Chart, "//", "/", -1))
+		helmFolder := filepath.Join(utils.GetHelmLocalFolder(""), strings.Replace(h.config.Chart, "//", "/", -1))
 
 		err := h.getterClient.Get(h.config.Chart, helmFolder)
 		if err != nil {
