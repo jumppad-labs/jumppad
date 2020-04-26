@@ -3,7 +3,7 @@ Feature: Modules
   I should apply a blueprint
 
   Scenario: Blueprint containing two modules
-    Given I apply the config "./test_fixtures/moduls"
+    Given I apply the config "./test_fixtures/modules"
     Then there should be 1 network called "onprem"
     And there should be 1 network called "cloud"
     And there should be 1 container running called "consul.container.shipyard.run"
