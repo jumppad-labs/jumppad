@@ -8,6 +8,21 @@
   defined in a config this process would run for each cluster unecessarilly slowed the startup time. Now images are cached in a persistant volume `images.volume.shipyard.run` improving startup times. When a cluster starts it first checks to see if an image exits, if it does not it will import the image from the local Docker instance. 
 * Added a new feature to the `purge` command which removes the persistent image cache.
 
+## Modules
+* New resource type `modules` which can import other Shipyard configuration blueprints from a file or from GitHub.
+* Modules do not respect dependencies, this feature is a TODO item.
+
+```
+module "k8s" {
+	source = "github.com/shipyard-run/shipyard/functional_tests/test_fixtures//single_k3s_cluster"
+}
+
+module "consul" {
+	source = "../container"
+}
+```
+
+
 ## version 0.0.19
 
 ### Sidecar resource

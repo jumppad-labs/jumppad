@@ -147,7 +147,7 @@ func ImageCacheLog() string {
 // TODO make more robust with error messages
 // to improve UX
 func IsLocalFolder(path string) bool {
-	if strings.HasPrefix(path, "/") || strings.HasPrefix(path, "./") {
+	if strings.HasPrefix(path, "/") || strings.HasPrefix(path, "./") || strings.HasPrefix(path, "../") {
 		// test to see if the folder or file exists
 		f, err := os.Stat(path)
 		if err != nil || f == nil {

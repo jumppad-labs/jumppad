@@ -3,6 +3,7 @@ package config
 // TODO how do we deal with multiple stanza with the same name
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/gernest/front"
+	"github.com/hashicorp/go-getter"
 	"github.com/hashicorp/hcl2/gohcl"
 	"github.com/hashicorp/hcl2/hcl"
 	"github.com/hashicorp/hcl2/hcl/hclsyntax"
@@ -18,6 +20,7 @@ import (
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/function"
+	"golang.org/x/xerrors"
 )
 
 var ctx *hcl.EvalContext
@@ -368,6 +371,36 @@ func ParseHCLFile(file string, c *Config) error {
 
 			c.AddResource(h)
 
+		case string(TypeModule):
+			m := NewModule(b.Labels[0])
+
+			err := decodeBody(b, m)
+			if err != nil {
+				return err
+			}
+
+			// import the source files for this module
+			if !utils.IsLocalFolder(ensureAbsolute(m.Source, file)) {
+				// get the details
+				dst := utils.GetBlueprintLocalFolder(m.Source)
+				err := getFiles(m.Source, dst)
+				if err != nil {
+					return err
+				}
+
+				// set the source to the local folder
+				m.Source = dst
+			}
+
+			// set the absolute path
+			m.Source = ensureAbsolute(m.Source, file)
+
+			// recursively parse references for the module
+			err = ParseFolder(m.Source, c)
+			if err != nil {
+				return err
+			}
+
 		default:
 			return ResourceTypeNotExistError{string(b.Type), file}
 		}
@@ -553,4 +586,28 @@ func ensureAbsolute(path, file string) string {
 	file, _ = filepath.Abs(file)
 	baseDir := filepath.Dir(file)
 	return filepath.Join(baseDir, path)
+}
+
+func getFiles(source, dest string) error {
+	pwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	// if the argument is a url fetch it first
+	c := &getter.Client{
+		Ctx:     context.Background(),
+		Src:     source,
+		Dst:     dest,
+		Pwd:     pwd,
+		Mode:    getter.ClientModeAny,
+		Options: []getter.ClientOption{},
+	}
+
+	err = c.Get()
+	if err != nil {
+		return xerrors.Errorf("unable to fetch files from %s: %w", source, err)
+	}
+
+	return nil
 }

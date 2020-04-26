@@ -13,7 +13,7 @@
       "env": {},
       "args": [
         "run",
-        "./functional_tests/test_fixtures/single_k3s_cluster"
+        "./functional_tests/test_fixtures/modules"
       ]
     }
   ]
