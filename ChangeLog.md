@@ -1,6 +1,6 @@
 # Change Log
 
-## version 0.0.23
+## version 0.0.24
 
 ## Env Command
 Added a new command to simplify the export of environment variables. Environment variables can be defined in a blueprint readme, after the blueprint has completed
@@ -58,6 +58,8 @@ To set the variable to the command line the user can either copy and paste the o
 eval $(shipyard env)
 ```
 
+## Bugfixes
+* Update terminal server in Docs, there was a bug with the latest Chrome where the terminal was not immediately displaying the terminal.
 
 ## version 0.0.20
 
