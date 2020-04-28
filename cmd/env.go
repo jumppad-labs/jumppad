@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
@@ -39,8 +40,13 @@ func newEnvCmd(e shipyard.Engine) *cobra.Command {
 			}
 
 			if c.Blueprint != nil && len(c.Blueprint.Environment) > 0 {
+				prefix := "export "
+				if runtime.GOOS == "windows" {
+					prefix = ""
+				}
+
 				for _, env := range c.Blueprint.Environment {
-					fmt.Printf("%s=%s\n", env.Key, env.Value)
+					fmt.Printf("%s%s=%s\n", prefix, env.Key, env.Value)
 				}
 			}
 			return nil

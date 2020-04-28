@@ -1,5 +1,64 @@
 # Change Log
 
+## version 0.0.23
+
+## Env Command
+Added a new command to simplify the export of environment variables. Environment variables can be defined in a blueprint readme, after the blueprint has completed
+the varaibles will be presented to the user.
+
+**Blueprint**
+```
+---
+title: Single Container Example
+author: Nic Jackson
+slug: container
+browser_windows: http://consul-http.ingress.shipyard.run:8500
+env:
+  - KUBECONFIG=$HOME/.shipyard/config/k3s/kubeconfig.yaml
+  - VAULT_ADDR=http://localhost:18200
+  - VAULT_TOKEN=root
+---
+
+# Single Container
+
+This blueprint shows how you can create a single container with Shipyard
+```
+
+**Output**
+```
+######################################################
+
+Environment Variables
+
+######################################################
+
+This blueprint exports the following environment varaibles:
+
+KUBECONFIG=$HOME/.shipyard/config/k3s/kubeconfig.yaml=
+VAULT_ADDR=http://localhost:18200=
+VAULT_TOKEN=root=
+
+You can set exported environment variables for your current terminal session using the following command:
+
+eval $(shipyard env)
+```
+
+The `env` command will write the defined environment variables to the command line...
+
+```
+➜ shipyard env
+export KUBECONFIG=$HOME/.shipyard/config/k3s/kubeconfig.yaml
+export VAULT_ADDR=http://localhost:18200
+export VAULT_TOKEN=root
+```
+
+To set the variable to the command line the user can either copy and paste the output or evaulate it.
+
+```
+eval $(shipyard env)
+```
+
+
 ## version 0.0.20
 
 ## Clusters
