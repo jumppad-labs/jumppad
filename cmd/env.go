@@ -17,14 +17,17 @@ func newEnvCmd(e shipyard.Engine) *cobra.Command {
 		Long:  "Prints environment variables defined by the blueprint",
 		Example: `
   # Display environment variables
-	shipyard env
-
-	VAR1=value
-	VAR2=value
-
-	# Set environemnt variables
-	eval $(shipyard env)
-	`,
+  shipyard env
+  
+  VAR1=value
+  VAR2=value
+  
+  # Set environment variables on Linux based systems
+  eval $(shipyard env)
+    
+  # Set environment variables on Windows based systems
+  @FOR /f "tokens=*" %i IN ('shipyard env') DO @%
+`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
