@@ -32,6 +32,8 @@ func TestRunParsesBlueprintInMarkdownFormat(t *testing.T) {
 	assert.Equal(t, "Single Container Example", c.Blueprint.Title)
 	assert.Equal(t, "container", c.Blueprint.Slug)
 	assert.Equal(t, []string{"http://consul-http.ingress.shipyard.run:8500"}, c.Blueprint.BrowserWindows)
+	assert.Equal(t, "SOMETHING", c.Blueprint.Environment[0].Key)
+	assert.Equal(t, "else", c.Blueprint.Environment[0].Value)
 	assert.Contains(t, c.Blueprint.Intro, "# Single Container")
 }
 

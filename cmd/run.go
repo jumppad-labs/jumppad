@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"strconv"
 	"sync"
 	"time"
@@ -27,13 +28,13 @@ func newRunCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients
 		Long:  `Run the supplied stack configuration`,
 		Example: `
   # Recursively create a stack from a directory
-  yard run ./-stack
+  shipyard run ./-stack
 
   # Create a stack from a specific file
-  yard run my-stack/network.hcl
+  shipyard run my-stack/network.hcl
   
   # Create a stack from a blueprint in GitHub
-  yard run github.com/shipyard-run/blueprints//vault-k8s
+  shipyard run github.com/shipyard-run/blueprints//vault-k8s
 	`,
 		Args:         cobra.ArbitraryArgs,
 		RunE:         newRunCmdFunc(e, bp, hc, bc, &noOpen, &force, l),
@@ -206,6 +207,22 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 			cmd.Println("")
 			cmd.Print(string(intro))
 			cmd.Println("")
+
+			if len(e.Blueprint().Environment) > 0 {
+				cmd.Println("This blueprint defines the following environment varaibles:")
+				cmd.Println("")
+				for _, env := range e.Blueprint().Environment {
+					cmd.Printf("%s=%s\n", env.Key, env.Value)
+				}
+				cmd.Println("")
+				cmd.Println("You can set these using the following command:")
+
+				if runtime.GOOS == "windows" {
+					cmd.Println(`@FOR /f "tokens=*" %i IN ('minikube -p minikube docker-env') DO @%i`)
+				} else {
+					cmd.Println("eval $(shipyard env)")
+				}
+			}
 		}
 
 		return nil

@@ -1,57 +1,49 @@
-// TODO setting env vars in go behaves like bash
-// i.e you cannot set the current shells env vars from a program
-// as the application runs in a child process
-// need to look at better options
-
 package cmd
 
 import (
-	"bufio"
 	"fmt"
 	"os"
-	"strings"
+
+	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/shipyard"
+	"github.com/shipyard-run/shipyard/pkg/utils"
+	"github.com/spf13/cobra"
 )
 
-type Env struct {
-	file *os.File
-}
+func newEnvCmd(e shipyard.Engine) *cobra.Command {
+	envCmd := &cobra.Command{
+		Use:   "env",
+		Short: "Prints environment variables defined by the blueprint",
+		Long:  "Prints environment variables defined by the blueprint",
+		Example: `
+  # Display environment variables
+	shipyard env
 
-func NewEnv(envfile string) (*Env, error) {
-	f, err := os.OpenFile(envfile, os.O_CREATE, 0655)
-	if err != nil {
-		return nil, err
+	VAR1=value
+	VAR2=value
+
+	# Set environemnt variables
+	eval $(shipyard env)
+	`,
+		Args: cobra.ArbitraryArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			c := config.New()
+			err := c.FromJSON(utils.StatePath())
+			if err != nil {
+				fmt.Println("Unable to load state", err)
+				os.Exit(1)
+			}
+
+			if c.Blueprint != nil && len(c.Blueprint.Environment) > 0 {
+				for _, env := range c.Blueprint.Environment {
+					fmt.Printf("%s=%s\n", env.Key, env.Value)
+				}
+			}
+			return nil
+		},
+		SilenceUsage: true,
 	}
 
-	return &Env{file: f}, nil
-}
-
-func (e *Env) Set(key, value string) error {
-	// get the previous env var
-	v := os.Getenv(key)
-	if v != "" {
-		_, err := e.file.WriteString(fmt.Sprintf(`%s=%s\n`, key, value))
-		if err != nil {
-			return err
-		}
-	}
-
-	// set the new env var
-	return os.Setenv(key, value)
-}
-
-// Clears all env vars restoring previous values
-func (e *Env) Clear() error {
-	e.file.Seek(0, 0)
-
-	scanner := bufio.NewScanner(e.file)
-	for scanner.Scan() {
-		p := strings.Split(scanner.Text(), "=")
-		os.Setenv(p[0], p[1])
-	}
-
-	return nil
-}
-
-func (e *Env) Close() {
-	e.file.Close()
+	return envCmd
 }

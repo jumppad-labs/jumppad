@@ -149,6 +149,16 @@ func parseYardMarkdown(file string, c *Config) error {
 		bp.BrowserWindows = strings.Split(a, ",")
 	}
 
+	if envs, ok := fr["env"].([]interface{}); ok {
+		bp.Environment = []KV{}
+		for _, e := range envs {
+			parts := strings.Split(e.(string), "=")
+			if len(parts) == 2 {
+				bp.Environment = append(bp.Environment, KV{Key: parts[0], Value: parts[1]})
+			}
+		}
+	}
+
 	bp.Intro = body
 
 	c.Blueprint = bp
