@@ -83,7 +83,7 @@ func pushK8sCluster(image string, c *config.K8sCluster, ct clients.ContainerTask
 
 	for _, id := range ids {
 		log.Info("Pushing to container", "id", id, "image", image)
-		err = cl.ImportLocalDockerImages("images", id, []config.Image{config.Image{Name: strings.Trim(image, " ")}})
+		err = cl.ImportLocalDockerImages(utils.ImageVolumeName, id, []config.Image{config.Image{Name: strings.Trim(image, " ")}})
 		if err != nil {
 			return xerrors.Errorf("Error pushing image: %w ", err)
 		}
@@ -103,7 +103,7 @@ func pushNomadCluster(image string, c *config.NomadCluster, ct clients.Container
 
 	for _, id := range ids {
 		log.Info("Pushing to container", "id", id, "image", image)
-		err = cl.ImportLocalDockerImages("images", id, []config.Image{config.Image{Name: strings.Trim(image, " ")}})
+		err = cl.ImportLocalDockerImages(utils.ImageVolumeName, id, []config.Image{config.Image{Name: strings.Trim(image, " ")}})
 		if err != nil {
 			return xerrors.Errorf("Error pushing image: %w ", err)
 		}
