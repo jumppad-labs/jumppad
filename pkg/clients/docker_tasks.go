@@ -391,7 +391,7 @@ func (d *DockerTasks) CopyFromContainer(id, src, dst string) error {
 
 // CopyLocalDockerImageToVolume writes multiple Docker images to a Docker volume as a compressed archive
 // returns the filename of the archive and an error if one occured
-func (d *DockerTasks) CopyLocalDockerImageToVolume(images []string, volume string) ([]string, error) {
+func (d *DockerTasks) CopyLocalDockerImageToVolume(images []string, volume string, force bool) ([]string, error) {
 	d.l.Debug("Writing docker images to volume", "images", images, "volume", volume)
 
 	savedImages := []string{}
@@ -426,7 +426,7 @@ func (d *DockerTasks) CopyLocalDockerImageToVolume(images []string, volume strin
 		compressedImageName := fmt.Sprintf("%s.tar", base64.StdEncoding.EncodeToString([]byte(i)))
 
 		// check if the image exists if we are not doing a forced update
-		if !d.force {
+		if !d.force && !force {
 			err := d.ExecuteCommand(tmpID, []string{"find", "/images/" + compressedImageName}, nil, nil)
 			if err == nil {
 				// we have the image already

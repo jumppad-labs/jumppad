@@ -1,5 +1,14 @@
 # Change Log
 
+## version 0.0.26
+
+### Push Command
+* Changes to caching volumes inadvertently changed the behaviour of the `push` command. When an image was already cached in the cluster image volume `push` would 
+  not overwrite this image. If the user specifies the `--force-update` command then the pushed image would be overwritten regardles of local cache; however, force-update
+  would also attempt to pull the image from a remote registry. Push was designed to push a local image to a cluster as part of the development flow, pulling remote images
+  is not desireable behaviour.
+* This change ensures that the `push` command does not attempt to pull a remote image when the `--force-update parameter is used.
+
 ## version 0.0.25
 
 ### Bugfixes

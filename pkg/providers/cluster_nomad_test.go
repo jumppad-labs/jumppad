@@ -29,7 +29,7 @@ func setupNomadClusterMocks() (*config.NomadCluster, *mocks.MockContainerTasks, 
 		nil,
 	)
 	md.On("CopyFromContainer", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	md.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything).Return([]string{"file.tar.gz"}, nil)
+	md.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything, mock.Anything).Return([]string{"file.tar.gz"}, nil)
 	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("RemoveContainer", mock.Anything).Return(nil)
 	md.On("RemoveVolume", mock.Anything).Return(nil)
@@ -210,13 +210,13 @@ func TestClusterNomadImportDockerCopiesImages(t *testing.T) {
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "CopyLocalDockerImageToVolume", []string{"consul:1.6.1", "vault:1.6.1"}, "images.volume.shipyard.run")
+	md.AssertCalled(t, "CopyLocalDockerImageToVolume", []string{"consul:1.6.1", "vault:1.6.1"}, "images.volume.shipyard.run", false)
 }
 
 func TestClusterNomadImportDockerCopyImageFailReturnsError(t *testing.T) {
 	cc, md, mh, cleanup := setupNomadClusterMocks()
 	removeOn(&md.Mock, "CopyLocalDockerImageToVolume")
-	md.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
+	md.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 	defer cleanup()
 
 	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())

@@ -29,11 +29,6 @@ func newPushCmd(ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTT
 				return xerrors.Errorf("Push requires two arguments [image] [cluster]")
 			}
 
-			// are we forcing the update
-			if force {
-				ct.SetForcePull(true)
-			}
-
 			image := args[0]
 			cluster := args[1]
 
@@ -58,9 +53,9 @@ func newPushCmd(ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTT
 
 			switch p.Info().Type {
 			case config.TypeK8sCluster:
-				return pushK8sCluster(image, p.(*config.K8sCluster), ct, kc, ht, l)
+				return pushK8sCluster(image, p.(*config.K8sCluster), ct, kc, ht, l, force)
 			case config.TypeNomadCluster:
-				return pushNomadCluster(image, p.(*config.NomadCluster), ct, nc, l)
+				return pushNomadCluster(image, p.(*config.NomadCluster), ct, nc, l, force)
 			}
 
 			return nil
@@ -72,7 +67,7 @@ func newPushCmd(ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTT
 	return pushCmd
 }
 
-func pushK8sCluster(image string, c *config.K8sCluster, ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTTP, log hclog.Logger) error {
+func pushK8sCluster(image string, c *config.K8sCluster, ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTTP, log hclog.Logger, force bool) error {
 	cl := providers.NewK8sCluster(c, ct, kc, ht, log)
 
 	// get the id of the cluster
@@ -83,7 +78,7 @@ func pushK8sCluster(image string, c *config.K8sCluster, ct clients.ContainerTask
 
 	for _, id := range ids {
 		log.Info("Pushing to container", "id", id, "image", image)
-		err = cl.ImportLocalDockerImages(utils.ImageVolumeName, id, []config.Image{config.Image{Name: strings.Trim(image, " ")}})
+		err = cl.ImportLocalDockerImages(utils.ImageVolumeName, id, []config.Image{config.Image{Name: strings.Trim(image, " ")}}, force)
 		if err != nil {
 			return xerrors.Errorf("Error pushing image: %w ", err)
 		}
@@ -92,7 +87,7 @@ func pushK8sCluster(image string, c *config.K8sCluster, ct clients.ContainerTask
 	return nil
 }
 
-func pushNomadCluster(image string, c *config.NomadCluster, ct clients.ContainerTasks, ht clients.Nomad, log hclog.Logger) error {
+func pushNomadCluster(image string, c *config.NomadCluster, ct clients.ContainerTasks, ht clients.Nomad, log hclog.Logger, force bool) error {
 	cl := providers.NewNomadCluster(c, ct, ht, log)
 
 	// get the id of the cluster
@@ -103,7 +98,7 @@ func pushNomadCluster(image string, c *config.NomadCluster, ct clients.Container
 
 	for _, id := range ids {
 		log.Info("Pushing to container", "id", id, "image", image)
-		err = cl.ImportLocalDockerImages(utils.ImageVolumeName, id, []config.Image{config.Image{Name: strings.Trim(image, " ")}})
+		err = cl.ImportLocalDockerImages(utils.ImageVolumeName, id, []config.Image{config.Image{Name: strings.Trim(image, " ")}}, force)
 		if err != nil {
 			return xerrors.Errorf("Error pushing image: %w ", err)
 		}

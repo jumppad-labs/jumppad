@@ -28,7 +28,7 @@ func setupClusterMocks() (*config.K8sCluster, *mocks.MockContainerTasks, *mocks.
 		nil,
 	)
 	md.On("CopyFromContainer", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	md.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything).Return([]string{"/images/file.tar.gz"}, nil)
+	md.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything, mock.Anything).Return([]string{"/images/file.tar.gz"}, nil)
 	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("RemoveContainer", mock.Anything).Return(nil)
 	md.On("RemoveVolume", mock.Anything).Return(nil)
@@ -294,12 +294,12 @@ func TestClusterK3sImportDockerCopiesImages(t *testing.T) {
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "CopyLocalDockerImageToVolume", []string{"consul:1.6.1", "vault:1.6.1"}, utils.FQDNVolumeName(utils.ImageVolumeName))
+	md.AssertCalled(t, "CopyLocalDockerImageToVolume", []string{"consul:1.6.1", "vault:1.6.1"}, utils.FQDNVolumeName(utils.ImageVolumeName), false)
 }
 func TestClusterK3sImportDockerCopyImageFailReturnsError(t *testing.T) {
 	cc, md, mk, cleanup := setupClusterMocks()
 	removeOn(&md.Mock, "CopyLocalDockerImageToVolume")
-	md.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything).Return("", fmt.Errorf("boom"))
+	md.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything, mock.Anything).Return("", fmt.Errorf("boom"))
 	defer cleanup()
 
 	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())

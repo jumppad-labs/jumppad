@@ -15,7 +15,7 @@ func setupPush(state string) (*cobra.Command, *mocks.MockContainerTasks, func())
 	mt := &mocks.MockContainerTasks{}
 	mt.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
 	mt.On("PullImage", mock.Anything, false).Return(nil)
-	mt.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything).Return([]string{"/images/file.tar"}, nil)
+	mt.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything, mock.Anything).Return([]string{"/images/file.tar"}, nil)
 	mt.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mt.On("SetForcePull", mock.Anything).Return(nil)
 
@@ -87,7 +87,7 @@ func TestPushWithForceSetsFlag(t *testing.T) {
 	err := c.Execute()
 	assert.NoError(t, err)
 
-	mt.AssertCalled(t, "SetForcePull", mock.Anything, mock.Anything, mock.Anything)
+	mt.AssertCalled(t, "CopyLocalDockerImageToVolume", mock.Anything, mock.Anything, true)
 }
 
 func TestPushK8sClusterPushesImage(t *testing.T) {

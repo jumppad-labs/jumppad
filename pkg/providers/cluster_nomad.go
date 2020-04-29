@@ -131,7 +131,7 @@ func (c *NomadCluster) createNomad() error {
 	// import the images to the servers container d instance
 	// importing images means that k3s does not need to pull from a remote docker hub
 	if c.config.Images != nil && len(c.config.Images) > 0 {
-		err := c.ImportLocalDockerImages("images", id, c.config.Images)
+		err := c.ImportLocalDockerImages("images", id, c.config.Images, false)
 		if err != nil {
 			return xerrors.Errorf("Error importing Docker images: %w", err)
 		}
@@ -141,7 +141,7 @@ func (c *NomadCluster) createNomad() error {
 }
 
 // ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
-func (c *NomadCluster) ImportLocalDockerImages(name string, id string, images []config.Image) error {
+func (c *NomadCluster) ImportLocalDockerImages(name string, id string, images []config.Image, force bool) error {
 	imgs := []string{}
 
 	for _, i := range images {
@@ -155,7 +155,7 @@ func (c *NomadCluster) ImportLocalDockerImages(name string, id string, images []
 
 	// import to volume
 	vn := utils.FQDNVolumeName(name)
-	imagesFile, err := c.client.CopyLocalDockerImageToVolume(imgs, vn)
+	imagesFile, err := c.client.CopyLocalDockerImageToVolume(imgs, vn, force)
 	if err != nil {
 		return err
 	}
