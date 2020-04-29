@@ -1,5 +1,11 @@
 # Change Log
 
+## version 0.0.25
+
+### Bugfixes
+* Environment variables were not being correctly passed to remote container executions when attaching to an exising container
+
+
 ## version 0.0.24
 
 ## Env Command

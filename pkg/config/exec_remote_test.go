@@ -32,7 +32,6 @@ func TestExecRemoteCreatesCorrectly(t *testing.T) {
 	assert.Equal(t, PendingCreation, ex.Info().Status)
 
 	assert.Equal(t, "hashicorp/vault:latest", ex.(*ExecRemote).Image.Name)
-	assert.Equal(t, dir+"/scripts/setup_vault.sh", ex.(*ExecRemote).Script)
 
 	assert.Len(t, ex.(*ExecRemote).Volumes, 1)
 	assert.Equal(t, dir+"/scripts", ex.(*ExecRemote).Volumes[0].Source)
@@ -49,8 +48,10 @@ exec_remote "setup_vault" {
   }
   network {
 	  name = "network.cloud"
-  }
-  script = "./scripts/setup_vault.sh"
+	}
+
+	cmd = "/scripts/setup_vault.sh"
+
   volume {
 	  source = "./scripts"
 	  destination = "/files"

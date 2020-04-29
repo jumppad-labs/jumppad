@@ -81,8 +81,8 @@ func (d *MockContainerTasks) CopyLocalDockerImageToVolume(images []string, volum
 	return nil, args.Error(1)
 }
 
-func (d *MockContainerTasks) ExecuteCommand(id string, command []string, writer io.Writer) error {
-	args := d.Called(id, command, writer)
+func (d *MockContainerTasks) ExecuteCommand(id string, command []string, env []string, writer io.Writer) error {
+	args := d.Called(id, command, env, writer)
 
 	return args.Error(0)
 }

@@ -26,9 +26,11 @@ func NewRemoteExec(c *config.ExecRemote, ex clients.ContainerTasks, l hclog.Logg
 func (c *ExecRemote) Create() error {
 	c.log.Info("Remote executing command", "ref", c.config.Name, "command", c.config.Command, "args", c.config.Arguments, "image", c.config.Image)
 
-	if c.config.Script != "" {
-		return fmt.Errorf("Remote execution of Scripts are not currently implemented: %s", c.config.Script)
-	}
+	/*
+		if c.config.Script != "" {
+			return fmt.Errorf("Remote execution of Scripts are not currently implemented: %s", c.config.Script)
+		}
+	*/
 
 	// execution target id
 	targetID := ""
@@ -74,7 +76,13 @@ func (c *ExecRemote) Create() error {
 	command = append(command, c.config.Command)
 	command = append(command, c.config.Arguments...)
 
-	err := c.client.ExecuteCommand(targetID, command, c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
+	// build the environment variables
+	envs := []string{}
+	for _, e := range c.config.Environment {
+		envs = append(envs, fmt.Sprintf("%s=%s", e.Key, e.Value))
+	}
+
+	err := c.client.ExecuteCommand(targetID, command, envs, c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
 	if err != nil {
 		err = xerrors.Errorf("Unable to execute command in remote container: %w", err)
 	}
@@ -96,7 +104,6 @@ func (c *ExecRemote) createRemoteExecContainer() (string, error) {
 	cc.Image = *c.config.Image
 	cc.Command = []string{"tail", "-f", "/dev/null"} // ensure container does not immediately exit
 	cc.Volumes = c.config.Volumes
-	cc.Environment = c.config.Environment
 
 	// pull any images needed for this container
 	err := c.client.PullImage(cc.Image, false)

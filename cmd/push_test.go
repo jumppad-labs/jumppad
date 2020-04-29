@@ -16,7 +16,7 @@ func setupPush(state string) (*cobra.Command, *mocks.MockContainerTasks, func())
 	mt.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
 	mt.On("PullImage", mock.Anything, false).Return(nil)
 	mt.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything).Return([]string{"/images/file.tar"}, nil)
-	mt.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	mt.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mt.On("SetForcePull", mock.Anything).Return(nil)
 
 	mk := &mocks.MockKubernetes{}
@@ -75,7 +75,7 @@ func TestPushK8sClusterIDNotFoundReturnsError(t *testing.T) {
 	err := c.Execute()
 	assert.NoError(t, err)
 
-	mt.AssertNotCalled(t, "ExecuteCommand", mock.Anything, mock.Anything, mock.Anything)
+	mt.AssertNotCalled(t, "ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestPushWithForceSetsFlag(t *testing.T) {
@@ -98,7 +98,7 @@ func TestPushK8sClusterPushesImage(t *testing.T) {
 	err := c.Execute()
 	assert.NoError(t, err)
 
-	mt.AssertCalled(t, "ExecuteCommand", mock.Anything, mock.Anything, mock.Anything)
+	mt.AssertCalled(t, "ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestPushNomadClusterIDErrorReturnsError(t *testing.T) {
@@ -124,7 +124,7 @@ func TestPushNomadClusterIDNotFoundReturnsError(t *testing.T) {
 	err := c.Execute()
 	assert.NoError(t, err)
 
-	mt.AssertNotCalled(t, "ExecuteCommand", mock.Anything, mock.Anything, mock.Anything)
+	mt.AssertNotCalled(t, "ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestPushNomadClusterPushesImage(t *testing.T) {
@@ -135,7 +135,7 @@ func TestPushNomadClusterPushesImage(t *testing.T) {
 	err := c.Execute()
 	assert.NoError(t, err)
 
-	mt.AssertCalled(t, "ExecuteCommand", mock.Anything, mock.Anything, mock.Anything)
+	mt.AssertCalled(t, "ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
 var clusterState = `

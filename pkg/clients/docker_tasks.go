@@ -427,7 +427,7 @@ func (d *DockerTasks) CopyLocalDockerImageToVolume(images []string, volume strin
 
 		// check if the image exists if we are not doing a forced update
 		if !d.force {
-			err := d.ExecuteCommand(tmpID, []string{"find", "/images/" + compressedImageName}, nil)
+			err := d.ExecuteCommand(tmpID, []string{"find", "/images/" + compressedImageName}, nil, nil)
 			if err == nil {
 				// we have the image already
 				d.l.Debug("Image already cached", "image", i)
@@ -530,12 +530,13 @@ func (d *DockerTasks) CopyLocalDockerImageToVolume(images []string, volume strin
 // id is the id of the container to execute the command in
 // command is a slice of strings to execute
 // writer [optional] will be used to write any output from the command execution.
-func (d *DockerTasks) ExecuteCommand(id string, command []string, writer io.Writer) error {
+func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, writer io.Writer) error {
 	execid, err := d.c.ContainerExecCreate(context.Background(), id, types.ExecConfig{
 		Cmd:          command,
 		WorkingDir:   "/",
 		AttachStdout: true,
 		AttachStderr: true,
+		Env:          env,
 	})
 
 	if err != nil {
@@ -549,7 +550,7 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, writer io.Writ
 	}
 	defer stream.Close()
 
-	// ensure that the log from the Docker exec command is copied to the default logger
+	// ensure that the log from the Docker exec command are copied to the provided writer
 	if writer != nil {
 		go func() {
 			io.Copy(

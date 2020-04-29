@@ -369,9 +369,11 @@ func ParseHCLFile(file string, c *Config) error {
 				return err
 			}
 
-			if h.Script != "" {
-				h.Script = ensureAbsolute(h.Script, file)
-			}
+			/*
+				if h.Script != "" {
+					h.Script = ensureAbsolute(h.Script, file)
+				}
+			*/
 
 			// process volumes
 			// make sure mount paths are absolute

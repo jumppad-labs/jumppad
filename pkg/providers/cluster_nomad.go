@@ -163,7 +163,7 @@ func (c *NomadCluster) ImportLocalDockerImages(name string, id string, images []
 	// execute the command to import the image
 	// write any command output to the logger
 	for _, i := range imagesFile {
-		err = c.client.ExecuteCommand(id, []string{"docker", "load", "-i", "/images/" + i}, c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
+		err = c.client.ExecuteCommand(id, []string{"docker", "load", "-i", "/images/" + i}, nil, c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
 		if err != nil {
 			return err
 		}
