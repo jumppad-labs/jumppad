@@ -7,7 +7,7 @@
   not overwrite this image. If the user specifies the `--force-update` command then the pushed image would be overwritten regardles of local cache; however, force-update
   would also attempt to pull the image from a remote registry. Push was designed to push a local image to a cluster as part of the development flow, pulling remote images
   is not desireable behaviour.
-* This change ensures that the `push` command does not attempt to pull a remote image when the `--force-update parameter is used.
+* This change ensures that the `push` command will always push an image regardless of local cache.
 
 ## version 0.0.25
 

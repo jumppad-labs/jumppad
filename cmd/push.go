@@ -29,6 +29,10 @@ func newPushCmd(ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTT
 				return xerrors.Errorf("Push requires two arguments [image] [cluster]")
 			}
 
+			if force == true {
+				ct.SetForcePull(true)
+			}
+
 			image := args[0]
 			cluster := args[1]
 
@@ -53,9 +57,9 @@ func newPushCmd(ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTT
 
 			switch p.Info().Type {
 			case config.TypeK8sCluster:
-				return pushK8sCluster(image, p.(*config.K8sCluster), ct, kc, ht, l, force)
+				return pushK8sCluster(image, p.(*config.K8sCluster), ct, kc, ht, l, true)
 			case config.TypeNomadCluster:
-				return pushNomadCluster(image, p.(*config.NomadCluster), ct, nc, l, force)
+				return pushNomadCluster(image, p.(*config.NomadCluster), ct, nc, l, true)
 			}
 
 			return nil
