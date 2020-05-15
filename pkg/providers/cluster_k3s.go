@@ -328,7 +328,4 @@ func (c *K8sCluster) destroyK3s() error {
 	}
 
 	return nil
-
-	// delete the volume
-	//return c.client.RemoveVolume(c.config.Name)
 }
