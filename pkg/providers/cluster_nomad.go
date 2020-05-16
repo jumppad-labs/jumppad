@@ -12,6 +12,7 @@ import (
 )
 
 const nomadBaseImage = "shipyardrun/nomad"
+const nomadBaseVersion = "v0.11.2"
 
 // NomadCluster defines a provider which can create Kubernetes clusters
 type NomadCluster struct {
@@ -52,6 +53,11 @@ func (c *NomadCluster) createNomad() error {
 
 	if err != nil {
 		return xerrors.Errorf("Unable to lookup cluster id: %w", err)
+	}
+
+	// if the version is not set use the default version
+	if c.config.Version == "" {
+		c.config.Version = nomadBaseVersion
 	}
 
 	// set the image

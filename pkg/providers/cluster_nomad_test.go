@@ -89,6 +89,18 @@ func TestClusterNomadPullsImage(t *testing.T) {
 	md.AssertCalled(t, "PullImage", config.Image{Name: "shipyardrun/nomad:v1.0.0"}, false)
 }
 
+func TestClusterNomadPullsImageWithDefault(t *testing.T) {
+	cc, md, mh, cleanup := setupNomadClusterMocks()
+	cc.Version = "" // reset the version
+	defer cleanup()
+
+	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+	md.AssertCalled(t, "PullImage", config.Image{Name: "shipyardrun/nomad:" + nomadBaseVersion}, false)
+}
+
 func TestClusterNomadCreatesANewVolume(t *testing.T) {
 	cc, md, mh, cleanup := setupNomadClusterMocks()
 	defer cleanup()
