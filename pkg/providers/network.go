@@ -30,16 +30,44 @@ func NewNetwork(co *config.Network, cl clients.Docker, l hclog.Logger) *Network 
 func (n *Network) Create() error {
 	n.log.Info("Creating Network", "ref", n.config.Name)
 
-	// check if the network exists
-	ids, err := n.Lookup()
+	// validate the subnet
+	_, cidr, err := net.ParseCIDR(n.config.Subnet)
+	if err != nil {
+		return fmt.Errorf("Unable to create network %s, invalid subnet %s", n.config.Name, n.config.Subnet)
+	}
+
+	// get all the networks
+	nets, err := n.getNetworks("")
 	if err != nil {
 		return err
 	}
 
-	// exists do not create
-	if len(ids) > 0 {
-		n.log.Info("Network already exists, skip creation", "ref", n.config.Name)
-		return nil
+	// is the network name and subnet equal to one which already exists
+	for _, ne := range nets {
+		if ne.Name == n.config.Name {
+			for _, ci := range ne.IPAM.Config {
+				// check that the returned networks subnet matches the existing networks subnet
+				if ci.Subnet != n.config.Subnet {
+					n.log.Info("Network already exists, skip creation", "ref", n.config.Name)
+					return nil
+				}
+			}
+		}
+	}
+
+	// check for overlapping subnets
+	for _, ne := range nets {
+		for _, ci := range ne.IPAM.Config {
+			_, cidr2, err := net.ParseCIDR(ci.Subnet)
+			if err != nil {
+				// unable to parse the CIDR should not happen
+				return err
+			}
+
+			if cidr.Contains(cidr2.IP) || cidr2.Contains(cidr.IP) {
+				return fmt.Errorf("Unable to create network %s, Network %s already exists with an overlapping subnet %s. Either remove the network '%s' or change the subnet for your network", n.config.Name, ne.Name, ci.Subnet, ne.Name)
+			}
+		}
 	}
 
 	opts := types.NetworkCreate{
@@ -85,48 +113,22 @@ func (n *Network) Destroy() error {
 
 // Lookup the ID for a network
 func (n *Network) Lookup() ([]string, error) {
-	args := filters.NewArgs()
-	nets, err := n.client.NetworkList(context.Background(), types.NetworkListOptions{Filters: args})
+	nets, err := n.getNetworks(n.config.Name)
+
 	if err != nil {
 		return nil, err
 	}
 
 	ids := []string{}
 	for _, n1 := range nets {
-		// is the network name equal to the config name
-		if n1.ID == n.config.Name {
-			// check that the returned networks subnet matches the existing networks subnet
-			if n1.IPAM.Config[0].Subnet != n.config.Subnet {
-				return nil, fmt.Errorf("Network %s already exists but with different subnet", n.config.Name)
-			}
-
-			ids = append(ids, n1.ID)
-		} else {
-			// if this is another network does the subnet overlap with the requested subnet if so return an error
-			_, cidr1, err := net.ParseCIDR(n.config.Subnet)
-			if err != nil {
-				// unable to parse the CIDR should not happen
-				return nil, err
-			}
-
-			for _, ci := range n1.IPAM.Config {
-				_, cidr2, err := net.ParseCIDR(ci.Subnet)
-				if err != nil {
-					// unable to parse the CIDR should not happen
-					return nil, err
-				}
-
-				if cidr1.Contains(cidr2.IP) || cidr2.Contains(cidr1.IP) {
-					return nil, fmt.Errorf("Unable to create network %s, Network %s already exists with an overlapping subnet %s", n.config.Name, n1.ID, ci.Subnet)
-				}
-			}
-		}
+		ids = append(ids, n1.ID)
 	}
 
 	return ids, nil
 }
 
-// Config returns the config for the provider
-func (c *Network) Config() ConfigWrapper {
-	return ConfigWrapper{"config.Network", c.config}
+func (n *Network) getNetworks(name string) ([]types.NetworkResource, error) {
+	args := filters.NewArgs()
+	args.Add("name", name)
+	return n.client.NetworkList(context.Background(), types.NetworkListOptions{Filters: args})
 }

@@ -22,6 +22,35 @@ func setupNetworkTests(c *config.Network) (*clients.MockDocker, *Network) {
 	return md, NewNetwork(c, md, hclog.Default())
 }
 
+func TestLookupReturnsID(t *testing.T) {
+	c := config.NewNetwork("testnet")
+	c.Subnet = "10.1.2.0/24"
+
+	md, p := setupNetworkTests(c)
+	removeOn(&md.Mock, "NetworkList")
+	md.On("NetworkList", mock.Anything, mock.Anything).Return([]types.NetworkResource{
+		types.NetworkResource{
+			ID: "testnet",
+			IPAM: network.IPAM{
+				Config: []network.IPAMConfig{network.IPAMConfig{Subnet: "10.1.2.0/24"}},
+			},
+		}}, nil)
+
+	ids, err := p.Lookup()
+	assert.NoError(t, err)
+	assert.Equal(t, "testnet", ids[0])
+}
+func TestLookupFailReturnsError(t *testing.T) {
+	c := config.NewNetwork("testnet")
+	c.Subnet = "10.1.2.0/24"
+
+	md, p := setupNetworkTests(c)
+	removeOn(&md.Mock, "NetworkList")
+	md.On("NetworkList", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
+
+	_, err := p.Lookup()
+	assert.Error(t, err)
+}
 func TestNetworkCreatesCorrectly(t *testing.T) {
 	c := config.NewNetwork("testnet")
 	c.Subnet = "10.1.2.0/24"
@@ -61,26 +90,7 @@ func TestNetworkDoesNOTCreateWhenExists(t *testing.T) {
 	md.AssertNotCalled(t, "NetworkCreate", mock.Anything, mock.Anything, mock.Anything)
 }
 
-func TestLookupReturnsID(t *testing.T) {
-	c := config.NewNetwork("testnet")
-	c.Subnet = "10.1.2.0/24"
-
-	md, p := setupNetworkTests(c)
-	removeOn(&md.Mock, "NetworkList")
-	md.On("NetworkList", mock.Anything, mock.Anything).Return([]types.NetworkResource{
-		types.NetworkResource{
-			ID: "testnet",
-			IPAM: network.IPAM{
-				Config: []network.IPAMConfig{network.IPAMConfig{Subnet: "10.1.2.0/24"}},
-			},
-		}}, nil)
-
-	ids, err := p.Lookup()
-	assert.NoError(t, err)
-	assert.Equal(t, "testnet", ids[0])
-}
-
-func TestLookupWithCorrectNameAndDifferentSubnetReturnsError(t *testing.T) {
+func TestCreateWithCorrectNameAndDifferentSubnetReturnsError(t *testing.T) {
 	c := config.NewNetwork("testnet")
 	c.Subnet = "10.1.2.0/16"
 
@@ -88,17 +98,17 @@ func TestLookupWithCorrectNameAndDifferentSubnetReturnsError(t *testing.T) {
 	removeOn(&md.Mock, "NetworkList")
 	md.On("NetworkList", mock.Anything, mock.Anything).Return([]types.NetworkResource{
 		types.NetworkResource{
-			ID: "abc",
+			ID: "testnet",
 			IPAM: network.IPAM{
 				Config: []network.IPAMConfig{network.IPAMConfig{Subnet: "10.1.1.0/24"}},
 			},
 		}}, nil)
 
-	_, err := p.Lookup()
+	err := p.Create()
 	assert.Error(t, err)
 }
 
-func TestLookupWithOverlappingSubnetReturnsError(t *testing.T) {
+func TestCreateWithOverlappingSubnetReturnsError(t *testing.T) {
 	c := config.NewNetwork("testnet")
 	c.Subnet = "10.2.3.0/16"
 
@@ -112,18 +122,6 @@ func TestLookupWithOverlappingSubnetReturnsError(t *testing.T) {
 			},
 		}}, nil)
 
-	_, err := p.Lookup()
-	assert.Error(t, err)
-}
-
-func TestLookupFailReturnsError(t *testing.T) {
-	c := config.NewNetwork("testnet")
-	c.Subnet = "10.1.2.0/24"
-
-	md, p := setupNetworkTests(c)
-	removeOn(&md.Mock, "NetworkList")
-	md.On("NetworkList", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
-
-	_, err := p.Lookup()
+	err := p.Create()
 	assert.Error(t, err)
 }
