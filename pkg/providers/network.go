@@ -2,6 +2,8 @@ package providers
 
 import (
 	"context"
+	"fmt"
+	"net"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
@@ -84,15 +86,41 @@ func (n *Network) Destroy() error {
 // Lookup the ID for a network
 func (n *Network) Lookup() ([]string, error) {
 	args := filters.NewArgs()
-	args.Add("name", n.config.Name)
 	nets, err := n.client.NetworkList(context.Background(), types.NetworkListOptions{Filters: args})
 	if err != nil {
 		return nil, err
 	}
 
 	ids := []string{}
-	for _, n := range nets {
-		ids = append(ids, n.ID)
+	for _, n1 := range nets {
+		// is the network name equal to the config name
+		if n1.ID == n.config.Name {
+			// check that the returned networks subnet matches the existing networks subnet
+			if n1.IPAM.Config[0].Subnet != n.config.Subnet {
+				return nil, fmt.Errorf("Network %s already exists but with different subnet", n.config.Name)
+			}
+
+			ids = append(ids, n1.ID)
+		} else {
+			// if this is another network does the subnet overlap with the requested subnet if so return an error
+			_, cidr1, err := net.ParseCIDR(n.config.Subnet)
+			if err != nil {
+				// unable to parse the CIDR should not happen
+				return nil, err
+			}
+
+			for _, ci := range n1.IPAM.Config {
+				_, cidr2, err := net.ParseCIDR(ci.Subnet)
+				if err != nil {
+					// unable to parse the CIDR should not happen
+					return nil, err
+				}
+
+				if cidr1.Contains(cidr2.IP) || cidr2.Contains(cidr1.IP) {
+					return nil, fmt.Errorf("Unable to create network %s, Network %s already exists with an overlapping subnet %s", n.config.Name, n1.ID, ci.Subnet)
+				}
+			}
+		}
 	}
 
 	return ids, nil
