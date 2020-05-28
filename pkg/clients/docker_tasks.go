@@ -548,16 +548,30 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 	if err != nil {
 		return xerrors.Errorf("unable to attach logging to exec process: %w", err)
 	}
+
 	defer stream.Close()
 
-	// ensure that the log from the Docker exec command are copied to the provided writer
+	// if we have a writer stream the logs from the container to the writer
 	if writer != nil {
+		ttyOut := streams.NewOut(writer)
+		ttyErr := streams.NewOut(writer)
+
+		errCh := make(chan error, 1)
+
 		go func() {
-			io.Copy(
-				writer,
-				stream.Reader,
-			)
+			defer close(errCh)
+			errCh <- func() error {
+
+				streamer := streams.NewHijackedStreamer(nil, ttyOut, nil, ttyOut, ttyErr, stream, false, "", d.l)
+
+				return streamer.Stream(context.Background())
+			}()
 		}()
+
+		if err := <-errCh; err != nil {
+			d.l.Error("unable to hijack exec stream: %s", err)
+			return err
+		}
 	}
 
 	err = d.c.ContainerExecStart(context.Background(), execid.ID, types.ExecStartCheck{})

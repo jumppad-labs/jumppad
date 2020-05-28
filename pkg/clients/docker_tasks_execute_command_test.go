@@ -16,13 +16,17 @@ import (
 )
 
 func testExecCommandMockSetup() (*mocks.MockDocker, *mocks.ImageLog) {
+	// we need to add the stream index (stdout) as the first byte for the hijacker
+	writerOutput := []byte("log output")
+	writerOutput = append([]byte{1}, writerOutput...)
+
 	mk := &mocks.MockDocker{}
 	mk.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(types.IDResponse{ID: "abc"}, nil)
 	mk.On("ContainerExecAttach", mock.Anything, "abc", mock.Anything).Return(
 		types.HijackedResponse{
 			Conn: &net.TCPConn{},
 			Reader: bufio.NewReader(
-				bytes.NewReader([]byte("log output")),
+				bytes.NewReader(writerOutput),
 			),
 		},
 		nil,
