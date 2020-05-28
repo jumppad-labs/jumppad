@@ -1,5 +1,10 @@
 # Change Log
 
+## version 0.0.30
+
+## Bugfixes Exec
+* Fix log output when executing commands in containers
+
 ## version 0.0.28
 
 ## Remote Exec
