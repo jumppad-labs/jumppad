@@ -1,5 +1,10 @@
 # Change Log
 
+## version 0.0.28
+
+## Remote Exec
+* Add `working_directory` parameter to allow setting of the execution folder when running commands
+
 ## version 0.0.26
 
 ### Push Command

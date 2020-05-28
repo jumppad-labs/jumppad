@@ -82,7 +82,7 @@ func (c *ExecRemote) Create() error {
 		envs = append(envs, fmt.Sprintf("%s=%s", e.Key, e.Value))
 	}
 
-	err := c.client.ExecuteCommand(targetID, command, envs, c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
+	err := c.client.ExecuteCommand(targetID, command, envs, c.config.WorkingDirectory, c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
 	if err != nil {
 		err = xerrors.Errorf("Unable to execute command in remote container: %w", err)
 	}

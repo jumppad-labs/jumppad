@@ -16,7 +16,7 @@ func setupPush(state string) (*cobra.Command, *mocks.MockContainerTasks, func())
 	mt.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
 	mt.On("PullImage", mock.Anything, false).Return(nil)
 	mt.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything, mock.Anything).Return([]string{"/images/file.tar"}, nil)
-	mt.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	mt.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mt.On("SetForcePull", mock.Anything).Return(nil)
 
 	mk := &mocks.MockKubernetes{}

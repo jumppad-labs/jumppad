@@ -17,8 +17,9 @@ type ExecRemote struct {
 
 	// Either Script or Command must be specified
 	//Script    string   `hcl:"script,optional" json:"script,omitempty"` // Path to a script to execute
-	Command   string   `hcl:"cmd,optional" json:"cmd,omitempty"`   // Command to execute
-	Arguments []string `hcl:"args,optional" json:"args,omitempty"` // only used when combined with Command
+	Command          string   `hcl:"cmd,optional" json:"cmd,omitempty"`                             // Command to execute
+	Arguments        []string `hcl:"args,optional" json:"args,omitempty"`                           // only used when combined with Command
+	WorkingDirectory string   `hcl:"working_directory,optional" json:"working_directory,omitempty"` // Working directory to exectute commands
 
 	Volumes     []Volume `hcl:"volume,block" json:"volumes,omitempty"` // Volumes to mount to container
 	Environment []KV     `hcl:"env,block" json:"env,omitempty"`        // Environment varialbes to set

@@ -51,7 +51,7 @@ type ContainerTasks interface {
 	// id is the id of the container to execute the command in
 	// command is a slice of strings to execute
 	// writer [optional] will be used to write any output from the command execution.
-	ExecuteCommand(id string, command []string, env []string, writer io.Writer) error
+	ExecuteCommand(id string, command []string, env []string, workingDirectory string, writer io.Writer) error
 	// NetworkDisconnect disconnects a container from the network
 	DetachNetwork(network, containerid string) error
 

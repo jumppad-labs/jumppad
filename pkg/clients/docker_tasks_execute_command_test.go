@@ -39,7 +39,7 @@ func TestExecuteCommandCreatesExec(t *testing.T) {
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}
-	err := md.ExecuteCommand("testcontainer", command, []string{"abc=123"}, writer)
+	err := md.ExecuteCommand("testcontainer", command, []string{"abc=123"}, "/files", writer)
 	assert.NoError(t, err)
 
 	mk.AssertCalled(t, "ContainerExecCreate", mock.Anything, "testcontainer", mock.Anything)
@@ -47,6 +47,9 @@ func TestExecuteCommandCreatesExec(t *testing.T) {
 
 	// test the command
 	assert.Equal(t, params.Cmd[0], command[0])
+
+	// test the working directory
+	assert.Equal(t, params.WorkingDir, "/files")
 
 	// check the environment variables
 	assert.Equal(t, params.Env[0], "abc=123")
@@ -61,7 +64,7 @@ func TestExecuteCommandExecFailReturnError(t *testing.T) {
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}
-	err := md.ExecuteCommand("testcontainer", command, nil, writer)
+	err := md.ExecuteCommand("testcontainer", command, nil, "/", writer)
 	assert.Error(t, err)
 }
 
@@ -71,7 +74,7 @@ func TestExecuteCommandAttachesToExec(t *testing.T) {
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}
-	err := md.ExecuteCommand("testcontainer", command, nil, writer)
+	err := md.ExecuteCommand("testcontainer", command, nil, "/", writer)
 	assert.NoError(t, err)
 
 	mk.AssertCalled(t, "ContainerExecAttach", mock.Anything, "abc", mock.Anything)
@@ -85,7 +88,7 @@ func TestExecuteCommandAttachFailReturnError(t *testing.T) {
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}
-	err := md.ExecuteCommand("testcontainer", command, nil, writer)
+	err := md.ExecuteCommand("testcontainer", command, nil, "/", writer)
 	assert.Error(t, err)
 }
 
@@ -95,7 +98,7 @@ func TestExecuteCommandStartsExec(t *testing.T) {
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}
-	err := md.ExecuteCommand("testcontainer", command, nil, writer)
+	err := md.ExecuteCommand("testcontainer", command, nil, "/", writer)
 	assert.NoError(t, err)
 
 	mk.AssertCalled(t, "ContainerExecStart", mock.Anything, "abc", mock.Anything)
@@ -109,7 +112,7 @@ func TestExecuteStartsFailReturnsError(t *testing.T) {
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}
-	err := md.ExecuteCommand("testcontainer", command, nil, writer)
+	err := md.ExecuteCommand("testcontainer", command, nil, "/", writer)
 	assert.Error(t, err)
 }
 
@@ -121,7 +124,7 @@ func TestExecuteCommandInspectsExecAndReturnsErrorOnFail(t *testing.T) {
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}
-	err := md.ExecuteCommand("testcontainer", command, nil, writer)
+	err := md.ExecuteCommand("testcontainer", command, nil, "/", writer)
 	assert.Error(t, err)
 
 	mk.AssertCalled(t, "ContainerExecInspect", mock.Anything, "abc", mock.Anything)
