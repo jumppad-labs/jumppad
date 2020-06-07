@@ -1,8 +1,23 @@
 # Change Log
 
+## version 0.0.31
+
+### Containers
+
+Add ability to configure network aliases for containers
+
+```
+  network { 
+    name = "network.onprem"
+    ip_address = "10.5.0.200"
+    // Add network aliases for the container
+    aliases = ["web.ingress.container.shipyard.run", "api.ingress.container.shipyard.run"]
+  }
+```
+
 ## version 0.0.30
 
-## Bugfixes Exec
+### Bugfixes Exec
 * Fix log output when executing commands in containers
 
 ## version 0.0.28
