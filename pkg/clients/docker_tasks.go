@@ -193,6 +193,11 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 			d.l.Debug("Attaching container to network", "ref", c.Name, "network", n.Name)
 			es := &network.EndpointSettings{NetworkID: net.Info().Name}
 
+			// if we have network aliases defined, add them to the network connection
+			if n.Aliases != nil && len(n.Aliases) > 0 {
+				es.Aliases = n.Aliases
+			}
+
 			// are we binding to a specific ip
 			if n.IPAddress != "" {
 				d.l.Debug("Assigning static ip address", "ref", c.Name, "network", n.Name, "ip_address", n.IPAddress)

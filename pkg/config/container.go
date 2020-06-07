@@ -34,8 +34,9 @@ func NewContainer(name string) *Container {
 }
 
 type NetworkAttachment struct {
-	Name      string `hcl:"name" json:"name"`
-	IPAddress string `hcl:"ip_address,optional" json:"ip_address,omitempty"`
+	Name      string   `hcl:"name" json:"name"`
+	IPAddress string   `hcl:"ip_address,optional" json:"ip_address,omitempty"`
+	Aliases   []string `hcl:"aliases,optional" json:"aliases,omitempty"` // Network aliases for the resource
 }
 
 // Resources allows the setting of resource constraints for the Container

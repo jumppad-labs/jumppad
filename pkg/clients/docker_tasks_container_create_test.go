@@ -234,6 +234,19 @@ func TestContainerAssignsIPToUserNetwork(t *testing.T) {
 	assert.Equal(t, cc.Networks[0].IPAddress, nc.IPAMConfig.IPv4Address)
 }
 
+func TestContainerAssignsAliasesToUserNetwork(t *testing.T) {
+	cc, _, _, md, mic := createContainerConfig()
+	cc.Networks[0].Aliases = []string{"abc", "123"}
+
+	err := setupContainer(t, cc, md, mic)
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "NetworkConnect")[0].Arguments
+	nc := params[3].(*network.EndpointSettings)
+
+	assert.Equal(t, cc.Networks[0].Aliases, nc.Aliases)
+}
+
 func TestContainerRollsbackWhenUnableToConnectToWANNetwork(t *testing.T) {
 	cc, _, _, md, mic := createContainerConfig()
 	removeOn(&md.Mock, "NetworkConnect")
