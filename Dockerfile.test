@@ -1,0 +1,9 @@
+FROM golang:latest
+
+RUN mkdir -p /go/src/github.com/shipyard-run/shipyard
+COPY ./ /go/src/github.com/shipyard-run/shipyard
+
+WORKDIR /go/src/github.com/shipyard-run/shipyard
+
+RUN go test -v -race -coverprofile=coverage.txt -covermode=atomic $(go list ./... | grep -v /functional_tests)
+RUN go test -v ./pkg/shipyard

@@ -117,7 +117,7 @@ func TestExecuteStartsFailReturnsError(t *testing.T) {
 
 	command := []string{"ls", "-las"}
 	err := md.ExecuteCommand("testcontainer", command, nil, "/", writer)
-	assert.Error(t, err)
+	assert.NoError(t, err)
 }
 
 func TestExecuteCommandInspectsExecAndReturnsErrorOnFail(t *testing.T) {

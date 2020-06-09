@@ -7,6 +7,9 @@ test_unit:
 test_functional: install_local
 	cd ./functional_tests && go test -timeout 20m -v -run.test true ./...
 
+test_docker:
+	docker build -t shipyard-run/tests -f Dockerfile.test .
+
 test: test_unit test_functional
 
 # Run tests continually with  a watcher

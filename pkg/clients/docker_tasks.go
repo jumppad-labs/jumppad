@@ -599,6 +599,7 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 			return xerrors.Errorf("container exec failed with exit code %d", i.ExitCode)
 		}
 
+		d.l.Debug("Loop")
 		time.Sleep(1 * time.Second)
 	}
 }
