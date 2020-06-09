@@ -556,6 +556,7 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 
 	defer stream.Close()
 
+	streamContext, cancelStream := context.WithCancel(context.Background())
 	// if we have a writer stream the logs from the container to the writer
 	if writer != nil {
 
@@ -570,20 +571,20 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 
 				streamer := streams.NewHijackedStreamer(nil, ttyOut, nil, ttyOut, ttyErr, stream, false, "", d.l)
 
-				return streamer.Stream(context.Background())
+				return streamer.Stream(streamContext)
 			}()
 		}()
 
-		/*
-			if err := <-errCh; err != nil {
-				d.l.Error("unable to hijack exec stream: %s", err)
-				return err
-			}
-		*/
+		if err := <-errCh; err != nil {
+			d.l.Error("unable to hijack exec stream: %s", err)
+			cancelStream()
+			return err
+		}
 	}
 
 	err = d.c.ContainerExecStart(context.Background(), execid.ID, types.ExecStartCheck{})
 	if err != nil {
+		cancelStream()
 		return xerrors.Errorf("unable to start exec process: %w", err)
 	}
 
@@ -591,14 +592,17 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 	for {
 		i, err := d.c.ContainerExecInspect(context.Background(), execid.ID)
 		if err != nil {
+			cancelStream()
 			return xerrors.Errorf("unable to determine status of exec process: %w", err)
 		}
 
 		if !i.Running {
 			if i.ExitCode == 0 {
+				cancelStream()
 				return nil
 			}
 
+			cancelStream()
 			return xerrors.Errorf("container exec failed with exit code %d", i.ExitCode)
 		}
 
