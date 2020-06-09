@@ -216,7 +216,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 				cmd.Println("######################################################")
 
 				cmd.Println("")
-				cmd.Println("This blueprint exports the following environment varaibles:")
+				cmd.Println("This blueprint exports the following environment variables:")
 				cmd.Println("")
 				for _, env := range e.Blueprint().Environment {
 					cmd.Printf("\033[1;32m%s=%s\033[0m\n", env.Key, env.Value)

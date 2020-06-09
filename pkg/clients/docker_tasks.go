@@ -558,25 +558,28 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 
 	// if we have a writer stream the logs from the container to the writer
 	if writer != nil {
-		ttyOut := streams.NewOut(writer)
-		ttyErr := streams.NewOut(writer)
 
-		errCh := make(chan error, 1)
+		/*
+			ttyOut := streams.NewOut(writer)
+			ttyErr := streams.NewOut(writer)
 
-		go func() {
-			defer close(errCh)
-			errCh <- func() error {
+				errCh := make(chan error, 1)
 
-				streamer := streams.NewHijackedStreamer(nil, ttyOut, nil, ttyOut, ttyErr, stream, false, "", d.l)
+				go func() {
+					defer close(errCh)
+					errCh <- func() error {
 
-				return streamer.Stream(context.Background())
-			}()
-		}()
+						streamer := streams.NewHijackedStreamer(nil, ttyOut, nil, ttyOut, ttyErr, stream, false, "", d.l)
 
-		if err := <-errCh; err != nil {
-			d.l.Error("unable to hijack exec stream: %s", err)
-			return err
-		}
+						return streamer.Stream(context.Background())
+					}()
+				}()
+
+				if err := <-errCh; err != nil {
+					d.l.Error("unable to hijack exec stream: %s", err)
+					return err
+				}
+		*/
 	}
 
 	err = d.c.ContainerExecStart(context.Background(), execid.ID, types.ExecStartCheck{})
@@ -599,7 +602,6 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 			return xerrors.Errorf("container exec failed with exit code %d", i.ExitCode)
 		}
 
-		d.l.Debug("Loop")
 		time.Sleep(1 * time.Second)
 	}
 }

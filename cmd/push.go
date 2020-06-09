@@ -40,7 +40,7 @@ func newPushCmd(ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTT
 
 			// check the resource is of the allowed type
 			if !strings.HasPrefix(cluster, "nomad_cluster") && !strings.HasPrefix(cluster, "k8s_cluster") {
-				return xerrors.Errorf("Invalid resoruce type, only resources type nomad_cluster and k8s_cluster are supported")
+				return xerrors.Errorf("Invalid resource type, only resources type nomad_cluster and k8s_cluster are supported")
 			}
 
 			// find the cluster in the state

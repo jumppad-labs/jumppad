@@ -1,14 +1,17 @@
 git_commit = $(shell git log -1 --pretty=format:"%H")
 
 test_unit:
-	go test -race $(shell go list ./... | grep -v /functional_tests)
-	go test ./pkg/shipyard
+	go clean --cache
+	go test -v -race $(shell go list ./... | grep -v /functional_tests)
+	go test -v ./pkg/shipyard
 
 test_functional: install_local
 	cd ./functional_tests && go test -timeout 20m -v -run.test true ./...
 
 test_docker:
 	docker build -t shipyard-run/tests -f Dockerfile.test .
+	docker run --rm shipyard-run/tests bash -c 'go test -v -race -coverprofile=coverage.txt -covermode=atomic $(go list ./... | grep -v /functional_tests)'
+	docker run --rm shipyard-run/tests bash -c 'go test -v ./pkg/shipyard'
 
 test: test_unit test_functional
 
