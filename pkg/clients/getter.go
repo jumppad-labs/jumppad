@@ -19,11 +19,29 @@ type Getter interface {
 type GetterImpl struct {
 	//
 	force bool
+	get   func(uri, dst, pwd string) error
 }
 
 // NewGetter creates a new Getter
 func NewGetter(force bool) *GetterImpl {
-	return &GetterImpl{force}
+	gi := &GetterImpl{
+		force,
+		func(uri, dst, pwd string) error {
+			// if the argument is a url fetch it first
+			c := &getter.Client{
+				Ctx:     context.Background(),
+				Src:     uri,
+				Dst:     dst,
+				Pwd:     pwd,
+				Mode:    getter.ClientModeAny,
+				Options: []getter.ClientOption{},
+			}
+
+			return c.Get()
+		},
+	}
+
+	return gi
 }
 
 // SetForce sets the force flag causing all downloads to overwrite the destination
@@ -54,30 +72,12 @@ func (g *GetterImpl) Get(uri, dst string) error {
 		}
 	}
 
-	// create the output folder
-	/*
-		err = os.MkdirAll(dst, os.ModePerm)
-		if err != nil {
-			return xerrors.Errorf("Unable to create destination folder: %w", err)
-		}
-	*/
-
 	pwd, err := os.Getwd()
 	if err != nil {
 		return err
 	}
 
-	// if the argument is a url fetch it first
-	c := &getter.Client{
-		Ctx:     context.Background(),
-		Src:     uri,
-		Dst:     dst,
-		Pwd:     pwd,
-		Mode:    getter.ClientModeAny,
-		Options: []getter.ClientOption{},
-	}
-
-	err = c.Get()
+	err = g.get(uri, dst, pwd)
 	if err != nil {
 		return xerrors.Errorf("unable to fetch files from %s: %w", uri, err)
 	}

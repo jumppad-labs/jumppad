@@ -647,13 +647,15 @@ func (d *DockerTasks) CreateShell(id string, command []string, stdin io.ReadClos
 
 	errCh := make(chan error, 1)
 
+	streamContext, streamCancel := context.WithCancel(context.Background())
+
 	go func() {
 		defer close(errCh)
 		errCh <- func() error {
 
 			streamer := streams.NewHijackedStreamer(ttyIn, ttyOut, ttyIn, ttyOut, ttyErr, resp, true, "", d.l)
 
-			return streamer.Stream(context.Background())
+			return streamer.Stream(streamContext)
 		}()
 	}()
 
@@ -673,14 +675,17 @@ func (d *DockerTasks) CreateShell(id string, command []string, stdin io.ReadClos
 	for {
 		i, err := d.c.ContainerExecInspect(context.Background(), execid.ID)
 		if err != nil {
+			streamCancel()
 			return xerrors.Errorf("unable to determine status of exec process: %w", err)
 		}
 
 		if !i.Running {
 			if i.ExitCode == 0 {
+				streamCancel()
 				return nil
 			}
 
+			streamCancel()
 			return xerrors.Errorf("container exec failed with exit code %d", i.ExitCode)
 		}
 
