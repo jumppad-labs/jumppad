@@ -1,5 +1,10 @@
 # Change Log
 
+## version 0.0.32
+
+### Remote Exec
+* Ensure remote exec containers use a unique ID
+
 ## version 0.0.31
 
 ### Containers
