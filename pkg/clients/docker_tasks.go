@@ -559,26 +559,26 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 	// if we have a writer stream the logs from the container to the writer
 	if writer != nil {
 
+		ttyOut := streams.NewOut(writer)
+		ttyErr := streams.NewOut(writer)
+
+		errCh := make(chan error, 1)
+
+		go func() {
+			defer close(errCh)
+			errCh <- func() error {
+
+				streamer := streams.NewHijackedStreamer(nil, ttyOut, nil, ttyOut, ttyErr, stream, false, "", d.l)
+
+				return streamer.Stream(context.Background())
+			}()
+		}()
+
 		/*
-			ttyOut := streams.NewOut(writer)
-			ttyErr := streams.NewOut(writer)
-
-				errCh := make(chan error, 1)
-
-				go func() {
-					defer close(errCh)
-					errCh <- func() error {
-
-						streamer := streams.NewHijackedStreamer(nil, ttyOut, nil, ttyOut, ttyErr, stream, false, "", d.l)
-
-						return streamer.Stream(context.Background())
-					}()
-				}()
-
-				if err := <-errCh; err != nil {
-					d.l.Error("unable to hijack exec stream: %s", err)
-					return err
-				}
+			if err := <-errCh; err != nil {
+				d.l.Error("unable to hijack exec stream: %s", err)
+				return err
+			}
 		*/
 	}
 
