@@ -155,7 +155,7 @@ func TestCopyLocalCreatesTempContainer(t *testing.T) {
 	cfg := params[1].(*container.Config)
 
 	// test name and command
-	assert.Equal(t, "temp-import", cfg.Hostname)
+	assert.Contains(t, cfg.Hostname, "import")
 	assert.Equal(t, "tail", cfg.Cmd[0])
 
 	// test mounts volume
@@ -200,7 +200,7 @@ func TestCopyLocalCopiesArchive(t *testing.T) {
 
 	_, err := dt.CopyLocalDockerImageToVolume(testCopyLocalImages, testCopyLocalVolume, false)
 	assert.NoError(t, err)
-	mk.AssertCalled(t, "CopyToContainer", mock.Anything, "temp-import.container.shipyard.run", "/images", mock.Anything, mock.Anything)
+	mk.AssertCalled(t, "CopyToContainer", mock.Anything, mock.Anything, "/images", mock.Anything, mock.Anything)
 }
 
 func TestCopyLocalCopiesArchiveFailReturnsError(t *testing.T) {

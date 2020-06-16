@@ -408,7 +408,7 @@ func (d *DockerTasks) CopyLocalDockerImageToVolume(images []string, volume strin
 	}
 
 	// create a dummy container to import to volume
-	cc := config.NewContainer("temp-import")
+	cc := config.NewContainer(fmt.Sprintf("%d.import", time.Now().Nanosecond()))
 
 	cc.Image = config.Image{Name: "alpine:latest"}
 	cc.Volumes = []config.Volume{

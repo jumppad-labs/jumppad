@@ -1,5 +1,10 @@
 # Change Log
 
+## version 0.0.33
+
+### Import images
+* Ensure containers use a unique ID when importing images
+
 ## version 0.0.32
 
 ### Remote Exec

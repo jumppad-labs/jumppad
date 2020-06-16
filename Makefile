@@ -13,6 +13,12 @@ test_docker:
 	docker run --rm shipyard-run/tests bash -c 'go test -v -race -coverprofile=coverage.txt -covermode=atomic $(go list ./... | grep -v /functional_tests)'
 	docker run --rm shipyard-run/tests bash -c 'go test -v ./pkg/shipyard'
 
+# Test Github actions using `act`
+# https://github.com/nektos/act
+test_github_actions:
+	act -P ubuntu-latest=nektos/act-environments-ubuntu:18.04 -j build
+	act -P ubuntu-latest=nektos/act-environments-ubuntu:18.04 -j functional_test
+
 test: test_unit test_functional
 
 # Run tests continually with  a watcher
