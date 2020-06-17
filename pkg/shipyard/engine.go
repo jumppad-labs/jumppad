@@ -76,7 +76,7 @@ func GenerateClients(l hclog.Logger) (*Clients, error) {
 
 	nc := clients.NewNomad(hc, 1*time.Second, l)
 
-	bp := &clients.GetterImpl{}
+	bp := clients.NewGetter(false)
 
 	bc := &clients.SystemImpl{}
 
