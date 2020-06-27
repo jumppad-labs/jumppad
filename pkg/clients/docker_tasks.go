@@ -12,6 +12,7 @@ import (
 	gosignal "os/signal"
 	"path"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -394,10 +395,17 @@ func (d *DockerTasks) CopyFromContainer(id, src, dst string) error {
 	return nil
 }
 
+var importMutex = sync.Mutex{}
+
 // CopyLocalDockerImageToVolume writes multiple Docker images to a Docker volume as a compressed archive
 // returns the filename of the archive and an error if one occured
 func (d *DockerTasks) CopyLocalDockerImageToVolume(images []string, volume string, force bool) ([]string, error) {
 	d.l.Debug("Writing docker images to volume", "images", images, "volume", volume)
+
+	// make sure this operation runs sequentially as we do not want to update the same volume at the same time
+	// for now it should be ok to block globally
+	importMutex.Lock()
+	defer importMutex.Unlock()
 
 	savedImages := []string{}
 
