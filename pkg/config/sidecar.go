@@ -18,7 +18,7 @@ type Sidecar struct {
 	Environment []KV     `hcl:"env,block" json:"environment,omitempty"`          // environment variables to set when starting the container
 	Volumes     []Volume `hcl:"volume,block" json:"volumes,omitempty"`           // volumes to attach to the container
 
-	Privileged bool `hcl:"privileged,optional" json:"privileged,omitempty"` // run the container in priviledged mode?
+	Privileged bool `hcl:"privileged,optional" json:"privileged,omitempty"` // run the container in privileged mode?
 
 	// resource constraints
 	Resources *Resources `hcl:"resources,block" json:"resources,omitempty"` // resource constraints for the container
