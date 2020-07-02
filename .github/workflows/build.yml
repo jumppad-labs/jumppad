@@ -22,7 +22,7 @@ jobs:
 
       - name: Unit Test
         run: |
-          go test -v -race -coverprofile=coverage.txt -covermode=atomic $(go list ./... | grep -v /functional_tests)
+          go test -v -p 1 -race -coverprofile=coverage.txt -covermode=atomic $(go list ./... | grep -v /functional_tests)
           go test -v ./pkg/shipyard
 
       - name: Build
