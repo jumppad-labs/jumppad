@@ -24,6 +24,11 @@ container "consul" {
     memory = 1024
   }
 
+  port_range {
+    range       = "8500-8502"
+    enable_host = true
+  }
+
   env {
     key ="abc"
     value = "123"
