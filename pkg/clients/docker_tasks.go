@@ -11,6 +11,7 @@ import (
 	"os"
 	gosignal "os/signal"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -129,6 +130,22 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 	ports := createPublishedPorts(c.Ports)
 	dc.ExposedPorts = ports.ExposedPorts
 	hc.PortBindings = ports.PortBindings
+
+	// create the port ranges
+	portRanges, err := createPublishedPortRanges(c.PortRanges)
+	if err != nil {
+		return "", xerrors.Errorf("Unable to attach to container network, invalid port range: %w", err)
+	}
+
+	for k, p := range portRanges.ExposedPorts {
+		// check that the port has not already been defined
+		if _, ok := dc.ExposedPorts[k]; !ok {
+			dc.ExposedPorts[k] = p
+			hc.PortBindings[k] = portRanges.PortBindings[k]
+		}
+	}
+	//dc.ExposedPorts = ports.ExposedPorts
+	//hc.PortBindings = ports.PortBindings
 
 	// is this a privlidged container
 	hc.Privileged = c.Privileged
@@ -784,6 +801,53 @@ func createPublishedPorts(ps []config.Port) publishedPorts {
 	}
 
 	return pp
+}
+
+func createPublishedPortRanges(ps []config.PortRange) (publishedPorts, error) {
+	pp := publishedPorts{
+		ExposedPorts: make(map[nat.Port]struct{}, 0),
+		PortBindings: make(map[nat.Port][]nat.PortBinding, 0),
+	}
+
+	for _, p := range ps {
+		// split the range
+		parts := strings.Split(p.Range, "-")
+		if len(parts) != 2 {
+			return pp, fmt.Errorf("Invalid port range, range should be written start-end, e.g 80-82")
+		}
+
+		// ensure the start is less than the end
+		start, serr := strconv.Atoi(parts[0])
+		end, eerr := strconv.Atoi(parts[1])
+
+		if serr != nil || eerr != nil {
+			return pp, fmt.Errorf("Invalid port range, range should be numbers and written start-end, e.g 80-82")
+		}
+
+		if start > end {
+			return pp, fmt.Errorf("Invalid port range, start and end ports should be numeric and written start-end, e.g 80-82")
+		}
+
+		// range is ok, generate ports
+		for i := start; i < end+1; i++ {
+			port := strconv.Itoa(i)
+			dp, _ := nat.NewPort(p.Protocol, port)
+			pp.ExposedPorts[dp] = struct{}{}
+
+			if p.EnableHost {
+				pb := []nat.PortBinding{
+					nat.PortBinding{
+						HostIP:   "0.0.0.0",
+						HostPort: port,
+					},
+				}
+
+				pp.PortBindings[dp] = pb
+			}
+		}
+	}
+
+	return pp, nil
 }
 
 // credentials are a json string and need to be base64 encoded

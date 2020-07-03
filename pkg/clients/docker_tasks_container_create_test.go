@@ -36,6 +36,9 @@ var containerConfig = &config.Container{
 	Environment: []config.KV{
 		config.KV{Key: "TEST", Value: "true"},
 	},
+	EnvVar: map[string]string{
+		"key": "value",
+	},
 	Ports: []config.Port{
 		config.Port{
 			Local:    "8080",
@@ -46,6 +49,18 @@ var containerConfig = &config.Container{
 			Local:    "8081",
 			Host:     "9081",
 			Protocol: "udp",
+		},
+	},
+	PortRanges: []config.PortRange{
+		config.PortRange{
+			Range:      "9000-9002",
+			Protocol:   "tcp",
+			EnableHost: true,
+		},
+		config.PortRange{
+			Range:      "9100-9102",
+			Protocol:   "udp",
+			EnableHost: false,
 		},
 	},
 	Networks: []config.NetworkAttachment{
@@ -328,6 +343,44 @@ func TestContainerPublishesPorts(t *testing.T) {
 	// check the port bindings for the local machine
 	assert.Equal(t, cc.Ports[1].Host, hc.PortBindings[exp][0].HostPort)
 	assert.Equal(t, "0.0.0.0", hc.PortBindings[exp][0].HostIP)
+}
+
+func TestContainerPublishesPortsRanges(t *testing.T) {
+	cc, _, _, md, mic := createContainerConfig()
+
+	err := setupContainer(t, cc, md, mic)
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
+	dc := params[1].(*container.Config)
+	hc := params[2].(*container.HostConfig)
+
+	assert.Len(t, dc.ExposedPorts, 8)
+
+	// check the first port range
+	exp, err := nat.NewPort("tcp", "9000")
+	assert.NoError(t, err)
+	assert.NotNil(t, dc.ExposedPorts[exp])
+
+	exp, err = nat.NewPort("tcp", "9001")
+	assert.NoError(t, err)
+	assert.NotNil(t, dc.ExposedPorts[exp])
+
+	exp, err = nat.NewPort("tcp", "9002")
+	assert.NoError(t, err)
+	assert.NotNil(t, dc.ExposedPorts[exp])
+
+	// check the port bindings for the local machine
+	assert.Equal(t, "9002", hc.PortBindings[exp][0].HostPort)
+	assert.Equal(t, "0.0.0.0", hc.PortBindings[exp][0].HostIP)
+
+	// check second range
+	exp, err = nat.NewPort("udp", "9102")
+	assert.NoError(t, err)
+	assert.NotNil(t, dc.ExposedPorts[exp])
+
+	// check the port bindings for the local machine are nil
+	assert.Nil(t, hc.PortBindings[exp])
 }
 
 // removeOn is a utility function for removing Expectations from mock objects
