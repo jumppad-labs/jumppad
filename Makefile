@@ -4,12 +4,12 @@ test_unit:
 	go clean --cache
 	go test -v -race ./...
 
-test_functional: install_local
-	yard-dev test ./examples/container
-	yard-dev test ./examples/docs
-	yard-dev test ./examples/modules
-	yard-dev test ./examples/nomad
-	yard-dev test ./examples/single_k3s_cluster
+test_functional:
+	go run main.go test ./examples/container
+	go run main.go test ./examples/docs
+	go run main.go test ./examples/modules
+	go run main.go test ./examples/nomad
+	go run main.go test ./examples/single_k3s_cluster
 
 test_docker:
 	docker build -t shipyard-run/tests -f Dockerfile.test .

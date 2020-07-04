@@ -22,7 +22,7 @@ jobs:
 
       - name: Unit Test
         run: |
-          go test -v -race -coverprofile=coverage.txt -covermode=atomic -short
+          go test -v -race -coverprofile=coverage.txt -covermode=atomic -short ./...
 
       - name: Build
         run: |

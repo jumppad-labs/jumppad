@@ -15,7 +15,8 @@ Scenario: Single Container from Local Blueprint
     | consul                    | container |
     | envoy                     | sidecar   |
     | consul-container-http     | ingress   |
-  And a HTTP call to "http://consul-http.ingress.shipyard.run:8500/v1/status/leader" should result in status 200
+  And a HTTP call to "http://consul.container.shipyard.run:8500/v1/status/leader" should result in status 200
+  And a HTTP call to "http://consul-http.ingress.shipyard.run:28500/v1/status/leader" should result in status 200
 
 Scenario: Single Container from Local Blueprint with multiple runs
   Given the environment variable "CONSUL_VERSION" has a value "<consul>"
