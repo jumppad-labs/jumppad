@@ -6,7 +6,11 @@ test_unit:
 	go test -v ./pkg/shipyard
 
 test_functional: install_local
-	cd ./functional_tests && go test -timeout 20m -v -run.test true ./...
+	yard-dev test ./examples/container
+	yard-dev test ./examples/docs
+	yard-dev test ./examples/modules
+	yard-dev test ./examples/nomad
+	yard-dev test ./examples/single_k3s_cluster
 
 test_docker:
 	docker build -t shipyard-run/tests -f Dockerfile.test .
@@ -14,10 +18,6 @@ test_docker:
 	docker run --rm shipyard-run/tests bash -c 'go test -v ./pkg/shipyard'
 
 test: test_unit test_functional
-
-# Run tests continually with  a watcher
-autotest:
-	filewatcher --idle-timeout 24h -x **/functional_tests gotestsum --format standard-verbose
 
 build: build-darwin build-linux build-windows
 
