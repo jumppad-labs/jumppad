@@ -21,7 +21,7 @@ type Container struct {
 	Ports       []Port            `hcl:"port,block" json:"ports,omitempty"`               // ports to expose
 	PortRanges  []PortRange       `hcl:"port_range,block" json:"port_ranges,omitempty"`   // range of ports to expose
 
-	Privileged bool `hcl:"privileged,optional" json:"privileged,omitempty"` // run the container in priviledged mode?
+	Privileged bool `hcl:"privileged,optional" json:"privileged,omitempty"` // run the container in privileged mode?
 
 	// resource constraints
 	Resources *Resources `hcl:"resources,block" json:"resources,omitempty"` // resource constraints for the container
