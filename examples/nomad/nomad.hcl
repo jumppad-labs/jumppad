@@ -1,5 +1,5 @@
 nomad_cluster "dev" {
-  version = "v0.10.2"
+  version = "v0.11.2"
 
   nodes = 1 // default
 
@@ -8,7 +8,7 @@ nomad_cluster "dev" {
   }
 
   image {
-    name = "consul:1.7.1"
+    name = "consul:1.8.0"
   }
 
   volume {
