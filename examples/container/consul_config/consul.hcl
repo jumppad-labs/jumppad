@@ -11,7 +11,7 @@ ui = true
 
 bind_addr = "0.0.0.0"
 client_addr = "0.0.0.0"
-advertise_addr = "10.5.0.2"
+advertise_addr = "10.6.0.200"
 
 ports {
   grpc = 8502

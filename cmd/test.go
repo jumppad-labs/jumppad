@@ -5,13 +5,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
-	"github.com/DATA-DOG/godog"
-	"github.com/DATA-DOG/godog/colors"
-	"github.com/DATA-DOG/godog/gherkin"
+	"github.com/cucumber/godog"
+	"github.com/cucumber/godog/colors"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/hashicorp/go-hclog"
@@ -24,35 +25,32 @@ import (
 func newTestCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, l hclog.Logger) *cobra.Command {
 	var testFolder string
 	var force bool
+	var purge bool
 	var testCmd = &cobra.Command{
 		Use:                   "test [blueprint]",
 		Short:                 "Run functional tests for the blueprint",
 		Long:                  `Run functional tests for the blueprint, this command will start the shipyard blueprint `,
 		DisableFlagsInUseLine: true,
 		Args:                  cobra.ArbitraryArgs,
-		RunE:                  newTestCmdFunc(e, bp, hc, bc, testFolder, &force, l),
+		RunE:                  newTestCmdFunc(e, bp, hc, bc, testFolder, &force, &purge, l),
 	}
 
 	testCmd.Flags().StringVarP(&testFolder, "test-folder", "", "./functional_tests", "Specify the folder containing the functional tests.")
 	testCmd.Flags().BoolVarP(&force, "force-update", "", false, "When set to true Shipyard will ignore cached images or files and will download all resources")
+	testCmd.Flags().BoolVarP(&purge, "purge", "", false, "When set to true Shipyard will remove any cached images or blueprints")
 
 	return testCmd
 }
 
-func newTestCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, testFolder string, force *bool, l hclog.Logger) func(cmd *cobra.Command, args []string) error {
+func newTestCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, testFolder string, force *bool, purge *bool, l hclog.Logger) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		//
 
-		tr := CucumberRunner{cmd, args, e, bp, hc, bc, testFolder, force, l}
+		tr := CucumberRunner{cmd, args, e, bp, hc, bc, testFolder, force, purge, l}
 		tr.start()
 
 		return nil
 	}
-}
-
-var opt = godog.Options{
-	Output: colors.Colored(os.Stdout),
-	Format: "progress", // can define default values
 }
 
 // CucumberRunner is a test runner for cucumber tests
@@ -65,51 +63,71 @@ type CucumberRunner struct {
 	bc         clients.System
 	testFolder string
 	force      *bool
+	purge      *bool
 	l          hclog.Logger
 }
 
+var opts = &godog.Options{
+	Format: "pretty",
+	Output: colors.Colored(os.Stdout),
+}
+
+var envVars map[string]string
+
 // Initialize the functional tests
 func (cr *CucumberRunner) start() {
-	godog.BindFlags("godog.", flag.CommandLine, &opt)
+	godog.BindFlags("godog.", flag.CommandLine, opts)
 	flag.Parse()
 
-	format := "pretty"
 	// the tests will be in the blueprint_folder/test
 	testFolder := fmt.Sprintf("%s/test", cr.args[0])
+	opts.Paths = []string{testFolder}
 
-	status := godog.RunWithOptions("godog", func(s *godog.Suite) {
-		cr.featureContext(s)
-	}, godog.Options{
-		Format: format,
-		Paths:  []string{testFolder},
-	})
+	status := godog.TestSuite{
+		Name:                "Blueprint test",
+		ScenarioInitializer: cr.initializeSuite,
+		Options:             opts,
+	}.Run()
 
 	os.Exit(status)
 }
 
-func (cr *CucumberRunner) featureContext(s *godog.Suite) {
-	s.Step(`^I have a running blueprint$`, cr.iRunApply)
-	s.Step(`^there should be a "([^"]*)" running called "([^"]*)"$`, cr.thereShouldBeAResourceRunningCalled)
-	s.Step(`^a HTTP call to "([^"]*)" should result in status (\d+)$`, cr.aCallToShouldResultInStatus)
-	s.Step(`^the following resources should be running$`, cr.theFollowingResourcesShouldBeRunning)
-
-	s.BeforeScenario(func(interface{}) {
+func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
+	ctx.BeforeScenario(func(gs *godog.Scenario) {
+		envVars = map[string]string{}
 	})
 
-	s.AfterScenario(func(i interface{}, err error) {
+	ctx.AfterScenario(func(gs *godog.Scenario, err error) {
 		fmt.Println("")
 		cr.e.Destroy("", true)
+
+		// unset environment vars
+		for k, v := range envVars {
+			if v == "" {
+				os.Unsetenv(k)
+			} else {
+				os.Setenv(k, v)
+			}
+		}
 
 		if err != nil {
 			fmt.Println(writer.String())
 		}
 
-		// purge the cache
-		//cmd = exec.Command("yard-dev", []string{"purge"}...)
-		//cmd.Stdout = os.Stdout
-		//cmd.Stderr = os.Stderr
-		//cmd.Run()
+		// do we need to pure the cache
+		if *cr.purge {
+			pc := newPurgeCmdFunc(cr.e.GetClients().Docker, cr.e.GetClients().ImageLog, cr.e.GetClients().Logger)
+			pc(cr.cmd, cr.args)
+		}
 	})
+
+	ctx.Step(`^I have a running blueprint$`, cr.iRunApply)
+	ctx.Step(`^there should be a "([^"]*)" running called "([^"]*)"$`, cr.thereShouldBeAResourceRunningCalled)
+	ctx.Step(`^the following resources should be running$`, cr.theFollowingResourcesShouldBeRunning)
+	ctx.Step(`^the following environment variables are set$`, cr.theFollowingEnvironmentVariablesAreSet)
+	ctx.Step(`^the environment variable "([^"]*)" has a value "([^"]*)"$`, cr.theEnvironmentVariableKHasAValueV)
+	ctx.Step(`^a HTTP call to "([^"]*)" should result in status (\d+)$`, cr.aCallToShouldResultInStatus)
+	ctx.Step(`^the response body should contain "([^"]*)"$`, cr.theResponseBodyShouldContain)
 }
 
 var writer = bytes.NewBufferString("")
@@ -162,7 +180,7 @@ func (cr *CucumberRunner) iRunApply() error {
 	return nil
 }
 
-func (cr *CucumberRunner) theFollowingResourcesShouldBeRunning(arg1 *gherkin.DataTable) error {
+func (cr *CucumberRunner) theFollowingResourcesShouldBeRunning(arg1 *godog.Table) error {
 	for i, r := range arg1.Rows {
 		if i == 0 {
 			if r.Cells[0].Value != "name" || r.Cells[1].Value != "type" {
@@ -176,14 +194,16 @@ func (cr *CucumberRunner) theFollowingResourcesShouldBeRunning(arg1 *gherkin.Dat
 			return fmt.Errorf("Table rows should have two columns 'name' and 'type'")
 		}
 
-		if r.Cells[1].Value == "network" {
-			err := cr.thereShouldBe1NetworkCalled(r.Cells[0].Value)
+		rType := strings.TrimSpace(r.Cells[1].GetValue())
+		rName := strings.TrimSpace(r.Cells[0].GetValue())
+
+		if rType == "network" {
+			err := cr.thereShouldBe1NetworkCalled(rName)
 			if err != nil {
 				return err
 			}
 		} else {
-
-			err := cr.thereShouldBeAResourceRunningCalled(r.Cells[1].Value, r.Cells[0].Value)
+			err := cr.thereShouldBeAResourceRunningCalled(rType, rName)
 			if err != nil {
 				return err
 			}
@@ -226,7 +246,7 @@ func (cr *CucumberRunner) thereShouldBeAResourceRunningCalled(resource string, n
 		time.Sleep(2 * time.Second)
 	}
 
-	return fmt.Errorf("Expected %d $s %s", 1, resource, name)
+	return fmt.Errorf("Expected %d %s %s", 1, resource, name)
 }
 
 func (cr *CucumberRunner) thereShouldBe1NetworkCalled(arg1 string) error {
@@ -245,6 +265,8 @@ func (cr *CucumberRunner) thereShouldBe1NetworkCalled(arg1 string) error {
 	return nil
 }
 
+var respBody = ""
+
 // test making a HTTP call, for testing Ingress
 func (cr *CucumberRunner) aCallToShouldResultInStatus(arg1 string, arg2 int) error {
 	// try 100 times
@@ -254,6 +276,9 @@ func (cr *CucumberRunner) aCallToShouldResultInStatus(arg1 string, arg2 int) err
 		resp, err = http.Get(arg1)
 
 		if err == nil && resp.StatusCode == arg2 {
+			d, _ := ioutil.ReadAll(resp.Body)
+			respBody = string(d)
+
 			return nil
 		}
 
@@ -265,4 +290,41 @@ func (cr *CucumberRunner) aCallToShouldResultInStatus(arg1 string, arg2 int) err
 	}
 
 	return err
+}
+
+func (cr *CucumberRunner) theResponseBodyShouldContain(value string) error {
+	if !strings.Contains(respBody, value) {
+		return fmt.Errorf("Expected value %s to be found in response %s", value, respBody)
+	}
+
+	return nil
+}
+
+func (cr *CucumberRunner) theFollowingEnvironmentVariablesAreSet(vars *godog.Table) error {
+	for i, r := range vars.Rows {
+		if i == 0 {
+			if r.Cells[0].Value != "key" || r.Cells[1].Value != "value" {
+				return fmt.Errorf("Tables should be formatted with a header row containing the columns 'key' and 'value'")
+			}
+
+			continue
+		}
+
+		if len(r.Cells) != 2 {
+			return fmt.Errorf("Table rows should have two columns 'key' and 'value'")
+		}
+
+		// set the environment variable
+		cr.theEnvironmentVariableKHasAValueV(r.Cells[0].GetValue(), r.Cells[1].GetValue())
+	}
+
+	return nil
+}
+
+func (cr *CucumberRunner) theEnvironmentVariableKHasAValueV(key, value string) error {
+	// get the existing value and set it to the map so we can undo later
+	envVars[key] = os.Getenv(key)
+	os.Setenv(strings.TrimSpace(key), strings.TrimSpace(value))
+
+	return nil
 }

@@ -1,6 +1,6 @@
 container "consul" {
   image   {
-    name = "consul:1.6.1"
+    name = "consul:${env("CONSUL_VERSION")}"
   }
 
   command = ["consul", "agent", "-config-file=/config/consul.hcl"]
@@ -45,11 +45,11 @@ container "consul" {
   }
 }
 
-sidecar "consul" {
+sidecar "envoy" {
   target = "container.consul"
 
   image   {
-    name = "consul:1.6.1"
+    name = "envoyproxy/envoy-alpine:v${env("ENVOY_VERSION")}"
   }
 
   command = ["tail", "-f", "/dev/null"]

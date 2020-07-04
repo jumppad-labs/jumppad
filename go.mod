@@ -6,6 +6,7 @@ require (
 	github.com/DATA-DOG/godog v0.7.13
 	github.com/MichaelMure/go-term-markdown v0.1.3
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
+	github.com/cucumber/godog v0.10.0
 	github.com/docker/docker v1.4.2-0.20200203170920-46ec8731fbce
 	github.com/docker/go v1.5.1-1 // indirect
 	github.com/docker/go-connections v0.4.0
@@ -24,7 +25,7 @@ require (
 	github.com/prometheus/common v0.7.0 // indirect
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.5.0
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.6.1
 	github.com/theupdateframework/notary v0.6.1 // indirect
 	github.com/zclconf/go-cty v1.2.1
 	golang.org/x/sys v0.0.0-20200212091648-12a6c2dcc1e4 // indirect
