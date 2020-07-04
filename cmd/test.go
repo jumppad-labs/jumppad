@@ -35,7 +35,7 @@ func newTestCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc client
 		RunE:                  newTestCmdFunc(e, bp, hc, bc, testFolder, &force, &purge, l),
 	}
 
-	testCmd.Flags().StringVarP(&testFolder, "test-folder", "", "./functional_tests", "Specify the folder containing the functional tests.")
+	testCmd.Flags().StringVarP(&testFolder, "test-folder", "", "", "Specify the folder containing the functional tests.")
 	testCmd.Flags().BoolVarP(&force, "force-update", "", false, "When set to true Shipyard will ignore cached images or files and will download all resources")
 	testCmd.Flags().BoolVarP(&purge, "purge", "", false, "When set to true Shipyard will remove any cached images or blueprints")
 
@@ -81,6 +81,12 @@ func (cr *CucumberRunner) start() {
 
 	// the tests will be in the blueprint_folder/test
 	testFolder := fmt.Sprintf("%s/test", cr.args[0])
+
+	// unless overidden by a flag
+	if cr.testFolder != "" {
+		testFolder = cr.testFolder
+	}
+
 	opts.Paths = []string{testFolder}
 
 	status := godog.TestSuite{

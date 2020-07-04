@@ -17,7 +17,7 @@ func setup() func() {
 }
 
 func TestRunParsesBlueprintInMarkdownFormat(t *testing.T) {
-	absoluteFolderPath, err := filepath.Abs("../../functional_tests/test_fixtures/container")
+	absoluteFolderPath, err := filepath.Abs("../../examples/container")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func TestRunParsesBlueprintInMarkdownFormat(t *testing.T) {
 }
 
 func TestRunParsesBlueprintInHCLFormat(t *testing.T) {
-	absoluteFolderPath, err := filepath.Abs("../../functional_tests/test_fixtures/single_k3s_cluster")
+	absoluteFolderPath, err := filepath.Abs("../../examples/single_k3s_cluster")
 	if err != nil {
 		t.Fatal(err)
 	}

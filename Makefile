@@ -2,8 +2,7 @@ git_commit = $(shell git log -1 --pretty=format:"%H")
 
 test_unit:
 	go clean --cache
-	go test -v -race $(shell go list ./... | grep -v /functional_tests)
-	go test -v ./pkg/shipyard
+	go test -v -race ./...
 
 test_functional: install_local
 	yard-dev test ./examples/container
@@ -14,7 +13,7 @@ test_functional: install_local
 
 test_docker:
 	docker build -t shipyard-run/tests -f Dockerfile.test .
-	docker run --rm shipyard-run/tests bash -c 'go test -v -race -coverprofile=coverage.txt -covermode=atomic $(go list ./... | grep -v /functional_tests)'
+	docker run --rm shipyard-run/tests bash -c 'go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...'
 	docker run --rm shipyard-run/tests bash -c 'go test -v ./pkg/shipyard'
 
 test: test_unit test_functional
