@@ -94,7 +94,26 @@ func (n *NomadImpl) HealthCheckAPI(timeout time.Duration) error {
 			// loop nodes and check ready
 			readyCount := 0
 			for _, node := range nodes {
-				if node["Status"].(string) == "ready" {
+				// get the node status
+				nodeStatus := node["Status"].(string)
+
+				// get the driver status
+				drivers, ok := node["Drivers"].(map[string]interface{})
+				if !ok {
+					continue
+				}
+
+				dockerDriver, ok := drivers["docker"].(map[string]interface{})
+				if !ok {
+					continue
+				}
+
+				dockerHealty, ok := dockerDriver["Healthy"].(bool)
+				if !ok {
+					continue
+				}
+
+				if nodeStatus == "ready" && dockerHealty {
 					readyCount++
 				}
 			}

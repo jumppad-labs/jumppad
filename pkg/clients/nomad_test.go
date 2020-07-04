@@ -312,6 +312,36 @@ func TestNomadHealthWithNotReadyNodeRetries(t *testing.T) {
 	mh.AssertNumberOfCalls(t, "Do", 2)
 }
 
+func TestNomadHealthWithNotReadyDockerRetries(t *testing.T) {
+	fp, tmpDir, mh := setupNomadTests(t)
+	defer os.RemoveAll(tmpDir)
+
+	removeOn(&mh.Mock, "Do")
+
+	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
+		&http.Response{
+			StatusCode: http.StatusOK,
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte(unhealthyDockerResponse))),
+		},
+		nil,
+	).Once()
+
+	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
+		&http.Response{
+			StatusCode: http.StatusOK,
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte(aliveResponse))),
+		},
+		nil,
+	).Once()
+
+	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
+	c.SetConfig(fp)
+
+	err := c.HealthCheckAPI(10 * time.Millisecond)
+	assert.NoError(t, err)
+	mh.AssertNumberOfCalls(t, "Do", 2)
+}
+
 func TestNomadHealthErrorsOnClientError(t *testing.T) {
 	fp, tmpDir, mh := setupNomadTests(t)
 	defer os.RemoveAll(tmpDir)
@@ -339,15 +369,64 @@ func getNomadConfig(l string) string {
 
 var aliveResponse = `
 [
-	{"Status": "ready"},
-	{"Status": "ready"}
+	{
+		"Status": "ready",
+		"Drivers": {
+			"docker": {
+        "Healthy": true
+      }
+		}
+	},
+	{
+		"Status": "ready",
+		"Drivers": {
+			"docker": {
+        "Healthy": true
+      }
+		}
+	}
 ]
 `
 
 var pendingResponse = `
 [
-	{"Status": "pending"},
-	{"Status": "ready"}
+	{
+		"Status": "pending",
+		"Drivers": {
+			"docker": {
+        "Healthy": true
+      }
+		}
+	},
+	{
+		"Status": "ready",
+		"Drivers": {
+			"docker": {
+        "Healthy": true
+      }
+		}
+	}
+]
+`
+
+var unhealthyDockerResponse = `
+[
+	{
+		"Status": "ready",
+		"Drivers": {
+			"docker": {
+        "Healthy": false
+      }
+		}
+	},
+	{
+		"Status": "ready",
+		"Drivers": {
+			"docker": {
+        "Healthy": true
+      }
+		}
+	}
 ]
 `
 
