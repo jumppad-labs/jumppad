@@ -30,13 +30,18 @@ job "example_2" {
     }
     
     ephemeral_disk {
-      size = 200
+      size = 30
     }
 
     task "consul" {
       # The "driver" parameter specifies the task driver that should be used to
       # run the task.
       driver = "docker"
+
+      logs {
+        max_files     = 2
+        max_file_size = 10
+      }
 
       config {
         image = "consul:1.7.1"

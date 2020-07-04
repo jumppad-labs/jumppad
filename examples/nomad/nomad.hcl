@@ -27,7 +27,7 @@ nomad_cluster "dev" {
   }
 }
 
-nomad_job "redis" {
+nomad_job "consul" {
   cluster = "nomad_cluster.dev"
 
   paths = ["./app_config/example2.nomad"]
