@@ -49,7 +49,7 @@ func TestNomadCreateReturnsErrorWhenFileNotExist(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
-	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/example.nomad"})
+	err := c.Create([]string{"../../examples/nomad/example.nomad"})
 	assert.Error(t, err)
 }
 
@@ -60,7 +60,7 @@ func TestNomadCreateValidatesConfig(t *testing.T) {
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"})
+	err := c.Create([]string{"../../examples/nomad/app_config/example.nomad"})
 	assert.NoError(t, err)
 
 	mh.AssertCalled(t, "Do", mock.Anything)
@@ -76,7 +76,7 @@ func TestNomadCreateValidateErrorReturnsError(t *testing.T) {
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"})
+	err := c.Create([]string{"../../examples/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
 }
 
@@ -90,7 +90,7 @@ func TestNomadCreateValidateNot200ReturnsError(t *testing.T) {
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"})
+	err := c.Create([]string{"../../examples/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
 }
 
@@ -101,7 +101,7 @@ func TestNomadCreateSubmitsJob(t *testing.T) {
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"})
+	err := c.Create([]string{"../../examples/nomad/app_config/example.nomad"})
 	assert.NoError(t, err)
 
 	mh.AssertNumberOfCalls(t, "Do", 2)
@@ -125,7 +125,7 @@ func TestNomadCreateSubmitErrorReturnsError(t *testing.T) {
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"})
+	err := c.Create([]string{"../../examples/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
 }
 
@@ -153,7 +153,7 @@ func TestNomadCreateSubmitNot200ReturnsError(t *testing.T) {
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	err := c.Create([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"})
+	err := c.Create([]string{"../../examples/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
 }
 
@@ -164,7 +164,7 @@ func TestNomadStopValidatesConfig(t *testing.T) {
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	err := c.Stop([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"})
+	err := c.Stop([]string{"../../examples/nomad/app_config/example.nomad"})
 	assert.NoError(t, err)
 
 	mh.AssertCalled(t, "Do", mock.Anything)
@@ -180,7 +180,7 @@ func TestNomadStopValidateErrorReturnsError(t *testing.T) {
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	err := c.Stop([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"})
+	err := c.Stop([]string{"../../examples/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
 }
 
@@ -191,7 +191,7 @@ func TestNomadStopStopsJob(t *testing.T) {
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	err := c.Stop([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"})
+	err := c.Stop([]string{"../../examples/nomad/app_config/example.nomad"})
 	assert.NoError(t, err)
 
 	mh.AssertNumberOfCalls(t, "Do", 2)
@@ -214,7 +214,7 @@ func TestNomadStopErrorReturnsError(t *testing.T) {
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	err := c.Stop([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"})
+	err := c.Stop([]string{"../../examples/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
 }
 
@@ -236,7 +236,7 @@ func TestNomadStopNoStatus200ReturnsError(t *testing.T) {
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	err := c.Stop([]string{"../../functional_tests/test_fixtures/nomad/app_config/example.nomad"})
+	err := c.Stop([]string{"../../examples/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
 }
 

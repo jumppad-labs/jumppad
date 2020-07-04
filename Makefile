@@ -2,22 +2,21 @@ git_commit = $(shell git log -1 --pretty=format:"%H")
 
 test_unit:
 	go clean --cache
-	go test -v -race $(shell go list ./... | grep -v /functional_tests)
-	go test -v ./pkg/shipyard
+	go test -v -race ./...
 
-test_functional: install_local
-	cd ./functional_tests && go test -timeout 20m -v -run.test true ./...
+test_functional:
+	go run main.go test ./examples/container
+	go run main.go test ./examples/docs
+	go run main.go test ./examples/modules
+	go run main.go test ./examples/nomad
+	go run main.go test ./examples/single_k3s_cluster
 
 test_docker:
 	docker build -t shipyard-run/tests -f Dockerfile.test .
-	docker run --rm shipyard-run/tests bash -c 'go test -v -race -coverprofile=coverage.txt -covermode=atomic $(go list ./... | grep -v /functional_tests)'
+	docker run --rm shipyard-run/tests bash -c 'go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...'
 	docker run --rm shipyard-run/tests bash -c 'go test -v ./pkg/shipyard'
 
 test: test_unit test_functional
-
-# Run tests continually with  a watcher
-autotest:
-	filewatcher --idle-timeout 24h -x **/functional_tests gotestsum --format standard-verbose
 
 build: build-darwin build-linux build-windows
 

@@ -99,14 +99,14 @@ func getTestFiles(tests string) string {
 		panic(err)
 	}
 	path := path.Dir(e)
-	return filepath.Join(path, "/functional_tests/test_fixtures", tests)
+	return filepath.Join(path, "/examples", tests)
 }
 
 func TestApplyCallsProviderInCorrectOrder(t *testing.T) {
 	e, _, mp, cleanup := setupTests(nil)
 	defer cleanup()
 
-	_, err := e.Apply("../../functional_tests/test_fixtures/single_k3s_cluster")
+	_, err := e.Apply("../../examples/single_k3s_cluster")
 	assert.NoError(t, err)
 
 	// should have called in order
@@ -124,7 +124,7 @@ func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
 	e, _, mp, cleanup := setupTests(nil)
 	defer cleanup()
 
-	_, err := e.Apply("../../functional_tests/test_fixtures/single_k3s_cluster")
+	_, err := e.Apply("../../examples/single_k3s_cluster")
 	assert.NoError(t, err)
 
 	// should have call create for each provider
@@ -160,7 +160,7 @@ func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 	e, _, mp, cleanup := setupTests(map[string]error{"cloud": fmt.Errorf("boom")})
 	defer cleanup()
 
-	_, err := e.Apply("../../functional_tests/test_fixtures/single_k3s_cluster")
+	_, err := e.Apply("../../examples/single_k3s_cluster")
 	assert.Error(t, err)
 
 	// should have call create for each provider
@@ -171,7 +171,7 @@ func TestApplyCallsProviderCreateErrorStopsExecution(t *testing.T) {
 	e, _, mp, cleanup := setupTests(map[string]error{"cloud": fmt.Errorf("boom")})
 	defer cleanup()
 
-	_, err := e.Apply("../../functional_tests/test_fixtures/single_k3s_cluster")
+	_, err := e.Apply("../../examples/single_k3s_cluster")
 	assert.Error(t, err)
 
 	// should have call create for each provider
@@ -194,7 +194,7 @@ func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
 	e, _, mp, cleanup := setupTests(nil)
 	defer cleanup()
 
-	err := e.Destroy("../../functional_tests/test_fixtures/single_k3s_cluster", true)
+	err := e.Destroy("../../examples/single_k3s_cluster", true)
 	assert.NoError(t, err)
 
 	// should have call create for each provider
@@ -205,7 +205,7 @@ func TestDestroyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 	e, _, mp, cleanup := setupTests(map[string]error{"k3s": fmt.Errorf("boom")})
 	defer cleanup()
 
-	err := e.Destroy("../../functional_tests/test_fixtures/single_k3s_cluster", true)
+	err := e.Destroy("../../examples/single_k3s_cluster", true)
 	assert.Error(t, err)
 
 	// should have call create for each provider
@@ -216,7 +216,7 @@ func TestDestroyFailSetsStatus(t *testing.T) {
 	e, _, mp, cleanup := setupTests(map[string]error{"cloud": fmt.Errorf("boom")})
 	defer cleanup()
 
-	err := e.Destroy("../../functional_tests/test_fixtures/single_k3s_cluster", true)
+	err := e.Destroy("../../examples/single_k3s_cluster", true)
 	assert.Error(t, err)
 
 	// should have call create for each provider
@@ -228,7 +228,7 @@ func TestDestroyCallsProviderDestroyInCorrectOrder(t *testing.T) {
 	e, _, mp, cleanup := setupTests(nil)
 	defer cleanup()
 
-	err := e.Destroy("../../functional_tests/test_fixtures/single_k3s_cluster", true)
+	err := e.Destroy("../../examples/single_k3s_cluster", true)
 	assert.NoError(t, err)
 
 	// due to paralel nature of the DAG, these two elements can appear in any order

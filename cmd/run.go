@@ -56,18 +56,18 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 		// Check the system to see if Docker is running and everything is installed
 		s, err := bc.Preflight()
 		if err != nil {
-			fmt.Println("")
-			fmt.Println("###### SYSTEM DIAGNOSTICS ######")
-			fmt.Println(s)
+			cmd.Println("")
+			cmd.Println("###### SYSTEM DIAGNOSTICS ######")
+			cmd.Println(s)
 			return err
 		}
 
 		// check the shipyard version
 		text, ok := bc.CheckVersion(version)
 		if !ok {
-			fmt.Println("")
-			fmt.Println(text)
-			fmt.Println("")
+			cmd.Println("")
+			cmd.Println(text)
+			cmd.Println("")
 		}
 
 		// create the shipyard home

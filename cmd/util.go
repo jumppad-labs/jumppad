@@ -1,7 +1,19 @@
 package cmd
 
-import "github.com/hashicorp/go-hclog"
+import (
+	"os"
+
+	"github.com/hashicorp/go-hclog"
+)
 
 func createLogger() hclog.Logger {
-	return hclog.New(&hclog.LoggerOptions{Level: hclog.Debug, Color: hclog.AutoColor})
+
+	opts := &hclog.LoggerOptions{Color: hclog.AutoColor}
+
+	// set the log level
+	if lev := os.Getenv("LOG_LEVEL"); lev != "" {
+		opts.Level = hclog.LevelFromString(lev)
+	}
+
+	return hclog.New(opts)
 }

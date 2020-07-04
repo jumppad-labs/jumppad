@@ -12,12 +12,14 @@ type Container struct {
 
 	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
-	Image       Image    `hcl:"image,block" json:"image"`                        // image to use for the container
-	Entrypoint  []string `hcl:"entrypoint,optional" json:"entrypoint,omitempty"` // entrypoint to use when starting the container
-	Command     []string `hcl:"command,optional" json:"command,omitempty"`       // command to use when starting the container
-	Environment []KV     `hcl:"env,block" json:"environment,omitempty"`          // environment variables to set when starting the container
-	Volumes     []Volume `hcl:"volume,block" json:"volumes,omitempty"`           // volumes to attach to the container
-	Ports       []Port   `hcl:"port,block" json:"ports,omitempty"`               // ports to expose
+	Image       Image             `hcl:"image,block" json:"image"`                        // image to use for the container
+	Entrypoint  []string          `hcl:"entrypoint,optional" json:"entrypoint,omitempty"` // entrypoint to use when starting the container
+	Command     []string          `hcl:"command,optional" json:"command,omitempty"`       // command to use when starting the container
+	Environment []KV              `hcl:"env,block" json:"environment,omitempty"`          // environment variables to set when starting the container, // Depricated field
+	EnvVar      map[string]string `hcl:"env_var,optional" json:"env_var,omitempty"`       // environment variables to set when starting the container
+	Volumes     []Volume          `hcl:"volume,block" json:"volumes,omitempty"`           // volumes to attach to the container
+	Ports       []Port            `hcl:"port,block" json:"ports,omitempty"`               // ports to expose
+	PortRanges  []PortRange       `hcl:"port_range,block" json:"port_ranges,omitempty"`   // range of ports to expose
 
 	Privileged bool `hcl:"privileged,optional" json:"privileged,omitempty"` // run the container in privileged mode?
 

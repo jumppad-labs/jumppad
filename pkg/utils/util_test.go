@@ -150,11 +150,11 @@ func TestIsHCLFile(t *testing.T) {
 			false,
 		}, {
 			"True when .hcl file",
-			"../../functional_tests/test_fixtures/single_k3s_cluster/k8s.hcl",
+			"../../examples/single_k3s_cluster/k8s.hcl",
 			true,
 		}, {
 			"False when other file",
-			"../../functional_tests/test_fixtures/single_k3s_cluster/helm/consul-values.yaml",
+			"../../examples/single_k3s_cluster/helm/consul-values.yaml",
 			false,
 		},
 	}

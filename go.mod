@@ -6,7 +6,7 @@ require (
 	github.com/DATA-DOG/godog v0.7.13
 	github.com/MichaelMure/go-term-markdown v0.1.3
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
-	github.com/alecthomas/assert v0.0.0-20170929043011-405dbfeb8e38
+	github.com/cucumber/godog v0.10.0
 	github.com/docker/docker v1.4.2-0.20200203170920-46ec8731fbce
 	github.com/docker/go v1.5.1-1 // indirect
 	github.com/docker/go-connections v0.4.0
@@ -22,11 +22,10 @@ require (
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.1.2
-	github.com/opencontainers/runtime-tools v0.0.0-20181011054405-1d69bd0f9c39
 	github.com/prometheus/common v0.7.0 // indirect
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.5.0
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.6.1
 	github.com/theupdateframework/notary v0.6.1 // indirect
 	github.com/zclconf/go-cty v1.2.1
 	golang.org/x/sys v0.0.0-20200212091648-12a6c2dcc1e4 // indirect
@@ -36,7 +35,6 @@ require (
 	k8s.io/api v0.17.2
 	k8s.io/apimachinery v0.17.2
 	k8s.io/client-go v0.17.2
-	k8s.io/utils v0.0.0-20191114184206-e782cd3c129f
 	rsc.io/letsencrypt v0.0.3 // indirect
 )
 
