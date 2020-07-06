@@ -1,4 +1,4 @@
-Feature: Docmentation
+Feature: Documentation
   In order to test the documentation feature
   I should create a blueprint
   and the containers should be running
