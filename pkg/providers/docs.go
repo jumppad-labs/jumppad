@@ -34,6 +34,11 @@ func NewDocs(c *config.Docs, cc clients.ContainerTasks, l hclog.Logger) *Docs {
 func (i *Docs) Create() error {
 	i.log.Info("Creating Documentation", "ref", i.config.Name)
 
+	// set the default live reload port
+	if i.config.LiveReloadPort == 0 {
+		i.config.LiveReloadPort = 37950
+	}
+
 	// create the documentation container
 	err := i.createDocsContainer()
 	if err != nil {
@@ -113,7 +118,7 @@ func (i *Docs) createDocsContainer() error {
 		config.Port{
 			Local:  "37950",
 			Remote: "37950",
-			Host:   "37950",
+			Host:   fmt.Sprintf("%d", i.config.LiveReloadPort),
 		},
 	}
 

@@ -96,6 +96,26 @@ func TestDocsSetsDocsPorts(t *testing.T) {
 	assert.Equal(t, "37950", params.Ports[1].Host)
 }
 
+func TestDocsSetsDocsPortsWithCustomReload(t *testing.T) {
+	d, md := setupDocs()
+	d.config.LiveReloadPort = 30000
+
+	err := d.Create()
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+
+	// main port
+	assert.Equal(t, "80", params.Ports[0].Local)
+	assert.Equal(t, "80", params.Ports[0].Remote)
+	assert.Equal(t, fmt.Sprintf("%d", d.config.Port), params.Ports[0].Host)
+
+	// livereload
+	assert.Equal(t, "37950", params.Ports[1].Local)
+	assert.Equal(t, "37950", params.Ports[1].Remote)
+	assert.Equal(t, "30000", params.Ports[1].Host)
+}
+
 func TestDocsPullsTerminalContainer(t *testing.T) {
 	d, md := setupDocs()
 
