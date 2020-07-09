@@ -122,6 +122,11 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 			}
 
 			// check for browser windows in the applied resources
+			checkDuration, err := time.ParseDuration(e.Blueprint().HealthCheckTimeout)
+			if err != nil {
+				checkDuration = 30 * time.Second
+			}
+
 			for _, r := range res {
 				switch r.Info().Type {
 				case config.TypeContainer:
@@ -174,7 +179,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 				wg.Add(1)
 				go func(uri string) {
 					// health check the URL
-					err := hc.HealthCheckHTTP(uri, 30*time.Second)
+					err := hc.HealthCheckHTTP(uri, checkDuration)
 					if err == nil {
 						be := bc.OpenBrowser(uri)
 						if be != nil {

@@ -132,6 +132,9 @@ func parseYardMarkdown(file string, c *Config) error {
 	}
 
 	bp := &Blueprint{}
+	bp.HealthCheckTimeout = "30s"
+
+	// set the default health check
 
 	if a, ok := fr["author"].(string); ok {
 		bp.Author = a
@@ -147,6 +150,10 @@ func parseYardMarkdown(file string, c *Config) error {
 
 	if a, ok := fr["browser_windows"].(string); ok {
 		bp.BrowserWindows = strings.Split(a, ",")
+	}
+
+	if a, ok := fr["health_check_timeout"].(string); ok {
+		bp.HealthCheckTimeout = a
 	}
 
 	if envs, ok := fr["env"].([]interface{}); ok {

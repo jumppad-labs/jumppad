@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 	clientmocks "github.com/shipyard-run/shipyard/pkg/clients/mocks"
@@ -16,7 +17,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func setupRun(t *testing.T) (*cobra.Command, *mocks.Engine, *clientmocks.Getter, *clientmocks.MockHTTP, *clientmocks.System) {
+func setupRun(t *testing.T, timeout string) (*cobra.Command, *mocks.Engine, *clientmocks.Getter, *clientmocks.MockHTTP, *clientmocks.System) {
 
 	mockHTTP := &clientmocks.MockHTTP{}
 	mockHTTP.On("HealthCheckHTTP", mock.Anything, mock.Anything).Return(nil)
@@ -43,13 +44,20 @@ func setupRun(t *testing.T) (*cobra.Command, *mocks.Engine, *clientmocks.Getter,
 	mockEngine := &mocks.Engine{}
 	mockEngine.On("Apply", mock.Anything).Return(nil, nil)
 	mockEngine.On("GetClients", mock.Anything).Return(clients)
-	mockEngine.On("Blueprint").Return(&config.Blueprint{BrowserWindows: []string{"http://localhost", "http://localhost2"}})
+
+	bp := config.Blueprint{BrowserWindows: []string{"http://localhost", "http://localhost2"}}
+
+	if timeout != "" {
+		bp.HealthCheckTimeout = timeout
+	}
+
+	mockEngine.On("Blueprint").Return(&bp)
 
 	return newRunCmd(mockEngine, mockGetter, mockHTTP, mockBrowser, hclog.Default()), mockEngine, mockGetter, mockHTTP, mockBrowser
 }
 
 func TestRunSetsForceOnGetter(t *testing.T) {
-	rf, _, mg, _, _ := setupRun(t)
+	rf, _, mg, _, _ := setupRun(t, "")
 	rf.Flags().Set("force-update", "true")
 
 	err := rf.Execute()
@@ -59,7 +67,7 @@ func TestRunSetsForceOnGetter(t *testing.T) {
 }
 
 func TestRunPreflightsSystem(t *testing.T) {
-	rf, _, _, _, mb := setupRun(t)
+	rf, _, _, _, mb := setupRun(t, "")
 	rf.SetArgs([]string{"/tmp"})
 
 	err := rf.Execute()
@@ -69,7 +77,7 @@ func TestRunPreflightsSystem(t *testing.T) {
 }
 
 func TestRunSetsDestinationFromArgsWhenPresent(t *testing.T) {
-	rf, me, _, _, _ := setupRun(t)
+	rf, me, _, _, _ := setupRun(t, "")
 	rf.SetArgs([]string{"/tmp"})
 
 	err := rf.Execute()
@@ -79,7 +87,7 @@ func TestRunSetsDestinationFromArgsWhenPresent(t *testing.T) {
 }
 
 func TestRunSetsDestinationToDownloadedBlueprintFromArgsWhenRemote(t *testing.T) {
-	rf, me, _, _, _ := setupRun(t)
+	rf, me, _, _, _ := setupRun(t, "")
 	rf.SetArgs([]string{"github.com/shipyard-run/blueprints//vault-k8s"})
 
 	err := rf.Execute()
@@ -90,7 +98,7 @@ func TestRunSetsDestinationToDownloadedBlueprintFromArgsWhenRemote(t *testing.T)
 
 func TestRunFetchesBlueprint(t *testing.T) {
 	bpf := "github.com/shipyard-run/blueprints//vault-k8s"
-	rf, _, mg, _, _ := setupRun(t)
+	rf, _, mg, _, _ := setupRun(t, "")
 	rf.SetArgs([]string{bpf})
 
 	err := rf.Execute()
@@ -101,7 +109,7 @@ func TestRunFetchesBlueprint(t *testing.T) {
 
 func TestRunFetchesBlueprintErrorReturnsError(t *testing.T) {
 	bpf := "github.com/shipyard-run/blueprints//vault-k8s"
-	rf, _, mb, _, _ := setupRun(t)
+	rf, _, mb, _, _ := setupRun(t, "")
 	rf.SetArgs([]string{bpf})
 
 	removeOn(&mb.Mock, "Get")
@@ -112,7 +120,7 @@ func TestRunFetchesBlueprintErrorReturnsError(t *testing.T) {
 }
 
 func TestRunOpensBrowserWindow(t *testing.T) {
-	rf, _, _, mh, mb := setupRun(t)
+	rf, _, _, mh, mb := setupRun(t, "")
 	rf.SetArgs([]string{"/tmp"})
 
 	err := rf.Execute()
@@ -120,10 +128,41 @@ func TestRunOpensBrowserWindow(t *testing.T) {
 
 	mh.AssertNumberOfCalls(t, "HealthCheckHTTP", 2)
 	mb.AssertNumberOfCalls(t, "OpenBrowser", 2)
+
+	mh.AssertCalled(t, "HealthCheckHTTP", "http://localhost", 30*time.Second)
+	mh.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", 30*time.Second)
+}
+
+func TestRunOpensBrowserWindowWithCustomTimeout(t *testing.T) {
+	rf, _, _, mh, mb := setupRun(t, "60s")
+	rf.SetArgs([]string{"/tmp"})
+
+	err := rf.Execute()
+	assert.NoError(t, err)
+
+	mh.AssertNumberOfCalls(t, "HealthCheckHTTP", 2)
+	mb.AssertNumberOfCalls(t, "OpenBrowser", 2)
+
+	mh.AssertCalled(t, "HealthCheckHTTP", "http://localhost", 60*time.Second)
+	mh.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", 60*time.Second)
+}
+
+func TestRunOpensBrowserWindowWithInvalidTimeout(t *testing.T) {
+	rf, _, _, mh, mb := setupRun(t, "6e")
+	rf.SetArgs([]string{"/tmp"})
+
+	err := rf.Execute()
+	assert.NoError(t, err)
+
+	mh.AssertNumberOfCalls(t, "HealthCheckHTTP", 2)
+	mb.AssertNumberOfCalls(t, "OpenBrowser", 2)
+
+	mh.AssertCalled(t, "HealthCheckHTTP", "http://localhost", 30*time.Second)
+	mh.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", 30*time.Second)
 }
 
 func TestRunOpensBrowserWindowForResources(t *testing.T) {
-	rf, me, _, mh, mb := setupRun(t)
+	rf, me, _, mh, mb := setupRun(t, "")
 	rf.SetArgs([]string{"/tmp"})
 
 	removeOn(&me.Mock, "Apply")
@@ -159,7 +198,7 @@ func TestRunOpensBrowserWindowForResources(t *testing.T) {
 }
 
 func TestRunDoesNotOpensBrowserWindowWhenCheckError(t *testing.T) {
-	rf, _, _, mh, mb := setupRun(t)
+	rf, _, _, mh, mb := setupRun(t, "")
 	rf.SetArgs([]string{"/tmp"})
 
 	removeOn(&mh.Mock, "HealthCheckHTTP")

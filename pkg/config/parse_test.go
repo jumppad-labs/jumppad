@@ -35,6 +35,7 @@ func TestRunParsesBlueprintInMarkdownFormat(t *testing.T) {
 	assert.Equal(t, "SOMETHING", c.Blueprint.Environment[0].Key)
 	assert.Equal(t, "else", c.Blueprint.Environment[0].Value)
 	assert.Contains(t, c.Blueprint.Intro, "# Single Container")
+	assert.Contains(t, c.Blueprint.HealthCheckTimeout, "30s")
 }
 
 func TestRunParsesBlueprintInHCLFormat(t *testing.T) {
