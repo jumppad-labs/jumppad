@@ -118,9 +118,10 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 
 		// create the mount
 		mounts = append(mounts, mount.Mount{
-			Type:   t,
-			Source: vc.Source,
-			Target: vc.Destination,
+			Type:     t,
+			Source:   vc.Source,
+			Target:   vc.Destination,
+			ReadOnly: vc.ReadOnly,
 		})
 	}
 
@@ -241,6 +242,16 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 	}
 
 	return cont.ID, nil
+}
+
+// ContainerInfo returns the Docker container info
+func (d *DockerTasks) ContainerInfo(id string) (interface{}, error) {
+	cj, err := d.c.ContainerInspect(context.Background(), id)
+	if err != nil {
+		return nil, xerrors.Errorf("Unable to read information about Docker container %s: %w", id, err)
+	}
+
+	return cj, nil
 }
 
 // PullImage pulls a Docker image from a remote repo
@@ -756,6 +767,15 @@ func (d *DockerTasks) resizeTTY(id string, out *streams.Out) error {
 		return err
 	}
 
+	return nil
+}
+
+func (d *DockerTasks) AttachNetwork(network, containerid string) error {
+	return fmt.Errorf("Not implemented")
+}
+
+// ListNetworks lists the networks a container is attached to
+func (d *DockerTasks) ListNetworks(id string) []config.NetworkAttachment {
 	return nil
 }
 

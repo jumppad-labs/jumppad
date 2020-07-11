@@ -50,9 +50,10 @@ type Resources struct {
 
 // Volume defines a folder, Docker volume, or temp folder to mount to the Container
 type Volume struct {
-	Source      string `hcl:"source" json:"source"`                // source path on the local machine for the volume
-	Destination string `hcl:"destination" json:"destination"`      // path to mount the volume inside the container
-	Type        string `hcl:"type,optional" json:"type,omitempty"` // type of the volume to mount [bind, volume, tmpfs]
+	Source      string `hcl:"source" json:"source"`                          // source path on the local machine for the volume
+	Destination string `hcl:"destination" json:"destination"`                // path to mount the volume inside the container
+	Type        string `hcl:"type,optional" json:"type,omitempty"`           // type of the volume to mount [bind, volume, tmpfs]
+	ReadOnly    bool   `hcl:"read_only,optional" json:"read_only,omitempty"` // specify that the volume is mounted read only
 }
 
 // KV is a key/value type

@@ -20,6 +20,9 @@ type ContainerTasks interface {
 	// if successful CreateContainer returns the ID of the created container and a nil error
 	// if not successful CreateContainer returns a blank string for the id and an error message
 	CreateContainer(*config.Container) (id string, err error)
+	// Container Info returns an annonymous interface corresponding to the container info
+	// returns error when unable to read info such as when the container does not exist.
+	ContainerInfo(id string) (interface{}, error)
 	// RemoveContainer stops and removes a running container
 	RemoveContainer(id string) error
 	// CreateVolume creates a new volume with the given name.
@@ -52,8 +55,12 @@ type ContainerTasks interface {
 	// command is a slice of strings to execute
 	// writer [optional] will be used to write any output from the command execution.
 	ExecuteCommand(id string, command []string, env []string, workingDirectory string, writer io.Writer) error
-	// NetworkDisconnect disconnects a container from the network
+	// AttachNetwork disconnects a container from the network
+	AttachNetwork(network, containerid string) error
+	// DetatchNetwork disconnects a container from the network
 	DetachNetwork(network, containerid string) error
+	// ListNetworks lists the networks a container is attached to
+	ListNetworks(id string) []config.NetworkAttachment
 
 	// CreateShell in the running container and attach
 	CreateShell(id string, command []string, stdin io.ReadCloser, stdout io.Writer, stderr io.Writer) error

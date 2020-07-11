@@ -23,7 +23,7 @@ func setupDocs() (*Docs, *mocks.MockContainerTasks) {
 
 	md.On("PullImage", mock.Anything, false).Return(nil)
 	md.On("CreateContainer", mock.Anything).Return("", nil)
-	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, nil)
 	md.On("RemoveContainer", mock.Anything).Return(nil)
 
 	d := NewDocs(cc, md, hclog.NewNullLogger())
@@ -126,6 +126,37 @@ func TestDocsPullsTerminalContainer(t *testing.T) {
 	assert.Equal(t, params.Name, terminalImageName+":"+terminalVersion)
 }
 
+func TestCreatesTerminalContainer(t *testing.T) {
+	d, md := setupDocs()
+
+	err := d.Create()
+	assert.NoError(t, err)
+
+	md.AssertNumberOfCalls(t, "CreateContainer", 2)
+}
+
+func TestDoesNotCreateTerminalContainerWhenRunning(t *testing.T) {
+	d, md := setupDocs()
+	removeOn(&md.Mock, "FindContainerIDs")
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
+
+	err := d.Create()
+	assert.NoError(t, err)
+
+	md.AssertNumberOfCalls(t, "CreateContainer", 1)
+}
+
+func TestModifiesTerminalContainerToAppendNetworks(t *testing.T) {
+	d, md := setupDocs()
+	removeOn(&md.Mock, "FindContainerIDs")
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
+
+	err := d.Create()
+	assert.NoError(t, err)
+
+	md.AssertNumberOfCalls(t, "CreateContainer", 1)
+}
+
 func TestDocsMountsDockerSock(t *testing.T) {
 	d, md := setupDocs()
 
@@ -155,6 +186,8 @@ func TestDocsSetsTerminalPorts(t *testing.T) {
 
 func TestDestroyRemovesContainers(t *testing.T) {
 	d, md := setupDocs()
+	removeOn(&md.Mock, "FindContainerIDs")
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
 
 	err := d.Create()
 	assert.NoError(t, err)
@@ -162,6 +195,6 @@ func TestDestroyRemovesContainers(t *testing.T) {
 	err = d.Destroy()
 	assert.NoError(t, err)
 
-	md.AssertNumberOfCalls(t, "FindContainerIDs", 2)
+	md.AssertNumberOfCalls(t, "FindContainerIDs", 3)
 	md.AssertNumberOfCalls(t, "RemoveContainer", 2)
 }
