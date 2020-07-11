@@ -5,10 +5,19 @@ test_unit:
 	go test -v -race ./...
 
 test_functional:
+	go run main.go purge
 	go run main.go test ./examples/container
+
+	go run main.go purge
 	go run main.go test ./examples/docs
+
+	go run main.go purge
 	go run main.go test ./examples/modules
+	
+	go run main.go purge
 	go run main.go test ./examples/nomad
+
+	go run main.go purge
 	go run main.go test ./examples/single_k3s_cluster
 
 test_docker:
