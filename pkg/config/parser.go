@@ -156,6 +156,10 @@ func parseYardMarkdown(file string, c *Config) error {
 		bp.HealthCheckTimeout = a
 	}
 
+	if a, ok := fr["shipyard_version"].(string); ok {
+		bp.ShipyardVersion = a
+	}
+
 	if envs, ok := fr["env"].([]interface{}); ok {
 		bp.Environment = []KV{}
 		for _, e := range envs {

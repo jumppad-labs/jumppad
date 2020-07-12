@@ -8,7 +8,7 @@ Scenario: Single Container from Local Blueprint
     | key            | value                 |
     | CONSUL_VERSION | 1.8.0                 |
     | ENVOY_VERSION  | 1.14.3                |
-  And I have a running blueprint
+  And I have a running blueprint using version "v0.0.37"
   Then the following resources should be running
     | name                      | type      |
     | onprem                    | network   |

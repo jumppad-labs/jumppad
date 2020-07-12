@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"os"
+
 	gvm "github.com/nicholasjackson/version-manager"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -12,6 +15,8 @@ func newVersionListCmd(vm gvm.Versions) *cobra.Command {
 		Long:  "List the available Shipyard versions",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			os.MkdirAll(utils.GetReleasesFolder(), os.FileMode(0755))
+
 			cmd.Println("Current Version:", version)
 			cmd.Println("")
 

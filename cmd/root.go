@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"path"
 
 	"github.com/hashicorp/go-hclog"
 	gvm "github.com/nicholasjackson/version-manager"
@@ -42,7 +41,7 @@ func init() {
 	o := gvm.Options{
 		Organization: "shipyard-run",
 		Repo:         "shipyard",
-		ReleasesPath: path.Join(utils.ShipyardHome(), "releases"),
+		ReleasesPath: utils.GetReleasesFolder(),
 	}
 
 	o.AssetNameFunc = func(version, goos, goarch string) string {

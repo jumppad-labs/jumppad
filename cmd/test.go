@@ -132,6 +132,9 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 	})
 
 	ctx.Step(`^I have a running blueprint$`, cr.iRunApply)
+	ctx.Step(`^I have a running blueprint using version "([^"]*)"$`, cr.iRunApplyWithVersion)
+	ctx.Step(`^I have a running blueprint at path "([^"]*)"$`, cr.iRunApplyAtPath)
+	ctx.Step(`^I have a running blueprint at path "([^"]*)" using version "([^"]*)"$`, cr.iRunApplyAtPathWithVersion)
 	ctx.Step(`^there should be a "([^"]*)" running called "([^"]*)"$`, cr.thereShouldBeAResourceRunningCalled)
 	ctx.Step(`^the following resources should be running$`, cr.theFollowingResourcesShouldBeRunning)
 	ctx.Step(`^the following environment variables are set$`, cr.theFollowingEnvironmentVariablesAreSet)
@@ -146,8 +149,28 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 var writer = bytes.NewBufferString("")
 
 func (cr *CucumberRunner) iRunApply() error {
-	// start the blueprint
-	noOpen := true
+	return cr.iRunApplyWithVersion("")
+}
+
+func (cr *CucumberRunner) iRunApplyWithVersion(version string) error {
+	return cr.iRunApplyAtPathWithVersion("", version)
+}
+
+func (cr *CucumberRunner) iRunApplyAtPath(path string) error {
+	return cr.iRunApplyAtPathWithVersion(path, "")
+}
+
+func (cr *CucumberRunner) iRunApplyAtPathWithVersion(filepath, version string) error {
+	writer = bytes.NewBufferString("")
+	args := []string{}
+
+	// if filepath is not absolute then it will be relative to args
+	if path.IsAbs(filepath) {
+		args = []string{filepath}
+	} else {
+		// is relative to args
+		args = []string{path.Join(cr.args[0], filepath)}
+	}
 
 	opts := &hclog.LoggerOptions{}
 
@@ -157,81 +180,82 @@ func (cr *CucumberRunner) iRunApply() error {
 		opts.Level = hclog.LevelFromString(lev)
 	}
 
-	// if the log level is debug print it to the output
+	// if the log level is not debug write it to a buffer
 	if os.Getenv("LOG_LEVEL") != "debug" {
-		// capture output to a string
 		opts.Output = writer
-
-		cr.l = hclog.New(opts)
-		engine, err := shipyard.New(cr.l)
-		if err != nil {
-			panic(err)
-		}
-
-		cr.e = engine
-
-		o := gvm.Options{
-			Organization: "shipyard-run",
-			Repo:         "shipyard",
-			ReleasesPath: path.Join(utils.ShipyardHome(), "releases"),
-		}
-
-		o.AssetNameFunc = func(version, goos, goarch string) string {
-			// No idea why we set the release architecture for the binary like this
-			if goarch == "amd64" {
-				goarch = "x86_64"
-			}
-
-			// zip is used on windows as tar is not available by default
-			switch goos {
-			case "linux":
-				return fmt.Sprintf("shipyard_%s_%s_%s.tar.gz", version, goos, goarch)
-			case "darwin":
-				return fmt.Sprintf("shipyard_%s_%s_%s.tar.gz", version, goos, goarch)
-			case "windows":
-				return fmt.Sprintf("shipyard_%s_%s_%s.zip", version, goos, goarch)
-			}
-
-			return ""
-		}
-
-		o.ExeNameFunc = func(version, goos, goarch string) string {
-			if goos == "windows" {
-				return "shipyard.exe"
-			}
-
-			return "shipyard"
-		}
-
-		vm := gvm.New(o)
-
-		var approve = true
-		var version = ""
-
-		// re-use the run command
-		rc := newRunCmdFunc(
-			engine,
-			engine.GetClients().Getter,
-			engine.GetClients().HTTP,
-			engine.GetClients().Browser,
-			vm,
-			&noOpen,
-			cr.force,
-			&version,
-			&approve,
-			cr.l,
-		)
-
-		cr.cmd.SetOut(writer)
-
-		err = rc(cr.cmd, cr.args)
-		if err != nil {
-			fmt.Println(writer.String())
-		}
-		return err
 	}
 
-	return nil
+	cr.l = hclog.New(opts)
+	engine, err := shipyard.New(cr.l)
+	if err != nil {
+		panic(err)
+	}
+
+	cr.e = engine
+
+	o := gvm.Options{
+		Organization: "shipyard-run",
+		Repo:         "shipyard",
+		ReleasesPath: path.Join(utils.ShipyardHome(), "releases"),
+	}
+
+	o.AssetNameFunc = func(version, goos, goarch string) string {
+		// No idea why we set the release architecture for the binary like this
+		if goarch == "amd64" {
+			goarch = "x86_64"
+		}
+
+		// zip is used on windows as tar is not available by default
+		switch goos {
+		case "linux":
+			return fmt.Sprintf("shipyard_%s_%s_%s.tar.gz", version, goos, goarch)
+		case "darwin":
+			return fmt.Sprintf("shipyard_%s_%s_%s.tar.gz", version, goos, goarch)
+		case "windows":
+			return fmt.Sprintf("shipyard_%s_%s_%s.zip", version, goos, goarch)
+		}
+
+		return ""
+	}
+
+	o.ExeNameFunc = func(version, goos, goarch string) string {
+		if goos == "windows" {
+			return "shipyard.exe"
+		}
+
+		return "shipyard"
+	}
+
+	noOpen := true
+	approve := true
+
+	vm := gvm.New(o)
+
+	// re-use the run command
+	rc := newRunCmdFunc(
+		engine,
+		engine.GetClients().Getter,
+		engine.GetClients().HTTP,
+		engine.GetClients().Browser,
+		vm,
+		&noOpen,
+		cr.force,
+		&version,
+		&approve,
+		cr.l,
+	)
+
+	// if the log level is not debug write it to a buffer
+	if os.Getenv("LOG_LEVEL") != "debug" {
+		cr.cmd.SetOut(writer)
+		cr.cmd.SetErr(writer)
+	}
+
+	err = rc(cr.cmd, args)
+	if err != nil {
+		fmt.Println(writer.String())
+	}
+	return err
 }
 
 func (cr *CucumberRunner) theFollowingResourcesShouldBeRunning(arg1 *godog.Table) error {

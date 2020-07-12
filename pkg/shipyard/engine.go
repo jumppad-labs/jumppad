@@ -41,6 +41,7 @@ type Clients struct {
 type Engine interface {
 	GetClients() *Clients
 	Apply(string) ([]config.Resource, error)
+	ParseConfig(string) error
 	Destroy(string, bool) error
 	ResourceCount() int
 	Blueprint() *config.Blueprint
@@ -123,6 +124,15 @@ func New(l hclog.Logger) (Engine, error) {
 // GetClients returns the clients from the engine
 func (e *EngineImpl) GetClients() *Clients {
 	return e.clients
+}
+
+func (e *EngineImpl) ParseConfig(path string) error {
+	_, err := e.readConfig(path)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Apply the current config creating the resources

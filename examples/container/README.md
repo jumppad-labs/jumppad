@@ -5,6 +5,7 @@ slug: container
 browser_windows: http://consul-http.ingress.shipyard.run:8500
 env:
   - SOMETHING=else
+shipyard_version: ">= v0.0.37"
 ---
 
 # Single Container

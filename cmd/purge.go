@@ -62,6 +62,14 @@ func newPurgeCmdFunc(dt clients.Docker, il clients.ImageLog, l hclog.Logger) fun
 			return fmt.Errorf("Unable to remove cached Blueprints: %s", err)
 		}
 
+		// delete the releases
+		rcp := utils.GetReleasesFolder()
+		l.Info("Removing releases", "path", rcp)
+		err = os.RemoveAll(rcp)
+		if err != nil {
+			return fmt.Errorf("Unable to remove cached Releases: %s", err)
+		}
+
 		return nil
 	}
 }

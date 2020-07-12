@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -203,6 +204,10 @@ func GetBlueprintLocalFolder(blueprint string) string {
 // for the given blueprint URI
 func GetHelmLocalFolder(blueprint string) string {
 	return filepath.Join(ShipyardHome(), "helm_charts", blueprint)
+}
+
+func GetReleasesFolder() string {
+	return path.Join(ShipyardHome(), "releases")
 }
 
 // GetDockerSock returns the location of the Docker sock depending on the platform
