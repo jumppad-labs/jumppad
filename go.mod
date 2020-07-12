@@ -27,7 +27,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/mapstructure v1.1.2
-	github.com/nicholasjackson/version-manager v0.0.2
+	github.com/nicholasjackson/version-manager v0.0.3
 	github.com/prometheus/common v0.7.0 // indirect
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.5.0
@@ -52,4 +52,4 @@ require (
 )
 
 replace github.com/docker/docker => github.com/docker/engine v1.4.2-0.20180718150940-a3ef7e9a9bda
-replace github.com/nicholasjackson/version-manager => ../../nicholasjackson/version-manager
+//replace github.com/nicholasjackson/version-manager => ../../nicholasjackson/version-manager
