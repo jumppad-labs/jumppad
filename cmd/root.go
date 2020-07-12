@@ -2,9 +2,12 @@ package cmd
 
 import (
 	"fmt"
+	"path"
 
 	"github.com/hashicorp/go-hclog"
+	gvm "github.com/nicholasjackson/version-manager"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -36,6 +39,41 @@ func init() {
 
 	engineClients = engine.GetClients()
 
+	o := gvm.Options{
+		Organization: "shipyard-run",
+		Repo:         "shipyard",
+		ReleasesPath: path.Join(utils.ShipyardHome(), "releases"),
+	}
+
+	o.AssetNameFunc = func(version, goos, goarch string) string {
+		// No idea why we set the release architecture for the binary like this
+		if goarch == "amd64" {
+			goarch = "x86_64"
+		}
+
+		// zip is used on windows as tar is not available by default
+		switch goos {
+		case "linux":
+			return fmt.Sprintf("shipyard_%s_%s_%s.tar.gz", version, goos, goarch)
+		case "darwin":
+			return fmt.Sprintf("shipyard_%s_%s_%s.tar.gz", version, goos, goarch)
+		case "windows":
+			return fmt.Sprintf("shipyard_%s_%s_%s.zip", version, goos, goarch)
+		}
+
+		return ""
+	}
+
+	o.ExeNameFunc = func(version, goos, goarch string) string {
+		if goos == "windows" {
+			return "shipyard.exe"
+		}
+
+		return "shipyard"
+	}
+
+	vm := gvm.New(o)
+
 	cobra.OnInitialize(configure)
 
 	//rootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.shipyard/config)")
@@ -43,7 +81,7 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(newEnvCmd(engine))
-	rootCmd.AddCommand(newRunCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, logger))
+	rootCmd.AddCommand(newRunCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, vm, logger))
 	rootCmd.AddCommand(newTestCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, logger))
 	rootCmd.AddCommand(pauseCmd)
 	rootCmd.AddCommand(resumeCmd)
@@ -53,7 +91,7 @@ func init() {
 	rootCmd.AddCommand(newPurgeCmd(engineClients.Docker, engineClients.ImageLog, logger))
 	rootCmd.AddCommand(taintCmd)
 	rootCmd.AddCommand(newExecCmd(engineClients.ContainerTasks))
-	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(newVersionCmd(vm))
 	//rootCmd.AddCommand(exposeCmd)
 	//rootCmd.AddCommand(containerCmd)
 	//rootCmd.AddCommand(codeCmd)

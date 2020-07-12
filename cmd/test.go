@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/hashicorp/go-hclog"
+	gvm "github.com/nicholasjackson/version-manager"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/shipyard-run/shipyard/pkg/utils"
@@ -168,14 +170,55 @@ func (cr *CucumberRunner) iRunApply() error {
 
 		cr.e = engine
 
+		o := gvm.Options{
+			Organization: "shipyard-run",
+			Repo:         "shipyard",
+			ReleasesPath: path.Join(utils.ShipyardHome(), "releases"),
+		}
+
+		o.AssetNameFunc = func(version, goos, goarch string) string {
+			// No idea why we set the release architecture for the binary like this
+			if goarch == "amd64" {
+				goarch = "x86_64"
+			}
+
+			// zip is used on windows as tar is not available by default
+			switch goos {
+			case "linux":
+				return fmt.Sprintf("shipyard_%s_%s_%s.tar.gz", version, goos, goarch)
+			case "darwin":
+				return fmt.Sprintf("shipyard_%s_%s_%s.tar.gz", version, goos, goarch)
+			case "windows":
+				return fmt.Sprintf("shipyard_%s_%s_%s.zip", version, goos, goarch)
+			}
+
+			return ""
+		}
+
+		o.ExeNameFunc = func(version, goos, goarch string) string {
+			if goos == "windows" {
+				return "shipyard.exe"
+			}
+
+			return "shipyard"
+		}
+
+		vm := gvm.New(o)
+
+		var approve = true
+		var version = ""
+
 		// re-use the run command
 		rc := newRunCmdFunc(
 			engine,
 			engine.GetClients().Getter,
 			engine.GetClients().HTTP,
 			engine.GetClients().Browser,
+			vm,
 			&noOpen,
 			cr.force,
+			&version,
+			&approve,
 			cr.l,
 		)
 

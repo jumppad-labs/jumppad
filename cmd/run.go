@@ -1,14 +1,19 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	gvm "github.com/nicholasjackson/version-manager"
 
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
@@ -19,9 +24,11 @@ import (
 	markdown "github.com/MichaelMure/go-term-markdown"
 )
 
-func newRunCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, l hclog.Logger) *cobra.Command {
+func newRunCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, vm gvm.Versions, l hclog.Logger) *cobra.Command {
 	var noOpen bool
 	var force bool
+	var y bool
+	var version string
 	runCmd := &cobra.Command{
 		Use:   "run [file] [directory] ...",
 		Short: "Run the supplied stack configuration",
@@ -37,16 +44,19 @@ func newRunCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients
   shipyard run github.com/shipyard-run/blueprints//vault-k8s
 	`,
 		Args:         cobra.ArbitraryArgs,
-		RunE:         newRunCmdFunc(e, bp, hc, bc, &noOpen, &force, l),
+		RunE:         newRunCmdFunc(e, bp, hc, bc, vm, &noOpen, &force, &version, &y, l),
 		SilenceUsage: true,
 	}
-	runCmd.Flags().BoolVarP(&noOpen, "no-browser", "", false, "When set to true Shipyard does not open the browser windows defined in the blueprint")
-	runCmd.Flags().BoolVarP(&force, "force-update", "", false, "When set to true Shipyard will ignore cached images or files and will download all resources")
+
+	runCmd.Flags().StringVarP(&version, "version", "v", "", "When set, run creates the specified resources using a particular Shipyard version")
+	runCmd.Flags().BoolVarP(&y, "y", "y", false, "When set, Shipyard will not prompt for conifirmation")
+	runCmd.Flags().BoolVarP(&noOpen, "no-browser", "", false, "When set to true Shipyard will not open the browser windows defined in the blueprint")
+	runCmd.Flags().BoolVarP(&force, "force-update", "", false, "When set to true Shipyard ignores cached images or files and will download all resources")
 
 	return runCmd
 }
 
-func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, noOpen *bool, force *bool, l hclog.Logger) func(cmd *cobra.Command, args []string) error {
+func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, vm gvm.Versions, noOpen *bool, force *bool, version *string, autoApprove *bool, l hclog.Logger) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		if *force == true {
 			bp.SetForce(true)
@@ -62,13 +72,99 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 			return err
 		}
 
-		// check the shipyard version
-		text, ok := bc.CheckVersion(version)
-		if !ok {
-			cmd.Println("")
-			cmd.Println(text)
-			cmd.Println("")
+		// are we running with a different shipyard version, if so check it is installed
+		if *version != "" {
+			var exePath string
+
+			r, err := vm.ListInstalledVersions(*version)
+			if err != nil {
+				return err
+			}
+
+			if len(r) != 1 {
+				// only prompt if not auto approve
+				if !*autoApprove {
+					cmd.Print("Would you like to install version:", *version, " [y/n]: ")
+
+					scanner := bufio.NewScanner(cmd.InOrStdin())
+
+					var text string
+					scanner.Scan()
+					text = scanner.Text()
+
+					if text != "y" {
+						return nil
+					}
+				}
+
+				// install the version
+				tag, url, err := vm.GetLatestReleaseURL(*version)
+				if err != nil {
+					return err
+				}
+
+				exePath, err = vm.DownloadRelease(tag, url)
+				if err != nil {
+					return err
+				}
+
+			} else {
+				exePath = r[*version]
+			}
+
+			// execute shipyard using a sub process
+			cmd.Println("Running blueprint with version:", *version)
+
+			//if there is no path use the current folder
+			if len(args[0]) == 0 || args[0] == "" {
+				p, _ := os.Getwd()
+				args[0] = p
+			} else if strings.HasPrefix(args[0], ".") {
+				// if we have a relative path we need to convert to an absolute path
+				p, _ := filepath.Abs(args[0])
+				args[0] = p
+			}
+
+			commandString := []string{
+				"run",
+			}
+
+			if *force {
+				commandString = append(commandString, "--force-update")
+			}
+
+			if *noOpen {
+				commandString = append(commandString, "--no-browser")
+			}
+
+			commandString = append(commandString, args[0])
+
+			execCmd := exec.Command(exePath, commandString...)
+			execCmd.Stderr = cmd.ErrOrStderr()
+			execCmd.Stdout = cmd.ErrOrStderr()
+
+			err = execCmd.Start()
+			if err != nil {
+				return err
+			}
+
+			err = execCmd.Wait()
+			if err != nil {
+				return err
+			}
+
+			return nil
 		}
+
+		/*
+			// check the shipyard version
+			text, ok := bc.CheckVersion(version)
+			if !ok {
+				cmd.Println("")
+				cmd.Println(text)
+				cmd.Println("")
+			}
+		*/
 
 		// create the shipyard home
 		os.MkdirAll(utils.ShipyardHome(), os.FileMode(0755))

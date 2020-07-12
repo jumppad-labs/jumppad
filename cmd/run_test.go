@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	gvm "github.com/nicholasjackson/version-manager"
 	clientmocks "github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
@@ -53,7 +54,9 @@ func setupRun(t *testing.T, timeout string) (*cobra.Command, *mocks.Engine, *cli
 
 	mockEngine.On("Blueprint").Return(&bp)
 
-	return newRunCmd(mockEngine, mockGetter, mockHTTP, mockBrowser, hclog.Default()), mockEngine, mockGetter, mockHTTP, mockBrowser
+	vm := gvm.New(nil)
+
+	return newRunCmd(mockEngine, mockGetter, mockHTTP, mockBrowser, vm, hclog.Default()), mockEngine, mockGetter, mockHTTP, mockBrowser
 }
 
 func TestRunSetsForceOnGetter(t *testing.T) {
