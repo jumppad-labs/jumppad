@@ -43,6 +43,7 @@ func setupRun(t *testing.T, timeout string) (*cobra.Command, *mocks.Engine, *cli
 	}
 
 	mockEngine := &mocks.Engine{}
+	mockEngine.On("ParseConfig", mock.Anything).Return(nil)
 	mockEngine.On("Apply", mock.Anything).Return(nil, nil)
 	mockEngine.On("GetClients", mock.Anything).Return(clients)
 
@@ -54,7 +55,7 @@ func setupRun(t *testing.T, timeout string) (*cobra.Command, *mocks.Engine, *cli
 
 	mockEngine.On("Blueprint").Return(&bp)
 
-	vm := gvm.New(nil)
+	vm := gvm.New(gvm.Options{})
 
 	return newRunCmd(mockEngine, mockGetter, mockHTTP, mockBrowser, vm, hclog.Default()), mockEngine, mockGetter, mockHTTP, mockBrowser
 }

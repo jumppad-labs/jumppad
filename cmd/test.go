@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -160,17 +161,20 @@ func (cr *CucumberRunner) iRunApplyAtPath(path string) error {
 	return cr.iRunApplyAtPathWithVersion(path, "")
 }
 
-func (cr *CucumberRunner) iRunApplyAtPathWithVersion(filepath, version string) error {
+func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
 	writer = bytes.NewBufferString("")
 	args := []string{}
 
 	// if filepath is not absolute then it will be relative to args
-	if path.IsAbs(filepath) {
-		args = []string{filepath}
+	if path.IsAbs(fp) {
+		args = []string{fp}
 	} else {
 		// is relative to args
-		args = []string{path.Join(cr.args[0], filepath)}
+		args = []string{path.Join(cr.args[0], fp)}
 	}
+
+	// convert the args to absolute
+	args[0], _ = filepath.Abs(args[0])
 
 	opts := &hclog.LoggerOptions{}
 

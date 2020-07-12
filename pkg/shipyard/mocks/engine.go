@@ -37,13 +37,20 @@ func (e *Engine) Destroy(path string, all bool) error {
 
 	return args.Error(0)
 }
+
 func (e *Engine) ResourceCount() int {
 	return e.Called().Int(0)
 }
+
 func (e *Engine) Blueprint() *config.Blueprint {
 	if bp, ok := e.Called().Get(0).(*config.Blueprint); ok {
 		return bp
 	}
 
 	return nil
+}
+
+func (e *Engine) ParseConfig(path string) error {
+	args := e.Called(path)
+	return args.Error(0)
 }
