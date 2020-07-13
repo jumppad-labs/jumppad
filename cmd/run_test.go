@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"path/filepath"
 	"testing"
@@ -18,8 +19,15 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func setupRun(t *testing.T, timeout string) (*cobra.Command, *mocks.Engine, *clientmocks.Getter, *clientmocks.MockHTTP, *clientmocks.System) {
+type runMocks struct {
+	engine *mocks.Engine
+	getter *clientmocks.Getter
+	http   *clientmocks.MockHTTP
+	system *clientmocks.System
+	vm     *gvm.MockVersions
+}
 
+func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
 	mockHTTP := &clientmocks.MockHTTP{}
 	mockHTTP.On("HealthCheckHTTP", mock.Anything, mock.Anything).Return(nil)
 
@@ -55,121 +63,140 @@ func setupRun(t *testing.T, timeout string) (*cobra.Command, *mocks.Engine, *cli
 
 	mockEngine.On("Blueprint").Return(&bp)
 
-	vm := gvm.New(gvm.Options{})
+	vm := &gvm.MockVersions{}
 
-	return newRunCmd(mockEngine, mockGetter, mockHTTP, mockBrowser, vm, hclog.Default()), mockEngine, mockGetter, mockHTTP, mockBrowser
+	rm := &runMocks{
+		engine: mockEngine,
+		getter: mockGetter,
+		http:   mockHTTP,
+		system: mockBrowser,
+		vm:     vm,
+	}
+
+	cmd := newRunCmd(mockEngine, mockGetter, mockHTTP, mockBrowser, vm, hclog.Default())
+	cmd.SetOut(bytes.NewBuffer([]byte("")))
+
+	return cmd, rm
 }
 
 func TestRunSetsForceOnGetter(t *testing.T) {
-	rf, _, mg, _, _ := setupRun(t, "")
+	rf, rm := setupRun(t, "")
 	rf.Flags().Set("force-update", "true")
 
 	err := rf.Execute()
 	assert.NoError(t, err)
 
-	mg.AssertCalled(t, "SetForce", true)
+	rm.getter.AssertCalled(t, "SetForce", true)
 }
 
 func TestRunPreflightsSystem(t *testing.T) {
-	rf, _, _, _, mb := setupRun(t, "")
+	rf, rm := setupRun(t, "")
 	rf.SetArgs([]string{"/tmp"})
 
 	err := rf.Execute()
 	assert.NoError(t, err)
 
-	mb.AssertCalled(t, "Preflight")
+	rm.system.AssertCalled(t, "Preflight")
+}
+
+func TestRunOtherVersionChecksInstalledVersions(t *testing.T) {
+	t.Skip()
+
+	rf, _ := setupRun(t, "")
+	rf.SetArgs([]string{"/tmp"})
+	rf.Flags().Set("version", "v0.0.99")
 }
 
 func TestRunSetsDestinationFromArgsWhenPresent(t *testing.T) {
-	rf, me, _, _, _ := setupRun(t, "")
+	rf, rm := setupRun(t, "")
 	rf.SetArgs([]string{"/tmp"})
 
 	err := rf.Execute()
 	assert.NoError(t, err)
 
-	me.AssertCalled(t, "Apply", "/tmp")
+	rm.engine.AssertCalled(t, "Apply", "/tmp")
 }
 
 func TestRunSetsDestinationToDownloadedBlueprintFromArgsWhenRemote(t *testing.T) {
-	rf, me, _, _, _ := setupRun(t, "")
+	rf, rm := setupRun(t, "")
 	rf.SetArgs([]string{"github.com/shipyard-run/blueprints//vault-k8s"})
 
 	err := rf.Execute()
 	assert.NoError(t, err)
 
-	me.AssertCalled(t, "Apply", filepath.Join(utils.ShipyardHome(), "blueprints/github.com/shipyard-run/blueprints/vault-k8s"))
+	rm.engine.AssertCalled(t, "Apply", filepath.Join(utils.ShipyardHome(), "blueprints/github.com/shipyard-run/blueprints/vault-k8s"))
 }
 
 func TestRunFetchesBlueprint(t *testing.T) {
 	bpf := "github.com/shipyard-run/blueprints//vault-k8s"
-	rf, _, mg, _, _ := setupRun(t, "")
+	rf, rm := setupRun(t, "")
 	rf.SetArgs([]string{bpf})
 
 	err := rf.Execute()
 	assert.NoError(t, err)
 
-	mg.AssertCalled(t, "Get", bpf, mock.Anything)
+	rm.getter.AssertCalled(t, "Get", bpf, mock.Anything)
 }
 
 func TestRunFetchesBlueprintErrorReturnsError(t *testing.T) {
 	bpf := "github.com/shipyard-run/blueprints//vault-k8s"
-	rf, _, mb, _, _ := setupRun(t, "")
+	rf, rm := setupRun(t, "")
 	rf.SetArgs([]string{bpf})
 
-	removeOn(&mb.Mock, "Get")
-	mb.On("Get", mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
+	removeOn(&rm.getter.Mock, "Get")
+	rm.getter.On("Get", mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
 	err := rf.Execute()
 	assert.Error(t, err)
 }
 
 func TestRunOpensBrowserWindow(t *testing.T) {
-	rf, _, _, mh, mb := setupRun(t, "")
+	rf, rm := setupRun(t, "")
 	rf.SetArgs([]string{"/tmp"})
 
 	err := rf.Execute()
 	assert.NoError(t, err)
 
-	mh.AssertNumberOfCalls(t, "HealthCheckHTTP", 2)
-	mb.AssertNumberOfCalls(t, "OpenBrowser", 2)
+	rm.http.AssertNumberOfCalls(t, "HealthCheckHTTP", 2)
+	rm.system.AssertNumberOfCalls(t, "OpenBrowser", 2)
 
-	mh.AssertCalled(t, "HealthCheckHTTP", "http://localhost", 30*time.Second)
-	mh.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost", 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", 30*time.Second)
 }
 
 func TestRunOpensBrowserWindowWithCustomTimeout(t *testing.T) {
-	rf, _, _, mh, mb := setupRun(t, "60s")
+	rf, rm := setupRun(t, "60s")
 	rf.SetArgs([]string{"/tmp"})
 
 	err := rf.Execute()
 	assert.NoError(t, err)
 
-	mh.AssertNumberOfCalls(t, "HealthCheckHTTP", 2)
-	mb.AssertNumberOfCalls(t, "OpenBrowser", 2)
+	rm.http.AssertNumberOfCalls(t, "HealthCheckHTTP", 2)
+	rm.system.AssertNumberOfCalls(t, "OpenBrowser", 2)
 
-	mh.AssertCalled(t, "HealthCheckHTTP", "http://localhost", 60*time.Second)
-	mh.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", 60*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost", 60*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", 60*time.Second)
 }
 
 func TestRunOpensBrowserWindowWithInvalidTimeout(t *testing.T) {
-	rf, _, _, mh, mb := setupRun(t, "6e")
+	rf, rm := setupRun(t, "6e")
 	rf.SetArgs([]string{"/tmp"})
 
 	err := rf.Execute()
 	assert.NoError(t, err)
 
-	mh.AssertNumberOfCalls(t, "HealthCheckHTTP", 2)
-	mb.AssertNumberOfCalls(t, "OpenBrowser", 2)
+	rm.http.AssertNumberOfCalls(t, "HealthCheckHTTP", 2)
+	rm.system.AssertNumberOfCalls(t, "OpenBrowser", 2)
 
-	mh.AssertCalled(t, "HealthCheckHTTP", "http://localhost", 30*time.Second)
-	mh.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost", 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", 30*time.Second)
 }
 
 func TestRunOpensBrowserWindowForResources(t *testing.T) {
-	rf, me, _, mh, mb := setupRun(t, "")
+	rf, rm := setupRun(t, "")
 	rf.SetArgs([]string{"/tmp"})
 
-	removeOn(&me.Mock, "Apply")
+	removeOn(&rm.engine.Mock, "Apply")
 
 	d := config.NewDocs("test")
 	d.OpenInBrowser = true
@@ -189,7 +216,7 @@ func TestRunOpensBrowserWindowForResources(t *testing.T) {
 	c2 := config.NewContainer("test2")
 	c2.Ports = []config.Port{config.Port{OpenInBrowser: ""}}
 
-	me.On("Apply", mock.Anything).Return(
+	rm.engine.On("Apply", mock.Anything).Return(
 		[]config.Resource{d, i, c, d2, i2, c2},
 		nil,
 	)
@@ -197,19 +224,19 @@ func TestRunOpensBrowserWindowForResources(t *testing.T) {
 	err := rf.Execute()
 	assert.NoError(t, err)
 
-	mh.AssertNumberOfCalls(t, "HealthCheckHTTP", 5)
-	mb.AssertNumberOfCalls(t, "OpenBrowser", 5)
+	rm.http.AssertNumberOfCalls(t, "HealthCheckHTTP", 5)
+	rm.system.AssertNumberOfCalls(t, "OpenBrowser", 5)
 }
 
 func TestRunDoesNotOpensBrowserWindowWhenCheckError(t *testing.T) {
-	rf, _, _, mh, mb := setupRun(t, "")
+	rf, rm := setupRun(t, "")
 	rf.SetArgs([]string{"/tmp"})
 
-	removeOn(&mh.Mock, "HealthCheckHTTP")
-	mh.On("HealthCheckHTTP", mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
+	removeOn(&rm.http.Mock, "HealthCheckHTTP")
+	rm.http.On("HealthCheckHTTP", mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
 	err := rf.Execute()
 	assert.NoError(t, err)
 
-	mb.AssertNumberOfCalls(t, "OpenBrowser", 0)
+	rm.system.AssertNumberOfCalls(t, "OpenBrowser", 0)
 }
