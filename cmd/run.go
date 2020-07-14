@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
@@ -74,7 +73,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 
 		// are we running with a different shipyard version, if so check it is installed
 		if *runVersion != "" {
-			return runWithOtherVersion(*runVersion, *autoApprove, args, *force, *noOpen, cmd, vm)
+			return runWithOtherVersion(*runVersion, *autoApprove, args, *force, *noOpen, cmd, vm, bc)
 		}
 
 		// create the shipyard home and releases
@@ -127,7 +126,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 
 			if !valid {
 				// we neeed to go in to the check loop
-				return runWithOtherVersion(e.Blueprint().ShipyardVersion, *autoApprove, args, *force, *noOpen, cmd, vm)
+				return runWithOtherVersion(e.Blueprint().ShipyardVersion, *autoApprove, args, *force, *noOpen, cmd, vm, bc)
 			}
 		}
 
@@ -285,7 +284,7 @@ func bluePrintInState() bool {
 	return sc.Blueprint != nil
 }
 
-func runWithOtherVersion(version string, autoApprove bool, args []string, forceUpdate bool, noBrowser bool, cmd *cobra.Command, vm gvm.Versions) error {
+func runWithOtherVersion(version string, autoApprove bool, args []string, forceUpdate bool, noBrowser bool, cmd *cobra.Command, vm gvm.Versions, sys clients.System) error {
 
 	var exePath string
 
@@ -304,15 +303,8 @@ func runWithOtherVersion(version string, autoApprove bool, args []string, forceU
 
 		// only prompt if not auto approve
 		if !autoApprove {
-			cmd.Print("Would you like to install version: ", tag, " [y/n]: ")
-
-			scanner := bufio.NewScanner(cmd.InOrStdin())
-
-			var text string
-			scanner.Scan()
-			text = scanner.Text()
-
-			if text != "y" {
+			resp := sys.PromptInput(cmd.InOrStdin(), cmd.OutOrStdout(), fmt.Sprintf("Would you like to install version: %s [y/n]: ", tag))
+			if resp != "y" {
 				return nil
 			}
 		}

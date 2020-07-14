@@ -64,6 +64,8 @@ func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
 	mockEngine.On("Blueprint").Return(&bp)
 
 	vm := &gvm.MockVersions{}
+	vm.On("ListInstalledVersions", mock.Anything).Return(nil, nil)
+	vm.On("GetLatestReleaseURL", mock.Anything).Return("v1.0.0", "http://download.com", nil)
 
 	rm := &runMocks{
 		engine: mockEngine,
@@ -100,11 +102,29 @@ func TestRunPreflightsSystem(t *testing.T) {
 }
 
 func TestRunOtherVersionChecksInstalledVersions(t *testing.T) {
-	t.Skip()
-
-	rf, _ := setupRun(t, "")
+	version := "v0.0.99"
+	rf, rm := setupRun(t, "")
 	rf.SetArgs([]string{"/tmp"})
-	rf.Flags().Set("version", "v0.0.99")
+	rf.Flags().Set("version", version)
+
+	err := rf.Execute()
+	assert.NoError(t, err)
+
+	rm.vm.AssertCalled(t, "ListInstalledVersions", version)
+	rm.vm.AssertCalled(t, "GetLatestReleaseURL", version)
+}
+
+func TestRunOtherVersionPromptsInstallWhenNotInstalled(t *testing.T) {
+	version := "v0.0.99"
+	rf, rm := setupRun(t, "")
+	rf.SetArgs([]string{"/tmp"})
+	rf.Flags().Set("version", version)
+
+	err := rf.Execute()
+	assert.NoError(t, err)
+
+	rm.vm.AssertCalled(t, "ListInstalledVersions", version)
+	rm.vm.AssertCalled(t, "GetLatestReleaseURL", version)
 }
 
 func TestRunSetsDestinationFromArgsWhenPresent(t *testing.T) {

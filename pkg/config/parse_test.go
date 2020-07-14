@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	assert "github.com/stretchr/testify/require"
 )
 
 func setup() func() {
@@ -49,6 +49,56 @@ func TestRunParsesBlueprintInHCLFormat(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.NotNil(t, c.Blueprint)
+}
+
+func TestLoadsVariablesFiles(t *testing.T) {
+	absoluteFolderPath, err := filepath.Abs("../../examples/container")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c := New()
+	err = ParseFolder(absoluteFolderPath, c)
+	assert.NoError(t, err)
+
+	// check variable has been interpolated
+	r, err := c.FindResource("container.consul")
+	assert.NoError(t, err)
+
+	validEnv := false
+	con := r.(*Container)
+	for _, e := range con.Environment {
+		// should contain a key called "something" with a value "else"
+		if e.Key == "something" && e.Value == "blah blah" {
+			validEnv = true
+		}
+	}
+
+	assert.True(t, validEnv)
+}
+
+func TestParseModuleCreatesResources(t *testing.T) {
+	absoluteFolderPath, err := filepath.Abs("../../examples/modules")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c := New()
+	err = ParseFolder(absoluteFolderPath, c)
+	assert.NoError(t, err)
+
+	// count the resources, should create 10
+	assert.Len(t, c.Resources, 10)
+
+	// check depends on is set
+	r, err := c.FindResource("container.consul")
+	assert.NoError(t, err)
+	assert.Contains(t, r.Info().DependsOn, "module.k8s")
+
+	// check the module is set on resources loaded as a module
+	r, err = c.FindResource("k8s_cluster.k3s")
+	assert.NoError(t, err)
+	assert.Equal(t, "k8s", r.Info().Module)
 }
 
 /*

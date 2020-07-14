@@ -1,8 +1,10 @@
 package clients
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os/exec"
@@ -23,6 +25,7 @@ type System interface {
 	OpenBrowser(string) error
 	Preflight() (string, error)
 	CheckVersion(string) (string, bool)
+	PromptInput(in io.Reader, out io.Writer, message string) string
 }
 
 // SystemImpl is a concrete implementation of the System interface
@@ -122,6 +125,17 @@ func (b *SystemImpl) CheckVersion(current string) (string, bool) {
 	}
 
 	return "", true
+}
+
+// PromptInput prompts the user for input in the CLI and returns the
+// entered value
+func (b *SystemImpl) PromptInput(in io.Reader, out io.Writer, message string) string {
+	out.Write([]byte(message))
+
+	scanner := bufio.NewScanner(in)
+
+	scanner.Scan()
+	return scanner.Text()
 }
 
 var updateText = `

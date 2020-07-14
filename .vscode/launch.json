@@ -38,7 +38,7 @@
       "env": {},
       "args": [
         "test",
-        "./examples/container",
+        "./examples/modules",
       ]
     }
   ]

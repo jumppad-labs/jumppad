@@ -15,6 +15,11 @@ container "consul" {
     ip_address = "10.6.0.200" // optional
   }
 
+  env {
+    key = "something"
+    value = "${something}"
+  }
+
   resources {
     # Max CPU to consume, 1024 is one core, default unlimited
     cpu = 2048

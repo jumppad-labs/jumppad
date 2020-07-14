@@ -25,6 +25,10 @@ import (
 
 var ctx *hcl.EvalContext
 
+func init() {
+	ctx = buildContext()
+}
+
 type ResourceTypeNotExistError struct {
 	Type string
 	File string
@@ -36,9 +40,20 @@ func (r ResourceTypeNotExistError) Error() string {
 
 // ParseFolder for config entries
 func ParseFolder(folder string, c *Config) error {
-	ctx = buildContext()
-
 	abs, _ := filepath.Abs(folder)
+
+	// load the variables
+	variableFiles, err := filepath.Glob(path.Join(abs, "*.vars"))
+	if err != nil {
+		return err
+	}
+
+	for _, f := range variableFiles {
+		err := LoadValuesFile(f)
+		if err != nil {
+			return err
+		}
+	}
 
 	// pick up the blueprint file
 	yardFilesHCL, err := filepath.Glob(path.Join(abs, "*.yard"))
@@ -87,9 +102,25 @@ func ParseYardFile(file string, c *Config) error {
 	return parseYardMarkdown(file, c)
 }
 
-func parseYardHCL(file string, c *Config) error {
-	ctx = buildContext()
+// LoadValuesFile loads varaible values from a file
+func LoadValuesFile(path string) error {
+	parser := hclparse.NewParser()
 
+	f, diag := parser.ParseHCLFile(path)
+	if diag.HasErrors() {
+		return errors.New(diag.Error())
+	}
+
+	attrs, _ := f.Body.JustAttributes()
+	for name, attr := range attrs {
+		val, _ := attr.Expr.Value(nil)
+		ctx.Variables[name] = val
+	}
+
+	return nil
+}
+
+func parseYardHCL(file string, c *Config) error {
 	parser := hclparse.NewParser()
 
 	f, diag := parser.ParseHCLFile(file)
@@ -178,7 +209,6 @@ func parseYardMarkdown(file string, c *Config) error {
 
 // ParseHCLFile parses a config file and adds it to the config
 func ParseHCLFile(file string, c *Config) error {
-	ctx = buildContext()
 	parser := hclparse.NewParser()
 
 	f, diag := parser.ParseHCLFile(file)
@@ -418,10 +448,18 @@ func ParseHCLFile(file string, c *Config) error {
 			// set the absolute path
 			m.Source = ensureAbsolute(m.Source, file)
 
+			conf := New()
 			// recursively parse references for the module
-			err = ParseFolder(m.Source, c)
+			err = ParseFolder(m.Source, conf)
 			if err != nil {
 				return err
+			}
+
+			// add the parsed resources to the main but add the module name
+			for _, r := range conf.Resources {
+				r.Info().Module = m.Name
+				r.Info().DependsOn = m.Depends
+				c.AddResource(r)
 			}
 
 		default:
@@ -580,7 +618,9 @@ func buildContext() *hcl.EvalContext {
 
 	ctx := &hcl.EvalContext{
 		Functions: map[string]function.Function{},
+		Variables: map[string]cty.Value{},
 	}
+
 	ctx.Functions["env"] = EnvFunc
 	ctx.Functions["k8s_config"] = KubeConfigFunc
 	ctx.Functions["home"] = HomeFunc

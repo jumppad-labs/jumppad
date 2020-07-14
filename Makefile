@@ -22,8 +22,7 @@ test_functional:
 
 test_docker:
 	docker build -t shipyard-run/tests -f Dockerfile.test .
-	docker run --rm shipyard-run/tests bash -c 'go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...'
-	docker run --rm shipyard-run/tests bash -c 'go test -v ./pkg/shipyard'
+	docker run --rm shipyard-run/tests bash -c 'go test -v -race ./...'
 
 test: test_unit test_functional
 
