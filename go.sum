@@ -972,6 +972,8 @@ github.com/nicholasjackson/version-manager v0.0.2 h1:V+FpUdBmgBd0036Gue2FqWV0c9I
 github.com/nicholasjackson/version-manager v0.0.2/go.mod h1:/jOJ3Jjt0Oiut+hHXtSu41XKxWQyPTJX0gCjcr8pra8=
 github.com/nicholasjackson/version-manager v0.0.3 h1:vH5V3VpbHdYlHbzGdPf/vBzlNQZjb9CmRoEg5K79yTM=
 github.com/nicholasjackson/version-manager v0.0.3/go.mod h1:/jOJ3Jjt0Oiut+hHXtSu41XKxWQyPTJX0gCjcr8pra8=
+github.com/nicholasjackson/version-manager v0.0.4 h1:9k2iXbzSNQ6Gyw9Ksa0VUu+yqAP5MtyBXXLUf/5JxGM=
+github.com/nicholasjackson/version-manager v0.0.4/go.mod h1:/jOJ3Jjt0Oiut+hHXtSu41XKxWQyPTJX0gCjcr8pra8=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
 github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d h1:VhgPp6v9qf9Agr/56bj7Y/xa04UccTW04VP0Qed4vnQ=
 github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d/go.mod h1:YUTz3bUH2ZwIWBy3CJBeOBEugqcmXREj14T+iG/4k4U=
