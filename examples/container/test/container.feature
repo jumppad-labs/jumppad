@@ -15,6 +15,9 @@ Scenario: Single Container from Local Blueprint
     | consul                    | container |
     | envoy                     | sidecar   |
     | consul-container-http     | ingress   |
+  And the info "{.HostConfig.PortBindings['8500/'][0].HostPort}" for the running "container" called "consul" should equal "8500"
+  And the info "{.HostConfig.PortBindings['8500/'][0].HostPort}" for the running "container" called "consul" should contain "85"
+  And the info "{.HostConfig.PortBindings['8501/']}" for the running "container" called "consul" should exist"
   And a HTTP call to "http://consul.container.shipyard.run:8500/v1/status/leader" should result in status 200
   And a HTTP call to "http://consul-http.ingress.shipyard.run:28500/v1/status/leader" should result in status 200
 

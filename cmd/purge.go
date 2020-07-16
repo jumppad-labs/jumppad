@@ -49,17 +49,25 @@ func newPurgeCmdFunc(dt clients.Docker, il clients.ImageLog, l hclog.Logger) fun
 		}
 
 		hcp := utils.GetBlueprintLocalFolder("")
-		l.Info("Removing Helm charts", "path", hcp)
+		l.Info("Removing Blueprints", "path", hcp)
 		err = os.RemoveAll(hcp)
 		if err != nil {
 			return fmt.Errorf("Unable to remove cached Helm charts: %s", err)
 		}
 
 		bcp := utils.GetHelmLocalFolder("")
-		l.Info("Removing Blueprints", "path", bcp)
+		l.Info("Removing Helm charts", "path", bcp)
 		err = os.RemoveAll(bcp)
 		if err != nil {
 			return fmt.Errorf("Unable to remove cached Blueprints: %s", err)
+		}
+
+		// delete the releases
+		rcp := utils.GetReleasesFolder()
+		l.Info("Removing releases", "path", rcp)
+		err = os.RemoveAll(rcp)
+		if err != nil {
+			return fmt.Errorf("Unable to remove cached Releases: %s", err)
 		}
 
 		return nil

@@ -81,6 +81,12 @@ func (m *MockDocker) ContainerLogs(ctx context.Context, containerID string, opti
 	return rc, args.Error(1)
 }
 
+func (m *MockDocker) ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+	args := m.Called(ctx, containerID)
+
+	return args.Get(0).(types.ContainerJSON), args.Error(1)
+}
+
 func (m *MockDocker) ContainerExecCreate(ctx context.Context, container string, config types.ExecConfig) (types.IDResponse, error) {
 	args := m.Called(ctx, container, config)
 

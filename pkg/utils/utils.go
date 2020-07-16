@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -15,6 +16,11 @@ var NameContainsInvalidCharactersError = fmt.Errorf("Name contains invalid chara
 
 // ImageVolumeName is the name of the volume which stores the images for clusters
 const ImageVolumeName string = "images"
+
+// Creates the required file structure in the users Home directory
+func CreateFolders() {
+	os.MkdirAll(GetReleasesFolder(), os.FileMode(0755))
+}
 
 // ValidateName ensures that the name for a resource is within certain boundaries
 // Valid characters: [a-z] [A-Z] _ - [0-9]
@@ -203,6 +209,10 @@ func GetBlueprintLocalFolder(blueprint string) string {
 // for the given blueprint URI
 func GetHelmLocalFolder(blueprint string) string {
 	return filepath.Join(ShipyardHome(), "helm_charts", blueprint)
+}
+
+func GetReleasesFolder() string {
+	return path.Join(ShipyardHome(), "releases")
 }
 
 // GetDockerSock returns the location of the Docker sock depending on the platform

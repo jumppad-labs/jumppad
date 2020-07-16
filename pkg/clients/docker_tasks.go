@@ -52,7 +52,7 @@ func (d *DockerTasks) SetForcePull(force bool) {
 
 // CreateContainer creates a new Docker container for the given configuation
 func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
-	d.l.Info("Creating Container", "ref", c.Name)
+	d.l.Debug("Creating Docker Container", "ref", c.Name)
 
 	// create a unique name based on service network [container].[network].shipyard
 	// attach to networks
@@ -118,9 +118,10 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 
 		// create the mount
 		mounts = append(mounts, mount.Mount{
-			Type:   t,
-			Source: vc.Source,
-			Target: vc.Destination,
+			Type:     t,
+			Source:   vc.Source,
+			Target:   vc.Destination,
+			ReadOnly: vc.ReadOnly,
 		})
 	}
 
@@ -241,6 +242,16 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 	}
 
 	return cont.ID, nil
+}
+
+// ContainerInfo returns the Docker container info
+func (d *DockerTasks) ContainerInfo(id string) (interface{}, error) {
+	cj, err := d.c.ContainerInspect(context.Background(), id)
+	if err != nil {
+		return nil, xerrors.Errorf("Unable to read information about Docker container %s: %w", id, err)
+	}
+
+	return cj, nil
 }
 
 // PullImage pulls a Docker image from a remote repo
@@ -756,6 +767,15 @@ func (d *DockerTasks) resizeTTY(id string, out *streams.Out) error {
 		return err
 	}
 
+	return nil
+}
+
+func (d *DockerTasks) AttachNetwork(network, containerid string) error {
+	return fmt.Errorf("Not implemented")
+}
+
+// ListNetworks lists the networks a container is attached to
+func (d *DockerTasks) ListNetworks(id string) []config.NetworkAttachment {
 	return nil
 }
 

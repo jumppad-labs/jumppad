@@ -98,6 +98,10 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 			t.Type = ResourceType(mm["type"].(string))
 			t.Status = Status(mm["status"].(string))
 
+			if m, ok := mm["module"].(string); ok {
+				t.Module = m
+			}
+
 			if d, ok := mm["depends_on"].([]interface{}); ok {
 				for _, i := range d {
 					t.DependsOn = append(t.DependsOn, i.(string))
@@ -114,6 +118,10 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 			t.Name = mm["name"].(string)
 			t.Type = ResourceType(mm["type"].(string))
 			t.Status = Status(mm["status"].(string))
+
+			if m, ok := mm["module"].(string); ok {
+				t.Module = m
+			}
 
 			if d, ok := mm["depends_on"].([]interface{}); ok {
 				for _, i := range d {
@@ -132,6 +140,10 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 			t.Type = ResourceType(mm["type"].(string))
 			t.Status = Status(mm["status"].(string))
 
+			if m, ok := mm["module"].(string); ok {
+				t.Module = m
+			}
+
 			if d, ok := mm["depends_on"].([]interface{}); ok {
 				for _, i := range d {
 					t.DependsOn = append(t.DependsOn, i.(string))
@@ -148,6 +160,10 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 			t.Name = mm["name"].(string)
 			t.Type = ResourceType(mm["type"].(string))
 			t.Status = Status(mm["status"].(string))
+
+			if m, ok := mm["module"].(string); ok {
+				t.Module = m
+			}
 
 			if d, ok := mm["depends_on"].([]interface{}); ok {
 				for _, i := range d {
@@ -166,6 +182,10 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 			t.Type = ResourceType(mm["type"].(string))
 			t.Status = Status(mm["status"].(string))
 
+			if m, ok := mm["module"].(string); ok {
+				t.Module = m
+			}
+
 			if d, ok := mm["depends_on"].([]interface{}); ok {
 				for _, i := range d {
 					t.DependsOn = append(t.DependsOn, i.(string))
@@ -182,6 +202,10 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 			t.Name = mm["name"].(string)
 			t.Type = ResourceType(mm["type"].(string))
 			t.Status = Status(mm["status"].(string))
+
+			if m, ok := mm["module"].(string); ok {
+				t.Module = m
+			}
 
 			if d, ok := mm["depends_on"].([]interface{}); ok {
 				for _, i := range d {
@@ -200,6 +224,10 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 			t.Type = ResourceType(mm["type"].(string))
 			t.Status = Status(mm["status"].(string))
 
+			if m, ok := mm["module"].(string); ok {
+				t.Module = m
+			}
+
 			if d, ok := mm["depends_on"].([]interface{}); ok {
 				for _, i := range d {
 					t.DependsOn = append(t.DependsOn, i.(string))
@@ -216,6 +244,10 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 			t.Name = mm["name"].(string)
 			t.Type = ResourceType(mm["type"].(string))
 			t.Status = Status(mm["status"].(string))
+
+			if m, ok := mm["module"].(string); ok {
+				t.Module = m
+			}
 
 			if d, ok := mm["depends_on"].([]interface{}); ok {
 				for _, i := range d {
@@ -234,6 +266,10 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 			t.Type = ResourceType(mm["type"].(string))
 			t.Status = Status(mm["status"].(string))
 
+			if m, ok := mm["module"].(string); ok {
+				t.Module = m
+			}
+
 			if d, ok := mm["depends_on"].([]interface{}); ok {
 				for _, i := range d {
 					t.DependsOn = append(t.DependsOn, i.(string))
@@ -250,6 +286,10 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 			t.Name = mm["name"].(string)
 			t.Type = ResourceType(mm["type"].(string))
 			t.Status = Status(mm["status"].(string))
+
+			if m, ok := mm["module"].(string); ok {
+				t.Module = m
+			}
 
 			if d, ok := mm["depends_on"].([]interface{}); ok {
 				for _, i := range d {
@@ -268,6 +308,10 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 			t.Type = ResourceType(mm["type"].(string))
 			t.Status = Status(mm["status"].(string))
 
+			if m, ok := mm["module"].(string); ok {
+				t.Module = m
+			}
+
 			if d, ok := mm["depends_on"].([]interface{}); ok {
 				for _, i := range d {
 					t.DependsOn = append(t.DependsOn, i.(string))
@@ -284,6 +328,10 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 			t.Name = mm["name"].(string)
 			t.Type = ResourceType(mm["type"].(string))
 			t.Status = Status(mm["status"].(string))
+
+			if m, ok := mm["module"].(string); ok {
+				t.Module = m
+			}
 
 			if d, ok := mm["depends_on"].([]interface{}); ok {
 				for _, i := range d {
@@ -302,6 +350,10 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 			t.Type = ResourceType(mm["type"].(string))
 			t.Status = Status(mm["status"].(string))
 
+			if m, ok := mm["module"].(string); ok {
+				t.Module = m
+			}
+
 			if d, ok := mm["depends_on"].([]interface{}); ok {
 				for _, i := range d {
 					t.DependsOn = append(t.DependsOn, i.(string))
@@ -319,6 +371,10 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 			t.Type = ResourceType(mm["type"].(string))
 			t.Status = Status(mm["status"].(string))
 
+			if m, ok := mm["module"].(string); ok {
+				t.Module = m
+			}
+
 			if d, ok := mm["depends_on"].([]interface{}); ok {
 				for _, i := range d {
 					t.DependsOn = append(t.DependsOn, i.(string))
@@ -335,6 +391,10 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 			t.Name = mm["name"].(string)
 			t.Type = ResourceType(mm["type"].(string))
 			t.Status = Status(mm["status"].(string))
+
+			if m, ok := mm["module"].(string); ok {
+				t.Module = m
+			}
 
 			if d, ok := mm["depends_on"].([]interface{}); ok {
 				for _, i := range d {

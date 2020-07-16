@@ -5,16 +5,24 @@ test_unit:
 	go test -v -race ./...
 
 test_functional:
+	go run main.go purge
 	go run main.go test ./examples/container
+
+	go run main.go purge
 	go run main.go test ./examples/docs
+
+	go run main.go purge
 	go run main.go test ./examples/modules
+	
+	go run main.go purge
 	go run main.go test ./examples/nomad
+
+	go run main.go purge
 	go run main.go test ./examples/single_k3s_cluster
 
 test_docker:
 	docker build -t shipyard-run/tests -f Dockerfile.test .
-	docker run --rm shipyard-run/tests bash -c 'go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...'
-	docker run --rm shipyard-run/tests bash -c 'go test -v ./pkg/shipyard'
+	docker run --rm shipyard-run/tests bash -c 'go test -v -race ./...'
 
 test: test_unit test_functional
 

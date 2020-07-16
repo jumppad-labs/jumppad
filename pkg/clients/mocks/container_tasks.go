@@ -21,6 +21,12 @@ func (m *MockContainerTasks) CreateContainer(c *config.Container) (id string, er
 	return args.String(0), args.Error(1)
 }
 
+func (m *MockContainerTasks) ContainerInfo(id string) (interface{}, error) {
+	args := m.Called(id)
+
+	return args.Get(0), args.Error(1)
+}
+
 func (m *MockContainerTasks) RemoveContainer(id string) error {
 	args := m.Called(id)
 
@@ -92,6 +98,19 @@ func (d *MockContainerTasks) DetachNetwork(network, containerid string) error {
 
 	return args.Error(0)
 }
+
+func (d *MockContainerTasks) AttachNetwork(network, containerid string) error {
+	args := d.Called(network, containerid)
+
+	return args.Error(0)
+}
+
+func (d *MockContainerTasks) ListNetworks(id string) []config.NetworkAttachment {
+	args := d.Called(id)
+
+	return args.Get(0).([]config.NetworkAttachment)
+}
+
 func (d *MockContainerTasks) CreateShell(id string, command []string, stdin io.ReadCloser, stdout io.Writer, stderr io.Writer) error {
 	args := d.Called(id, command, stdin, stdout, stderr)
 

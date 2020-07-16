@@ -23,7 +23,14 @@ import (
 	"golang.org/x/xerrors"
 )
 
+// TODO this really needs to be a struct with configuration not
+// separate methods.
+
 var ctx *hcl.EvalContext
+
+func init() {
+	ctx = buildContext()
+}
 
 type ResourceTypeNotExistError struct {
 	Type string
@@ -34,35 +41,54 @@ func (r ResourceTypeNotExistError) Error() string {
 	return fmt.Sprintf("Resource type %s defined in file %s, does not exist. Please check the documentation for supported resources. We love PRs if you would like to create a resource of this type :)", r.Type, r.File)
 }
 
-// ParseFolder for config entries
-func ParseFolder(folder string, c *Config) error {
-	ctx = buildContext()
-
+// ParseFolder for Resource, Blueprint, and Variable files
+// The onlyResources parameter allows you to specfiy that the parser
+// only reads resource files and will ignore Blueprint and Varaible files.
+// This is useful when recursively parsing such as when reading Modules
+func ParseFolder(folder string, c *Config, onlyResources bool, variables map[string]string) error {
 	abs, _ := filepath.Abs(folder)
 
-	// pick up the blueprint file
-	yardFilesHCL, err := filepath.Glob(path.Join(abs, "*.yard"))
-	if err != nil {
-		return err
-	}
-
-	yardFilesMD, err := filepath.Glob(path.Join(abs, "*.md"))
-	if err != nil {
-		return err
-	}
-
-	yardFiles := []string{}
-	yardFiles = append(yardFiles, yardFilesHCL...)
-	yardFiles = append(yardFiles, yardFilesMD...)
-
-	if len(yardFiles) > 0 {
-		err := ParseYardFile(yardFiles[0], c)
+	// load the variables
+	if !onlyResources {
+		variableFiles, err := filepath.Glob(path.Join(abs, "*.vars"))
 		if err != nil {
 			return err
 		}
+
+		for _, f := range variableFiles {
+			err := LoadValuesFile(f)
+			if err != nil {
+				return err
+			}
+		}
+
+		// setup any variables which are passed as environment variables or in the collection
+		SetVariables(variables)
+
+		// pick up the blueprint file
+		yardFilesHCL, err := filepath.Glob(path.Join(abs, "*.yard"))
+		if err != nil {
+			return err
+		}
+
+		yardFilesMD, err := filepath.Glob(path.Join(abs, "README.md"))
+		if err != nil {
+			return err
+		}
+
+		yardFiles := []string{}
+		yardFiles = append(yardFiles, yardFilesHCL...)
+		yardFiles = append(yardFiles, yardFilesMD...)
+
+		if len(yardFiles) > 0 {
+			err := ParseYardFile(yardFiles[0], c)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
-	// load files from the current folder
+	// Parse Resource files from the current folder
 	files, err := filepath.Glob(path.Join(abs, "*.hcl"))
 	if err != nil {
 		return err
@@ -87,9 +113,63 @@ func ParseYardFile(file string, c *Config) error {
 	return parseYardMarkdown(file, c)
 }
 
-func parseYardHCL(file string, c *Config) error {
-	ctx = buildContext()
+// LoadValuesFile loads varaible values from a file
+func LoadValuesFile(path string) error {
+	parser := hclparse.NewParser()
 
+	f, diag := parser.ParseHCLFile(path)
+	if diag.HasErrors() {
+		return errors.New(diag.Error())
+	}
+
+	attrs, _ := f.Body.JustAttributes()
+	for name, attr := range attrs {
+		val, _ := attr.Expr.Value(nil)
+
+		setContextVariable(name, val)
+	}
+
+	return nil
+}
+
+func setContextVariable(key string, value interface{}) {
+	var valMap map[string]cty.Value
+
+	// get the existing map
+	if m, ok := ctx.Variables["var"]; ok {
+		valMap = m.AsValueMap()
+	} else {
+		valMap = map[string]cty.Value{}
+	}
+
+	switch v := value.(type) {
+	case string:
+		valMap[key] = cty.StringVal(v)
+	case cty.Value:
+		valMap[key] = v
+	}
+
+	ctx.Variables["var"] = cty.MapVal(valMap)
+}
+
+// SetVaraibles allow variables to be set from a collection or environment variables
+// Precedence should be file, env, vars
+func SetVariables(vars map[string]string) {
+	// first any vars defined as environment varaibles
+	for _, e := range os.Environ() {
+		if strings.HasPrefix(e, "SY_VAR_") {
+			parts := strings.Split(e, "=")
+			setContextVariable(strings.Replace(parts[0], "SY_VAR_", "", -1), parts[1])
+		}
+	}
+
+	// then set vars
+	for k, v := range vars {
+		setContextVariable(k, v)
+	}
+}
+
+func parseYardHCL(file string, c *Config) error {
 	parser := hclparse.NewParser()
 
 	f, diag := parser.ParseHCLFile(file)
@@ -156,6 +236,10 @@ func parseYardMarkdown(file string, c *Config) error {
 		bp.HealthCheckTimeout = a
 	}
 
+	if a, ok := fr["shipyard_version"].(string); ok {
+		bp.ShipyardVersion = a
+	}
+
 	if envs, ok := fr["env"].([]interface{}); ok {
 		bp.Environment = []KV{}
 		for _, e := range envs {
@@ -174,7 +258,6 @@ func parseYardMarkdown(file string, c *Config) error {
 
 // ParseHCLFile parses a config file and adds it to the config
 func ParseHCLFile(file string, c *Config) error {
-	ctx = buildContext()
 	parser := hclparse.NewParser()
 
 	f, diag := parser.ParseHCLFile(file)
@@ -414,10 +497,19 @@ func ParseHCLFile(file string, c *Config) error {
 			// set the absolute path
 			m.Source = ensureAbsolute(m.Source, file)
 
+			conf := New()
 			// recursively parse references for the module
-			err = ParseFolder(m.Source, c)
+			// ensure we do load the values which might be in module folders
+			err = ParseFolder(m.Source, conf, true, nil)
 			if err != nil {
 				return err
+			}
+
+			// add the parsed resources to the main but add the module name
+			for _, r := range conf.Resources {
+				r.Info().Module = m.Name
+				r.Info().DependsOn = m.Depends
+				c.AddResource(r)
 			}
 
 		default:
@@ -576,7 +668,9 @@ func buildContext() *hcl.EvalContext {
 
 	ctx := &hcl.EvalContext{
 		Functions: map[string]function.Function{},
+		Variables: map[string]cty.Value{},
 	}
+
 	ctx.Functions["env"] = EnvFunc
 	ctx.Functions["k8s_config"] = KubeConfigFunc
 	ctx.Functions["home"] = HomeFunc

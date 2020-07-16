@@ -14,6 +14,7 @@ type Blueprint struct {
 	BrowserWindows     []string `hcl:"browser_windows,optional" json:"browser_windows,omitempty" mapstructure:"browser_windows"`
 	HealthCheckTimeout string   `hcl:"health_check_timeout,optional" json:"health_check_timeout,omitempty" mapstructure:"health_check_timeout"`
 	Environment        []KV     `hcl:"env,block" json:"environment,omitempty"`
+	ShipyardVersion    string   `hcl:"shipyard_version,optional" json:"shipyard_version,omitempty"`
 }
 
 // Validate the Blueprint and return errors

@@ -53,6 +53,8 @@ type ResourceInfo struct {
 	Status Status `json:"status,omitempty"`
 	// DependsOn is a list of objects which must exist before this resource can be applied
 	DependsOn []string `json:"depends_on,omitempty"`
+	// Module is the name of the module if a resource has been loaded from a module
+	Module string `json:"module,omitempty"`
 
 	// parent container
 	Config *Config `json:"-"`
@@ -98,15 +100,30 @@ func (e ResourceExistsError) Error() string {
 	return fmt.Sprintf("Resource already exists: %s", e.Name)
 }
 
-// New creates a new Config with the default WAN network
+// New creates a new Config
 func New() *Config {
 	c := &Config{}
 
-	// add the default WAN
-	wan := NewNetwork("wan")
-	wan.Subnet = "10.200.0.0/16"
-
 	return c
+}
+
+// FindResources returns an array of resources for the given module
+func (c *Config) FindModuleResources(name string) ([]Resource, error) {
+	resources := []Resource{}
+
+	parts := strings.Split(name, ".")
+
+	for _, r := range c.Resources {
+		if r.Info().Module == parts[1] {
+			resources = append(resources, r)
+		}
+	}
+
+	if len(resources) > 0 {
+		return resources, nil
+	}
+
+	return nil, ResourceNotFoundError{name}
 }
 
 // FindResource returns the resource for the given name
@@ -118,7 +135,6 @@ func New() *Config {
 // r, err := c.FindResource("cluster.k3s")
 func (c *Config) FindResource(name string) (Resource, error) {
 	parts := strings.Split(name, ".")
-
 	for _, r := range c.Resources {
 		if r.Info().Type == ResourceType(parts[0]) && r.Info().Name == parts[1] {
 			return r, nil
@@ -179,13 +195,28 @@ func (c *Config) DoYaLikeDAGs() (*dag.AcyclicGraph, error) {
 	for _, resource := range c.Resources {
 		hasDeps := false
 		for _, d := range resource.Info().DependsOn {
-			dependency, err := c.FindResource(d)
-			if err != nil {
-				return nil, err
+			var err error
+			dependencies := []Resource{}
+
+			if strings.HasPrefix(d, "module.") {
+				// find dependencies from modules
+				dependencies, err = c.FindModuleResources(d)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				// find dependencies for direct resources
+				r, err := c.FindResource(d)
+				if err != nil {
+					return nil, err
+				}
+				dependencies = append(dependencies, r)
 			}
 
-			hasDeps = true
-			graph.Connect(dag.BasicEdge(dependency, resource))
+			for _, d := range dependencies {
+				hasDeps = true
+				graph.Connect(dag.BasicEdge(d, resource))
+			}
 		}
 
 		// if no deps add to root node

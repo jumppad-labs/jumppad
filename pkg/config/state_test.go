@@ -22,7 +22,10 @@ func setupConfigTests(t *testing.T) (*Config, func()) {
 
 	// create a config with all resource types
 	c := New()
-	c.AddResource(NewContainer("config"))
+	con := NewContainer("config")
+	con.Info().Module = "tester"
+	c.AddResource(con)
+
 	c.AddResource(NewDocs("config"))
 	c.AddResource(NewExecLocal("config"))
 	c.AddResource(NewExecRemote("config"))
@@ -72,6 +75,7 @@ func TestConfigDeSerializesFromJSON(t *testing.T) {
 	assert.Len(t, c.Resources, 9)
 	assert.Equal(t, ResourceType("container"), c.Resources[0].Info().Type)
 	assert.Equal(t, "config", c.Resources[0].Info().Name)
+	assert.Equal(t, "tester", c.Resources[0].Info().Module)
 }
 
 func TestConfigMergesAddingItems(t *testing.T) {

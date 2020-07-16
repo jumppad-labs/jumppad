@@ -27,7 +27,7 @@ const (
 	White   = "\033[1;37m%s\033[0m"
 )
 
-var json bool
+var jsonFlag bool
 
 var statusCmd = &cobra.Command{
 	Use:   "status",
@@ -43,7 +43,7 @@ var statusCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if json {
+		if jsonFlag {
 			s, err := prettyjson.Marshal(c)
 			if err != nil {
 				fmt.Println("Unable to load state", err)
@@ -80,5 +80,5 @@ var statusCmd = &cobra.Command{
 }
 
 func init() {
-	statusCmd.Flags().BoolVarP(&json, "json", "", false, "Output the status as JSON")
+	statusCmd.Flags().BoolVarP(&jsonFlag, "json", "", false, "Output the status as JSON")
 }

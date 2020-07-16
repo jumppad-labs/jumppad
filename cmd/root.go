@@ -4,11 +4,11 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/go-hclog"
+	gvm "github.com/nicholasjackson/version-manager"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var configFile = ""
@@ -27,23 +27,18 @@ var version string
 
 func init() {
 	// setup dependencies
-	var err error
 	logger = createLogger()
-	engine, err = shipyard.New(logger)
-	if err != nil {
-		panic(err)
-	}
+	engine, vm := createEngine(logger)
+	engineClients := engine.GetClients()
 
-	engineClients = engine.GetClients()
-
-	cobra.OnInitialize(configure)
+	//cobra.OnInitialize(configure)
 
 	//rootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.shipyard/config)")
 
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(newEnvCmd(engine))
-	rootCmd.AddCommand(newRunCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, logger))
+	rootCmd.AddCommand(newRunCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, vm, logger))
 	rootCmd.AddCommand(newTestCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, logger))
 	rootCmd.AddCommand(pauseCmd)
 	rootCmd.AddCommand(resumeCmd)
@@ -53,7 +48,7 @@ func init() {
 	rootCmd.AddCommand(newPurgeCmd(engineClients.Docker, engineClients.ImageLog, logger))
 	rootCmd.AddCommand(taintCmd)
 	rootCmd.AddCommand(newExecCmd(engineClients.ContainerTasks))
-	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(newVersionCmd(vm))
 	//rootCmd.AddCommand(exposeCmd)
 	//rootCmd.AddCommand(containerCmd)
 	//rootCmd.AddCommand(codeCmd)
@@ -64,27 +59,48 @@ func init() {
 	rootCmd.AddCommand(newPushCmd(engineClients.ContainerTasks, engineClients.Kubernetes, engineClients.HTTP, engineClients.Nomad, logger))
 }
 
-func configure() {
-	if configFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(configFile)
-	} else {
-		// Find home directory.
-		home, err := homedir.Dir()
-		if err != nil {
-			fmt.Println(err)
+func createEngine(l hclog.Logger) (shipyard.Engine, gvm.Versions) {
+	engine, err := shipyard.New(l)
+	if err != nil {
+		panic(err)
+	}
+
+	o := gvm.Options{
+		Organization: "shipyard-run",
+		Repo:         "shipyard",
+		ReleasesPath: utils.GetReleasesFolder(),
+	}
+
+	o.AssetNameFunc = func(version, goos, goarch string) string {
+		// No idea why we set the release architecture for the binary like this
+		if goarch == "amd64" {
+			goarch = "x86_64"
 		}
 
-		// Search config in home directory with name ".shipyard".
-		viper.AddConfigPath(home)
-		viper.SetConfigName(".shipyard/config")
+		// zip is used on windows as tar is not available by default
+		switch goos {
+		case "linux":
+			return fmt.Sprintf("shipyard_%s_%s_%s.tar.gz", version, goos, goarch)
+		case "darwin":
+			return fmt.Sprintf("shipyard_%s_%s_%s.tar.gz", version, goos, goarch)
+		case "windows":
+			return fmt.Sprintf("shipyard_%s_%s_%s.zip", version, goos, goarch)
+		}
+
+		return ""
 	}
 
-	viper.AutomaticEnv()
+	o.ExeNameFunc = func(version, goos, goarch string) string {
+		if goos == "windows" {
+			return "shipyard.exe"
+		}
 
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		return "shipyard"
 	}
+
+	vm := gvm.New(o)
+
+	return engine, vm
 }
 
 // Execute the root command

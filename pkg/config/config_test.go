@@ -3,10 +3,10 @@ package config
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	assert "github.com/stretchr/testify/require"
 )
 
-func testSetupConfig() *Config {
+func testSetupConfig(t *testing.T) *Config {
 	net1 := NewNetwork("cloud")
 	cl1 := NewK8sCluster("test")
 	cl1.DependsOn = []string{"network.cloud"}
@@ -18,13 +18,30 @@ func testSetupConfig() *Config {
 	return c
 }
 
+func testSetupModuleConfig(t *testing.T) *Config {
+	net1 := NewNetwork("cloud")
+	net1.Module = "test"
+
+	cl1 := NewK8sCluster("test")
+	cl1.DependsOn = []string{"module.test"}
+
+	c := New()
+	err := c.AddResource(net1)
+	assert.NoError(t, err)
+
+	err = c.AddResource(cl1)
+	assert.NoError(t, err)
+
+	return c
+}
+
 func TestResourceCount(t *testing.T) {
 
 	//assert.Equal(t, 10, c.ResourceCount())
 }
 
 func TestResourceAddChildSetsDetails(t *testing.T) {
-	c := testSetupConfig()
+	c := testSetupConfig(t)
 	cl := NewK8sCluster("newtest")
 
 	c.Resources[0].AddChild(cl)
@@ -34,7 +51,7 @@ func TestResourceAddChildSetsDetails(t *testing.T) {
 }
 
 func TestFindResourceFindsCluster(t *testing.T) {
-	c := testSetupConfig()
+	c := testSetupConfig(t)
 
 	cl, err := c.FindResource("k8s_cluster.test")
 	assert.NoError(t, err)
@@ -42,7 +59,7 @@ func TestFindResourceFindsCluster(t *testing.T) {
 }
 
 func TestFindResourceReturnsNotFoundError(t *testing.T) {
-	c := testSetupConfig()
+	c := testSetupConfig(t)
 
 	cl, err := c.FindResource("cluster.notexist")
 	assert.Error(t, err)
@@ -51,7 +68,7 @@ func TestFindResourceReturnsNotFoundError(t *testing.T) {
 }
 
 func TestFindDependentResourceFindsResource(t *testing.T) {
-	c := testSetupConfig()
+	c := testSetupConfig(t)
 
 	r, err := c.Resources[0].FindDependentResource("k8s_cluster.test")
 	assert.NoError(t, err)
@@ -59,7 +76,7 @@ func TestFindDependentResourceFindsResource(t *testing.T) {
 }
 
 func TestAddResourceAddsAResouce(t *testing.T) {
-	c := testSetupConfig()
+	c := testSetupConfig(t)
 
 	cl := NewK8sCluster("mikey")
 	err := c.AddResource(cl)
@@ -71,14 +88,14 @@ func TestAddResourceAddsAResouce(t *testing.T) {
 }
 
 func TestAddResourceExistsReturnsError(t *testing.T) {
-	c := testSetupConfig()
+	c := testSetupConfig(t)
 
 	err := c.AddResource(c.Resources[0])
 	assert.Error(t, err)
 }
 
 func TestRemoveResourceRemoves(t *testing.T) {
-	c := testSetupConfig()
+	c := testSetupConfig(t)
 
 	err := c.RemoveResource(c.Resources[0])
 	assert.NoError(t, err)
@@ -86,7 +103,7 @@ func TestRemoveResourceRemoves(t *testing.T) {
 }
 
 func TestRemoveResourceNotFoundReturnsError(t *testing.T) {
-	c := testSetupConfig()
+	c := testSetupConfig(t)
 
 	err := c.RemoveResource(nil)
 	assert.Error(t, err)
@@ -94,7 +111,7 @@ func TestRemoveResourceNotFoundReturnsError(t *testing.T) {
 }
 
 func TestDoYaLikeDAGGeneratesAGraph(t *testing.T) {
-	c := testSetupConfig()
+	c := testSetupConfig(t)
 
 	d, err := c.DoYaLikeDAGs()
 	assert.NoError(t, err)
@@ -104,7 +121,23 @@ func TestDoYaLikeDAGGeneratesAGraph(t *testing.T) {
 }
 
 func TestDoYaLikeDAGAddsDependencies(t *testing.T) {
-	c := testSetupConfig()
+	c := testSetupConfig(t)
+
+	g, err := c.DoYaLikeDAGs()
+	assert.NoError(t, err)
+
+	// check the dependency tree of a cluster
+	s, err := g.Descendents(c.Resources[1])
+	assert.NoError(t, err)
+
+	// check that the network and a blueprint is returned
+	list := s.List()
+	assert.Contains(t, list, c.Resources[0])
+	assert.Contains(t, list, &Blueprint{})
+}
+
+func TestDoYaLikeDAGAddsDependenciesForModules(t *testing.T) {
+	c := testSetupModuleConfig(t)
 
 	g, err := c.DoYaLikeDAGs()
 	assert.NoError(t, err)
@@ -120,7 +153,7 @@ func TestDoYaLikeDAGAddsDependencies(t *testing.T) {
 }
 
 func TestDoYaLikeDAGWithUnresolvedDependencyReturnsError(t *testing.T) {
-	c := testSetupConfig()
+	c := testSetupConfig(t)
 
 	con := NewContainer("test")
 	con.DependsOn = []string{"doesnot.exist"}

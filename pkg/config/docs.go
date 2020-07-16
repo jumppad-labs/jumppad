@@ -14,9 +14,10 @@ type Docs struct {
 
 	Image *Image `hcl:"image,block" json:"image,omitempty"` // image to use for the container
 
-	Path          string `hcl:"path" json:"path"`
-	Port          int    `hcl:"port" json:"port"`
-	OpenInBrowser bool   `hcl:"open_in_browser,optional" json:"open_in_browser" mapstructure:"open_in_browser"` // When a host port is defined open the location in a browser
+	Path           string `hcl:"path" json:"path"`
+	Port           int    `hcl:"port" json:"port"`
+	LiveReloadPort int    `hcl:"live_reload_port,optional" json:"live_reload_port,omitempty"`
+	OpenInBrowser  bool   `hcl:"open_in_browser,optional" json:"open_in_browser" mapstructure:"open_in_browser"` // When a host port is defined open the location in a browser
 
 	IndexTitle string   `hcl:"index_title,optional" json:"index_title" mapstructure:"index_title"`
 	IndexPages []string `hcl:"index_pages,optional" json:"index_pages,omitempty" mapstructure:"index_pages"`

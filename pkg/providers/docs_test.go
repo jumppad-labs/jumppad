@@ -23,7 +23,7 @@ func setupDocs() (*Docs, *mocks.MockContainerTasks) {
 
 	md.On("PullImage", mock.Anything, false).Return(nil)
 	md.On("CreateContainer", mock.Anything).Return("", nil)
-	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, nil)
 	md.On("RemoveContainer", mock.Anything).Return(nil)
 
 	d := NewDocs(cc, md, hclog.NewNullLogger())
@@ -96,6 +96,26 @@ func TestDocsSetsDocsPorts(t *testing.T) {
 	assert.Equal(t, "37950", params.Ports[1].Host)
 }
 
+func TestDocsSetsDocsPortsWithCustomReload(t *testing.T) {
+	d, md := setupDocs()
+	d.config.LiveReloadPort = 30000
+
+	err := d.Create()
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+
+	// main port
+	assert.Equal(t, "80", params.Ports[0].Local)
+	assert.Equal(t, "80", params.Ports[0].Remote)
+	assert.Equal(t, fmt.Sprintf("%d", d.config.Port), params.Ports[0].Host)
+
+	// livereload
+	assert.Equal(t, "37950", params.Ports[1].Local)
+	assert.Equal(t, "37950", params.Ports[1].Remote)
+	assert.Equal(t, "30000", params.Ports[1].Host)
+}
+
 func TestDocsPullsTerminalContainer(t *testing.T) {
 	d, md := setupDocs()
 
@@ -104,6 +124,37 @@ func TestDocsPullsTerminalContainer(t *testing.T) {
 
 	params := getCalls(&md.Mock, "PullImage")[1].Arguments[0].(config.Image)
 	assert.Equal(t, params.Name, terminalImageName+":"+terminalVersion)
+}
+
+func TestCreatesTerminalContainer(t *testing.T) {
+	d, md := setupDocs()
+
+	err := d.Create()
+	assert.NoError(t, err)
+
+	md.AssertNumberOfCalls(t, "CreateContainer", 2)
+}
+
+func TestDoesNotCreateTerminalContainerWhenRunning(t *testing.T) {
+	d, md := setupDocs()
+	removeOn(&md.Mock, "FindContainerIDs")
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
+
+	err := d.Create()
+	assert.NoError(t, err)
+
+	md.AssertNumberOfCalls(t, "CreateContainer", 1)
+}
+
+func TestModifiesTerminalContainerToAppendNetworks(t *testing.T) {
+	d, md := setupDocs()
+	removeOn(&md.Mock, "FindContainerIDs")
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
+
+	err := d.Create()
+	assert.NoError(t, err)
+
+	md.AssertNumberOfCalls(t, "CreateContainer", 1)
 }
 
 func TestDocsMountsDockerSock(t *testing.T) {
@@ -135,6 +186,8 @@ func TestDocsSetsTerminalPorts(t *testing.T) {
 
 func TestDestroyRemovesContainers(t *testing.T) {
 	d, md := setupDocs()
+	removeOn(&md.Mock, "FindContainerIDs")
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
 
 	err := d.Create()
 	assert.NoError(t, err)
@@ -142,6 +195,6 @@ func TestDestroyRemovesContainers(t *testing.T) {
 	err = d.Destroy()
 	assert.NoError(t, err)
 
-	md.AssertNumberOfCalls(t, "FindContainerIDs", 2)
+	md.AssertNumberOfCalls(t, "FindContainerIDs", 3)
 	md.AssertNumberOfCalls(t, "RemoveContainer", 2)
 }
