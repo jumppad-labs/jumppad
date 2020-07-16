@@ -8,9 +8,7 @@ import (
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var configFile = ""
@@ -29,14 +27,43 @@ var version string
 
 func init() {
 	// setup dependencies
-	var err error
 	logger = createLogger()
-	engine, err = shipyard.New(logger)
+	engine, vm := createEngine(logger)
+	engineClients := engine.GetClients()
+
+	//cobra.OnInitialize(configure)
+
+	//rootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.shipyard/config)")
+
+	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(checkCmd)
+	rootCmd.AddCommand(newEnvCmd(engine))
+	rootCmd.AddCommand(newRunCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, vm, logger))
+	rootCmd.AddCommand(newTestCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, logger))
+	rootCmd.AddCommand(pauseCmd)
+	rootCmd.AddCommand(resumeCmd)
+	rootCmd.AddCommand(newGetCmd(engineClients.Getter))
+	rootCmd.AddCommand(destroyCmd)
+	rootCmd.AddCommand(statusCmd)
+	rootCmd.AddCommand(newPurgeCmd(engineClients.Docker, engineClients.ImageLog, logger))
+	rootCmd.AddCommand(taintCmd)
+	rootCmd.AddCommand(newExecCmd(engineClients.ContainerTasks))
+	rootCmd.AddCommand(newVersionCmd(vm))
+	//rootCmd.AddCommand(exposeCmd)
+	//rootCmd.AddCommand(containerCmd)
+	//rootCmd.AddCommand(codeCmd)
+	//rootCmd.AddCommand(docsCmd)
+	//rootCmd.AddCommand(toolsCmd)
+	//rootCmd.AddCommand(upgradeCmd)
+	rootCmd.AddCommand(uninstallCmd)
+	rootCmd.AddCommand(newPushCmd(engineClients.ContainerTasks, engineClients.Kubernetes, engineClients.HTTP, engineClients.Nomad, logger))
+}
+
+func createEngine(l hclog.Logger) (shipyard.Engine, gvm.Versions) {
+	engine, err := shipyard.New(l)
 	if err != nil {
 		panic(err)
 	}
-
-	engineClients = engine.GetClients()
 
 	o := gvm.Options{
 		Organization: "shipyard-run",
@@ -73,55 +100,7 @@ func init() {
 
 	vm := gvm.New(o)
 
-	cobra.OnInitialize(configure)
-
-	//rootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.shipyard/config)")
-
-	rootCmd.AddCommand(initCmd)
-	rootCmd.AddCommand(checkCmd)
-	rootCmd.AddCommand(newEnvCmd(engine))
-	rootCmd.AddCommand(newRunCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, vm, logger))
-	rootCmd.AddCommand(newTestCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, logger))
-	rootCmd.AddCommand(pauseCmd)
-	rootCmd.AddCommand(resumeCmd)
-	rootCmd.AddCommand(newGetCmd(engineClients.Getter))
-	rootCmd.AddCommand(destroyCmd)
-	rootCmd.AddCommand(statusCmd)
-	rootCmd.AddCommand(newPurgeCmd(engineClients.Docker, engineClients.ImageLog, logger))
-	rootCmd.AddCommand(taintCmd)
-	rootCmd.AddCommand(newExecCmd(engineClients.ContainerTasks))
-	rootCmd.AddCommand(newVersionCmd(vm))
-	//rootCmd.AddCommand(exposeCmd)
-	//rootCmd.AddCommand(containerCmd)
-	//rootCmd.AddCommand(codeCmd)
-	//rootCmd.AddCommand(docsCmd)
-	//rootCmd.AddCommand(toolsCmd)
-	//rootCmd.AddCommand(upgradeCmd)
-	rootCmd.AddCommand(uninstallCmd)
-	rootCmd.AddCommand(newPushCmd(engineClients.ContainerTasks, engineClients.Kubernetes, engineClients.HTTP, engineClients.Nomad, logger))
-}
-
-func configure() {
-	if configFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(configFile)
-	} else {
-		// Find home directory.
-		home, err := homedir.Dir()
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		// Search config in home directory with name ".shipyard".
-		viper.AddConfigPath(home)
-		viper.SetConfigName(".shipyard/config")
-	}
-
-	viper.AutomaticEnv()
-
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
-	}
+	return engine, vm
 }
 
 // Execute the root command

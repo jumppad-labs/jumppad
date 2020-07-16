@@ -8,17 +8,16 @@ Scenario: Single Container from Local Blueprint
     | key            | value                 |
     | CONSUL_VERSION | 1.8.0                 |
     | ENVOY_VERSION  | 1.14.3                |
-  And I have a running blueprint using version "v0.0.37"
+  And I have a running blueprint
   Then the following resources should be running
     | name                      | type      |
     | onprem                    | network   |
     | consul                    | container |
     | envoy                     | sidecar   |
     | consul-container-http     | ingress   |
-
-  And the info "{.HostConfig.PortBindings['8500/'][0].HostPort}" for the running "container" running called "consul" should equal "8500"
-  And the info "{.HostConfig.PortBindings['8500/'][0].HostPort}" for the running "container" running called "consul" should contain "85"
-  And the info "{.HostConfig.PortBindings['8501/']}" for the running "container" running called "consul" should exist"
+  And the info "{.HostConfig.PortBindings['8500/'][0].HostPort}" for the running "container" called "consul" should equal "8500"
+  And the info "{.HostConfig.PortBindings['8500/'][0].HostPort}" for the running "container" called "consul" should contain "85"
+  And the info "{.HostConfig.PortBindings['8501/']}" for the running "container" called "consul" should exist"
   And a HTTP call to "http://consul.container.shipyard.run:8500/v1/status/leader" should result in status 200
   And a HTTP call to "http://consul-http.ingress.shipyard.run:28500/v1/status/leader" should result in status 200
 

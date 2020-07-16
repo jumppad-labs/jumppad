@@ -52,7 +52,7 @@ func (d *DockerTasks) SetForcePull(force bool) {
 
 // CreateContainer creates a new Docker container for the given configuation
 func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
-	d.l.Info("Creating Container", "ref", c.Name)
+	d.l.Debug("Creating Docker Container", "ref", c.Name)
 
 	// create a unique name based on service network [container].[network].shipyard
 	// attach to networks

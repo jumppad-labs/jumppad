@@ -23,6 +23,9 @@ import (
 	"golang.org/x/xerrors"
 )
 
+// TODO this really needs to be a struct with configuration not
+// separate methods.
+
 var ctx *hcl.EvalContext
 
 func init() {
@@ -38,46 +41,54 @@ func (r ResourceTypeNotExistError) Error() string {
 	return fmt.Sprintf("Resource type %s defined in file %s, does not exist. Please check the documentation for supported resources. We love PRs if you would like to create a resource of this type :)", r.Type, r.File)
 }
 
-// ParseFolder for config entries
-func ParseFolder(folder string, c *Config) error {
+// ParseFolder for Resource, Blueprint, and Variable files
+// The onlyResources parameter allows you to specfiy that the parser
+// only reads resource files and will ignore Blueprint and Varaible files.
+// This is useful when recursively parsing such as when reading Modules
+func ParseFolder(folder string, c *Config, onlyResources bool, variables map[string]string) error {
 	abs, _ := filepath.Abs(folder)
 
 	// load the variables
-	variableFiles, err := filepath.Glob(path.Join(abs, "*.vars"))
-	if err != nil {
-		return err
-	}
-
-	for _, f := range variableFiles {
-		err := LoadValuesFile(f)
+	if !onlyResources {
+		variableFiles, err := filepath.Glob(path.Join(abs, "*.vars"))
 		if err != nil {
 			return err
 		}
-	}
 
-	// pick up the blueprint file
-	yardFilesHCL, err := filepath.Glob(path.Join(abs, "*.yard"))
-	if err != nil {
-		return err
-	}
+		for _, f := range variableFiles {
+			err := LoadValuesFile(f)
+			if err != nil {
+				return err
+			}
+		}
 
-	yardFilesMD, err := filepath.Glob(path.Join(abs, "*.md"))
-	if err != nil {
-		return err
-	}
+		// setup any variables which are passed as environment variables or in the collection
+		SetVariables(variables)
 
-	yardFiles := []string{}
-	yardFiles = append(yardFiles, yardFilesHCL...)
-	yardFiles = append(yardFiles, yardFilesMD...)
-
-	if len(yardFiles) > 0 {
-		err := ParseYardFile(yardFiles[0], c)
+		// pick up the blueprint file
+		yardFilesHCL, err := filepath.Glob(path.Join(abs, "*.yard"))
 		if err != nil {
 			return err
 		}
+
+		yardFilesMD, err := filepath.Glob(path.Join(abs, "README.md"))
+		if err != nil {
+			return err
+		}
+
+		yardFiles := []string{}
+		yardFiles = append(yardFiles, yardFilesHCL...)
+		yardFiles = append(yardFiles, yardFilesMD...)
+
+		if len(yardFiles) > 0 {
+			err := ParseYardFile(yardFiles[0], c)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
-	// load files from the current folder
+	// Parse Resource files from the current folder
 	files, err := filepath.Glob(path.Join(abs, "*.hcl"))
 	if err != nil {
 		return err
@@ -114,10 +125,48 @@ func LoadValuesFile(path string) error {
 	attrs, _ := f.Body.JustAttributes()
 	for name, attr := range attrs {
 		val, _ := attr.Expr.Value(nil)
-		ctx.Variables[name] = val
+
+		setContextVariable(name, val)
 	}
 
 	return nil
+}
+
+func setContextVariable(key string, value interface{}) {
+	var valMap map[string]cty.Value
+
+	// get the existing map
+	if m, ok := ctx.Variables["var"]; ok {
+		valMap = m.AsValueMap()
+	} else {
+		valMap = map[string]cty.Value{}
+	}
+
+	switch v := value.(type) {
+	case string:
+		valMap[key] = cty.StringVal(v)
+	case cty.Value:
+		valMap[key] = v
+	}
+
+	ctx.Variables["var"] = cty.MapVal(valMap)
+}
+
+// SetVaraibles allow variables to be set from a collection or environment variables
+// Precedence should be file, env, vars
+func SetVariables(vars map[string]string) {
+	// first any vars defined as environment varaibles
+	for _, e := range os.Environ() {
+		if strings.HasPrefix(e, "SY_VAR_") {
+			parts := strings.Split(e, "=")
+			setContextVariable(strings.Replace(parts[0], "SY_VAR_", "", -1), parts[1])
+		}
+	}
+
+	// then set vars
+	for k, v := range vars {
+		setContextVariable(k, v)
+	}
 }
 
 func parseYardHCL(file string, c *Config) error {
@@ -450,7 +499,8 @@ func ParseHCLFile(file string, c *Config) error {
 
 			conf := New()
 			// recursively parse references for the module
-			err = ParseFolder(m.Source, conf)
+			// ensure we do load the values which might be in module folders
+			err = ParseFolder(m.Source, conf, true, nil)
 			if err != nil {
 				return err
 			}

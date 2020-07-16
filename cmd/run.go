@@ -28,6 +28,7 @@ func newRunCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients
 	var force bool
 	var y bool
 	var runVersion string
+	var variables []string
 	runCmd := &cobra.Command{
 		Use:   "run [file] [directory] ...",
 		Short: "Run the supplied stack configuration",
@@ -43,7 +44,7 @@ func newRunCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients
   shipyard run github.com/shipyard-run/blueprints//vault-k8s
 	`,
 		Args:         cobra.ArbitraryArgs,
-		RunE:         newRunCmdFunc(e, bp, hc, bc, vm, &noOpen, &force, &runVersion, &y, l),
+		RunE:         newRunCmdFunc(e, bp, hc, bc, vm, &noOpen, &force, &runVersion, &y, variables, l),
 		SilenceUsage: true,
 	}
 
@@ -51,15 +52,28 @@ func newRunCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients
 	runCmd.Flags().BoolVarP(&y, "y", "y", false, "When set, Shipyard will not prompt for conifirmation")
 	runCmd.Flags().BoolVarP(&noOpen, "no-browser", "", false, "When set to true Shipyard will not open the browser windows defined in the blueprint")
 	runCmd.Flags().BoolVarP(&force, "force-update", "", false, "When set to true Shipyard ignores cached images or files and will download all resources")
+	runCmd.Flags().StringSliceVar(&variables, "var", nil, "Allows setting variables from the command line, varaiables are specified as a key and value, e.g --var key=value. Can be specified multiple times")
 
 	return runCmd
 }
 
-func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, vm gvm.Versions, noOpen *bool, force *bool, runVersion *string, autoApprove *bool, l hclog.Logger) func(cmd *cobra.Command, args []string) error {
+func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, vm gvm.Versions, noOpen *bool, force *bool, runVersion *string, autoApprove *bool, variables []string, l hclog.Logger) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
+		// create the shipyard and sub folders in the users home directory
+		utils.CreateFolders()
+
 		if *force == true {
 			bp.SetForce(true)
 			e.GetClients().ContainerTasks.SetForcePull(true)
+		}
+
+		// parse the vars into a map
+		vars := map[string]string{}
+		for _, v := range variables {
+			parts := strings.Split(v, "=")
+			if len(parts) == 2 {
+				vars[parts[0]] = parts[1]
+			}
 		}
 
 		// Check the system to see if Docker is running and everything is installed
@@ -73,11 +87,8 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 
 		// are we running with a different shipyard version, if so check it is installed
 		if *runVersion != "" {
-			return runWithOtherVersion(*runVersion, *autoApprove, args, *force, *noOpen, cmd, vm, bc)
+			return runWithOtherVersion(*runVersion, *autoApprove, args, *force, *noOpen, cmd, vm, bc, variables)
 		}
-
-		// create the shipyard home and releases
-		os.MkdirAll(utils.GetReleasesFolder(), os.FileMode(0755))
 
 		dst := ""
 		if len(args) == 1 {
@@ -106,7 +117,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 		}
 
 		// Parse the config to check it is valid
-		err = e.ParseConfig(dst)
+		err = e.ParseConfigWithVariables(dst, vars)
 		if err != nil {
 			return fmt.Errorf("Unable to read config: %s", err)
 		}
@@ -126,12 +137,12 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 
 			if !valid {
 				// we neeed to go in to the check loop
-				return runWithOtherVersion(e.Blueprint().ShipyardVersion, *autoApprove, args, *force, *noOpen, cmd, vm, bc)
+				return runWithOtherVersion(e.Blueprint().ShipyardVersion, *autoApprove, args, *force, *noOpen, cmd, vm, bc, variables)
 			}
 		}
 
 		// Load the files
-		res, err := e.Apply(dst)
+		res, err := e.ApplyWithVariables(dst, vars)
 		if err != nil {
 			return fmt.Errorf("Unable to apply blueprint: %s", err)
 		}
@@ -284,7 +295,7 @@ func bluePrintInState() bool {
 	return sc.Blueprint != nil
 }
 
-func runWithOtherVersion(version string, autoApprove bool, args []string, forceUpdate bool, noBrowser bool, cmd *cobra.Command, vm gvm.Versions, sys clients.System) error {
+func runWithOtherVersion(version string, autoApprove bool, args []string, forceUpdate bool, noBrowser bool, cmd *cobra.Command, vm gvm.Versions, sys clients.System, variables []string) error {
 
 	var exePath string
 
@@ -340,6 +351,14 @@ func runWithOtherVersion(version string, autoApprove bool, args []string, forceU
 
 	if noBrowser {
 		commandString = append(commandString, "--no-browser")
+	}
+
+	// Variables as a command line is only available in Shipyard v0.0.38 and later
+	if ok, _ := vm.InRange(version, ">= v0.0.38"); ok {
+		for _, v := range variables {
+			commandString = append(commandString, "--var")
+			commandString = append(commandString, v)
+		}
 	}
 
 	commandString = append(commandString, args[0])

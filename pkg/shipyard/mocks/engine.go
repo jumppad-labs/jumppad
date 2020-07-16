@@ -32,6 +32,16 @@ func (e *Engine) Apply(path string) ([]config.Resource, error) {
 	return nil, args.Error(1)
 }
 
+func (e *Engine) ApplyWithVariables(path string, vars map[string]string) ([]config.Resource, error) {
+	args := e.Called(path, vars)
+
+	if r, ok := args.Get(0).([]config.Resource); ok {
+		return r, args.Error(1)
+	}
+
+	return nil, args.Error(1)
+}
+
 func (e *Engine) Destroy(path string, all bool) error {
 	args := e.Called(path, all)
 
@@ -52,5 +62,10 @@ func (e *Engine) Blueprint() *config.Blueprint {
 
 func (e *Engine) ParseConfig(path string) error {
 	args := e.Called(path)
+	return args.Error(0)
+}
+
+func (e *Engine) ParseConfigWithVariables(path string, vars map[string]string) error {
+	args := e.Called(path, vars)
 	return args.Error(0)
 }

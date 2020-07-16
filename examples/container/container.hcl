@@ -17,7 +17,7 @@ container "consul" {
 
   env {
     key = "something"
-    value = "${something}"
+    value = "${var.something}"
   }
 
   resources {

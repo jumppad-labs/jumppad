@@ -17,6 +17,11 @@ var NameContainsInvalidCharactersError = fmt.Errorf("Name contains invalid chara
 // ImageVolumeName is the name of the volume which stores the images for clusters
 const ImageVolumeName string = "images"
 
+// Creates the required file structure in the users Home directory
+func CreateFolders() {
+	os.MkdirAll(GetReleasesFolder(), os.FileMode(0755))
+}
+
 // ValidateName ensures that the name for a resource is within certain boundaries
 // Valid characters: [a-z] [A-Z] _ - [0-9]
 // Max length: 128

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -23,7 +24,7 @@ func TestRunParsesBlueprintInMarkdownFormat(t *testing.T) {
 	}
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c)
+	err = ParseFolder(absoluteFolderPath, c, false, nil)
 	assert.NoError(t, err)
 
 	assert.NotNil(t, c.Blueprint)
@@ -45,7 +46,7 @@ func TestRunParsesBlueprintInHCLFormat(t *testing.T) {
 	}
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c)
+	err = ParseFolder(absoluteFolderPath, c, false, nil)
 	assert.NoError(t, err)
 
 	assert.NotNil(t, c.Blueprint)
@@ -58,7 +59,7 @@ func TestLoadsVariablesFiles(t *testing.T) {
 	}
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c)
+	err = ParseFolder(absoluteFolderPath, c, false, nil)
 	assert.NoError(t, err)
 
 	// check variable has been interpolated
@@ -77,6 +78,90 @@ func TestLoadsVariablesFiles(t *testing.T) {
 	assert.True(t, validEnv)
 }
 
+func TestOverridesVariablesFilesWithFlag(t *testing.T) {
+	absoluteFolderPath, err := filepath.Abs("../../examples/container")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c := New()
+	err = ParseFolder(absoluteFolderPath, c, false, map[string]string{"something": "else"})
+	assert.NoError(t, err)
+
+	// check variable has been interpolated
+	r, err := c.FindResource("container.consul")
+	assert.NoError(t, err)
+
+	validEnv := false
+	con := r.(*Container)
+	for _, e := range con.Environment {
+		// should contain a key called "something" with a value "else"
+		if e.Key == "something" && e.Value == "else" {
+			validEnv = true
+		}
+	}
+
+	assert.True(t, validEnv)
+}
+
+func TestOverridesVariablesFilesWithEnv(t *testing.T) {
+	absoluteFolderPath, err := filepath.Abs("../../examples/container")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	os.Setenv("SY_VAR_something", "env")
+	t.Cleanup(func() {
+		os.Unsetenv("SY_VAR_something")
+	})
+
+	c := New()
+	err = ParseFolder(absoluteFolderPath, c, false, nil)
+	assert.NoError(t, err)
+
+	// check variable has been interpolated
+	r, err := c.FindResource("container.consul")
+	assert.NoError(t, err)
+
+	validEnv := false
+	con := r.(*Container)
+	for _, e := range con.Environment {
+		// should contain a key called "something" with a value "else"
+		if e.Key == "something" && e.Value == "env" {
+			validEnv = true
+		}
+	}
+
+	assert.True(t, validEnv)
+}
+
+func TestDoesNotLoadsVariablesFilesFromInsideModules(t *testing.T) {
+	absoluteFolderPath, err := filepath.Abs("../../examples/modules")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c := New()
+	err = ParseFolder(absoluteFolderPath, c, false, nil)
+	assert.NoError(t, err)
+
+	// check variable has been interpolated
+	r, err := c.FindResource("container.consul")
+	assert.NoError(t, err)
+
+	validEnv := false
+	con := r.(*Container)
+	for _, e := range con.Environment {
+		fmt.Println(e.Value)
+		// should contain a key called "something" with a value "else"
+		if e.Key == "something" && e.Value == "this is a module" {
+			validEnv = true
+		}
+	}
+
+	assert.True(t, validEnv)
+}
+
 func TestParseModuleCreatesResources(t *testing.T) {
 	absoluteFolderPath, err := filepath.Abs("../../examples/modules")
 	if err != nil {
@@ -84,21 +169,21 @@ func TestParseModuleCreatesResources(t *testing.T) {
 	}
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c)
+	err = ParseFolder(absoluteFolderPath, c, false, nil)
 	assert.NoError(t, err)
 
 	// count the resources, should create 10
-	assert.Len(t, c.Resources, 10)
+	assert.Len(t, c.Resources, 12)
 
 	// check depends on is set
-	r, err := c.FindResource("container.consul")
+	r, err := c.FindResource("k8s_cluster.k3s")
 	assert.NoError(t, err)
-	assert.Contains(t, r.Info().DependsOn, "module.k8s")
+	assert.Contains(t, r.Info().DependsOn, "module.consul")
 
 	// check the module is set on resources loaded as a module
-	r, err = c.FindResource("k8s_cluster.k3s")
+	r, err = c.FindResource("container.consul")
 	assert.NoError(t, err)
-	assert.Equal(t, "k8s", r.Info().Module)
+	assert.Equal(t, "consul", r.Info().Module)
 }
 
 /*

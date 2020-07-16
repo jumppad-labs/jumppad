@@ -43,6 +43,10 @@ func NewContainerSidecar(cs *config.Sidecar, cl clients.ContainerTasks, hc clien
 func (c *Container) Create() error {
 	c.log.Info("Creating Container", "ref", c.config.Name)
 
+	return c.internalCreate()
+}
+
+func (c *Container) internalCreate() error {
 	// pull any images needed for this container
 	err := c.client.PullImage(c.config.Image, false)
 	if err != nil {
@@ -73,8 +77,12 @@ func (c *Container) Create() error {
 // Destroy stops and removes the container
 func (c *Container) Destroy() error {
 	c.log.Info("Destroy Container", "ref", c.config.Name)
-	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.Type)
 
+	return c.internalDestroy()
+}
+
+func (c *Container) internalDestroy() error {
+	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.Type)
 	if err != nil {
 		return err
 	}

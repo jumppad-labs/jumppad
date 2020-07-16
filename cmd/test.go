@@ -19,13 +19,21 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/hashicorp/go-hclog"
-	gvm "github.com/nicholasjackson/version-manager"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/util/jsonpath"
 )
+
+var opts = &godog.Options{
+	Format: "pretty",
+	Output: colors.Colored(os.Stdout),
+}
+
+var envVars map[string]string
+var shipyardVars []string
+var output = bytes.NewBufferString("")
 
 func newTestCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, l hclog.Logger) *cobra.Command {
 	var testFolder string
@@ -72,13 +80,6 @@ type CucumberRunner struct {
 	l          hclog.Logger
 }
 
-var opts = &godog.Options{
-	Format: "pretty",
-	Output: colors.Colored(os.Stdout),
-}
-
-var envVars map[string]string
-
 // Initialize the functional tests
 func (cr *CucumberRunner) start() {
 	godog.BindFlags("godog.", flag.CommandLine, opts)
@@ -106,6 +107,7 @@ func (cr *CucumberRunner) start() {
 func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 	ctx.BeforeScenario(func(gs *godog.Scenario) {
 		envVars = map[string]string{}
+		shipyardVars = []string{}
 	})
 
 	ctx.AfterScenario(func(gs *godog.Scenario, err error) {
@@ -122,7 +124,7 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 		}
 
 		if err != nil {
-			fmt.Println(writer.String())
+			fmt.Println(output.String())
 		}
 
 		// do we need to pure the cache
@@ -139,15 +141,14 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 	ctx.Step(`^there should be a "([^"]*)" running called "([^"]*)"$`, cr.thereShouldBeAResourceRunningCalled)
 	ctx.Step(`^the following resources should be running$`, cr.theFollowingResourcesShouldBeRunning)
 	ctx.Step(`^the following environment variables are set$`, cr.theFollowingEnvironmentVariablesAreSet)
+	ctx.Step(`^the following shipyard variables are set$`, cr.theFollowingShipyardVaraiblesAreSet)
 	ctx.Step(`^the environment variable "([^"]*)" has a value "([^"]*)"$`, cr.theEnvironmentVariableKHasAValueV)
 	ctx.Step(`^a HTTP call to "([^"]*)" should result in status (\d+)$`, cr.aCallToShouldResultInStatus)
 	ctx.Step(`^the response body should contain "([^"]*)"$`, cr.theResponseBodyShouldContain)
-	ctx.Step(`^the info "([^"]*)" for the running "([^"]*)" running called "([^"]*)" should equal "([^"]*)"$`, cr.theResourceInfoShouldEqual)
-	ctx.Step(`^the info "([^"]*)" for the running "([^"]*)" running called "([^"]*)" should contain "([^"]*)"$`, cr.theResourceInfoShouldContain)
-	ctx.Step(`^the info "([^"]*)" for the running "([^"]*)" running called "([^"]*)" should exist`, cr.theResourceInfoShouldExist)
+	ctx.Step(`^the info "([^"]*)" for the running "([^"]*)" called "([^"]*)" should equal "([^"]*)"$`, cr.theResourceInfoShouldEqual)
+	ctx.Step(`^the info "([^"]*)" for the running "([^"]*)" called "([^"]*)" should contain "([^"]*)"$`, cr.theResourceInfoShouldContain)
+	ctx.Step(`^the info "([^"]*)" for the running "([^"]*)" called "([^"]*)" should exist`, cr.theResourceInfoShouldExist)
 }
-
-var writer = bytes.NewBufferString("")
 
 func (cr *CucumberRunner) iRunApply() error {
 	return cr.iRunApplyWithVersion("")
@@ -162,7 +163,8 @@ func (cr *CucumberRunner) iRunApplyAtPath(path string) error {
 }
 
 func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
-	writer = bytes.NewBufferString("")
+	output = bytes.NewBufferString("")
+
 	args := []string{}
 
 	// if filepath is not absolute then it will be relative to args
@@ -176,7 +178,9 @@ func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
 	// convert the args to absolute
 	args[0], _ = filepath.Abs(args[0])
 
-	opts := &hclog.LoggerOptions{}
+	opts := &hclog.LoggerOptions{
+		Color: hclog.AutoColor,
+	}
 
 	// set the log level
 	opts.Level = hclog.Debug
@@ -186,54 +190,18 @@ func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
 
 	// if the log level is not debug write it to a buffer
 	if os.Getenv("LOG_LEVEL") != "debug" {
-		opts.Output = writer
+		opts.Output = output
+		opts.Color = hclog.ColorOff
 	}
 
-	cr.l = hclog.New(opts)
-	engine, err := shipyard.New(cr.l)
-	if err != nil {
-		panic(err)
-	}
+	logger := hclog.New(opts)
+	engine, vm := createEngine(logger)
 
 	cr.e = engine
-
-	o := gvm.Options{
-		Organization: "shipyard-run",
-		Repo:         "shipyard",
-		ReleasesPath: path.Join(utils.ShipyardHome(), "releases"),
-	}
-
-	o.AssetNameFunc = func(version, goos, goarch string) string {
-		// No idea why we set the release architecture for the binary like this
-		if goarch == "amd64" {
-			goarch = "x86_64"
-		}
-
-		// zip is used on windows as tar is not available by default
-		switch goos {
-		case "linux":
-			return fmt.Sprintf("shipyard_%s_%s_%s.tar.gz", version, goos, goarch)
-		case "darwin":
-			return fmt.Sprintf("shipyard_%s_%s_%s.tar.gz", version, goos, goarch)
-		case "windows":
-			return fmt.Sprintf("shipyard_%s_%s_%s.zip", version, goos, goarch)
-		}
-
-		return ""
-	}
-
-	o.ExeNameFunc = func(version, goos, goarch string) string {
-		if goos == "windows" {
-			return "shipyard.exe"
-		}
-
-		return "shipyard"
-	}
+	cr.l = logger
 
 	noOpen := true
 	approve := true
-
-	vm := gvm.New(o)
 
 	// re-use the run command
 	rc := newRunCmdFunc(
@@ -246,18 +214,19 @@ func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
 		cr.force,
 		&version,
 		&approve,
+		shipyardVars,
 		cr.l,
 	)
 
 	// if the log level is not debug write it to a buffer
 	if os.Getenv("LOG_LEVEL") != "debug" {
-		cr.cmd.SetOut(writer)
-		cr.cmd.SetErr(writer)
+		cr.cmd.SetOut(output)
+		cr.cmd.SetErr(output)
 	}
 
-	err = rc(cr.cmd, args)
+	err := rc(cr.cmd, args)
 	if err != nil {
-		fmt.Println(writer.String())
+		fmt.Println(output.String())
 	}
 	return err
 }
@@ -398,6 +367,26 @@ func (cr *CucumberRunner) theFollowingEnvironmentVariablesAreSet(vars *godog.Tab
 
 		// set the environment variable
 		cr.theEnvironmentVariableKHasAValueV(r.Cells[0].GetValue(), r.Cells[1].GetValue())
+	}
+
+	return nil
+}
+
+func (cr *CucumberRunner) theFollowingShipyardVaraiblesAreSet(vars *godog.Table) error {
+	for i, r := range vars.Rows {
+		if i == 0 {
+			if r.Cells[0].Value != "key" || r.Cells[1].Value != "value" {
+				return fmt.Errorf("Tables should be formatted with a header row containing the columns 'key' and 'value'")
+			}
+
+			continue
+		}
+
+		if len(r.Cells) != 2 {
+			return fmt.Errorf("Table rows should have two columns 'key' and 'value'")
+		}
+
+		shipyardVars = append(shipyardVars, fmt.Sprintf("%s=%s", r.Cells[0].Value, r.Cells[1].Value))
 	}
 
 	return nil

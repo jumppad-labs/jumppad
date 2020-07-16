@@ -35,10 +35,11 @@ func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
 	mockGetter.On("Get", mock.Anything, mock.Anything).Return(nil)
 	mockGetter.On("SetForce", mock.Anything)
 
-	mockBrowser := &clientmocks.System{}
-	mockBrowser.On("OpenBrowser", mock.Anything).Return(nil)
-	mockBrowser.On("Preflight").Return(nil)
-	mockBrowser.On("CheckVersion", mock.Anything).Return("", false)
+	mockSystem := &clientmocks.System{}
+	mockSystem.On("OpenBrowser", mock.Anything).Return(nil)
+	mockSystem.On("Preflight").Return(nil)
+	mockSystem.On("PromptInput", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("")
+	mockSystem.On("CheckVersion", mock.Anything).Return("", false)
 
 	mockTasks := &clientmocks.MockContainerTasks{}
 	mockTasks.On("SetForcePull", mock.Anything)
@@ -46,13 +47,13 @@ func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
 	clients := &shipyard.Clients{
 		HTTP:           mockHTTP,
 		Getter:         mockGetter,
-		Browser:        mockBrowser,
+		Browser:        mockSystem,
 		ContainerTasks: mockTasks,
 	}
 
 	mockEngine := &mocks.Engine{}
-	mockEngine.On("ParseConfig", mock.Anything).Return(nil)
-	mockEngine.On("Apply", mock.Anything).Return(nil, nil)
+	mockEngine.On("ParseConfigWithVariables", mock.Anything, mock.Anything).Return(nil)
+	mockEngine.On("ApplyWithVariables", mock.Anything, mock.Anything).Return(nil, nil)
 	mockEngine.On("GetClients", mock.Anything).Return(clients)
 
 	bp := config.Blueprint{BrowserWindows: []string{"http://localhost", "http://localhost2"}}
@@ -71,11 +72,11 @@ func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
 		engine: mockEngine,
 		getter: mockGetter,
 		http:   mockHTTP,
-		system: mockBrowser,
+		system: mockSystem,
 		vm:     vm,
 	}
 
-	cmd := newRunCmd(mockEngine, mockGetter, mockHTTP, mockBrowser, vm, hclog.Default())
+	cmd := newRunCmd(mockEngine, mockGetter, mockHTTP, mockSystem, vm, hclog.Default())
 	cmd.SetOut(bytes.NewBuffer([]byte("")))
 
 	return cmd, rm
@@ -134,7 +135,7 @@ func TestRunSetsDestinationFromArgsWhenPresent(t *testing.T) {
 	err := rf.Execute()
 	assert.NoError(t, err)
 
-	rm.engine.AssertCalled(t, "Apply", "/tmp")
+	rm.engine.AssertCalled(t, "ApplyWithVariables", "/tmp", mock.Anything)
 }
 
 func TestRunSetsDestinationToDownloadedBlueprintFromArgsWhenRemote(t *testing.T) {
@@ -144,7 +145,7 @@ func TestRunSetsDestinationToDownloadedBlueprintFromArgsWhenRemote(t *testing.T)
 	err := rf.Execute()
 	assert.NoError(t, err)
 
-	rm.engine.AssertCalled(t, "Apply", filepath.Join(utils.ShipyardHome(), "blueprints/github.com/shipyard-run/blueprints/vault-k8s"))
+	rm.engine.AssertCalled(t, "ApplyWithVariables", filepath.Join(utils.ShipyardHome(), "blueprints/github.com/shipyard-run/blueprints/vault-k8s"), mock.Anything)
 }
 
 func TestRunFetchesBlueprint(t *testing.T) {
@@ -216,7 +217,7 @@ func TestRunOpensBrowserWindowForResources(t *testing.T) {
 	rf, rm := setupRun(t, "")
 	rf.SetArgs([]string{"/tmp"})
 
-	removeOn(&rm.engine.Mock, "Apply")
+	removeOn(&rm.engine.Mock, "ApplyWithVariables")
 
 	d := config.NewDocs("test")
 	d.OpenInBrowser = true
@@ -236,7 +237,7 @@ func TestRunOpensBrowserWindowForResources(t *testing.T) {
 	c2 := config.NewContainer("test2")
 	c2.Ports = []config.Port{config.Port{OpenInBrowser: ""}}
 
-	rm.engine.On("Apply", mock.Anything).Return(
+	rm.engine.On("ApplyWithVariables", mock.Anything, mock.Anything).Return(
 		[]config.Resource{d, i, c, d2, i2, c2},
 		nil,
 	)
