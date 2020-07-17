@@ -26,9 +26,11 @@ var engineClients *shipyard.Clients
 var version string
 
 func init() {
+	var vm gvm.Versions
+
 	// setup dependencies
 	logger = createLogger()
-	engine, vm := createEngine(logger)
+	engine, vm = createEngine(logger)
 	engineClients := engine.GetClients()
 
 	//cobra.OnInitialize(configure)

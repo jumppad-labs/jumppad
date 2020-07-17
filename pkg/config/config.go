@@ -135,8 +135,12 @@ func (c *Config) FindModuleResources(name string) ([]Resource, error) {
 // r, err := c.FindResource("cluster.k3s")
 func (c *Config) FindResource(name string) (Resource, error) {
 	parts := strings.Split(name, ".")
+	// the name could contain . so join after the first
+	typ := parts[0]
+	n := strings.Join(parts[1:], ".")
+
 	for _, r := range c.Resources {
-		if r.Info().Type == ResourceType(parts[0]) && r.Info().Name == parts[1] {
+		if r.Info().Type == ResourceType(typ) && r.Info().Name == n {
 			return r, nil
 		}
 	}

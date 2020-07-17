@@ -8,7 +8,7 @@ import (
 
 func testSetupConfig(t *testing.T) *Config {
 	net1 := NewNetwork("cloud")
-	cl1 := NewK8sCluster("test")
+	cl1 := NewK8sCluster("test.dev")
 	cl1.DependsOn = []string{"network.cloud"}
 
 	c := New()
@@ -22,7 +22,7 @@ func testSetupModuleConfig(t *testing.T) *Config {
 	net1 := NewNetwork("cloud")
 	net1.Module = "test"
 
-	cl1 := NewK8sCluster("test")
+	cl1 := NewK8sCluster("test.dev")
 	cl1.DependsOn = []string{"module.test"}
 
 	c := New()
@@ -53,7 +53,7 @@ func TestResourceAddChildSetsDetails(t *testing.T) {
 func TestFindResourceFindsCluster(t *testing.T) {
 	c := testSetupConfig(t)
 
-	cl, err := c.FindResource("k8s_cluster.test")
+	cl, err := c.FindResource("k8s_cluster.test.dev")
 	assert.NoError(t, err)
 	assert.Equal(t, c.Resources[1], cl)
 }
@@ -70,7 +70,7 @@ func TestFindResourceReturnsNotFoundError(t *testing.T) {
 func TestFindDependentResourceFindsResource(t *testing.T) {
 	c := testSetupConfig(t)
 
-	r, err := c.Resources[0].FindDependentResource("k8s_cluster.test")
+	r, err := c.Resources[0].FindDependentResource("k8s_cluster.test.dev")
 	assert.NoError(t, err)
 	assert.Equal(t, c.Resources[1], r)
 }
