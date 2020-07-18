@@ -20,6 +20,10 @@ test_functional:
 	go run main.go purge
 	go run main.go test ./examples/single_k3s_cluster
 
+test_e2e_cmd: install_local
+	yard-dev run --no-browser github.com/shipyard-run/blueprints//consul-terminating-gateways
+	yard-dev destroy
+
 test_docker:
 	docker build -t shipyard-run/tests -f Dockerfile.test .
 	docker run --rm shipyard-run/tests bash -c 'go test -v -race ./...'

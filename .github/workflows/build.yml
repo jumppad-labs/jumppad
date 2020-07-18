@@ -47,3 +47,6 @@ jobs:
     
       - name: Run tests
         run: make test_functional
+      
+      - name: E2E test for build binary
+        run: make test_e2e_cmd

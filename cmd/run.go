@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -238,23 +239,17 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 			cmd.Println("")
 			cmd.Println("Title", e.Blueprint().Title)
 			cmd.Println("Author", e.Blueprint().Author)
-			cmd.Println("")
-			cmd.Println("########################################################")
 
 			// parse the body as markdown and print
 			intro := markdown.Render(e.Blueprint().Intro, 80, 0)
 
-			cmd.Println("")
 			cmd.Println("")
 			cmd.Print(string(intro))
 			cmd.Println("")
 
 			if len(e.Blueprint().Environment) > 0 {
 				cmd.Println("######################################################")
-				cmd.Println("")
 				cmd.Println("Environment Variables")
-				cmd.Println("")
-				cmd.Println("######################################################")
 
 				cmd.Println("")
 				cmd.Println("This blueprint exports the following environment variables:")
@@ -279,6 +274,15 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 }
 
 func buildBrowserPath(n, p string, t config.ResourceType, path string) string {
+	// if the path starts with http or https then override the default behaviour
+	if strings.HasPrefix(path, "https://") || strings.HasPrefix(path, "http://") {
+		// validate this is a good URL
+		_, err := url.Parse(path)
+		if err == nil {
+			return path
+		}
+	}
+
 	ty := t
 	if t == config.TypeNomadIngress || t == config.TypeContainerIngress || t == config.TypeK8sIngress {
 		ty = config.TypeIngress

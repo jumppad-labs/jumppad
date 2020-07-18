@@ -1,6 +1,7 @@
 package clients
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"time"
@@ -21,13 +22,19 @@ type HTTP interface {
 
 type HTTPImpl struct {
 	backoff time.Duration
+	httpc   *http.Client
 	l       hclog.Logger
 }
 
 func NewHTTP(backoff time.Duration, l hclog.Logger) HTTP {
-	return &HTTPImpl{backoff, l}
+	httpc := &http.Client{}
+	httpc.Transport = http.DefaultTransport.(*http.Transport).Clone()
+	httpc.Transport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+
+	return &HTTPImpl{backoff, httpc, l}
 }
 
+// HealthCheckHTTP checks a http or HTTPS endpoint for a status 200
 func (h *HTTPImpl) HealthCheckHTTP(address string, timeout time.Duration) error {
 	h.l.Debug("Performing health check for address", "address", address)
 	st := time.Now()
@@ -38,7 +45,7 @@ func (h *HTTPImpl) HealthCheckHTTP(address string, timeout time.Duration) error 
 			return fmt.Errorf("Timeout waiting for HTTP healthcheck %s", address)
 		}
 
-		resp, err := http.Get(address)
+		resp, err := h.httpc.Get(address)
 		if err == nil && resp.StatusCode == 200 {
 			h.l.Debug("Health check complete", "address", address)
 			return nil
@@ -51,5 +58,5 @@ func (h *HTTPImpl) HealthCheckHTTP(address string, timeout time.Duration) error 
 
 // Do executes a HTTP request and returns the response
 func (h *HTTPImpl) Do(r *http.Request) (*http.Response, error) {
-	return http.DefaultClient.Do(r)
+	return h.httpc.Do(r)
 }

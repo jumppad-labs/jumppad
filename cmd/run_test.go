@@ -226,7 +226,7 @@ func TestRunOpensBrowserWindowForResources(t *testing.T) {
 	i.Ports = []config.Port{config.Port{Host: "8080", OpenInBrowser: "/"}}
 
 	c := config.NewContainer("test")
-	c.Ports = []config.Port{config.Port{Host: "8080", OpenInBrowser: "/"}}
+	c.Ports = []config.Port{config.Port{Host: "8080", OpenInBrowser: "https://test.container.shipyard.run:8080"}}
 
 	// should not be opened
 	d2 := config.NewDocs("test")
@@ -247,6 +247,9 @@ func TestRunOpensBrowserWindowForResources(t *testing.T) {
 
 	rm.http.AssertNumberOfCalls(t, "HealthCheckHTTP", 5)
 	rm.system.AssertNumberOfCalls(t, "OpenBrowser", 5)
+
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://test.ingress.shipyard.run:8080/", 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "https://test.container.shipyard.run:8080", 30*time.Second)
 }
 
 func TestRunDoesNotOpensBrowserWindowWhenCheckError(t *testing.T) {
