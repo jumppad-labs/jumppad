@@ -186,6 +186,32 @@ func TestParseModuleCreatesResources(t *testing.T) {
 	assert.Equal(t, "consul", r.Info().Module)
 }
 
+func TestParseFileFunctionReadCorrectly(t *testing.T) {
+	absoluteFolderPath, err := filepath.Abs("../../examples/container")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c := New()
+	err = ParseFolder(absoluteFolderPath, c, false, nil)
+	assert.NoError(t, err)
+
+	// check variable has been interpolated
+	r, err := c.FindResource("container.consul")
+	assert.NoError(t, err)
+
+	validEnv := false
+	con := r.(*Container)
+	for _, e := range con.Environment {
+		// should contain a key called "something" with a value "else"
+		if e.Key == "file" && e.Value == "this is the contents of a file" {
+			validEnv = true
+		}
+	}
+
+	assert.True(t, validEnv)
+}
+
 /*
 func TestSingleKubernetesCluster(t *testing.T) {
 	absoluteFolderPath, err := filepath.Abs("./examples/single-cluster-k8s")

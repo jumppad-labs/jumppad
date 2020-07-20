@@ -14,6 +14,7 @@
       "env": {},
       "args": [
         "run",
+        "--var=client_nodes=3",
         "./examples/nomad"
       ]
     },    {

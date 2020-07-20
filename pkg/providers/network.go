@@ -48,7 +48,7 @@ func (n *Network) Create() error {
 			for _, ci := range ne.IPAM.Config {
 				// check that the returned networks subnet matches the existing networks subnet
 				if ci.Subnet != n.config.Subnet {
-					n.log.Info("Network already exists, skip creation", "ref", n.config.Name)
+					n.log.Debug("Network already exists, skip creation", "ref", n.config.Name)
 					return nil
 				}
 			}
@@ -74,6 +74,7 @@ func (n *Network) Create() error {
 		CheckDuplicate: true,
 		Driver:         "bridge",
 		IPAM: &network.IPAM{
+			Driver: "default",
 			Config: []network.IPAMConfig{
 				network.IPAMConfig{
 					Subnet: n.config.Subnet,

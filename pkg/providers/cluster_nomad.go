@@ -2,7 +2,10 @@ package providers
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math/rand"
+	"os"
+	"path"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
@@ -13,6 +16,29 @@ import (
 
 const nomadBaseImage = "shipyardrun/nomad"
 const nomadBaseVersion = "v0.11.2"
+
+const dataDir = `
+data_dir = "/etc/nomad.d/data"
+`
+
+const serverConfig = `
+server {
+  enabled = true
+  bootstrap_expect = 1
+}
+`
+
+const clientConfig = `
+client {
+    enabled = true
+}
+
+plugin "raw_exec" {
+  config {
+    enabled = true
+  }
+}
+`
 
 // NomadCluster defines a provider which can create Kubernetes clusters
 type NomadCluster struct {
@@ -45,7 +71,19 @@ func (c *NomadCluster) Lookup() ([]string, error) {
 func (c *NomadCluster) createNomad() error {
 	c.log.Info("Creating Cluster", "ref", c.config.Name)
 
-	// check the cluster does not already exist
+	for i := 0; i < c.config.ClientNodes; i++ {
+		// check the client nodes
+		ids, err := c.client.FindContainerIDs(fmt.Sprintf("%d.client.%s", i+1, c.config.Name), c.config.Type)
+		if len(ids) > 0 {
+			return fmt.Errorf("Client already exists")
+		}
+
+		if err != nil {
+			return xerrors.Errorf("Unable to lookup cluster id: %w", err)
+		}
+	}
+
+	// check the server does not already exist
 	ids, err := c.client.FindContainerIDs(fmt.Sprintf("server.%s", c.config.Name), c.config.Type)
 	if len(ids) > 0 {
 		return ErrorClusterExists
@@ -75,56 +113,24 @@ func (c *NomadCluster) createNomad() error {
 		return err
 	}
 
-	// create the server
-	// since the server is just a container create the container config and provider
-	cc := config.NewContainer(fmt.Sprintf("server.%s", c.config.Name))
-	c.config.ResourceInfo.AddChild(cc)
-
-	cc.Image = config.Image{Name: image}
-	cc.Networks = c.config.Networks
-	cc.Privileged = true // nomad must run Privileged as Docker needs to manipulate ip tables and stuff
-
-	// set the volume mount for the images
-	cc.Volumes = []config.Volume{
-		config.Volume{
-			Source:      volID,
-			Destination: "/images",
-			Type:        "volume",
-		},
+	isClient := true
+	if c.config.ClientNodes > 0 {
+		isClient = false
 	}
 
-	// if there are any custom volumes to mount
-	for _, v := range c.config.Volumes {
-		cc.Volumes = append(cc.Volumes, v)
-	}
-
-	// set the environment variables for the K3S_KUBECONFIG_OUTPUT and K3S_CLUSTER_SECRET
-	cc.Environment = c.config.Environment
-
-	// set the API server port to a random number 64000 - 65000
-	apiPort := rand.Intn(1000) + 64000
-
-	// expose the API server port
-	cc.Ports = []config.Port{
-		config.Port{
-			Local:    "4646",
-			Host:     fmt.Sprintf("%d", apiPort),
-			Protocol: "tcp",
-		},
-	}
-
-	id, err := c.client.CreateContainer(cc)
+	serverID, configDir, configPath, err := c.createServerNode(image, volID, isClient)
 	if err != nil {
 		return err
 	}
 
-	// generate the config file
-	nomadConfig := clients.NomadConfig{Location: fmt.Sprintf("http://localhost:%d", apiPort), NodeCount: 1}
-	_, configPath := utils.CreateNomadConfigPath(c.config.Name)
+	clients := []string{}
+	for i := 0; i < c.config.ClientNodes; i++ {
+		clientID, err := c.createClientNode(i+1, image, volID, configDir, utils.FQDN(fmt.Sprintf("server.%s", c.config.Name), string(config.TypeNomadCluster)))
+		if err != nil {
+			return err
+		}
 
-	err = nomadConfig.Save(configPath)
-	if err != nil {
-		return xerrors.Errorf("Unable to generate Nomad config: %w", err)
+		clients = append(clients, clientID)
 	}
 
 	// ensure all client nodes are up
@@ -137,13 +143,144 @@ func (c *NomadCluster) createNomad() error {
 	// import the images to the servers container d instance
 	// importing images means that k3s does not need to pull from a remote docker hub
 	if c.config.Images != nil && len(c.config.Images) > 0 {
-		err := c.ImportLocalDockerImages("images", id, c.config.Images, false)
+		// import into the server
+		err := c.ImportLocalDockerImages("images", serverID, c.config.Images, false)
 		if err != nil {
 			return xerrors.Errorf("Error importing Docker images: %w", err)
+		}
+
+		// import cached images to the clients
+		for _, id := range clients {
+			err := c.ImportLocalDockerImages("images", id, c.config.Images, false)
+			if err != nil {
+				return xerrors.Errorf("Error importing Docker images: %w", err)
+			}
 		}
 	}
 
 	return nil
+}
+
+func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (string, string, string, error) {
+	// set the API server port to a random number 64000 - 65000
+	apiPort := rand.Intn(1000) + 64000
+	// generate the config file
+	nomadConfig := clients.NomadConfig{Location: fmt.Sprintf("http://localhost:%d", apiPort), NodeCount: c.config.ClientNodes}
+	configDir, configPath := utils.CreateNomadConfigPath(c.config.Name)
+
+	err := nomadConfig.Save(configPath)
+	if err != nil {
+		return "", "", "", xerrors.Errorf("Unable to generate Nomad config: %w", err)
+	}
+
+	// generate the server config
+	sc := dataDir + "\n" + serverConfig
+	if isClient {
+		sc = dataDir + "\n" + serverConfig + "\n" + clientConfig
+	}
+
+	// if we have custom config use that
+	if c.config.ServerConfig != "" {
+		sc = c.config.ServerConfig
+	}
+
+	// write the config to a file
+	serverConfigPath := path.Join(configDir, "server_config.hcl")
+	ioutil.WriteFile(serverConfigPath, []byte(sc), os.ModePerm)
+
+	// create the server
+	// since the server is just a container create the container config and provider
+	cc := config.NewContainer(fmt.Sprintf("server.%s", c.config.Name))
+	c.config.ResourceInfo.AddChild(cc)
+
+	cc.Image = config.Image{Name: image}
+	cc.Networks = c.config.Networks
+	cc.Privileged = true // nomad must run Privileged as Docker needs to manipulate ip tables and stuff
+
+	// set the volume mount for the images and the config
+	cc.Volumes = []config.Volume{
+		config.Volume{
+			Source:      volumeID,
+			Destination: "/images",
+			Type:        "volume",
+		},
+		config.Volume{
+			Source:      serverConfigPath,
+			Destination: "/etc/nomad.d/config.hcl",
+			Type:        "bind",
+		},
+	}
+
+	// if there are any custom volumes to mount
+	for _, v := range c.config.Volumes {
+		cc.Volumes = append(cc.Volumes, v)
+	}
+
+	// set the environment variables for the K3S_KUBECONFIG_OUTPUT and K3S_CLUSTER_SECRET
+	cc.Environment = c.config.Environment
+
+	// expose the API server port
+	cc.Ports = []config.Port{
+		config.Port{
+			Local:    "4646",
+			Host:     fmt.Sprintf("%d", apiPort),
+			Protocol: "tcp",
+		},
+	}
+
+	id, err := c.client.CreateContainer(cc)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	return id, configDir, configPath, nil
+}
+
+func (c *NomadCluster) createClientNode(index int, image, volumeID, configDir, serverID string) (string, error) {
+	// generate the client config
+	sc := dataDir + "\n" + clientConfig
+
+	// if we have custom config use that
+	if c.config.ClientConfig != "" {
+		sc = c.config.ClientConfig
+	}
+
+	// write the config to a file
+	clientConfigPath := path.Join(configDir, "client_config.hcl")
+	ioutil.WriteFile(clientConfigPath, []byte(sc), os.ModePerm)
+
+	// create the server
+	// since the server is just a container create the container config and provider
+	cc := config.NewContainer(fmt.Sprintf("%d.client.%s", index, c.config.Name))
+	c.config.ResourceInfo.AddChild(cc)
+
+	cc.Image = config.Image{Name: image}
+	cc.Networks = c.config.Networks
+	cc.Privileged = true // nomad must run Privileged as Docker needs to manipulate ip tables and stuff
+
+	// set the volume mount for the images and the config
+	cc.Volumes = []config.Volume{
+		config.Volume{
+			Source:      volumeID,
+			Destination: "/images",
+			Type:        "volume",
+		},
+		config.Volume{
+			Source:      clientConfigPath,
+			Destination: "/etc/nomad.d/config.hcl",
+			Type:        "bind",
+		},
+	}
+
+	// if there are any custom volumes to mount
+	for _, v := range c.config.Volumes {
+		cc.Volumes = append(cc.Volumes, v)
+	}
+
+	// set the environment variables for the K3S_KUBECONFIG_OUTPUT and K3S_CLUSTER_SECRET
+	cc.Environment = c.config.Environment
+
+	return c.client.CreateContainer(cc)
 }
 
 // ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
@@ -181,9 +318,26 @@ func (c *NomadCluster) ImportLocalDockerImages(name string, id string, images []
 func (c *NomadCluster) destroyNomad() error {
 	c.log.Info("Destroy Nomad Cluster", "ref", c.config.Name)
 
-	// FindContainerIDs works on absolute addresses, we need to append the server
+	// destroy the server
+	err := c.destroyNode(fmt.Sprintf("server.%s", c.config.Name))
+	if err != nil {
+		return err
+	}
 
-	ids, err := c.client.FindContainerIDs(fmt.Sprintf("server.%s", c.config.Name), c.config.Type)
+	// destroy the clients
+	for i := 0; i < c.config.ClientNodes; i++ {
+		err := c.destroyNode(fmt.Sprintf("%d.client.%s", i+1, c.config.Name))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *NomadCluster) destroyNode(id string) error {
+	// FindContainerIDs works on absolute addresses, we need to append the server
+	ids, err := c.client.FindContainerIDs(id, c.config.Type)
 	if err != nil {
 		return err
 	}
@@ -205,7 +359,4 @@ func (c *NomadCluster) destroyNomad() error {
 	}
 
 	return nil
-
-	// delete the volume
-	//return c.client.RemoveVolume(c.config.Name)
 }

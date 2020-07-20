@@ -150,9 +150,13 @@ func TestClusterNomadCreatesAServer(t *testing.T) {
 	assert.Equal(t, "/images", params.Volumes[0].Destination)
 	assert.Equal(t, "volume", params.Volumes[0].Type)
 
+	// validate that the config volume has been added
+	assert.Contains(t, params.Volumes[1].Source, "test/server_config.hcl")
+	assert.Equal(t, "/etc/nomad.d/config.hcl", params.Volumes[1].Destination)
+
 	// validate that the custom volume has been added
-	assert.Equal(t, "./files", params.Volumes[1].Source)
-	assert.Equal(t, "/files", params.Volumes[1].Destination)
+	assert.Equal(t, "./files", params.Volumes[2].Source)
+	assert.Equal(t, "/files", params.Volumes[2].Destination)
 
 	// validate the API port is set
 	intLocal, _ := strconv.Atoi(params.Ports[0].Local)

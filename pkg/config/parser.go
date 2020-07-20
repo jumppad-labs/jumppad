@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -275,7 +276,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case string(TypeK8sCluster):
 			cl := NewK8sCluster(b.Labels[0])
 
-			err := decodeBody(b, cl)
+			err := decodeBody(file, b, cl)
 			if err != nil {
 				return err
 			}
@@ -285,7 +286,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case string(TypeK8sConfig):
 			h := NewK8sConfig(b.Labels[0])
 
-			err := decodeBody(b, h)
+			err := decodeBody(file, b, h)
 			if err != nil {
 				return err
 			}
@@ -300,7 +301,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case string(TypeHelm):
 			h := NewHelm(b.Labels[0])
 
-			err := decodeBody(b, h)
+			err := decodeBody(file, b, h)
 			if err != nil {
 				return err
 			}
@@ -319,7 +320,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case string(TypeK8sIngress):
 			i := NewK8sIngress(b.Labels[0])
 
-			err := decodeBody(b, i)
+			err := decodeBody(file, b, i)
 			if err != nil {
 				return err
 			}
@@ -329,7 +330,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case string(TypeNomadCluster):
 			cl := NewNomadCluster(b.Labels[0])
 
-			err := decodeBody(b, cl)
+			err := decodeBody(file, b, cl)
 			if err != nil {
 				return err
 			}
@@ -345,7 +346,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case string(TypeNomadJob):
 			h := NewNomadJob(b.Labels[0])
 
-			err := decodeBody(b, h)
+			err := decodeBody(file, b, h)
 			if err != nil {
 				return err
 			}
@@ -360,7 +361,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case string(TypeNomadIngress):
 			i := NewNomadIngress(b.Labels[0])
 
-			err := decodeBody(b, i)
+			err := decodeBody(file, b, i)
 			if err != nil {
 				return err
 			}
@@ -370,7 +371,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case string(TypeNetwork):
 			n := NewNetwork(b.Labels[0])
 
-			err := decodeBody(b, n)
+			err := decodeBody(file, b, n)
 			if err != nil {
 				return err
 			}
@@ -380,7 +381,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case string(TypeIngress):
 			i := NewIngress(b.Labels[0])
 
-			err := decodeBody(b, i)
+			err := decodeBody(file, b, i)
 			if err != nil {
 				return err
 			}
@@ -390,7 +391,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case string(TypeContainer):
 			co := NewContainer(b.Labels[0])
 
-			err := decodeBody(b, co)
+			err := decodeBody(file, b, co)
 			if err != nil {
 				return err
 			}
@@ -406,7 +407,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case string(TypeContainerIngress):
 			i := NewContainerIngress(b.Labels[0])
 
-			err := decodeBody(b, i)
+			err := decodeBody(file, b, i)
 			if err != nil {
 				return err
 			}
@@ -416,7 +417,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case string(TypeSidecar):
 			s := NewSidecar(b.Labels[0])
 
-			err := decodeBody(b, s)
+			err := decodeBody(file, b, s)
 			if err != nil {
 				return err
 			}
@@ -430,7 +431,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case string(TypeDocs):
 			do := NewDocs(b.Labels[0])
 
-			err := decodeBody(b, do)
+			err := decodeBody(file, b, do)
 			if err != nil {
 				return err
 			}
@@ -442,7 +443,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case string(TypeExecLocal):
 			h := NewExecLocal(b.Labels[0])
 
-			err := decodeBody(b, h)
+			err := decodeBody(file, b, h)
 			if err != nil {
 				return err
 			}
@@ -454,7 +455,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case string(TypeExecRemote):
 			h := NewExecRemote(b.Labels[0])
 
-			err := decodeBody(b, h)
+			err := decodeBody(file, b, h)
 			if err != nil {
 				return err
 			}
@@ -476,7 +477,7 @@ func ParseHCLFile(file string, c *Config) error {
 		case string(TypeModule):
 			m := NewModule(b.Labels[0])
 
-			err := decodeBody(b, m)
+			err := decodeBody(file, b, m)
 			if err != nil {
 				return err
 			}
@@ -666,6 +667,31 @@ func buildContext() *hcl.EvalContext {
 		},
 	})
 
+	var FileFunc = function.New(&function.Spec{
+		Params: []function.Parameter{
+			{
+				Name:             "path",
+				Type:             cty.String,
+				AllowDynamicType: true,
+			},
+		},
+		Type: function.StaticReturnType(cty.String),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			// get the current file path from the context
+			path := ctx.Variables["path"].AsString()
+			// conver the file path to an absolute
+			fp := ensureAbsolute(args[0].AsString(), path)
+
+			// read the contents of the file
+			d, err := ioutil.ReadFile(fp)
+			if err != nil {
+				return cty.StringVal(""), err
+			}
+
+			return cty.StringVal(string(d)), nil
+		},
+	})
+
 	ctx := &hcl.EvalContext{
 		Functions: map[string]function.Function{},
 		Variables: map[string]cty.Value{},
@@ -675,11 +701,17 @@ func buildContext() *hcl.EvalContext {
 	ctx.Functions["k8s_config"] = KubeConfigFunc
 	ctx.Functions["home"] = HomeFunc
 	ctx.Functions["shipyard"] = ShipyardFunc
+	ctx.Functions["file"] = FileFunc
 
 	return ctx
 }
 
-func decodeBody(b *hclsyntax.Block, p interface{}) error {
+func decodeBody(path string, b *hclsyntax.Block, p interface{}) error {
+	// add the current file path to the context.
+	// this allows any functions which require absolute paths to be able to
+	// build them from relative paths.
+	ctx.Variables["path"] = cty.StringVal(path)
+
 	diag := gohcl.DecodeBody(b.Body, ctx, p)
 	if diag.HasErrors() {
 		return errors.New(diag.Error())

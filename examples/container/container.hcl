@@ -19,6 +19,11 @@ container "consul" {
     key = "something"
     value = "${var.something}"
   }
+  
+  env {
+    key = "file"
+    value = "${file("./conf.txt")}"
+  }
 
   resources {
     # Max CPU to consume, 1024 is one core, default unlimited
