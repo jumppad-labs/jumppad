@@ -149,7 +149,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 		}
 
 		// do not open the browser windows
-		if *noOpen == false {
+		if *noOpen == false && e.Blueprint() != nil {
 
 			browserList := []string{}
 
