@@ -52,6 +52,10 @@ func (e *Engine) ResourceCount() int {
 	return e.Called().Int(0)
 }
 
+func (e *Engine) ResourceCountForType(t string) int {
+	return e.Called(t).Int(0)
+}
+
 func (e *Engine) Blueprint() *config.Blueprint {
 	if bp, ok := e.Called().Get(0).(*config.Blueprint); ok {
 		return bp

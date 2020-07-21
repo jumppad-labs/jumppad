@@ -70,6 +70,13 @@ func newPurgeCmdFunc(dt clients.Docker, il clients.ImageLog, l hclog.Logger) fun
 			return fmt.Errorf("Unable to remove cached Releases: %s", err)
 		}
 
+		dcp := utils.GetDataFolder("")
+		l.Info("Removing data folder", "path", dcp)
+		err = os.RemoveAll(dcp)
+		if err != nil {
+			return fmt.Errorf("Unable to remove Data folder: %s", err)
+		}
+
 		return nil
 	}
 }

@@ -173,7 +173,7 @@ func TestParseModuleCreatesResources(t *testing.T) {
 	assert.NoError(t, err)
 
 	// count the resources, should create 10
-	assert.Len(t, c.Resources, 12)
+	assert.Len(t, c.Resources, 13)
 
 	// check depends on is set
 	r, err := c.FindResource("k8s_cluster.k3s")

@@ -55,6 +55,7 @@ func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
 	mockEngine.On("ParseConfigWithVariables", mock.Anything, mock.Anything).Return(nil)
 	mockEngine.On("ApplyWithVariables", mock.Anything, mock.Anything).Return(nil, nil)
 	mockEngine.On("GetClients", mock.Anything).Return(clients)
+	mockEngine.On("ResourceCountForType", mock.Anything).Return(0)
 
 	bp := config.Blueprint{BrowserWindows: []string{"http://localhost", "http://localhost2"}}
 
