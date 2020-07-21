@@ -52,4 +52,5 @@ require (
 )
 
 replace github.com/docker/docker => github.com/docker/engine v1.4.2-0.20180718150940-a3ef7e9a9bda
+
 // replace github.com/nicholasjackson/version-manager => ../../nicholasjackson/version-manager
