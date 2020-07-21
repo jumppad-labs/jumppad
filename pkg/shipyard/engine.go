@@ -46,6 +46,7 @@ type Engine interface {
 	ParseConfigWithVariables(string, map[string]string) error
 	Destroy(string, bool) error
 	ResourceCount() int
+	ResourceCountForType(string) int
 	Blueprint() *config.Blueprint
 }
 
@@ -295,6 +296,11 @@ func (e *EngineImpl) Destroy(path string, allResources bool) error {
 // ResourceCount defines the number of resources in a plan
 func (e *EngineImpl) ResourceCount() int {
 	return e.config.ResourceCount()
+}
+
+// ResourceCountForType returns the count of resources matching the given type
+func (e *EngineImpl) ResourceCountForType(t string) int {
+	return len(e.config.FindResourcesByType(t))
 }
 
 // Blueprint returns the blueprint for the current config

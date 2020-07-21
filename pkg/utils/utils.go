@@ -215,6 +215,14 @@ func GetReleasesFolder() string {
 	return path.Join(ShipyardHome(), "releases")
 }
 
+// GetDataFolder creates the data directory used by the application
+func GetDataFolder(p string) string {
+	data := path.Join(ShipyardHome(), "data", p)
+	// create the folder if it does not exist
+	os.MkdirAll(data, os.ModePerm)
+	return data
+}
+
 // GetDockerSock returns the location of the Docker sock depending on the platform
 func GetDockerSock() string {
 	//TODO: need to think about what happens if Docker is running at a TCP address rather than a socket

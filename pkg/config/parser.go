@@ -702,6 +702,20 @@ func buildContext() *hcl.EvalContext {
 		},
 	})
 
+	var DataFunc = function.New(&function.Spec{
+		Params: []function.Parameter{
+			{
+				Name:             "path",
+				Type:             cty.String,
+				AllowDynamicType: true,
+			},
+		},
+		Type: function.StaticReturnType(cty.String),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			return cty.StringVal(utils.GetDataFolder(args[0].AsString())), nil
+		},
+	})
+
 	ctx := &hcl.EvalContext{
 		Functions: map[string]function.Function{},
 		Variables: map[string]cty.Value{},
@@ -712,6 +726,7 @@ func buildContext() *hcl.EvalContext {
 	ctx.Functions["home"] = HomeFunc
 	ctx.Functions["shipyard"] = ShipyardFunc
 	ctx.Functions["file"] = FileFunc
+	ctx.Functions["data"] = DataFunc
 
 	return ctx
 }

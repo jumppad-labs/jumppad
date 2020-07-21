@@ -148,6 +148,19 @@ func (c *Config) FindResource(name string) (Resource, error) {
 	return nil, ResourceNotFoundError{name}
 }
 
+// FindResourcesByType returns the resources from the given type
+func (c *Config) FindResourcesByType(t string) []Resource {
+	res := []Resource{}
+
+	for _, r := range c.Resources {
+		if r.Info().Type == ResourceType(t) {
+			res = append(res, r)
+		}
+	}
+
+	return res
+}
+
 // AddResource adds a given resource to the resource list
 // if the resource already exists an error will be returned
 func (c *Config) AddResource(r Resource) error {

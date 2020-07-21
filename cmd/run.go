@@ -245,20 +245,12 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 
 			cmd.Println("")
 			cmd.Print(string(intro))
-			cmd.Println("")
 
-			if len(e.Blueprint().Environment) > 0 {
-				cmd.Println("######################################################")
-				cmd.Println("Environment Variables")
-
+			if len(e.Blueprint().Environment) > 0 || e.ResourceCountForType("output") > 0 {
 				cmd.Println("")
-				cmd.Println("This blueprint exports the following environment variables:")
+				cmd.Printf("This blueprint defines %d output variables.\n", e.ResourceCountForType("output"))
 				cmd.Println("")
-				for _, env := range e.Blueprint().Environment {
-					cmd.Printf("\033[1;32m%s=%s\033[0m\n", env.Key, env.Value)
-				}
-				cmd.Println("")
-				cmd.Println("You can set exported environment variables for your current terminal session using the following command:")
+				cmd.Println("You can set output variables as environment variables for your current terminal session using the following command:")
 				cmd.Println("")
 
 				if runtime.GOOS == "windows" {
@@ -266,6 +258,10 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 				} else {
 					cmd.Println("eval $(shipyard env)")
 				}
+				cmd.Println("")
+				cmd.Println("To list output variables use the command:")
+				cmd.Println("")
+				cmd.Println("shipyard output")
 			}
 		}
 

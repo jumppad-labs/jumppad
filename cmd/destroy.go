@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/hashicorp/go-hclog"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -27,6 +30,9 @@ var destroyCmd = &cobra.Command{
 		} else {
 			err = engine.Destroy(dst, false)
 		}
+
+		// clean up the data folder
+		os.RemoveAll(utils.GetDataFolder(""))
 
 		if err != nil {
 			hclog.Default().Error("Unable to destroy stack", "error", err)
