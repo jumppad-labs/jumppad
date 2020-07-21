@@ -30,12 +30,16 @@ server {
 
 const clientConfig = `
 client {
-    enabled = true
+	enabled = true
+
+	server_join {
+		retry_join = ["%s"]
+	}
 }
 
 plugin "raw_exec" {
   config {
-    enabled = true
+	enabled = true
   }
 }
 `
@@ -176,7 +180,7 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 	// generate the server config
 	sc := dataDir + "\n" + serverConfig
 	if isClient {
-		sc = dataDir + "\n" + serverConfig + "\n" + clientConfig
+		sc = dataDir + "\n" + serverConfig + "\n" + fmt.Sprintf(clientConfig, "localhost")
 	}
 
 	// if we have custom config use that
@@ -238,7 +242,7 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 
 func (c *NomadCluster) createClientNode(index int, image, volumeID, configDir, serverID string) (string, error) {
 	// generate the client config
-	sc := dataDir + "\n" + clientConfig
+	sc := dataDir + "\n" + fmt.Sprintf(clientConfig, serverID)
 
 	// if we have custom config use that
 	if c.config.ClientConfig != "" {
