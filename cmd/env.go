@@ -39,14 +39,22 @@ func newEnvCmd(e shipyard.Engine) *cobra.Command {
 				os.Exit(1)
 			}
 
-			if c.Blueprint != nil && len(c.Blueprint.Environment) > 0 {
-				prefix := "export "
-				if runtime.GOOS == "windows" {
-					prefix = ""
-				}
+			prefix := "export "
+			if runtime.GOOS == "windows" {
+				prefix = ""
+			}
 
+			if c.Blueprint != nil && len(c.Blueprint.Environment) > 0 {
 				for _, env := range c.Blueprint.Environment {
 					fmt.Printf("%s%s=%s\n", prefix, env.Key, env.Value)
+				}
+			}
+
+			// add output variables
+
+			for _, r := range c.Resources {
+				if r.Info().Type == config.TypeOutput {
+					fmt.Printf("%s%s=%s\n", prefix, r.Info().Name, r.(*config.Output).Value)
 				}
 			}
 			return nil

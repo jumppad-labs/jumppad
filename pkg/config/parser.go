@@ -283,6 +283,16 @@ func ParseHCLFile(file string, c *Config) error {
 
 			c.AddResource(cl)
 
+		case string(TypeOutput):
+			cl := NewOutput(b.Labels[0])
+
+			err := decodeBody(file, b, cl)
+			if err != nil {
+				return err
+			}
+
+			c.AddResource(cl)
+
 		case string(TypeK8sConfig):
 			h := NewK8sConfig(b.Labels[0])
 

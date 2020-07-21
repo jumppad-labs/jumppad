@@ -88,6 +88,26 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 
 		t := ResourceType(mm["type"].(string))
 		switch t {
+		case TypeOutput:
+			t := Output{}
+			err := mapstructure.Decode(mm, &t)
+			if err != nil {
+				return err
+			}
+			t.Name = mm["name"].(string)
+			t.Type = ResourceType(mm["type"].(string))
+			t.Status = Status(mm["status"].(string))
+
+			if m, ok := mm["module"].(string); ok {
+				t.Module = m
+			}
+
+			if d, ok := mm["depends_on"].([]interface{}); ok {
+				for _, i := range d {
+					t.DependsOn = append(t.DependsOn, i.(string))
+				}
+			}
+			c.AddResource(&t)
 		case TypeContainer:
 			t := Container{}
 			err := mapstructure.Decode(mm, &t)

@@ -386,6 +386,8 @@ func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
 		return providers.NewNomadJob(c.(*config.NomadJob), cc.Nomad, cc.Logger)
 	case config.TypeNetwork:
 		return providers.NewNetwork(c.(*config.Network), cc.Docker, cc.Logger)
+	case config.TypeOutput:
+		return providers.NewNull(c.Info(), cc.Logger)
 	}
 
 	return nil
