@@ -1,7 +1,6 @@
 nomad_cluster "dev" {
   version = "v0.11.2"
 
-  client_nodes = "${var.client_nodes}"
 
   network {
     name = "network.cloud"

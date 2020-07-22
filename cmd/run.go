@@ -132,11 +132,8 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 		// check that the current shipyard version can process this blueprint
 		if e.Blueprint() != nil && e.Blueprint().ShipyardVersion != "" {
 			valid, err := vm.InRange(version, e.Blueprint().ShipyardVersion)
-			if err != nil {
-				return err
-			}
 
-			if !valid {
+			if !valid || err != nil {
 				// we neeed to go in to the check loop
 				return runWithOtherVersion(e.Blueprint().ShipyardVersion, *autoApprove, args, *force, *noOpen, cmd, vm, bc, *variables)
 			}

@@ -21,8 +21,9 @@ type ExecRemote struct {
 	Arguments        []string `hcl:"args,optional" json:"args,omitempty"`                           // only used when combined with Command
 	WorkingDirectory string   `hcl:"working_directory,optional" json:"working_directory,omitempty"` // Working directory to exectute commands
 
-	Volumes     []Volume `hcl:"volume,block" json:"volumes,omitempty"` // Volumes to mount to container
-	Environment []KV     `hcl:"env,block" json:"env,omitempty"`        // Environment varialbes to set
+	Volumes     []Volume          `hcl:"volume,block" json:"volumes,omitempty"`     // Volumes to mount to container
+	Environment []KV              `hcl:"env,block" json:"env,omitempty"`            // Environment varialbes to set
+	EnvVar      map[string]string `hcl:"env_var,optional" json:"env_var,omitempty"` // environment variables to set when starting the container
 }
 
 // NewExecRemote creates a ExecRemote resorurce with the detault values

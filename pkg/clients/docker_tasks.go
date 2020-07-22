@@ -65,6 +65,11 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 		env = append(env, fmt.Sprintf("%s=%s", kv.Key, kv.Value))
 	}
 
+	// convert the new environment map to a list of [key]=[value]
+	for k, v := range c.EnvVar {
+		env = append(env, fmt.Sprintf("%s=%s", k, v))
+	}
+
 	// create the container config
 	dc := &container.Config{
 		Hostname:     c.Name,
