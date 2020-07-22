@@ -179,13 +179,20 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 
 	// generate the server config
 	sc := dataDir + "\n" + serverConfig
-	if isClient {
-		sc = dataDir + "\n" + serverConfig + "\n" + fmt.Sprintf(clientConfig, "localhost")
+
+	// if we have custom server config use that
+	if c.config.ServerConfig != "" {
+		sc = dataDir + "\n" + c.config.ServerConfig
 	}
 
-	// if we have custom config use that
-	if c.config.ServerConfig != "" {
-		sc = c.config.ServerConfig
+	// if the server also functions as a client
+	if isClient {
+		sc = sc + "\n" + fmt.Sprintf(clientConfig, "localhost")
+
+		// if we have custom client config use that
+		if c.config.ClientConfig != "" {
+			sc = sc + c.config.ClientConfig
+		}
 	}
 
 	// write the config to a file
@@ -246,7 +253,7 @@ func (c *NomadCluster) createClientNode(index int, image, volumeID, configDir, s
 
 	// if we have custom config use that
 	if c.config.ClientConfig != "" {
-		sc = c.config.ClientConfig
+		sc = dataDir + "\n" + c.config.ClientConfig
 	}
 
 	// write the config to a file
