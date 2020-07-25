@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -9,13 +10,17 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/cucumber/godog"
 	"github.com/cucumber/godog/colors"
+	"github.com/cucumber/messages-go/v10"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/hashicorp/go-hclog"
@@ -34,6 +39,10 @@ var opts = &godog.Options{
 var envVars map[string]string
 var shipyardVars []string
 var output = bytes.NewBufferString("")
+
+// used by script runner steps
+var commandOutput = bytes.NewBufferString("")
+var commandExitCode = 0
 
 func newTestCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, l hclog.Logger) *cobra.Command {
 	var testFolder string
@@ -59,7 +68,7 @@ func newTestCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cl
 	return func(cmd *cobra.Command, args []string) error {
 		//
 
-		tr := CucumberRunner{cmd, args, e, bp, hc, bc, testFolder, force, purge, l}
+		tr := CucumberRunner{cmd, args, e, bp, hc, bc, testFolder, "", force, purge, l}
 		tr.start()
 
 		return nil
@@ -75,6 +84,7 @@ type CucumberRunner struct {
 	hc         clients.HTTP
 	bc         clients.System
 	testFolder string
+	testPath   string
 	force      *bool
 	purge      *bool
 	l          hclog.Logger
@@ -85,15 +95,24 @@ func (cr *CucumberRunner) start() {
 	godog.BindFlags("godog.", flag.CommandLine, opts)
 	flag.Parse()
 
-	// the tests will be in the blueprint_folder/test
-	testFolder := fmt.Sprintf("%s/test", cr.args[0])
-
-	// unless overidden by a flag
-	if cr.testFolder != "" {
-		testFolder = cr.testFolder
+	if len(cr.args) < 1 {
+		cr.args = []string{"."}
 	}
 
-	opts.Paths = []string{testFolder}
+	// the tests will be in the blueprint_folder/test
+	if cr.testFolder == "" {
+		cr.testFolder = "test"
+	}
+
+	cr.testPath = filepath.Join(cr.args[0], cr.testFolder)
+
+	if !filepath.IsAbs(cr.args[0]) {
+		// convert to absolute
+		wd, _ := os.Getwd()
+		cr.testPath = filepath.Join(wd, cr.args[0], cr.testFolder)
+	}
+
+	opts.Paths = []string{cr.testPath}
 
 	status := godog.TestSuite{
 		Name:                "Blueprint test",
@@ -108,6 +127,8 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 	ctx.BeforeScenario(func(gs *godog.Scenario) {
 		envVars = map[string]string{}
 		shipyardVars = []string{}
+		commandOutput = bytes.NewBufferString("")
+		commandExitCode = 0
 	})
 
 	ctx.AfterScenario(func(gs *godog.Scenario, err error) {
@@ -148,6 +169,13 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the info "([^"]*)" for the running "([^"]*)" called "([^"]*)" should equal "([^"]*)"$`, cr.theResourceInfoShouldEqual)
 	ctx.Step(`^the info "([^"]*)" for the running "([^"]*)" called "([^"]*)" should contain "([^"]*)"$`, cr.theResourceInfoShouldContain)
 	ctx.Step(`^the info "([^"]*)" for the running "([^"]*)" called "([^"]*)" should exist`, cr.theResourceInfoShouldExist)
+	ctx.Step(`^I expect the exit code to be (\d+)$`, cr.iExpectTheExitCodeToBe)
+	ctx.Step(`^I expect the response to contain "([^"]*)"$`, cr.iExpectTheResponseToContain)
+	ctx.Step(`^when I run the command "([^"]*)"$`, cr.whenIRunTheCommand)
+	ctx.Step(`^when I run the script$`, cr.whenIRunTheScript)
+}
+
+func FeatureContext(s *godog.Suite) {
 }
 
 func (cr *CucumberRunner) iRunApply() error {
@@ -344,8 +372,20 @@ func (cr *CucumberRunner) aCallToShouldResultInStatus(arg1 string, arg2 int) err
 }
 
 func (cr *CucumberRunner) theResponseBodyShouldContain(value string) error {
-	if !strings.Contains(respBody, value) {
-		return fmt.Errorf("Expected value %s to be found in response %s", value, respBody)
+	if strings.HasPrefix(value, "`") && strings.HasSuffix(value, "`") {
+		r, err := regexp.Compile(strings.Replace(value, "`", "", -1))
+		if err != nil {
+			return err
+		}
+
+		s := r.FindString(respBody)
+		if s == "" {
+			return fmt.Errorf("Expected value %s to be found in response %s", value, respBody)
+		}
+	} else {
+		if !strings.Contains(respBody, value) {
+			return fmt.Errorf("Expected value %s to be found in response %s", value, respBody)
+		}
 	}
 
 	return nil
@@ -434,6 +474,108 @@ func (cr *CucumberRunner) theResourceInfoShouldExist(path, resource, name string
 	}
 
 	return nil
+}
+
+func (cr *CucumberRunner) whenIRunTheScript(arg1 *messages.PickleStepArgument_PickleDocString) error {
+	// copy the script into a temp file and try to execute it
+	tmpFile, err := ioutil.TempFile(utils.ShipyardTemp(), "*.sh")
+	if err != nil {
+		return err
+	}
+
+	// remove the file on exit
+	defer func() {
+		os.Remove(tmpFile.Name())
+	}()
+
+	// write the script to the temp file
+	lines := strings.Split(arg1.GetContent(), "\n")
+
+	w := bufio.NewWriter(tmpFile)
+	for _, l := range lines {
+		fmt.Fprintln(w, l)
+	}
+	w.Flush()
+	tmpFile.Close()
+
+	// set as executable
+	os.Chmod(tmpFile.Name(), 0777)
+
+	// execute and return
+	cr.executeCommand(tmpFile.Name())
+
+	return nil
+}
+
+func (cr *CucumberRunner) whenIRunTheCommand(arg1 string) error {
+	if strings.HasPrefix(arg1, ".") {
+		// path is relative so make absolute using the current file path as base
+		arg1 = filepath.Join(cr.testFolder, arg1)
+	}
+
+	cr.executeCommand(arg1)
+
+	return nil
+}
+
+func (cr *CucumberRunner) iExpectTheExitCodeToBe(arg1 int) error {
+	if commandExitCode != arg1 {
+		return fmt.Errorf("Expected exit code to be %d, got %d\nOutput:\n%s", arg1, commandExitCode, commandOutput.String())
+	}
+
+	return nil
+}
+
+func (cr *CucumberRunner) iExpectTheResponseToContain(arg1 string) error {
+	if strings.HasPrefix(arg1, "`") && strings.HasSuffix(arg1, "`") {
+		r, err := regexp.Compile(strings.Replace(arg1, "`", "", -1))
+		if err != nil {
+			return err
+		}
+
+		s := r.FindString(commandOutput.String())
+		if s != "" {
+			return nil
+		}
+	} else {
+		if strings.Contains(commandOutput.String(), arg1) {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("Expected command output to contain %s.\n Output:\n%s", arg1, commandOutput.String())
+}
+
+func (cr *CucumberRunner) executeCommand(cmd string) {
+	// split command and args
+	parts := strings.Split(cmd, " ")
+
+	commandOutput = bytes.NewBufferString("")
+	commandExitCode = 0
+
+	var c *exec.Cmd
+	if len(parts) > 1 {
+		c = exec.Command(parts[0], parts[1:]...)
+	} else {
+		c = exec.Command(parts[0])
+	}
+
+	c.Stdout = commandOutput
+	c.Stderr = commandOutput
+
+	c.Args = parts
+
+	err := c.Run()
+	if err != nil {
+		if exiterr, ok := err.(*exec.ExitError); ok {
+			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+				commandExitCode = status.ExitStatus()
+				return
+			}
+		}
+
+		commandExitCode = -1
+	}
 }
 
 func (cr *CucumberRunner) getJSONPath(path, resource, name string) (string, error) {
