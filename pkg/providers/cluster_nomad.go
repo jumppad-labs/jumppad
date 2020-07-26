@@ -128,6 +128,7 @@ func (c *NomadCluster) createNomad() error {
 		return err
 	}
 
+	cMutex := sync.Mutex{}
 	clients := []string{}
 	clWait := sync.WaitGroup{}
 	clWait.Add(c.config.ClientNodes)
@@ -141,7 +142,10 @@ func (c *NomadCluster) createNomad() error {
 				clientError = err
 			}
 
+			cMutex.Lock()
 			clients = append(clients, clientID)
+			cMutex.Unlock()
+
 			clWait.Done()
 		}(i+1, image, volID, configDir, utils.FQDN(fmt.Sprintf("server.%s", c.config.Name), string(config.TypeNomadCluster)))
 	}
@@ -173,10 +177,12 @@ func (c *NomadCluster) createNomad() error {
 		var importErr error
 		for _, id := range clients {
 			go func(id string) {
-				importErr = c.ImportLocalDockerImages("images", id, c.config.Images, false)
+				err := c.ImportLocalDockerImages("images", id, c.config.Images, false)
 				clWait.Done()
 				if err != nil {
+					cMutex.Lock()
 					importErr = xerrors.Errorf("Error importing Docker images: %w", err)
+					cMutex.Unlock()
 				}
 			}(id)
 		}
