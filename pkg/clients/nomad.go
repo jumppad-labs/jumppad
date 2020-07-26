@@ -96,24 +96,40 @@ func (n *NomadImpl) HealthCheckAPI(timeout time.Duration) error {
 			for _, node := range nodes {
 				// get the node status
 				nodeStatus := node["Status"].(string)
+				nodeName := node["Name"].(string)
+				nodeEligable := node["SchedulingEligibility"].(string)
 
+				n.l.Debug("Node status", "node", nodeName, "status", nodeStatus, "eligible", nodeEligable)
 				// get the driver status
 				drivers, ok := node["Drivers"].(map[string]interface{})
 				if !ok {
 					continue
 				}
 
-				dockerDriver, ok := drivers["docker"].(map[string]interface{})
-				if !ok {
-					continue
+				var driversHealthy = true
+				for k, v := range drivers {
+					driver, ok := v.(map[string]interface{})
+					if !ok {
+						continue
+					}
+
+					healthy, ok := driver["Healthy"].(bool)
+					if !ok {
+						continue
+					}
+
+					detected, ok := driver["Detected"].(bool)
+					if !ok || !detected {
+						continue
+					}
+
+					n.l.Debug("Driver status", "node", nodeName, "driver", k, "healthy", healthy)
+					if healthy != true {
+						driversHealthy = false
+					}
 				}
 
-				dockerHealty, ok := dockerDriver["Healthy"].(bool)
-				if !ok {
-					continue
-				}
-
-				if nodeStatus == "ready" && dockerHealty {
+				if nodeStatus == "ready" && nodeEligable == "eligible" && driversHealthy {
 					readyCount++
 				}
 			}
@@ -122,6 +138,8 @@ func (n *NomadImpl) HealthCheckAPI(timeout time.Duration) error {
 				n.l.Debug("Nomad check complete", "address", address)
 				return nil
 			}
+
+			n.l.Debug("Nodes not ready", "ready", readyCount, "nodes", nodeCount)
 		}
 
 		// backoff

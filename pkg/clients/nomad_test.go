@@ -13,8 +13,8 @@ import (
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	assert "github.com/stretchr/testify/require"
 )
 
 func setupNomadClient() {
@@ -370,18 +370,24 @@ func getNomadConfig(l string) string {
 var aliveResponse = `
 [
 	{
+		"Name": "node1",
 		"Status": "ready",
+		"SchedulingEligibility": "eligible",
 		"Drivers": {
 			"docker": {
-        "Healthy": true
+        "Healthy": true,
+        "Detected": true
       }
 		}
 	},
 	{
+		"Name": "node2",
 		"Status": "ready",
+		"SchedulingEligibility": "eligible",
 		"Drivers": {
 			"docker": {
-        "Healthy": true
+        "Healthy": true,
+        "Detected": true
       }
 		}
 	}
@@ -391,18 +397,24 @@ var aliveResponse = `
 var pendingResponse = `
 [
 	{
+		"Name": "node1",
 		"Status": "pending",
+		"SchedulingEligibility": "eligible",
 		"Drivers": {
 			"docker": {
-        "Healthy": true
+        "Healthy": true,
+        "Detected": true
       }
 		}
 	},
 	{
+		"Name": "node2",
 		"Status": "ready",
+		"SchedulingEligibility": "eligible",
 		"Drivers": {
 			"docker": {
-        "Healthy": true
+        "Healthy": true,
+        "Detected": true
       }
 		}
 	}
@@ -412,18 +424,24 @@ var pendingResponse = `
 var unhealthyDockerResponse = `
 [
 	{
+		"Name": "node1",
 		"Status": "ready",
+		"SchedulingEligibility": "eligible",
 		"Drivers": {
 			"docker": {
         "Healthy": false
+        "Detected": true
       }
 		}
 	},
 	{
+		"Name": "node2",
 		"Status": "ready",
+		"SchedulingEligibility": "eligible",
 		"Drivers": {
 			"docker": {
         "Healthy": true
+        "Detected": true
       }
 		}
 	}

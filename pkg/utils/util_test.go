@@ -133,6 +133,56 @@ func TestCreateNomadConfigPathReturnsCorrectValues(t *testing.T) {
 	assert.True(t, s.IsDir())
 }
 
+func TestShipyardTempReturnsPath(t *testing.T) {
+	home := os.Getenv("HOME")
+	tmp, _ := ioutil.TempDir("", "")
+	os.Setenv("HOME", tmp)
+
+	t.Cleanup(func() {
+		os.Setenv("HOME", home)
+		os.RemoveAll(tmp)
+	})
+
+	st := ShipyardTemp()
+
+	assert.Equal(t, filepath.Join(tmp, ".shipyard", "/tmp"), st)
+
+	s, err := os.Stat(st)
+	assert.NoError(t, err)
+	assert.True(t, s.IsDir())
+}
+
+func TestShipyardDataReturnsPath(t *testing.T) {
+	home := os.Getenv("HOME")
+	tmp, _ := ioutil.TempDir("", "")
+	os.Setenv("HOME", tmp)
+
+	t.Cleanup(func() {
+		os.Setenv("HOME", home)
+		os.RemoveAll(tmp)
+	})
+
+	d := GetDataFolder("test")
+
+	assert.Equal(t, filepath.Join(tmp, ".shipyard", "/data", "/test"), d)
+
+	s, err := os.Stat(d)
+	assert.NoError(t, err)
+	assert.True(t, s.IsDir())
+}
+
+func TestShipyardHelmReturnsPath(t *testing.T) {
+	h := GetHelmLocalFolder("test")
+
+	assert.Equal(t, filepath.Join(os.Getenv("HOME"), ".shipyard", "/helm_charts", "/test"), h)
+}
+
+func TestShipyardReleasesReturnsPath(t *testing.T) {
+	r := GetReleasesFolder()
+
+	assert.Equal(t, filepath.Join(os.Getenv("HOME"), ".shipyard", "/releases"), r)
+}
+
 func TestIsHCLFile(t *testing.T) {
 	tests := []struct {
 		name string

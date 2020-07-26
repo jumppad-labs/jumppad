@@ -208,9 +208,10 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 
 			// check the browser windows in the blueprint file
 			wg := sync.WaitGroup{}
+			wg.Add(len(browserList))
 
+			l.Debug("Health check urls for browser windows", "count", len(browserList))
 			for _, b := range browserList {
-				wg.Add(1)
 				go func(uri string) {
 					// health check the URL
 					err := hc.HealthCheckHTTP(uri, checkDuration)
@@ -226,7 +227,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 			}
 
 			wg.Wait()
-
+			l.Debug("Browser windows open")
 		}
 
 		// if we have a blueprint show the header

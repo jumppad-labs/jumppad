@@ -211,6 +211,7 @@ func GetHelmLocalFolder(blueprint string) string {
 	return filepath.Join(ShipyardHome(), "helm_charts", blueprint)
 }
 
+// GetReleasesFolder return the path of the Shipyard releases
 func GetReleasesFolder() string {
 	return path.Join(ShipyardHome(), "releases")
 }

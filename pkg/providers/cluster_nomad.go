@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"path"
+	"sync"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
@@ -75,8 +76,8 @@ func (c *NomadCluster) Lookup() ([]string, error) {
 func (c *NomadCluster) createNomad() error {
 	c.log.Info("Creating Cluster", "ref", c.config.Name)
 
+	// check the client nodes do not already exist
 	for i := 0; i < c.config.ClientNodes; i++ {
-		// check the client nodes
 		ids, err := c.client.FindContainerIDs(fmt.Sprintf("%d.client.%s", i+1, c.config.Name), c.config.Type)
 		if len(ids) > 0 {
 			return fmt.Errorf("Client already exists")
@@ -128,13 +129,26 @@ func (c *NomadCluster) createNomad() error {
 	}
 
 	clients := []string{}
-	for i := 0; i < c.config.ClientNodes; i++ {
-		clientID, err := c.createClientNode(i+1, image, volID, configDir, utils.FQDN(fmt.Sprintf("server.%s", c.config.Name), string(config.TypeNomadCluster)))
-		if err != nil {
-			return err
-		}
+	clWait := sync.WaitGroup{}
+	clWait.Add(c.config.ClientNodes)
 
-		clients = append(clients, clientID)
+	var clientError error
+	for i := 0; i < c.config.ClientNodes; i++ {
+		// create client node asyncronously
+		go func(i int, image, volID, configDir, name string) {
+			clientID, err := c.createClientNode(i, image, volID, configDir, name)
+			if err != nil {
+				clientError = err
+			}
+
+			clients = append(clients, clientID)
+			clWait.Done()
+		}(i+1, image, volID, configDir, utils.FQDN(fmt.Sprintf("server.%s", c.config.Name), string(config.TypeNomadCluster)))
+	}
+
+	clWait.Wait()
+	if clientError != nil {
+		return xerrors.Errorf("Unable to create client nodes: %w", clientError)
 	}
 
 	// ensure all client nodes are up
@@ -153,12 +167,23 @@ func (c *NomadCluster) createNomad() error {
 			return xerrors.Errorf("Error importing Docker images: %w", err)
 		}
 
-		// import cached images to the clients
+		// import cached images to the clients asynchronously
+		clWait := sync.WaitGroup{}
+		clWait.Add(c.config.ClientNodes)
+		var importErr error
 		for _, id := range clients {
-			err := c.ImportLocalDockerImages("images", id, c.config.Images, false)
-			if err != nil {
-				return xerrors.Errorf("Error importing Docker images: %w", err)
-			}
+			go func(id string) {
+				importErr = c.ImportLocalDockerImages("images", id, c.config.Images, false)
+				clWait.Done()
+				if err != nil {
+					importErr = xerrors.Errorf("Error importing Docker images: %w", err)
+				}
+			}(id)
+		}
+
+		clWait.Wait()
+		if importErr != nil {
+			return importErr
 		}
 	}
 
@@ -168,8 +193,15 @@ func (c *NomadCluster) createNomad() error {
 func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (string, string, string, error) {
 	// set the API server port to a random number 64000 - 65000
 	apiPort := rand.Intn(1000) + 64000
+
+	// if the node count is 0 we are creating a combo client server
+	nodeCount := 1
+	if c.config.ClientNodes > 0 {
+		nodeCount = c.config.ClientNodes
+	}
+
 	// generate the config file
-	nomadConfig := clients.NomadConfig{Location: fmt.Sprintf("http://localhost:%d", apiPort), NodeCount: c.config.ClientNodes}
+	nomadConfig := clients.NomadConfig{Location: fmt.Sprintf("http://localhost:%d", apiPort), NodeCount: nodeCount}
 	configDir, configPath := utils.CreateNomadConfigPath(c.config.Name)
 
 	err := nomadConfig.Save(configPath)
