@@ -412,6 +412,11 @@ func ParseHCLFile(file string, c *Config) error {
 				co.Volumes[i].Source = ensureAbsolute(v.Source, file)
 			}
 
+			// make sure build paths are absolute
+			if co.Build != nil {
+				co.Build.Context = ensureAbsolute(co.Build.Context, file)
+			}
+
 			c.AddResource(co)
 
 		case string(TypeContainerIngress):

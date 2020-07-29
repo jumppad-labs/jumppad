@@ -240,3 +240,13 @@ func (m *MockDocker) ImageRemove(ctx context.Context, imageID string, options ty
 
 	return nil, args.Error(1)
 }
+
+func (m *MockDocker) ImageBuild(ctx context.Context, buildContext io.Reader, options types.ImageBuildOptions) (types.ImageBuildResponse, error) {
+	args := m.Called(ctx, buildContext, options)
+
+	if ibr, ok := args.Get(0).(types.ImageBuildResponse); ok {
+		return ibr, args.Error(1)
+	}
+
+	return types.ImageBuildResponse{}, args.Error(1)
+}

@@ -7,6 +7,9 @@ test_unit:
 test_functional:
 	go run main.go purge
 	go run main.go test ./examples/container
+	
+	go run main.go purge
+	go run main.go test ./examples/build
 
 	go run main.go purge
 	go run main.go test ./examples/docs

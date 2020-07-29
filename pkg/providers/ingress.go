@@ -162,7 +162,7 @@ func (i *Ingress) Create() error {
 
 	c.Networks = i.config.Networks
 	c.Ports = i.config.Ports
-	c.Image = config.Image{Name: ingressImage}
+	c.Image = &config.Image{Name: ingressImage}
 	c.Command = command
 	c.Volumes = volumes
 	c.Environment = env

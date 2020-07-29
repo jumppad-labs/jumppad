@@ -106,12 +106,12 @@ func (c *ExecRemote) createRemoteExecContainer() (string, error) {
 	c.config.ResourceInfo.AddChild(cc)
 
 	cc.Networks = c.config.Networks
-	cc.Image = *c.config.Image
+	cc.Image = c.config.Image
 	cc.Command = []string{"tail", "-f", "/dev/null"} // ensure container does not immediately exit
 	cc.Volumes = c.config.Volumes
 
 	// pull any images needed for this container
-	err := c.client.PullImage(cc.Image, false)
+	err := c.client.PullImage(*cc.Image, false)
 	if err != nil {
 		c.log.Error("Error pulling container image", "ref", cc.Name, "image", cc.Image.Name)
 

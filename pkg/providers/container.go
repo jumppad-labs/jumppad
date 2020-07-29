@@ -6,6 +6,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
+	"golang.org/x/xerrors"
 )
 
 // Container is a provider for creating and destroying Docker containers
@@ -31,7 +32,7 @@ func NewContainerSidecar(cs *config.Sidecar, cl clients.ContainerTasks, hc clien
 	co.Environment = cs.Environment
 	co.EnvVar = cs.EnvVar
 	co.HealthCheck = cs.HealthCheck
-	co.Image = cs.Image
+	co.Image = &cs.Image
 	co.Privileged = cs.Privileged
 	co.Resources = cs.Resources
 	co.Type = cs.Type
@@ -48,15 +49,28 @@ func (c *Container) Create() error {
 }
 
 func (c *Container) internalCreate() error {
-	// pull any images needed for this container
-	err := c.client.PullImage(c.config.Image, false)
-	if err != nil {
-		c.log.Error("Error pulling container image", "ref", c.config.Name, "image", c.config.Image.Name)
+	// do we need to build an image
+	if c.config.Build != nil {
+		c.log.Debug("Building image", "context", c.config.Build.Context, "dockerfile", c.config.Build.File)
 
-		return err
+		name, err := c.client.BuildContainer(c.config, false)
+		if err != nil {
+			return xerrors.Errorf("Unable to build image: %w", err)
+		}
+
+		// set the image to be loaded and continue with the container creation
+		c.config.Image = &config.Image{Name: name}
+	} else {
+		// pull any images needed for this container
+		err := c.client.PullImage(*c.config.Image, false)
+		if err != nil {
+			c.log.Error("Error pulling container image", "ref", c.config.Name, "image", c.config.Image.Name)
+
+			return err
+		}
 	}
 
-	_, err = c.client.CreateContainer(c.config)
+	_, err := c.client.CreateContainer(c.config)
 
 	if c.config.HealthCheck == nil {
 		return err

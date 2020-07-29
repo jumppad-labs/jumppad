@@ -25,6 +25,11 @@ type ContainerTasks interface {
 	ContainerInfo(id string) (interface{}, error)
 	// RemoveContainer stops and removes a running container
 	RemoveContainer(id string) error
+	// BuildContainer builds a container based on the given configuration
+	// If a cahced image already exists Build will noop
+	// When force is specificed BuildContainer will rebuild the container regardless of cached images
+	// Returns the canonical name of the built image and an error
+	BuildContainer(config *config.Container, force bool) (string, error)
 	// CreateVolume creates a new volume with the given name.
 	// If successful the id of the newly created volume is returned
 	CreateVolume(name string) (id string, err error)

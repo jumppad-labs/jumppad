@@ -22,7 +22,10 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
+	"github.com/docker/docker/pkg/archive"
+	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/signal"
+	"github.com/docker/docker/pkg/term"
 	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients/streams"
@@ -350,6 +353,54 @@ func (d *DockerTasks) RemoveContainer(id string) error {
 	return nil
 }
 
+func (d *DockerTasks) BuildContainer(config *config.Container, force bool) (string, error) {
+	imageName := fmt.Sprintf("shipyard.run/localcache/%s:latest", config.Name)
+	imageName = makeImageCanonical(imageName)
+
+	args := filters.NewArgs()
+	args.Add("reference", imageName)
+
+	// check if the image already exists, if so do not rebuild unless force
+	if !force && !d.force {
+		sum, err := d.c.ImageList(context.Background(), types.ImageListOptions{Filters: args})
+		if err != nil {
+			return "", xerrors.Errorf("unable to list images in local Docker cache: %w", err)
+		}
+
+		// if we have images do not pull
+		if len(sum) > 0 {
+			d.l.Debug("Image exists in local cache, skip build", "image", imageName)
+
+			return imageName, nil
+		}
+	}
+
+	// if the Dockerfile is not set, set to default
+	if config.Build.File == "" {
+		config.Build.File = "./Dockerfile"
+	}
+
+	// tar the build context folder and send to the server
+	buildOpts := types.ImageBuildOptions{
+		Dockerfile: config.Build.File,
+		Tags:       []string{imageName},
+	}
+
+	buildCtx, _ := archive.TarWithOptions(config.Build.Context, &archive.TarOptions{})
+
+	resp, err := d.c.ImageBuild(context.Background(), buildCtx, buildOpts)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	out := d.l.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug})
+	termFd, _ := term.GetFdInfo(out)
+	jsonmessage.DisplayJSONMessagesStream(resp.Body, out, termFd, false, nil)
+
+	return imageName, nil
+}
+
 // CreateVolume creates a Docker volume for a cluster
 // if the volume exists performs no action
 // returns the volume name and an error if unsuccessful
@@ -451,7 +502,7 @@ func (d *DockerTasks) CopyLocalDockerImageToVolume(images []string, volume strin
 	// create a dummy container to import to volume
 	cc := config.NewContainer("temp-import")
 
-	cc.Image = config.Image{Name: "alpine:latest"}
+	cc.Image = &config.Image{Name: "alpine:latest"}
 	cc.Volumes = []config.Volume{
 		config.Volume{
 			Source:      volume,

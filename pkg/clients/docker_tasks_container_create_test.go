@@ -25,7 +25,7 @@ var wanNetwork = &config.Network{ResourceInfo: config.ResourceInfo{Name: "wan", 
 var containerNetwork = &config.Network{ResourceInfo: config.ResourceInfo{Name: "testnet", Type: config.TypeNetwork}, Subnet: "192.168.4.0/24"}
 var containerConfig = &config.Container{
 	ResourceInfo: config.ResourceInfo{Name: "testcontainer", Type: config.TypeContainer},
-	Image:        config.Image{Name: "consul:v1.6.1"},
+	Image:        &config.Image{Name: "consul:v1.6.1"},
 	Command:      []string{"tail", "-f", "/dev/null"},
 	Volumes: []config.Volume{
 		config.Volume{

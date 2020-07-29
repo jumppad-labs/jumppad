@@ -64,15 +64,15 @@ func (i *Docs) createDocsContainer() error {
 
 	cc.Networks = i.config.Networks
 
-	cc.Image = config.Image{Name: fmt.Sprintf("%s:%s", docsImageName, docsVersion)}
+	cc.Image = &config.Image{Name: fmt.Sprintf("%s:%s", docsImageName, docsVersion)}
 
 	// if image is set override defaults
 	if i.config.Image != nil {
-		cc.Image = *i.config.Image
+		cc.Image = i.config.Image
 	}
 
 	// pull the docker image
-	err := i.client.PullImage(cc.Image, false)
+	err := i.client.PullImage(*cc.Image, false)
 	if err != nil {
 		return err
 	}
@@ -147,10 +147,10 @@ func (i *Docs) createTerminalContainer() error {
 	i.config.ResourceInfo.AddChild(cc)
 
 	cc.Networks = i.config.Networks
-	cc.Image = config.Image{Name: fmt.Sprintf("%s:%s", terminalImageName, terminalVersion)}
+	cc.Image = &config.Image{Name: fmt.Sprintf("%s:%s", terminalImageName, terminalVersion)}
 
 	// pull the image
-	err = i.client.PullImage(cc.Image, false)
+	err = i.client.PullImage(*cc.Image, false)
 	if err != nil {
 		return err
 	}

@@ -14,12 +14,13 @@ import (
 
 func TestContainerCreatesSuccessfully(t *testing.T) {
 	cc := config.NewContainer("tests")
+	cc.Image = &config.Image{}
 	md := &mocks.MockContainerTasks{}
 	hc := &mocks.MockHTTP{}
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
 	// check pulls image before creating container
-	md.On("PullImage", cc.Image, false).Once().Return(nil)
+	md.On("PullImage", *cc.Image, false).Once().Return(nil)
 
 	// check calls CreateContainer with the config
 	md.On("CreateContainer", cc).Once().Return("", nil)
@@ -32,6 +33,7 @@ func TestContainerCreatesSuccessfully(t *testing.T) {
 
 func TestContainerRunsHTTPChecks(t *testing.T) {
 	cc := config.NewContainer("tests")
+	cc.Image = &config.Image{}
 	cc.HealthCheck = &config.HealthCheck{
 		Timeout: "30s",
 		HTTP:    "http://localhost:8500",
@@ -41,7 +43,7 @@ func TestContainerRunsHTTPChecks(t *testing.T) {
 	hc := &mocks.MockHTTP{}
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
-	md.On("PullImage", cc.Image, false).Once().Return(nil)
+	md.On("PullImage", *cc.Image, false).Once().Return(nil)
 	md.On("CreateContainer", cc).Once().Return("", nil)
 
 	hc.On("HealthCheckHTTP", mock.Anything, mock.Anything).Return(nil)
@@ -54,13 +56,14 @@ func TestContainerRunsHTTPChecks(t *testing.T) {
 
 func TestContainerDoesNOTCreateWhenPullImageFail(t *testing.T) {
 	cc := config.NewContainer("tests")
+	cc.Image = &config.Image{}
 	md := &mocks.MockContainerTasks{}
 	hc := &mocks.MockHTTP{}
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
 	// check pulls image before creating container and return an erro
 	imageErr := fmt.Errorf("Unable to pull image")
-	md.On("PullImage", cc.Image, false).Once().Return(imageErr)
+	md.On("PullImage", *cc.Image, false).Once().Return(imageErr)
 
 	// check does not call CreateContainer with the config
 	md.On("CreateContainer", cc).Times(0)
@@ -124,4 +127,22 @@ func TestContainerLooksupIDs(t *testing.T) {
 	ids, err := c.Lookup()
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"abc"}, ids)
+}
+
+func TestContainerBuildsContainer(t *testing.T) {
+	cc := config.NewContainer("tests")
+	cc.Build = &config.Build{Context: "./", File: "./"}
+
+	md := &mocks.MockContainerTasks{}
+	md.On("BuildContainer", mock.Anything, mock.Anything).Return("testimage", nil)
+	md.On("CreateContainer", cc).Once().Return("", nil)
+
+	hc := &mocks.MockHTTP{}
+	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
+
+	err := c.Create()
+	assert.NoError(t, err)
+
+	conf := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	assert.Equal(t, "testimage", conf.Image.Name)
 }

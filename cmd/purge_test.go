@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/docker/docker/api/types"
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/utils"
@@ -40,6 +41,7 @@ func setupPurgeCommand(t *testing.T) (*cobra.Command, *mocks.MockDocker, *mocks.
 	mockDocker := &mocks.MockDocker{}
 	mockDocker.On("ImageRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 	mockDocker.On("VolumeRemove", mock.Anything, mock.Anything, true).Return(nil)
+	mockDocker.On("ImageList", mock.Anything, mock.Anything).Return([]types.ImageSummary{}, nil)
 
 	mockImageLog := &mocks.ImageLog{}
 	mockImageLog.On("Read", mock.Anything).Return([]string{"one", "two"}, nil)
@@ -62,6 +64,19 @@ func TestPurgeCallsImageRemoveForCachedImages(t *testing.T) {
 	assert.NoError(t, err)
 	md.AssertNumberOfCalls(t, "ImageRemove", 2)
 	mi.AssertCalled(t, "Clear")
+}
+
+func TestPurgeCallsImageRemoveForBuiltImages(t *testing.T) {
+	pc, md, _, cleanup := setupPurgeCommand(t)
+	defer cleanup()
+
+	removeOn(&md.Mock, "ImageList")
+	md.On("ImageList", mock.Anything, mock.Anything).Return([]types.ImageSummary{{ID: "test"}}, nil)
+
+	err := pc.Execute()
+
+	assert.NoError(t, err)
+	md.AssertNumberOfCalls(t, "ImageRemove", 3)
 }
 
 func TestPurgeReturnsErrorOnImageRemoveError(t *testing.T) {

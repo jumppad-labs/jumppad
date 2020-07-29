@@ -12,7 +12,8 @@ type Container struct {
 
 	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
-	Image       Image             `hcl:"image,block" json:"image"`                        // image to use for the container
+	Image       *Image            `hcl:"image,block" json:"image"`                        // Image to use for the container
+	Build       *Build            `hcl:"build,block" json:"build"`                        // Enables containers to be built on the fly
 	Entrypoint  []string          `hcl:"entrypoint,optional" json:"entrypoint,omitempty"` // entrypoint to use when starting the container
 	Command     []string          `hcl:"command,optional" json:"command,omitempty"`       // command to use when starting the container
 	Environment []KV              `hcl:"env,block" json:"environment,omitempty"`          // environment variables to set when starting the container, // Depricated field
@@ -60,6 +61,13 @@ type Volume struct {
 type KV struct {
 	Key   string `hcl:"key" json:"key"`
 	Value string `hcl:"value" json:"value"`
+}
+
+// Build allows you to define the conditions for building a container
+// on run from a Dockerfile
+type Build struct {
+	File    string `hcl:"file,optional" json:"file,omitempty"` // Location of build file inside build context defaults to ./Dockerfile
+	Context string `hcl:"context" json:"context"`              // Path to build context
 }
 
 // Validate the config
