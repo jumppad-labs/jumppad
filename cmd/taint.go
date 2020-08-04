@@ -14,7 +14,7 @@ var taintCmd = &cobra.Command{
 	Short: "Taint a resource e.g. 'shipyard taint container test'",
 	Long: `Taint a resource and mark is to be re-created on the next Apply
 	Example use to remove a container named test
-	shipyard taint container.test	
+	shipyard taint container.test
 	`,
 	Args: cobra.ArbitraryArgs,
 	Run: func(cmd *cobra.Command, args []string) {

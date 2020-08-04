@@ -40,7 +40,7 @@ func newRunCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients
 
   # Create a stack from a specific file
   shipyard run my-stack/network.hcl
-  
+
   # Create a stack from a blueprint in GitHub
   shipyard run github.com/shipyard-run/blueprints//vault-k8s
 	`,
