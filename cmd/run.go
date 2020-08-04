@@ -50,10 +50,10 @@ func newRunCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients
 	}
 
 	runCmd.Flags().StringVarP(&runVersion, "version", "v", "", "When set, run creates the specified resources using a particular Shipyard version")
-	runCmd.Flags().BoolVarP(&y, "y", "y", false, "When set, Shipyard will not prompt for conifirmation")
+	runCmd.Flags().BoolVarP(&y, "y", "y", false, "When set, Shipyard will not prompt for confirmation")
 	runCmd.Flags().BoolVarP(&noOpen, "no-browser", "", false, "When set to true Shipyard will not open the browser windows defined in the blueprint")
 	runCmd.Flags().BoolVarP(&force, "force-update", "", false, "When set to true Shipyard ignores cached images or files and will download all resources")
-	runCmd.Flags().StringSliceVarP(&variables, "var", "", nil, "Allows setting variables from the command line, varaiables are specified as a key and value, e.g --var key=value. Can be specified multiple times")
+	runCmd.Flags().StringSliceVarP(&variables, "var", "", nil, "Allows setting variables from the command line, variables are specified as a key and value, e.g --var key=value. Can be specified multiple times")
 
 	return runCmd
 }

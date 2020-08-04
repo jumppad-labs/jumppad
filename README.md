@@ -160,7 +160,7 @@ container "consul" {
 
 ## Contributing
 
-We love contributions to the project, to contribute, first ensure that there is an issue and that it has been acknoledged by one of the maintainers of the project. Ensuring an issue exists and has been acknowledged ensures that the work you are about to submit will not be rejected due to specifications or duplicate work.
+We love contributions to the project, to contribute, first ensure that there is an issue and that it has been acknowledged by one of the maintainers of the project. Ensuring an issue exists and has been acknowledged ensures that the work you are about to submit will not be rejected due to specifications or duplicate work.
 Once an issue exists, you can modify the code and raise a PR against this repo. We are working on increasing code coverage, please ensure that your work has at least 80% test coverage before submitting.
 
 
@@ -170,7 +170,7 @@ The project has two types of test, pure code Unit tests and, Functional tests wh
 
 ### Unit tests:
 
-To run the unit tests you can use the make recipie `make test_unit` this runs the `go test` and excludes the functional tests.
+To run the unit tests you can use the make recipe `make test_unit` this runs the `go test` and excludes the functional tests.
 
 ```shell
 shipyard on  master via 🐹 v1.13.5 on 🐳 v19.03.5 () 
@@ -196,7 +196,7 @@ ok      github.com/shipyard-run/shipyard        (cached) [no tests to run]
 
 ### Functional tests:
 
-To run the functional tests ensure that Docker is running in your environment then run `make test_functional`. unctional tests are executed with GoDog cucumber test runner for Go. Note: These tests execute real blueprints and can a few minutes to run.
+To run the functional tests ensure that Docker is running in your environment then run `make test_functional`. functional tests are executed with GoDog cucumber test runner for Go. Note: These tests execute real blueprints and can a few minutes to run.
 
 ```shell
 ➜ make test_functional 

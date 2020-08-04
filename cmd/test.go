@@ -162,7 +162,7 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 	ctx.Step(`^there should be a "([^"]*)" running called "([^"]*)"$`, cr.thereShouldBeAResourceRunningCalled)
 	ctx.Step(`^the following resources should be running$`, cr.theFollowingResourcesShouldBeRunning)
 	ctx.Step(`^the following environment variables are set$`, cr.theFollowingEnvironmentVariablesAreSet)
-	ctx.Step(`^the following shipyard variables are set$`, cr.theFollowingShipyardVaraiblesAreSet)
+	ctx.Step(`^the following shipyard variables are set$`, cr.theFollowingShipyardVariablesAreSet)
 	ctx.Step(`^the environment variable "([^"]*)" has a value "([^"]*)"$`, cr.theEnvironmentVariableKHasAValueV)
 	ctx.Step(`^a HTTP call to "([^"]*)" should result in status (\d+)$`, cr.aCallToShouldResultInStatus)
 	ctx.Step(`^the response body should contain "([^"]*)"$`, cr.theResponseBodyShouldContain)
@@ -348,7 +348,7 @@ var respBody = ""
 
 // test making a HTTP call, for testing Ingress
 func (cr *CucumberRunner) aCallToShouldResultInStatus(arg1 string, arg2 int) error {
-	// try 100 times
+	// try 200 times
 	var err error
 	for i := 0; i < 200; i++ {
 		var resp *http.Response
@@ -412,7 +412,7 @@ func (cr *CucumberRunner) theFollowingEnvironmentVariablesAreSet(vars *godog.Tab
 	return nil
 }
 
-func (cr *CucumberRunner) theFollowingShipyardVaraiblesAreSet(vars *godog.Table) error {
+func (cr *CucumberRunner) theFollowingShipyardVariablesAreSet(vars *godog.Table) error {
 	for i, r := range vars.Rows {
 		if i == 0 {
 			if r.Cells[0].Value != "key" || r.Cells[1].Value != "value" {
