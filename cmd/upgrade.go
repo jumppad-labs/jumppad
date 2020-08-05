@@ -6,8 +6,8 @@ import (
 
 var upgradeCmd = &cobra.Command{
 	Use:   "upgrade",
-	Short: "Upgrade yard",
-	Long:  `Upgrade the yard binary, but leaves the stacks alone`,
+	Short: "Upgrade Shipyard",
+	Long:  `Upgrade the Shipyard binary, but leaves the stacks alone`,
 	DisableFlagsInUseLine: true,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {

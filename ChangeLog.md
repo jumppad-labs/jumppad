@@ -49,7 +49,7 @@ Add ability to configure network aliases for containers
 
 ## Env Command
 Added a new command to simplify the export of environment variables. Environment variables can be defined in a blueprint readme, after the blueprint has completed
-the varaibles will be presented to the user.
+the variables will be presented to the user.
 
 **Blueprint**
 ```
@@ -77,7 +77,7 @@ Environment Variables
 
 ######################################################
 
-This blueprint exports the following environment varaibles:
+This blueprint exports the following environment variables:
 
 KUBECONFIG=$HOME/.shipyard/config/k3s/kubeconfig.yaml=
 VAULT_ADDR=http://localhost:18200=
@@ -330,7 +330,7 @@ nomad_ingress "nomad-http" {
 
 ### Bug fixes
 * Fix bug where heirachy in state was lost on incremental applies
-* Minor UX tweak for run command, use current directory as default 
+* Minor UX tweak for run command, use current directory as default
 
 ## version 0.0.5
 

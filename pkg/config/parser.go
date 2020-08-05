@@ -153,10 +153,10 @@ func setContextVariable(key string, value interface{}) {
 	ctx.Variables["var"] = cty.MapVal(valMap)
 }
 
-// SetVaraibles allow variables to be set from a collection or environment variables
+// SetVariables allow variables to be set from a collection or environment variables
 // Precedence should be file, env, vars
 func SetVariables(vars map[string]string) {
-	// first any vars defined as environment varaibles
+	// first any vars defined as environment variables
 	for _, e := range os.Environ() {
 		if strings.HasPrefix(e, "SY_VAR_") {
 			parts := strings.Split(e, "=")
