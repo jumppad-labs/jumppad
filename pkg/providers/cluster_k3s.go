@@ -96,7 +96,7 @@ func (c *K8sCluster) createK3s() error {
 	cc := config.NewContainer(fmt.Sprintf("server.%s", c.config.Name))
 	c.config.ResourceInfo.AddChild(cc)
 
-	cc.Image = config.Image{Name: image}
+	cc.Image = &config.Image{Name: image}
 	cc.Networks = c.config.Networks
 	cc.Privileged = true // k3s must run Privlidged
 

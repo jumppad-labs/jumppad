@@ -143,7 +143,7 @@ func createK8sShell(r config.Resource, dt clients.ContainerTasks, pod, container
 	c := config.NewContainer(fmt.Sprintf("exec-%d", time.Now().Nanosecond()))
 	r.AddChild(c)
 
-	c.Image = i
+	c.Image = &i
 	c.Entrypoint = []string{} // overide the entrypoint
 	c.Command = []string{"tail", "-f", "/dev/null"}
 

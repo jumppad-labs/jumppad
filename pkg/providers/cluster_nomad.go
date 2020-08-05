@@ -242,7 +242,7 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 	cc := config.NewContainer(fmt.Sprintf("server.%s", c.config.Name))
 	c.config.ResourceInfo.AddChild(cc)
 
-	cc.Image = config.Image{Name: image}
+	cc.Image = &config.Image{Name: image}
 	cc.Networks = c.config.Networks
 	cc.Privileged = true // nomad must run Privileged as Docker needs to manipulate ip tables and stuff
 
@@ -303,7 +303,7 @@ func (c *NomadCluster) createClientNode(index int, image, volumeID, configDir, s
 	cc := config.NewContainer(fmt.Sprintf("%d.client.%s", index, c.config.Name))
 	c.config.ResourceInfo.AddChild(cc)
 
-	cc.Image = config.Image{Name: image}
+	cc.Image = &config.Image{Name: image}
 	cc.Networks = c.config.Networks
 	cc.Privileged = true // nomad must run Privileged as Docker needs to manipulate ip tables and stuff
 

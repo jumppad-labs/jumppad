@@ -33,6 +33,11 @@ func (m *MockContainerTasks) RemoveContainer(id string) error {
 	return args.Error(0)
 }
 
+func (m *MockContainerTasks) BuildContainer(config *config.Container, force bool) (string, error) {
+	args := m.Called(config, force)
+	return args.String(0), args.Error(1)
+}
+
 func (m *MockContainerTasks) CreateVolume(name string) (id string, err error) {
 	args := m.Called(name)
 
