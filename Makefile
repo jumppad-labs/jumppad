@@ -47,3 +47,6 @@ build-windows:
 install_local:
 	go build -ldflags "-X main.version=${git_commit}" -o bin/yard-dev main.go
 	sudo cp bin/yard-dev /usr/local/bin/yard-dev
+
+test_releaser:
+	goreleaser release --snapshot --rm-dist

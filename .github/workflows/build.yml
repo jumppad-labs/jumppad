@@ -50,3 +50,23 @@ jobs:
       
       - name: E2E test for build binary
         run: make test_e2e_cmd
+  
+  e2e_windows:
+    name: Windows E2E tests
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Setup Go version
+        uses: actions/setup-go@v2-beta
+        with:
+          go-version: '1.14.4' # The Go version to download (if necessary) and use.
+    
+      - name: Build a windows binary
+        run: go build -ldflags "-X main.version=e2e" -o bin/yard-windows.exe main.go
+      
+      - name: E2E test for build binary
+        run: |
+        bin\yard-windows.exe run --no-browser github.com/shipyard-run/blueprints//consul-terminating-gateways
+        bin\yard-windows.exe destroy

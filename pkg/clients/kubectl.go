@@ -1,6 +1,7 @@
 package clients
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
@@ -84,7 +85,7 @@ func (k *KubernetesImpl) GetPods(selector string) (*v1.PodList, error) {
 	lo := metav1.ListOptions{
 		LabelSelector: selector,
 	}
-	pl, err := k.client.Pods("").List(lo)
+	pl, err := k.client.Pods("").List(context.Background(), lo)
 	if err != nil {
 		return nil, err
 	}
