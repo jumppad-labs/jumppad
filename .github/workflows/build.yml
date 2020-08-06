@@ -68,5 +68,5 @@ jobs:
       
       - name: E2E test for build binary
         run: |
-        bin\yard-windows.exe run --no-browser github.com/shipyard-run/blueprints//consul-terminating-gateways
-        bin\yard-windows.exe destroy
+          bin\yard-windows.exe run --no-browser github.com/shipyard-run/blueprints//consul-terminating-gateways
+          bin\yard-windows.exe destroy
