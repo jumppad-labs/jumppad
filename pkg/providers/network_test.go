@@ -9,15 +9,22 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	assert "github.com/stretchr/testify/require"
 )
+
+var bridgeNetwork = types.NetworkResource{
+	ID:   "bridge",
+	Name: "bridge",
+	IPAM: network.IPAM{
+		Config: []network.IPAMConfig{network.IPAMConfig{Subnet: "10.8.2.0/24"}},
+	},
+}
 
 func setupNetworkTests(c *config.Network) (*clients.MockDocker, *Network) {
 	md := &clients.MockDocker{}
-	md.On("NetworkCreate", mock.Anything, mock.Anything, mock.Anything).
-		Return(types.NetworkCreateResponse{}, nil)
-	md.On("NetworkList", mock.Anything, mock.Anything).Return(nil, nil)
+	md.On("NetworkCreate", mock.Anything, mock.Anything, mock.Anything).Return(types.NetworkCreateResponse{}, nil)
+	md.On("NetworkList", mock.Anything, mock.Anything).Return([]types.NetworkResource{bridgeNetwork}, nil)
 
 	return md, NewNetwork(c, md, hclog.Default())
 }
@@ -34,7 +41,9 @@ func TestLookupReturnsID(t *testing.T) {
 			IPAM: network.IPAM{
 				Config: []network.IPAMConfig{network.IPAMConfig{Subnet: "10.1.2.0/24"}},
 			},
-		}}, nil)
+		},
+		bridgeNetwork,
+	}, nil)
 
 	ids, err := p.Lookup()
 	assert.NoError(t, err)
@@ -57,7 +66,9 @@ func TestNetworkCreatesCorrectly(t *testing.T) {
 
 	md, p := setupNetworkTests(c)
 
-	p.Create()
+	err := p.Create()
+
+	assert.NoError(t, err)
 
 	md.AssertCalled(t, "NetworkCreate", mock.Anything, mock.Anything, mock.Anything)
 
@@ -69,6 +80,25 @@ func TestNetworkCreatesCorrectly(t *testing.T) {
 	assert.True(t, nco.Attachable)
 	assert.Equal(t, "bridge", nco.Driver)
 	assert.Equal(t, c.Subnet, nco.IPAM.Config[0].Subnet)
+}
+
+func TestNetworkCreatesNatWhenNoBridge(t *testing.T) {
+	c := config.NewNetwork("testnet")
+	c.Subnet = "10.1.2.0/24"
+
+	md, p := setupNetworkTests(c)
+
+	removeOn(&md.Mock, "NetworkList")
+	md.On("NetworkList", mock.Anything, mock.Anything).Return(nil, nil)
+
+	p.Create()
+
+	md.AssertCalled(t, "NetworkCreate", mock.Anything, mock.Anything, mock.Anything)
+
+	params := md.Calls[1].Arguments
+	nco := params[2].(types.NetworkCreate)
+
+	assert.Equal(t, "nat", nco.Driver)
 }
 
 func TestNetworkDoesNOTCreateWhenExists(t *testing.T) {
@@ -83,7 +113,8 @@ func TestNetworkDoesNOTCreateWhenExists(t *testing.T) {
 			IPAM: network.IPAM{
 				Config: []network.IPAMConfig{network.IPAMConfig{Subnet: "10.1.2.0/24"}},
 			},
-		}}, nil)
+		}, bridgeNetwork,
+	}, nil)
 
 	p.Create()
 
@@ -102,7 +133,8 @@ func TestCreateWithCorrectNameAndDifferentSubnetReturnsError(t *testing.T) {
 			IPAM: network.IPAM{
 				Config: []network.IPAMConfig{network.IPAMConfig{Subnet: "10.1.1.0/24"}},
 			},
-		}}, nil)
+		}, bridgeNetwork,
+	}, nil)
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -120,7 +152,8 @@ func TestCreateWithOverlappingSubnetReturnsError(t *testing.T) {
 			IPAM: network.IPAM{
 				Config: []network.IPAMConfig{network.IPAMConfig{Subnet: "10.2.0.0/24"}},
 			},
-		}}, nil)
+		}, bridgeNetwork,
+	}, nil)
 
 	err := p.Create()
 	assert.Error(t, err)
