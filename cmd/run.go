@@ -216,10 +216,14 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 					// health check the URL
 					err := hc.HealthCheckHTTP(uri, checkDuration)
 					if err == nil {
-						be := bc.OpenBrowser(uri)
-						if be != nil {
-							l.Error("Unable to open browser", "error", be)
-						}
+						// There is a recent issue with WSL2 and Chrome where this process hangs
+						// we do not need to wait for this to complete
+						go func() {
+							be := bc.OpenBrowser(uri)
+							if be != nil {
+								l.Error("Unable to open browser", "error", be)
+							}
+						}()
 					}
 
 					wg.Done()
