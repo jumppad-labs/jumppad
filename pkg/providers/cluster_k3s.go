@@ -109,6 +109,11 @@ func (c *K8sCluster) createK3s() error {
 		},
 	}
 
+	// if there are any custom volumes to mount
+	for _, v := range c.config.Volumes {
+		cc.Volumes = append(cc.Volumes, v)
+	}
+
 	// set the environment variables for the K3S_KUBECONFIG_OUTPUT and K3S_CLUSTER_SECRET
 	cc.Environment = []config.KV{
 		config.KV{Key: "K3S_KUBECONFIG_OUTPUT", Value: "/output/kubeconfig.yaml"},

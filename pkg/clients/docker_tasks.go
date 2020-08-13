@@ -396,7 +396,11 @@ func (d *DockerTasks) BuildContainer(config *config.Container, force bool) (stri
 
 	out := d.l.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug})
 	termFd, _ := term.GetFdInfo(out)
-	jsonmessage.DisplayJSONMessagesStream(resp.Body, out, termFd, false, nil)
+	err = jsonmessage.DisplayJSONMessagesStream(resp.Body, out, termFd, false, nil)
+
+	if err != nil {
+		return "", err
+	}
 
 	return imageName, nil
 }

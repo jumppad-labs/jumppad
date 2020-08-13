@@ -12,10 +12,11 @@ type K8sCluster struct {
 
 	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
-	Driver  string  `hcl:"driver" json:"driver,omitempty"`
-	Version string  `hcl:"version,optional" json:"version,omitempty"`
-	Nodes   int     `hcl:"nodes,optional" json:"nodes,omitempty"`
-	Images  []Image `hcl:"image,block" json:"images,omitempty"`
+	Driver  string   `hcl:"driver" json:"driver,omitempty"`
+	Version string   `hcl:"version,optional" json:"version,omitempty"`
+	Nodes   int      `hcl:"nodes,optional" json:"nodes,omitempty"`
+	Images  []Image  `hcl:"image,block" json:"images,omitempty"`
+	Volumes []Volume `hcl:"volume,block" json:"volumes,omitempty"` // volumes to attach to the cluster
 }
 
 // NewK8sCluster creates new Cluster config with the correct defaults
