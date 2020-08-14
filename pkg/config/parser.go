@@ -281,6 +281,12 @@ func ParseHCLFile(file string, c *Config) error {
 				return err
 			}
 
+			// Process volumes
+			// make sure mount paths are absolute
+			for i, v := range cl.Volumes {
+				cl.Volumes[i].Source = ensureAbsolute(v.Source, file)
+			}
+
 			c.AddResource(cl)
 
 		case string(TypeOutput):
