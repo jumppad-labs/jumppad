@@ -29,7 +29,7 @@ container "consul" {
     # Max CPU to consume, 1000 is one core, default unlimited
     cpu = 2000
     # Pin container to specified CPU cores, default all cores
-    cpu_pin = [1,2]
+    cpu_pin = [0,1]
     # max memory in MB to consume, default unlimited
     memory = 1024
   }
