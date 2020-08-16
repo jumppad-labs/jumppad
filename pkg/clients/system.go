@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/docker/docker/api/types"
 )
@@ -49,7 +50,25 @@ func (b *SystemImpl) OpenBrowser(uri string) error {
 	args = append(args, uri)
 
 	cmd := exec.Command(openCommand, args...)
-	return cmd.Run()
+
+	// we need to enable a timeout for this command as it can hang on WSL2
+	doneChan := make(chan struct{})
+	timerChan := time.After(10 * time.Second)
+
+	var err error
+
+	go func() {
+		err = cmd.Run()
+	}()
+
+	select {
+	case <-timerChan:
+		err = fmt.Errorf("Timeout opening browser window")
+	case <-doneChan:
+
+	}
+
+	return err
 }
 
 // Preflight checks that the required software is installed and is

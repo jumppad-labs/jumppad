@@ -89,6 +89,30 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 	hc := &container.HostConfig{}
 	nc := &network.NetworkingConfig{}
 
+	// https: //docs.docker.com/config/containers/resource_constraints/#cpu
+	rc := container.Resources{}
+	if c.Resources != nil {
+		// set memory if set
+		if c.Resources.Memory > 0 {
+			rc.Memory = int64(c.Resources.Memory) * 1000000 // docker specifies memory in bytes, shipyard megabytes
+		}
+
+		if c.Resources.CPU > 0 {
+			rc.CPUQuota = int64(c.Resources.CPU) * 100
+		}
+
+		if len(c.Resources.CPUPin) > 0 {
+			cpuPin := make([]string, len(c.Resources.CPUPin))
+			for i, v := range c.Resources.CPUPin {
+				cpuPin[i] = fmt.Sprintf("%d", v)
+			}
+
+			rc.CpusetCpus = strings.Join(cpuPin, ",")
+		}
+
+		hc.Resources = rc
+	}
+
 	// by default the container should NOT be attached to a network
 	nc.EndpointsConfig = make(map[string]*network.EndpointSettings)
 

@@ -17,8 +17,8 @@ import (
 	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/utils"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	assert "github.com/stretchr/testify/require"
 )
 
 var wanNetwork = &config.Network{ResourceInfo: config.ResourceInfo{Name: "wan", Type: config.TypeNetwork}, Subnet: "192.168.6.0/24"}
@@ -62,6 +62,11 @@ var containerConfig = &config.Container{
 			Protocol:   "udp",
 			EnableHost: false,
 		},
+	},
+	Resources: &config.Resources{
+		CPU:    1000,
+		Memory: 1000,
+		CPUPin: []int{1, 4},
 	},
 	Networks: []config.NetworkAttachment{
 		config.NetworkAttachment{Name: "network.testnet"},
@@ -381,6 +386,20 @@ func TestContainerPublishesPortsRanges(t *testing.T) {
 
 	// check the port bindings for the local machine are nil
 	assert.Nil(t, hc.PortBindings[exp])
+}
+func TestContainerConfiguresResources(t *testing.T) {
+	cc, _, _, md, mic := createContainerConfig()
+
+	err := setupContainer(t, cc, md, mic)
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
+	hc := params[2].(*container.HostConfig)
+	assert.NotEmpty(t, hc.Resources)
+
+	assert.Equal(t, hc.Resources.Memory, int64(1000000000))
+	assert.Equal(t, hc.Resources.CPUQuota, int64(100000))
+	assert.Equal(t, hc.Resources.CpusetCpus, "1,4")
 }
 
 // removeOn is a utility function for removing Expectations from mock objects

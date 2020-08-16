@@ -146,19 +146,21 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 		}
 
 		// do not open the browser windows
-		if *noOpen == false && e.Blueprint() != nil {
+		if *noOpen == false {
 
 			browserList := []string{}
+			checkDuration := 30 * time.Second
 
 			// check if blueprint is in the state, if so do not open these windows again
 			if !blueprintExists && e.Blueprint() != nil {
 				browserList = e.Blueprint().BrowserWindows
-			}
-
-			// check for browser windows in the applied resources
-			checkDuration, err := time.ParseDuration(e.Blueprint().HealthCheckTimeout)
-			if err != nil {
-				checkDuration = 30 * time.Second
+				// check for browser windows in the applied resources
+				if e.Blueprint().HealthCheckTimeout != "" {
+					cd, err := time.ParseDuration(e.Blueprint().HealthCheckTimeout)
+					if err == nil {
+						checkDuration = cd
+					}
+				}
 			}
 
 			for _, r := range res {
@@ -216,14 +218,10 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 					// health check the URL
 					err := hc.HealthCheckHTTP(uri, checkDuration)
 					if err == nil {
-						// There is a recent issue with WSL2 and Chrome where this process hangs
-						// we do not need to wait for this to complete
-						go func() {
-							be := bc.OpenBrowser(uri)
-							if be != nil {
-								l.Error("Unable to open browser", "error", be)
-							}
-						}()
+						be := bc.OpenBrowser(uri)
+						if be != nil {
+							l.Error("Unable to open browser", "error", be)
+						}
 					}
 
 					wg.Done()

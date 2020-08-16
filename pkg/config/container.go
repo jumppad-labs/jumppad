@@ -44,7 +44,7 @@ type NetworkAttachment struct {
 
 // Resources allows the setting of resource constraints for the Container
 type Resources struct {
-	CPU    int   `hcl:"cpu,optional" json:"cpu,omitempty"`         // cpu limit for the container where 1 CPU = 1024
+	CPU    int   `hcl:"cpu,optional" json:"cpu,omitempty"`         // cpu limit for the container where 1 CPU = 1000
 	CPUPin []int `hcl:"cpu_pin,optional" json:"cpu_pin,omitempty"` // pin the container to one or more cpu cores
 	Memory int   `hcl:"memory,optional" json:"memory,omitempty"`   // max memory the container can consume in MB
 }
