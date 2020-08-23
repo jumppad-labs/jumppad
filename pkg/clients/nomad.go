@@ -34,7 +34,7 @@ type Nomad interface {
 type NomadImpl struct {
 	httpClient HTTP
 	l          hclog.Logger
-	c          *NomadConfig
+	c          *ClusterConfig
 	backoff    time.Duration
 }
 
@@ -54,7 +54,7 @@ type createRequest struct {
 
 // SetConfig loads the Nomad config from a file
 func (n *NomadImpl) SetConfig(nomadconfig string) error {
-	c := &NomadConfig{}
+	c := &ClusterConfig{}
 	err := c.Load(nomadconfig)
 	if err != nil {
 		return err
@@ -68,7 +68,7 @@ func (n *NomadImpl) SetConfig(nomadconfig string) error {
 // HealthCheckAPI executes a HTTP heathcheck for a Nomad cluster
 func (n *NomadImpl) HealthCheckAPI(timeout time.Duration) error {
 	// get the address and the nodecount from the config
-	address := n.c.Location
+	address := n.c.Address
 	nodeCount := n.c.NodeCount
 
 	n.l.Debug("Performing Nomad health check for address", "address", address)
@@ -159,7 +159,7 @@ func (n *NomadImpl) Create(files []string) error {
 		// submit the job top the API
 		cr := fmt.Sprintf(`{"Job": %s}`, string(jsonJob))
 
-		r, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/v1/jobs", n.c.Location), bytes.NewReader([]byte(cr)))
+		r, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/v1/jobs", n.c.APIAddress()), bytes.NewReader([]byte(cr)))
 		if err != nil {
 			return xerrors.Errorf("Unable to create http request: %w", err)
 		}
@@ -189,7 +189,7 @@ func (n *NomadImpl) Stop(files []string) error {
 		}
 
 		// stop the job
-		r, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/v1/job/%s", n.c.Location, id), nil)
+		r, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/v1/job/%s", n.c.APIAddress(), id), nil)
 		if err != nil {
 			return xerrors.Errorf("Unable to create http request: %w", err)
 		}
@@ -223,7 +223,7 @@ func (n *NomadImpl) ParseJob(file string) ([]byte, error) {
 	jobData, _ := json.Marshal(rd)
 
 	// validate the config with the Nomad API
-	r, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/v1/jobs/parse", n.c.Location), bytes.NewReader(jobData))
+	r, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/v1/jobs/parse", n.c.APIAddress()), bytes.NewReader(jobData))
 	if err != nil {
 		return nil, xerrors.Errorf("Unable to create http request: %w", err)
 	}
@@ -251,7 +251,7 @@ func (n *NomadImpl) ParseJob(file string) ([]byte, error) {
 // JobStatus returns a string status for the given job
 func (n *NomadImpl) JobStatus(job string) (string, error) {
 	// get the allocations for the job
-	r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v1/job/%s", n.c.Location, job), nil)
+	r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v1/job/%s", n.c.APIAddress(), job), nil)
 	if err != nil {
 		return "", xerrors.Errorf("Unable to create http request: %w", err)
 	}

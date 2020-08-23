@@ -207,7 +207,7 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 	}
 
 	// generate the config file
-	nomadConfig := clients.NomadConfig{Location: fmt.Sprintf("http://localhost:%d", apiPort), NodeCount: nodeCount}
+	nomadConfig := clients.ClusterConfig{Address: "localhost", APIPort: apiPort, NodeCount: nodeCount}
 	configDir, configPath := utils.CreateNomadConfigPath(c.config.Name)
 
 	err := nomadConfig.Save(configPath)
