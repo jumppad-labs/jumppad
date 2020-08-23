@@ -199,6 +199,7 @@ func (c *NomadCluster) createNomad() error {
 func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (string, string, string, error) {
 	// set the API server port to a random number 64000 - 65000
 	apiPort := rand.Intn(1000) + 64000
+	connectorPort := rand.Intn(1000) + 64000
 
 	// if the node count is 0 we are creating a combo client server
 	nodeCount := 1
@@ -207,8 +208,8 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 	}
 
 	// generate the config file
-	nomadConfig := clients.ClusterConfig{Address: "localhost", APIPort: apiPort, NodeCount: nodeCount}
-	configDir, configPath := utils.CreateNomadConfigPath(c.config.Name)
+	nomadConfig := clients.ClusterConfig{Address: "localhost", ConnectorPort: connectorPort, APIPort: apiPort, NodeCount: nodeCount}
+	configDir, configPath := utils.CreateClusterConfigPath(c.config.Name)
 
 	err := nomadConfig.Save(configPath)
 	if err != nil {
@@ -265,7 +266,6 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 		cc.Volumes = append(cc.Volumes, v)
 	}
 
-	// set the environment variables for the K3S_KUBECONFIG_OUTPUT and K3S_CLUSTER_SECRET
 	cc.Environment = c.config.Environment
 
 	// expose the API server port
@@ -273,6 +273,11 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 		config.Port{
 			Local:    "4646",
 			Host:     fmt.Sprintf("%d", apiPort),
+			Protocol: "tcp",
+		},
+		config.Port{
+			Local:    "19090",
+			Host:     fmt.Sprintf("%d", connectorPort),
 			Protocol: "tcp",
 		},
 	}

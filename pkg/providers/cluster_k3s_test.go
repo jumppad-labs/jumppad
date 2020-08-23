@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -148,9 +149,17 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 	assert.Equal(t, "volume", params.Volumes[0].Type)
 
 	// validate the API port is set
-	assert.GreaterOrEqual(t, params.Ports[0].Local, "64000")
-	assert.GreaterOrEqual(t, params.Ports[0].Local, params.Ports[0].Host)
+	localPort, _ := strconv.Atoi(params.Ports[0].Local)
+	hostPort, _ := strconv.Atoi(params.Ports[0].Host)
+	assert.GreaterOrEqual(t, localPort, 64000)
+	assert.GreaterOrEqual(t, hostPort, 64000)
 	assert.Equal(t, "tcp", params.Ports[0].Protocol)
+
+	localPort, _ = strconv.Atoi(params.Ports[1].Local)
+	hostPort, _ = strconv.Atoi(params.Ports[1].Host)
+	assert.Equal(t, localPort, 19090)
+	assert.GreaterOrEqual(t, hostPort, 64000)
+	assert.Equal(t, "tcp", params.Ports[1].Protocol)
 
 	// validate the command
 	assert.Equal(t, "server", params.Command[0])

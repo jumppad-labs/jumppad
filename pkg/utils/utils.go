@@ -90,11 +90,11 @@ func CreateKubeConfigPath(name string) (dir, filePath string, dockerPath string)
 	return
 }
 
-// CreateNomadConfigPath creates the file path for the Nomad config file when
-// using Kubernetes cluster
-func CreateNomadConfigPath(name string) (dir, filePath string) {
+// CreateClusterConfigPath creates the file path for the Cluster config
+// which stores details such as the API server location
+func CreateClusterConfigPath(name string) (dir, filePath string) {
 	dir = fmt.Sprintf("%s/.shipyard/config/%s", HomeFolder(), name)
-	filePath = fmt.Sprintf("%s/nomad.json", dir)
+	filePath = fmt.Sprintf("%s/config.json", dir)
 
 	// create the folders
 	err := os.MkdirAll(dir, 0755)

@@ -173,6 +173,13 @@ func TestClusterNomadCreatesAServer(t *testing.T) {
 	assert.GreaterOrEqual(t, intLocal, 4646)
 	assert.GreaterOrEqual(t, intHost, 64000)
 	assert.Equal(t, "tcp", params.Ports[0].Protocol)
+
+	// validate the Connector port is set
+	intLocal, _ = strconv.Atoi(params.Ports[1].Local)
+	intHost, _ = strconv.Atoi(params.Ports[1].Host)
+	assert.GreaterOrEqual(t, intLocal, 19090)
+	assert.GreaterOrEqual(t, intHost, 64000)
+	assert.Equal(t, "tcp", params.Ports[0].Protocol)
 }
 
 func TestClusterNomadCreatesClientNodes(t *testing.T) {
@@ -232,7 +239,7 @@ func TestClusterNomadGeneratesConfig(t *testing.T) {
 	err := p.Create()
 	assert.NoError(t, err)
 
-	_, configPath := utils.CreateNomadConfigPath(cc.Name)
+	_, configPath := utils.CreateClusterConfigPath(cc.Name)
 	assert.FileExists(t, configPath)
 }
 
