@@ -169,8 +169,8 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the info "([^"]*)" for the running "([^"]*)" called "([^"]*)" should equal "([^"]*)"$`, cr.theResourceInfoShouldEqual)
 	ctx.Step(`^the info "([^"]*)" for the running "([^"]*)" called "([^"]*)" should contain "([^"]*)"$`, cr.theResourceInfoShouldContain)
 	ctx.Step(`^the info "([^"]*)" for the running "([^"]*)" called "([^"]*)" should exist`, cr.theResourceInfoShouldExist)
-	ctx.Step(`^when I run the command "([^"]*)"$`, cr.whenIRunTheCommand)
-	ctx.Step(`^when I run the script$`, cr.whenIRunTheScript)
+	ctx.Step(`^I run the command "([^"]*)"$`, cr.whenIRunTheCommand)
+	ctx.Step(`^I run the script$`, cr.whenIRunTheScript)
 	ctx.Step(`^I expect the exit code to be (\d+)$`, cr.iExpectTheExitCodeToBe)
 	ctx.Step(`^I expect the response to contain "([^"]*)"$`, cr.iExpectTheResponseToContain)
 }
@@ -502,9 +502,7 @@ func (cr *CucumberRunner) whenIRunTheScript(arg1 *messages.PickleStepArgument_Pi
 	os.Chmod(tmpFile.Name(), 0777)
 
 	// execute and return
-	cr.executeCommand(tmpFile.Name())
-
-	return nil
+	return cr.executeCommand(tmpFile.Name())
 }
 
 func (cr *CucumberRunner) whenIRunTheCommand(arg1 string) error {
@@ -513,9 +511,7 @@ func (cr *CucumberRunner) whenIRunTheCommand(arg1 string) error {
 		arg1 = filepath.Join(cr.testFolder, arg1)
 	}
 
-	cr.executeCommand(arg1)
-
-	return nil
+	return cr.executeCommand(arg1)
 }
 
 func (cr *CucumberRunner) iExpectTheExitCodeToBe(arg1 int) error {
@@ -546,7 +542,7 @@ func (cr *CucumberRunner) iExpectTheResponseToContain(arg1 string) error {
 	return fmt.Errorf("Expected command output to contain %s.\n Output:\n%s", arg1, commandOutput.String())
 }
 
-func (cr *CucumberRunner) executeCommand(cmd string) {
+func (cr *CucumberRunner) executeCommand(cmd string) error {
 	// split command and args
 	parts := strings.Split(cmd, " ")
 
@@ -570,12 +566,15 @@ func (cr *CucumberRunner) executeCommand(cmd string) {
 		if exiterr, ok := err.(*exec.ExitError); ok {
 			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
 				commandExitCode = status.ExitStatus()
-				return
+				return nil
 			}
 		}
 
 		commandExitCode = -1
+		return err
 	}
+
+	return nil
 }
 
 func (cr *CucumberRunner) getJSONPath(path, resource, name string) (string, error) {
