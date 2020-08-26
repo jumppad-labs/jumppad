@@ -1,0 +1,47 @@
+# Web frontend
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-deployment
+  labels:
+    app: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: web
+        image: nicholasjackson/fake-service:v0.14.1
+        ports:
+        - containerPort: 9090
+        env:
+        - name: "LISTEN_ADDR"
+          value: "0.0.0.0:9090"
+        - name: "UPSTREAM_URIS"
+          value: "http://local-shipyard:13000"
+        - name: "NAME"
+          value: "web"
+        - name: "MESSAGE"
+          value: "Hello World"
+        - name: "HTTP_CLIENT_KEEP_ALIVES"
+          value: "false"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: connector-service-web
+spec:
+  selector:
+    app: web
+  ports:
+    - protocol: TCP
+      port: 9090
+      targetPort: 9090

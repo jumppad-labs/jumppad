@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: connector-deployment
+  labels:
+    app: connector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: connector
+  template:
+    metadata:
+      labels:
+        app: connector
+    spec:
+      containers:
+      - name: connector
+        image: shipyardrun/connector:v0.0.1
+        env:
+          - name: BIND_ADDR_GRPC 
+            value: "0.0.0.0:30000"
+          - name: BIND_ADDR_HTTP
+            value: "0.0.0.0:30001"
+          - name: LOG_LEVEL
+            value: debug
+        ports:
+        - containerPort: 30000
+        - containerPort: 30001
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: connector-service
+spec:
+  type: NodePort
+  selector:
+    app: connector
+  ports:
+    - protocol: TCP
+      name: grpc
+      port: 30000
+      targetPort: 30000
+      nodePort: 30000
+    - protocol: TCP
+      name: http
+      port: 30001
+      targetPort: 30001
+      nodePort: 30001
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: local-shipyard
+spec:
+  type: NodePort
+  selector:
+    app: connector
+  ports:
+    - protocol: TCP
+      port: 13000
+      targetPort: 13000
