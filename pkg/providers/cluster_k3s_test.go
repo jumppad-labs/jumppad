@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -148,14 +149,51 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 	assert.Equal(t, "volume", params.Volumes[0].Type)
 
 	// validate the API port is set
-	assert.GreaterOrEqual(t, params.Ports[0].Local, "64000")
-	assert.GreaterOrEqual(t, params.Ports[0].Local, params.Ports[0].Host)
+	localPort, _ := strconv.Atoi(params.Ports[0].Local)
+	hostPort, _ := strconv.Atoi(params.Ports[0].Host)
+	assert.GreaterOrEqual(t, localPort, 64000)
+	assert.GreaterOrEqual(t, hostPort, 64000)
 	assert.Equal(t, "tcp", params.Ports[0].Protocol)
+
+	localPort, _ = strconv.Atoi(params.Ports[1].Local)
+	hostPort, _ = strconv.Atoi(params.Ports[1].Host)
+	assert.Equal(t, localPort, 30000)
+	assert.GreaterOrEqual(t, hostPort, 64000)
+	assert.Equal(t, "tcp", params.Ports[1].Protocol)
+
+	localPort, _ = strconv.Atoi(params.Ports[2].Local)
+	hostPort, _ = strconv.Atoi(params.Ports[2].Host)
+	assert.Equal(t, localPort, 30001)
+	assert.GreaterOrEqual(t, hostPort, 64000)
+	assert.Equal(t, "tcp", params.Ports[2].Protocol)
 
 	// validate the command
 	assert.Equal(t, "server", params.Command[0])
 	assert.Contains(t, params.Command[1], params.Ports[0].Local)
 	assert.Contains(t, params.Command[2], "traefik")
+}
+
+func TestClusterK3CreatesAServerWithAdditionalPorts(t *testing.T) {
+	cc, md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	cc.Ports = []config.Port{{Local: "8080", Remote: "8080", Host: "8080"}}
+	cc.PortRanges = []config.PortRange{{Range: "8000-9000", EnableHost: true}}
+
+	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+
+	localPort, _ := strconv.Atoi(params.Ports[3].Local)
+	hostPort, _ := strconv.Atoi(params.Ports[3].Host)
+	assert.Equal(t, localPort, 8080)
+	assert.Equal(t, hostPort, 8080)
+
+	assert.Equal(t, params.PortRanges[0].Range, "8000-9000")
+	assert.True(t, params.PortRanges[0].EnableHost)
 }
 
 func TestClusterK3sErrorsIfServerNOTStart(t *testing.T) {

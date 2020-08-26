@@ -122,16 +122,40 @@ func (c *K8sCluster) createK3s() error {
 
 	// set the API server port to a random number 64000 - 65000
 	apiPort := rand.Intn(1000) + 64000
+	connectorPort := rand.Intn(1000) + 64000
+	connectorHTTPPort := rand.Intn(1000) + 64000
 	args := []string{"server", fmt.Sprintf("--https-listen-port=%d", apiPort)}
 
-	// expose the API server port
+	// save the config
+	clusterConfig := clients.ClusterConfig{Address: "localhost", APIPort: apiPort, ConnectorPort: connectorPort, NodeCount: 1}
+	_, configPath := utils.CreateClusterConfigPath(c.config.Name)
+
+	err = clusterConfig.Save(configPath)
+	if err != nil {
+		return xerrors.Errorf("Unable to generate Cluster config: %w", err)
+	}
+
+	// expose the API server and Connector ports
 	cc.Ports = []config.Port{
 		config.Port{
 			Local:    fmt.Sprintf("%d", apiPort),
 			Host:     fmt.Sprintf("%d", apiPort),
 			Protocol: "tcp",
 		},
+		config.Port{
+			Local:    "30000",
+			Host:     fmt.Sprintf("%d", connectorPort),
+			Protocol: "tcp",
+		},
+		config.Port{
+			Local:    "30001",
+			Host:     fmt.Sprintf("%d", connectorHTTPPort),
+			Protocol: "tcp",
+		},
 	}
+
+	cc.PortRanges = c.config.PortRanges
+	cc.Ports = append(cc.Ports, c.config.Ports...)
 
 	// disable the installation of traefik
 	args = append(args, "--no-deploy=traefik")

@@ -17,6 +17,9 @@ type K8sCluster struct {
 	Nodes   int      `hcl:"nodes,optional" json:"nodes,omitempty"`
 	Images  []Image  `hcl:"image,block" json:"images,omitempty"`
 	Volumes []Volume `hcl:"volume,block" json:"volumes,omitempty"` // volumes to attach to the cluster
+
+	Ports      []Port      `hcl:"port,block" json:"ports,omitempty"`             // ports to expose
+	PortRanges []PortRange `hcl:"port_range,block" json:"port_ranges,omitempty"` // range of ports to expose
 }
 
 // NewK8sCluster creates new Cluster config with the correct defaults

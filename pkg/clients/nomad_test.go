@@ -29,7 +29,7 @@ func setupNomadTests(t *testing.T) (string, string, *mocks.MockHTTP) {
 	f, err := os.Create(fp)
 	assert.NoError(t, err)
 
-	_, err = f.WriteString(getNomadConfig("localhost:4646"))
+	_, err = f.WriteString(getNomadConfig("localhost", 4646))
 	assert.NoError(t, err)
 
 	mh := &mocks.MockHTTP{}
@@ -359,12 +359,13 @@ func TestNomadHealthErrorsOnClientError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func getNomadConfig(l string) string {
+func getNomadConfig(l string, p int) string {
 	return fmt.Sprintf(`
 	{
-		"location": "http://%s",
+		"address": "%s",
+		"api_port": %d,
 		"node_count": 2
-	}`, l)
+	}`, l, p)
 }
 
 var aliveResponse = `

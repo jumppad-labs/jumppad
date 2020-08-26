@@ -34,7 +34,7 @@ func (n *NomadJob) Create() error {
 	}
 
 	// load the config
-	_, configPath := utils.CreateNomadConfigPath(cc.Info().Name)
+	_, configPath := utils.CreateClusterConfigPath(cc.Info().Name)
 	err = n.client.SetConfig(configPath)
 	if err != nil {
 		return xerrors.Errorf("Unable to load nomad config %s: %w", configPath, err)
@@ -87,7 +87,7 @@ func (n *NomadJob) Destroy() error {
 	}
 
 	// load the config
-	_, configPath := utils.CreateNomadConfigPath(cc.Info().Name)
+	_, configPath := utils.CreateClusterConfigPath(cc.Info().Name)
 	err = n.client.SetConfig(configPath)
 	if err != nil {
 		n.log.Error("Unable to load Nomad config", "config", configPath, "error", err)
