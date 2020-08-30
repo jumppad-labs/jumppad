@@ -16,14 +16,18 @@ jobs:
         name: Unshallow
         run: git fetch --prune --unshallow
       
-      -
-        name: Docker Login
-        if: success() && startsWith(github.ref, 'refs/tags/')
-        env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USER }}
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASS }}
-        run: |
-          echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin 
+      # Setup gcloud CLI
+      - 
+        uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+        with:
+          version: '270.0.0'
+          service_account_key: ${{ secrets.GCP_KEY }}
+
+         # Configure docker to use the gcloud command-line tool as a credential helper
+      - run: |
+          # Set up docker to authenticate
+          # via gcloud command-line tool.
+          gcloud auth configure-docker  
       -
         name: Set up Go
         uses: actions/setup-go@v1

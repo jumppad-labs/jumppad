@@ -81,6 +81,6 @@ changelog:
     - '^test:'
 dockers:
   - image_templates:
-    - shipyardrun/shipyard:{{ .Tag }}
+    - gcr.io/shipyard-287511/shipyard:{{ .Tag }}
 signs:
   - artifacts: checksum
