@@ -3,6 +3,8 @@ package cmd
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -52,8 +54,8 @@ func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
 	}
 
 	mockEngine := &mocks.Engine{}
-	mockEngine.On("ParseConfigWithVariables", mock.Anything, mock.Anything).Return(nil)
-	mockEngine.On("ApplyWithVariables", mock.Anything, mock.Anything).Return(nil, nil)
+	mockEngine.On("ParseConfigWithVariables", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	mockEngine.On("ApplyWithVariables", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 	mockEngine.On("GetClients", mock.Anything).Return(clients)
 	mockEngine.On("ResourceCountForType", mock.Anything).Return(0)
 
@@ -136,7 +138,32 @@ func TestRunSetsDestinationFromArgsWhenPresent(t *testing.T) {
 	err := rf.Execute()
 	assert.NoError(t, err)
 
-	rm.engine.AssertCalled(t, "ApplyWithVariables", "/tmp", mock.Anything)
+	rm.engine.AssertCalled(t, "ApplyWithVariables", "/tmp", mock.Anything, mock.Anything)
+}
+
+func TestRunSetsVariablesFileReturnsErrorWhenMissing(t *testing.T) {
+	rf, _ := setupRun(t, "")
+	rf.SetArgs([]string{"--vars-file=./vars.file", "/tmp"})
+
+	err := rf.Execute()
+	assert.Error(t, err)
+}
+
+func TestRunSetsVariablesFileWhenPresent(t *testing.T) {
+	tmpFile, err := ioutil.TempFile("", "*.vars")
+	assert.NoError(t, err)
+
+	t.Cleanup(func() {
+		os.Remove(tmpFile.Name())
+	})
+
+	rf, rm := setupRun(t, "")
+	rf.SetArgs([]string{"--vars-file=" + tmpFile.Name(), "/tmp"})
+
+	err = rf.Execute()
+	assert.NoError(t, err)
+
+	rm.engine.AssertCalled(t, "ApplyWithVariables", "/tmp", mock.Anything, tmpFile.Name())
 }
 
 func TestRunSetsDestinationToDownloadedBlueprintFromArgsWhenRemote(t *testing.T) {
@@ -146,7 +173,7 @@ func TestRunSetsDestinationToDownloadedBlueprintFromArgsWhenRemote(t *testing.T)
 	err := rf.Execute()
 	assert.NoError(t, err)
 
-	rm.engine.AssertCalled(t, "ApplyWithVariables", filepath.Join(utils.ShipyardHome(), "blueprints/github.com/shipyard-run/blueprints/vault-k8s"), mock.Anything)
+	rm.engine.AssertCalled(t, "ApplyWithVariables", filepath.Join(utils.ShipyardHome(), "blueprints/github.com/shipyard-run/blueprints/vault-k8s"), mock.Anything, mock.Anything)
 }
 
 func TestRunFetchesBlueprint(t *testing.T) {
@@ -238,7 +265,7 @@ func TestRunOpensBrowserWindowForResources(t *testing.T) {
 	c2 := config.NewContainer("test2")
 	c2.Ports = []config.Port{config.Port{OpenInBrowser: ""}}
 
-	rm.engine.On("ApplyWithVariables", mock.Anything, mock.Anything).Return(
+	rm.engine.On("ApplyWithVariables", mock.Anything, mock.Anything, mock.Anything).Return(
 		[]config.Resource{d, i, c, d2, i2, c2},
 		nil,
 	)

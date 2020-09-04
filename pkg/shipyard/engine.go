@@ -41,9 +41,9 @@ type Clients struct {
 type Engine interface {
 	GetClients() *Clients
 	Apply(string) ([]config.Resource, error)
-	ApplyWithVariables(string, map[string]string) ([]config.Resource, error)
+	ApplyWithVariables(string, map[string]string, string) ([]config.Resource, error)
 	ParseConfig(string) error
-	ParseConfigWithVariables(string, map[string]string) error
+	ParseConfigWithVariables(string, map[string]string, string) error
 	Destroy(string, bool) error
 	ResourceCount() int
 	ResourceCountForType(string) int
@@ -130,11 +130,11 @@ func (e *EngineImpl) GetClients() *Clients {
 }
 
 func (e *EngineImpl) ParseConfig(path string) error {
-	return e.ParseConfigWithVariables(path, nil)
+	return e.ParseConfigWithVariables(path, nil, "")
 }
 
-func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]string) error {
-	_, err := e.readConfig(path, vars)
+func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]string, variablesFile string) error {
+	_, err := e.readConfig(path, vars, variablesFile)
 	if err != nil {
 		return err
 	}
@@ -143,12 +143,12 @@ func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]strin
 }
 
 func (e *EngineImpl) Apply(path string) ([]config.Resource, error) {
-	return e.ApplyWithVariables(path, nil)
+	return e.ApplyWithVariables(path, nil, "")
 }
 
 // ApplyWithVariables applies the current config creating the resources
-func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string) ([]config.Resource, error) {
-	d, err := e.readConfig(path, vars)
+func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, variablesFile string) ([]config.Resource, error) {
+	d, err := e.readConfig(path, vars, variablesFile)
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +226,7 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string) ([]
 
 // Destroy the resources defined by the config
 func (e *EngineImpl) Destroy(path string, allResources bool) error {
-	d, err := e.readConfig(path, nil)
+	d, err := e.readConfig(path, nil, "")
 	if err != nil {
 		return err
 	}
@@ -308,18 +308,25 @@ func (e *EngineImpl) Blueprint() *config.Blueprint {
 	return e.config.Blueprint
 }
 
-func (e *EngineImpl) readConfig(path string, variables map[string]string) (*dag.AcyclicGraph, error) {
+func (e *EngineImpl) readConfig(path string, variables map[string]string, variablesFile string) (*dag.AcyclicGraph, error) {
 	// load the new config
 	cc := config.New()
 	if path != "" {
 		if utils.IsHCLFile(path) {
 			config.SetVariables(variables)
+			if variablesFile != "" {
+				err := config.LoadValuesFile(variablesFile)
+				if err != nil {
+					return nil, err
+				}
+			}
+
 			err := config.ParseHCLFile(path, cc)
 			if err != nil {
 				return nil, err
 			}
 		} else {
-			err := config.ParseFolder(path, cc, false, variables)
+			err := config.ParseFolder(path, cc, false, variables, variablesFile)
 			if err != nil {
 				return nil, err
 			}

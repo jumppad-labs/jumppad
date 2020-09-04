@@ -32,8 +32,8 @@ func (e *Engine) Apply(path string) ([]config.Resource, error) {
 	return nil, args.Error(1)
 }
 
-func (e *Engine) ApplyWithVariables(path string, vars map[string]string) ([]config.Resource, error) {
-	args := e.Called(path, vars)
+func (e *Engine) ApplyWithVariables(path string, vars map[string]string, varsFile string) ([]config.Resource, error) {
+	args := e.Called(path, vars, varsFile)
 
 	if r, ok := args.Get(0).([]config.Resource); ok {
 		return r, args.Error(1)
@@ -69,7 +69,7 @@ func (e *Engine) ParseConfig(path string) error {
 	return args.Error(0)
 }
 
-func (e *Engine) ParseConfigWithVariables(path string, vars map[string]string) error {
-	args := e.Called(path, vars)
+func (e *Engine) ParseConfigWithVariables(path string, vars map[string]string, varsFile string) error {
+	args := e.Called(path, vars, varsFile)
 	return args.Error(0)
 }
