@@ -90,10 +90,13 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 		}
 
 		// check the variables file exists
-		if *variablesFile != "" {
+		if variablesFile != nil && *variablesFile != "" {
 			if _, err := os.Stat(*variablesFile); err != nil {
 				return fmt.Errorf("Variables file %s, does not exist", *variablesFile)
 			}
+		} else {
+			vf := ""
+			variablesFile = &vf
 		}
 
 		// are we running with a different shipyard version, if so check it is installed
