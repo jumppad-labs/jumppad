@@ -46,7 +46,7 @@ func (r ResourceTypeNotExistError) Error() string {
 // The onlyResources parameter allows you to specfiy that the parser
 // only reads resource files and will ignore Blueprint and Varaible files.
 // This is useful when recursively parsing such as when reading Modules
-func ParseFolder(folder string, c *Config, onlyResources bool, variables map[string]string) error {
+func ParseFolder(folder string, c *Config, onlyResources bool, variables map[string]string, variablesFile string) error {
 	abs, _ := filepath.Abs(folder)
 
 	// load the variables
@@ -65,6 +65,14 @@ func ParseFolder(folder string, c *Config, onlyResources bool, variables map[str
 
 		// setup any variables which are passed as environment variables or in the collection
 		SetVariables(variables)
+
+		// load variables from any custom files
+		if variablesFile != "" {
+			err := LoadValuesFile(variablesFile)
+			if err != nil {
+				return err
+			}
+		}
 
 		// pick up the blueprint file
 		yardFilesHCL, err := filepath.Glob(path.Join(abs, "*.yard"))
@@ -114,7 +122,7 @@ func ParseYardFile(file string, c *Config) error {
 	return parseYardMarkdown(file, c)
 }
 
-// LoadValuesFile loads varaible values from a file
+// LoadValuesFile loads variable values from a file
 func LoadValuesFile(path string) error {
 	parser := hclparse.NewParser()
 
@@ -524,7 +532,7 @@ func ParseHCLFile(file string, c *Config) error {
 			conf := New()
 			// recursively parse references for the module
 			// ensure we do load the values which might be in module folders
-			err = ParseFolder(m.Source, conf, true, nil)
+			err = ParseFolder(m.Source, conf, true, nil, "")
 			if err != nil {
 				return err
 			}

@@ -24,7 +24,7 @@ func TestRunParsesBlueprintInMarkdownFormat(t *testing.T) {
 	}
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c, false, nil)
+	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
 	assert.NoError(t, err)
 
 	assert.NotNil(t, c.Blueprint)
@@ -46,7 +46,7 @@ func TestRunParsesBlueprintInHCLFormat(t *testing.T) {
 	}
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c, false, nil)
+	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
 	assert.NoError(t, err)
 
 	assert.NotNil(t, c.Blueprint)
@@ -54,12 +54,10 @@ func TestRunParsesBlueprintInHCLFormat(t *testing.T) {
 
 func TestLoadsVariablesFiles(t *testing.T) {
 	absoluteFolderPath, err := filepath.Abs("../../examples/container")
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c, false, nil)
+	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
 	assert.NoError(t, err)
 
 	// check variable has been interpolated
@@ -78,6 +76,33 @@ func TestLoadsVariablesFiles(t *testing.T) {
 	assert.True(t, validEnv)
 }
 
+func TestLoadsVariablesFromOptionalFile(t *testing.T) {
+	absoluteFolderPath, err := filepath.Abs("../../examples/container")
+	assert.NoError(t, err)
+
+	absoluteVarsPath, err := filepath.Abs("../../examples/override.vars")
+	assert.NoError(t, err)
+
+	c := New()
+	err = ParseFolder(absoluteFolderPath, c, false, nil, absoluteVarsPath)
+	assert.NoError(t, err)
+
+	// check variable has been interpolated
+	r, err := c.FindResource("container.consul")
+	assert.NoError(t, err)
+
+	validEnv := false
+	con := r.(*Container)
+	for _, e := range con.Environment {
+		// should contain a key called "something" with a value "else"
+		if e.Key == "something" && e.Value == "else" {
+			validEnv = true
+		}
+	}
+
+	assert.True(t, validEnv)
+}
+
 func TestOverridesVariablesFilesWithFlag(t *testing.T) {
 	absoluteFolderPath, err := filepath.Abs("../../examples/container")
 	if err != nil {
@@ -85,7 +110,7 @@ func TestOverridesVariablesFilesWithFlag(t *testing.T) {
 	}
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c, false, map[string]string{"something": "else"})
+	err = ParseFolder(absoluteFolderPath, c, false, map[string]string{"something": "else"}, "")
 	assert.NoError(t, err)
 
 	// check variable has been interpolated
@@ -116,7 +141,7 @@ func TestOverridesVariablesFilesWithEnv(t *testing.T) {
 	})
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c, false, nil)
+	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
 	assert.NoError(t, err)
 
 	// check variable has been interpolated
@@ -142,7 +167,7 @@ func TestDoesNotLoadsVariablesFilesFromInsideModules(t *testing.T) {
 	}
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c, false, nil)
+	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
 	assert.NoError(t, err)
 
 	// check variable has been interpolated
@@ -169,7 +194,7 @@ func TestParseModuleCreatesResources(t *testing.T) {
 	}
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c, false, nil)
+	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
 	assert.NoError(t, err)
 
 	// count the resources, should create 10
@@ -193,7 +218,7 @@ func TestParseFileFunctionReadCorrectly(t *testing.T) {
 	}
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c, false, nil)
+	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
 	assert.NoError(t, err)
 
 	// check variable has been interpolated

@@ -243,6 +243,7 @@ func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
 		&version,
 		&approve,
 		&shipyardVars,
+		nil,
 		cr.l,
 	)
 
