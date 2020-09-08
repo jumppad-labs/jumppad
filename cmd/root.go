@@ -54,14 +54,14 @@ func init() {
 	rootCmd.AddCommand(taintCmd)
 	rootCmd.AddCommand(newExecCmd(engineClients.ContainerTasks))
 	rootCmd.AddCommand(newVersionCmd(vm))
-	//rootCmd.AddCommand(exposeCmd)
-	//rootCmd.AddCommand(containerCmd)
-	//rootCmd.AddCommand(codeCmd)
-	//rootCmd.AddCommand(docsCmd)
-	//rootCmd.AddCommand(toolsCmd)
-	//rootCmd.AddCommand(upgradeCmd)
 	rootCmd.AddCommand(uninstallCmd)
 	rootCmd.AddCommand(newPushCmd(engineClients.ContainerTasks, engineClients.Kubernetes, engineClients.HTTP, engineClients.Nomad, logger))
+
+	// add the server commands
+	rootCmd.AddCommand(connectorCmd)
+	connectorCmd.AddCommand(newConnectorRunCommand())
+	connectorCmd.AddCommand(connectorStopCmd)
+	connectorCmd.AddCommand(newConnectorCertCmd())
 }
 
 func createEngine(l hclog.Logger) (shipyard.Engine, gvm.Versions) {
