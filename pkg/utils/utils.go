@@ -235,3 +235,13 @@ func GetDockerSock() string {
 
 	return "/var/run/docker.sock"
 }
+
+// GetConnectorPIDFile returns the connector PID file used by the connector
+func GetConnectorPIDFile() string {
+	return filepath.Join(ShipyardHome(), "connector.pid")
+}
+
+// GetConnectorLogFile returns the log file used by the connector
+func GetConnectorLogFile() string {
+	return filepath.Join(ShipyardHome(), "connector.log")
+}
