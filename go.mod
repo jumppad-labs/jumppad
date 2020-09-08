@@ -24,7 +24,6 @@ require (
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/mapstructure v1.3.3
-	github.com/prometheus/common v0.7.0 // indirect
 	github.com/shipyard-run/version-manager v0.0.5
 	github.com/shipyard-run/connector v0.0.9
 	github.com/spf13/cobra v1.0.0
