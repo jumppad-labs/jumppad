@@ -15,6 +15,7 @@ import (
 	"github.com/shipyard-run/connector/http"
 	"github.com/shipyard-run/connector/protos/shipyard"
 	"github.com/shipyard-run/connector/remote"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -35,10 +36,25 @@ func newConnectorRunCommand() *cobra.Command {
 		Long:  `Runs the connector with the given options`,
 		Args:  cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Do Stuff Here
 
 			lo := hclog.LoggerOptions{}
 			lo.Level = hclog.LevelFromString(logLevel)
+
+			if logFile != "" {
+				// create a new log file
+				if _, err := os.Stat(utils.GetConnectorLogFile()); err == nil {
+					os.RemoveAll(utils.GetConnectorLogFile())
+				}
+
+				f, err := os.Create(utils.GetConnectorLogFile())
+				if err != nil {
+					return fmt.Errorf("unable to create log file %s: %s", utils.GetConnectorLogFile(), err)
+				}
+				defer f.Close()
+
+				lo.Output = f // set the logger to use file output
+			}
+
 			l := hclog.New(&lo)
 
 			grpcServer := grpc.NewServer()
