@@ -29,7 +29,7 @@ require (
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/nicholasjackson/version-manager v0.0.4
-	github.com/prometheus/common v0.7.0 // indirect
+	github.com/shipyard-run/connector v0.0.4
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.5.0
 	github.com/stretchr/testify v1.6.1
@@ -44,6 +44,7 @@ require (
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 	gonum.org/v1/netlib v0.0.0-20190331212654-76723241ea4e // indirect
 	google.golang.org/api v0.30.0 // indirect
+	google.golang.org/grpc v1.31.0
 	helm.sh/helm/v3 v3.2.4
 	k8s.io/api v0.18.0
 	k8s.io/apimachinery v0.18.0
