@@ -421,9 +421,11 @@ func ParseHCLFile(file string, c *Config) error {
 			}
 
 			// process volumes
-			// make sure mount paths are absolute
 			for i, v := range co.Volumes {
-				co.Volumes[i].Source = ensureAbsolute(v.Source, file)
+				// make sure mount paths are absolute when type is bind
+				if v.Type == "" || v.Type == "bind" {
+					co.Volumes[i].Source = ensureAbsolute(v.Source, file)
+				}
 			}
 
 			// make sure build paths are absolute
