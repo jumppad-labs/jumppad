@@ -28,6 +28,7 @@ func setupHelm() (*clients.MockHelm, *clients.MockKubernetes, *clients.Getter, *
 
 	cl := config.NewK8sCluster("tester")
 	ch := config.NewHelm("test")
+	ch.ChartName = "test"
 	ch.Cluster = "k8s_cluster.tester"
 
 	c := config.New()

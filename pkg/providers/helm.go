@@ -63,7 +63,7 @@ func (h *Helm) Create() error {
 		return xerrors.Errorf("unable to create Kubernetes client: %w", err)
 	}
 
-	err = h.helmClient.Create(kcPath, h.config.Name, h.config.Namespace, h.config.Chart, h.config.Values, h.config.ValuesString)
+	err = h.helmClient.Create(kcPath, h.config.ChartName, h.config.Namespace, h.config.Chart, h.config.Values, h.config.ValuesString)
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func (h *Helm) Destroy() error {
 	}
 
 	// get the target cluster
-	h.helmClient.Destroy(kcPath, h.config.Name, h.config.Namespace)
+	h.helmClient.Destroy(kcPath, h.config.ChartName, h.config.Namespace)
 
 	if err != nil {
 		h.log.Debug("There was a problem destroying Helm chart, logging message but ignoring error", "ref", h.config.Name, "error", err)
