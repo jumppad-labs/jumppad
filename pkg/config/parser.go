@@ -330,6 +330,12 @@ func ParseHCLFile(file string, c *Config) error {
 				return err
 			}
 
+			// if ChartName is not set use the name of the chart use the name of the
+			// resource
+			if h.ChartName == "" {
+				h.ChartName = h.Name
+			}
+
 			// only set absolute if is local folder
 			if h.Chart != "" && utils.IsLocalFolder(ensureAbsolute(h.Chart, file)) {
 				h.Chart = ensureAbsolute(h.Chart, file)

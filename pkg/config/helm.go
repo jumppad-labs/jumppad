@@ -14,6 +14,10 @@ type Helm struct {
 	Values       string            `hcl:"values,optional" json:"values"`
 	ValuesString map[string]string `hcl:"values_string,optional" json:"values_string"`
 
+	// ChartName is the name of the chart, if not present
+	// uses the name of the resource block
+	ChartName string `hcl:"chart_name,optional" json:"chart_name,omitempty"`
+
 	// Namespace is the Kubernetes namespace
 	Namespace string `hcl:"namespace,optional" json:"namespace,omitempty"`
 
