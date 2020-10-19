@@ -7,8 +7,15 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
+type CommandConfig struct {
+	Command          string
+	Args             []string
+	Env              []string
+	WorkingDirectory string
+}
+
 type Command interface {
-	Execute(string, ...string) error
+	Execute(config CommandConfig) error
 }
 
 // Command executes local commands
@@ -23,12 +30,20 @@ func NewCommand(maxCommandTime time.Duration, l hclog.Logger) Command {
 }
 
 // Execute the given command
-func (c *CommandImpl) Execute(command string, args ...string) error {
+func (c *CommandImpl) Execute(config CommandConfig) error {
 
 	cmd := exec.Command(
-		command,
-		args...,
+		config.Command,
+		config.Args...,
 	)
+
+	if config.Env != nil {
+		cmd.Env = config.Args
+	}
+
+	if config.WorkingDirectory != "" {
+		cmd.Dir = config.WorkingDirectory
+	}
 
 	// set the standard out and error to the logger
 	cmd.Stdout = c.log.StandardWriter(&hclog.StandardLoggerOptions{InferLevels: true})

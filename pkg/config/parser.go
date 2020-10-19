@@ -485,8 +485,6 @@ func ParseHCLFile(file string, c *Config) error {
 				return err
 			}
 
-			h.Script = ensureAbsolute(h.Script, file)
-
 			c.AddResource(h)
 
 		case string(TypeExecRemote):
@@ -496,12 +494,6 @@ func ParseHCLFile(file string, c *Config) error {
 			if err != nil {
 				return err
 			}
-
-			/*
-				if h.Script != "" {
-					h.Script = ensureAbsolute(h.Script, file)
-				}
-			*/
 
 			// process volumes
 			// make sure mount paths are absolute
