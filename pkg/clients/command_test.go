@@ -15,5 +15,5 @@ func TestExecuteWithBasicParams(t *testing.T) {
 	t.Skip()
 	e := setupExecute(t)
 
-	e.Execute("ls")
+	e.Execute(CommandConfig{Command: "ls"})
 }

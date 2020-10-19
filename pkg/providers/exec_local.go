@@ -2,7 +2,6 @@ package providers
 
 import (
 	"fmt"
-	"os"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
@@ -24,19 +23,28 @@ func NewExecLocal(c *config.ExecLocal, ex clients.Command, l hclog.Logger) *Exec
 
 // Create a new exec
 func (c *ExecLocal) Create() error {
-	if c.config.Command != "" {
-		return fmt.Errorf("Only Script execution is currently implemented for Local Exec")
+	c.log.Debug("Locally executing script", "ref", c.config.Name, "script", c.config.Command, "args", c.config.Arguments)
+
+	// build the environment variables
+	envs := []string{}
+	for _, e := range c.config.Environment {
+		envs = append(envs, fmt.Sprintf("%s=%s", e.Key, e.Value))
 	}
 
-	c.log.Debug("Localy executing script", "ref", c.config.Name, "script", c.config.Script)
-
-	// make sure the script is executable
-	err := os.Chmod(c.config.Script, 0777)
-	if err != nil {
-		c.log.Error("Unable to set script permissions", "error", err)
+	for k, v := range c.config.EnvVar {
+		envs = append(envs, fmt.Sprintf("%s=%s", k, v))
 	}
 
-	err = c.client.Execute(c.config.Script)
+	// create the config
+	cc := clients.CommandConfig{
+		Command:          c.config.Command,
+		Args:             c.config.Arguments,
+		Env:              envs,
+		WorkingDirectory: c.config.WorkingDirectory,
+	}
+
+	// set the env vars
+	err := c.client.Execute(cc)
 	if err != nil {
 		return err
 	}
