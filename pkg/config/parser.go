@@ -594,6 +594,10 @@ func ParseReferences(c *Config) error {
 				c.DependsOn = append(c.DependsOn, c.Target)
 			}
 
+		case TypeExecLocal:
+			c := r.(*ExecLocal)
+			c.DependsOn = append(c.DependsOn, c.Depends...)
+
 		case TypeIngress:
 			c := r.(*Ingress)
 			for _, n := range c.Networks {
