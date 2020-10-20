@@ -1,5 +1,27 @@
 # Change Log
 
+## version 0.1.8
+
+### Fix local exec capability 
+Fixes bugs and extends the local exec capability for running commands local as part of a run
+
+```
+```javascript
+exec_remote "exec_standalone" {
+  cmd = "consul"
+  args = [
+    "services",
+    "register",
+    "./config/redis.hcl"
+  ]
+
+  env {
+    key = "CONSUL_HTTP_ADDR"
+    value = "http://consul.container.shipyard.run:8500"
+  }
+}
+```
+
 ## version 0.0.32
 
 ### Remote Exec
@@ -33,10 +55,11 @@ Add ability to configure network aliases for containers
 ## version 0.0.26
 
 ### Push Command
-* Changes to caching volumes inadvertently changed the behaviour of the `push` command. When an image was already cached in the cluster image volume `push` would 
-  not overwrite this image. If the user specifies the `--force-update` command then the pushed image would be overwritten regardles of local cache; however, force-update
-  would also attempt to pull the image from a remote registry. Push was designed to push a local image to a cluster as part of the development flow, pulling remote images
-  is not desireable behaviour.
+* Changes to caching volumes inadvertently changed the behaviour of the `push` command. When an image was already cached
+  in the cluster image volume `push` would not overwrite this image. If the user specifies the `--force-update` command
+  then the pushed image would be overwritten regardles of local cache; however, force-update would also attempt to pull
+  the image from a remote registry. Push was designed to push a local image to a cluster as part of the development
+  flow, pulling remote images is not desireable behaviour.
 * This change ensures that the `push` command will always push an image regardless of local cache.
 
 ## version 0.0.25
@@ -48,8 +71,8 @@ Add ability to configure network aliases for containers
 ## version 0.0.24
 
 ## Env Command
-Added a new command to simplify the export of environment variables. Environment variables can be defined in a blueprint readme, after the blueprint has completed
-the variables will be presented to the user.
+Added a new command to simplify the export of environment variables. Environment variables can be defined in a blueprint
+readme, after the blueprint has completed the variables will be presented to the user.
 
 **Blueprint**
 ```
@@ -104,14 +127,18 @@ eval $(shipyard env)
 ```
 
 ## Bugfixes
-* Update terminal server in Docs, there was a bug with the latest Chrome where the terminal was not immediately displaying the terminal.
+* Update terminal server in Docs, there was a bug with the latest Chrome where the terminal was not immediately
+  displaying the terminal.
 
 ## version 0.0.20
 
 ## Clusters
-* New feature to persist and share cache for importing images for clusters. Previously each cluster has its own cache which was created every time 
-  the cluster was started. Images were copied from the local machine to a Docker volume before being imported to the clsuter. If multiple clusters were
-  defined in a config this process would run for each cluster unecessarilly slowed the startup time. Now images are cached in a persistant volume `images.volume.shipyard.run` improving startup times. When a cluster starts it first checks to see if an image exits, if it does not it will import the image from the local Docker instance. 
+* New feature to persist and share cache for importing images for clusters. Previously each cluster has its own cache
+  which was created every time the cluster was started. Images were copied from the local machine to a Docker volume
+  before being imported to the clsuter. If multiple clusters were defined in a config this process would run for each
+  cluster unecessarilly slowed the startup time. Now images are cached in a persistant volume
+  `images.volume.shipyard.run` improving startup times. When a cluster starts it first checks to see if an image exits,
+  if it does not it will import the image from the local Docker instance.
 * Added a new feature to the `purge` command which removes the persistent image cache.
 
 ## Modules
@@ -195,7 +222,8 @@ helm "vault" {
 ## version 0.0.16
 
 ### Bugfixes
-* By default when looking up the id of a Docker container Docker does a greedy match, this caused issues where we would grab an incorrect id on destroy. Changed to use a regex.
+* By default when looking up the id of a Docker container Docker does a greedy match, this caused issues where we would
+  grab an incorrect id on destroy. Changed to use a regex.
 
 ## version 0.0.16
 

@@ -3,7 +3,7 @@ Feature: Docker Container
   I should apply a blueprint which defines a simple container setup
   and test the resources are created correctly
 
-Scenario: Single Container from Local Blueprint
+Scenario: Single Container with Shipyard Variables
   Given the following environment variables are set
     | key            | value                 |
     | CONSUL_VERSION | 1.8.0                 |
