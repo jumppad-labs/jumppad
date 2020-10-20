@@ -1,6 +1,8 @@
 package providers
 
 import (
+	"time"
+
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
@@ -31,6 +33,19 @@ func (c *K8sConfig) Create() error {
 	err = c.client.Apply(c.config.Paths, c.config.WaitUntilReady)
 	if err != nil {
 		return err
+	}
+
+	// run any health checks
+	if c.config.HealthCheck != nil && len(c.config.HealthCheck.Pods) > 0 {
+		to, err := time.ParseDuration(c.config.HealthCheck.Timeout)
+		if err != nil {
+			return xerrors.Errorf("unable to parse healthcheck duration: %w", err)
+		}
+
+		err = c.client.HealthCheckPods(c.config.HealthCheck.Pods, to)
+		if err != nil {
+			return xerrors.Errorf("healthcheck failed after helm chart setup: %w", err)
+		}
 	}
 
 	// set the status

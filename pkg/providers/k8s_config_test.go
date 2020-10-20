@@ -3,6 +3,7 @@ package providers
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
 	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
@@ -41,6 +42,34 @@ func TestCreatesCorrectly(t *testing.T) {
 	_, destPath, _ := utils.CreateKubeConfigPath("testcluster")
 	mk.AssertCalled(t, "SetConfig", destPath)
 	mk.AssertCalled(t, "Apply", p.config.Paths, p.config.WaitUntilReady)
+}
+
+func TestRunsHealthChecks(t *testing.T) {
+	mk, p := setupK8sConfig()
+	p.config.HealthCheck = &config.HealthCheck{
+		Pods:    []string{"app=mine"},
+		Timeout: "60s",
+	}
+	mk.On("HealthCheckPods", mock.Anything, mock.Anything).Return(nil)
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	mk.AssertCalled(t, "HealthCheckPods", []string{"app=mine"}, 60*time.Second)
+}
+
+func TestHealthCheckFailReturnsError(t *testing.T) {
+	mk, p := setupK8sConfig()
+	p.config.HealthCheck = &config.HealthCheck{
+		Pods:    []string{"app=mine"},
+		Timeout: "60s",
+	}
+	mk.On("HealthCheckPods", mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
+
+	err := p.Create()
+	assert.Error(t, err)
+
+	mk.AssertCalled(t, "HealthCheckPods", []string{"app=mine"}, 60*time.Second)
 }
 
 func TestCreateSetupErrorReturnsError(t *testing.T) {

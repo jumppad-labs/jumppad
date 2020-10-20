@@ -23,7 +23,7 @@ func NewExecLocal(c *config.ExecLocal, ex clients.Command, l hclog.Logger) *Exec
 
 // Create a new exec
 func (c *ExecLocal) Create() error {
-	c.log.Debug("Locally executing script", "ref", c.config.Name, "script", c.config.Command, "args", c.config.Arguments)
+	c.log.Info("Locally executing script", "ref", c.config.Name, "script", c.config.Command, "args", c.config.Arguments)
 
 	// build the environment variables
 	envs := []string{}
