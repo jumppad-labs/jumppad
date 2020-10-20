@@ -22,6 +22,6 @@ func TestExecLocalCreatesCorrectly(t *testing.T) {
 
 var execLocalRelative = `
 exec_local "setup_vault" {
-  script = "./scripts/setup_vault.sh"
+  cmd = "./scripts/setup_vault.sh"
 }
 `

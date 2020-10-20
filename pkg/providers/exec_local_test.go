@@ -5,20 +5,19 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
-	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-func testLocalExecSetupMocks() (*config.ExecLocal, *mocks.Command) {
+func testLocalExecSetupMocks() (*config.ExecLocal, *clients.CommandMock) {
 	el := config.NewExecLocal("tester")
 	el.Command = "mycommand"
 	el.Arguments = []string{"arg1", "arg2"}
 	el.WorkingDirectory = "mine"
 	el.EnvVar = map[string]string{"abc": "123"}
 
-	mc := &mocks.Command{}
+	mc := &clients.CommandMock{}
 	mc.On("Execute", mock.Anything).Return(nil)
 
 	return el, mc
