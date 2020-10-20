@@ -1,6 +1,7 @@
 package clients
 
 import (
+	"os"
 	"os/exec"
 	"time"
 
@@ -37,13 +38,18 @@ func (c *CommandImpl) Execute(config CommandConfig) error {
 		config.Args...,
 	)
 
+	// add the default environment variables
+	cmd.Env = os.Environ()
+
 	if config.Env != nil {
-		cmd.Env = config.Args
+		cmd.Env = append(cmd.Env, config.Args...)
 	}
 
 	if config.WorkingDirectory != "" {
 		cmd.Dir = config.WorkingDirectory
 	}
+
+	c.log.Debug("Running command", "cmd", config.Command, "args", config.Args, "dir", config.WorkingDirectory, "env", config.Env)
 
 	// set the standard out and error to the logger
 	cmd.Stdout = c.log.StandardWriter(&hclog.StandardLoggerOptions{InferLevels: true})
