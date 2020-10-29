@@ -4,9 +4,9 @@ container "local_connector" {
   }
 
   env_var = {
-    "BIND_ADDR_GRPC": "0.0.0.0:9090"
-    "BIND_ADDR_HTTP": "0.0.0.0:9091"
-    "LOG_LEVEL": "debug"
+    "BIND_ADDR_GRPC" = "0.0.0.0:9090"
+    "BIND_ADDR_HTTP" = "0.0.0.0:9091"
+    "LOG_LEVEL" = "debug"
   }
   
   port_range {
@@ -15,7 +15,7 @@ container "local_connector" {
   }
 
   port_range {
-    range = "12000-12100"
+    range = "12000-12010"
     enable_host = true
   }
 
