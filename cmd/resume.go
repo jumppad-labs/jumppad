@@ -130,8 +130,6 @@ func checkStatus(c clients.Docker) (bool, error) {
 		// wait 1s then try again
 		time.Sleep(1 * time.Second)
 	}
-
-	return true, nil
 }
 
 func getContainers(c clients.Docker, status string) ([]types.Container, error) {

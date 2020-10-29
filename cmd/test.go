@@ -349,11 +349,14 @@ var respBody = ""
 
 // test making a HTTP call, for testing Ingress
 func (cr *CucumberRunner) aCallToShouldResultInStatus(arg1 string, arg2 int) error {
-	// try 200 times
+	// try 5 times
 	var err error
-	for i := 0; i < 200; i++ {
+	for i := 0; i < 5; i++ {
 		var resp *http.Response
-		resp, err = http.Get(arg1)
+		var netClient = &http.Client{
+			Timeout: time.Second * 10,
+		}
+		resp, err = netClient.Get(arg1)
 
 		if err == nil && resp.StatusCode == arg2 {
 			d, _ := ioutil.ReadAll(resp.Body)
@@ -366,7 +369,7 @@ func (cr *CucumberRunner) aCallToShouldResultInStatus(arg1 string, arg2 int) err
 			err = fmt.Errorf("Expected status code %d, got %d", arg2, resp.StatusCode)
 		}
 
-		time.Sleep(2 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 
 	return err
@@ -560,10 +563,27 @@ func (cr *CucumberRunner) executeCommand(cmd string) error {
 	c.Stdout = commandOutput
 	c.Stderr = commandOutput
 
+	// Ensure command does not run forever
+
 	c.Args = parts
 
-	err := c.Run()
-	if err != nil {
+	errChan := make(chan error)
+	doneChan := make(chan struct{})
+
+	// Run command in background
+	go func() {
+		err := c.Run()
+		if err != nil {
+			errChan <- err
+			return
+		}
+
+		doneChan <- struct{}{}
+	}()
+
+	// Block until done or error
+	select {
+	case err := <-errChan:
 		if exiterr, ok := err.(*exec.ExitError); ok {
 			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
 				commandExitCode = status.ExitStatus()
@@ -573,6 +593,10 @@ func (cr *CucumberRunner) executeCommand(cmd string) error {
 
 		commandExitCode = -1
 		return err
+	case <-time.After(60 * time.Second):
+		fmt.Println("timed out")
+	case <-doneChan:
+		return nil
 	}
 
 	return nil
