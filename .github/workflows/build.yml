@@ -60,7 +60,7 @@ jobs:
       - name: Run tests
         run: |
           go run main.go purge
-          go run main.go test ${matrix.folder}
+          go run main.go test ${{matrix.folder}}
 
       - name: E2E test for build binary
         run: make test_e2e_cmd
