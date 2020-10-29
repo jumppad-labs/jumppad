@@ -1,3 +1,5 @@
+---
+
 name: Build
 on: [push]
 jobs:
@@ -13,7 +15,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v2-beta
         with:
-          go-version: '1.14.4' # The Go version to download (if necessary) and use.
+          go-version: '1.14.4'  # The Go version to download (if necessary) and use.
 
       - name: Get dependencies
         run: |
@@ -31,41 +33,68 @@ jobs:
       - name: Upload Code Coverage
         uses: codecov/codecov-action@v1
         with:
-          token: ${{ secrets.CODECOV_TOKEN }} #required
-  
+          token: ${{ secrets.CODECOV_TOKEN }}  # required
+
   functional_test:
+    name: Functional Test
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        folder: [
+          './examples/container',
+          './examples/build',
+          './examples/docs',
+          './examples/modules',
+          './examples/single_k3s_cluster',
+        ]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Go version
+        uses: actions/setup-go@v2-beta
+        with:
+          go-version: '1.14.4'  # The Go version to download (if necessary) and use.
+
+      - name: Run tests
+        run: |
+          go run main.go purge
+          go run main.go test ${matrix.folder}
+
+      - name: E2E test for build binary
+        run: make test_e2e_cmd
+
+  e2e_linux:
     name: Functional Test
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
-      
+
       - name: Setup Go version
         uses: actions/setup-go@v2-beta
         with:
-          go-version: '1.14.4' # The Go version to download (if necessary) and use.
-    
-      - name: Run tests
-        run: make test_functional
-      
+          go-version: '1.14.4'  # The Go version to download (if necessary) and use.
+
       - name: E2E test for build binary
         run: make test_e2e_cmd
-  
+
   e2e_windows:
     name: Windows E2E tests
     runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v2
-      
+
       - name: Setup Go version
         uses: actions/setup-go@v2-beta
         with:
-          go-version: '1.14.4' # The Go version to download (if necessary) and use.
-    
+          go-version: '1.14.4'  # The Go version to download (if necessary) and use.
+
       - name: Build a windows binary
         run: go build -ldflags "-X main.version=e2e" -o bin/yard-windows.exe main.go
-      
+
       - name: E2E test for build binary
         run: |
           bin\yard-windows.exe run --no-browser github.com/shipyard-run/blueprints//consul-terminating-gateways
