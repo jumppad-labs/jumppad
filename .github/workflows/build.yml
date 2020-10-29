@@ -62,9 +62,6 @@ jobs:
           go run main.go purge
           go run main.go test ${{matrix.folder}}
 
-      - name: E2E test for build binary
-        run: make test_e2e_cmd
-
   e2e_linux:
     name: Functional Test
     runs-on: ubuntu-latest
