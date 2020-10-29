@@ -695,6 +695,21 @@ func buildContext() *hcl.EvalContext {
 		},
 		Type: function.StaticReturnType(cty.String),
 		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			_, kcp, _ := utils.CreateKubeConfigPath(args[0].AsString())
+			return cty.StringVal(kcp), nil
+		},
+	})
+
+	var KubeConfigDockerFunc = function.New(&function.Spec{
+		Params: []function.Parameter{
+			{
+				Name:             "k8s_config_docker",
+				Type:             cty.String,
+				AllowDynamicType: true,
+			},
+		},
+		Type: function.StaticReturnType(cty.String),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
 			_, _, kcp := utils.CreateKubeConfigPath(args[0].AsString())
 			return cty.StringVal(kcp), nil
 		},
@@ -746,6 +761,7 @@ func buildContext() *hcl.EvalContext {
 
 	ctx.Functions["env"] = EnvFunc
 	ctx.Functions["k8s_config"] = KubeConfigFunc
+	ctx.Functions["k8s_config_docker"] = KubeConfigDockerFunc
 	ctx.Functions["home"] = HomeFunc
 	ctx.Functions["shipyard"] = ShipyardFunc
 	ctx.Functions["file"] = FileFunc
