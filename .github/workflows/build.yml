@@ -63,7 +63,7 @@ jobs:
           go run main.go test ${{matrix.folder}}
 
   e2e_linux:
-    name: Functional Test
+    name: Linux E2E Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -78,7 +78,7 @@ jobs:
         run: make test_e2e_cmd
 
   e2e_windows:
-    name: Windows E2E tests
+    name: Windows E2E Tests
     runs-on: windows-latest
 
     steps:
