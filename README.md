@@ -10,6 +10,9 @@
 
 Shipyard is a tool for building modern cloud native development environments. Using the Shipyard configuration language you can create Docker containers, Nomad/Kubernetes clusters and more. Shipyard understands terraform
 
+## Community
+Join our community on Discord: [https://discord.gg/ZuEFPJU69D](https://discord.gg/ZuEFPJU69D)
+
 ## Questions
 ## Is Shipyard like Terraform?
 Kind of but more about local environments rather than infrastructure
