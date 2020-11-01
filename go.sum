@@ -577,9 +577,6 @@ github.com/hashicorp/go-getter v1.5.0 h1:ciWJaeZWSMbc5OiLMpKp40MKFPqO44i0h3uyfXP
 github.com/hashicorp/go-getter v1.5.0/go.mod h1:a7z7NPPfNQpJWcn4rSWFtdrSldqLdLPEF3d8nFMsSLM=
 github.com/hashicorp/go-hclog v0.0.0-20180709165350-ff2cf002a8dd/go.mod h1:9bjs9uLqI8l75knNv3lV1kA55veR+WUPSiKIWcQHudI=
 github.com/hashicorp/go-hclog v0.0.0-20181001195459-61d530d6c27f/go.mod h1:5CU+agLiy3J7N7QjHK5d05KxGsuXiQLrjA0H7acj2lQ=
-github.com/hashicorp/go-hclog v0.10.1 h1:uyt/l0dWjJ879yiAu+T7FG3/6QX+zwm4bQ8P7XsYt3o=
-github.com/hashicorp/go-hclog v0.10.1/go.mod h1:whpDNt7SSdeAju8AWKIWsul05p54N/39EeqMAyrmvFQ=
-github.com/hashicorp/go-hclog v0.12.1/go.mod h1:whpDNt7SSdeAju8AWKIWsul05p54N/39EeqMAyrmvFQ=
 github.com/hashicorp/go-hclog v0.14.1 h1:nQcJDQwIAGnmoUWp8ubocEX40cCml/17YkF6csQLReU=
 github.com/hashicorp/go-hclog v0.14.1/go.mod h1:whpDNt7SSdeAju8AWKIWsul05p54N/39EeqMAyrmvFQ=
 github.com/hashicorp/go-immutable-radix v0.0.0-20180129170900-7f3cd4390caa/go.mod h1:6ij3Z20p+OhOkCSrA0gImAWoHYQRGbnlcuk6XYTiaRw=
@@ -672,11 +669,18 @@ github.com/jonboulle/clockwork v0.1.0/go.mod h1:Ii8DK3G1RaLaWxj9trq07+26W01tbo22
 github.com/joyent/triton-go v0.0.0-20180313100802-d8f9c0314926 h1:kie3qOosvRKqwij2HGzXWffwpXvcqfPPXRUw8I4F/mg=
 github.com/joyent/triton-go v0.0.0-20180313100802-d8f9c0314926/go.mod h1:U+RSyWxWd04xTqnuOQxnai7XGS2PrPY2cfGoDKtMHjA=
 <<<<<<< HEAD
+<<<<<<< HEAD
 github.com/jpillora/backoff v0.0.0-20180909062703-3050d21c67d7/go.mod h1:2iMrUgbbvHEiQClaW2NsSzMyGHqN+rDFqY705q49KG0=
 =======
 github.com/jpillora/backoff v1.0.0/go.mod h1:J/6gKK9jxlEcS3zixgDgUAsiuZ7yrSoa/FX5e0EB2j4=
 github.com/json-iterator/go v0.0.0-20180612202835-f2b4162afba3/go.mod h1:+SdeFBvtyEkXs7REEP0seUULqWtbJapLOCVDaaPEHmU=
 >>>>>>> start to add connector run command
+=======
+github.com/jpillora/backoff v1.0.0/go.mod h1:J/6gKK9jxlEcS3zixgDgUAsiuZ7yrSoa/FX5e0EB2j4=
+github.com/json-iterator/go v0.0.0-20180612202835-f2b4162afba3/go.mod h1:+SdeFBvtyEkXs7REEP0seUULqWtbJapLOCVDaaPEHmU=
+=======
+>>>>>>> Update version manager to new shipyard package
+>>>>>>> Update version manager to new shipyard package
 github.com/json-iterator/go v1.1.5/go.mod h1:+SdeFBvtyEkXs7REEP0seUULqWtbJapLOCVDaaPEHmU=
 github.com/json-iterator/go v1.1.6/go.mod h1:+SdeFBvtyEkXs7REEP0seUULqWtbJapLOCVDaaPEHmU=
 github.com/json-iterator/go v1.1.7 h1:KfgG9LzI+pYjr4xvmz/5H4FXjokeP+rlHLhv3iH62Fo=
@@ -842,8 +846,11 @@ github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f/go.mod h1:qRW
 github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f/go.mod h1:ZdcZmHo+o7JKHSa8/e818NopupXU1YMK5fe1lsApnBw=
 github.com/ncw/swift v1.0.47/go.mod h1:23YIA4yWVnGwv2dQlN4bB7egfYX6YLn0Yo/S6zZO/ZM=
 <<<<<<< HEAD
+<<<<<<< HEAD
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e h1:fD57ERR4JtEqsWbfPhv4DMiApHyliiK5xCTNVSPiaAs=
 =======
+=======
+>>>>>>> Update version manager to new shipyard package
 github.com/nicholasjackson/env v0.6.0/go.mod h1:/GtSb9a/BDUCLpcnpauN0d/Bw5ekSI1vLC1b9Lw0Vyk=
 github.com/nicholasjackson/version-manager v0.0.1 h1:PwIPNLBltiEKK+KNWOQj/Gf5dd4hyS0WvpSuNA+8BMw=
 github.com/nicholasjackson/version-manager v0.0.1/go.mod h1:/jOJ3Jjt0Oiut+hHXtSu41XKxWQyPTJX0gCjcr8pra8=
@@ -853,7 +860,13 @@ github.com/nicholasjackson/version-manager v0.0.3 h1:vH5V3VpbHdYlHbzGdPf/vBzlNQZ
 github.com/nicholasjackson/version-manager v0.0.3/go.mod h1:/jOJ3Jjt0Oiut+hHXtSu41XKxWQyPTJX0gCjcr8pra8=
 github.com/nicholasjackson/version-manager v0.0.4 h1:9k2iXbzSNQ6Gyw9Ksa0VUu+yqAP5MtyBXXLUf/5JxGM=
 github.com/nicholasjackson/version-manager v0.0.4/go.mod h1:/jOJ3Jjt0Oiut+hHXtSu41XKxWQyPTJX0gCjcr8pra8=
+<<<<<<< HEAD
 >>>>>>> start to add connector run command
+=======
+=======
+github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e h1:fD57ERR4JtEqsWbfPhv4DMiApHyliiK5xCTNVSPiaAs=
+>>>>>>> Update version manager to new shipyard package
+>>>>>>> Update version manager to new shipyard package
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
 github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d h1:VhgPp6v9qf9Agr/56bj7Y/xa04UccTW04VP0Qed4vnQ=
 github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d/go.mod h1:YUTz3bUH2ZwIWBy3CJBeOBEugqcmXREj14T+iG/4k4U=
@@ -935,12 +948,20 @@ github.com/prometheus/common v0.4.1/go.mod h1:TNfzLD0ON7rHzMJeJkieUDPYmFC7Snx/y8
 github.com/prometheus/common v0.7.0 h1:L+1lyG48J1zAQXA3RBX/nG/B3gjlHq0zTt2tlbJLyCY=
 github.com/prometheus/common v0.7.0/go.mod h1:DjGbpBbp5NYNiECxcL/VnbXCCaQpKd3tt26CguLLsqA=
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> Update version manager to new shipyard package
 github.com/prometheus/common v0.10.0 h1:RyRA7RzGXQZiW+tGMr7sxa85G1z0yOpM1qq5c8lNawc=
 github.com/prometheus/common v0.10.0/go.mod h1:Tlit/dnDKsSWFlCLTWaA1cyBgKHSMdTB80sz/V91rCo=
 github.com/prometheus/common v0.13.0 h1:vJlpe9wPgDRM1Z+7Wj3zUUjY1nr6/1jNKyl7llliccg=
 github.com/prometheus/common v0.13.0/go.mod h1:U+gB1OBLb1lF3O42bTCL+FK18tX9Oar16Clt/msog/s=
+<<<<<<< HEAD
 >>>>>>> start to add connector run command
+=======
+=======
+>>>>>>> Update version manager to new shipyard package
+>>>>>>> Update version manager to new shipyard package
 github.com/prometheus/procfs v0.0.0-20180125133057-cb4147076ac7/go.mod h1:c3At6R/oaqEKCNdg8wHV1ftS6bRYblBhIjjI8uT2IGk=
 github.com/prometheus/procfs v0.0.0-20181005140218-185b4288413d/go.mod h1:c3At6R/oaqEKCNdg8wHV1ftS6bRYblBhIjjI8uT2IGk=
 github.com/prometheus/procfs v0.0.0-20190117184657-bf6a532e95b1/go.mod h1:c3At6R/oaqEKCNdg8wHV1ftS6bRYblBhIjjI8uT2IGk=
@@ -968,12 +989,21 @@ github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg
 github.com/sergi/go-diff v1.0.0 h1:Kpca3qRNrduNnOQeazBd0ysaKrUJiIuISHxogkT9RPQ=
 github.com/sergi/go-diff v1.0.0/go.mod h1:0CfEIISq7TuYL3j771MWULgwwjU+GofnZX9QAmXWZgo=
 <<<<<<< HEAD
+<<<<<<< HEAD
 github.com/shipyard-run/version-manager v0.0.5 h1:gswTn7y/f2yoUOGl9tu18Bbp84EQa7gtqMNBbPu78BA=
 github.com/shipyard-run/version-manager v0.0.5/go.mod h1:odqsb09c70cTpSnm1rhQpBV1j7dF3N1FGzdiz8W0n+c=
 =======
 github.com/shipyard-run/connector v0.0.4 h1:kvQlGpTeW/50oRTrPQmjEsBzxvWKkbtTk/RWlTg1MCY=
 github.com/shipyard-run/connector v0.0.4/go.mod h1:XuIa4QRIZSQIX0id2FKnjCcjJqfQAnPkGHQSVfuoJ68=
 >>>>>>> start to add connector run command
+=======
+github.com/shipyard-run/connector v0.0.4 h1:kvQlGpTeW/50oRTrPQmjEsBzxvWKkbtTk/RWlTg1MCY=
+github.com/shipyard-run/connector v0.0.4/go.mod h1:XuIa4QRIZSQIX0id2FKnjCcjJqfQAnPkGHQSVfuoJ68=
+=======
+github.com/shipyard-run/version-manager v0.0.5 h1:gswTn7y/f2yoUOGl9tu18Bbp84EQa7gtqMNBbPu78BA=
+github.com/shipyard-run/version-manager v0.0.5/go.mod h1:odqsb09c70cTpSnm1rhQpBV1j7dF3N1FGzdiz8W0n+c=
+>>>>>>> Update version manager to new shipyard package
+>>>>>>> Update version manager to new shipyard package
 github.com/shurcooL/sanitized_anchor_name v1.0.0 h1:PdmoCO6wvbs+7yrJyMORt4/BmY5IYyJwS/kOiWx8mHo=
 github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeVRXNmyL/1OwPU0+IJeTBvfc=
 github.com/sirupsen/logrus v1.0.4-0.20170822132746-89742aefa4b2/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=
@@ -987,7 +1017,10 @@ github.com/smartystreets/assertions v1.0.0/go.mod h1:kHHU4qYBaI3q23Pp3VPrmWhuIUr
 github.com/smartystreets/go-aws-auth v0.0.0-20180515143844-0c1422d1fdb9/go.mod h1:SnhjPscd9TpLiy1LpzGSKh3bXCfxxXuqd9xmQJy3slM=
 github.com/smartystreets/goconvey v0.0.0-20180222194500-ef6db91d284a/go.mod h1:XDJAKZRPZ1CvBcN2aX5YOUTYGHki24fSF0Iv48Ibg0s=
 github.com/smartystreets/goconvey v0.0.0-20190330032615-68dc04aab96a/go.mod h1:syvi0/a8iFYH4r/RixwvyeAJjdLS9QV7WQ/tjFTllLA=
+<<<<<<< HEAD
 github.com/smartystreets/gunit v1.0.0/go.mod h1:qwPWnhz6pn0NnRBP++URONOVyNkPyr4SauJk4cUOwJs=
+=======
+>>>>>>> Update version manager to new shipyard package
 github.com/soheilhy/cmux v0.1.4 h1:0HKaf1o97UwFjHH9o5XsHUOF+tqmdA7KEzXLpiyaw0E=
 github.com/soheilhy/cmux v0.1.4/go.mod h1:IM3LyeVVIOuxMH7sFAkER9+bJ4dT7Ms6E4xg4kGIyLM=
 github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
@@ -1456,8 +1489,11 @@ gopkg.in/yaml.v2 v2.2.8 h1:obN1ZagJSUGI0Ek/LBmuj4SNLPfIny3KsKFopxRdj10=
 gopkg.in/yaml.v2 v2.2.8/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c h1:dUUwHk2QECo/6vqA44rthZ8ie2QXMNeKRTHCNY2nXvo=
 gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
+<<<<<<< HEAD
 gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c h1:grhR+C34yXImVGp7EzNk+DTIk+323eIUWOmEevy6bDo=
 gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
+=======
+>>>>>>> Update version manager to new shipyard package
 gotest.tools v2.2.0+incompatible h1:VsBPFP1AI068pPrMxtb/S8Zkgf9xEmTLJjfM+P5UIEo=
 gotest.tools v2.2.0+incompatible/go.mod h1:DsYFclhRJ6vuDpmuTbkuFWG+y2sxOXAzmJt81HFBacw=
 helm.sh/helm/v3 v3.2.4 h1:lz/0ZRkSgyIF+pCo6pjFzap1udCARB1IN6CRfqkpcOg=
