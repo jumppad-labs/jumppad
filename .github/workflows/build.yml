@@ -35,7 +35,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}  # required
 
-      - name: Send status to Discord   
+      - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
         if: always()
         with:
@@ -52,6 +52,7 @@ jobs:
           './examples/build',
           './examples/docs',
           './examples/modules',
+          './examples/nomad',
           './examples/single_k3s_cluster',
         ]
 
@@ -67,8 +68,8 @@ jobs:
         run: |
           go run main.go purge
           go run main.go test ${{matrix.folder}}
-          
-      - name: Send status to Discord   
+
+      - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
         if: always()
         with:
@@ -88,8 +89,8 @@ jobs:
 
       - name: E2E test for build binary
         run: make test_e2e_cmd
-      
-      - name: Send status to Discord   
+
+      - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
         if: always()
         with:
