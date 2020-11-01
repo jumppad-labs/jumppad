@@ -1,11 +1,16 @@
 # Change Log
 
+## version 0.1.14
+Various bug fixes
+
+* Fix Nomad health checks
+* Move version manager package
+
 ## version 0.1.8
 
 ### Fix local exec capability 
 Fixes bugs and extends the local exec capability for running commands local as part of a run
 
-```
 ```javascript
 exec_remote "exec_standalone" {
   cmd = "consul"
