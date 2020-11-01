@@ -3,8 +3,8 @@ package cmd
 import (
 	"os"
 
-	gvm "github.com/nicholasjackson/version-manager"
 	"github.com/shipyard-run/shipyard/pkg/utils"
+	gvm "github.com/shipyard-run/version-manager"
 	"github.com/spf13/cobra"
 )
 

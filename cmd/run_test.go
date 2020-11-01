@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	gvm "github.com/nicholasjackson/version-manager"
 	clientmocks "github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/shipyard-run/shipyard/pkg/shipyard/mocks"
 	"github.com/shipyard-run/shipyard/pkg/utils"
+	gvm "github.com/shipyard-run/version-manager"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
