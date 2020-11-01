@@ -52,7 +52,6 @@ jobs:
           './examples/build',
           './examples/docs',
           './examples/modules',
-          './examples/nomad',
           './examples/single_k3s_cluster',
         ]
 
