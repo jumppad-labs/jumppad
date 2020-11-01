@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	gvm "github.com/nicholasjackson/version-manager"
+	gvm "github.com/shipyard-run/version-manager"
 	"github.com/spf13/cobra"
 )
 
