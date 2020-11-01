@@ -68,7 +68,7 @@ func (n *NomadImpl) SetConfig(nomadconfig string) error {
 // HealthCheckAPI executes a HTTP heathcheck for a Nomad cluster
 func (n *NomadImpl) HealthCheckAPI(timeout time.Duration) error {
 	// get the address and the nodecount from the config
-	address := n.c.Address
+	address := n.c.APIAddress()
 	nodeCount := n.c.NodeCount
 
 	n.l.Debug("Performing Nomad health check for address", "address", address)

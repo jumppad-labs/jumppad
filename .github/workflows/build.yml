@@ -35,6 +35,12 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}  # required
 
+      - name: Send status to Discord   
+        uses: sarisia/actions-status-discord@v1
+        if: always()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+
   functional_test:
     name: Functional Test
     runs-on: ubuntu-latest
@@ -61,6 +67,12 @@ jobs:
         run: |
           go run main.go purge
           go run main.go test ${{matrix.folder}}
+          
+      - name: Send status to Discord   
+        uses: sarisia/actions-status-discord@v1
+        if: always()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
 
   e2e_linux:
     name: Linux E2E Tests
@@ -76,6 +88,12 @@ jobs:
 
       - name: E2E test for build binary
         run: make test_e2e_cmd
+      
+      - name: Send status to Discord   
+        uses: sarisia/actions-status-discord@v1
+        if: always()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
 
   e2e_windows:
     name: Windows E2E Tests
@@ -96,3 +114,9 @@ jobs:
         run: |
           bin\yard-windows.exe run --no-browser github.com/shipyard-run/blueprints//consul-terminating-gateways
           bin\yard-windows.exe destroy
+          
+      - name: Send status to Discord   
+        uses: sarisia/actions-status-discord@v1
+        if: always()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
