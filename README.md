@@ -13,8 +13,6 @@ Shipyard is a tool for building modern cloud native development environments. Us
 ## Community
 Join our community on Discord: [https://discord.gg/ZuEFPJU69D](https://discord.gg/ZuEFPJU69D)
 
-<iframe src="https://discordapp.com/widget?id=771742803196772402&theme=dark" width="350" height="500" allowtransparency="true" frameborder="0" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"></iframe>
-
 ## Questions
 ## Is Shipyard like Terraform?
 Kind of but more about local environments rather than infrastructure
