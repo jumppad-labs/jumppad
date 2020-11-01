@@ -12,7 +12,7 @@ type ClusterConfig struct {
 	// Location of the Cluster
 	Address string `json:"address"`
 
-	// Location of the Nomad cluster
+	// Port the API Server is running on
 	APIPort int `json:"api_port"`
 
 	// Port where the connector is running
