@@ -17,9 +17,8 @@ test_functional:
 	go run main.go purge
 	go run main.go test ./examples/modules
 
-	# It takes too long for Nomad cluster to become healthy on CI
-	#go run main.go purge
-	#go run main.go test ./examples/nomad
+	go run main.go purge
+	go run main.go test ./examples/nomad
 
 	go run main.go purge
 	go run main.go test ./examples/single_k3s_cluster
