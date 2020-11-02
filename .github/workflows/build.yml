@@ -32,8 +32,9 @@ jobs:
           version: v0.139.0
           args: release --rm-dist --snapshot
 
-      - uses: actions/upload-artifact@v2
-        if: {{github.ref == 'ref/head/main'}}
+      - name: Upload artifacts
+        if: github.ref == 'ref/head/main'
+        uses: actions/upload-artifact@v2
         with:
           name: shipyard
           path: |
