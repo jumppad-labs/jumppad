@@ -53,6 +53,7 @@ jobs:
           './examples/docs',
           './examples/modules',
           './examples/single_k3s_cluster',
+          './examples/nomad',
         ]
 
     steps:
@@ -114,8 +115,8 @@ jobs:
         run: |
           bin\yard-windows.exe run --no-browser github.com/shipyard-run/blueprints//consul-terminating-gateways
           bin\yard-windows.exe destroy
-          
-      - name: Send status to Discord   
+
+      - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
         if: always()
         with:
