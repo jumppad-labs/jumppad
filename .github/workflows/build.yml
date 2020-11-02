@@ -26,9 +26,22 @@ jobs:
         run: |
           go test -v -race -coverprofile=coverage.txt -covermode=atomic -short ./...
 
-      - name: Build
-        run: |
-          go build -v .
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v1
+        with:
+          version: v0.139.0
+          args: release --rm-dist --snapshot
+
+      - uses: actions/upload-artifact@v2
+        if: {{github.ref == 'ref/head/main'}}
+        with:
+          name: shipyard
+          path: |
+            dist/shipyard_darwin_amd64
+            dist/shipyard_linux_amd64
+            dist/shipyard_linux_arm64
+            dist/shipyard_linux_arm_7
+            dist/shipyard_windows_amd64
 
       - name: Upload Code Coverage
         uses: codecov/codecov-action@v1
