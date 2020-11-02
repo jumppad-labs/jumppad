@@ -9,32 +9,27 @@ jobs:
   goreleaser:
     runs-on: ubuntu-latest
     steps:
-      -
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@v2
-      -
-        name: Unshallow
+      - name: Unshallow
         run: git fetch --prune --unshallow
-      
-      # Setup gcloud CLI
-      - 
+
         uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
         with:
           version: '270.0.0'
           service_account_key: ${{ secrets.GCP_KEY }}
 
-         # Configure docker to use the gcloud command-line tool as a credential helper
       - run: |
           # Set up docker to authenticate
           # via gcloud command-line tool.
-          gcloud auth configure-docker  
-      -
-        name: Set up Go
+          gcloud auth configure-docker
+
+      - name: Set up Go
         uses: actions/setup-go@v1
         with:
           go-version: 1.14.4
-      -
-        name: Run GoReleaser
+
+      - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v1
         with:
           version: v0.139.0
@@ -42,13 +37,12 @@ jobs:
           key: ${{ secrets.GPG_PRIVATE_KEY }}
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-  
+
   choco:
     needs: goreleaser
     runs-on: windows-latest
     steps:
-      -
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@v2
         with:
           repository: 'shipyard-run/choco'
@@ -64,29 +58,25 @@ jobs:
         with:
           value: ${{ github.ref }}
           regex: "refs/tags/v"
-          replacement: "" 
+          replacement: ""
 
       - name: Replace checksum
         run: |
           wget "https://github.com/shipyard-run/shipyard/releases/download/v${{ steps.tag.outputs.value }}/shipyard_${{ steps.tag.outputs.value }}_Windows_x86_64.zip"
           powershell -Command "(gc tools/chocolateyinstall.ps1) -replace '__checksum__', '$(checksum -t sha256 -f shipyard_${{ steps.tag.outputs.value }}_Windows_x86_64.zip)' | Out-File -encoding ASCII tools/chocolateyinstall.ps1"
 
-      - 
-        name: Replace version
-        run: | 
+      - name: Replace version
+        run: |
           powershell -Command "(gc shipyard.nuspec) -replace '__version__', '${{ steps.tag.outputs.value }}' | Out-File -encoding ASCII shipyard.nuspec"
-          powershell -Command "(gc tools/chocolateyinstall.ps1) -replace '__version__', '${{ steps.tag.outputs.value }}' | Out-File -encoding ASCII tools\chocolateyinstall.ps1" 
+          powershell -Command "(gc tools/chocolateyinstall.ps1) -replace '__version__', '${{ steps.tag.outputs.value }}' | Out-File -encoding ASCII tools\chocolateyinstall.ps1"
 
-      -
-        name: Choco login
+      - name: Choco login
         run: choco apikey -k ${{ secrets.CHOCO_API_KEY }} -s https://push.chocolatey.org/
-      
-      -
-        name: Choco build
+
+      - name: Choco build
         run: choco pack
-      
-      -
-        name: Choco push
+
+      - name: Choco push
         run: choco push -f
 
   apt:
@@ -94,8 +84,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: ["amd64.deb", "arm64.deb", "armv7.deb","amd64.rpm", "arm64.rpm", "armv7.rpm"]
-    
+        arch: ["amd64.deb", "arm64.deb", "armv7.deb", "amd64.rpm", "arm64.rpm", "armv7.rpm"]
+
     steps:
     - name: Tag
       id: tag
@@ -103,7 +93,7 @@ jobs:
       with:
         value: ${{ github.ref }}
         regex: "refs/tags/v"
-        replacement: "" 
+        replacement: ""
 
     - name: Download release
       run: |
@@ -124,25 +114,24 @@ jobs:
         with:
           repository: 'shipyard-run/shipyard-website'
           token: '${{ secrets.GH_TOKEN }}'
-        
-      - 
-        name: Configure Git
+
+      - name: Configure Git
         run: |
           git config user.email "mail@shipyard.run"
           git config user.name "Shipyard Bot"
-    
+
       - name: Tag
         id: tag
         uses: ashley-taylor/regex-property-action@v1.0
         with:
           value: ${{ github.ref }}
           regex: "refs/tags/v"
-          replacement: "" 
+          replacement: ""
 
       - name: Write version
         run: |
           echo "${{ steps.tag.outputs.value }}" > ./static/latest
-      
+
       - name: Push update
         run: |
 
