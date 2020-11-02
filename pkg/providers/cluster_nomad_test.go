@@ -99,7 +99,7 @@ func TestClusterNomadPullsImage(t *testing.T) {
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "PullImage", config.Image{Name: "shipyardrun/nomad:v1.0.0"}, false)
+	md.AssertCalled(t, "PullImage", config.Image{Name: "registry.shipyard.run/nomad:v1.0.0"}, false)
 }
 
 func TestClusterNomadPullsImageWithDefault(t *testing.T) {
@@ -110,7 +110,7 @@ func TestClusterNomadPullsImageWithDefault(t *testing.T) {
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "PullImage", config.Image{Name: "shipyardrun/nomad:" + nomadBaseVersion}, false)
+	md.AssertCalled(t, "PullImage", config.Image{Name: "registry.shipyard.run/nomad:" + nomadBaseVersion}, false)
 }
 
 func TestClusterNomadCreatesANewVolume(t *testing.T) {
