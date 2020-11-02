@@ -14,7 +14,7 @@ jobs:
       - name: Unshallow
         run: git fetch --prune --unshallow
 
-        uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+      - uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
         with:
           version: '270.0.0'
           service_account_key: ${{ secrets.GCP_KEY }}
