@@ -36,7 +36,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
       - name: Upload artifacts
-        if: github.ref == 'refs/head/main'
         uses: actions/upload-artifact@v2
         with:
           name: shipyard
