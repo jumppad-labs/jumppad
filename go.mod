@@ -22,16 +22,15 @@ require (
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/mapstructure v1.3.3
+	github.com/shipyard-run/connector v0.0.8
 	github.com/shipyard-run/version-manager v0.0.5
-	github.com/shipyard-run/connector v0.0.4
 	github.com/spf13/cobra v1.0.0
 	github.com/stretchr/testify v1.6.1
 	github.com/zclconf/go-cty v1.5.1
-	golang.org/x/sys v0.0.0-20200806060901-a37d78b92225 // indirect
 	golang.org/x/tools v0.0.0-20200806022845-90696ccdc692 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 	google.golang.org/api v0.30.0 // indirect
-	google.golang.org/grpc v1.31.0
+	google.golang.org/grpc v1.33.1
 	helm.sh/helm/v3 v3.2.4
 	k8s.io/api v0.18.0
 	k8s.io/apimachinery v0.18.0

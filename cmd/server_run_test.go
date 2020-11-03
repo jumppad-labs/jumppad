@@ -11,9 +11,43 @@ import (
 	"testing"
 	"time"
 
+	"github.com/shipyard-run/connector/crypto"
 	"github.com/shipyard-run/shipyard/pkg/utils"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func setupGenerateCerts(t *testing.T, dir string) {
+	// create a tempfolder
+	k, err := crypto.GenerateKeyPair()
+	assert.NoError(t, err)
+
+	ca, err := crypto.GenerateCA(k.Private)
+	assert.NoError(t, err)
+
+	err = k.Private.WriteFile(path.Join(dir, "root.key"))
+	assert.NoError(t, err)
+
+	err = ca.WriteFile(path.Join(dir, "root.cert"))
+	assert.NoError(t, err)
+
+	lk, err := crypto.GenerateKeyPair()
+	assert.NoError(t, err)
+
+	lc, err := crypto.GenerateLeaf(
+		[]string{"127.0.0.1"},
+		[]string{"localhost"},
+		ca,
+		k.Private,
+		lk.Private,
+	)
+
+	err = lk.Private.WriteFile(path.Join(dir, "leaf.key"))
+	assert.NoError(t, err)
+
+	err = lc.WriteFile(path.Join(dir, "leaf.cert"))
+	assert.NoError(t, err)
+}
 
 func setupServerRunTests(t *testing.T) string {
 	// setup the certificates
@@ -23,34 +57,17 @@ func setupServerRunTests(t *testing.T) string {
 	oh := os.Getenv("HOME")
 	os.Setenv("HOME", tmpDir)
 
-	// create the shipyard home folder
-	os.MkdirAll(utils.ShipyardHome(), 0777)
+	// create the shipyard home folder and certs
+	os.MkdirAll(utils.CertsDir(), 0777)
 
-	// generate the CA certs
-	ccc := newConnectorCertCmd()
-	ccc.Flags().Set("ca", "true") // generate a ca
-	ccc.SetArgs([]string{tmpDir}) // set the output directory
-	err = ccc.Execute()
-	require.NoError(t, err)
-
-	// generate the leaf
-	ccc = newConnectorCertCmd()
-	ccc.Flags().Set("leaf", "true") // generate a leaf
-	ccc.Flags().Set("root-key", path.Join(tmpDir, "root.key"))
-	ccc.Flags().Set("root-ca", path.Join(tmpDir, "root.cert"))
-	ccc.SetArgs([]string{tmpDir}) // set the output directory
-	err = ccc.Execute()
-	require.NoError(t, err)
-
-	//err := connectorRunCmd.Execute()
-	//require.NoError(t, err)
+	setupGenerateCerts(t, utils.CertsDir())
 
 	t.Cleanup(func() {
 		os.Setenv("HOME", oh)
 		os.RemoveAll(tmpDir)
 	})
 
-	return tmpDir
+	return utils.CertsDir()
 }
 
 func TestServerStarts(t *testing.T) {
