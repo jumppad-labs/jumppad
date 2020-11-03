@@ -138,6 +138,12 @@ func StateDir() string {
 	return fmt.Sprintf("%s/state", ShipyardHome())
 }
 
+// CertsDir returns the location of the certificates
+// used to secure the Shipyard ingress, usually $HOME/.shipyard/certs
+func CertsDir() string {
+	return fmt.Sprintf("%s/certs", ShipyardHome())
+}
+
 // StatePath returns the full path for the state file
 func StatePath() string {
 	return fmt.Sprintf("%s/state.json", StateDir())

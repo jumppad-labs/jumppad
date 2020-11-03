@@ -58,7 +58,7 @@ func newConnectorRunCommand() *cobra.Command {
 			l := hclog.New(&lo)
 
 			grpcServer := grpc.NewServer()
-			s := remote.New(l.Named("grpc_server"), nil, nil)
+			s := remote.New(l.Named("grpc_server"), nil, nil, nil)
 
 			// do we need to set up the server to use TLS?
 			if pathCertServer != "" && pathKeyServer != "" && pathCertRoot != "" {
@@ -86,7 +86,7 @@ func newConnectorRunCommand() *cobra.Command {
 				})
 
 				grpcServer = grpc.NewServer(grpc.Creds(creds))
-				s = remote.New(l.Named("grpc_server"), certPool, &certificate)
+				s = remote.New(l.Named("grpc_server"), certPool, &certificate, nil)
 			}
 
 			shipyard.RegisterRemoteConnectionServer(grpcServer, s)
