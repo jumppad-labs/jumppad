@@ -148,13 +148,12 @@ jobs:
     needs: build
 
     steps:
-      - name: Trigger remote Mac Build
-      - run: |
-        curl \
-          -X POST \
-          -H "Accept: application/vnd.github.v3+json" \
-          https://api.github.com/repos/shipyard/shipyard-mac-build/actions/workflows/mac.yml/dispatches \
-          -d '{"ref":"ref"}'
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: shipyard-run/shipyard-mac-build
+          event-type: test
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
