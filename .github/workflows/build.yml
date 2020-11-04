@@ -151,7 +151,7 @@ jobs:
       - name: Repository Dispatch
         uses: peter-evans/repository-dispatch@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: '${{ secrets.GH_TOKEN }}'
           repository: shipyard-run/shipyard-mac-build
           event-type: test
 
