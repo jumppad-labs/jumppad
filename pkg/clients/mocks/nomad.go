@@ -34,10 +34,10 @@ func (m *MockNomad) ParseJob(file string) ([]byte, error) {
 	return args.Get(0).([]byte), args.Error(1)
 }
 
-func (m *MockNomad) JobStatus(job string) (string, error) {
+func (m *MockNomad) JobRunning(job string) (bool, error) {
 	args := m.Called(job)
 
-	return args.String(0), args.Error(1)
+	return args.Bool(0), args.Error(1)
 }
 
 func (m *MockNomad) HealthCheckAPI(timeout time.Duration) error {

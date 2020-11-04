@@ -61,8 +61,8 @@ func (n *NomadJob) Create() error {
 
 				n.log.Debug("Checking health for", "ref", n.config.Name, "job", j)
 
-				s, err := n.client.JobStatus(j)
-				if err == nil && s == "running" {
+				s, err := n.client.JobRunning(j)
+				if err == nil && s == true {
 					n.log.Debug("Health passed for", "ref", n.config.Name, "job", j)
 					break
 				}

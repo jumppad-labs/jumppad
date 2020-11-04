@@ -22,8 +22,8 @@ type Nomad interface {
 	Stop(files []string) error
 	// ParseJob in the given file and return a JSON blob representing the HCL job
 	ParseJob(file string) ([]byte, error)
-	// JobStatus returns the status for the given job
-	JobStatus(job string) (string, error)
+	// JobRunning returns true if all allocations for a job are running
+	JobRunning(job string) (bool, error)
 	// HealthCheckAPI uses the Nomad API to check that all servers and nodes
 	// are ready. The function will block until either all nodes are healthy or the
 	// timeout period elapses.
@@ -248,27 +248,37 @@ func (n *NomadImpl) ParseJob(file string) ([]byte, error) {
 	return jsonJob, nil
 }
 
-// JobStatus returns a string status for the given job
-func (n *NomadImpl) JobStatus(job string) (string, error) {
+// JobRunning returns true when all allocations for a job are running
+func (n *NomadImpl) JobRunning(job string) (bool, error) {
 	// get the allocations for the job
-	r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v1/job/%s", n.c.APIAddress(), job), nil)
+	r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v1/job/%s/allocations", n.c.APIAddress(), job), nil)
 	if err != nil {
-		return "", xerrors.Errorf("Unable to create http request: %w", err)
+		return false, xerrors.Errorf("Unable to create http request: %w", err)
 	}
 
 	resp, err := n.httpClient.Do(r)
 	if err != nil {
-		return "", xerrors.Errorf("Unable to validate job: %w", err)
+		return false, xerrors.Errorf("Unable to validate job: %w", err)
 	}
 	defer resp.Body.Close()
 
-	jobDetail := make(map[string]interface{}, 0)
+	jobDetail := make([]map[string]interface{}, 0)
 	err = json.NewDecoder(resp.Body).Decode(&jobDetail)
 	if err != nil {
-		return "", err
+		return false, err
 	}
 
-	return jobDetail["Status"].(string), nil
+	if len(jobDetail) < 1 {
+		return false, nil
+	}
+
+	for _, v := range jobDetail {
+		if v["ClientStatus"].(string) != "running" {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
 
 func (n *NomadImpl) getJobID(file string) (string, error) {

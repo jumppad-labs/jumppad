@@ -29,3 +29,20 @@ nomad_ingress "nomad-http" {
     name = "network.cloud"
   }
 }
+
+nomad_ingress "fake-service" {
+  cluster  = "nomad_cluster.dev"
+  job = ""
+  group = ""
+  task = ""
+
+  port {
+    local  = 19090
+    remote = 19090
+    host   = 19090
+  }
+
+  network  {
+    name = "network.cloud"
+  }
+}

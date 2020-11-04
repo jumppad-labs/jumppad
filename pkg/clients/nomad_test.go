@@ -248,7 +248,7 @@ func TestNomadJobStatusReturnsStatus(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(allocationsResponse))),
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte(jobAllocationsResponse))),
 		},
 		nil,
 	)
@@ -256,10 +256,10 @@ func TestNomadJobStatusReturnsStatus(t *testing.T) {
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	s, err := c.JobStatus("test")
+	s, err := c.JobRunning("test")
 	assert.NoError(t, err)
 
-	assert.Equal(t, "running", s)
+	assert.True(t, s)
 }
 
 func TestNomadHealthCallsAPI(t *testing.T) {
@@ -459,20 +459,94 @@ var validateResponse = `
 	"ID": "my-job"
 }
 `
+var jobAllocationsResponse = `
+[
+  {
+    "ID": "da975cd1-8b04-6bce-9d5c-03e47353768c",
+    "EvalID": "915e3cd4-81c6-dd1e-7880-55562ad938c6",
+    "Name": "example_1.fake_service[0]",
+    "Namespace": "default",
+    "NodeID": "e92cfe74-1ba3-2248-cf89-18760af8c278",
+    "NodeName": "server.dev",
+    "JobID": "example_1",
+    "JobType": "service",
+    "JobVersion": 0,
+    "TaskGroup": "fake_service",
+    "DesiredStatus": "run",
+    "DesiredDescription": "",
+    "ClientStatus": "running"
+  },
+  {
+    "ID": "da975cd1-8b04-6bce-9d5c-03e47353768c",
+    "EvalID": "915e3cd4-81c6-dd1e-7880-55562ad938c6",
+    "Name": "example_1.fake_service[0]",
+    "Namespace": "default",
+    "NodeID": "e92cfe74-1ba3-2248-cf89-18760af8c278",
+    "NodeName": "server.dev",
+    "JobID": "example_1",
+    "JobType": "service",
+    "JobVersion": 0,
+    "TaskGroup": "fake_service",
+    "DesiredStatus": "run",
+    "DesiredDescription": "",
+    "ClientStatus": "running"
+  }
+]
+`
+
 var allocationsResponse = `
 {
-    "ID": "ed344e0a-7290-d117-41d3-a64f853ca3c2",
-		"JobID": "example",
-		"Status": "running",
-    "TaskGroup": "cache",
-    "TaskStates": {
-      "redis": {
-				"State": "running"
-			},
-      "web": {
-				"State": "running"
-			}
-		}
-	},
+  "ID": "da975cd1-8b04-6bce-9d5c-03e47353768c",
+  "Namespace": "default",
+  "EvalID": "915e3cd4-81c6-dd1e-7880-55562ad938c6",
+  "Name": "example_1.fake_service[0]",
+  "NodeID": "e92cfe74-1ba3-2248-cf89-18760af8c278",
+  "NodeName": "server.dev",
+  "JobID": "example_1",
+  "Job": {
+    "ID": "example_1",
+    "Name": "example_1",
+    "Datacenters": [
+      "dc1"
+    ],
+    "Constraints": null,
+    "Affinities": null,
+    "Spreads": null,
+    "TaskGroups": [
+      {
+        "Name": "fake_service",
+        "Count": 1,
+        "Tasks": [
+          {
+            "Name": "fake_service",
+            "Driver": "docker",
+            "Config": {
+              "image": "nicholasjackson/fake-service:v0.18.1",
+              "ports": [
+                "http"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "TaskGroup": "fake_service",
+  "Resources": {
+    "Networks": [
+      {
+        "IP": "10.5.0.2",
+        "ReservedPorts": null,
+        "DynamicPorts": [
+          {
+            "Label": "http",
+            "Value": 28862,
+            "To": 19090,
+            "HostNetwork": "default"
+          }
+        ]
+      }
+    ]
+  }
 }
 `
