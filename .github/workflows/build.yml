@@ -148,17 +148,13 @@ jobs:
     needs: build
 
     steps:
-      - uses: actions/checkout@v2
-
-      - name: Setup Go version
-        uses: actions/setup-go@v2-beta
-        with:
-          go-version: '1.14.4'  # The Go version to download (if necessary) and use.
-
-      - name: E2E test for build binary
-        run: |
-          make install_local
-          /usr/local/bin/yard-dev test ./examples/nomad
+      - name: Trigger remote Mac Build
+      - run: |
+        curl \
+          -X POST \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/repos/shipyard/shipyard-mac-build/actions/workflows/mac.yml/dispatches \
+          -d '{"ref":"ref"}'
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
