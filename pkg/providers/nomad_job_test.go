@@ -23,7 +23,7 @@ func setupNomadJobMocks() (*config.NomadJob, *mocks.MockNomad) {
 	c.AddResource(&jc)
 
 	mh := &mocks.MockNomad{}
-	mh.On("SetConfig", mock.Anything).Return(nil)
+	mh.On("SetConfig", mock.Anything, mock.Anything).Return(nil)
 	mh.On("Create", mock.Anything, mock.Anything).Return(nil)
 
 	return &jc, mh

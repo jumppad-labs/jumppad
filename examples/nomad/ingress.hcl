@@ -38,7 +38,7 @@ nomad_ingress "fake-service-1" {
 
   port {
     local  = 19090
-    remote = 19090
+    remote = "http"
     host   = 19090
   }
 

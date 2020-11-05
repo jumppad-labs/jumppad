@@ -36,7 +36,7 @@ func setupNomadClusterMocks(t *testing.T) (*config.NomadCluster, *mocks.MockCont
 	md.On("DetachNetwork", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	mh := &mocks.MockNomad{}
-	mh.On("SetConfig", mock.Anything).Return(nil)
+	mh.On("SetConfig", mock.Anything, mock.Anything).Return(nil)
 	mh.On("HealthCheckAPI", mock.Anything).Return(nil)
 
 	// set the home folder to a temp folder

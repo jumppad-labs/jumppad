@@ -10,8 +10,9 @@ import (
 	"golang.org/x/xerrors"
 )
 
-const ingressImage = "shipyardrun/ingress:latest"
+const ingressImage = "registry.shipyard.run/ingress:latest"
 
+// Ingress defines a provider for handling connection ingress for a cluster
 type Ingress struct {
 	config *config.Ingress
 	client clients.ContainerTasks
@@ -26,6 +27,7 @@ func NewIngress(c *config.Ingress, cc clients.ContainerTasks, l hclog.Logger) *I
 // NewContainerIngress creates a new ingress provider for a container
 func NewContainerIngress(ci *config.ContainerIngress, cc clients.ContainerTasks, l hclog.Logger) *Ingress {
 	c := config.NewIngress(ci.Name)
+
 	c.Depends = ci.Depends
 	c.Networks = ci.Networks
 	c.Target = ci.Target
@@ -43,6 +45,8 @@ func NewNomadIngress(ci *config.NomadIngress, cc clients.ContainerTasks, l hclog
 	c.Target = ci.Cluster
 	c.Ports = ci.Ports
 	c.Config = ci.Config
+
+	c.Service = fmt.Sprintf("%s.%s.%s", ci.Job, ci.Group, ci.Task)
 
 	return &Ingress{c, cc, l}
 }
@@ -113,35 +117,47 @@ func (i *Ingress) Create() error {
 	case config.TypeContainer:
 		serviceName = utils.FQDN(target.Info().Name, string(target.Info().Type))
 	case config.TypeNomadCluster:
-		serviceName = utils.FQDN(fmt.Sprintf("server.%s", target.Info().Name), string(target.Info().Type))
+		v := target.(*config.NomadCluster)
+		// if this is a nomad cluster we need to add the nomadconfig and
+		// make sure that the proxy runs in nomad mode
+		serviceName = i.config.Service
+		_, nomadConfigPath := utils.CreateClusterConfigPath(v.Name)
+		nomadConfigDestPath := "/.nomad/config.json"
+
+		volumes = append(volumes, config.Volume{
+			Source:      nomadConfigPath,
+			Destination: nomadConfigDestPath,
+		})
+
+		command = append(command, "--proxy-type")
+		command = append(command, "nomad")
+
+		command = append(command, "--nomad-config")
+		command = append(command, "/.nomad/config.json")
+
 	case config.TypeK8sCluster:
 		v := target.(*config.K8sCluster)
-		// determine the type of cluster
 		// if this is a k3s cluster we need to add the kubeconfig and
 		// make sure that the proxy runs in kube mode
-		if v.Driver == "k3s" {
-			serviceName = i.config.Service
-			_, _, kubeConfigPath := utils.CreateKubeConfigPath(v.Name)
-			volumes = append(volumes, config.Volume{
-				Source:      kubeConfigPath,
-				Destination: "/.kube/kubeconfig.yml",
-			})
+		serviceName = i.config.Service
+		_, _, kubeConfigPath := utils.CreateKubeConfigPath(v.Name)
+		volumes = append(volumes, config.Volume{
+			Source:      kubeConfigPath,
+			Destination: "/.kube/kubeconfig.yml",
+		})
 
-			env = append(env, config.KV{Key: "KUBECONFIG", Value: "/.kube/kubeconfig.yml"})
+		env = append(env, config.KV{Key: "KUBECONFIG", Value: "/.kube/kubeconfig.yml"})
 
-			command = append(command, "--proxy-type")
-			command = append(command, "kubernetes")
+		command = append(command, "--proxy-type")
+		command = append(command, "kubernetes")
 
-			// if the namespace is not present assume default
-			if i.config.Namespace == "" {
-				i.config.Namespace = "default"
-			}
-
-			command = append(command, "--namespace")
-			command = append(command, i.config.Namespace)
-		} else {
-			serviceName = fmt.Sprintf("server.%s", utils.FQDN(v.Name, string(v.Type)))
+		// if the namespace is not present assume default
+		if i.config.Namespace == "" {
+			i.config.Namespace = "default"
 		}
+
+		command = append(command, "--namespace")
+		command = append(command, i.config.Namespace)
 
 	default:
 		return fmt.Errorf("Only Containers, Kubernetes clusters, and Nomad clusters are supported at present")
@@ -212,6 +228,6 @@ func (i *Ingress) Lookup() ([]string, error) {
 }
 
 // Config returns the config for the provider
-func (c *Ingress) Config() ConfigWrapper {
-	return ConfigWrapper{"config.Ingress", c.config}
+func (i *Ingress) Config() ConfigWrapper {
+	return ConfigWrapper{"config.Ingress", i.config}
 }

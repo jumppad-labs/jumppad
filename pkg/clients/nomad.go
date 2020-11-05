@@ -15,7 +15,7 @@ import (
 // Nomad defines an interface for a Nomad client
 type Nomad interface {
 	// SetConfig for the client, path is a valid Nomad JSON config file
-	SetConfig(string) error
+	SetConfig(string, string) error
 	// Create jobs in the provided files
 	Create(files []string) error
 	// Stop jobs in the provided files
@@ -55,9 +55,9 @@ type createRequest struct {
 }
 
 // SetConfig loads the Nomad config from a file
-func (n *NomadImpl) SetConfig(nomadconfig string) error {
+func (n *NomadImpl) SetConfig(nomadconfig string, context string) error {
 	c := &ClusterConfig{}
-	err := c.Load(nomadconfig)
+	err := c.Load(nomadconfig, Context(context))
 	if err != nil {
 		return err
 	}
@@ -324,14 +324,14 @@ func (n *NomadImpl) Endpoints(job, group, task string) ([]map[string]string, err
 				for _, dp := range n.DynamicPorts {
 					if dp.Label == p {
 						ep[p] = fmt.Sprintf("%s:%d", n.IP, dp.Value)
-						epc += 1
+						epc++
 					}
 				}
 
 				for _, dp := range n.ReservedPorts {
 					if dp.Label == p {
 						ep[p] = fmt.Sprintf("%s:%d", n.IP, dp.Value)
-						epc += 1
+						epc++
 					}
 				}
 			}

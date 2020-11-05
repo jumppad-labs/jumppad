@@ -127,7 +127,13 @@ func (c *K8sCluster) createK3s() error {
 	args := []string{"server", fmt.Sprintf("--https-listen-port=%d", apiPort)}
 
 	// save the config
-	clusterConfig := clients.ClusterConfig{Address: "localhost", APIPort: apiPort, ConnectorPort: connectorPort, NodeCount: 1}
+	clusterConfig := clients.ClusterConfig{
+		LocalAddress:  "localhost",
+		RemoteAddress: fmt.Sprintf("server.%s", c.config.Name),
+		APIPort:       apiPort,
+		ConnectorPort: connectorPort,
+		NodeCount:     1,
+	}
 	_, configPath := utils.CreateClusterConfigPath(c.config.Name)
 
 	err = clusterConfig.Save(configPath)

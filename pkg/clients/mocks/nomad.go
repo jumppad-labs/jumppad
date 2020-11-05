@@ -10,8 +10,8 @@ type MockNomad struct {
 	mock.Mock
 }
 
-func (m *MockNomad) SetConfig(c string) error {
-	args := m.Called(c)
+func (m *MockNomad) SetConfig(c string, ctx string) error {
+	args := m.Called(c, ctx)
 
 	return args.Error(0)
 }
