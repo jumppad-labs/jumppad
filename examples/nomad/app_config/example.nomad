@@ -22,7 +22,10 @@ job "example_1" {
     count = 1
 
     network {
-      port  "http" { to = 19090 }
+      port  "http" { 
+        to = 19090
+        static = 19090
+      }
     }
 
     restart {

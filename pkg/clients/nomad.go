@@ -28,6 +28,8 @@ type Nomad interface {
 	// are ready. The function will block until either all nodes are healthy or the
 	// timeout period elapses.
 	HealthCheckAPI(time.Duration) error
+	// Endpoints returns a list of endpoints for a cluster
+	Endpoints(job, group, task string) ([]string, error)
 }
 
 // NomadImpl is an implementation of the Nomad interface
@@ -250,20 +252,7 @@ func (n *NomadImpl) ParseJob(file string) ([]byte, error) {
 
 // JobRunning returns true when all allocations for a job are running
 func (n *NomadImpl) JobRunning(job string) (bool, error) {
-	// get the allocations for the job
-	r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v1/job/%s/allocations", n.c.APIAddress(), job), nil)
-	if err != nil {
-		return false, xerrors.Errorf("Unable to create http request: %w", err)
-	}
-
-	resp, err := n.httpClient.Do(r)
-	if err != nil {
-		return false, xerrors.Errorf("Unable to validate job: %w", err)
-	}
-	defer resp.Body.Close()
-
-	jobDetail := make([]map[string]interface{}, 0)
-	err = json.NewDecoder(resp.Body).Decode(&jobDetail)
+	jobDetail, err := n.getJobAllocations(job)
 	if err != nil {
 		return false, err
 	}
@@ -279,6 +268,43 @@ func (n *NomadImpl) JobRunning(job string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+// Endpoints returns a list of endpoints for a cluster
+func (n *NomadImpl) Endpoints(job, group, task string) ([]string, error) {
+	_, err := n.getJobAllocations(job)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (n *NomadImpl) getJobAllocations(job string) ([]map[string]interface{}, error) {
+	// get the allocations for the job
+	r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v1/job/%s/allocations", n.c.APIAddress(), job), nil)
+	if err != nil {
+		return nil, xerrors.Errorf("Unable to create http request: %w", err)
+	}
+
+	resp, err := n.httpClient.Do(r)
+	if err != nil {
+		return nil, xerrors.Errorf("Unable to validate job: %w", err)
+	}
+
+	if resp.Body == nil {
+		return nil, xerrors.Errorf("No body returned from Nomad API")
+	}
+
+	defer resp.Body.Close()
+
+	jobDetail := make([]map[string]interface{}, 0)
+	err = json.NewDecoder(resp.Body).Decode(&jobDetail)
+	if err != nil {
+		return nil, err
+	}
+
+	return jobDetail, err
 }
 
 func (n *NomadImpl) getJobID(file string) (string, error) {

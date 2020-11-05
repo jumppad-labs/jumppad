@@ -359,6 +359,47 @@ func TestNomadHealthErrorsOnClientError(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestNomadEndpointsErrorWhenUnableToGetJobs(t *testing.T) {
+	fp, tmpDir, mh := setupNomadTests(t)
+	defer os.RemoveAll(tmpDir)
+
+	removeOn(&mh.Mock, "Do")
+	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
+		&http.Response{
+			StatusCode: http.StatusBadRequest,
+		},
+		nil,
+	)
+
+	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
+	c.SetConfig(fp)
+
+	_, err := c.Endpoints("test", "test", "test")
+	assert.Error(t, err)
+}
+
+func TestNomadEndpointsReturnsTwoEndpoints(t *testing.T) {
+	t.Skip()
+	fp, tmpDir, mh := setupNomadTests(t)
+	defer os.RemoveAll(tmpDir)
+
+	removeOn(&mh.Mock, "Do")
+	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
+		&http.Response{
+			StatusCode: http.StatusBadRequest,
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte(jobAllocationsResponse))),
+		},
+		nil,
+	).Once()
+
+	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
+	c.SetConfig(fp)
+
+	e, err := c.Endpoints("test", "test", "test")
+	assert.NoError(t, err)
+	assert.Len(t, e, 2)
+}
+
 func getNomadConfig(l string, p int) string {
 	return fmt.Sprintf(`
 	{

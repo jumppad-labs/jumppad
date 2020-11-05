@@ -40,6 +40,16 @@ func (m *MockNomad) JobRunning(job string) (bool, error) {
 	return args.Bool(0), args.Error(1)
 }
 
+func (m *MockNomad) Endpoints(job, group, task string) ([]string, error) {
+	args := m.Called(job, group, task)
+
+	if a, ok := args.Get(0).([]string); ok {
+		return a, args.Error(1)
+	}
+
+	return nil, args.Error(1)
+}
+
 func (m *MockNomad) HealthCheckAPI(timeout time.Duration) error {
 	args := m.Called(timeout)
 
