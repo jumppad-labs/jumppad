@@ -40,10 +40,10 @@ func (m *MockNomad) JobRunning(job string) (bool, error) {
 	return args.Bool(0), args.Error(1)
 }
 
-func (m *MockNomad) Endpoints(job, group, task string) ([]string, error) {
+func (m *MockNomad) Endpoints(job, group, task string) ([]map[string]string, error) {
 	args := m.Called(job, group, task)
 
-	if a, ok := args.Get(0).([]string); ok {
+	if a, ok := args.Get(0).([]map[string]string); ok {
 		return a, args.Error(1)
 	}
 

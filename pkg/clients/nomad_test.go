@@ -340,6 +340,7 @@ func TestNomadHealthWithNotReadyDockerRetries(t *testing.T) {
 	err := c.HealthCheckAPI(10 * time.Millisecond)
 	assert.NoError(t, err)
 	mh.AssertNumberOfCalls(t, "Do", 2)
+
 }
 
 func TestNomadHealthErrorsOnClientError(t *testing.T) {
@@ -379,7 +380,6 @@ func TestNomadEndpointsErrorWhenUnableToGetJobs(t *testing.T) {
 }
 
 func TestNomadEndpointsReturnsTwoEndpoints(t *testing.T) {
-	t.Skip()
 	fp, tmpDir, mh := setupNomadTests(t)
 	defer os.RemoveAll(tmpDir)
 
@@ -392,12 +392,31 @@ func TestNomadEndpointsReturnsTwoEndpoints(t *testing.T) {
 		nil,
 	).Once()
 
+	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
+		&http.Response{
+			StatusCode: http.StatusBadRequest,
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte(allocationsResponse1))),
+		},
+		nil,
+	).Once()
+
+	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
+		&http.Response{
+			StatusCode: http.StatusBadRequest,
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte(allocationsResponse2))),
+		},
+		nil,
+	).Once()
+
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
 	c.SetConfig(fp)
 
-	e, err := c.Endpoints("test", "test", "test")
+	e, err := c.Endpoints("example_1", "fake_service", "fake_service")
 	assert.NoError(t, err)
 	assert.Len(t, e, 2)
+
+	assert.Equal(t, "10.5.0.2:28862", e[0]["http"])
+	assert.Equal(t, "10.5.0.3:19090", e[1]["http"])
 }
 
 func getNomadConfig(l string, p int) string {
@@ -535,7 +554,7 @@ var jobAllocationsResponse = `
 ]
 `
 
-var allocationsResponse = `
+var allocationsResponse1 = `
 {
   "ID": "da975cd1-8b04-6bce-9d5c-03e47353768c",
   "Namespace": "default",
@@ -582,6 +601,62 @@ var allocationsResponse = `
           {
             "Label": "http",
             "Value": 28862,
+            "To": 19090,
+            "HostNetwork": "default"
+          }
+        ]
+      }
+    ]
+  }
+}
+`
+
+var allocationsResponse2 = `
+{
+  "ID": "da975cd1-8b04-6bce-9d5c-03e47353768c",
+  "Namespace": "default",
+  "EvalID": "915e3cd4-81c6-dd1e-7880-55562ad938c6",
+  "Name": "example_1.fake_service[0]",
+  "NodeID": "e92cfe74-1ba3-2248-cf89-18760af8c278",
+  "NodeName": "server.dev",
+  "JobID": "example_1",
+  "Job": {
+    "ID": "example_1",
+    "Name": "example_1",
+    "Datacenters": [
+      "dc1"
+    ],
+    "Constraints": null,
+    "Affinities": null,
+    "Spreads": null,
+    "TaskGroups": [
+      {
+        "Name": "fake_service",
+        "Count": 1,
+        "Tasks": [
+          {
+            "Name": "fake_service",
+            "Driver": "docker",
+            "Config": {
+              "image": "nicholasjackson/fake-service:v0.18.1",
+              "ports": [
+                "http"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "TaskGroup": "fake_service",
+  "Resources": {
+    "Networks": [
+      {
+        "IP": "10.5.0.3",
+        "ReservedPorts": [
+          {
+            "Label": "http",
+            "Value": 19090,
             "To": 19090,
             "HostNetwork": "default"
           }
