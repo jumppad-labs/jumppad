@@ -52,6 +52,7 @@ job "example_1" {
 
       env {
         LISTEN_ADDR = ":19090"
+        NAME = "Example1"
       }
 
       config {
