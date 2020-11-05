@@ -16,6 +16,10 @@ type ClusterConfig struct {
 	// Port the API Server is running on
 	APIPort int `json:"api_port"`
 
+	// Port the API Server is running on reachable from
+	// a remote network
+	RemoteAPIPort int `json:"remote_api_port"`
+
 	// Port where the connector is running
 	ConnectorPort int `json:"connector_port"`
 
@@ -80,7 +84,7 @@ func (n *ClusterConfig) APIAddress() string {
 		return fmt.Sprintf("%s://%s:%d", protocol, n.LocalAddress, n.APIPort)
 	}
 
-	return fmt.Sprintf("%s://%s:%d", protocol, n.RemoteAddress, n.APIPort)
+	return fmt.Sprintf("%s://%s:%d", protocol, n.RemoteAddress, n.RemoteAPIPort)
 }
 
 // ConnectorAddress returns the FQDN for the gRPC endpoing of the Connector

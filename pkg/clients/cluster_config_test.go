@@ -60,7 +60,7 @@ func TestConfigReturnsLocalAPIFQDNSSL(t *testing.T) {
 }
 
 func TestConfigReturnsRemoteAPIFQDNSSL(t *testing.T) {
-	nc := ClusterConfig{LocalAddress: "localhost", RemoteAddress: "nomad.remote", APIPort: 4646, SSL: true, context: RemoteContext}
+	nc := ClusterConfig{LocalAddress: "localhost", RemoteAddress: "nomad.remote", APIPort: 4646, RemoteAPIPort: 4646, SSL: true, context: RemoteContext}
 
 	assert.Equal(t, "https://nomad.remote:4646", nc.APIAddress())
 }
