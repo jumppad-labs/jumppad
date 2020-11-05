@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -77,19 +76,6 @@ func TestPurgeCallsImageRemoveForBuiltImages(t *testing.T) {
 
 	assert.NoError(t, err)
 	md.AssertNumberOfCalls(t, "ImageRemove", 3)
-}
-
-func TestPurgeReturnsErrorOnImageRemoveError(t *testing.T) {
-	pc, md, mi, cleanup := setupPurgeCommand(t)
-	defer cleanup()
-	removeOn(&md.Mock, "ImageRemove")
-	md.On("ImageRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("Boom"))
-
-	err := pc.Execute()
-
-	assert.Error(t, err)
-	md.AssertNumberOfCalls(t, "ImageRemove", 1)
-	mi.AssertNotCalled(t, "Clear")
 }
 
 func TestPurgeRemovesBlueprints(t *testing.T) {

@@ -33,24 +33,27 @@ func newPurgeCmdFunc(dt clients.Docker, il clients.ImageLog, l hclog.Logger) fun
 	return func(cmd *cobra.Command, args []string) error {
 		images, _ := il.Read(clients.ImageTypeDocker)
 
+		bHasError := false
+
 		for _, i := range images {
 			l.Info("Removing image", "image", i)
 
 			_, err := dt.ImageRemove(context.Background(), i, types.ImageRemoveOptions{Force: true, PruneChildren: true})
 			if err != nil {
-				return fmt.Errorf("Unable to delete image: %s, error: %s", i, err)
+				l.Error("Unable to delete", "image", i, "error", err)
 			}
 		}
 		il.Clear()
 
-		// Remove any images whcih have been built
+		// Remove any images which have been built
 		filter := filters.NewArgs()
 		filter.Add("reference", "shipyard.run/localcache/*")
 
 		// check if the image already exists, if so do not rebuild unless force
 		sum, err := dt.ImageList(context.Background(), types.ImageListOptions{Filters: filter})
 		if err != nil {
-			return fmt.Errorf("Unable to check image cache, error: %s", err)
+			l.Error("Unable to check image cache", "error", err)
+			bHasError = true
 		}
 
 		for _, i := range sum {
@@ -58,28 +61,32 @@ func newPurgeCmdFunc(dt clients.Docker, il clients.ImageLog, l hclog.Logger) fun
 
 			_, err := dt.ImageRemove(context.Background(), i.ID, types.ImageRemoveOptions{Force: true, PruneChildren: true})
 			if err != nil {
-				return fmt.Errorf("Unable to delete image: %s, error: %s", i.ID, err)
+				l.Error("Unable to delete", "image", i.ID, "error", err)
+				bHasError = true
 			}
 		}
 
 		l.Info("Removing cached images for clusters")
 		err = dt.VolumeRemove(context.Background(), utils.FQDNVolumeName("images"), true)
 		if err != nil {
-			return fmt.Errorf("Unable to remove cached image volume, error: %s", err)
+			l.Error("Unable to remove cached image volume", "error", err)
+			bHasError = true
 		}
 
 		hcp := utils.GetBlueprintLocalFolder("")
 		l.Info("Removing Blueprints", "path", hcp)
 		err = os.RemoveAll(hcp)
 		if err != nil {
-			return fmt.Errorf("Unable to remove cached Helm charts: %s", err)
+			l.Error("Unable to remove cached Helm charts", "error", err)
+			bHasError = true
 		}
 
 		bcp := utils.GetHelmLocalFolder("")
 		l.Info("Removing Helm charts", "path", bcp)
 		err = os.RemoveAll(bcp)
 		if err != nil {
-			return fmt.Errorf("Unable to remove cached Blueprints: %s", err)
+			l.Error("Unable to remove cached Blueprints", "error", err)
+			bHasError = true
 		}
 
 		// delete the releases
@@ -87,14 +94,20 @@ func newPurgeCmdFunc(dt clients.Docker, il clients.ImageLog, l hclog.Logger) fun
 		l.Info("Removing releases", "path", rcp)
 		err = os.RemoveAll(rcp)
 		if err != nil {
-			return fmt.Errorf("Unable to remove cached Releases: %s", err)
+			l.Error("Unable to remove cached Releases", "error", err)
+			bHasError = true
 		}
 
 		dcp := utils.GetDataFolder("")
 		l.Info("Removing data folder", "path", dcp)
 		err = os.RemoveAll(dcp)
 		if err != nil {
-			return fmt.Errorf("Unable to remove Data folder: %s", err)
+			l.Error("Unable to remove Data folder", "error", err)
+			bHasError = true
+		}
+
+		if bHasError {
+			return fmt.Errorf("An error occured when purging data")
 		}
 
 		return nil

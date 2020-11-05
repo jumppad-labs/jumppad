@@ -5,6 +5,7 @@ go 1.14
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.3
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
+	github.com/apex/log v1.9.0
 	github.com/aws/aws-sdk-go v1.33.5 // indirect
 	github.com/cucumber/godog v0.10.0
 	github.com/cucumber/messages-go/v10 v10.0.3
