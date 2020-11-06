@@ -35,7 +35,7 @@ func (n *NomadJob) Create() error {
 
 	// load the config
 	_, configPath := utils.CreateClusterConfigPath(cc.Info().Name)
-	err = n.client.SetConfig(configPath)
+	err = n.client.SetConfig(configPath, string(clients.LocalContext))
 	if err != nil {
 		return xerrors.Errorf("Unable to load nomad config %s: %w", configPath, err)
 	}
@@ -61,8 +61,8 @@ func (n *NomadJob) Create() error {
 
 				n.log.Debug("Checking health for", "ref", n.config.Name, "job", j)
 
-				s, err := n.client.JobStatus(j)
-				if err == nil && s == "running" {
+				s, err := n.client.JobRunning(j)
+				if err == nil && s == true {
 					n.log.Debug("Health passed for", "ref", n.config.Name, "job", j)
 					break
 				}
@@ -88,7 +88,7 @@ func (n *NomadJob) Destroy() error {
 
 	// load the config
 	_, configPath := utils.CreateClusterConfigPath(cc.Info().Name)
-	err = n.client.SetConfig(configPath)
+	err = n.client.SetConfig(configPath, string(clients.LocalContext))
 	if err != nil {
 		n.log.Error("Unable to load Nomad config", "config", configPath, "error", err)
 		return nil

@@ -10,8 +10,8 @@ type MockNomad struct {
 	mock.Mock
 }
 
-func (m *MockNomad) SetConfig(c string) error {
-	args := m.Called(c)
+func (m *MockNomad) SetConfig(c string, ctx string) error {
+	args := m.Called(c, ctx)
 
 	return args.Error(0)
 }
@@ -34,10 +34,20 @@ func (m *MockNomad) ParseJob(file string) ([]byte, error) {
 	return args.Get(0).([]byte), args.Error(1)
 }
 
-func (m *MockNomad) JobStatus(job string) (string, error) {
+func (m *MockNomad) JobRunning(job string) (bool, error) {
 	args := m.Called(job)
 
-	return args.String(0), args.Error(1)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockNomad) Endpoints(job, group, task string) ([]map[string]string, error) {
+	args := m.Called(job, group, task)
+
+	if a, ok := args.Get(0).([]map[string]string); ok {
+		return a, args.Error(1)
+	}
+
+	return nil, args.Error(1)
 }
 
 func (m *MockNomad) HealthCheckAPI(timeout time.Duration) error {

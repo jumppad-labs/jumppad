@@ -58,7 +58,7 @@ func TestNomadCreateValidatesConfig(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
-	c.SetConfig(fp)
+	c.SetConfig(fp, "local")
 
 	err := c.Create([]string{"../../examples/nomad/app_config/example.nomad"})
 	assert.NoError(t, err)
@@ -74,7 +74,7 @@ func TestNomadCreateValidateErrorReturnsError(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("Boom"))
 
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
-	c.SetConfig(fp)
+	c.SetConfig(fp, "local")
 
 	err := c.Create([]string{"../../examples/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
@@ -88,7 +88,7 @@ func TestNomadCreateValidateNot200ReturnsError(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusInternalServerError}, nil)
 
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
-	c.SetConfig(fp)
+	c.SetConfig(fp, "local")
 
 	err := c.Create([]string{"../../examples/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
@@ -99,7 +99,7 @@ func TestNomadCreateSubmitsJob(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
-	c.SetConfig(fp)
+	c.SetConfig(fp, "local")
 
 	err := c.Create([]string{"../../examples/nomad/app_config/example.nomad"})
 	assert.NoError(t, err)
@@ -123,7 +123,7 @@ func TestNomadCreateSubmitErrorReturnsError(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("Boom")).Once()
 
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
-	c.SetConfig(fp)
+	c.SetConfig(fp, "local")
 
 	err := c.Create([]string{"../../examples/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
@@ -151,7 +151,7 @@ func TestNomadCreateSubmitNot200ReturnsError(t *testing.T) {
 	)
 
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
-	c.SetConfig(fp)
+	c.SetConfig(fp, "local")
 
 	err := c.Create([]string{"../../examples/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
@@ -162,7 +162,7 @@ func TestNomadStopValidatesConfig(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
-	c.SetConfig(fp)
+	c.SetConfig(fp, "local")
 
 	err := c.Stop([]string{"../../examples/nomad/app_config/example.nomad"})
 	assert.NoError(t, err)
@@ -178,7 +178,7 @@ func TestNomadStopValidateErrorReturnsError(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("Boom"))
 
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
-	c.SetConfig(fp)
+	c.SetConfig(fp, "local")
 
 	err := c.Stop([]string{"../../examples/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
@@ -189,7 +189,7 @@ func TestNomadStopStopsJob(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
-	c.SetConfig(fp)
+	c.SetConfig(fp, "local")
 
 	err := c.Stop([]string{"../../examples/nomad/app_config/example.nomad"})
 	assert.NoError(t, err)
@@ -212,7 +212,7 @@ func TestNomadStopErrorReturnsError(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
-	c.SetConfig(fp)
+	c.SetConfig(fp, "local")
 
 	err := c.Stop([]string{"../../examples/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
@@ -234,7 +234,7 @@ func TestNomadStopNoStatus200ReturnsError(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusInternalServerError}, nil)
 
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
-	c.SetConfig(fp)
+	c.SetConfig(fp, "local")
 
 	err := c.Stop([]string{"../../examples/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
@@ -248,18 +248,18 @@ func TestNomadJobStatusReturnsStatus(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(allocationsResponse))),
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte(jobAllocationsResponse))),
 		},
 		nil,
 	)
 
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
-	c.SetConfig(fp)
+	c.SetConfig(fp, "local")
 
-	s, err := c.JobStatus("test")
+	s, err := c.JobRunning("test")
 	assert.NoError(t, err)
 
-	assert.Equal(t, "running", s)
+	assert.True(t, s)
 }
 
 func TestNomadHealthCallsAPI(t *testing.T) {
@@ -276,7 +276,7 @@ func TestNomadHealthCallsAPI(t *testing.T) {
 	).Once()
 
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
-	c.SetConfig(fp)
+	c.SetConfig(fp, "local")
 
 	err := c.HealthCheckAPI(10 * time.Millisecond)
 	assert.NoError(t, err)
@@ -305,7 +305,7 @@ func TestNomadHealthWithNotReadyNodeRetries(t *testing.T) {
 	).Once()
 
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
-	c.SetConfig(fp)
+	c.SetConfig(fp, "local")
 
 	err := c.HealthCheckAPI(10 * time.Millisecond)
 	assert.NoError(t, err)
@@ -335,11 +335,12 @@ func TestNomadHealthWithNotReadyDockerRetries(t *testing.T) {
 	).Once()
 
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
-	c.SetConfig(fp)
+	c.SetConfig(fp, "local")
 
 	err := c.HealthCheckAPI(10 * time.Millisecond)
 	assert.NoError(t, err)
 	mh.AssertNumberOfCalls(t, "Do", 2)
+
 }
 
 func TestNomadHealthErrorsOnClientError(t *testing.T) {
@@ -353,16 +354,76 @@ func TestNomadHealthErrorsOnClientError(t *testing.T) {
 	)
 
 	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
-	c.SetConfig(fp)
+	c.SetConfig(fp, "local")
 
 	err := c.HealthCheckAPI(10 * time.Millisecond)
 	assert.Error(t, err)
 }
 
+func TestNomadEndpointsErrorWhenUnableToGetJobs(t *testing.T) {
+	fp, tmpDir, mh := setupNomadTests(t)
+	defer os.RemoveAll(tmpDir)
+
+	removeOn(&mh.Mock, "Do")
+	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
+		&http.Response{
+			StatusCode: http.StatusBadRequest,
+		},
+		nil,
+	)
+
+	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
+	c.SetConfig(fp, "local")
+
+	_, err := c.Endpoints("test", "test", "test")
+	assert.Error(t, err)
+}
+
+func TestNomadEndpointsReturnsTwoEndpoints(t *testing.T) {
+	fp, tmpDir, mh := setupNomadTests(t)
+	defer os.RemoveAll(tmpDir)
+
+	removeOn(&mh.Mock, "Do")
+	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
+		&http.Response{
+			StatusCode: http.StatusBadRequest,
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte(jobAllocationsResponse))),
+		},
+		nil,
+	).Once()
+
+	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
+		&http.Response{
+			StatusCode: http.StatusBadRequest,
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte(allocationsResponse1))),
+		},
+		nil,
+	).Once()
+
+	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
+		&http.Response{
+			StatusCode: http.StatusBadRequest,
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte(allocationsResponse2))),
+		},
+		nil,
+	).Once()
+
+	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
+	c.SetConfig(fp, "local")
+
+	e, err := c.Endpoints("example_1", "fake_service", "fake_service")
+	assert.NoError(t, err)
+	assert.Len(t, e, 2)
+
+	assert.Equal(t, "10.5.0.2:28862", e[0]["http"])
+	assert.Equal(t, "10.5.0.3:19090", e[1]["http"])
+}
+
 func getNomadConfig(l string, p int) string {
 	return fmt.Sprintf(`
 	{
-		"address": "%s",
+		"local_address": "%s",
+		"remote_address": "server.dev.nomad_cluster.shipyard.run",
 		"api_port": %d,
 		"node_count": 2
 	}`, l, p)
@@ -459,20 +520,150 @@ var validateResponse = `
 	"ID": "my-job"
 }
 `
-var allocationsResponse = `
+var jobAllocationsResponse = `
+[
+  {
+    "ID": "da975cd1-8b04-6bce-9d5c-03e47353768c",
+    "EvalID": "915e3cd4-81c6-dd1e-7880-55562ad938c6",
+    "Name": "example_1.fake_service[0]",
+    "Namespace": "default",
+    "NodeID": "e92cfe74-1ba3-2248-cf89-18760af8c278",
+    "NodeName": "server.dev",
+    "JobID": "example_1",
+    "JobType": "service",
+    "JobVersion": 0,
+    "TaskGroup": "fake_service",
+    "DesiredStatus": "run",
+    "DesiredDescription": "",
+    "ClientStatus": "running"
+  },
+  {
+    "ID": "da975cd1-8b04-6bce-9d5c-03e47353768c",
+    "EvalID": "915e3cd4-81c6-dd1e-7880-55562ad938c6",
+    "Name": "example_1.fake_service[0]",
+    "Namespace": "default",
+    "NodeID": "e92cfe74-1ba3-2248-cf89-18760af8c278",
+    "NodeName": "server.dev",
+    "JobID": "example_1",
+    "JobType": "service",
+    "JobVersion": 0,
+    "TaskGroup": "fake_service",
+    "DesiredStatus": "run",
+    "DesiredDescription": "",
+    "ClientStatus": "running"
+  }
+]
+`
+
+var allocationsResponse1 = `
 {
-    "ID": "ed344e0a-7290-d117-41d3-a64f853ca3c2",
-		"JobID": "example",
-		"Status": "running",
-    "TaskGroup": "cache",
-    "TaskStates": {
-      "redis": {
-				"State": "running"
-			},
-      "web": {
-				"State": "running"
-			}
-		}
-	},
+  "ID": "da975cd1-8b04-6bce-9d5c-03e47353768c",
+  "Namespace": "default",
+  "EvalID": "915e3cd4-81c6-dd1e-7880-55562ad938c6",
+  "Name": "example_1.fake_service[0]",
+  "NodeID": "e92cfe74-1ba3-2248-cf89-18760af8c278",
+  "NodeName": "server.dev",
+  "JobID": "example_1",
+  "Job": {
+    "ID": "example_1",
+    "Name": "example_1",
+    "Datacenters": [
+      "dc1"
+    ],
+    "Constraints": null,
+    "Affinities": null,
+    "Spreads": null,
+    "TaskGroups": [
+      {
+        "Name": "fake_service",
+        "Count": 1,
+        "Tasks": [
+          {
+            "Name": "fake_service",
+            "Driver": "docker",
+            "Config": {
+              "image": "nicholasjackson/fake-service:v0.18.1",
+              "ports": [
+                "http"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "TaskGroup": "fake_service",
+  "Resources": {
+    "Networks": [
+      {
+        "IP": "10.5.0.2",
+        "ReservedPorts": null,
+        "DynamicPorts": [
+          {
+            "Label": "http",
+            "Value": 28862,
+            "To": 19090,
+            "HostNetwork": "default"
+          }
+        ]
+      }
+    ]
+  }
+}
+`
+
+var allocationsResponse2 = `
+{
+  "ID": "da975cd1-8b04-6bce-9d5c-03e47353768c",
+  "Namespace": "default",
+  "EvalID": "915e3cd4-81c6-dd1e-7880-55562ad938c6",
+  "Name": "example_1.fake_service[0]",
+  "NodeID": "e92cfe74-1ba3-2248-cf89-18760af8c278",
+  "NodeName": "server.dev",
+  "JobID": "example_1",
+  "Job": {
+    "ID": "example_1",
+    "Name": "example_1",
+    "Datacenters": [
+      "dc1"
+    ],
+    "Constraints": null,
+    "Affinities": null,
+    "Spreads": null,
+    "TaskGroups": [
+      {
+        "Name": "fake_service",
+        "Count": 1,
+        "Tasks": [
+          {
+            "Name": "fake_service",
+            "Driver": "docker",
+            "Config": {
+              "image": "nicholasjackson/fake-service:v0.18.1",
+              "ports": [
+                "http"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "TaskGroup": "fake_service",
+  "Resources": {
+    "Networks": [
+      {
+        "IP": "10.5.0.3",
+        "ReservedPorts": [
+          {
+            "Label": "http",
+            "Value": 19090,
+            "To": 19090,
+            "HostNetwork": "default"
+          }
+        ]
+      }
+    ]
+  }
 }
 `

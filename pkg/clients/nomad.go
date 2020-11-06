@@ -15,19 +15,21 @@ import (
 // Nomad defines an interface for a Nomad client
 type Nomad interface {
 	// SetConfig for the client, path is a valid Nomad JSON config file
-	SetConfig(string) error
+	SetConfig(string, string) error
 	// Create jobs in the provided files
 	Create(files []string) error
 	// Stop jobs in the provided files
 	Stop(files []string) error
 	// ParseJob in the given file and return a JSON blob representing the HCL job
 	ParseJob(file string) ([]byte, error)
-	// JobStatus returns the status for the given job
-	JobStatus(job string) (string, error)
+	// JobRunning returns true if all allocations for a job are running
+	JobRunning(job string) (bool, error)
 	// HealthCheckAPI uses the Nomad API to check that all servers and nodes
 	// are ready. The function will block until either all nodes are healthy or the
 	// timeout period elapses.
 	HealthCheckAPI(time.Duration) error
+	// Endpoints returns a list of endpoints for a cluster
+	Endpoints(job, group, task string) ([]map[string]string, error)
 }
 
 // NomadImpl is an implementation of the Nomad interface
@@ -53,9 +55,9 @@ type createRequest struct {
 }
 
 // SetConfig loads the Nomad config from a file
-func (n *NomadImpl) SetConfig(nomadconfig string) error {
+func (n *NomadImpl) SetConfig(nomadconfig string, context string) error {
 	c := &ClusterConfig{}
-	err := c.Load(nomadconfig)
+	err := c.Load(nomadconfig, Context(context))
 	if err != nil {
 		return err
 	}
@@ -248,27 +250,126 @@ func (n *NomadImpl) ParseJob(file string) ([]byte, error) {
 	return jsonJob, nil
 }
 
-// JobStatus returns a string status for the given job
-func (n *NomadImpl) JobStatus(job string) (string, error) {
-	// get the allocations for the job
-	r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v1/job/%s", n.c.APIAddress(), job), nil)
+// JobRunning returns true when all allocations for a job are running
+func (n *NomadImpl) JobRunning(job string) (bool, error) {
+	jobDetail, err := n.getJobAllocations(job)
 	if err != nil {
-		return "", xerrors.Errorf("Unable to create http request: %w", err)
+		return false, err
+	}
+
+	if len(jobDetail) < 1 {
+		return false, nil
+	}
+
+	for _, v := range jobDetail {
+		if v["ClientStatus"].(string) != "running" {
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
+// Endpoints returns a list of endpoints for a cluster
+func (n *NomadImpl) Endpoints(job, group, task string) ([]map[string]string, error) {
+	jobs, err := n.getJobAllocations(job)
+	if err != nil {
+		return nil, err
+	}
+
+	endpoints := []map[string]string{}
+
+	// get the allocation details for each endpoint
+	for _, j := range jobs {
+		r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v1/allocation/%s", n.c.APIAddress(), j["ID"]), nil)
+		if err != nil {
+			return nil, xerrors.Errorf("Unable to create http request: %w", err)
+		}
+
+		resp, err := n.httpClient.Do(r)
+		if err != nil {
+			return nil, xerrors.Errorf("Unable to get allocation: %w", err)
+		}
+
+		if resp.Body == nil {
+			return nil, xerrors.Errorf("No body returned from Nomad API")
+		}
+
+		defer resp.Body.Close()
+
+		allocDetail := allocation{}
+		err = json.NewDecoder(resp.Body).Decode(&allocDetail)
+		if err != nil {
+			return nil, err
+		}
+
+		ports := []string{}
+
+		//find the ports used by the task
+		for _, tg := range allocDetail.Job.TaskGroups {
+			if tg.Name == group {
+				for _, t := range tg.Tasks {
+					if t.Name == task {
+						ports = t.Config.Ports
+					}
+				}
+			}
+		}
+
+		ep := map[string]string{}
+		epc := 0
+		for _, p := range ports {
+			// lookup the resources for the ports
+			for _, n := range allocDetail.Resources.Networks {
+				for _, dp := range n.DynamicPorts {
+					if dp.Label == p {
+						ep[p] = fmt.Sprintf("%s:%d", n.IP, dp.Value)
+						epc++
+					}
+				}
+
+				for _, dp := range n.ReservedPorts {
+					if dp.Label == p {
+						ep[p] = fmt.Sprintf("%s:%d", n.IP, dp.Value)
+						epc++
+					}
+				}
+			}
+		}
+
+		if epc > 0 {
+			endpoints = append(endpoints, ep)
+		}
+	}
+
+	return endpoints, nil
+}
+
+func (n *NomadImpl) getJobAllocations(job string) ([]map[string]interface{}, error) {
+	// get the allocations for the job
+	r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v1/job/%s/allocations", n.c.APIAddress(), job), nil)
+	if err != nil {
+		return nil, xerrors.Errorf("Unable to create http request: %w", err)
 	}
 
 	resp, err := n.httpClient.Do(r)
 	if err != nil {
-		return "", xerrors.Errorf("Unable to validate job: %w", err)
+		return nil, xerrors.Errorf("Unable to query job: %w", err)
 	}
+
+	if resp.Body == nil {
+		return nil, xerrors.Errorf("No body returned from Nomad API")
+	}
+
 	defer resp.Body.Close()
 
-	jobDetail := make(map[string]interface{}, 0)
+	jobDetail := make([]map[string]interface{}, 0)
 	err = json.NewDecoder(resp.Body).Decode(&jobDetail)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return jobDetail["Status"].(string), nil
+	return jobDetail, err
 }
 
 func (n *NomadImpl) getJobID(file string) (string, error) {
@@ -286,4 +387,44 @@ func (n *NomadImpl) getJobID(file string) (string, error) {
 	}
 
 	return jobMap["ID"].(string), nil
+}
+
+type allocation struct {
+	ID        string
+	Job       job
+	Resources resource
+}
+
+type job struct {
+	Name       string
+	TaskGroups []taskGroup
+}
+
+type taskGroup struct {
+	Name  string
+	Tasks []task
+}
+
+type task struct {
+	Name   string
+	Config taskConfig
+}
+
+type taskConfig struct {
+	Ports []string
+}
+
+type resource struct {
+	Networks []allocNetwork
+}
+
+type allocNetwork struct {
+	IP            string
+	DynamicPorts  []port
+	ReservedPorts []port
+}
+
+type port struct {
+	Label string
+	Value int
 }

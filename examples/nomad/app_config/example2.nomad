@@ -18,8 +18,14 @@ job "example_2" {
     healthy_deadline = "5m"
   }
   
-  group "consul" {
+  group "fake_service" {
     count = 1
+
+    network {
+      port  "http" { 
+        to = 19090 # Dynamic port allocation
+      }
+    }
 
     restart {
       # The number of attempts to run the job within the specified interval.
@@ -33,32 +39,31 @@ job "example_2" {
       size = 30
     }
 
-    task "consul" {
+    task "fake_service" {
       # The "driver" parameter specifies the task driver that should be used to
       # run the task.
       driver = "docker"
-
+      
       logs {
         max_files     = 2
         max_file_size = 10
       }
 
-      config {
-        image = "consul:1.7.1"
+      env {
+        LISTEN_ADDR = ":19090"
+        NAME = "Example2"
+      }
 
-        port_map {
-          http = 8500
-        }
+      config {
+        image = "nicholasjackson/fake-service:v0.18.1"
+
+        ports = ["http"]
       }
 
       resources {
         cpu    = 500 # 500 MHz
         memory = 256 # 256MB
 
-        network {
-          mbits = 10
-          port  "http"  {}
-        }
       }
     }
   }

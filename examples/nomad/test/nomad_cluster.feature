@@ -10,6 +10,9 @@ Feature: Nomad Cluster
       | name                    | type            |
       | cloud                   | network         |
       | server.dev              | nomad_cluster   |
+    And a HTTP call to "http://consul-http.ingress.shipyard.run:18500/v1/status/leader" should result in status 200
+    And a HTTP call to "http://fake-service.ingress.shipyard.run:19090" should result in status 200
+    And a HTTP call to "http://fake-service.ingress.shipyard.run:19091" should result in status 200
 
   Scenario: Nomad Multi-Node Cluster
     Given the following shipyard variables are set
@@ -23,3 +26,6 @@ Feature: Nomad Cluster
       | 1.client.dev              | nomad_cluster   |
       | 2.client.dev              | nomad_cluster   |
       | 3.client.dev              | nomad_cluster   |
+    And a HTTP call to "http://consul-http.ingress.shipyard.run:18500/v1/status/leader" should result in status 200
+    And a HTTP call to "http://fake-service.ingress.shipyard.run:19090" should result in status 200
+    And a HTTP call to "http://fake-service.ingress.shipyard.run:19091" should result in status 200

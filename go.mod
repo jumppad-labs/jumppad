@@ -5,6 +5,7 @@ go 1.14
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.3
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
+	github.com/apex/log v1.9.0
 	github.com/aws/aws-sdk-go v1.33.5 // indirect
 	github.com/cucumber/godog v0.10.0
 	github.com/cucumber/messages-go/v10 v10.0.3
@@ -19,6 +20,7 @@ require (
 	github.com/hashicorp/terraform v0.12.29
 	github.com/hokaccha/go-prettyjson v0.0.0-20190818114111-108c894c2c0e
 	github.com/konsorten/go-windows-terminal-sequences v1.0.3 // indirect
+	github.com/kr/pretty v0.2.0
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/mapstructure v1.3.3

@@ -107,7 +107,7 @@ func New() *Config {
 	return c
 }
 
-// FindResources returns an array of resources for the given module
+// FindModuleResources returns an array of resources for the given module
 func (c *Config) FindModuleResources(name string) ([]Resource, error) {
 	resources := []Resource{}
 

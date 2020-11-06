@@ -129,7 +129,7 @@ func (c *NomadCluster) createNomad() error {
 	}
 
 	cMutex := sync.Mutex{}
-	clients := []string{}
+	cls := []string{}
 	clWait := sync.WaitGroup{}
 	clWait.Add(c.config.ClientNodes)
 
@@ -143,7 +143,7 @@ func (c *NomadCluster) createNomad() error {
 			}
 
 			cMutex.Lock()
-			clients = append(clients, clientID)
+			cls = append(cls, clientID)
 			cMutex.Unlock()
 
 			clWait.Done()
@@ -156,7 +156,7 @@ func (c *NomadCluster) createNomad() error {
 	}
 
 	// ensure all client nodes are up
-	c.nomadClient.SetConfig(configPath)
+	c.nomadClient.SetConfig(configPath, string(clients.LocalContext))
 	err = c.nomadClient.HealthCheckAPI(startTimeout)
 	if err != nil {
 		return err
@@ -175,7 +175,7 @@ func (c *NomadCluster) createNomad() error {
 		clWait := sync.WaitGroup{}
 		clWait.Add(c.config.ClientNodes)
 		var importErr error
-		for _, id := range clients {
+		for _, id := range cls {
 			go func(id string) {
 				err := c.ImportLocalDockerImages("images", id, c.config.Images, false)
 				clWait.Done()
@@ -208,7 +208,14 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 	}
 
 	// generate the config file
-	nomadConfig := clients.ClusterConfig{Address: "localhost", ConnectorPort: connectorPort, APIPort: apiPort, NodeCount: nodeCount}
+	nomadConfig := clients.ClusterConfig{
+		LocalAddress:  "localhost",
+		RemoteAddress: utils.FQDN(fmt.Sprintf("server.%s", c.config.Name), string(c.config.Type)),
+		ConnectorPort: connectorPort,
+		APIPort:       apiPort,
+		RemoteAPIPort: 4646,
+		NodeCount:     nodeCount,
+	}
 	configDir, configPath := utils.CreateClusterConfigPath(c.config.Name)
 
 	err := nomadConfig.Save(configPath)
