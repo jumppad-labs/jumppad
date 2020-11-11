@@ -8,17 +8,20 @@ before:
     # you may remove this if you don't need go generate
     - go generate ./...
 builds:
-- 
+-
   env:
   - CGO_ENABLED=0
   - GO111MODULE=on
   - GPG_TTY=$(tty)
-  
+
   binary: shipyard
 
-  flags:
-    - -tags={.Tag}
- 
+  ldflags:
+    - -s -w
+
+  hooks:
+    post: ./upx.sh
+
   goos:
     - linux
     - darwin
@@ -72,7 +75,7 @@ archives:
 checksum:
   name_template: 'checksums.txt'
 snapshot:
-  name_template: "{{ .Tag }}-next"
+  name_template: "{{ .Version }}-next"
 changelog:
   sort: asc
   filters:
@@ -81,6 +84,6 @@ changelog:
     - '^test:'
 dockers:
   - image_templates:
-    - gcr.io/shipyard-287511/shipyard:{{ .Tag }}
+    - gcr.io/shipyard-287511/shipyard:{{ .Version }}
 signs:
   - artifacts: checksum

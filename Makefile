@@ -41,6 +41,9 @@ build-darwin:
 build-linux:
 	CGO_ENABLED=0 GOOS=linux go build -ldflags "-X main.version=${git_commit}" -o bin/yard-linux main.go
 
+build-linux-small:
+	CGO_ENABLED=0 GOOS=linux go build -ldflags "-X main.version=${git_commit} -s -w" -o bin/yard-linux-small main.go
+
 build-windows:
 	CGO_ENABLED=0 GOOS=windows go build -ldflags "-X main.version=${git_commit}" -o bin/yard-windows.exe main.go
 

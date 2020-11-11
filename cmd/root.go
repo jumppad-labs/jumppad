@@ -24,6 +24,8 @@ var logger hclog.Logger
 var engineClients *shipyard.Clients
 
 var version string
+var date string
+var commit string
 
 func init() {
 	var vm gvm.Versions
@@ -107,7 +109,10 @@ func createEngine(l hclog.Logger) (shipyard.Engine, gvm.Versions) {
 }
 
 // Execute the root command
-func Execute(v string) error {
+func Execute(v, c, d string) error {
 	version = v
+	commit = c
+	date = d
+
 	return rootCmd.Execute()
 }
