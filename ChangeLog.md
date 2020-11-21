@@ -1,5 +1,12 @@
 # Change Log
 
+## version 0.1.17
+* Compress Shipyard binary to reduce distribution size
+* Add ability to add variables overides with test command
+
+## version 0.1.15
+Add updates for Nomad ingress
+
 ## version 0.1.14
 Various bug fixes
 
