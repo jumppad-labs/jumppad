@@ -37,7 +37,6 @@ var opts = &godog.Options{
 }
 
 var envVars map[string]string
-var shipyardVars []string
 var output = bytes.NewBufferString("")
 
 // used by script runner steps
@@ -48,27 +47,32 @@ func newTestCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc client
 	var testFolder string
 	var force bool
 	var purge bool
+	var variables []string
+	var variablesFile string
+
 	var testCmd = &cobra.Command{
 		Use:                   "test [blueprint]",
 		Short:                 "Run functional tests for the blueprint",
 		Long:                  `Run functional tests for the blueprint, this command will start the shipyard blueprint `,
 		DisableFlagsInUseLine: true,
 		Args:                  cobra.ArbitraryArgs,
-		RunE:                  newTestCmdFunc(e, bp, hc, bc, testFolder, &force, &purge, l),
+		RunE:                  newTestCmdFunc(e, bp, hc, bc, testFolder, &force, &purge, &variables, &variablesFile, l),
 	}
 
 	testCmd.Flags().StringVarP(&testFolder, "test-folder", "", "", "Specify the folder containing the functional tests.")
 	testCmd.Flags().BoolVarP(&force, "force-update", "", false, "When set to true Shipyard will ignore cached images or files and will download all resources")
 	testCmd.Flags().BoolVarP(&purge, "purge", "", false, "When set to true Shipyard will remove any cached images or blueprints")
+	testCmd.Flags().StringSliceVarP(&variables, "var", "", nil, "Allows setting variables from the command line, variables are specified as a key and value, e.g --var key=value. Can be specified multiple times")
+	testCmd.Flags().StringVarP(&variablesFile, "vars-file", "", "", "Load variables from a location other than *.vars files in the blueprint folder. E.g --vars-file=./file.vars")
 
 	return testCmd
 }
 
-func newTestCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, testFolder string, force *bool, purge *bool, l hclog.Logger) func(cmd *cobra.Command, args []string) error {
+func newTestCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, testFolder string, force *bool, purge *bool, variables *[]string, variablesFile *string, l hclog.Logger) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		//
 
-		tr := CucumberRunner{cmd, args, e, bp, hc, bc, testFolder, "", force, purge, l}
+		tr := CucumberRunner{cmd, args, e, bp, hc, bc, testFolder, "", force, purge, l, *variables, *variablesFile}
 		tr.start()
 
 		return nil
@@ -77,17 +81,19 @@ func newTestCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cl
 
 // CucumberRunner is a test runner for cucumber tests
 type CucumberRunner struct {
-	cmd        *cobra.Command
-	args       []string
-	e          shipyard.Engine
-	bp         clients.Getter
-	hc         clients.HTTP
-	bc         clients.System
-	testFolder string
-	testPath   string
-	force      *bool
-	purge      *bool
-	l          hclog.Logger
+	cmd           *cobra.Command
+	args          []string
+	e             shipyard.Engine
+	bp            clients.Getter
+	hc            clients.HTTP
+	bc            clients.System
+	testFolder    string
+	testPath      string
+	force         *bool
+	purge         *bool
+	l             hclog.Logger
+	variables     []string
+	variablesFile string
 }
 
 // Initialize the functional tests
@@ -126,7 +132,6 @@ func (cr *CucumberRunner) start() {
 func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 	ctx.BeforeScenario(func(gs *godog.Scenario) {
 		envVars = map[string]string{}
-		shipyardVars = []string{}
 		commandOutput = bytes.NewBufferString("")
 		commandExitCode = 0
 	})
@@ -242,8 +247,8 @@ func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
 		cr.force,
 		&version,
 		&approve,
-		&shipyardVars,
-		nil,
+		&cr.variables,
+		&cr.variablesFile,
 		cr.l,
 	)
 
@@ -430,7 +435,7 @@ func (cr *CucumberRunner) theFollowingShipyardVariablesAreSet(vars *godog.Table)
 			return fmt.Errorf("Table rows should have two columns 'key' and 'value'")
 		}
 
-		shipyardVars = append(shipyardVars, fmt.Sprintf("%s=%s", r.Cells[0].Value, r.Cells[1].Value))
+		cr.variables = append(cr.variables, fmt.Sprintf("%s=%s", r.Cells[0].Value, r.Cells[1].Value))
 	}
 
 	return nil
