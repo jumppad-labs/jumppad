@@ -245,7 +245,7 @@ func TestDockerIPWithDefaultReturnsCorrectValue(t *testing.T) {
 
 func TestDockerIPWithEnvReturnsCorrectValue(t *testing.T) {
   dh := os.Getenv("DOCKER_HOST")
-  os.Setenv("DOCKER_HOST", "tcp://apple.shipyard.run")
+  os.Setenv("DOCKER_HOST", "tcp://apple.shipyard.run:2342")
   t.Cleanup(func() { os.Setenv("DOCKER_HOST", dh) })
 
 	ds := GetDockerIP()

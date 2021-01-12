@@ -239,7 +239,7 @@ func GetDockerIP() string {
     if strings.HasPrefix(dh, "tcp://") {
       u,err := url.Parse(dh)
       if err == nil {
-        return u.Host
+        return strings.Split(u.Host,":")[0]
       }
     }
   }
