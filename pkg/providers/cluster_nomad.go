@@ -15,7 +15,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-const nomadBaseImage = "registry.shipyard.run/nomad"
+const nomadBaseImage = "shipyardrun/nomad"
 const nomadBaseVersion = "v0.12.7"
 
 const dataDir = `

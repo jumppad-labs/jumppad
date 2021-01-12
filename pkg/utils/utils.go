@@ -225,8 +225,8 @@ func GetDataFolder(p string) string {
 	return data
 }
 
-// GetDockerSock returns the location of the Docker sock depending on the platform
-func GetDockerSock() string {
+// GetDockerHost returns the location of the Docker API depending on the platform
+func GetDockerHost() string {
   if dh := os.Getenv("DOCKER_HOST"); dh != "" {
     return dh
   }
@@ -234,6 +234,7 @@ func GetDockerSock() string {
 	return "/var/run/docker.sock"
 }
 
+// GetDockerIP returns the location of the Docker Server IP address
 func GetDockerIP() string {
   if dh := os.Getenv("DOCKER_HOST"); dh != "" {
     if strings.HasPrefix(dh, "tcp://") {

@@ -685,6 +685,20 @@ func buildContext() *hcl.EvalContext {
 		},
 	})
 
+  var DockerIPFunc = function.New(&function.Spec{
+		Type: function.StaticReturnType(cty.String),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			return cty.StringVal(utils.GetDockerIP()), nil
+		},
+	})
+
+  var DockerHostFunc = function.New(&function.Spec{
+		Type: function.StaticReturnType(cty.String),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			return cty.StringVal(utils.GetDockerHost()), nil
+		},
+	})
+
 	var KubeConfigFunc = function.New(&function.Spec{
 		Params: []function.Parameter{
 			{
@@ -766,6 +780,8 @@ func buildContext() *hcl.EvalContext {
 	ctx.Functions["shipyard"] = ShipyardFunc
 	ctx.Functions["file"] = FileFunc
 	ctx.Functions["data"] = DataFunc
+	ctx.Functions["docker_ip"] = DockerIPFunc
+	ctx.Functions["docker_host"] = DockerHostFunc
 
 	return ctx
 }

@@ -223,17 +223,17 @@ func TestBlueprintLocalFolder(t *testing.T) {
 	assert.Equal(t, ShipyardHome()+"/blueprints/github.com/shipyard-run/blueprints/vault-k8s", dst)
 }
 
-func TestDockerSockWithDefaultReturnsCorrectValue(t *testing.T) {
-	ds := GetDockerSock()
+func TestDockerHostWithDefaultReturnsCorrectValue(t *testing.T) {
+	ds := GetDockerHost()
 	assert.Equal(t, "/var/run/docker.sock", ds)
 }
 
-func TestDockerSockWithEnvReturnsCorrectValue(t *testing.T) {
+func TestDockerHostWithEnvReturnsCorrectValue(t *testing.T) {
   dh := os.Getenv("DOCKER_HOST")
   os.Setenv("DOCKER_HOST", "tcp://abc.123")
   t.Cleanup(func() { os.Setenv("DOCKER_HOST", dh) })
 
-	ds := GetDockerSock()
+	ds := GetDockerHost()
 
   assert.Equal(t, "tcp://abc.123", ds)
 }
