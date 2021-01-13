@@ -112,18 +112,16 @@ func TestIngressK8sTargetConfiguresKubeConfig(t *testing.T) {
 	err := p.Create()
 	assert.NoError(t, err)
 
-	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	container := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
 
 	// check the env var for the kubeconfig is set
-	assert.Equal(t, "/kubeconfig-docker.yaml", params.Environment[0].Value)
+	assert.Equal(t, "/kubeconfig-docker.yaml", container.Environment[0].Value)
 
 	// check that the kubeconfig has been copied to the container
-	md.AssertCalled(t,
-		"CopyFileToContainer",
-		"ingress",
-		"/home/nicj/.shipyard/config/test/kubeconfig-docker.yaml",
-		"/",
-	)
+	params := getCalls(&md.Mock, "CopyFileToContainer")[0].Arguments
+	assert.Equal(t, "ingress", params[0])
+	assert.Contains(t, params[1], ".shipyard/config/test/kubeconfig-docker.yaml")
+	assert.Equal(t, "/", params[2])
 }
 
 func TestIngressK8sTargetWithNamespaceConfiguresCommand(t *testing.T) {
