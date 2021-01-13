@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -224,14 +225,25 @@ func GetDataFolder(p string) string {
 	return data
 }
 
-// GetDockerSock returns the location of the Docker sock depending on the platform
-func GetDockerSock() string {
-	//TODO: need to think about what happens if Docker is running at a TCP address rather than a socket
-	/*
-		if dh := os.Getenv("DOCKER_HOST"); dh != "" {
-			return dh
-		}
-	*/
+// GetDockerHost returns the location of the Docker API depending on the platform
+func GetDockerHost() string {
+  if dh := os.Getenv("DOCKER_HOST"); dh != "" {
+    return dh
+  }
 
 	return "/var/run/docker.sock"
+}
+
+// GetDockerIP returns the location of the Docker Server IP address
+func GetDockerIP() string {
+  if dh := os.Getenv("DOCKER_HOST"); dh != "" {
+    if strings.HasPrefix(dh, "tcp://") {
+      u,err := url.Parse(dh)
+      if err == nil {
+        return strings.Split(u.Host,":")[0]
+      }
+    }
+  }
+
+	return "localhost"
 }

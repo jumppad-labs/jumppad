@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -178,10 +179,18 @@ func (c *K8sCluster) createK3s() error {
 		return err
 	}
 
-	// get the Kubernetes config file and drop it in $HOME/.shipyard/config/[clustername]/kubeconfig.yml
+	// get the Kubernetes config file and drop it in a temp folder
 	kc, err := c.copyKubeConfig(id)
 	if err != nil {
 		return xerrors.Errorf("Error copying Kubernetes config: %w", err)
+	}
+
+  // replace the server location in the kubeconfig file
+  // and write to $HOME/.shipyard/config/[clustername]/kubeconfig.yml
+  // we need to do this as Shipyard might be using a remote Docker engine
+  config, err := c.createLocalKubeConfig(kc)
+	if err != nil {
+		return xerrors.Errorf("Error creating Local Kubernetes config: %w", err)
 	}
 
 	// create the Docker container version of the Kubeconfig
@@ -196,7 +205,7 @@ func (c *K8sCluster) createK3s() error {
 	// before progressing
 	// we might also need to wait for the api services to become ready
 	// this could be done with the folowing command kubectl get apiservice
-	err = c.kubeClient.SetConfig(kc)
+	err = c.kubeClient.SetConfig(config)
 	if err != nil {
 		return err
 	}
@@ -262,20 +271,46 @@ func (c *K8sCluster) waitForStart(id string) error {
 
 func (c *K8sCluster) copyKubeConfig(id string) (string, error) {
 	// create destination kubeconfig file paths
-	_, destPath, _ := utils.CreateKubeConfigPath(c.config.Name)
+  out := path.Join(os.TempDir(), "kubeconfig.yaml")
 
 	// get kubeconfig file from container and read contents
-	err := c.client.CopyFromContainer(id, "/output/kubeconfig.yaml", destPath)
+	err := c.client.CopyFromContainer(id, "/output/kubeconfig.yaml", out)
 	if err != nil {
 		return "", err
 	}
 
-	return destPath, nil
+	return out, nil
+}
+
+func (c *K8sCluster) createLocalKubeConfig(kubeconfig string) (string, error) {
+  ip := utils.GetDockerIP()
+	_, kubePath, _ := utils.CreateKubeConfigPath(c.config.Name)
+
+  err := c.changeServerAddressInK8sConfig(
+		fmt.Sprintf("https://%s", ip),
+    kubeconfig,
+    kubePath,
+  )
+  if err != nil {
+    return "", err
+  }
+
+  return kubePath, nil
 }
 
 func (c *K8sCluster) createDockerKubeConfig(kubeconfig string) error {
+	_, _, dockerPath := utils.CreateKubeConfigPath(c.config.Name)
+
+  return c.changeServerAddressInK8sConfig(
+		fmt.Sprintf("https://server.%s", utils.FQDN(c.config.Name, string(c.config.Type))),
+    kubeconfig,
+    dockerPath,
+  )
+}
+
+func (c*K8sCluster) changeServerAddressInK8sConfig(addr, origFile, newFile string) error {
 	// read the config into a string
-	f, err := os.OpenFile(kubeconfig, os.O_RDONLY, 0666)
+	f, err := os.OpenFile(origFile, os.O_RDONLY, 0666)
 	if err != nil {
 		return err
 	}
@@ -290,21 +325,19 @@ func (c *K8sCluster) createDockerKubeConfig(kubeconfig string) error {
 	newConfig := strings.Replace(
 		string(readBytes),
 		"server: https://127.0.0.1",
-		fmt.Sprintf("server: https://server.%s", utils.FQDN(c.config.Name, string(c.config.Type))),
+    fmt.Sprintf("server: %s",addr),
 		-1,
 	)
 
-	_, _, dockerPath := utils.CreateKubeConfigPath(c.config.Name)
-
-	kubeconfigfile, err := os.Create(dockerPath)
+  kubeconfigfile, err := os.Create(newFile)
 	if err != nil {
-		return fmt.Errorf("Couldn't create kubeconfig file %s\n%+v", dockerPath, err)
+		return fmt.Errorf("Couldn't create kubeconfig file %s\n%+v", newFile, err)
 	}
 
 	defer kubeconfigfile.Close()
 	kubeconfigfile.Write([]byte(newConfig))
 
-	return nil
+  return nil
 }
 
 // ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster

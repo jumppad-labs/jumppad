@@ -167,8 +167,8 @@ func TestDocsMountsDockerSock(t *testing.T) {
 
 	// check the config file has been generated
 	// this will be the second volume
-	assert.Equal(t, utils.GetDockerSock(), params.Volumes[0].Source)
-	assert.Equal(t, utils.GetDockerSock(), params.Volumes[0].Destination)
+	assert.Equal(t, utils.GetDockerHost(), params.Volumes[0].Source)
+	assert.Equal(t, utils.GetDockerHost(), params.Volumes[0].Destination)
 }
 
 func TestDocsSetsTerminalPorts(t *testing.T) {

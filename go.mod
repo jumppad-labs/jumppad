@@ -12,6 +12,7 @@ require (
 	github.com/docker/docker v1.4.2-0.20200203170920-46ec8731fbce
 	github.com/docker/go-connections v0.4.0
 	github.com/gernest/front v0.0.0-20181129160812-ed80ca338b88
+	github.com/go-delve/delve v1.5.1 // indirect
 	github.com/gosuri/uitable v0.0.4
 	github.com/hashicorp/go-getter v1.5.0
 	github.com/hashicorp/go-hclog v0.14.1
@@ -21,18 +22,27 @@ require (
 	github.com/hokaccha/go-prettyjson v0.0.0-20190818114111-108c894c2c0e
 	github.com/konsorten/go-windows-terminal-sequences v1.0.3 // indirect
 	github.com/kr/pretty v0.2.0
+	github.com/mattn/go-colorable v0.1.8 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
+	github.com/mattn/go-runewidth v0.0.10 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/mapstructure v1.3.3
+	github.com/peterh/liner v1.2.1 // indirect
 	github.com/prometheus/common v0.7.0 // indirect
+	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shipyard-run/version-manager v0.0.5
-	github.com/spf13/cobra v1.0.0
+	github.com/sirupsen/logrus v1.7.0 // indirect
+	github.com/spf13/cobra v1.1.1
 	github.com/stretchr/testify v1.6.1
 	github.com/zclconf/go-cty v1.5.1
-	golang.org/x/sys v0.0.0-20200806060901-a37d78b92225 // indirect
+	go.starlark.net v0.0.0-20201210151846-e81fc95f7bd5 // indirect
+	golang.org/x/arch v0.0.0-20210105144330-cfa462d59626 // indirect
+	golang.org/x/sys v0.0.0-20210112091331-59c308dcf3cc // indirect
 	golang.org/x/tools v0.0.0-20200806022845-90696ccdc692 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 	google.golang.org/api v0.30.0 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	helm.sh/helm/v3 v3.2.4
 	k8s.io/api v0.18.0
 	k8s.io/apimachinery v0.18.0

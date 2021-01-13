@@ -40,9 +40,8 @@ func setupClusterMocks() (*config.K8sCluster, *mocks.MockContainerTasks, *mocks.
 	currentHome := os.Getenv("HOME")
 	os.Setenv("HOME", tmpDir)
 
-	// write the kubeconfi
-	_, destPath, _ := utils.CreateKubeConfigPath(clusterConfig.Name)
-	kcf, err := os.Create(destPath)
+	// write the kubeconfig
+	kcf, err := os.Create("/tmp/kubeconfig.yaml")
 	if err != nil {
 		panic(err)
 	}
@@ -222,11 +221,10 @@ func TestClusterK3sDownloadsConfig(t *testing.T) {
 	err := p.Create()
 	assert.NoError(t, err)
 
-	_, destPath, _ := utils.CreateKubeConfigPath(clusterConfig.Name)
 	params := getCalls(&md.Mock, "CopyFromContainer")[0].Arguments
 	assert.Equal(t, "containerid", params.String(0))
 	assert.Equal(t, "/output/kubeconfig.yaml", params.String(1))
-	assert.Equal(t, destPath, params.String(2))
+	assert.Equal(t, "/tmp/kubeconfig.yaml", params.String(2))
 }
 
 func TestClusterK3sRaisesErrorWhenUnableToDownloadConfig(t *testing.T) {
@@ -240,6 +238,36 @@ func TestClusterK3sRaisesErrorWhenUnableToDownloadConfig(t *testing.T) {
 
 	err := p.Create()
 	assert.Error(t, err)
+}
+
+func TestClusterK3sSetsServerInConfig(t *testing.T) {
+  dh := os.Getenv("DOCKER_HOST")
+  os.Setenv("DOCKER_HOST", "tcp://test.com")
+
+  t.Cleanup(func() {
+    os.Setenv("DOCKER_HOST", dh)
+  })
+
+	cc, md, mk, cleanup := setupClusterMocks()
+	defer cleanup()
+
+	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	// check the kubeconfig file for docker uses a network ip not localhost
+
+	// check file has been written
+	_, kubePath, _ := utils.CreateKubeConfigPath(clusterConfig.Name)
+	f, err := os.Open(kubePath)
+	assert.NoError(t, err)
+	defer f.Close()
+
+	// check file contains docker ip
+	d, err := ioutil.ReadAll(f)
+	assert.NoError(t, err)
+  assert.Contains(t, string(d), "test.com")
 }
 
 func TestClusterK3sCreatesDockerConfig(t *testing.T) {
@@ -334,6 +362,7 @@ func TestClusterK3sImportDockerCopiesImages(t *testing.T) {
 	assert.NoError(t, err)
 	md.AssertCalled(t, "CopyLocalDockerImageToVolume", []string{"consul:1.6.1", "vault:1.6.1"}, utils.FQDNVolumeName(utils.ImageVolumeName), false)
 }
+
 func TestClusterK3sImportDockerCopyImageFailReturnsError(t *testing.T) {
 	cc, md, mk, cleanup := setupClusterMocks()
 	removeOn(&md.Mock, "CopyLocalDockerImageToVolume")
