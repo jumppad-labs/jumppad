@@ -27,23 +27,36 @@ var testCopyLocalVolume = "images"
 // Create happy path mocks
 func testCreateCopyLocalMocks() *mocks.MockDocker {
 	mk := &mocks.MockDocker{}
+
 	mk.On("ImageSave", mock.Anything, mock.Anything).Return(
 		ioutil.NopCloser(bytes.NewBufferString("test")),
 		nil,
 	)
+
 	mk.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(container.ContainerCreateCreatedBody{ID: "myid"}, nil)
+
 	mk.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	mk.On("CopyToContainer", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	mk.On(
+		"CopyToContainer",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(nil)
+
 	mk.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	mk.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
-	mk.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).Return(
-		ioutil.NopCloser(strings.NewReader("hello world")),
-		nil,
-	)
 
-	mk.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(types.IDResponse{ID: "abc"}, nil)
+	mk.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).
+		Return(ioutil.NopCloser(strings.NewReader("hello world")), nil)
+
+	mk.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).
+		Return(types.IDResponse{ID: "abc"}, nil)
+
 	mk.On("ContainerExecAttach", mock.Anything, "abc", mock.Anything).Return(
 		types.HijackedResponse{
 			Conn: &net.TCPConn{},
@@ -53,10 +66,14 @@ func testCreateCopyLocalMocks() *mocks.MockDocker {
 		},
 		nil,
 	)
-	mk.On("ContainerExecStart", mock.Anything, "abc", mock.Anything).Return(nil)
-	mk.On("ContainerExecInspect", mock.Anything, "abc", mock.Anything).Return(types.ContainerExecInspect{Running: false, ExitCode: 0}, nil)
 
-	mk.On("VolumeList", mock.Anything, mock.Anything).Return(volume.VolumeListOKBody{Volumes: []*types.Volume{&types.Volume{}}})
+	mk.On("ContainerExecStart", mock.Anything, "abc", mock.Anything).Return(nil)
+
+	mk.On("ContainerExecInspect", mock.Anything, "abc", mock.Anything).
+		Return(types.ContainerExecInspect{Running: false, ExitCode: 0}, nil)
+
+	mk.On("VolumeList", mock.Anything, mock.Anything).
+		Return(volume.VolumeListOKBody{Volumes: []*types.Volume{&types.Volume{}}})
 
 	return mk
 }

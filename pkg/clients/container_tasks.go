@@ -50,6 +50,8 @@ type ContainerTasks interface {
 	ContainerLogs(id string, stdOut, stdErr bool) (io.ReadCloser, error)
 	// CopyFromContainer allows the copying of a file from a container
 	CopyFromContainer(id, src, dst string) error
+  // CopyToContainer allows a file to be copied into a container
+	CopyFileToContainer(id, src, dst string) error
 	// CopyLocaDockerImageToVolume copies the docker images to the docker volume as a
 	// compressed archive.
 	// the path in the docker volume where the archive is created is returned

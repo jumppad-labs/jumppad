@@ -136,17 +136,13 @@ func (i *Ingress) Create() error {
 		command = append(command, "/.nomad/config.json")
 
 	case config.TypeK8sCluster:
-		v := target.(*config.K8sCluster)
+		//v := target.(*config.K8sCluster)
 		// if this is a k3s cluster we need to add the kubeconfig and
 		// make sure that the proxy runs in kube mode
 		serviceName = i.config.Service
-		_, _, kubeConfigPath := utils.CreateKubeConfigPath(v.Name)
-		volumes = append(volumes, config.Volume{
-			Source:      kubeConfigPath,
-			Destination: "/.kube/kubeconfig.yml",
-		})
 
-		env = append(env, config.KV{Key: "KUBECONFIG", Value: "/.kube/kubeconfig.yml"})
+    // set the KUBECONFIG for the ingress, we will copy this file later
+		env = append(env, config.KV{Key: "KUBECONFIG", Value: "/kubeconfig-docker.yaml"})
 
 		command = append(command, "--proxy-type")
 		command = append(command, "kubernetes")
@@ -183,10 +179,23 @@ func (i *Ingress) Create() error {
 	c.Volumes = volumes
 	c.Environment = env
 
-	_, err = i.client.CreateContainer(c)
+  id, err := i.client.CreateContainer(c)
 	if err != nil {
 		return err
 	}
+
+  // if this is a Kubernetes ingress we need to copy the Kubernetes config
+  // to the container
+	if target.Info().Type == config.TypeK8sCluster {
+		v := target.(*config.K8sCluster)
+		_, _, kubeConfigPath := utils.CreateKubeConfigPath(v.Name)
+    i.log.Debug("Copy KubeConfig to container","id", id, "file", kubeConfigPath)
+
+    err = i.client.CopyFileToContainer(id, kubeConfigPath, "/")
+	  if err != nil {
+      return err
+	  }
+  }
 
 	// set the state
 	i.config.Status = config.Applied

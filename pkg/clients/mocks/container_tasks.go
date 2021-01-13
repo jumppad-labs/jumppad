@@ -82,6 +82,12 @@ func (d *MockContainerTasks) CopyFromContainer(id, src, dst string) error {
 	return args.Error(0)
 }
 
+func (d*MockContainerTasks) CopyFileToContainer(id, src, dst string) error {
+	args := d.Called(id, src, dst)
+
+	return args.Error(0)
+}
+
 func (d *MockContainerTasks) CopyLocalDockerImageToVolume(images []string, volume string, force bool) ([]string, error) {
 	args := d.Called(images, volume, force)
 

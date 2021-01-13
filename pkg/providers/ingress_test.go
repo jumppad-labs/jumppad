@@ -19,6 +19,7 @@ func testIngressCreateMocks() (*mocks.MockContainerTasks, *config.Config) {
 	md.On("RemoveContainer", mock.Anything).Return(nil)
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{}, nil)
 	md.On("DetachNetwork", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	md.On("CopyFileToContainer", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	testCluster.Driver = "k3s"
 
@@ -113,13 +114,16 @@ func TestIngressK8sTargetConfiguresKubeConfig(t *testing.T) {
 
 	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
 
-	// check the volume mount is set
-	_, _, path := utils.CreateKubeConfigPath("test")
-	assert.Equal(t, path, params.Volumes[0].Source)
-	assert.Equal(t, "/.kube/kubeconfig.yml", params.Volumes[0].Destination)
-
 	// check the env var for the kubeconfig is set
-	assert.Equal(t, "/.kube/kubeconfig.yml", params.Environment[0].Value)
+	assert.Equal(t, "/kubeconfig-docker.yaml", params.Environment[0].Value)
+
+	// check that the kubeconfig has been copied to the container
+	md.AssertCalled(t,
+		"CopyFileToContainer",
+		"ingress",
+		"/home/nicj/.shipyard/config/test/kubeconfig-docker.yaml",
+		"/",
+	)
 }
 
 func TestIngressK8sTargetWithNamespaceConfiguresCommand(t *testing.T) {
