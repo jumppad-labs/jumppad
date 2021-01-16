@@ -152,6 +152,10 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 			}
 		}
 
+		// generate the certificates for the connector if needed
+
+		// start the connector
+
 		// Load the files
 		res, err := e.ApplyWithVariables(dst, vars, *variablesFile)
 		if err != nil {

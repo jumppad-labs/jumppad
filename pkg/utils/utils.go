@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/url"
 	"os"
 	"path"
@@ -300,4 +301,31 @@ func GetShipyardBinaryPath() string {
 	exePath := filepath.Dir(ex)
 
 	return exePath
+}
+
+// returns the hostname for the current machine
+func GetHostname() string {
+	hn, err := os.Hostname()
+	if err != nil {
+		return ""
+	}
+
+	return hn
+}
+
+func GetLocalIPAddresses() []string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return []string{}
+	}
+
+	addresses := []string{}
+	for _, a := range addrs {
+		ip, _, err := net.ParseCIDR(a.String())
+		if err != nil {
+			addresses = append(addresses, string(ip))
+		}
+	}
+
+	return addresses
 }
