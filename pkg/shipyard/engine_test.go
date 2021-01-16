@@ -1,5 +1,3 @@
-// +build !race
-
 package shipyard
 
 import (
@@ -19,7 +17,7 @@ import (
 	"github.com/shipyard-run/shipyard/pkg/providers/mocks"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 
-	"github.com/stretchr/testify/assert"
+	assert "github.com/stretchr/testify/require"
 )
 
 var lock = sync.Mutex{}
@@ -111,13 +109,17 @@ func TestApplyCallsProviderInCorrectOrder(t *testing.T) {
 
 	// should have called in order
 	assert.Equal(t, "cloud", (*mp)[0].Config().Info().Name)
-	assert.Equal(t, "k3s", (*mp)[1].Config().Info().Name)
+
+	// due to paralel nature of the DAG, these two elements will be first
+	assert.Contains(t, []string{"k3s", "local_connector"}, (*mp)[1].Config().Info().Name)
 
 	// due to paralel nature of the DAG, these two elements can appear in any order
-	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http"}, (*mp)[2].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http"}, (*mp)[3].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http"}, (*mp)[4].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http"}, (*mp)[5].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "connector", "local_connector"}, (*mp)[2].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "connector", "local_connector"}, (*mp)[3].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "connector", "local_connector"}, (*mp)[4].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "connector", "local_connector"}, (*mp)[5].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "connector", "local_connector"}, (*mp)[6].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "connector", "local_connector"}, (*mp)[7].Config().Info().Name)
 }
 
 func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
@@ -128,7 +130,7 @@ func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
 	assert.NoError(t, err)
 
 	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Create", 6)
+	testAssertMethodCalled(t, mp, "Create", 8)
 	//assert.Len(t, res, 4)
 }
 
@@ -198,7 +200,7 @@ func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
 	assert.NoError(t, err)
 
 	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 6)
+	testAssertMethodCalled(t, mp, "Destroy", 8)
 }
 
 func TestDestroyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
@@ -209,7 +211,7 @@ func TestDestroyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 	assert.Error(t, err)
 
 	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 5)
+	testAssertMethodCalled(t, mp, "Destroy", 7)
 }
 
 func TestDestroyFailSetsStatus(t *testing.T) {
@@ -220,8 +222,8 @@ func TestDestroyFailSetsStatus(t *testing.T) {
 	assert.Error(t, err)
 
 	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 6)
-	assert.Equal(t, config.Failed, (*mp)[5].Config().Info().Status)
+	testAssertMethodCalled(t, mp, "Destroy", 8)
+	assert.Equal(t, config.Failed, (*mp)[7].Config().Info().Status)
 }
 
 func TestDestroyCallsProviderDestroyInCorrectOrder(t *testing.T) {
@@ -231,15 +233,17 @@ func TestDestroyCallsProviderDestroyInCorrectOrder(t *testing.T) {
 	err := e.Destroy("../../examples/single_k3s_cluster", true)
 	assert.NoError(t, err)
 
-	// due to paralel nature of the DAG, these two elements can appear in any order
-	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault"}, (*mp)[0].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault"}, (*mp)[1].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault"}, (*mp)[2].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault"}, (*mp)[3].Config().Info().Name)
+	// due to paralel nature of the DAG, these elements can appear in any order
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "local_connector"}, (*mp)[0].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "local_connector"}, (*mp)[1].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "local_connector"}, (*mp)[2].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "local_connector"}, (*mp)[3].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "local_connector"}, (*mp)[4].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "local_connector"}, (*mp)[5].Config().Info().Name)
 
 	// should have called in order
-	assert.Equal(t, "k3s", (*mp)[4].Config().Info().Name)
-	assert.Equal(t, "cloud", (*mp)[5].Config().Info().Name)
+	assert.Equal(t, "k3s", (*mp)[6].Config().Info().Name)
+	assert.Equal(t, "cloud", (*mp)[7].Config().Info().Name)
 
 }
 

@@ -66,7 +66,7 @@ func buildConnector(t *testing.T) string {
 }
 
 func TestConnectorSuite(t *testing.T) {
-	buildConnector(t)
+	//buildConnector(t)
 
 	//c := NewConnector()
 
