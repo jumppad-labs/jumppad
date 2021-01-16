@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -250,4 +251,41 @@ func GetConnectorPIDFile() string {
 // GetConnectorLogFile returns the log file used by the connector
 func GetConnectorLogFile() string {
 	return filepath.Join(ShipyardHome(), "connector.log")
+}
+
+// GetShipyardBinaryPath returns the path to the running Shipyard binary
+func GetShipyardBinaryPath() string {
+	if os.Getenv("GO_ENV") == "testing" {
+		_, filename, _, _ := runtime.Caller(0)
+		dir := path.Dir(filename)
+
+		// walk backwards until we find the go.mod
+		for {
+			files, err := ioutil.ReadDir(dir)
+			if err != nil {
+				return ""
+			}
+
+			for _, f := range files {
+				fmt.Println("dir", dir, f.Name())
+				if strings.HasSuffix(f.Name(), "go.mod") {
+					fp, _ := filepath.Abs(dir)
+
+					// found the project root
+					return "go run " + filepath.Join(fp, "main.go")
+				}
+			}
+
+			// check the parent
+			dir = path.Join(dir, "../")
+		}
+	}
+
+	ex, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	exePath := filepath.Dir(ex)
+
+	return exePath
 }

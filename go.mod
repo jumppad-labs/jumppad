@@ -21,6 +21,7 @@ require (
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/mapstructure v1.4.0
 	github.com/shipyard-run/connector v0.0.9
+	github.com/shipyard-run/gohup v0.1.1
 	github.com/shipyard-run/version-manager v0.0.5
 	github.com/spf13/cobra v1.1.1
 	github.com/stretchr/testify v1.6.1

@@ -227,3 +227,21 @@ func TestDockerSockReturnsCorrectValue(t *testing.T) {
 	ds := GetDockerSock()
 	assert.Equal(t, "/var/run/docker.sock", ds)
 }
+
+func TestGetShipyardBinaryPathReturnsGoRunWhenTesting(t *testing.T) {
+	os.Setenv("GO_ENV", "testing")
+
+	t.Cleanup(func() {
+		os.Unsetenv("GO_ENV")
+	})
+
+	sbp := GetShipyardBinaryPath()
+
+	assert.Contains(t, sbp, "main.go")
+}
+
+func TestGetShipyardBinaryPathReturnsShipyardBinaryWhenNoTesting(t *testing.T) {
+	sbp := GetShipyardBinaryPath()
+
+	assert.Contains(t, sbp, "go-build")
+}

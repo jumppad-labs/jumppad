@@ -786,6 +786,8 @@ github.com/mitchellh/go-homedir v1.1.0 h1:lukF9ziXFxDFPkA1vsr5zpc1XuPDn/wFntq5mG
 github.com/mitchellh/go-homedir v1.1.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrkLzIz1N1q0pr0=
 github.com/mitchellh/go-linereader v0.0.0-20190213213312-1b945b3263eb h1:GRiLv4rgyqjqzxbhJke65IYUf4NCOOvrPOJbV/sPxkM=
 github.com/mitchellh/go-linereader v0.0.0-20190213213312-1b945b3263eb/go.mod h1:OaY7UOoTkkrX3wRwjpYRKafIkkyeD0UtweSHAWWiqQM=
+github.com/mitchellh/go-ps v1.0.0 h1:i6ampVEEF4wQFF+bkYfwYgY+F/uYJDktmvLPf7qIgjc=
+github.com/mitchellh/go-ps v1.0.0/go.mod h1:J4lOc8z8yJs6vUwklHw2XEIiT4z4C40KtWVN3nvg8Pg=
 github.com/mitchellh/go-testing-interface v0.0.0-20171004221916-a61a99592b77/go.mod h1:kRemZodwjscx+RGhAo8eIhFbs2+BFgRtFPeD/KE+zxI=
 github.com/mitchellh/go-testing-interface v1.0.0/go.mod h1:kRemZodwjscx+RGhAo8eIhFbs2+BFgRtFPeD/KE+zxI=
 github.com/mitchellh/go-testing-interface v1.14.1 h1:jrgshOhYAUVNMAJiKbEu7EqAwgJJ2JqpQmpLJOu07cU=
@@ -959,6 +961,8 @@ github.com/sergi/go-diff v1.0.0 h1:Kpca3qRNrduNnOQeazBd0ysaKrUJiIuISHxogkT9RPQ=
 github.com/sergi/go-diff v1.0.0/go.mod h1:0CfEIISq7TuYL3j771MWULgwwjU+GofnZX9QAmXWZgo=
 github.com/shipyard-run/connector v0.0.9 h1:b9FTZlBSH0QthyAskKhI+daCnMK6ACzSY4s0ABcuDeE=
 github.com/shipyard-run/connector v0.0.9/go.mod h1:2txYr6iWtAgWkHtKG7BF04NNyKNlNhvY4k4M6q8pfRI=
+github.com/shipyard-run/gohup v0.1.1 h1:TtRoxrNY6p/mnBMXHIpFCGuE81LrOPP/AeGQp1Fwuuw=
+github.com/shipyard-run/gohup v0.1.1/go.mod h1:uMOvcAs5ufi1VnPsK7iDdruE3y6Hp56CSrN06f17sWs=
 github.com/shipyard-run/version-manager v0.0.5 h1:gswTn7y/f2yoUOGl9tu18Bbp84EQa7gtqMNBbPu78BA=
 github.com/shipyard-run/version-manager v0.0.5/go.mod h1:odqsb09c70cTpSnm1rhQpBV1j7dF3N1FGzdiz8W0n+c=
 github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeVRXNmyL/1OwPU0+IJeTBvfc=
