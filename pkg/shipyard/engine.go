@@ -166,6 +166,8 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 
 			// get the provider to create the resource
 			p := e.getProvider(r, e.clients)
+			fmt.Println(r.Info().Name, p)
+
 			if p == nil {
 				r.Info().Status = config.Failed
 				return diags.Append(fmt.Errorf("Unable to create provider for resource Name: %s, Type: %s", r.Info().Name, r.Info().Type))
@@ -182,15 +184,16 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 			}
 
 			// create the resource
-			err = p.Create()
-			if err != nil {
+			createErr := p.Create()
+			if createErr != nil {
 				r.Info().Status = config.Failed
-				return diags.Append(err)
+				return diags.Append(createErr)
 			}
 
 			// set the status
 			r.Info().Status = config.Applied
-			createdResource = append(createdResource, r)
+
+			appendResources(&createdResource, r)
 		}
 
 		return nil
@@ -252,10 +255,10 @@ func (e *EngineImpl) Destroy(path string, allResources bool) error {
 			}
 
 			// execute
-			err = p.Destroy()
-			if err != nil {
+			destroyErr := p.Destroy()
+			if destroyErr != nil {
 				r.Info().Status = config.Failed
-				return diags.Append(err)
+				return diags.Append(destroyErr)
 			}
 
 			// set the status
@@ -404,4 +407,14 @@ func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
 	}
 
 	return nil
+}
+
+var crMutex = sync.Mutex{}
+
+// appends item to the resources slice in a thread safe way
+func appendResources(cr *[]config.Resource, r config.Resource) {
+	crMutex.Lock()
+	defer crMutex.Unlock()
+
+	*cr = append(*cr, r)
 }

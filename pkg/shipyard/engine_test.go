@@ -114,12 +114,12 @@ func TestApplyCallsProviderInCorrectOrder(t *testing.T) {
 	assert.Contains(t, []string{"k3s", "local_connector"}, (*mp)[1].Config().Info().Name)
 
 	// due to paralel nature of the DAG, these two elements can appear in any order
-	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "connector", "local_connector"}, (*mp)[2].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "connector", "local_connector"}, (*mp)[3].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "connector", "local_connector"}, (*mp)[4].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "connector", "local_connector"}, (*mp)[5].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "connector", "local_connector"}, (*mp)[6].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "connector", "local_connector"}, (*mp)[7].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "connector", "local_connector", "k3s"}, (*mp)[2].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "connector", "local_connector", "k3s"}, (*mp)[3].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "connector", "local_connector", "k3s"}, (*mp)[4].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "connector", "local_connector", "k3s"}, (*mp)[5].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "connector", "local_connector", "k3s"}, (*mp)[6].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "connector", "local_connector", "k3s"}, (*mp)[7].Config().Info().Name)
 }
 
 func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {

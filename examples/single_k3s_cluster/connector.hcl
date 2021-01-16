@@ -1,6 +1,6 @@
 container "local_connector" {
   image {
-    name = "shipyardrun/connector:v0.0.1"
+    name = "shipyardrun/connector:v0.0.10"
   }
 
   env_var = {
