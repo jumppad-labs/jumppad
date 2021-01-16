@@ -509,7 +509,7 @@ func (d *DockerTasks) CopyFromContainer(id, src, dst string) error {
 
 var importMutex = sync.Mutex{}
 
-// CopyLocalDockerImageToVolume writes multiple Docker images to a Docker volume as a compressed archive
+// CopyLocalDockerImageToVolume writes multiple Docker images to a Docker container as a compressed archive
 // returns the filename of the archive and an error if one occured
 func (d *DockerTasks) CopyLocalDockerImageToVolume(images []string, volume string, force bool) ([]string, error) {
 	d.l.Debug("Writing docker images to volume", "images", images, "volume", volume)
@@ -562,86 +562,17 @@ func (d *DockerTasks) CopyLocalDockerImageToVolume(images []string, volume strin
 		}
 
 		d.l.Debug("Copying image to container", "image", i)
-
-		// save the image to a local temp file
-		ir, err := d.c.ImageSave(context.Background(), []string{i})
+		imageFile, err := d.saveImageToTempFile(i, compressedImageName)
 		if err != nil {
-			return nil, xerrors.Errorf("unable to save images: %w", err)
-		}
-		defer ir.Close()
-
-		tmpDir, err := ioutil.TempDir("", "")
-		if err != nil {
-			return nil, xerrors.Errorf("unable to create temporary file: %w", err)
+			return nil, err
 		}
 
-		// create a temp file to hold the tar
-		tmpFile, err := os.Create(path.Join(tmpDir, compressedImageName))
+		// clean up after ourselfs
+		defer os.Remove(imageFile)
+
+		err = d.CopyFileToContainer(utils.FQDN(cc.Name, string(cc.Type)), imageFile, "/images")
 		if err != nil {
-			return nil, xerrors.Errorf("unable to create temporary file: %w", err)
-		}
-
-		defer func() {
-			tmpFile.Close()
-			os.Remove(tmpFile.Name())
-		}()
-
-		_, err = io.Copy(tmpFile, ir)
-		if err != nil {
-			return nil, xerrors.Errorf("unable to copy image to temp file: %w", err)
-		}
-
-		// set the seek pos back to 0
-		tmpFile.Seek(0, 0)
-
-		// create  temp file for a tar to contain the tar we just created
-		// CopyToContainer expects a tar which has individual file entries
-		// if we write the original file the output will not be a single file
-		// but the contents of the tar. To bypass this we need to add the output from
-		// save image to a tar
-		tmpTarFile, err := ioutil.TempFile("", "")
-		if err != nil {
-			return nil, xerrors.Errorf("unable to create temporary file: %w", err)
-		}
-
-		defer func() {
-			tmpTarFile.Close()
-			os.Remove(tmpTarFile.Name())
-		}()
-
-		_, err = io.Copy(tmpTarFile, ir)
-		if err != nil {
-			return nil, xerrors.Errorf("unable to copy image to temp file: %w", err)
-		}
-
-		ta := tar.NewWriter(tmpTarFile)
-
-		fi, _ := tmpFile.Stat()
-
-		hdr, err := tar.FileInfoHeader(fi, fi.Name())
-		if err != nil {
-			return nil, xerrors.Errorf("unable to create header for tar: %w", err)
-		}
-
-		// write the header to the tar file, this has to happen before the file
-		err = ta.WriteHeader(hdr)
-		if err != nil {
-			return nil, xerrors.Errorf("unable to write tar header: %w", err)
-		}
-
-		io.Copy(ta, tmpFile)
-		if err != nil {
-			return nil, xerrors.Errorf("unable to copy image to tar file: %w", err)
-		}
-
-		ta.Close()
-
-		// reset the file seek so we can copy to the container
-		tmpTarFile.Seek(0, 0)
-
-		err = d.c.CopyToContainer(context.Background(), utils.FQDN(cc.Name, string(cc.Type)), "/images", tmpTarFile, types.CopyToContainerOptions{})
-		if err != nil {
-			return nil, xerrors.Errorf("unable to copy file to container: %w", err)
+			return nil, err
 		}
 
 		savedImages = append(savedImages, compressedImageName)
@@ -649,6 +580,63 @@ func (d *DockerTasks) CopyLocalDockerImageToVolume(images []string, volume strin
 
 	// return the name of the archive
 	return savedImages, nil
+}
+
+// CopyFileToContainer copies the file at path filename to the container containerID and
+// stores it in the container at the path path.
+func (d *DockerTasks) CopyFileToContainer(containerID, filename, path string) error {
+	f, err := os.Open(filename)
+	if err != nil {
+		return xerrors.Errorf("unable to open file: %w", err)
+	}
+	defer f.Close()
+
+	// create temp file for a tar which will be used to package the file
+	// CopyToContainer expects a tar which has individual file entries
+	// if we write the original file the output will not be a single file
+	// but the contents of the tar. To bypass this we need to add the output from
+	// save image to a tar
+	tmpTarFile, err := ioutil.TempFile("", "")
+	if err != nil {
+		return xerrors.Errorf("unable to create temporary file: %w for tar achive", err)
+	}
+
+	defer func() {
+		tmpTarFile.Close()
+		os.Remove(tmpTarFile.Name())
+	}()
+
+	ta := tar.NewWriter(tmpTarFile)
+
+	fi, _ := f.Stat()
+
+	hdr, err := tar.FileInfoHeader(fi, fi.Name())
+	if err != nil {
+		return xerrors.Errorf("unable to create header for tar: %w", err)
+	}
+
+	// write the header to the tar file, this has to happen before the file
+	err = ta.WriteHeader(hdr)
+	if err != nil {
+		return xerrors.Errorf("unable to write tar header: %w", err)
+	}
+
+	io.Copy(ta, f)
+	if err != nil {
+		return xerrors.Errorf("unable to copy image to tar file: %w", err)
+	}
+
+	ta.Close()
+
+	// reset the file seek so we can copy to the container
+	tmpTarFile.Seek(0, 0)
+
+	err = d.c.CopyToContainer(context.Background(), containerID, path, tmpTarFile, types.CopyToContainerOptions{})
+	if err != nil {
+		return xerrors.Errorf("unable to copy file to container: %w", err)
+	}
+
+	return nil
 }
 
 // ExecuteCommand allows the execution of commands in a running docker container
@@ -925,11 +913,15 @@ func createPublishedPortRanges(ps []config.PortRange) (publishedPorts, error) {
 		end, eerr := strconv.Atoi(parts[1])
 
 		if serr != nil || eerr != nil {
-			return pp, fmt.Errorf("Invalid port range, range should be numbers and written start-end, e.g 80-82")
+			return pp, fmt.Errorf(
+				"Invalid port range, range should be numbers and written start-end, e.g 80-82",
+			)
 		}
 
 		if start > end {
-			return pp, fmt.Errorf("Invalid port range, start and end ports should be numeric and written start-end, e.g 80-82")
+			return pp, fmt.Errorf(
+				"Invalid port range, start and end ports should be numeric and written start-end, e.g 80-82",
+			)
 		}
 
 		// range is ok, generate ports
@@ -975,4 +967,36 @@ func makeImageCanonical(image string) string {
 	}
 
 	return image
+}
+
+// saveImageToTempFile saves a Docker image to a temporary tar file
+// it is the responsibility of the caller to remove the temporary file
+func (d *DockerTasks) saveImageToTempFile(image, filename string) (string, error) {
+	// save the image to a local temp file
+	ir, err := d.c.ImageSave(context.Background(), []string{image})
+	if err != nil {
+		return "", xerrors.Errorf("unable to save images: %w", err)
+	}
+	defer ir.Close()
+
+	tmpDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return "", xerrors.Errorf("unable to create temporary file: %w", err)
+	}
+
+	// create a temp file to hold the tar
+	tmpFileName := path.Join(tmpDir, filename)
+	tmpFile, err := os.Create(tmpFileName)
+	if err != nil {
+		return "", xerrors.Errorf("unable to create temporary file: %w", err)
+	}
+
+	defer tmpFile.Close()
+
+	_, err = io.Copy(tmpFile, ir)
+	if err != nil {
+		return "", xerrors.Errorf("unable to copy image to temp file: %w", err)
+	}
+
+	return tmpFileName, nil
 }

@@ -12,11 +12,11 @@ import (
 	"golang.org/x/xerrors"
 )
 
-const docsImageName = "registry.shipyard.run/docs"
-const docsVersion = "v0.1.0"
+const docsImageName = "shipyardrun/docs"
+const docsVersion = "v0.2.0"
 
-const terminalImageName = "registry.shipyard.run/terminal-server"
-const terminalVersion = "v0.1.0"
+const terminalImageName = "shipyardrun/terminal-server"
+const terminalVersion = "v0.2.0"
 
 // Docs defines a provider for creating documentation containers
 type Docs struct {
@@ -160,8 +160,8 @@ func (i *Docs) createTerminalContainer() error {
 	cc.Volumes = append(
 		cc.Volumes,
 		config.Volume{
-			Source:      utils.GetDockerSock(),
-			Destination: utils.GetDockerSock(),
+			Source:      utils.GetDockerHost(),
+			Destination: "/var/run/docker.sock",
 		},
 	)
 
