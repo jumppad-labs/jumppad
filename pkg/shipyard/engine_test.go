@@ -234,15 +234,15 @@ func TestDestroyCallsProviderDestroyInCorrectOrder(t *testing.T) {
 	assert.NoError(t, err)
 
 	// due to paralel nature of the DAG, these elements can appear in any order
-	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "local_connector"}, (*mp)[0].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "local_connector"}, (*mp)[1].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "local_connector"}, (*mp)[2].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "local_connector"}, (*mp)[3].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "local_connector"}, (*mp)[4].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "local_connector"}, (*mp)[5].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "local_connector", "k3s"}, (*mp)[0].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "local_connector", "k3s"}, (*mp)[1].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "local_connector", "k3s"}, (*mp)[2].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "local_connector", "k3s"}, (*mp)[3].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "local_connector", "k3s"}, (*mp)[4].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "local_connector", "k3s"}, (*mp)[5].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "local_connector", "k3s"}, (*mp)[6].Config().Info().Name)
 
-	// should have called in order
-	assert.Equal(t, "k3s", (*mp)[6].Config().Info().Name)
+	// should be last to be removed
 	assert.Equal(t, "cloud", (*mp)[7].Config().Info().Name)
 
 }
