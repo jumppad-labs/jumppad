@@ -40,7 +40,6 @@ func buildConnector(t *testing.T) string {
 
 		found := false
 		for _, f := range files {
-			fmt.Println("dir", dir, f.Name())
 			if strings.HasSuffix(f.Name(), "go.mod") {
 				fp, _ = filepath.Abs(dir)
 
@@ -86,7 +85,8 @@ func buildConnector(t *testing.T) string {
 
 var suiteTemp string
 var suiteBinary string
-var suiteOptions = ConnectorOptions{}
+var suiteCertBundle *CertBundle
+var suiteOptions ConnectorOptions
 
 func TestConnectorSuite(t *testing.T) {
 	suiteTemp = t.TempDir()
@@ -94,32 +94,39 @@ func TestConnectorSuite(t *testing.T) {
 
 	suiteOptions.LogDirectory = suiteTemp
 	suiteOptions.BinaryPath = suiteBinary
-	suiteOptions.RootCertPath = path.Join(suiteTemp, "root.cert")
-	suiteOptions.LeafCertPath = path.Join(suiteTemp, "leaf.cert")
-	suiteOptions.LeafKeyPath = path.Join(suiteTemp, "leaf.key")
 	suiteOptions.GrpcBind = fmt.Sprintf(":%d", rand.Intn(1000)+20000)
 	suiteOptions.HTTPBind = fmt.Sprintf(":%d", rand.Intn(1000)+20000)
 
-	t.Run("Starts generates certificates", testGenerateCreatesBundle)
+	t.Run("Generates certificates", testGenerateCreatesBundle)
+	t.Run("Fetches certificates", testFetchesLocalCertBundle)
 	t.Run("Starts Connector correctly", testStartsConnector)
 }
 
 func testGenerateCreatesBundle(t *testing.T) {
 	c := NewConnector(suiteOptions)
 
-	err := c.GenerateLocalBundle(suiteTemp)
+	var err error
+	suiteCertBundle, err = c.GenerateLocalCertBundle(suiteTemp)
 	assert.NoError(t, err)
 
-	assert.FileExists(t, path.Join(suiteTemp, "root.key"))
-	assert.FileExists(t, suiteOptions.RootCertPath)
-	assert.FileExists(t, suiteOptions.LeafKeyPath)
-	assert.FileExists(t, suiteOptions.LeafCertPath)
+	assert.FileExists(t, suiteCertBundle.RootCertPath)
+	assert.FileExists(t, suiteCertBundle.RootKeyPath)
+	assert.FileExists(t, suiteCertBundle.LeafKeyPath)
+	assert.FileExists(t, suiteCertBundle.LeafCertPath)
+}
+
+func testFetchesLocalCertBundle(t *testing.T) {
+	c := NewConnector(suiteOptions)
+
+	cb, err := c.GetLocalCertBundle(suiteTemp)
+	assert.NoError(t, err)
+	assert.NotNil(t, cb)
 }
 
 func testStartsConnector(t *testing.T) {
 	c := NewConnector(suiteOptions)
 
-	err := c.Start()
+	err := c.Start(suiteCertBundle)
 	assert.NoError(t, err)
 
 	// make sure we stop even if we fail

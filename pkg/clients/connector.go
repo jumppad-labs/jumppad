@@ -2,6 +2,7 @@ package clients
 
 import (
 	"fmt"
+	"os"
 	"path"
 
 	"github.com/shipyard-run/connector/crypto"
@@ -13,17 +14,22 @@ import (
 // Shipyard connector
 type Connector interface {
 	// Start the Connector, returns an error on failure
-	Start() error
+	Start(*CertBundle) error
 	// Stop the Connector, returns an error on failure
 	Stop() error
 	// IsRunning returns true when the Connector is running
 	IsRunning() bool
 
-	// GenerateLocalBundle generates a root CA and leaf certificate for
+	// GenerateLocalCertBundle generates a root CA and leaf certificate for
 	// securing connector communications for the local instance
 	// this function is a convenience function which wraps other
 	// methods
-	GenerateLocalBundle(out string) error
+	GenerateLocalCertBundle(out string) (*CertBundle, error)
+
+	// Fetches the local certificate bundle from the given directory
+	// if any of the required files do not exist an error and a nil
+	// CertBundle will be returned
+	GetLocalCertBundle(dir string) (*CertBundle, error)
 }
 
 var defaultArgs = []string{
@@ -44,7 +50,11 @@ type ConnectorOptions struct {
 	GrpcBind     string
 	HTTPBind     string
 	LogLevel     string
+}
+
+type CertBundle struct {
 	RootCertPath string
+	RootKeyPath  string
 	LeafCertPath string
 	LeafKeyPath  string
 }
@@ -55,7 +65,7 @@ func NewConnector(opts ConnectorOptions) Connector {
 }
 
 // Start the Connector, returns an error on failure
-func (c *ConnectorImpl) Start() error {
+func (c *ConnectorImpl) Start(cb *CertBundle) error {
 	lp := &gohup.LocalProcess{}
 	o := gohup.Options{
 		Path: c.options.BinaryPath,
@@ -64,9 +74,9 @@ func (c *ConnectorImpl) Start() error {
 			"run",
 			"--grpc-bind", c.options.GrpcBind,
 			"--http-bind", c.options.HTTPBind,
-			"--root-cert-path", c.options.RootCertPath,
-			"--server-cert-path", c.options.RootCertPath,
-			"--server-key-path", c.options.RootCertPath,
+			"--root-cert-path", cb.RootCertPath,
+			"--server-cert-path", cb.RootCertPath,
+			"--server-key-path", cb.RootCertPath,
 		},
 		Logfile: path.Join(c.options.LogDirectory, "connector.log"),
 	}
@@ -102,43 +112,50 @@ func (c *ConnectorImpl) IsRunning() bool {
 }
 
 // creates a CA and local leaf cert
-func (c *ConnectorImpl) GenerateLocalBundle(out string) error {
+func (c *ConnectorImpl) GenerateLocalCertBundle(out string) (*CertBundle, error) {
+	cb := &CertBundle{
+		RootCertPath: path.Join(out, "root.cert"),
+		RootKeyPath:  path.Join(out, "root.key"),
+		LeafCertPath: path.Join(out, "leaf.cert"),
+		LeafKeyPath:  path.Join(out, "leaf.key"),
+	}
+
+	fmt.Println(out)
+
 	// create the CA
 	rk, err := crypto.GenerateKeyPair()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ca, err := crypto.GenerateCA(rk.Private)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = rk.Private.WriteFile(path.Join(out, "root.key"))
+	err = rk.Private.WriteFile(cb.RootKeyPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = ca.WriteFile(path.Join(out, "root.cert"))
+	err = ca.WriteFile(cb.RootCertPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// generate a local cert
 	k, err := crypto.GenerateKeyPair()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = k.Private.WriteFile(path.Join(out, "leaf.key"))
+	err = k.Private.WriteFile(cb.LeafKeyPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ips := utils.GetLocalIPAddresses()
 	host := utils.GetHostname()
-
-	fmt.Println(ips, host)
 
 	lc, err := crypto.GenerateLeaf(
 		ips,
@@ -147,9 +164,49 @@ func (c *ConnectorImpl) GenerateLocalBundle(out string) error {
 		rk.Private,
 		k.Private)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = lc.WriteFile(path.Join(out, "leaf.cert"))
-	return nil
+	err = lc.WriteFile(cb.LeafCertPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return cb, nil
+}
+
+func (c *ConnectorImpl) GetLocalCertBundle(dir string) (*CertBundle, error) {
+	cb := &CertBundle{
+		RootCertPath: path.Join(dir, "root.cert"),
+		RootKeyPath:  path.Join(dir, "root.key"),
+		LeafCertPath: path.Join(dir, "leaf.cert"),
+		LeafKeyPath:  path.Join(dir, "leaf.key"),
+	}
+
+	// test to see if files exist
+	f1, err := os.Open(cb.RootCertPath)
+	if os.IsNotExist(err) {
+		return nil, fmt.Errorf("Unable to find root certificate")
+	}
+	defer f1.Close()
+
+	f2, err := os.Open(cb.RootKeyPath)
+	if os.IsNotExist(err) {
+		return nil, fmt.Errorf("Unable to find root key")
+	}
+	defer f2.Close()
+
+	f3, err := os.Open(cb.LeafCertPath)
+	if os.IsNotExist(err) {
+		return nil, fmt.Errorf("Unable to find leaf certificate")
+	}
+	defer f3.Close()
+
+	f4, err := os.Open(cb.LeafKeyPath)
+	if os.IsNotExist(err) {
+		return nil, fmt.Errorf("Unable to find leaf key")
+	}
+	defer f4.Close()
+
+	return cb, nil
 }
