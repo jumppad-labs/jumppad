@@ -35,6 +35,7 @@ type Clients struct {
 	Getter         clients.Getter
 	Browser        clients.System
 	ImageLog       clients.ImageLog
+	Connector      clients.Connector
 }
 
 // Engine defines an interface for the Shipyard engine
@@ -88,6 +89,9 @@ func GenerateClients(l hclog.Logger) (*Clients, error) {
 
 	ct := clients.NewDockerTasks(dc, il, l)
 
+	co := clients.DefaultConnectorOptions()
+	cc := clients.NewConnector(co)
+
 	return &Clients{
 		ContainerTasks: ct,
 		Docker:         dc,
@@ -100,6 +104,7 @@ func GenerateClients(l hclog.Logger) (*Clients, error) {
 		Getter:         bp,
 		Browser:        bc,
 		ImageLog:       il,
+		Connector:      cc,
 	}, nil
 }
 

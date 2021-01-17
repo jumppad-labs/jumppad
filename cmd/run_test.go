@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/shipyard-run/shipyard/pkg/clients"
 	clientmocks "github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
@@ -22,11 +23,12 @@ import (
 )
 
 type runMocks struct {
-	engine *mocks.Engine
-	getter *clientmocks.Getter
-	http   *clientmocks.MockHTTP
-	system *clientmocks.System
-	vm     *gvm.MockVersions
+	engine    *mocks.Engine
+	getter    *clientmocks.Getter
+	http      *clientmocks.MockHTTP
+	system    *clientmocks.System
+	vm        *gvm.MockVersions
+	connector *clients.ConnectorMock
 }
 
 func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
@@ -46,11 +48,23 @@ func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
 	mockTasks := &clientmocks.MockContainerTasks{}
 	mockTasks.On("SetForcePull", mock.Anything)
 
+	mockConnector := &clients.ConnectorMock{}
+	mockConnector.On("GetLocalCertBundle", mock.Anything).Return(
+		&clients.CertBundle{},
+		nil,
+	)
+
+	mockConnector.On("GenerateLocalCertBundle", mock.Anything).Return(
+		&clients.CertBundle{},
+		nil,
+	)
+
 	clients := &shipyard.Clients{
 		HTTP:           mockHTTP,
 		Getter:         mockGetter,
 		Browser:        mockSystem,
 		ContainerTasks: mockTasks,
+		Connector:      mockConnector,
 	}
 
 	mockEngine := &mocks.Engine{}
@@ -72,14 +86,15 @@ func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
 	vm.On("GetLatestReleaseURL", mock.Anything).Return("v1.0.0", "http://download.com", nil)
 
 	rm := &runMocks{
-		engine: mockEngine,
-		getter: mockGetter,
-		http:   mockHTTP,
-		system: mockSystem,
-		vm:     vm,
+		engine:    mockEngine,
+		getter:    mockGetter,
+		http:      mockHTTP,
+		system:    mockSystem,
+		vm:        vm,
+		connector: mockConnector,
 	}
 
-	cmd := newRunCmd(mockEngine, mockGetter, mockHTTP, mockSystem, vm, hclog.Default())
+	cmd := newRunCmd(mockEngine, mockGetter, mockHTTP, mockSystem, vm, mockConnector, hclog.Default())
 	cmd.SetOut(bytes.NewBuffer([]byte("")))
 
 	return cmd, rm
@@ -129,6 +144,39 @@ func TestRunOtherVersionPromptsInstallWhenNotInstalled(t *testing.T) {
 
 	rm.vm.AssertCalled(t, "ListInstalledVersions", version)
 	rm.vm.AssertCalled(t, "GetLatestReleaseURL", version)
+}
+
+func TestRunChecksForCertBundle(t *testing.T) {
+	rf, rm := setupRun(t, "")
+	rf.SetArgs([]string{"/tmp"})
+
+	err := rf.Execute()
+	assert.NoError(t, err)
+
+	rm.connector.AssertCalled(t, "GetLocalCertBundle", mock.Anything)
+}
+
+func TestRunNotGeneratesCertBundleWhenExist(t *testing.T) {
+	rf, rm := setupRun(t, "")
+	rf.SetArgs([]string{"/tmp"})
+
+	err := rf.Execute()
+	assert.NoError(t, err)
+
+	rm.connector.AssertNotCalled(t, "GenerateLocalCertBundle", mock.Anything)
+}
+
+func TestRunGeneratesCertBundleWhenNotExist(t *testing.T) {
+	rf, rm := setupRun(t, "")
+	rf.SetArgs([]string{"/tmp"})
+
+	removeOn(&rm.connector.Mock, "GetLocalCertBundle")
+	rm.connector.On("GetLocalCertBundle", mock.Anything).Return(nil, fmt.Errorf("boom"))
+
+	err := rf.Execute()
+	assert.NoError(t, err)
+
+	rm.connector.AssertCalled(t, "GenerateLocalCertBundle", mock.Anything)
 }
 
 func TestRunSetsDestinationFromArgsWhenPresent(t *testing.T) {

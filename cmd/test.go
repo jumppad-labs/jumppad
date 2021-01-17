@@ -243,6 +243,7 @@ func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
 		engine.GetClients().HTTP,
 		engine.GetClients().Browser,
 		vm,
+		engine.GetClients().Connector,
 		&noOpen,
 		cr.force,
 		&version,

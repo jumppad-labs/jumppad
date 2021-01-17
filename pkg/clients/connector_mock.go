@@ -7,8 +7,8 @@ type ConnectorMock struct {
 }
 
 // Start the Connector, returns an error on failure
-func (m *ConnectorMock) Start() error {
-	args := m.Called()
+func (m *ConnectorMock) Start(cb *CertBundle) error {
+	args := m.Called(cb)
 
 	return args.Error(0)
 }
@@ -34,11 +34,19 @@ func (m *ConnectorMock) IsRunning() bool {
 func (m *ConnectorMock) GenerateLocalCertBundle(out string) (*CertBundle, error) {
 	args := m.Called(out)
 
-	return args.Get(0).(*CertBundle), args.Error(1)
+	if cb, ok := args.Get(0).(*CertBundle); ok {
+		return cb, args.Error(1)
+	}
+
+	return nil, args.Error(1)
 }
 
-func (m *ConnectorMock) FetchLocalCertBundle(out string) (*CertBundle, error) {
+func (m *ConnectorMock) GetLocalCertBundle(out string) (*CertBundle, error) {
 	args := m.Called(out)
 
-	return args.Get(0).(*CertBundle), args.Error(1)
+	if cb, ok := args.Get(0).(*CertBundle); ok {
+		return cb, args.Error(1)
+	}
+
+	return nil, args.Error(1)
 }

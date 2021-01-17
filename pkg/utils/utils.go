@@ -144,7 +144,19 @@ func StateDir() string {
 // CertsDir returns the location of the certificates
 // used to secure the Shipyard ingress, usually $HOME/.shipyard/certs
 func CertsDir() string {
-	return fmt.Sprintf("%s/certs", ShipyardHome())
+	certs := fmt.Sprintf("%s/certs", ShipyardHome())
+	// create the folder if it does not exist
+	os.MkdirAll(certs, os.ModePerm)
+	return certs
+}
+
+// LogsDir returns the location of the logs
+// used to secure the Shipyard ingress, usually $HOME/.shipyard/logs
+func LogsDir() string {
+	logs := fmt.Sprintf("%s/logs", ShipyardHome())
+
+	os.MkdirAll(logs, os.ModePerm)
+	return logs
 }
 
 // StatePath returns the full path for the state file
@@ -263,7 +275,7 @@ func GetConnectorPIDFile() string {
 
 // GetConnectorLogFile returns the log file used by the connector
 func GetConnectorLogFile() string {
-	return filepath.Join(ShipyardHome(), "connector.log")
+	return filepath.Join(LogsDir(), "connector.log")
 }
 
 // GetShipyardBinaryPath returns the path to the running Shipyard binary

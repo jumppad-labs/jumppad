@@ -59,6 +59,17 @@ type CertBundle struct {
 	LeafKeyPath  string
 }
 
+func DefaultConnectorOptions() ConnectorOptions {
+	co := ConnectorOptions{}
+	co.LogDirectory = utils.LogsDir()
+	co.BinaryPath = utils.GetShipyardBinaryPath()
+	co.GrpcBind = ":30001"
+	co.HTTPBind = ":30002"
+	co.LogLevel = "info"
+
+	return co
+}
+
 // NewConnector creates a new connector with the given options
 func NewConnector(opts ConnectorOptions) Connector {
 	return &ConnectorImpl{options: opts}
