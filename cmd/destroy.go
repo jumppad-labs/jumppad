@@ -42,7 +42,7 @@ func newDestroyCmd(cc clients.Connector) *cobra.Command {
 			os.RemoveAll(utils.GetDataFolder(""))
 
 			// remove the certs
-			os.RemoveAll(utils.CertsDir())
+			os.RemoveAll(utils.CertsDir(""))
 
 			// shutdown ingress
 			if cc.IsRunning() {

@@ -50,3 +50,13 @@ func (m *ConnectorMock) GetLocalCertBundle(out string) (*CertBundle, error) {
 
 	return nil, args.Error(1)
 }
+
+func (m *ConnectorMock) GenerateLeafCert(privateKey, rootCA, hosts string, ips []string, dir string) (*CertBundle, error) {
+	args := m.Called(privateKey, rootCA, hosts, ips, dir)
+
+	if cb, ok := args.Get(0).(*CertBundle); ok {
+		return cb, args.Error(1)
+	}
+
+	return nil, args.Error(1)
+}

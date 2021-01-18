@@ -141,10 +141,10 @@ func StateDir() string {
 	return fmt.Sprintf("%s/state", ShipyardHome())
 }
 
-// CertsDir returns the location of the certificates
-// used to secure the Shipyard ingress, usually $HOME/.shipyard/certs
-func CertsDir() string {
-	certs := fmt.Sprintf("%s/certs", ShipyardHome())
+// CertsDir returns the location of the certificates for the given resource
+// used to secure the Shipyard ingress, usually rooted at $HOME/.shipyard/certs
+func CertsDir(name string) string {
+	certs := fmt.Sprintf("%s/certs/%s", ShipyardHome(), name)
 	// create the folder if it does not exist
 	os.MkdirAll(certs, os.ModePerm)
 	return certs

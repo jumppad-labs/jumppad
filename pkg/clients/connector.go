@@ -30,6 +30,9 @@ type Connector interface {
 	// if any of the required files do not exist an error and a nil
 	// CertBundle will be returned
 	GetLocalCertBundle(dir string) (*CertBundle, error)
+
+	// Generates a Leaf certificate for securing a connector
+	GenerateLeafCert(privateKey, rootCA, hosts string, ips []string, dir string) (*CertBundle, error)
 }
 
 var defaultArgs = []string{
@@ -153,38 +156,10 @@ func (c *ConnectorImpl) GenerateLocalCertBundle(out string) (*CertBundle, error)
 		return nil, err
 	}
 
-	// generate a local cert
-	k, err := crypto.GenerateKeyPair()
-	if err != nil {
-		return nil, err
-	}
-
-	os.Remove(cb.LeafKeyPath)
-	err = k.Private.WriteFile(cb.LeafKeyPath)
-	if err != nil {
-		return nil, err
-	}
-
 	ips := utils.GetLocalIPAddresses()
 	host := utils.GetHostname()
 
-	lc, err := crypto.GenerateLeaf(
-		ips,
-		[]string{"localhost", "*.shipyard.run", host},
-		ca,
-		rk.Private,
-		k.Private)
-	if err != nil {
-		return nil, err
-	}
-
-	os.Remove(cb.LeafCertPath)
-	err = lc.WriteFile(cb.LeafCertPath)
-	if err != nil {
-		return nil, err
-	}
-
-	return cb, nil
+	return c.GenerateLeafCert(cb.RootKeyPath, cb.RootCertPath, host, ips, out)
 }
 
 func (c *ConnectorImpl) GetLocalCertBundle(dir string) (*CertBundle, error) {
@@ -219,6 +194,62 @@ func (c *ConnectorImpl) GetLocalCertBundle(dir string) (*CertBundle, error) {
 		return nil, fmt.Errorf("Unable to find leaf key")
 	}
 	defer f4.Close()
+
+	return cb, nil
+}
+
+// GenerateLeafCert generates a x509 leaf certificate with the given details
+func (c *ConnectorImpl) GenerateLeafCert(
+	rootKey, rootCA, host string, ips []string, dir string) (*CertBundle, error) {
+
+	cb := &CertBundle{
+		RootCertPath: rootCA,
+		RootKeyPath:  rootKey,
+		LeafCertPath: path.Join(dir, "leaf.cert"),
+		LeafKeyPath:  path.Join(dir, "leaf.key"),
+	}
+
+	// load the root key
+	rk := &crypto.PrivateKey{}
+	err := rk.ReadFile(cb.RootKeyPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// load the ca
+	ca := &crypto.X509{}
+	err = ca.ReadFile(cb.RootCertPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// generate a local cert
+	k, err := crypto.GenerateKeyPair()
+	if err != nil {
+		return nil, err
+	}
+
+	os.Remove(cb.LeafKeyPath)
+	err = k.Private.WriteFile(cb.LeafKeyPath)
+	if err != nil {
+		return nil, err
+	}
+
+	lc, err := crypto.GenerateLeaf(
+		ips,
+		[]string{"localhost", "*.shipyard.run", host},
+		ca,
+		rk,
+		k.Private)
+	if err != nil {
+		return nil, err
+	}
+
+	os.Remove(cb.LeafCertPath)
+	err = lc.WriteFile(cb.LeafCertPath)
+	if err != nil {
+		return nil, err
+	}
 
 	return cb, nil
 }

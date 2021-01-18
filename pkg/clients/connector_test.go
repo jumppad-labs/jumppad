@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/rand"
+	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
@@ -99,6 +100,7 @@ func TestConnectorSuite(t *testing.T) {
 
 	t.Run("Generates certificates", testGenerateCreatesBundle)
 	t.Run("Fetches certificates", testFetchesLocalCertBundle)
+	t.Run("Generates a leaf certificate", testGenerateCreatesLeaf)
 	t.Run("Starts Connector correctly", testStartsConnector)
 }
 
@@ -121,6 +123,28 @@ func testFetchesLocalCertBundle(t *testing.T) {
 	cb, err := c.GetLocalCertBundle(suiteTemp)
 	assert.NoError(t, err)
 	assert.NotNil(t, cb)
+}
+
+func testGenerateCreatesLeaf(t *testing.T) {
+	c := NewConnector(suiteOptions)
+
+	certDir := path.Join(suiteTemp, "tester")
+	os.MkdirAll(certDir, os.ModePerm)
+
+	var err error
+	leafCertBundle, err := c.GenerateLeafCert(
+		suiteCertBundle.RootKeyPath,
+		suiteCertBundle.RootCertPath,
+		"tester",
+		[]string{"123.121.121.1"},
+		certDir,
+	)
+	assert.NoError(t, err)
+
+	assert.FileExists(t, leafCertBundle.RootCertPath)
+	assert.FileExists(t, leafCertBundle.RootKeyPath)
+	assert.FileExists(t, leafCertBundle.LeafKeyPath)
+	assert.FileExists(t, leafCertBundle.LeafCertPath)
 }
 
 func testStartsConnector(t *testing.T) {

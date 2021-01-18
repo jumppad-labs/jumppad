@@ -57,17 +57,14 @@ func setupServerRunTests(t *testing.T) string {
 	oh := os.Getenv("HOME")
 	os.Setenv("HOME", tmpDir)
 
-	// create the shipyard home folder and certs
-	os.MkdirAll(utils.CertsDir(), 0777)
-
-	setupGenerateCerts(t, utils.CertsDir())
+	setupGenerateCerts(t, utils.CertsDir(""))
 
 	t.Cleanup(func() {
 		os.Setenv("HOME", oh)
 		os.RemoveAll(tmpDir)
 	})
 
-	return utils.CertsDir()
+	return utils.CertsDir("")
 }
 
 func TestServerStarts(t *testing.T) {
