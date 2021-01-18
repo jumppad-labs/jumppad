@@ -72,7 +72,7 @@ func newPushCmd(ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTT
 }
 
 func pushK8sCluster(image string, c *config.K8sCluster, ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTTP, log hclog.Logger, force bool) error {
-	cl := providers.NewK8sCluster(c, ct, kc, ht, log)
+	cl := providers.NewK8sCluster(c, ct, kc, ht, nil, log)
 
 	// get the id of the cluster
 	ids, err := cl.Lookup()

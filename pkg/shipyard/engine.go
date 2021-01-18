@@ -171,7 +171,6 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 
 			// get the provider to create the resource
 			p := e.getProvider(r, e.clients)
-			fmt.Println(r.Info().Name, p)
 
 			if p == nil {
 				r.Info().Status = config.Failed
@@ -394,7 +393,7 @@ func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
 	case config.TypeIngress:
 		return providers.NewIngress(c.(*config.Ingress), cc.ContainerTasks, cc.Logger)
 	case config.TypeK8sCluster:
-		return providers.NewK8sCluster(c.(*config.K8sCluster), cc.ContainerTasks, cc.Kubernetes, cc.HTTP, cc.Logger)
+		return providers.NewK8sCluster(c.(*config.K8sCluster), cc.ContainerTasks, cc.Kubernetes, cc.HTTP, cc.Connector, cc.Logger)
 	case config.TypeK8sConfig:
 		return providers.NewK8sConfig(c.(*config.K8sConfig), cc.Kubernetes, cc.Logger)
 	case config.TypeK8sIngress:

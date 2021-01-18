@@ -59,6 +59,14 @@ func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
 		nil,
 	)
 
+	mockConnector.On("IsRunning").Return(
+		false,
+	)
+
+	mockConnector.On("Start", mock.Anything).Return(
+		nil,
+	)
+
 	clients := &shipyard.Clients{
 		HTTP:           mockHTTP,
 		Getter:         mockGetter,
@@ -171,12 +179,50 @@ func TestRunGeneratesCertBundleWhenNotExist(t *testing.T) {
 	rf.SetArgs([]string{"/tmp"})
 
 	removeOn(&rm.connector.Mock, "GetLocalCertBundle")
-	rm.connector.On("GetLocalCertBundle", mock.Anything).Return(nil, fmt.Errorf("boom"))
+	rm.connector.On("GetLocalCertBundle", mock.Anything).Return(nil, fmt.Errorf("boom")).Once()
+	rm.connector.On("GetLocalCertBundle", mock.Anything).Return(clients.CertBundle{}, nil).Once()
 
 	err := rf.Execute()
 	assert.NoError(t, err)
 
 	rm.connector.AssertCalled(t, "GenerateLocalCertBundle", mock.Anything)
+}
+
+func TestRunStartsConnectorWhenNotRunning(t *testing.T) {
+	rf, rm := setupRun(t, "")
+	rf.SetArgs([]string{"/tmp"})
+
+	err := rf.Execute()
+	assert.NoError(t, err)
+
+	rm.connector.AssertCalled(t, "Start", mock.Anything)
+}
+
+func TestRunDoesNotStartsConnectorWhenRunning(t *testing.T) {
+	rf, rm := setupRun(t, "")
+	rf.SetArgs([]string{"/tmp"})
+
+	removeOn(&rm.connector.Mock, "IsRunning")
+	rm.connector.On("IsRunning", mock.Anything).Return(true).Once()
+
+	err := rf.Execute()
+	assert.NoError(t, err)
+
+	rm.connector.AssertNotCalled(t, "Start", mock.Anything)
+}
+
+func TestRunConnectorStartErrorWhenGetCertBundleFails(t *testing.T) {
+	rf, rm := setupRun(t, "")
+	rf.SetArgs([]string{"/tmp"})
+
+	removeOn(&rm.connector.Mock, "GetLocalCertBundle")
+	rm.connector.On("GetLocalCertBundle", mock.Anything).Return(clients.CertBundle{}, nil).Once()
+	rm.connector.On("GetLocalCertBundle", mock.Anything).Return(nil, fmt.Errorf("boom")).Once()
+
+	err := rf.Execute()
+	assert.Error(t, err)
+
+	rm.connector.AssertNotCalled(t, "Start", mock.Anything)
 }
 
 func TestRunSetsDestinationFromArgsWhenPresent(t *testing.T) {

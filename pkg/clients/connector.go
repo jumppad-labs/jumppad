@@ -39,8 +39,6 @@ var defaultArgs = []string{
 
 // ConnectorImpl is a concrete implementation of the Connector interface
 type ConnectorImpl struct {
-	pid     int
-	pidfile string
 	options ConnectorOptions
 }
 
@@ -50,6 +48,7 @@ type ConnectorOptions struct {
 	GrpcBind     string
 	HTTPBind     string
 	LogLevel     string
+	PidFile      string
 }
 
 type CertBundle struct {
@@ -66,6 +65,7 @@ func DefaultConnectorOptions() ConnectorOptions {
 	co.GrpcBind = ":30001"
 	co.HTTPBind = ":30002"
 	co.LogLevel = "info"
+	co.PidFile = utils.GetConnectorPIDFile()
 
 	return co
 }
@@ -86,31 +86,28 @@ func (c *ConnectorImpl) Start(cb *CertBundle) error {
 			"--grpc-bind", c.options.GrpcBind,
 			"--http-bind", c.options.HTTPBind,
 			"--root-cert-path", cb.RootCertPath,
-			"--server-cert-path", cb.RootCertPath,
-			"--server-key-path", cb.RootCertPath,
+			"--server-cert-path", cb.LeafCertPath,
+			"--server-key-path", cb.LeafKeyPath,
 		},
 		Logfile: path.Join(c.options.LogDirectory, "connector.log"),
+		Pidfile: c.options.PidFile,
 	}
 
 	var err error
-	c.pid, c.pidfile, err = lp.Start(o)
-	if err != nil {
-		panic(err)
-	}
-
+	_, c.options.PidFile, err = lp.Start(o)
 	return err
 }
 
 // Stop the Connector, returns an error on failure
 func (c *ConnectorImpl) Stop() error {
 	lp := &gohup.LocalProcess{}
-	return lp.Stop(c.pidfile)
+	return lp.Stop(c.options.PidFile)
 }
 
 // IsRunning returns true when the Connector is running
 func (c *ConnectorImpl) IsRunning() bool {
 	lp := &gohup.LocalProcess{}
-	status, err := lp.QueryStatus(c.pidfile)
+	status, err := lp.QueryStatus(c.options.PidFile)
 	if err != nil {
 		return false
 	}
@@ -144,11 +141,13 @@ func (c *ConnectorImpl) GenerateLocalCertBundle(out string) (*CertBundle, error)
 		return nil, err
 	}
 
+	os.Remove(cb.RootKeyPath)
 	err = rk.Private.WriteFile(cb.RootKeyPath)
 	if err != nil {
 		return nil, err
 	}
 
+	os.Remove(cb.RootCertPath)
 	err = ca.WriteFile(cb.RootCertPath)
 	if err != nil {
 		return nil, err
@@ -160,6 +159,7 @@ func (c *ConnectorImpl) GenerateLocalCertBundle(out string) (*CertBundle, error)
 		return nil, err
 	}
 
+	os.Remove(cb.LeafKeyPath)
 	err = k.Private.WriteFile(cb.LeafKeyPath)
 	if err != nil {
 		return nil, err
@@ -178,6 +178,7 @@ func (c *ConnectorImpl) GenerateLocalCertBundle(out string) (*CertBundle, error)
 		return nil, err
 	}
 
+	os.Remove(cb.LeafCertPath)
 	err = lc.WriteFile(cb.LeafCertPath)
 	if err != nil {
 		return nil, err

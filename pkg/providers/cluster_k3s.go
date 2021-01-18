@@ -31,12 +31,13 @@ type K8sCluster struct {
 	client     clients.ContainerTasks
 	kubeClient clients.Kubernetes
 	httpClient clients.HTTP
+	connector  clients.Connector
 	log        hclog.Logger
 }
 
 // NewK8sCluster creates a new Kubernetes cluster provider
-func NewK8sCluster(c *config.K8sCluster, cc clients.ContainerTasks, kc clients.Kubernetes, hc clients.HTTP, l hclog.Logger) *K8sCluster {
-	return &K8sCluster{c, cc, kc, hc, l}
+func NewK8sCluster(c *config.K8sCluster, cc clients.ContainerTasks, kc clients.Kubernetes, hc clients.HTTP, co clients.Connector, l hclog.Logger) *K8sCluster {
+	return &K8sCluster{c, cc, kc, hc, co, l}
 }
 
 // Create implements interface method to create a cluster of the specified type
@@ -185,10 +186,10 @@ func (c *K8sCluster) createK3s() error {
 		return xerrors.Errorf("Error copying Kubernetes config: %w", err)
 	}
 
-  // replace the server location in the kubeconfig file
-  // and write to $HOME/.shipyard/config/[clustername]/kubeconfig.yml
-  // we need to do this as Shipyard might be using a remote Docker engine
-  config, err := c.createLocalKubeConfig(kc)
+	// replace the server location in the kubeconfig file
+	// and write to $HOME/.shipyard/config/[clustername]/kubeconfig.yml
+	// we need to do this as Shipyard might be using a remote Docker engine
+	config, err := c.createLocalKubeConfig(kc)
 	if err != nil {
 		return xerrors.Errorf("Error creating Local Kubernetes config: %w", err)
 	}
@@ -233,6 +234,10 @@ func (c *K8sCluster) createK3s() error {
 		}
 	}
 
+	// start the connectorService
+	c.log.Debug("Deploying connector")
+	c.deployConnector()
+
 	return nil
 }
 
@@ -271,7 +276,7 @@ func (c *K8sCluster) waitForStart(id string) error {
 
 func (c *K8sCluster) copyKubeConfig(id string) (string, error) {
 	// create destination kubeconfig file paths
-  out := path.Join(os.TempDir(), "kubeconfig.yaml")
+	out := path.Join(os.TempDir(), "kubeconfig.yaml")
 
 	// get kubeconfig file from container and read contents
 	err := c.client.CopyFromContainer(id, "/output/kubeconfig.yaml", out)
@@ -283,32 +288,32 @@ func (c *K8sCluster) copyKubeConfig(id string) (string, error) {
 }
 
 func (c *K8sCluster) createLocalKubeConfig(kubeconfig string) (string, error) {
-  ip := utils.GetDockerIP()
+	ip := utils.GetDockerIP()
 	_, kubePath, _ := utils.CreateKubeConfigPath(c.config.Name)
 
-  err := c.changeServerAddressInK8sConfig(
+	err := c.changeServerAddressInK8sConfig(
 		fmt.Sprintf("https://%s", ip),
-    kubeconfig,
-    kubePath,
-  )
-  if err != nil {
-    return "", err
-  }
+		kubeconfig,
+		kubePath,
+	)
+	if err != nil {
+		return "", err
+	}
 
-  return kubePath, nil
+	return kubePath, nil
 }
 
 func (c *K8sCluster) createDockerKubeConfig(kubeconfig string) error {
 	_, _, dockerPath := utils.CreateKubeConfigPath(c.config.Name)
 
-  return c.changeServerAddressInK8sConfig(
+	return c.changeServerAddressInK8sConfig(
 		fmt.Sprintf("https://server.%s", utils.FQDN(c.config.Name, string(c.config.Type))),
-    kubeconfig,
-    dockerPath,
-  )
+		kubeconfig,
+		dockerPath,
+	)
 }
 
-func (c*K8sCluster) changeServerAddressInK8sConfig(addr, origFile, newFile string) error {
+func (c *K8sCluster) changeServerAddressInK8sConfig(addr, origFile, newFile string) error {
 	// read the config into a string
 	f, err := os.OpenFile(origFile, os.O_RDONLY, 0666)
 	if err != nil {
@@ -325,11 +330,11 @@ func (c*K8sCluster) changeServerAddressInK8sConfig(addr, origFile, newFile strin
 	newConfig := strings.Replace(
 		string(readBytes),
 		"server: https://127.0.0.1",
-    fmt.Sprintf("server: %s",addr),
+		fmt.Sprintf("server: %s", addr),
 		-1,
 	)
 
-  kubeconfigfile, err := os.Create(newFile)
+	kubeconfigfile, err := os.Create(newFile)
 	if err != nil {
 		return fmt.Errorf("Couldn't create kubeconfig file %s\n%+v", newFile, err)
 	}
@@ -337,7 +342,22 @@ func (c*K8sCluster) changeServerAddressInK8sConfig(addr, origFile, newFile strin
 	defer kubeconfigfile.Close()
 	kubeconfigfile.Write([]byte(newConfig))
 
-  return nil
+	return nil
+}
+
+// deployConnector deploys the connector service to the cluster
+// once it has started
+func (c *K8sCluster) deployConnector() error {
+
+	// generate the certificates for the service
+
+	// copy the certificates to the container
+
+	// deploy the application config
+
+	// wait for it to start
+
+	return nil
 }
 
 // ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
@@ -397,3 +417,117 @@ func (c *K8sCluster) destroyK3s() error {
 
 	return nil
 }
+
+var connectorDeployment = `
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: connector-deployment
+  namespace: shipyard
+  labels:
+    app: connector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: connector
+  template:
+    metadata:
+      labels:
+        app: connector
+    spec:
+      serviceAccountName: connector
+      containers:
+      - name: connector
+        imagePullPolicy: IfNotPresent
+        image: registry.shipyard.run/connector:dev
+        ports:
+          - name: http
+            containerPort: 9091
+          - name: grpc
+            containerPort: 9090
+        command: ["/connector", "run"]
+        args: [
+          "--log-level=debug",
+          "--root-cert-path=/etc/connector/tls/ca/tls.crt",
+          "--server-cert-path=/etc/connector/tls/leaf/tls.crt",
+          "--server-key-path=/etc/connector/tls/leaf/tls.key",
+          "--integration=kubernetes"
+        ]
+        volumeMounts:
+          - mountPath: "/etc/connector/tls/ca"
+            name: connector-tls-ca
+            readOnly: true
+          - mountPath: "/etc/connector/tls/leaf"
+            name: connector-tls-leaf
+            readOnly: true
+      volumes:
+      - name: connector-tls-ca
+        secret:
+          secretName: connector-tls-ca
+      - name: connector-tls-leaf
+        secret:
+          secretName: connector-tls-leaf
+`
+
+var connectorService = `
+apiVersion: v1
+kind: Service
+metadata:
+  name: connector
+  namespace: shipyard
+spec:
+  selector:
+    app: connector
+  ports:
+    - port: 19090
+      targetPort: 9090
+      name: http
+    - port: 19091
+      targetPort: 9091
+      name: grpc
+`
+
+var connectorRbac = `
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: service-creator
+  namespace: shipyard
+rules:
+- apiGroups: [""]
+  resources: ["services", "endpoints", "pods"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+# This cluster role binding allows anyone in the "manager" group to read secrets in any namespace.
+kind: ClusterRoleBinding
+metadata:
+  name: service-creator-global
+  namespace: shipyard
+subjects:
+  - kind: ServiceAccount
+    name: connector
+    namespace: shipyard
+roleRef:
+  kind: ClusterRole
+  name: service-creator
+  apiGroup: rbac.authorization.k8s.io
+
+`
+
+var connectorNamespace = `
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: shipyard
+`
+
+var connectorServiceAccount = `
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: connector
+  namespace: shipyard
+`

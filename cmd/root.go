@@ -48,7 +48,7 @@ func init() {
 	rootCmd.AddCommand(pauseCmd)
 	rootCmd.AddCommand(resumeCmd)
 	rootCmd.AddCommand(newGetCmd(engineClients.Getter))
-	rootCmd.AddCommand(destroyCmd)
+	rootCmd.AddCommand(newDestroyCmd(engineClients.Connector))
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(newPurgeCmd(engineClients.Docker, engineClients.ImageLog, logger))
 	rootCmd.AddCommand(taintCmd)

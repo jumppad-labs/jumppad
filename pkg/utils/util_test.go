@@ -224,6 +224,12 @@ func TestBlueprintLocalFolder(t *testing.T) {
 }
 
 func TestDockerHostWithDefaultReturnsCorrectValue(t *testing.T) {
+	dh := os.Getenv("DOCKER_HOST")
+	os.Unsetenv("DOCKER_HOST")
+	t.Cleanup(func() {
+		os.Setenv("DOCKER_HOST", dh)
+	})
+
 	ds := GetDockerHost()
 	assert.Equal(t, "/var/run/docker.sock", ds)
 }

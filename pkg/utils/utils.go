@@ -213,7 +213,6 @@ func GetBlueprintFolder(blueprint string) (string, error) {
 	parts := strings.Split(blueprint, "//")
 
 	if parts == nil || len(parts) != 2 {
-		fmt.Println(parts)
 		return "", InvalidBlueprintURIError
 	}
 
@@ -292,7 +291,6 @@ func GetShipyardBinaryPath() string {
 			}
 
 			for _, f := range files {
-				fmt.Println("dir", dir, f.Name())
 				if strings.HasSuffix(f.Name(), "go.mod") {
 					fp, _ := filepath.Abs(dir)
 
@@ -310,9 +308,8 @@ func GetShipyardBinaryPath() string {
 	if err != nil {
 		panic(err)
 	}
-	exePath := filepath.Dir(ex)
 
-	return exePath
+	return ex
 }
 
 // returns the hostname for the current machine
@@ -334,8 +331,8 @@ func GetLocalIPAddresses() []string {
 	addresses := []string{}
 	for _, a := range addrs {
 		ip, _, err := net.ParseCIDR(a.String())
-		if err != nil {
-			addresses = append(addresses, string(ip))
+		if err == nil {
+			addresses = append(addresses, fmt.Sprintf("%s", ip))
 		}
 	}
 
