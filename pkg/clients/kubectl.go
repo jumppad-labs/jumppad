@@ -69,6 +69,12 @@ func (k *KubernetesImpl) setConfig() error {
 		return err
 	}
 
+	// Set insecure as the k3s certs sometimes have missing ips
+	// when using a remote Docker
+	config.TLSClientConfig.Insecure = true
+	config.TLSClientConfig.CAFile = ""
+	config.TLSClientConfig.CAData = nil
+
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return err

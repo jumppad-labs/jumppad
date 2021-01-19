@@ -32,7 +32,7 @@ type Connector interface {
 	GetLocalCertBundle(dir string) (*CertBundle, error)
 
 	// Generates a Leaf certificate for securing a connector
-	GenerateLeafCert(privateKey, rootCA, hosts string, ips []string, dir string) (*CertBundle, error)
+	GenerateLeafCert(privateKey, rootCA string, hosts []string, ips []string, dir string) (*CertBundle, error)
 }
 
 var defaultArgs = []string{
@@ -91,6 +91,7 @@ func (c *ConnectorImpl) Start(cb *CertBundle) error {
 			"--root-cert-path", cb.RootCertPath,
 			"--server-cert-path", cb.LeafCertPath,
 			"--server-key-path", cb.LeafKeyPath,
+			"--log-level", "debug",
 		},
 		Logfile: path.Join(c.options.LogDirectory, "connector.log"),
 		Pidfile: c.options.PidFile,
@@ -157,7 +158,7 @@ func (c *ConnectorImpl) GenerateLocalCertBundle(out string) (*CertBundle, error)
 	}
 
 	ips := utils.GetLocalIPAddresses()
-	host := utils.GetHostname()
+	host := []string{utils.GetHostname()}
 
 	return c.GenerateLeafCert(cb.RootKeyPath, cb.RootCertPath, host, ips, out)
 }
@@ -200,7 +201,7 @@ func (c *ConnectorImpl) GetLocalCertBundle(dir string) (*CertBundle, error) {
 
 // GenerateLeafCert generates a x509 leaf certificate with the given details
 func (c *ConnectorImpl) GenerateLeafCert(
-	rootKey, rootCA, host string, ips []string, dir string) (*CertBundle, error) {
+	rootKey, rootCA string, host, ips []string, dir string) (*CertBundle, error) {
 
 	cb := &CertBundle{
 		RootCertPath: rootCA,
@@ -235,9 +236,12 @@ func (c *ConnectorImpl) GenerateLeafCert(
 		return nil, err
 	}
 
+	hosts := []string{"localhost", "*.shipyard.run", ":30001"}
+	hosts = append(hosts, host...)
+
 	lc, err := crypto.GenerateLeaf(
 		ips,
-		[]string{"localhost", "*.shipyard.run", host},
+		hosts,
 		ca,
 		rk,
 		k.Private)

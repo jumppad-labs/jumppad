@@ -259,12 +259,16 @@ func GetDockerIP() string {
 		if strings.HasPrefix(dh, "tcp://") {
 			u, err := url.Parse(dh)
 			if err == nil {
-				return strings.Split(u.Host, ":")[0]
+				host := strings.Split(u.Host, ":")[0]
+				ip, err := net.LookupHost(host)
+				if err == nil && len(ip) > 0 {
+					return ip[0]
+				}
 			}
 		}
 	}
 
-	return "localhost"
+	return "127.0.0.1"
 }
 
 // GetConnectorPIDFile returns the connector PID file used by the connector

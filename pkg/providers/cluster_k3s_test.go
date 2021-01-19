@@ -57,6 +57,14 @@ func setupClusterMocks(t *testing.T) (
 	mk.Mock.On("HealthCheckPods", mock.Anything, mock.Anything).Return(nil)
 
 	mc := &clients.ConnectorMock{}
+	mc.On("GetLocalCertBundle", mock.Anything).Return(&clients.CertBundle{}, nil)
+	mc.On("GenerateLeafCert",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(&clients.CertBundle{}, nil)
 
 	// copy the config
 	cc := *clusterConfig
@@ -385,6 +393,25 @@ func TestClusterK3sImportDockerExecFailReturnsError(t *testing.T) {
 
 	err := p.Create()
 	assert.Error(t, err)
+}
+
+func TestClusterK3sGeneratesCertsForConnector(t *testing.T) {
+	cc, md, mk, mc := setupClusterMocks(t)
+
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	mc.AssertCalled(t, "GetLocalCertBundle", mock.Anything)
+	mc.AssertCalled(t,
+		"GenerateLeafCert",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	)
 }
 
 // Destroy Tests

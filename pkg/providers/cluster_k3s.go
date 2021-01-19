@@ -2,6 +2,7 @@ package providers
 
 import (
 	"bytes"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -124,8 +125,7 @@ func (c *K8sCluster) createK3s() error {
 
 	// set the API server port to a random number 64000 - 65000
 	apiPort := rand.Intn(1000) + 64000
-	connectorPort := rand.Intn(1000) + 64000
-	connectorHTTPPort := rand.Intn(1000) + 64000
+	connectorPort := rand.Intn(2767) + 30000
 	args := []string{"server", fmt.Sprintf("--https-listen-port=%d", apiPort)}
 
 	// save the config
@@ -151,13 +151,13 @@ func (c *K8sCluster) createK3s() error {
 			Protocol: "tcp",
 		},
 		config.Port{
-			Local:    "30000",
+			Local:    fmt.Sprintf("%d", connectorPort),
 			Host:     fmt.Sprintf("%d", connectorPort),
 			Protocol: "tcp",
 		},
 		config.Port{
-			Local:    "30001",
-			Host:     fmt.Sprintf("%d", connectorHTTPPort),
+			Local:    fmt.Sprintf("%d", connectorPort+1),
+			Host:     fmt.Sprintf("%d", connectorPort+1),
 			Protocol: "tcp",
 		},
 	}
@@ -236,9 +236,7 @@ func (c *K8sCluster) createK3s() error {
 
 	// start the connectorService
 	c.log.Debug("Deploying connector")
-	c.deployConnector()
-
-	return nil
+	return c.deployConnector(connectorPort, connectorPort+1)
 }
 
 func (c *K8sCluster) waitForStart(id string) error {
@@ -347,15 +345,78 @@ func (c *K8sCluster) changeServerAddressInK8sConfig(addr, origFile, newFile stri
 
 // deployConnector deploys the connector service to the cluster
 // once it has started
-func (c *K8sCluster) deployConnector() error {
-
+func (c *K8sCluster) deployConnector(grpcPort, httpPort int) error {
 	// generate the certificates for the service
+	cb, err := c.connector.GetLocalCertBundle(utils.CertsDir(""))
+	if err != nil {
+		return fmt.Errorf("Unable to fetch root certificates for ingress: %s", err)
+	}
 
-	// copy the certificates to the container
+	// generate the leaf certificates ensuring that we add
+	// the ip address for the docker hosts as this might not be local
+	lf, err := c.connector.GenerateLeafCert(
+		cb.RootKeyPath,
+		cb.RootCertPath,
+		[]string{
+			"connector",
+			fmt.Sprintf("%s:%d", utils.GetDockerIP(), grpcPort),
+		},
+		[]string{utils.GetDockerIP()},
+		utils.CertsDir(c.config.Name))
+
+	if err != nil {
+		return fmt.Errorf("Unable to generate leaf certificates for ingress: %s", err)
+	}
+
+	// create a temp directory to write config to
+	dir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return fmt.Errorf("Unable to create temporary directory: %s", err)
+	}
+
+	defer os.RemoveAll(dir)
+
+	files := []string{}
+
+	files = append(files, path.Join(dir, "namespace.yaml"))
+	c.log.Debug("Writing namespace config", "file", files[0])
+	err = writeConnectorNamespace(files[0])
+	if err != nil {
+		return fmt.Errorf("Unable to create namespace for connector: %s", err)
+	}
+
+	files = append(files, path.Join(dir, "secret.yaml"))
+	c.log.Debug("Writing secret config", "file", files[1])
+	writeConnectorK8sSecret(files[1], lf.RootCertPath, lf.LeafKeyPath, lf.LeafCertPath)
+	if err != nil {
+		return fmt.Errorf("Unable to create secret for connector: %s", err)
+	}
+
+	files = append(files, path.Join(dir, "rbac.yaml"))
+	c.log.Debug("Writing RBAC config", "file", files[2])
+	writeConnectorRBAC(files[2])
+	if err != nil {
+		return fmt.Errorf("Unable to create RBAC for connector: %s", err)
+	}
+
+	files = append(files, path.Join(dir, "deployment.yaml"))
+	c.log.Debug("Writing deployment config", "file", files[3])
+	writeConnectorDeployment(files[3], grpcPort, httpPort)
+	if err != nil {
+		return fmt.Errorf("Unable to create deployment for connector: %s", err)
+	}
 
 	// deploy the application config
+	err = c.kubeClient.Apply(files, true)
+	if err != nil {
+		return fmt.Errorf("Unable to apply configuration: %s", err)
+	}
 
 	// wait for it to start
+	c.kubeClient.HealthCheckPods([]string{"app=connector"}, 60*time.Second)
+	if err != nil {
+		return fmt.Errorf("Error waiting for connector to start: %s", err)
+	}
 
 	return nil
 }
@@ -418,7 +479,79 @@ func (c *K8sCluster) destroyK3s() error {
 	return nil
 }
 
+func writeConnectorNamespace(path string) error {
+	return ioutil.WriteFile(path, []byte(connectorNamespace), os.ModePerm)
+}
+
+// writeK8sSecret writes a Kubernetes secret yaml to a file
+func writeConnectorK8sSecret(path, root, key, cert string) error {
+	// load the key and base64 encode
+	kd, err := ioutil.ReadFile(key)
+	if err != nil {
+		return err
+	}
+
+	kb := base64.StdEncoding.EncodeToString(kd)
+
+	// load the cert and base64 encode
+	cd, err := ioutil.ReadFile(cert)
+	if err != nil {
+		return err
+	}
+
+	cb := base64.StdEncoding.EncodeToString(cd)
+
+	// load the root cert and base64 encode
+	rd, err := ioutil.ReadFile(root)
+	if err != nil {
+		return err
+	}
+
+	rb := base64.StdEncoding.EncodeToString(rd)
+
+	return ioutil.WriteFile(path, []byte(
+		fmt.Sprintf(connectorSecret, rb, cb, kb),
+	), os.ModePerm)
+}
+
+func writeConnectorDeployment(path string, grpc, http int) error {
+	return ioutil.WriteFile(path, []byte(
+		fmt.Sprintf(connectorDeployment, grpc, http),
+	), os.ModePerm)
+}
+
+func writeConnectorRBAC(path string) error {
+	return ioutil.WriteFile(path, []byte(connectorRBAC), os.ModePerm)
+}
+
 var connectorDeployment = `
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: connector
+  namespace: shipyard
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: connector
+  namespace: shipyard
+spec:
+  type: NodePort
+  selector:
+    app: connector
+  ports:
+    - port: 9090
+      nodePort: %d
+      targetPort: 9090
+      name: grpc
+    - port: 9091
+      nodePort: %d
+      targetPort: 9091
+      name: http
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -440,55 +573,31 @@ spec:
       containers:
       - name: connector
         imagePullPolicy: IfNotPresent
-        image: registry.shipyard.run/connector:dev
+        image: shipyardrun/connector:v0.0.10
         ports:
-          - name: http
-            containerPort: 9091
           - name: grpc
             containerPort: 9090
+          - name: http
+            containerPort: 9091
         command: ["/connector", "run"]
         args: [
           "--log-level=debug",
-          "--root-cert-path=/etc/connector/tls/ca/tls.crt",
-          "--server-cert-path=/etc/connector/tls/leaf/tls.crt",
-          "--server-key-path=/etc/connector/tls/leaf/tls.key",
+          "--root-cert-path=/etc/connector/tls/root.crt",
+          "--server-cert-path=/etc/connector/tls/tls.crt",
+          "--server-key-path=/etc/connector/tls/tls.key",
           "--integration=kubernetes"
         ]
         volumeMounts:
-          - mountPath: "/etc/connector/tls/ca"
-            name: connector-tls-ca
-            readOnly: true
-          - mountPath: "/etc/connector/tls/leaf"
-            name: connector-tls-leaf
+          - mountPath: "/etc/connector/tls"
+            name: connector-tls
             readOnly: true
       volumes:
-      - name: connector-tls-ca
+      - name: connector-tls
         secret:
-          secretName: connector-tls-ca
-      - name: connector-tls-leaf
-        secret:
-          secretName: connector-tls-leaf
+          secretName: connector-certs
 `
 
-var connectorService = `
-apiVersion: v1
-kind: Service
-metadata:
-  name: connector
-  namespace: shipyard
-spec:
-  selector:
-    app: connector
-  ports:
-    - port: 19090
-      targetPort: 9090
-      name: http
-    - port: 19091
-      targetPort: 9091
-      name: grpc
-`
-
-var connectorRbac = `
+var connectorRBAC = `
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -514,7 +623,6 @@ roleRef:
   kind: ClusterRole
   name: service-creator
   apiGroup: rbac.authorization.k8s.io
-
 `
 
 var connectorNamespace = `
@@ -524,10 +632,14 @@ metadata:
   name: shipyard
 `
 
-var connectorServiceAccount = `
+var connectorSecret = `
 apiVersion: v1
-kind: ServiceAccount
+data:
+  root.crt: %s
+  tls.crt: %s
+  tls.key: %s
+kind: Secret
 metadata:
-  name: connector
+  name: connector-certs
   namespace: shipyard
 `
