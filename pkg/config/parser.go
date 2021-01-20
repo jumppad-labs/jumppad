@@ -451,6 +451,16 @@ func ParseHCLFile(file string, c *Config) error {
 
 			c.AddResource(i)
 
+		case string(TypeLocalIngress):
+			i := NewLocalIngress(b.Labels[0])
+
+			err := decodeBody(file, b, i)
+			if err != nil {
+				return err
+			}
+
+			c.AddResource(i)
+
 		case string(TypeSidecar):
 			s := NewSidecar(b.Labels[0])
 
@@ -649,6 +659,12 @@ func ParseReferences(c *Config) error {
 		case TypeNomadJob:
 			c := r.(*NomadJob)
 			c.DependsOn = append(c.DependsOn, c.Cluster)
+
+		case TypeLocalIngress:
+			c := r.(*LocalIngress)
+			c.DependsOn = append(c.DependsOn, c.Target)
+			c.DependsOn = append(c.DependsOn, c.Depends...)
+
 			c.DependsOn = append(c.DependsOn, c.Depends...)
 		}
 	}
@@ -685,14 +701,14 @@ func buildContext() *hcl.EvalContext {
 		},
 	})
 
-  var DockerIPFunc = function.New(&function.Spec{
+	var DockerIPFunc = function.New(&function.Spec{
 		Type: function.StaticReturnType(cty.String),
 		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
 			return cty.StringVal(utils.GetDockerIP()), nil
 		},
 	})
 
-  var DockerHostFunc = function.New(&function.Spec{
+	var DockerHostFunc = function.New(&function.Spec{
 		Type: function.StaticReturnType(cty.String),
 		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
 			return cty.StringVal(utils.GetDockerHost()), nil

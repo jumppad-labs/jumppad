@@ -130,7 +130,7 @@ func (c *K8sCluster) createK3s() error {
 
 	// save the config
 	clusterConfig := clients.ClusterConfig{
-		LocalAddress:  "localhost",
+		LocalAddress:  utils.GetDockerIP(),
 		RemoteAddress: fmt.Sprintf("server.%s", c.config.Name),
 		APIPort:       apiPort,
 		ConnectorPort: connectorPort,

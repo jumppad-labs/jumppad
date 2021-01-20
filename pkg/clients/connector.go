@@ -1,13 +1,20 @@
 package clients
 
 import (
+	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 
 	"github.com/shipyard-run/connector/crypto"
+	"github.com/shipyard-run/connector/protos/shipyard"
 	"github.com/shipyard-run/gohup"
 	"github.com/shipyard-run/shipyard/pkg/utils"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 // Connector defines a client which can be used for interfacing with the
@@ -32,7 +39,23 @@ type Connector interface {
 	GetLocalCertBundle(dir string) (*CertBundle, error)
 
 	// Generates a Leaf certificate for securing a connector
-	GenerateLeafCert(privateKey, rootCA string, hosts []string, ips []string, dir string) (*CertBundle, error)
+	GenerateLeafCert(
+		privateKey, rootCA string,
+		hosts, ips []string,
+		dir string) (*CertBundle, error)
+
+	// ExposeService allows you to expose a local or remote
+	// service with another connector
+	ExposeService(
+		name string,
+		port int,
+		remoteAddr string,
+		destAddr string,
+		direction string,
+	) (string, error)
+
+	// RemoveService removes a previously exposed service
+	RemoveService(id string) error
 }
 
 var defaultArgs = []string{
@@ -158,7 +181,7 @@ func (c *ConnectorImpl) GenerateLocalCertBundle(out string) (*CertBundle, error)
 	}
 
 	ips := utils.GetLocalIPAddresses()
-	host := []string{utils.GetHostname()}
+	host := []string{utils.GetHostname(), "localhost:30001", "localhost:30002"}
 
 	return c.GenerateLeafCert(cb.RootKeyPath, cb.RootCertPath, host, ips, out)
 }
@@ -256,4 +279,104 @@ func (c *ConnectorImpl) GenerateLeafCert(
 	}
 
 	return cb, nil
+}
+
+// ExposeService allows you to expose a local or remote
+// service with another connector
+func (c *ConnectorImpl) ExposeService(
+	name string,
+	port int,
+	remoteAddr string,
+	destAddr string,
+	direction string,
+) (string, error) {
+
+	cb, err := c.GetLocalCertBundle(utils.CertsDir(""))
+	if err != nil {
+		return "", err
+	}
+
+	cl, err := getClient(cb, "localhost:30001")
+	if err != nil {
+		return "", err
+	}
+
+	t := shipyard.ServiceType_LOCAL
+	if direction == "remote" {
+		t = shipyard.ServiceType_REMOTE
+	}
+
+	r := &shipyard.ExposeRequest{}
+	r.Service = &shipyard.Service{
+		Name:                name,
+		RemoteConnectorAddr: remoteAddr,
+		DestinationAddr:     destAddr,
+		SourcePort:          int32(port),
+		Type:                t,
+	}
+
+	er, err := cl.ExposeService(context.Background(), r)
+	if err != nil {
+		return "", err
+	}
+
+	return er.Id, nil
+}
+
+// RemoveService removes a previously exposed service
+func (c *ConnectorImpl) RemoveService(id string) error {
+	cb, err := c.GetLocalCertBundle(utils.CertsDir(""))
+	if err != nil {
+		return err
+	}
+
+	cl, err := getClient(cb, "localhost:30001")
+	if err != nil {
+		return err
+	}
+
+	r := &shipyard.DestroyRequest{}
+	r.Id = id
+
+	_, err = cl.DestroyService(context.Background(), r)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getClient(cert *CertBundle, uri string) (shipyard.RemoteConnectionClient, error) {
+	// if we are using TLS create a TLS client
+	certificate, err := tls.LoadX509KeyPair(cert.LeafCertPath, cert.LeafKeyPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a certificate pool from the certificate authority
+	certPool := x509.NewCertPool()
+	ca, err := ioutil.ReadFile(cert.RootCertPath)
+	if err != nil {
+		return nil, err
+	}
+
+	ok := certPool.AppendCertsFromPEM(ca)
+	if !ok {
+		return nil, fmt.Errorf("unable to append certs from ca pem")
+	}
+
+	creds := credentials.NewTLS(&tls.Config{
+		ServerName:   uri,
+		Certificates: []tls.Certificate{certificate},
+		RootCAs:      certPool,
+	})
+
+	// Create a connection with the TLS credentials
+	conn, err := grpc.Dial(uri, grpc.WithTransportCredentials(creds))
+	if err != nil {
+		return nil, err
+	}
+	rc := shipyard.NewRemoteConnectionClient(conn)
+
+	return rc, nil
 }
