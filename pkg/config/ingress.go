@@ -3,23 +3,35 @@ package config
 // TypeIngress is the resource string for the type
 const TypeIngress ResourceType = "ingress"
 
-// Ingress defines an ingress service mapping ports between local host or docker network and the target
-// Note: This type is Deprecated and will be removed in a later version
-//       Please use one of the new specific types:
-//       * K8sIngress
-//       * NomadIngress
-//       * ContainerIngress
+// Ingress defines an ingress service mapping ports between local host and resources like containers and kube cluster
 type Ingress struct {
 	ResourceInfo
 
+	// Id stores the ID of the created connector service
+	Id string `json:"id"`
+
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 
-	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
+	Destination Traffic `hcl:"destination,block" json:"destination"`
+	Source      Traffic `hcl:"source,block" json:"source"`
+}
 
-	Target    string `hcl:"target" json:"target"`
-	Service   string `hcl:"service,optional" json:"service,omitempty"`
-	Namespace string `hcl:"namespace,optional" json:"namespace,omitempty"`
-	Ports     []Port `hcl:"port,block" json:"ports,omitempty"`
+// Traffic defines either a source or a destination block for ingress traffic
+type Traffic struct {
+	// Driver to use when creating the ingress, k8s, nomad, docker, local
+	Driver string `hcl:"driver" json:"driver"`
+
+	// Config is an collection which has driver specific content
+	Config TrafficConfig `hcl:"config,block" json:"config"`
+}
+
+// TrafficConfig defines the parameters for the traffic
+type TrafficConfig struct {
+	Cluster       string `hcl:"cluster,optional" json:"cluster,omitempty"`
+	Service       string `hcl:"service" json:"service"`
+	Namespace     string `hcl:"namespace,optional" json:"namespace,omitempty"`
+	Port          string `hcl:"port" json:"port"`
+	OpenInBrowser string `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"`
 }
 
 // NewIngress creates a new ingress with the correct defaults

@@ -451,16 +451,6 @@ func ParseHCLFile(file string, c *Config) error {
 
 			c.AddResource(i)
 
-		case string(TypeLocalIngress):
-			i := NewLocalIngress(b.Labels[0])
-
-			err := decodeBody(file, b, i)
-			if err != nil {
-				return err
-			}
-
-			c.AddResource(i)
-
 		case string(TypeSidecar):
 			s := NewSidecar(b.Labels[0])
 
@@ -610,10 +600,14 @@ func ParseReferences(c *Config) error {
 
 		case TypeIngress:
 			c := r.(*Ingress)
-			for _, n := range c.Networks {
-				c.DependsOn = append(c.DependsOn, n.Name)
+			if c.Source.Config.Cluster != "" {
+				c.DependsOn = append(c.DependsOn, c.Source.Config.Cluster)
 			}
-			c.DependsOn = append(c.DependsOn, c.Target)
+
+			if c.Destination.Config.Cluster != "" {
+				c.DependsOn = append(c.DependsOn, c.Destination.Config.Cluster)
+			}
+
 			c.DependsOn = append(c.DependsOn, c.Depends...)
 
 		case TypeK8sCluster:

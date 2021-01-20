@@ -216,10 +216,8 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 					}
 				case config.TypeIngress:
 					c := r.(*config.Ingress)
-					for _, p := range c.Ports {
-						if p.Host != "" && p.OpenInBrowser != "" {
-							browserList = append(browserList, buildBrowserPath(r.Info().Name, p.Host, r.Info().Type, p.OpenInBrowser))
-						}
+					if c.Source.Driver == "local" && c.Source.Config.OpenInBrowser != "" {
+						browserList = append(browserList, buildBrowserPath(r.Info().Name, c.Source.Config.Port, r.Info().Type, c.Source.Config.OpenInBrowser))
 					}
 				case config.TypeContainerIngress:
 					c := r.(*config.ContainerIngress)

@@ -391,7 +391,7 @@ func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
 	case config.TypeHelm:
 		return providers.NewHelm(c.(*config.Helm), cc.Kubernetes, cc.Helm, cc.Getter, cc.Logger)
 	case config.TypeIngress:
-		return providers.NewIngress(c.(*config.Ingress), cc.ContainerTasks, cc.Logger)
+		return providers.NewIngress(c.(*config.Ingress), cc.ContainerTasks, cc.Connector, cc.Logger)
 	case config.TypeK8sCluster:
 		return providers.NewK8sCluster(c.(*config.K8sCluster), cc.ContainerTasks, cc.Kubernetes, cc.HTTP, cc.Connector, cc.Logger)
 	case config.TypeK8sConfig:
@@ -406,8 +406,6 @@ func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
 		return providers.NewNomadJob(c.(*config.NomadJob), cc.Nomad, cc.Logger)
 	case config.TypeNetwork:
 		return providers.NewNetwork(c.(*config.Network), cc.Docker, cc.Logger)
-	case config.TypeLocalIngress:
-		return providers.NewIngressLocal(c.(*config.LocalIngress), cc.ContainerTasks, cc.Connector, cc.Logger)
 	case config.TypeOutput:
 		return providers.NewNull(c.Info(), cc.Logger)
 	}
