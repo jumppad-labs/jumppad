@@ -138,7 +138,13 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 
 	ctx.AfterScenario(func(gs *godog.Scenario, err error) {
 		fmt.Println("")
-		cr.e.Destroy("", true)
+
+		dest := newDestroyCmd(cr.e.GetClients().Connector)
+		dest.Execute()
+
+		if err != nil {
+			fmt.Println(output.String())
+		}
 
 		// unset environment vars
 		for k, v := range envVars {
@@ -147,10 +153,6 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 			} else {
 				os.Setenv(k, v)
 			}
-		}
-
-		if err != nil {
-			fmt.Println(output.String())
 		}
 
 		// do we need to pure the cache

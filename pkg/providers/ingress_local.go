@@ -38,6 +38,23 @@ func (c *IngressLocal) Create() error {
 		return err
 	}
 
+	// validate the name
+	if c.config.Name == "connector" {
+		return fmt.Errorf("Service name 'connector' is a reserved name")
+	}
+
+	// validate the remote port, can not be 60000 or 60001 as these
+	// ports are used by the connector service
+	remotePort, err := strconv.Atoi(c.config.Ports[0].Remote)
+	if err != nil {
+		return xerrors.Errorf("Unable to parse remote port :%w", err)
+	}
+
+	if remotePort == 60000 || remotePort == 60001 {
+		return fmt.Errorf("Unable to expose local service using remote port %d,"+
+			"ports 60000 and 60001 are reserved for internal use", remotePort)
+	}
+
 	// get the address of the remote connector from the target
 	_, configPath := utils.CreateClusterConfigPath(res.Info().Name)
 
@@ -45,11 +62,6 @@ func (c *IngressLocal) Create() error {
 	err = cc.Load(configPath, clients.LocalContext)
 	if err != nil {
 		return xerrors.Errorf("Unable to load cluster config :%w", err)
-	}
-
-	remotePort, err := strconv.Atoi(c.config.Ports[0].Remote)
-	if err != nil {
-		return xerrors.Errorf("Unable to parse remote port :%w", err)
 	}
 
 	// send the request

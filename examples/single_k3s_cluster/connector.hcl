@@ -1,25 +1,25 @@
-container "local_connector" {
-  image {
-    name = "shipyardrun/connector:v0.0.10"
-  }
+local_ingress "tester" {
+  target = "k8s_cluster.k3s"
+  destination = "localhost"
 
-  env_var = {
-    "BIND_ADDR_GRPC" = "0.0.0.0:9090"
-    "BIND_ADDR_HTTP" = "0.0.0.0:9091"
-    "LOG_LEVEL" = "debug"
+  port {
+    remote = 10000
+    local = 30002
   }
-  
-  port_range {
-    range = "9090-9091"
-    enable_host = true
-  }
+}
 
-  port_range {
-    range = "12000-12010"
-    enable_host = true
-  }
+k8s_ingress "connector-http" {
+  cluster = "k8s_cluster.k3s"
+  service  = "tester"
+  namespace = "shipyard"
 
   network {
     name = "network.cloud"
+  }
+
+  port {
+    local  = 10000
+    remote = 10000
+    host   = 10000
   }
 }

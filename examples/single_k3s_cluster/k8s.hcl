@@ -9,14 +9,6 @@ k8s_cluster "k3s" {
   }
 
   image {
-    name = "consul:1.6.1"
+    name = "shipyardrun/connector:v0.0.10"
   }
-}
-
-k8s_config "connector" {
-  cluster = "k8s_cluster.k3s"
-
-  paths = ["./connector_config"]
-
-  wait_until_ready = false
 }

@@ -542,13 +542,13 @@ spec:
   selector:
     app: connector
   ports:
-    - port: 9090
+    - port: 60000
       nodePort: %d
-      targetPort: 9090
+      targetPort: 60000
       name: grpc
-    - port: 9091
+    - port: 60001
       nodePort: %d
-      targetPort: 9091
+      targetPort: 60001
       name: http
 
 ---
@@ -576,11 +576,13 @@ spec:
         image: shipyardrun/connector:v0.0.10
         ports:
           - name: grpc
-            containerPort: 9090
+            containerPort: 60000
           - name: http
-            containerPort: 9091
+            containerPort: 60001
         command: ["/connector", "run"]
         args: [
+          "--grpc-bind=:60000",
+          "--http-bind=:60001",
           "--log-level=debug",
           "--root-cert-path=/etc/connector/tls/root.crt",
           "--server-cert-path=/etc/connector/tls/tls.crt",
