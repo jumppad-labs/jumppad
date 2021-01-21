@@ -1,6 +1,6 @@
 module github.com/shipyard-run/shipyard
 
-go 1.14
+go 1.15
 
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.3
@@ -22,7 +22,7 @@ require (
 	github.com/hokaccha/go-prettyjson v0.0.0-20190818114111-108c894c2c0e
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/mapstructure v1.4.0
-	github.com/shipyard-run/connector v0.0.9
+	github.com/shipyard-run/connector v0.0.15
 	github.com/shipyard-run/gohup v0.1.1
 	github.com/shipyard-run/version-manager v0.0.5
 	github.com/spf13/cobra v1.1.1
@@ -44,4 +44,4 @@ replace github.com/docker/docker => github.com/docker/engine v1.4.2-0.2018071815
 
 replace golang.org/x/sys => golang.org/x/sys v0.0.0-20190830141801-acfa387b8d69
 
-//replace github.com/nicholasjackson/version-manager => ../../nicholasjackson/version-manager
+replace github.com/shipyard-run/connector => ../connector

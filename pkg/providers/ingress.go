@@ -145,7 +145,7 @@ func (c *Ingress) exposeK8sRemote() error {
 		namespace = c.config.Destination.Config.Namespace
 	}
 
-	destAddr := fmt.Sprintf("%s.%s.svc.cluster.local:%s", c.config.Destination.Config.Service, namespace, c.config.Destination.Config.Port)
+	destAddr := fmt.Sprintf("%s.%s.svc:%s", c.config.Destination.Config.Service, namespace, c.config.Destination.Config.Port)
 
 	localPort, err := strconv.Atoi(c.config.Source.Config.Port)
 	if err != nil {
