@@ -117,6 +117,9 @@ func (c *ConnectorImpl) Start(cb *CertBundle) error {
 			"run",
 			"--grpc-bind", c.options.GrpcBind,
 			"--http-bind", c.options.HTTPBind,
+			"--root-cert-path", cb.RootCertPath,
+			"--server-cert-path", cb.LeafCertPath,
+			"--server-key-path", cb.LeafKeyPath,
 			"--log-level", ll,
 		},
 		Logfile: path.Join(c.options.LogDirectory, "connector.log"),
@@ -377,7 +380,7 @@ func getClient(cert *CertBundle, uri string) (shipyard.RemoteConnectionClient, e
 	_ = creds
 
 	// Create a connection with the TLS credentials
-	conn, err := grpc.Dial(uri, grpc.WithInsecure())
+	conn, err := grpc.Dial(uri, grpc.WithTransportCredentials(creds))
 	if err != nil {
 		return nil, err
 	}

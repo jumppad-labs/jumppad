@@ -579,7 +579,7 @@ spec:
       containers:
       - name: connector
         imagePullPolicy: IfNotPresent
-        image: shipyardrun/connector:v0.0.15
+        image: shipyardrun/connector:v0.0.16
         ports:
           - name: grpc
             containerPort: 60000
@@ -589,6 +589,9 @@ spec:
         args: [
           "--grpc-bind=:60000",
           "--http-bind=:60001",
+					"--root-cert-path=/etc/connector/tls/root.crt",
+					"--server-cert-path=/etc/connector/tls/tls.crt",
+					"--server-key-path=/etc/connector/tls/tls.key",
           "--log-level=%s",
           "--integration=kubernetes"
         ]

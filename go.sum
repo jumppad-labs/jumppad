@@ -904,6 +904,8 @@ github.com/shipyard-run/connector v0.0.9 h1:b9FTZlBSH0QthyAskKhI+daCnMK6ACzSY4s0
 github.com/shipyard-run/connector v0.0.9/go.mod h1:2txYr6iWtAgWkHtKG7BF04NNyKNlNhvY4k4M6q8pfRI=
 github.com/shipyard-run/connector v0.0.12 h1:dPI2jNj6GEBnRgiMsOUE3TrZJkQthgDHOQiqKofUGxo=
 github.com/shipyard-run/connector v0.0.12/go.mod h1:hEKWnx/tRxSVoGPUeoSUSPwpos+8ceTQF5/gdIOST/I=
+github.com/shipyard-run/connector v0.0.16 h1:0VZkPgp1872oe3NLuxi5bpm5LJgn4rpoNEwhgZxdJYc=
+github.com/shipyard-run/connector v0.0.16/go.mod h1:hEKWnx/tRxSVoGPUeoSUSPwpos+8ceTQF5/gdIOST/I=
 github.com/shipyard-run/gohup v0.1.1 h1:TtRoxrNY6p/mnBMXHIpFCGuE81LrOPP/AeGQp1Fwuuw=
 github.com/shipyard-run/gohup v0.1.1/go.mod h1:uMOvcAs5ufi1VnPsK7iDdruE3y6Hp56CSrN06f17sWs=
 github.com/shipyard-run/version-manager v0.0.5 h1:gswTn7y/f2yoUOGl9tu18Bbp84EQa7gtqMNBbPu78BA=
