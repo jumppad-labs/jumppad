@@ -103,6 +103,12 @@ func NewConnector(opts ConnectorOptions) Connector {
 
 // Start the Connector, returns an error on failure
 func (c *ConnectorImpl) Start(cb *CertBundle) error {
+	// get the log level from the environment variable
+	ll := os.Getenv("LOG_LEVEL")
+	if ll == "" {
+		ll = "info"
+	}
+
 	lp := &gohup.LocalProcess{}
 	o := gohup.Options{
 		Path: c.options.BinaryPath,
@@ -111,10 +117,7 @@ func (c *ConnectorImpl) Start(cb *CertBundle) error {
 			"run",
 			"--grpc-bind", c.options.GrpcBind,
 			"--http-bind", c.options.HTTPBind,
-			"--root-cert-path", cb.RootCertPath,
-			"--server-cert-path", cb.LeafCertPath,
-			"--server-key-path", cb.LeafKeyPath,
-			"--log-level", "debug",
+			"--log-level", ll,
 		},
 		Logfile: path.Join(c.options.LogDirectory, "connector.log"),
 		Pidfile: c.options.PidFile,
@@ -371,8 +374,10 @@ func getClient(cert *CertBundle, uri string) (shipyard.RemoteConnectionClient, e
 		RootCAs:      certPool,
 	})
 
+	_ = creds
+
 	// Create a connection with the TLS credentials
-	conn, err := grpc.Dial(uri, grpc.WithTransportCredentials(creds))
+	conn, err := grpc.Dial(uri, grpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}

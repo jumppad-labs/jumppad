@@ -28,8 +28,7 @@ type Traffic struct {
 // TrafficConfig defines the parameters for the traffic
 type TrafficConfig struct {
 	Cluster       string `hcl:"cluster,optional" json:"cluster,omitempty"`
-	Service       string `hcl:"service" json:"service"`
-	Namespace     string `hcl:"namespace,optional" json:"namespace,omitempty"`
+	Address       string `hcl:"address,optional" json:"address,omitempty"`
 	Port          string `hcl:"port" json:"port"`
 	OpenInBrowser string `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"`
 }

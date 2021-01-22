@@ -71,7 +71,7 @@ func (c *Ingress) exposeLocal() error {
 	}
 
 	// validate the name
-	if c.config.Source.Config.Service == "connector" {
+	if c.config.Name == "connector" {
 		return fmt.Errorf("Service name 'connector' is a reserved name")
 	}
 
@@ -96,19 +96,29 @@ func (c *Ingress) exposeLocal() error {
 		return xerrors.Errorf("Unable to load cluster config :%w", err)
 	}
 
-	destAddr := fmt.Sprintf("%s:%s", c.config.Destination.Config.Service, c.config.Destination.Config.Port)
+	if c.config.Destination.Config.Address == "" {
+		return xerrors.Errorf("The address config stanza field must be specified when type 'local'")
+	}
+
+	destAddr := fmt.Sprintf("%s:%s", c.config.Destination.Config.Address, c.config.Destination.Config.Port)
+
+	// sanitize the name to make it uri format
+	serviceName, err := utils.ReplaceNonURIChars(c.config.Name)
+	if err != nil {
+		return xerrors.Errorf("Unable to repace non URI characters in service name %s :%w", c.config.Name, err)
+	}
 
 	// send the request
 	c.log.Debug(
 		"Calling connector to expose local service",
-		"name", c.config.Source.Config.Service,
+		"name", serviceName,
 		"remote_port", remotePort,
 		"connector_addr", cc.ConnectorAddress(),
 		"local_addr", destAddr,
 	)
 
 	id, err := c.connector.ExposeService(
-		c.config.Source.Config.Service,
+		serviceName,
 		remotePort,
 		cc.ConnectorAddress(),
 		destAddr,
@@ -140,12 +150,11 @@ func (c *Ingress) exposeK8sRemote() error {
 		return xerrors.Errorf("Unable to load cluster config :%w", err)
 	}
 
-	namespace := "default"
-	if c.config.Destination.Config.Namespace != "" {
-		namespace = c.config.Destination.Config.Namespace
+	if c.config.Destination.Config.Address == "" {
+		return xerrors.Errorf("Config parameter 'address' is required for desinations of type 'k8s'")
 	}
 
-	destAddr := fmt.Sprintf("%s.%s.svc:%s", c.config.Destination.Config.Service, namespace, c.config.Destination.Config.Port)
+	destAddr := fmt.Sprintf("%s:%s", c.config.Destination.Config.Address, c.config.Destination.Config.Port)
 
 	localPort, err := strconv.Atoi(c.config.Source.Config.Port)
 	if err != nil {
@@ -157,24 +166,30 @@ func (c *Ingress) exposeK8sRemote() error {
 			"ports 30001 and 30002 are reserved for internal use", localPort)
 	}
 
+	// sanitize the name to make it uri format
+	serviceName, err := utils.ReplaceNonURIChars(c.config.Name)
+	if err != nil {
+		return xerrors.Errorf("Unable to repace non URI characters in service name %s :%w", c.config.Name, err)
+	}
+
 	// send the request
 	c.log.Debug(
 		"Calling connector to expose remote service",
-		"name", c.config.Destination.Config.Service,
+		"name", serviceName,
 		"local_port", localPort,
 		"connector_addr", cc.ConnectorAddress(),
 		"local_addr", destAddr,
 	)
 
 	id, err := c.connector.ExposeService(
-		c.config.Destination.Config.Service,
+		serviceName,
 		localPort,
 		cc.ConnectorAddress(),
 		destAddr,
 		"remote")
 
 	if err != nil {
-		return xerrors.Errorf("Unable to expose local service to remote cluster :%w", err)
+		return xerrors.Errorf("Unable to remote cluster service to local machine :%w", err)
 	}
 
 	c.log.Debug("Successfully exposed service", "id", id)

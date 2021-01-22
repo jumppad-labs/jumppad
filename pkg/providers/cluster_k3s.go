@@ -399,9 +399,15 @@ func (c *K8sCluster) deployConnector(grpcPort, httpPort int) error {
 		return fmt.Errorf("Unable to create RBAC for connector: %s", err)
 	}
 
+	// get the log level from the environment variable
+	ll := os.Getenv("LOG_LEVEL")
+	if ll == "" {
+		ll = "info"
+	}
+
 	files = append(files, path.Join(dir, "deployment.yaml"))
 	c.log.Debug("Writing deployment config", "file", files[3])
-	writeConnectorDeployment(files[3], grpcPort, httpPort)
+	writeConnectorDeployment(files[3], grpcPort, httpPort, ll)
 	if err != nil {
 		return fmt.Errorf("Unable to create deployment for connector: %s", err)
 	}
@@ -514,9 +520,9 @@ func writeConnectorK8sSecret(path, root, key, cert string) error {
 	), os.ModePerm)
 }
 
-func writeConnectorDeployment(path string, grpc, http int) error {
+func writeConnectorDeployment(path string, grpc, http int, logLevel string) error {
 	return ioutil.WriteFile(path, []byte(
-		fmt.Sprintf(connectorDeployment, grpc, http),
+		fmt.Sprintf(connectorDeployment, grpc, http, logLevel),
 	), os.ModePerm)
 }
 
@@ -583,10 +589,7 @@ spec:
         args: [
           "--grpc-bind=:60000",
           "--http-bind=:60001",
-          "--log-level=debug",
-          "--root-cert-path=/etc/connector/tls/root.crt",
-          "--server-cert-path=/etc/connector/tls/tls.crt",
-          "--server-key-path=/etc/connector/tls/tls.key",
+          "--log-level=%s",
           "--integration=kubernetes"
         ]
         volumeMounts:
