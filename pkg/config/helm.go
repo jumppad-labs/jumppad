@@ -21,6 +21,9 @@ type Helm struct {
 	// Namespace is the Kubernetes namespace
 	Namespace string `hcl:"namespace,optional" json:"namespace,omitempty"`
 
+	// CreateNamespace when set to true Helm wiil creeate the namespace before installing
+	CreateNamespace bool `hcl:"create_namespace,optional" json:"create_namespace,omitempty"`
+
 	HealthCheck *HealthCheck `hcl:"health_check,block" json:"health_check,omitempty" mapstructure:"health_check"`
 }
 

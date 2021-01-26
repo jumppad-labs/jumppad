@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/kr/pretty"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
@@ -37,6 +38,8 @@ var taintCmd = &cobra.Command{
 		}
 
 		r.Info().Status = config.PendingModification
+
+		pretty.Print(c)
 
 		err = c.ToJSON(utils.StatePath())
 		if err != nil {

@@ -26,11 +26,14 @@ func setupConfigTests(t *testing.T) (*Config, func()) {
 	con.Info().Module = "tester"
 	c.AddResource(con)
 
+	i := NewIngress("config")
+	i.Id = "myid"
+	c.AddResource(i)
+
 	c.AddResource(NewDocs("config"))
 	c.AddResource(NewExecLocal("config"))
 	c.AddResource(NewExecRemote("config"))
 	c.AddResource(NewHelm("config"))
-	c.AddResource(NewIngress("config"))
 	c.AddResource(NewK8sCluster("config"))
 	c.AddResource(NewNetwork("config"))
 	c.AddResource(NewNomadCluster("config"))
@@ -76,6 +79,10 @@ func TestConfigDeSerializesFromJSON(t *testing.T) {
 	assert.Equal(t, ResourceType("container"), c.Resources[0].Info().Type)
 	assert.Equal(t, "config", c.Resources[0].Info().Name)
 	assert.Equal(t, "tester", c.Resources[0].Info().Module)
+
+	// ensure it deserializes the id
+	assert.Equal(t, ResourceType("ingress"), c.Resources[1].Info().Type)
+	assert.Equal(t, "myid", c.Resources[1].(*Ingress).Id)
 }
 
 func TestConfigMergesAddingItems(t *testing.T) {

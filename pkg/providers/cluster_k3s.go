@@ -22,7 +22,7 @@ import (
 
 // https://github.com/rancher/k3d/blob/master/cli/commands.go
 
-const k3sBaseImage = "rancher/k3s"
+const k3sBaseImage = "shipyardrun/k3s:v1.18.15"
 
 var startTimeout = (300 * time.Second)
 
@@ -80,7 +80,8 @@ func (c *K8sCluster) createK3s() error {
 	}
 
 	// set the image
-	image := fmt.Sprintf("%s:%s", k3sBaseImage, c.config.Version)
+	//image := fmt.Sprintf("%s:%s", k3sBaseImage, c.config.Version)
+	image := k3sBaseImage
 
 	// pull the container image
 	err = c.client.PullImage(config.Image{Name: image}, false)

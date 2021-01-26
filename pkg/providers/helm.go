@@ -63,7 +63,11 @@ func (h *Helm) Create() error {
 		return xerrors.Errorf("unable to create Kubernetes client: %w", err)
 	}
 
-	err = h.helmClient.Create(kcPath, h.config.ChartName, h.config.Namespace, h.config.Chart, h.config.Values, h.config.ValuesString)
+	err = h.helmClient.Create(
+		kcPath, h.config.ChartName,
+		h.config.Namespace, h.config.CreateNamespace,
+		h.config.Chart, h.config.Values, h.config.ValuesString)
+
 	if err != nil {
 		return err
 	}

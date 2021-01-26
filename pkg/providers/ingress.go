@@ -45,13 +45,13 @@ func (c *Ingress) Create() error {
 
 // Destroy statisfies the interface method but is not implemented by LocalExec
 func (c *Ingress) Destroy() error {
-	c.log.Info("Destroy Local Ingress", "ref", c.config.Name, "id", c.config.Id)
+	c.log.Info("Destroy Ingress", "ref", c.config.Name, "id", c.config.Id)
 
 	err := c.connector.RemoveService(c.config.Id)
 	if err != nil {
 		// fail silently as this should not stop us from destroying the
 		// other resources
-		c.log.Warn("Unable to remove local ingress", "error", err)
+		c.log.Warn("Unable to remove local ingress", "ref", c.config.Name, "id", c.config.Id, "error", err)
 	}
 
 	return nil
@@ -59,6 +59,7 @@ func (c *Ingress) Destroy() error {
 
 // Lookup statisfies the interface method but is not implemented by LocalExec
 func (c *Ingress) Lookup() ([]string, error) {
+	c.log.Debug("Lookup Ingress", "ref", c.config.Name, "id", c.config.Id)
 
 	return []string{}, nil
 }
