@@ -1,6 +1,7 @@
 # Change Log
 
 ## version 0.2.0
+* Add new interpolation function to get the ip address of the machine running shipyard
 * Add CreateNamespace config parameter to Helm config
 
 ```javascript

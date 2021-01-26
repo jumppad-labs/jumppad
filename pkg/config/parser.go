@@ -709,6 +709,14 @@ func buildContext() *hcl.EvalContext {
 		},
 	})
 
+	var ShipyardIPFunc = function.New(&function.Spec{
+		Type: function.StaticReturnType(cty.String),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			ip, _ := utils.GetShipyardIPAndHostname()
+			return cty.StringVal(ip), nil
+		},
+	})
+
 	var KubeConfigFunc = function.New(&function.Spec{
 		Params: []function.Parameter{
 			{
@@ -792,6 +800,7 @@ func buildContext() *hcl.EvalContext {
 	ctx.Functions["data"] = DataFunc
 	ctx.Functions["docker_ip"] = DockerIPFunc
 	ctx.Functions["docker_host"] = DockerHostFunc
+	ctx.Functions["shipyard_ip"] = ShipyardIPFunc
 
 	return ctx
 }
