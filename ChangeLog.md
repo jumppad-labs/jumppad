@@ -59,6 +59,17 @@ ingress "local-to-k8s" {
 }
 ```
 
+* Add ability to define defaults for variables
+
+Variables can also be defined in modules, variables specified as 
+flags, files, or environment override defaults.
+
+```
+variable "mod_network" {
+  default = "modulenetwork"
+}
+```
+
 ### Ingress
 Major refactor of ingress, implemented K8s and Local
 

@@ -97,7 +97,39 @@ func ParseFolder(folder string, c *Config, onlyResources bool, variables map[str
 		}
 	}
 
+	// We need to do a two pass parsing, first we check if there are any
+	// default variables which should be added to the collection
+	err := parseVariables(abs, c)
+	if err != nil {
+		return err
+	}
+
 	// Parse Resource files from the current folder
+	err = parseResources(abs, c)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func parseVariables(abs string, c *Config) error {
+	files, err := filepath.Glob(path.Join(abs, "*.hcl"))
+	if err != nil {
+		return err
+	}
+
+	for _, f := range files {
+		err := ParseVariableFile(f, c)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func parseResources(abs string, c *Config) error {
 	files, err := filepath.Glob(path.Join(abs, "*.hcl"))
 	if err != nil {
 		return err
@@ -159,6 +191,17 @@ func setContextVariable(key string, value interface{}) {
 	}
 
 	ctx.Variables["var"] = cty.MapVal(valMap)
+}
+
+func setContextVariableIfMissing(key string, value interface{}) {
+	if m, ok := ctx.Variables["var"]; ok {
+		if _, ok := m.AsValueMap()[key]; ok {
+			return
+		}
+	}
+
+	fmt.Printf("Setting: %s, %#v", key, value)
+	setContextVariable(key, value)
 }
 
 // SetVariables allow variables to be set from a collection or environment variables
@@ -265,6 +308,38 @@ func parseYardMarkdown(file string, c *Config) error {
 	return nil
 }
 
+// ParseVariableFile parses a config file for variables
+func ParseVariableFile(file string, c *Config) error {
+	parser := hclparse.NewParser()
+
+	f, diag := parser.ParseHCLFile(file)
+	if diag.HasErrors() {
+		return errors.New(diag.Error())
+	}
+
+	body, ok := f.Body.(*hclsyntax.Body)
+	if !ok {
+		return errors.New("Error getting body")
+	}
+
+	for _, b := range body.Blocks {
+		switch b.Type {
+		case string(TypeVariable):
+			v := NewVariable(b.Labels[0])
+
+			err := decodeBody(file, b, v)
+			if err != nil {
+				return err
+			}
+
+			val, _ := v.Default.(*hcl.Attribute).Expr.Value(ctx)
+			setContextVariableIfMissing(v.Name, val)
+		}
+	}
+
+	return nil
+}
+
 // ParseHCLFile parses a config file and adds it to the config
 func ParseHCLFile(file string, c *Config) error {
 	parser := hclparse.NewParser()
@@ -281,6 +356,10 @@ func ParseHCLFile(file string, c *Config) error {
 
 	for _, b := range body.Blocks {
 		switch b.Type {
+		case string(TypeVariable):
+			//ignore variables in this pass
+			continue
+
 		case string(TypeK8sCluster):
 			cl := NewK8sCluster(b.Labels[0])
 
