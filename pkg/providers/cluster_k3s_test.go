@@ -274,7 +274,7 @@ func TestClusterK3sSetsServerInConfig(t *testing.T) {
 	// check file contains docker ip
 	d, err := ioutil.ReadAll(f)
 	assert.NoError(t, err)
-	assert.Contains(t, string(d), "https://127.0.0.1")
+	assert.Contains(t, string(d), "https://"+utils.GetDockerIP())
 }
 
 func TestClusterK3sCreatesDockerConfig(t *testing.T) {
