@@ -3,6 +3,12 @@ package config
 // TypeIngress is the resource string for the type
 const TypeIngress ResourceType = "ingress"
 
+const (
+	IngressSourceLocal  = "local"
+	IngressSourceK8s    = "k8s"
+	IngressSourceDocker = "docker"
+)
+
 // Ingress defines an ingress service mapping ports between local host and resources like containers and kube cluster
 type Ingress struct {
 	ResourceInfo

@@ -68,6 +68,9 @@ flags, files, or environment override defaults.
 variable "mod_network" {
   default = "modulenetwork"
 }
+
+* New Interpolation functions file_path and file_dir
+
 ```
 
 ### Ingress

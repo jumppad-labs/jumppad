@@ -16,7 +16,7 @@ import (
 
 func setupHelm() (*clients.MockHelm, *clients.MockKubernetes, *clients.Getter, *config.Config, *Helm) {
 	mh := &clients.MockHelm{}
-	mh.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	mh.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mh.On("Destroy", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	kc := &clients.MockKubernetes{}
@@ -58,7 +58,7 @@ func TestHelmCreateGetsRemoteRepo(t *testing.T) {
 	assert.NoError(t, err)
 
 	mg.AssertCalled(t, "Get", mock.Anything, helmFolder)
-	mh.AssertCalled(t, "Create", mock.Anything, mock.Anything, mock.Anything, helmFolder, mock.Anything, mock.Anything)
+	mh.AssertCalled(t, "Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, helmFolder, mock.Anything, mock.Anything)
 }
 
 func TestHelmCreateSetsConfig(t *testing.T) {
@@ -93,6 +93,7 @@ func TestHelmCreateCallsCreateWithDefaultNamespace(t *testing.T) {
 		mock.Anything,
 		p.config.Name,
 		"default",
+		false,
 		p.config.Chart,
 		p.config.Values,
 		p.config.ValuesString,
@@ -112,6 +113,7 @@ func TestHelmCreateCallsCreateWithCustomNamespace(t *testing.T) {
 		mock.Anything,
 		p.config.Name,
 		"custom",
+		p.config.CreateNamespace,
 		p.config.Chart,
 		p.config.Values,
 		p.config.ValuesString,
@@ -121,7 +123,7 @@ func TestHelmCreateCallsCreateWithCustomNamespace(t *testing.T) {
 func TestHelmCreateCallCreateFailReturnsError(t *testing.T) {
 	hm, _, _, _, p := setupHelm()
 	removeOn(&hm.Mock, "Create")
-	hm.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
+	hm.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
 	err := p.Create()
 	assert.Error(t, err)

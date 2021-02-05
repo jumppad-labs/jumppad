@@ -243,7 +243,7 @@ func TestIngressK8sTargetDestroysContainer(t *testing.T) {
 
 	removeOn(&md.Mock, "FindContainerIDs")
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"ingress"}, nil)
-	p := NewIngress(tc.(*config.Ingress), md, hclog.NewNullLogger())
+	p := NewLegacyIngress(tc.(*config.LegacyIngress), md, hclog.NewNullLogger())
 
 	err := p.Destroy()
 	assert.NoError(t, err)
@@ -307,7 +307,7 @@ func TestIngressNomadAddsPorts(t *testing.T) {
 	assert.Equal(t, tc.(*config.NomadIngress).Ports, params.Ports)
 }
 
-var testIngressConfig = config.Ingress{
+var testIngressConfig = config.LegacyIngress{
 	Service: "svc/web",
 	ResourceInfo: config.ResourceInfo{
 		Name: "web-http",

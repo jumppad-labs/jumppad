@@ -216,7 +216,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 					}
 				case config.TypeIngress:
 					c := r.(*config.Ingress)
-					if c.Source.Driver == "local" && c.Source.Config.OpenInBrowser != "" {
+					if c.Source.Driver == config.IngressSourceLocal && c.Source.Config.OpenInBrowser != "" && c.Source.Config.Port != "" {
 						browserList = append(browserList, buildBrowserPath(r.Info().Name, c.Source.Config.Port, r.Info().Type, c.Source.Config.OpenInBrowser))
 					}
 				case config.TypeContainerIngress:
@@ -243,7 +243,12 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 				case config.TypeDocs:
 					c := r.(*config.Docs)
 					if c.OpenInBrowser {
-						browserList = append(browserList, buildBrowserPath(r.Info().Name, strconv.Itoa(c.Port), r.Info().Type, ""))
+						port := strconv.Itoa(c.Port)
+						if port == "0" {
+							port = "80"
+						}
+
+						browserList = append(browserList, buildBrowserPath(r.Info().Name, port, r.Info().Type, ""))
 					}
 				}
 			}
@@ -254,6 +259,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 
 			l.Debug("Health check urls for browser windows", "count", len(browserList))
 			for _, b := range browserList {
+				fmt.Println("check", b)
 				go func(uri string) {
 					// health check the URL
 					err := hc.HealthCheckHTTP(uri, checkDuration)

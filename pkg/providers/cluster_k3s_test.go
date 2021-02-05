@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,8 +15,8 @@ import (
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/utils"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	assert "github.com/stretchr/testify/require"
 )
 
 // setupClusterMocks sets up a happy path for mocks
@@ -55,6 +56,7 @@ func setupClusterMocks(t *testing.T) (
 	mk := &mocks.MockKubernetes{}
 	mk.Mock.On("SetConfig", mock.Anything).Return(nil)
 	mk.Mock.On("HealthCheckPods", mock.Anything, mock.Anything).Return(nil)
+	mk.Mock.On("Apply", mock.Anything, mock.Anything).Return(nil)
 
 	mc := &clients.ConnectorMock{}
 	mc.On("GetLocalCertBundle", mock.Anything).Return(&clients.CertBundle{}, nil)
@@ -111,7 +113,7 @@ func TestClusterK3PullsImage(t *testing.T) {
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "PullImage", config.Image{Name: "rancher/k3s:v1.0.0"}, false)
+	md.AssertCalled(t, "PullImage", config.Image{Name: "shipyardrun/k3s:v1.18.15"}, false)
 }
 
 func TestClusterK3CreatesANewVolume(t *testing.T) {
@@ -149,7 +151,7 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 
 	// validate the basic details for the server container
 	assert.Contains(t, params.Name, "server")
-	assert.Contains(t, params.Image.Name, "rancher")
+	assert.Contains(t, params.Image.Name, "shipyardrun")
 	assert.Equal(t, clusterNetwork.Name, params.Networks[0].Name)
 	assert.True(t, params.Privileged)
 
@@ -167,14 +169,13 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 
 	localPort, _ = strconv.Atoi(params.Ports[1].Local)
 	hostPort, _ = strconv.Atoi(params.Ports[1].Host)
-	assert.Equal(t, localPort, 30000)
-	assert.GreaterOrEqual(t, hostPort, 64000)
+	assert.GreaterOrEqual(t, hostPort, 30000)
 	assert.Equal(t, "tcp", params.Ports[1].Protocol)
 
-	localPort, _ = strconv.Atoi(params.Ports[2].Local)
-	hostPort, _ = strconv.Atoi(params.Ports[2].Host)
-	assert.Equal(t, localPort, 30001)
-	assert.GreaterOrEqual(t, hostPort, 64000)
+	localPort2, _ := strconv.Atoi(params.Ports[2].Local)
+	hostPort2, _ := strconv.Atoi(params.Ports[2].Host)
+	assert.Equal(t, localPort2, localPort+1)
+	assert.GreaterOrEqual(t, hostPort2, 30000)
 	assert.Equal(t, "tcp", params.Ports[2].Protocol)
 
 	// validate the command
@@ -249,7 +250,7 @@ func TestClusterK3sRaisesErrorWhenUnableToDownloadConfig(t *testing.T) {
 
 func TestClusterK3sSetsServerInConfig(t *testing.T) {
 	dh := os.Getenv("DOCKER_HOST")
-	os.Setenv("DOCKER_HOST", "tcp://test.com")
+	os.Setenv("DOCKER_HOST", "tcp://localhost")
 
 	t.Cleanup(func() {
 		os.Setenv("DOCKER_HOST", dh)
@@ -273,7 +274,7 @@ func TestClusterK3sSetsServerInConfig(t *testing.T) {
 	// check file contains docker ip
 	d, err := ioutil.ReadAll(f)
 	assert.NoError(t, err)
-	assert.Contains(t, string(d), "test.com")
+	assert.Contains(t, string(d), "https://127.0.0.1")
 }
 
 func TestClusterK3sCreatesDockerConfig(t *testing.T) {
@@ -412,6 +413,56 @@ func TestClusterK3sGeneratesCertsForConnector(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 	)
+}
+
+func TestClusterK3sGeneratesCertsForDeployment(t *testing.T) {
+	cc, md, mk, mc := setupClusterMocks(t)
+
+	cp := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
+
+	err := cp.Create()
+	assert.NoError(t, err)
+
+	//args := getCalls(&mk.Mock, "Apply")[0]
+	//path := strings.Split(args.Arguments[0].([]string)[0], "/")
+
+	mc.AssertCalled(t, "GenerateLeafCert", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestClusterK3sDeploysConnector(t *testing.T) {
+	cc, md, mk, mc := setupClusterMocks(t)
+
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	files := []string{
+		"namespace.yaml",
+		"secret.yaml",
+		"rbac.yaml",
+		"deployment.yaml",
+	}
+
+	mk.AssertCalled(t, "Apply", mock.Anything, true)
+
+	args := getCalls(&mk.Mock, "Apply")[0]
+
+	for _, f := range args.Arguments[0].([]string) {
+		fn := strings.Split(f, "/")[3]
+		assert.Contains(t, files, fn)
+	}
+}
+
+func TestClusterK3sWaitsForConnectorStart(t *testing.T) {
+	cc, md, mk, mc := setupClusterMocks(t)
+
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	mk.AssertCalled(t, "HealthCheckPods", []string{"app=connector"}, 60*time.Second)
 }
 
 // Destroy Tests

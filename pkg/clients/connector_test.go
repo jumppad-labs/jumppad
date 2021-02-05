@@ -135,7 +135,7 @@ func testGenerateCreatesLeaf(t *testing.T) {
 	leafCertBundle, err := c.GenerateLeafCert(
 		suiteCertBundle.RootKeyPath,
 		suiteCertBundle.RootCertPath,
-		"tester",
+		[]string{"tester"},
 		[]string{"123.121.121.1"},
 		certDir,
 	)

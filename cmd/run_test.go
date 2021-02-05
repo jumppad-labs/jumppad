@@ -18,8 +18,8 @@ import (
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	gvm "github.com/shipyard-run/version-manager"
 	"github.com/spf13/cobra"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	assert "github.com/stretchr/testify/require"
 )
 
 type runMocks struct {
@@ -341,23 +341,31 @@ func TestRunOpensBrowserWindowForResources(t *testing.T) {
 
 	removeOn(&rm.engine.Mock, "ApplyWithVariables")
 
+	// should open
 	d := config.NewDocs("test")
 	d.OpenInBrowser = true
 
+	// should open
 	i := config.NewIngress("test")
-	i.Ports = []config.Port{config.Port{Host: "8080", OpenInBrowser: "/"}}
+	i.Source.Driver = config.IngressSourceLocal
+	i.Source.Config.Port = "8080"
+	i.Source.Config.OpenInBrowser = "/"
 
+	// should open
 	c := config.NewContainer("test")
 	c.Ports = []config.Port{config.Port{Host: "8080", OpenInBrowser: "https://test.container.shipyard.run:8080"}}
 
 	// should not be opened
-	d2 := config.NewDocs("test")
-
-	i2 := config.NewIngress("test")
-	i2.Ports = []config.Port{config.Port{Host: "8080", OpenInBrowser: ""}}
-
 	c2 := config.NewContainer("test2")
 	c2.Ports = []config.Port{config.Port{OpenInBrowser: ""}}
+
+	// should not be opened
+	i2 := config.NewIngress("test")
+	i.Source.Driver = config.IngressSourceLocal
+	i2.Source.Config.Port = "8080"
+
+	// should not be opened
+	d2 := config.NewDocs("test2")
 
 	rm.engine.On("ApplyWithVariables", mock.Anything, mock.Anything, mock.Anything).Return(
 		[]config.Resource{d, i, c, d2, i2, c2},
@@ -372,6 +380,9 @@ func TestRunOpensBrowserWindowForResources(t *testing.T) {
 
 	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://test.ingress.shipyard.run:8080/", 30*time.Second)
 	rm.http.AssertCalled(t, "HealthCheckHTTP", "https://test.container.shipyard.run:8080", 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost", 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://test.docs.shipyard.run:80", 30*time.Second)
 }
 
 func TestRunDoesNotOpensBrowserWindowWhenCheckError(t *testing.T) {

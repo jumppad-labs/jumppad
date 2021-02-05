@@ -163,9 +163,14 @@ func LoadValuesFile(path string) error {
 		return errors.New(diag.Error())
 	}
 
+	// add the file functions to the context with a reference to the
+	// current file
+	ctx.Functions["file_path"] = getFilePathFunc(path)
+	ctx.Functions["file_dir"] = getFileDirFunc(path)
+
 	attrs, _ := f.Body.JustAttributes()
 	for name, attr := range attrs {
-		val, _ := attr.Expr.Value(nil)
+		val, _ := attr.Expr.Value(ctx)
 
 		setContextVariable(name, val)
 	}
@@ -174,13 +179,11 @@ func LoadValuesFile(path string) error {
 }
 
 func setContextVariable(key string, value interface{}) {
-	var valMap map[string]cty.Value
+	valMap := map[string]cty.Value{}
 
 	// get the existing map
 	if m, ok := ctx.Variables["var"]; ok {
 		valMap = m.AsValueMap()
-	} else {
-		valMap = map[string]cty.Value{}
 	}
 
 	switch v := value.(type) {
@@ -190,7 +193,7 @@ func setContextVariable(key string, value interface{}) {
 		valMap[key] = v
 	}
 
-	ctx.Variables["var"] = cty.MapVal(valMap)
+	ctx.Variables["var"] = cty.ObjectVal(valMap)
 }
 
 func setContextVariableIfMissing(key string, value interface{}) {
@@ -200,7 +203,6 @@ func setContextVariableIfMissing(key string, value interface{}) {
 		}
 	}
 
-	fmt.Printf("Setting: %s, %#v", key, value)
 	setContextVariable(key, value)
 }
 
@@ -343,6 +345,8 @@ func ParseVariableFile(file string, c *Config) error {
 // ParseHCLFile parses a config file and adds it to the config
 func ParseHCLFile(file string, c *Config) error {
 	parser := hclparse.NewParser()
+	ctx.Functions["file_path"] = getFilePathFunc(file)
+	ctx.Functions["file_dir"] = getFileDirFunc(file)
 
 	f, diag := parser.ParseHCLFile(file)
 	if diag.HasErrors() {
@@ -881,7 +885,30 @@ func buildContext() *hcl.EvalContext {
 	ctx.Functions["docker_host"] = DockerHostFunc
 	ctx.Functions["shipyard_ip"] = ShipyardIPFunc
 
+	// the functions file_path and file_dir are added dynamically when processing a file
+	// this is because the need a reference to the current file
+
 	return ctx
+}
+
+func getFilePathFunc(path string) function.Function {
+	return function.New(&function.Spec{
+		Type: function.StaticReturnType(cty.String),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			s, err := filepath.Abs(path)
+			return cty.StringVal(s), err
+		},
+	})
+}
+
+func getFileDirFunc(path string) function.Function {
+	return function.New(&function.Spec{
+		Type: function.StaticReturnType(cty.String),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			s, err := filepath.Abs(path)
+			return cty.StringVal(filepath.Dir(s)), err
+		},
+	})
 }
 
 func decodeBody(path string, b *hclsyntax.Block, p interface{}) error {

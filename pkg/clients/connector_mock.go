@@ -51,7 +51,7 @@ func (m *ConnectorMock) GetLocalCertBundle(out string) (*CertBundle, error) {
 	return nil, args.Error(1)
 }
 
-func (m *ConnectorMock) GenerateLeafCert(privateKey, rootCA, hosts string, ips []string, dir string) (*CertBundle, error) {
+func (m *ConnectorMock) GenerateLeafCert(privateKey, rootCA string, hosts, ips []string, dir string) (*CertBundle, error) {
 	args := m.Called(privateKey, rootCA, hosts, ips, dir)
 
 	if cb, ok := args.Get(0).(*CertBundle); ok {
@@ -59,4 +59,22 @@ func (m *ConnectorMock) GenerateLeafCert(privateKey, rootCA, hosts string, ips [
 	}
 
 	return nil, args.Error(1)
+}
+
+func (m *ConnectorMock) ExposeService(
+	name string,
+	port int,
+	remoteAddr string,
+	destAddr string,
+	direction string,
+) (string, error) {
+
+	args := m.Called(name, port, remoteAddr, destAddr, direction)
+
+	return args.String(0), args.Error(1)
+}
+
+// RemoveService removes a previously exposed service
+func (m *ConnectorMock) RemoveService(id string) error {
+	return m.Called(id).Error(0)
 }
