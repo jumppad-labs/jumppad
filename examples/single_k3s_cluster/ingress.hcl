@@ -27,7 +27,7 @@ ingress "consul-lan" {
     
     config {
       cluster = "k8s_cluster.k3s"
-      address = "consul-0.default.svc"
+      address = "consul-consul-server.default.svc"
       port = 8300
     }
   }

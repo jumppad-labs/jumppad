@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -137,9 +138,10 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 	})
 
 	ctx.AfterScenario(func(gs *godog.Scenario, err error) {
-		fmt.Println("")
+		fmt.Println("destroy: ", err)
 
 		dest := newDestroyCmd(cr.e.GetClients().Connector)
+		dest.SetArgs([]string{})
 		dest.Execute()
 
 		if err != nil {
@@ -180,6 +182,7 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 	ctx.Step(`^I run the script$`, cr.whenIRunTheScript)
 	ctx.Step(`^I expect the exit code to be (\d+)$`, cr.iExpectTheExitCodeToBe)
 	ctx.Step(`^I expect the response to contain "([^"]*)"$`, cr.iExpectTheResponseToContain)
+	ctx.Step(`^a TCP connection to "([^"]*)" should open$`, aTCPConnectionToShouldOpen)
 }
 
 func FeatureContext(s *godog.Suite) {
@@ -552,6 +555,23 @@ func (cr *CucumberRunner) iExpectTheResponseToContain(arg1 string) error {
 	}
 
 	return fmt.Errorf("Expected command output to contain %s.\n Output:\n%s", arg1, commandOutput.String())
+}
+
+func aTCPConnectionToShouldOpen(addr string) error {
+
+	var err error
+	for i := 0; i < 5; i++ {
+		var c net.Conn
+		c, err = net.Dial("tcp", addr)
+		if err == nil {
+			c.Close()
+			return nil
+		}
+
+		time.Sleep(10 * time.Second)
+	}
+
+	return err
 }
 
 func (cr *CucumberRunner) executeCommand(cmd string) error {

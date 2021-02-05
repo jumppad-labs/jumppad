@@ -86,7 +86,7 @@ func (i *LegacyIngress) Create() error {
 
 	// check the ingress does not already exist
 	// TODO, we can probably extract all of the check and pull logic into a common function
-	ids, err := i.client.FindContainerIDs(i.config.Name, i.config.Type)
+	ids, err := i.client.FindContainerIDs(i.config.Name, config.TypeIngress)
 	if len(ids) > 0 {
 		return xerrors.Errorf("Unable to create ingress, and ingress with the name %s already exists: %w", i.config.Name, err)
 	}
@@ -170,7 +170,9 @@ func (i *LegacyIngress) Create() error {
 
 	// ingress simply crease a container with specific options
 	c := config.NewContainer(i.config.Name)
+
 	i.config.ResourceInfo.AddChild(c)
+	c.Type = config.TypeIngress // override the resource type
 
 	c.Networks = i.config.Networks
 	c.Ports = i.config.Ports
@@ -207,7 +209,7 @@ func (i *LegacyIngress) Create() error {
 func (i *LegacyIngress) Destroy() error {
 	i.log.Info("Destroy Ingress", "ref", i.config.Name, "type", i.config.Type)
 
-	ids, err := i.client.FindContainerIDs(i.config.Name, i.config.Type)
+	ids, err := i.client.FindContainerIDs(i.config.Name, config.TypeIngress)
 	if err != nil {
 		return err
 	}
