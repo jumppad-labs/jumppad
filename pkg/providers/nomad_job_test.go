@@ -57,6 +57,7 @@ func TestNomadJobUnableToLoadConfigReturnsError(t *testing.T) {
 	err := p.Create()
 	assert.Error(t, err)
 }
+
 func TestNomadJobCreateReturnsError(t *testing.T) {
 	jc, mh := setupNomadJobMocks()
 	removeOn(&mh.Mock, "Create")
@@ -75,4 +76,88 @@ func TestNomadJobValidatesConfig(t *testing.T) {
 
 	err := p.Create()
 	assert.NoError(t, err)
+}
+
+func TestNomadJobHealthCheckInvalidDurationReturnsError(t *testing.T) {
+	jc, mh := setupNomadJobMocks()
+	jc.HealthCheck = &config.HealthCheck{
+		Timeout:   "1t",
+		NomadJobs: []string{"abc"},
+	}
+
+	mh.On("JobRunning", mock.Anything).Return(false, nil)
+
+	p := NewNomadJob(jc, mh, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.Error(t, err)
+}
+
+func TestNomadJobHealthCheckReturnsErrorWhenNotHealthy(t *testing.T) {
+	jc, mh := setupNomadJobMocks()
+	jc.HealthCheck = &config.HealthCheck{
+		Timeout:   "3s",
+		NomadJobs: []string{"abc"},
+	}
+	mh.On("JobRunning", mock.Anything).Return(false, nil)
+
+	p := NewNomadJob(jc, mh, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.Error(t, err)
+	mh.AssertNumberOfCalls(t, "JobRunning", 3)
+}
+
+func TestNomadJobHealthCheckReturnsErrorWhenHealthError(t *testing.T) {
+	jc, mh := setupNomadJobMocks()
+	jc.HealthCheck = &config.HealthCheck{
+		Timeout:   "3s",
+		NomadJobs: []string{"abc"},
+	}
+	mh.On("JobRunning", mock.Anything).Return(true, fmt.Errorf("boom"))
+
+	p := NewNomadJob(jc, mh, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.Error(t, err)
+	mh.AssertNumberOfCalls(t, "JobRunning", 3)
+}
+
+func TestNomadJobHealthCheckReturnsOKHealthy(t *testing.T) {
+	jc, mh := setupNomadJobMocks()
+	jc.HealthCheck = &config.HealthCheck{
+		Timeout:   "3s",
+		NomadJobs: []string{"abc"},
+	}
+	mh.On("JobRunning", mock.Anything).Return(true, nil)
+
+	p := NewNomadJob(jc, mh, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+	mh.AssertNumberOfCalls(t, "JobRunning", 1)
+}
+
+func TestNomadJobDestroyReturnsErrorWhenNoCluster(t *testing.T) {
+	jc, mh := setupNomadJobMocks()
+	jc.Config.Resources = jc.Config.Resources[1:]
+
+	p := NewNomadJob(jc, mh, hclog.NewNullLogger())
+
+	err := p.Destroy()
+	assert.Error(t, err)
+}
+
+func TestNomadJobDestroyCallsStop(t *testing.T) {
+	jc, mh := setupNomadJobMocks()
+	jc.Paths = []string{"./blah.hcl", "./something.hcl"}
+
+	mh.On("Stop", mock.Anything).Return(nil)
+
+	p := NewNomadJob(jc, mh, hclog.NewNullLogger())
+
+	err := p.Destroy()
+	assert.NoError(t, err)
+
+	mh.AssertCalled(t, "Stop", jc.Paths)
 }
