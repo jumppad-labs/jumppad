@@ -100,9 +100,11 @@ func getTestFiles(tests string) string {
 	return filepath.Join(path, "/examples", tests)
 }
 
-func TestGenerateClientsCreatesClient(t *testing.T) {
-	cl, err := GenerateClients(hclog.NewNullLogger())
+func TestNewCreatesClients(t *testing.T) {
+	e, err := New(hclog.NewNullLogger())
 	assert.NoError(t, err)
+
+	cl := e.GetClients()
 
 	assert.NotNil(t, cl.Kubernetes)
 	assert.NotNil(t, cl.Helm)
@@ -113,6 +115,37 @@ func TestGenerateClientsCreatesClient(t *testing.T) {
 	assert.NotNil(t, cl.Browser)
 	assert.NotNil(t, cl.ImageLog)
 	assert.NotNil(t, cl.Connector)
+}
+
+func TestApplyWithSingleFile(t *testing.T) {
+	e, _, mp, cleanup := setupTests(nil)
+	defer cleanup()
+
+	_, err := e.Apply("../../examples/single_file/config.hcl")
+	assert.NoError(t, err)
+
+	assert.Equal(t, "onprem", (*mp)[0].Config().Info().Name)
+	assert.Equal(t, "consul", (*mp)[1].Config().Info().Name)
+
+	c, ok := (*mp)[1].Config().(*config.Container)
+	assert.True(t, ok)
+
+	assert.Equal(t, "consul:1.6.1", c.Image.Name)
+}
+
+func TestApplyWithSingleFileAndVariables(t *testing.T) {
+	e, _, mp, cleanup := setupTests(nil)
+	defer cleanup()
+
+	_, err := e.ApplyWithVariables("../../examples/single_file/config.hcl", nil, "../../examples/single_file/default.vars")
+	assert.NoError(t, err)
+
+	assert.Equal(t, "onprem", (*mp)[0].Config().Info().Name)
+
+	c, ok := (*mp)[1].Config().(*config.Container)
+	assert.True(t, ok)
+
+	assert.Equal(t, "consul:1.8.1", c.Image.Name)
 }
 
 func TestApplyCallsProviderInCorrectOrder(t *testing.T) {

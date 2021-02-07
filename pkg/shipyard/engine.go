@@ -42,7 +42,11 @@ type Clients struct {
 type Engine interface {
 	GetClients() *Clients
 	Apply(string) ([]config.Resource, error)
-	ApplyWithVariables(string, map[string]string, string) ([]config.Resource, error)
+
+	// ApplyWithVariables applies a configuration file or directory containing
+	// configuraiton. Optionally the user can provide a map of variables which the configuraiton
+	// uses and / or a file containing variables.
+	ApplyWithVariables(path string, variables map[string]string, variablesFile string) ([]config.Resource, error)
 	ParseConfig(string) error
 	ParseConfigWithVariables(string, map[string]string, string) error
 	Destroy(string, bool) error
@@ -320,15 +324,7 @@ func (e *EngineImpl) readConfig(path string, variables map[string]string, variab
 	cc := config.New()
 	if path != "" {
 		if utils.IsHCLFile(path) {
-			config.SetVariables(variables)
-			if variablesFile != "" {
-				err := config.LoadValuesFile(variablesFile)
-				if err != nil {
-					return nil, err
-				}
-			}
-
-			err := config.ParseHCLFile(path, cc)
+			err := config.ParseSingleFile(path, cc, variables, variablesFile)
 			if err != nil {
 				return nil, err
 			}

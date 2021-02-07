@@ -1,7 +1,5 @@
 package config
 
-// TODO how do we deal with multiple stanza with the same name
-
 import (
 	"context"
 	"errors"
@@ -24,9 +22,6 @@ import (
 	"golang.org/x/xerrors"
 )
 
-// TODO this really needs to be a struct with configuration not
-// separate methods.
-
 var ctx *hcl.EvalContext
 
 func init() {
@@ -40,6 +35,28 @@ type ResourceTypeNotExistError struct {
 
 func (r ResourceTypeNotExistError) Error() string {
 	return fmt.Sprintf("Resource type %s defined in file %s, does not exist. Please check the documentation for supported resources. We love PRs if you would like to create a resource of this type :)", r.Type, r.File)
+}
+
+func ParseSingleFile(file string, c *Config, variables map[string]string, variablesFile string) error {
+	SetVariables(variables)
+	if variablesFile != "" {
+		err := LoadValuesFile(variablesFile)
+		if err != nil {
+			return err
+		}
+	}
+
+	err := ParseVariableFile(file, c)
+	if err != nil {
+		return err
+	}
+
+	err = ParseHCLFile(file, c)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // ParseFolder for Resource, Blueprint, and Variable files
