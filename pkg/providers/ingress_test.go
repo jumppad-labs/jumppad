@@ -42,11 +42,11 @@ func TestIngressExposeLocalErrorsWhenUnableToFindDependencies(t *testing.T) {
 	md, c := testIngressCreateMocks()
 	mc := testIngressCreateMockConnector(t, testIngressExposeK8sLocalConfig.Name)
 
-	tc := &testIngressExposeK8sLocalConfig
+	tc := testIngressExposeK8sLocalConfig
 	tc.Source.Config.Cluster = "blah"
-	c.AddResource(tc)
+	c.AddResource(&tc)
 
-	p := NewIngress(tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -56,11 +56,11 @@ func TestIngressExposeLocalErrorsWhenInvalidName(t *testing.T) {
 	md, c := testIngressCreateMocks()
 	mc := testIngressCreateMockConnector(t, testIngressExposeK8sLocalConfig.Name)
 
-	tc := &testIngressExposeK8sLocalConfig
+	tc := testIngressExposeK8sLocalConfig
 	tc.Name = "connector"
-	c.AddResource(tc)
+	c.AddResource(&tc)
 
-	p := NewIngress(tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -70,11 +70,11 @@ func TestIngressExposeLocalErrorsWhenInvalidPort(t *testing.T) {
 	md, c := testIngressCreateMocks()
 	mc := testIngressCreateMockConnector(t, testIngressExposeK8sLocalConfig.Name)
 
-	tc := &testIngressExposeK8sLocalConfig
+	tc := testIngressExposeK8sLocalConfig
 	tc.Source.Config.Port = "abc"
-	c.AddResource(tc)
+	c.AddResource(&tc)
 
-	p := NewIngress(tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -84,20 +84,18 @@ func TestIngressExposeLocalErrorsWhenPortReserved(t *testing.T) {
 	md, c := testIngressCreateMocks()
 	mc := testIngressCreateMockConnector(t, testIngressExposeK8sLocalConfig.Name)
 
-	tc := &testIngressExposeK8sLocalConfig
+	tc := testIngressExposeK8sLocalConfig
 	tc.Source.Config.Port = "60000"
-	c.AddResource(tc)
+	c.AddResource(&tc)
 
-	p := NewIngress(tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
 
-	tc = &testIngressExposeK8sLocalConfig
 	tc.Source.Config.Port = "60001"
-	c.AddResource(tc)
 
-	p = NewIngress(tc, md, mc, hclog.NewNullLogger())
+	p = NewIngress(&tc, md, mc, hclog.NewNullLogger())
 
 	err = p.Create()
 	assert.Error(t, err)
@@ -107,11 +105,11 @@ func TestIngressExposeLocalErrorsWhenInvalidAddress(t *testing.T) {
 	md, c := testIngressCreateMocks()
 	mc := testIngressCreateMockConnector(t, testIngressExposeK8sLocalConfig.Name)
 
-	tc := &testIngressExposeK8sLocalConfig
-	tc.Source.Config.Address = ""
-	c.AddResource(tc)
+	tc := testIngressExposeK8sLocalConfig
+	tc.Destination.Config.Address = ""
+	c.AddResource(&tc)
 
-	p := NewIngress(tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -121,10 +119,10 @@ func TestIngressExposeLocalCallsExpose(t *testing.T) {
 	md, c := testIngressCreateMocks()
 	mc := testIngressCreateMockConnector(t, testIngressExposeK8sLocalConfig.Name)
 
-	tc := &testIngressExposeK8sLocalConfig
-	c.AddResource(tc)
+	tc := testIngressExposeK8sLocalConfig
+	c.AddResource(&tc)
 
-	p := NewIngress(tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -145,11 +143,11 @@ func TestIngressExposeRemoteErrorsWhenUnableToFindDependencies(t *testing.T) {
 	md, c := testIngressCreateMocks()
 	mc := testIngressCreateMockConnector(t, "")
 
-	tc := &testIngressExposesLocalK8sServiceConfig
-	tc.Source.Config.Cluster = "blah"
-	c.AddResource(tc)
+	tc := testIngressExposesLocalK8sServiceConfig
+	tc.Destination.Config.Cluster = "blah"
+	c.AddResource(&tc)
 
-	p := NewIngress(tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -159,11 +157,11 @@ func TestIngressExposeRemoteErrorsWhenNoDestinationAddress(t *testing.T) {
 	md, c := testIngressCreateMocks()
 	mc := testIngressCreateMockConnector(t, "")
 
-	tc := &testIngressExposesLocalK8sServiceConfig
+	tc := testIngressExposesLocalK8sServiceConfig
 	tc.Destination.Config.Address = ""
-	c.AddResource(tc)
+	c.AddResource(&tc)
 
-	p := NewIngress(tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -173,11 +171,11 @@ func TestIngressExposeRemoteErrorsWhenUnableToParsePort(t *testing.T) {
 	md, c := testIngressCreateMocks()
 	mc := testIngressCreateMockConnector(t, "")
 
-	tc := &testIngressExposesLocalK8sServiceConfig
-	tc.Destination.Config.Port = "sdf"
-	c.AddResource(tc)
+	tc := testIngressExposesLocalK8sServiceConfig
+	tc.Source.Config.Port = "sdf"
+	c.AddResource(&tc)
 
-	p := NewIngress(tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -187,20 +185,18 @@ func TestIngressExposeRemoteErrorsWhenReservedPort(t *testing.T) {
 	md, c := testIngressCreateMocks()
 	mc := testIngressCreateMockConnector(t, "")
 
-	tc := &testIngressExposesLocalK8sServiceConfig
-	tc.Destination.Config.Port = "30000"
-	c.AddResource(tc)
+	tc := testIngressExposesLocalK8sServiceConfig
+	tc.Source.Config.Port = "30001"
+	c.AddResource(&tc)
 
-	p := NewIngress(tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
 
-	tc = &testIngressExposesLocalK8sServiceConfig
-	tc.Destination.Config.Port = "30001"
-	c.AddResource(tc)
+	tc.Source.Config.Port = "30002"
 
-	p = NewIngress(tc, md, mc, hclog.NewNullLogger())
+	p = NewIngress(&tc, md, mc, hclog.NewNullLogger())
 
 	err = p.Create()
 	assert.Error(t, err)
@@ -210,10 +206,10 @@ func TestIngressExposeRemoteCallsExpose(t *testing.T) {
 	md, c := testIngressCreateMocks()
 	mc := testIngressCreateMockConnector(t, testIngressExposeK8sLocalConfig.Name)
 
-	tc := &testIngressExposesLocalK8sServiceConfig
-	c.AddResource(tc)
+	tc := testIngressExposesLocalK8sServiceConfig
+	c.AddResource(&tc)
 
-	p := NewIngress(tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -234,10 +230,10 @@ func TestIngressDestroyCallsRemove(t *testing.T) {
 	md, _ := testIngressCreateMocks()
 	mc := testIngressCreateMockConnector(t, testIngressExposeK8sLocalConfig.Name)
 
-	tc := &testIngressExposesLocalK8sServiceConfig
+	tc := testIngressExposesLocalK8sServiceConfig
 	tc.Id = "12345"
 
-	p := NewIngress(tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
 
 	err := p.Destroy()
 	assert.NoError(t, err)
@@ -261,6 +257,7 @@ var testIngressExposeK8sLocalConfig = config.Ingress{
 
 	Destination: config.Traffic{
 		Driver: "local",
+
 		Config: config.TrafficConfig{
 			Port:    "1234",
 			Address: "localhost",
@@ -275,6 +272,7 @@ var testIngressExposesLocalK8sServiceConfig = config.Ingress{
 	},
 	Destination: config.Traffic{
 		Driver: "k8s",
+
 		Config: config.TrafficConfig{
 			Cluster: "k8s_cluster.test",
 			Port:    "1234",
