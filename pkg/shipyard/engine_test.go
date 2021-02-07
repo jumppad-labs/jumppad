@@ -100,6 +100,21 @@ func getTestFiles(tests string) string {
 	return filepath.Join(path, "/examples", tests)
 }
 
+func TestGenerateClientsCreatesClient(t *testing.T) {
+	cl, err := GenerateClients(hclog.NewNullLogger())
+	assert.NoError(t, err)
+
+	assert.NotNil(t, cl.Kubernetes)
+	assert.NotNil(t, cl.Helm)
+	assert.NotNil(t, cl.Command)
+	assert.NotNil(t, cl.HTTP)
+	assert.NotNil(t, cl.Nomad)
+	assert.NotNil(t, cl.Getter)
+	assert.NotNil(t, cl.Browser)
+	assert.NotNil(t, cl.ImageLog)
+	assert.NotNil(t, cl.Connector)
+}
+
 func TestApplyCallsProviderInCorrectOrder(t *testing.T) {
 	e, _, mp, cleanup := setupTests(nil)
 	defer cleanup()
