@@ -30,3 +30,10 @@ func TestExecuteLongRunningTimesOut(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, ErrorCommandTimeout, err)
 }
+
+func TestExecuteInvalidCommandReturnsError(t *testing.T) {
+	e := setupExecute(t)
+
+	err := e.Execute(CommandConfig{Command: "nocommand"})
+	assert.Error(t, err)
+}

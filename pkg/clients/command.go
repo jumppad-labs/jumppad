@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -61,16 +62,31 @@ func (c *CommandImpl) Execute(config CommandConfig) error {
 	// done chan
 	done := make(chan error)
 
+	cm := sync.Mutex{}
+
 	// wait for timeout
 	t := time.After(c.timeout)
 
 	go func() {
-		err := cmd.Run()
+		cm.Lock()
+
+		err := cmd.Start()
+
+		cm.Unlock()
+
+		if err != nil {
+			done <- err
+		}
+
+		err = cmd.Wait()
 		done <- err
 	}()
 
 	select {
 	case <-t:
+		cm.Lock()
+		defer cm.Unlock()
+
 		// kill the running process
 		cmd.Process.Kill()
 		return ErrorCommandTimeout
