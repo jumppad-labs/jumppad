@@ -133,8 +133,7 @@ jobs:
 
       - name: E2E test for build binary
         run: |
-          bin\yard-windows.exe run --no-browser ./examples/single_k3s_cluster
-          bin\yard-windows.exe destroy
+          bin\yard-windows.exe test ./examples/container
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
