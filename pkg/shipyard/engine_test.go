@@ -121,7 +121,7 @@ func TestApplyWithSingleFile(t *testing.T) {
 	e, _, mp, cleanup := setupTests(nil)
 	defer cleanup()
 
-	_, err := e.Apply("../../examples/single_file/config.hcl")
+	_, err := e.Apply("../../examples/single_file/container.hcl")
 	assert.NoError(t, err)
 
 	assert.Equal(t, "onprem", (*mp)[0].Config().Info().Name)
@@ -137,7 +137,7 @@ func TestApplyWithSingleFileAndVariables(t *testing.T) {
 	e, _, mp, cleanup := setupTests(nil)
 	defer cleanup()
 
-	_, err := e.ApplyWithVariables("../../examples/single_file/config.hcl", nil, "../../examples/single_file/default.vars")
+	_, err := e.ApplyWithVariables("../../examples/single_file/container.hcl", nil, "../../examples/single_file/default.vars")
 	assert.NoError(t, err)
 
 	assert.Equal(t, "onprem", (*mp)[0].Config().Info().Name)
