@@ -15,7 +15,7 @@ func setupExecute(t *testing.T) Command {
 
 func TestExecuteWithBasicParams(t *testing.T) {
 	command := "sh"
-	args := []string{"ls"}
+	args := []string{"-c", "ls"}
 
 	if runtime.GOOS == "windows" {
 		command = "cmd.exe"
@@ -34,7 +34,7 @@ func TestExecuteWithBasicParams(t *testing.T) {
 
 func TestExecuteLongRunningTimesOut(t *testing.T) {
 	command := "sh"
-	args := []string{"sleep", "10"}
+	args := []string{"-c", "sleep 10s"}
 
 	if runtime.GOOS == "windows" {
 		command = "cmd.exe"
