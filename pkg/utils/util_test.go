@@ -46,18 +46,6 @@ func TestIsLocalAbsFolder(t *testing.T) {
 	assert.True(t, is)
 }
 
-func TestIsLocalRelativeFolderWindows(t *testing.T) {
-	is := IsLocalFolder(".\\")
-
-	assert.True(t, is)
-}
-
-func TestIsLocalAbsFolderWindows(t *testing.T) {
-	is := IsLocalFolder("c:\\tmp")
-
-	assert.True(t, is)
-}
-
 func TestIsFolderNotExists(t *testing.T) {
 	is := IsLocalFolder("/dfdfdf")
 
