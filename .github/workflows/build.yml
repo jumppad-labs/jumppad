@@ -115,33 +115,6 @@ jobs:
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
 
-  e2e_windows:
-    name: Windows E2E Tests
-    runs-on: windows-latest
-    needs: build
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Setup Go version
-        uses: actions/setup-go@v1
-        with:
-          go-version: 1.15.2
-
-      - name: Build a windows binary
-        run: go build -ldflags "-X main.version=e2e" -o bin/yard-windows.exe main.go
-
-      - name: E2E test for build binary
-        run: |
-          bin\yard-windows.exe test .\examples\single_file
-
-      - name: Send status to Discord
-        uses: sarisia/actions-status-discord@v1
-        if: always()
-        with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-
-
   e2e_mac:
     name: Mac E2E Tests
     runs-on: ubuntu-latest
