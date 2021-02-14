@@ -1,16 +1,18 @@
 package utils
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"net/url"
 	"os"
-	"path"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
+	"sync"
 )
 
 var InvalidBlueprintURIError = fmt.Errorf("Inavlid blueprint URI")
@@ -80,9 +82,9 @@ func FQDNVolumeName(name string) string {
 // CreateKubeConfigPath creates the file path for the KubeConfig file when
 // using Kubernetes cluster
 func CreateKubeConfigPath(name string) (dir, filePath string, dockerPath string) {
-	dir = fmt.Sprintf("%s/.shipyard/config/%s", HomeFolder(), name)
-	filePath = fmt.Sprintf("%s/kubeconfig.yaml", dir)
-	dockerPath = fmt.Sprintf("%s/kubeconfig-docker.yaml", dir)
+	dir = filepath.Join(ShipyardHome(), "/config/", name)
+	filePath = filepath.Join(dir, "/kubeconfig.yaml")
+	dockerPath = filepath.Join(dir, "/kubeconfig-docker.yaml")
 
 	// create the folders
 	err := os.MkdirAll(dir, 0755)
@@ -96,8 +98,8 @@ func CreateKubeConfigPath(name string) (dir, filePath string, dockerPath string)
 // CreateClusterConfigPath creates the file path for the Cluster config
 // which stores details such as the API server location
 func CreateClusterConfigPath(name string) (dir, filePath string) {
-	dir = fmt.Sprintf("%s/.shipyard/config/%s", HomeFolder(), name)
-	filePath = fmt.Sprintf("%s/config.json", dir)
+	dir = filepath.Join(ShipyardHome(), "/config/", name)
+	filePath = filepath.Join(dir, "/config.json")
 
 	// create the folders
 	err := os.MkdirAll(dir, 0755)
@@ -111,17 +113,22 @@ func CreateClusterConfigPath(name string) (dir, filePath string) {
 // HomeFolder returns the users homefolder this will be $HOME on windows and mac and
 // USERPROFILE on windows
 func HomeFolder() string {
+	return os.Getenv(HomeEnvName())
+}
+
+// HomeEnvName returns the environment variable used to store the home path
+func HomeEnvName() string {
 	if runtime.GOOS == "windows" {
-		return os.Getenv("USERPROFILE")
+		return "USERPROFILE"
 	}
 
-	return os.Getenv("HOME")
+	return "HOME"
 }
 
 // ShipyardHome returns the location of the shipyard
 // folder, usually $HOME/.shipyard
 func ShipyardHome() string {
-	return fmt.Sprintf("%s/.shipyard", HomeFolder())
+	return filepath.Join(HomeFolder(), "/.shipyard")
 }
 
 // ShipyardTemp returns a temporary folder
@@ -138,13 +145,15 @@ func ShipyardTemp() string {
 // StateDir returns the location of the shipyard
 // state, usually $HOME/.shipyard/state
 func StateDir() string {
-	return fmt.Sprintf("%s/state", ShipyardHome())
+	return filepath.Join(ShipyardHome(), "/state")
 }
 
 // CertsDir returns the location of the certificates for the given resource
 // used to secure the Shipyard ingress, usually rooted at $HOME/.shipyard/certs
 func CertsDir(name string) string {
-	certs := fmt.Sprintf("%s/certs/%s", ShipyardHome(), name)
+	certs := filepath.Join(ShipyardHome(), "/certs", name)
+	certs = filepath.FromSlash(certs)
+
 	// create the folder if it does not exist
 	os.MkdirAll(certs, os.ModePerm)
 	return certs
@@ -153,7 +162,7 @@ func CertsDir(name string) string {
 // LogsDir returns the location of the logs
 // used to secure the Shipyard ingress, usually $HOME/.shipyard/logs
 func LogsDir() string {
-	logs := fmt.Sprintf("%s/logs", ShipyardHome())
+	logs := filepath.Join(ShipyardHome(), "/logs")
 
 	os.MkdirAll(logs, os.ModePerm)
 	return logs
@@ -161,7 +170,7 @@ func LogsDir() string {
 
 // StatePath returns the full path for the state file
 func StatePath() string {
-	return fmt.Sprintf("%s/state.json", StateDir())
+	return filepath.Join(StateDir(), "/state.json")
 }
 
 // ImageCacheLog returns the location of the image cache log
@@ -174,17 +183,17 @@ func ImageCacheLog() string {
 // TODO make more robust with error messages
 // to improve UX
 func IsLocalFolder(path string) bool {
-	if strings.HasPrefix(path, "/") || strings.HasPrefix(path, "./") || strings.HasPrefix(path, "../") {
-		// test to see if the folder or file exists
-		f, err := os.Stat(path)
-		if err != nil || f == nil {
-			return false
-		}
-
-		return true
+	path, err := filepath.Abs(path)
+	if err != nil {
+		return false
 	}
 
-	return false
+	f, err := os.Stat(path)
+	if err != nil || f == nil {
+		return false
+	}
+
+	return true
 }
 
 // IsHCLFile tests if the given path resolves to a HCL config file
@@ -205,6 +214,14 @@ func IsHCLFile(path string) bool {
 	return true
 }
 
+func sanitizeBlueprintFolder(blueprint string) string {
+	blueprint = strings.ReplaceAll(blueprint, "?", "/")
+	blueprint = strings.ReplaceAll(blueprint, "&", "/")
+	blueprint = strings.ReplaceAll(blueprint, "=", "/")
+
+	return blueprint
+}
+
 // GetBlueprintFolder parses a blueprint uri and returns the top level
 // blueprint folder
 // if the URI is not a blueprint will return an error
@@ -216,12 +233,16 @@ func GetBlueprintFolder(blueprint string) (string, error) {
 		return "", InvalidBlueprintURIError
 	}
 
-	return parts[1], nil
+	return sanitizeBlueprintFolder(parts[1]), nil
 }
 
 // GetBlueprintLocalFolder returns the full storage path
 // for the given blueprint URI
 func GetBlueprintLocalFolder(blueprint string) string {
+	// we might have a querystring reference such has github.com/abc/cds?ref=dfdf&dfdf
+	// replace these separators with /
+	blueprint = sanitizeBlueprintFolder(blueprint)
+
 	return filepath.Join(ShipyardHome(), "blueprints", blueprint)
 }
 
@@ -233,12 +254,12 @@ func GetHelmLocalFolder(blueprint string) string {
 
 // GetReleasesFolder return the path of the Shipyard releases
 func GetReleasesFolder() string {
-	return path.Join(ShipyardHome(), "releases")
+	return filepath.Join(ShipyardHome(), "releases")
 }
 
 // GetDataFolder creates the data directory used by the application
 func GetDataFolder(p string) string {
-	data := path.Join(ShipyardHome(), "data", p)
+	data := filepath.Join(ShipyardHome(), "data", p)
 	// create the folder if it does not exist
 	os.MkdirAll(data, os.ModePerm)
 	return data
@@ -281,39 +302,82 @@ func GetConnectorLogFile() string {
 	return filepath.Join(LogsDir(), "connector.log")
 }
 
-// GetShipyardBinaryPath returns the path to the running Shipyard binary
-func GetShipyardBinaryPath() string {
-	if os.Getenv("GO_ENV") == "testing" {
-		_, filename, _, _ := runtime.Caller(0)
-		dir := path.Dir(filename)
+func compileShipyardBinary(path string) error {
+	maxLevels := 10
+	currentLevel := 0
 
-		// walk backwards until we find the go.mod
-		for {
-			files, err := ioutil.ReadDir(dir)
-			if err != nil {
-				return ""
-			}
+	// we are running from a test so compile the binary
+	// and returns its path
+	dir, _ := os.Getwd()
 
-			for _, f := range files {
-				if strings.HasSuffix(f.Name(), "go.mod") {
-					fp, _ := filepath.Abs(dir)
+	// walk backwards until we find the go.mod
+	for {
+		files, err := ioutil.ReadDir(dir)
+		if err != nil {
+			return err
+		}
 
-					// found the project root
-					return "go run " + filepath.Join(fp, "main.go")
+		for _, f := range files {
+			if strings.HasSuffix(f.Name(), "go.mod") {
+				fp, _ := filepath.Abs(dir)
+
+				// found the project root
+				file := filepath.Join(fp, "main.go")
+				tmpBinary := path
+
+				// if windows append the exe extension
+				if runtime.GOOS == "windows" {
+					tmpBinary = tmpBinary + ".exe"
 				}
-			}
 
-			// check the parent
-			dir = path.Join(dir, "../")
+				fmt.Println("Building temporary connector binary", tmpBinary)
+				os.RemoveAll(tmpBinary)
+
+				outwriter := bytes.NewBufferString("")
+				cmd := exec.Command("go", "build", "-o", tmpBinary, file)
+				cmd.Stderr = outwriter
+				cmd.Stdout = outwriter
+
+				err := cmd.Run()
+				if err != nil {
+					fmt.Println("Error building temporary binary:", cmd.Args)
+					fmt.Println(outwriter.String())
+					panic(fmt.Errorf("unable to build connector binary: %s", err))
+				}
+
+				return nil
+			}
+		}
+
+		// check the parent
+		dir = filepath.Join(dir, "../")
+		fmt.Println(dir)
+		currentLevel++
+		if currentLevel > maxLevels {
+			panic("unable to find go.mod")
 		}
 	}
+}
 
-	ex, err := os.Executable()
-	if err != nil {
-		panic(err)
+var buildSync = sync.Once{}
+
+// GetShipyardBinaryPath returns the path to the running Shipyard binary
+func GetShipyardBinaryPath() string {
+	if strings.HasSuffix(os.Args[0], "shipyard") || strings.HasSuffix(os.Args[0], "yard-dev") || strings.HasSuffix(os.Args[0], "shipyard.exe") {
+		ex, err := os.Executable()
+		if err != nil {
+			panic(err)
+		}
+
+		return ex
 	}
 
-	return ex
+	tmpBinary := filepath.Join(os.TempDir(), "shipyard-dev")
+	buildSync.Do(func() {
+		compileShipyardBinary(tmpBinary)
+	})
+
+	return tmpBinary
 }
 
 // returns the hostname for the current machine

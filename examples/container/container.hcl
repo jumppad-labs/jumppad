@@ -1,6 +1,15 @@
+variable "consul_version" {
+  default = "1.8.1"
+}
+
+variable "envoy_version" {
+  default = "1.14.3"
+}
+
+
 container "consul" {
   image   {
-    name = "consul:${env("CONSUL_VERSION")}"
+    name = "consul:${var.consul_version}"
   }
 
   command = ["consul", "agent", "-config-file=/config/consul.hcl"]
@@ -18,12 +27,17 @@ container "consul" {
 
   env {
     key = "something"
-    value = "${var.something}"
+    value = var.something
+  }
+  
+  env {
+    key = "foo"
+    value = env("BAH")
   }
   
   env {
     key = "file"
-    value = "${file("./conf.txt")}"
+    value = file("./conf.txt")
   }
 
   resources {
@@ -47,12 +61,12 @@ container "consul" {
   
   env {
     key ="SHIPYARD_FOLDER"
-    value = "${shipyard()}"
+    value = shipyard()
   }
   
   env {
     key ="HOME_FOLDER"
-    value = "${home()}"
+    value = home()
   }
 }
 
@@ -60,7 +74,7 @@ sidecar "envoy" {
   target = "container.consul"
 
   image   {
-    name = "envoyproxy/envoy-alpine:v${env("ENVOY_VERSION")}"
+    name = "envoyproxy/envoy-alpine:v${var.envoy_version}"
   }
 
   command = ["tail", "-f", "/dev/null"]

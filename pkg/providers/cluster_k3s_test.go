@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -40,12 +40,13 @@ func setupClusterMocks(t *testing.T) (
 	md.On("DetachNetwork", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	// set the home folder to a temp folder
-	tmpDir, _ := ioutil.TempDir("", "")
-	currentHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
+	tmpDir := t.TempDir()
+	currentHome := os.Getenv(utils.HomeEnvName())
+	os.Setenv(utils.HomeEnvName(), tmpDir)
 
 	// write the kubeconfig
-	kcf, err := os.Create("/tmp/kubeconfig.yaml")
+	_, kubePath, _ := utils.CreateKubeConfigPath(clusterConfig.Name)
+	kcf, err := os.Create(kubePath)
 	if err != nil {
 		panic(err)
 	}
@@ -77,8 +78,7 @@ func setupClusterMocks(t *testing.T) (
 	c.AddResource(&cn)
 
 	t.Cleanup(func() {
-		os.Setenv("HOME", currentHome)
-		os.RemoveAll(tmpDir)
+		os.Setenv(utils.HomeEnvName(), currentHome)
 	})
 
 	return &cc, md, mk, mc
@@ -224,6 +224,7 @@ func TestClusterK3sErrorsIfServerNOTStart(t *testing.T) {
 
 func TestClusterK3sDownloadsConfig(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
+	_, kubePath, _ := utils.CreateKubeConfigPath(cc.Name)
 
 	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
@@ -233,7 +234,7 @@ func TestClusterK3sDownloadsConfig(t *testing.T) {
 	params := getCalls(&md.Mock, "CopyFromContainer")[0].Arguments
 	assert.Equal(t, "containerid", params.String(0))
 	assert.Equal(t, "/output/kubeconfig.yaml", params.String(1))
-	assert.Equal(t, "/tmp/kubeconfig.yaml", params.String(2))
+	assert.Equal(t, kubePath, params.String(2))
 }
 
 func TestClusterK3sRaisesErrorWhenUnableToDownloadConfig(t *testing.T) {
@@ -449,7 +450,7 @@ func TestClusterK3sDeploysConnector(t *testing.T) {
 	args := getCalls(&mk.Mock, "Apply")[0]
 
 	for _, f := range args.Arguments[0].([]string) {
-		fn := strings.Split(f, "/")[3]
+		_, fn := filepath.Split(f)
 		assert.Contains(t, files, fn)
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/gernest/front"
@@ -945,6 +946,12 @@ func decodeBody(path string, b *hclsyntax.Block, p interface{}) error {
 // ensureAbsolute ensure that the given path is either absolute or
 // if relative is converted to abasolute based on the path of the config
 func ensureAbsolute(path, file string) string {
+	// if the file starts with a / and we are on windows
+	// we should treat this as absolute
+	if runtime.GOOS == "windows" && strings.HasPrefix(path, "/") {
+		return path
+	}
+
 	if filepath.IsAbs(path) {
 		return path
 	}

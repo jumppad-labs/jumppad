@@ -37,8 +37,8 @@ func setupState(state string) func() {
 		panic(err)
 	}
 
-	home := os.Getenv("HOME")
-	os.Setenv("HOME", dir)
+	home := os.Getenv(utils.HomeEnvName())
+	os.Setenv(utils.HomeEnvName(), dir)
 
 	// write the state file
 	if state != "" {
@@ -55,7 +55,7 @@ func setupState(state string) func() {
 	}
 
 	return func() {
-		os.Setenv("HOME", home)
+		os.Setenv(utils.HomeEnvName(), home)
 		os.RemoveAll(dir)
 	}
 }

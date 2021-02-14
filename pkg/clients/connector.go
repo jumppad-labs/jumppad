@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/shipyard-run/connector/crypto"
 	"github.com/shipyard-run/connector/protos/shipyard"
@@ -122,7 +123,7 @@ func (c *ConnectorImpl) Start(cb *CertBundle) error {
 			"--server-key-path", cb.LeafKeyPath,
 			"--log-level", ll,
 		},
-		Logfile: path.Join(c.options.LogDirectory, "connector.log"),
+		Logfile: filepath.Join(c.options.LogDirectory, "connector.log"),
 		Pidfile: c.options.PidFile,
 	}
 
@@ -155,13 +156,11 @@ func (c *ConnectorImpl) IsRunning() bool {
 // creates a CA and local leaf cert
 func (c *ConnectorImpl) GenerateLocalCertBundle(out string) (*CertBundle, error) {
 	cb := &CertBundle{
-		RootCertPath: path.Join(out, "root.cert"),
-		RootKeyPath:  path.Join(out, "root.key"),
-		LeafCertPath: path.Join(out, "leaf.cert"),
-		LeafKeyPath:  path.Join(out, "leaf.key"),
+		RootCertPath: filepath.Join(out, "root.cert"),
+		RootKeyPath:  filepath.Join(out, "root.key"),
+		LeafCertPath: filepath.Join(out, "leaf.cert"),
+		LeafKeyPath:  filepath.Join(out, "leaf.key"),
 	}
-
-	fmt.Println(out)
 
 	// create the CA
 	rk, err := crypto.GenerateKeyPair()
@@ -194,10 +193,10 @@ func (c *ConnectorImpl) GenerateLocalCertBundle(out string) (*CertBundle, error)
 
 func (c *ConnectorImpl) GetLocalCertBundle(dir string) (*CertBundle, error) {
 	cb := &CertBundle{
-		RootCertPath: path.Join(dir, "root.cert"),
-		RootKeyPath:  path.Join(dir, "root.key"),
-		LeafCertPath: path.Join(dir, "leaf.cert"),
-		LeafKeyPath:  path.Join(dir, "leaf.key"),
+		RootCertPath: filepath.Join(dir, "root.cert"),
+		RootKeyPath:  filepath.Join(dir, "root.key"),
+		LeafCertPath: filepath.Join(dir, "leaf.cert"),
+		LeafKeyPath:  filepath.Join(dir, "leaf.key"),
 	}
 
 	// test to see if files exist

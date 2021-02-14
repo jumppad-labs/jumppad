@@ -118,9 +118,10 @@ func TestIngressK8sTargetConfiguresKubeConfig(t *testing.T) {
 	assert.Equal(t, "/kubeconfig-docker.yaml", container.Environment[0].Value)
 
 	// check that the kubeconfig has been copied to the container
+	_, _, kubeConfigPath := utils.CreateKubeConfigPath("test")
 	params := getCalls(&md.Mock, "CopyFileToContainer")[0].Arguments
 	assert.Equal(t, "ingress", params[0])
-	assert.Contains(t, params[1], ".shipyard/config/test/kubeconfig-docker.yaml")
+	assert.Equal(t, params[1], kubeConfigPath)
 	assert.Equal(t, "/", params[2])
 }
 

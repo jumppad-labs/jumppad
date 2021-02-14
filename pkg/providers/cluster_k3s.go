@@ -275,15 +275,15 @@ func (c *K8sCluster) waitForStart(id string) error {
 
 func (c *K8sCluster) copyKubeConfig(id string) (string, error) {
 	// create destination kubeconfig file paths
-	out := path.Join(os.TempDir(), "kubeconfig.yaml")
+	_, kubePath, _ := utils.CreateKubeConfigPath(c.config.Name)
 
 	// get kubeconfig file from container and read contents
-	err := c.client.CopyFromContainer(id, "/output/kubeconfig.yaml", out)
+	err := c.client.CopyFromContainer(id, "/output/kubeconfig.yaml", kubePath)
 	if err != nil {
 		return "", err
 	}
 
-	return out, nil
+	return kubePath, nil
 }
 
 func (c *K8sCluster) createLocalKubeConfig(kubeconfig string) (string, error) {

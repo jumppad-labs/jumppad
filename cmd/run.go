@@ -177,11 +177,6 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 			}
 		}
 
-		// generate the certificates for the connector if needed
-
-		// start the connector
-
-		// Load the files
 		res, err := e.ApplyWithVariables(dst, vars, *variablesFile)
 		if err != nil {
 			return fmt.Errorf("Unable to apply blueprint: %s", err)
@@ -259,7 +254,6 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 
 			l.Debug("Health check urls for browser windows", "count", len(browserList))
 			for _, b := range browserList {
-				fmt.Println("check", b)
 				go func(uri string) {
 					// health check the URL
 					err := hc.HealthCheckHTTP(uri, checkDuration)

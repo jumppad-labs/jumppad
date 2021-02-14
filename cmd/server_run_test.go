@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -25,10 +26,10 @@ func setupGenerateCerts(t *testing.T, dir string) {
 	ca, err := crypto.GenerateCA(k.Private)
 	assert.NoError(t, err)
 
-	err = k.Private.WriteFile(path.Join(dir, "root.key"))
+	err = k.Private.WriteFile(filepath.Join(dir, "root.key"))
 	assert.NoError(t, err)
 
-	err = ca.WriteFile(path.Join(dir, "root.cert"))
+	err = ca.WriteFile(filepath.Join(dir, "root.cert"))
 	assert.NoError(t, err)
 
 	lk, err := crypto.GenerateKeyPair()
@@ -42,10 +43,10 @@ func setupGenerateCerts(t *testing.T, dir string) {
 		lk.Private,
 	)
 
-	err = lk.Private.WriteFile(path.Join(dir, "leaf.key"))
+	err = lk.Private.WriteFile(filepath.Join(dir, "leaf.key"))
 	assert.NoError(t, err)
 
-	err = lc.WriteFile(path.Join(dir, "leaf.cert"))
+	err = lc.WriteFile(filepath.Join(dir, "leaf.cert"))
 	assert.NoError(t, err)
 }
 
@@ -54,13 +55,13 @@ func setupServerRunTests(t *testing.T) string {
 	tmpDir, err := ioutil.TempDir("", "")
 	require.NoError(t, err)
 
-	oh := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
+	oh := os.Getenv(utils.HomeEnvName())
+	os.Setenv(utils.HomeEnvName(), tmpDir)
 
 	setupGenerateCerts(t, utils.CertsDir(""))
 
 	t.Cleanup(func() {
-		os.Setenv("HOME", oh)
+		os.Setenv(utils.HomeEnvName(), oh)
 		os.RemoveAll(tmpDir)
 	})
 

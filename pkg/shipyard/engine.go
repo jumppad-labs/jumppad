@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -157,6 +158,21 @@ func (e *EngineImpl) Apply(path string) ([]config.Resource, error) {
 
 // ApplyWithVariables applies the current config creating the resources
 func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, variablesFile string) ([]config.Resource, error) {
+	// abs paths
+	var err error
+	path, err = filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if variablesFile != "" {
+
+		variablesFile, err = filepath.Abs(variablesFile)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	d, err := e.readConfig(path, vars, variablesFile)
 	if err != nil {
 		return nil, err

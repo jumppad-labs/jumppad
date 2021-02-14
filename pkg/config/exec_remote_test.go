@@ -1,6 +1,7 @@
 package config
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -34,7 +35,7 @@ func TestExecRemoteCreatesCorrectly(t *testing.T) {
 	assert.Equal(t, "hashicorp/vault:latest", ex.(*ExecRemote).Image.Name)
 
 	assert.Len(t, ex.(*ExecRemote).Volumes, 1)
-	assert.Equal(t, dir+"/scripts", ex.(*ExecRemote).Volumes[0].Source)
+	assert.Equal(t, filepath.Join(dir, "/scripts"), ex.(*ExecRemote).Volumes[0].Source)
 }
 
 var execRemoteRelative = `
