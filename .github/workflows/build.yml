@@ -133,7 +133,8 @@ jobs:
 
       - name: E2E test for build binary
         run: |
-          bin\yard-windows.exe test ./examples/container
+          bin\yard-windows.exe test .\examples\single_file
+          bin\yard-windows.exe test .\examples\container
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
