@@ -11,7 +11,6 @@ import (
 	"os"
 	gosignal "os/signal"
 	"path"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -103,17 +102,13 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 		}
 
 		// cupsets are not supported on windows
-		if runtime.GOOS != "windows" {
-			if len(c.Resources.CPUPin) > 0 {
-				cpuPin := make([]string, len(c.Resources.CPUPin))
-				for i, v := range c.Resources.CPUPin {
-					cpuPin[i] = fmt.Sprintf("%d", v)
-				}
-
-				rc.CpusetCpus = strings.Join(cpuPin, ",")
+		if len(c.Resources.CPUPin) > 0 {
+			cpuPin := make([]string, len(c.Resources.CPUPin))
+			for i, v := range c.Resources.CPUPin {
+				cpuPin[i] = fmt.Sprintf("%d", v)
 			}
-		} else {
-			d.l.Warn("Windows does not support CpusetCpus, ignoring", "parameter", c.Resources.CPUPin)
+
+			rc.CpusetCpus = strings.Join(cpuPin, ",")
 		}
 
 		hc.Resources = rc
