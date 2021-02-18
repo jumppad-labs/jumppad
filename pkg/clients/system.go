@@ -56,14 +56,12 @@ func (b *SystemImpl) OpenBrowser(uri string) error {
 	timerChan := time.After(10 * time.Second)
 
 	var err error
-
 	go func() {
 		err = cmd.Run()
 	}()
 
 	select {
 	case <-timerChan:
-		err = fmt.Errorf("Timeout opening browser window")
 	case <-doneChan:
 
 	}

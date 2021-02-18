@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -35,13 +36,18 @@ type Clients struct {
 	Getter         clients.Getter
 	Browser        clients.System
 	ImageLog       clients.ImageLog
+	Connector      clients.Connector
 }
 
 // Engine defines an interface for the Shipyard engine
 type Engine interface {
 	GetClients() *Clients
 	Apply(string) ([]config.Resource, error)
-	ApplyWithVariables(string, map[string]string, string) ([]config.Resource, error)
+
+	// ApplyWithVariables applies a configuration file or directory containing
+	// configuraiton. Optionally the user can provide a map of variables which the configuraiton
+	// uses and / or a file containing variables.
+	ApplyWithVariables(path string, variables map[string]string, variablesFile string) ([]config.Resource, error)
 	ParseConfig(string) error
 	ParseConfigWithVariables(string, map[string]string, string) error
 	Destroy(string, bool) error
@@ -88,6 +94,9 @@ func GenerateClients(l hclog.Logger) (*Clients, error) {
 
 	ct := clients.NewDockerTasks(dc, il, l)
 
+	co := clients.DefaultConnectorOptions()
+	cc := clients.NewConnector(co)
+
 	return &Clients{
 		ContainerTasks: ct,
 		Docker:         dc,
@@ -100,6 +109,7 @@ func GenerateClients(l hclog.Logger) (*Clients, error) {
 		Getter:         bp,
 		Browser:        bc,
 		ImageLog:       il,
+		Connector:      cc,
 	}, nil
 }
 
@@ -148,6 +158,21 @@ func (e *EngineImpl) Apply(path string) ([]config.Resource, error) {
 
 // ApplyWithVariables applies the current config creating the resources
 func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, variablesFile string) ([]config.Resource, error) {
+	// abs paths
+	var err error
+	path, err = filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if variablesFile != "" {
+
+		variablesFile, err = filepath.Abs(variablesFile)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	d, err := e.readConfig(path, vars, variablesFile)
 	if err != nil {
 		return nil, err
@@ -166,6 +191,7 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 
 			// get the provider to create the resource
 			p := e.getProvider(r, e.clients)
+
 			if p == nil {
 				r.Info().Status = config.Failed
 				return diags.Append(fmt.Errorf("Unable to create provider for resource Name: %s, Type: %s", r.Info().Name, r.Info().Type))
@@ -182,15 +208,16 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 			}
 
 			// create the resource
-			err = p.Create()
-			if err != nil {
+			createErr := p.Create()
+			if createErr != nil {
 				r.Info().Status = config.Failed
-				return diags.Append(err)
+				return diags.Append(createErr)
 			}
 
 			// set the status
 			r.Info().Status = config.Applied
-			createdResource = append(createdResource, r)
+
+			appendResources(&createdResource, r)
 		}
 
 		return nil
@@ -252,10 +279,10 @@ func (e *EngineImpl) Destroy(path string, allResources bool) error {
 			}
 
 			// execute
-			err = p.Destroy()
-			if err != nil {
+			destroyErr := p.Destroy()
+			if destroyErr != nil {
 				r.Info().Status = config.Failed
-				return diags.Append(err)
+				return diags.Append(destroyErr)
 			}
 
 			// set the status
@@ -313,15 +340,7 @@ func (e *EngineImpl) readConfig(path string, variables map[string]string, variab
 	cc := config.New()
 	if path != "" {
 		if utils.IsHCLFile(path) {
-			config.SetVariables(variables)
-			if variablesFile != "" {
-				err := config.LoadValuesFile(variablesFile)
-				if err != nil {
-					return nil, err
-				}
-			}
-
-			err := config.ParseHCLFile(path, cc)
+			err := config.ParseSingleFile(path, cc, variables, variablesFile)
 			if err != nil {
 				return nil, err
 			}
@@ -384,9 +403,9 @@ func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
 	case config.TypeHelm:
 		return providers.NewHelm(c.(*config.Helm), cc.Kubernetes, cc.Helm, cc.Getter, cc.Logger)
 	case config.TypeIngress:
-		return providers.NewIngress(c.(*config.Ingress), cc.ContainerTasks, cc.Logger)
+		return providers.NewIngress(c.(*config.Ingress), cc.ContainerTasks, cc.Connector, cc.Logger)
 	case config.TypeK8sCluster:
-		return providers.NewK8sCluster(c.(*config.K8sCluster), cc.ContainerTasks, cc.Kubernetes, cc.HTTP, cc.Logger)
+		return providers.NewK8sCluster(c.(*config.K8sCluster), cc.ContainerTasks, cc.Kubernetes, cc.HTTP, cc.Connector, cc.Logger)
 	case config.TypeK8sConfig:
 		return providers.NewK8sConfig(c.(*config.K8sConfig), cc.Kubernetes, cc.Logger)
 	case config.TypeK8sIngress:
@@ -404,4 +423,14 @@ func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
 	}
 
 	return nil
+}
+
+var crMutex = sync.Mutex{}
+
+// appends item to the resources slice in a thread safe way
+func appendResources(cr *[]config.Resource, r config.Resource) {
+	crMutex.Lock()
+	defer crMutex.Unlock()
+
+	*cr = append(*cr, r)
 }

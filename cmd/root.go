@@ -43,25 +43,25 @@ func init() {
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(outputCmd)
 	rootCmd.AddCommand(newEnvCmd(engine))
-	rootCmd.AddCommand(newRunCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, vm, logger))
+	rootCmd.AddCommand(newRunCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, vm, engineClients.Connector, logger))
 	rootCmd.AddCommand(newTestCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, logger))
 	rootCmd.AddCommand(pauseCmd)
 	rootCmd.AddCommand(resumeCmd)
 	rootCmd.AddCommand(newGetCmd(engineClients.Getter))
-	rootCmd.AddCommand(destroyCmd)
+	rootCmd.AddCommand(newDestroyCmd(engineClients.Connector))
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(newPurgeCmd(engineClients.Docker, engineClients.ImageLog, logger))
 	rootCmd.AddCommand(taintCmd)
 	rootCmd.AddCommand(newExecCmd(engineClients.ContainerTasks))
 	rootCmd.AddCommand(newVersionCmd(vm))
-	//rootCmd.AddCommand(exposeCmd)
-	//rootCmd.AddCommand(containerCmd)
-	//rootCmd.AddCommand(codeCmd)
-	//rootCmd.AddCommand(docsCmd)
-	//rootCmd.AddCommand(toolsCmd)
-	//rootCmd.AddCommand(upgradeCmd)
 	rootCmd.AddCommand(uninstallCmd)
 	rootCmd.AddCommand(newPushCmd(engineClients.ContainerTasks, engineClients.Kubernetes, engineClients.HTTP, engineClients.Nomad, logger))
+
+	// add the server commands
+	rootCmd.AddCommand(connectorCmd)
+	connectorCmd.AddCommand(newConnectorRunCommand())
+	connectorCmd.AddCommand(connectorStopCmd)
+	connectorCmd.AddCommand(newConnectorCertCmd())
 }
 
 func createEngine(l hclog.Logger) (shipyard.Engine, gvm.Versions) {

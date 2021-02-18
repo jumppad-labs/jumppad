@@ -31,6 +31,18 @@ k8s_cluster "testing" {
 }
 
 ingress "testing" {
-	target = "cluster.testing"
+	destination {
+		driver = "k8s"
+		config {
+			port = 8080
+		}
+	}
+	
+	source {
+		driver = "k8s"
+		config {
+			port = 8080
+		}
+	}
 }
 `

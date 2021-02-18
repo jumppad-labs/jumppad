@@ -160,6 +160,90 @@ func TestOverridesVariablesFilesWithEnv(t *testing.T) {
 	assert.True(t, validEnv)
 }
 
+func TestVariablesSetFromDefault(t *testing.T) {
+	absoluteFolderPath, err := filepath.Abs("../../examples/variables/simple/")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c := New()
+	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
+	assert.NoError(t, err)
+
+	// check variable has been interpolated
+	r, err := c.FindResource("container.consul")
+	assert.NoError(t, err)
+
+	con := r.(*Container)
+
+	assert.Equal(t, "onprem", con.Networks[0].Name)
+}
+
+func TestOverridesVariableDefaultsWithEnv(t *testing.T) {
+	absoluteFolderPath, err := filepath.Abs("../../examples/variables/simple/")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	os.Setenv("SY_VAR_network", "cloud")
+	t.Cleanup(func() {
+		os.Unsetenv("SY_VAR_network")
+	})
+
+	c := New()
+	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
+	assert.NoError(t, err)
+
+	// check variable has been interpolated
+	r, err := c.FindResource("container.consul")
+	assert.NoError(t, err)
+
+	con := r.(*Container)
+	assert.Equal(t, "cloud", con.Networks[0].Name)
+}
+
+func TestVariablesSetFromDefaultModule(t *testing.T) {
+	absoluteFolderPath, err := filepath.Abs("../../examples/variables/with_module/")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c := New()
+	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
+	assert.NoError(t, err)
+
+	// check variable has been interpolated
+	r, err := c.FindResource("container.consul")
+	assert.NoError(t, err)
+
+	con := r.(*Container)
+
+	assert.Equal(t, "modulenetwork", con.Networks[0].Name)
+}
+
+func TestOverridesVariablesSetFromDefaultModuleWithEnv(t *testing.T) {
+	absoluteFolderPath, err := filepath.Abs("../../examples/variables/with_module/")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	os.Setenv("SY_VAR_mod_network", "cloud")
+	t.Cleanup(func() {
+		os.Unsetenv("SY_VAR_mod_network")
+	})
+
+	c := New()
+	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
+	assert.NoError(t, err)
+
+	// check variable has been interpolated
+	r, err := c.FindResource("container.consul")
+	assert.NoError(t, err)
+
+	con := r.(*Container)
+	assert.Equal(t, "cloud", con.Networks[0].Name)
+}
+
 func TestDoesNotLoadsVariablesFilesFromInsideModules(t *testing.T) {
 	absoluteFolderPath, err := filepath.Abs("../../examples/modules")
 	if err != nil {

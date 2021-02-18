@@ -1,12 +1,16 @@
 package clients
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
 )
+
+var ErrorCommandTimeout = fmt.Errorf("Command timed out before completing")
 
 type CommandConfig struct {
 	Command          string
@@ -55,26 +59,38 @@ func (c *CommandImpl) Execute(config CommandConfig) error {
 	cmd.Stdout = c.log.StandardWriter(&hclog.StandardLoggerOptions{InferLevels: true})
 	cmd.Stderr = c.log.StandardWriter(&hclog.StandardLoggerOptions{InferLevels: true})
 
-	/*
-		// wait for timeout
-		t := time.AfterFunc(c.timeout, func() {
-			// kill the running process
-			cmd.Process.Kill()
-			return fmt.Errorf("Command timed out before completing")
-		})
-	*/
+	// done chan
+	done := make(chan error)
 
-	err := cmd.Run()
-	if err != nil {
+	cm := sync.Mutex{}
+
+	// wait for timeout
+	t := time.After(c.timeout)
+
+	go func() {
+		cm.Lock()
+
+		err := cmd.Start()
+
+		cm.Unlock()
+
+		if err != nil {
+			done <- err
+		}
+
+		err = cmd.Wait()
+		done <- err
+	}()
+
+	select {
+	case <-t:
+		cm.Lock()
+		defer cm.Unlock()
+
+		// kill the running process
+		cmd.Process.Kill()
+		return ErrorCommandTimeout
+	case err := <-done:
 		return err
 	}
-
-	// command has completed clear the timeout timer
-	/*
-		if t!= nil {
-			t.Stop()
-		}
-	*/
-
-	return nil
 }

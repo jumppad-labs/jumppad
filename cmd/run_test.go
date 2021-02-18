@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/shipyard-run/shipyard/pkg/clients"
 	clientmocks "github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
@@ -17,16 +18,17 @@ import (
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	gvm "github.com/shipyard-run/version-manager"
 	"github.com/spf13/cobra"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	assert "github.com/stretchr/testify/require"
 )
 
 type runMocks struct {
-	engine *mocks.Engine
-	getter *clientmocks.Getter
-	http   *clientmocks.MockHTTP
-	system *clientmocks.System
-	vm     *gvm.MockVersions
+	engine    *mocks.Engine
+	getter    *clientmocks.Getter
+	http      *clientmocks.MockHTTP
+	system    *clientmocks.System
+	vm        *gvm.MockVersions
+	connector *clients.ConnectorMock
 }
 
 func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
@@ -46,11 +48,31 @@ func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
 	mockTasks := &clientmocks.MockContainerTasks{}
 	mockTasks.On("SetForcePull", mock.Anything)
 
+	mockConnector := &clients.ConnectorMock{}
+	mockConnector.On("GetLocalCertBundle", mock.Anything).Return(
+		&clients.CertBundle{},
+		nil,
+	)
+
+	mockConnector.On("GenerateLocalCertBundle", mock.Anything).Return(
+		&clients.CertBundle{},
+		nil,
+	)
+
+	mockConnector.On("IsRunning").Return(
+		false,
+	)
+
+	mockConnector.On("Start", mock.Anything).Return(
+		nil,
+	)
+
 	clients := &shipyard.Clients{
 		HTTP:           mockHTTP,
 		Getter:         mockGetter,
 		Browser:        mockSystem,
 		ContainerTasks: mockTasks,
+		Connector:      mockConnector,
 	}
 
 	mockEngine := &mocks.Engine{}
@@ -72,14 +94,15 @@ func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
 	vm.On("GetLatestReleaseURL", mock.Anything).Return("v1.0.0", "http://download.com", nil)
 
 	rm := &runMocks{
-		engine: mockEngine,
-		getter: mockGetter,
-		http:   mockHTTP,
-		system: mockSystem,
-		vm:     vm,
+		engine:    mockEngine,
+		getter:    mockGetter,
+		http:      mockHTTP,
+		system:    mockSystem,
+		vm:        vm,
+		connector: mockConnector,
 	}
 
-	cmd := newRunCmd(mockEngine, mockGetter, mockHTTP, mockSystem, vm, hclog.Default())
+	cmd := newRunCmd(mockEngine, mockGetter, mockHTTP, mockSystem, vm, mockConnector, hclog.Default())
 	cmd.SetOut(bytes.NewBuffer([]byte("")))
 
 	return cmd, rm
@@ -129,6 +152,77 @@ func TestRunOtherVersionPromptsInstallWhenNotInstalled(t *testing.T) {
 
 	rm.vm.AssertCalled(t, "ListInstalledVersions", version)
 	rm.vm.AssertCalled(t, "GetLatestReleaseURL", version)
+}
+
+func TestRunChecksForCertBundle(t *testing.T) {
+	rf, rm := setupRun(t, "")
+	rf.SetArgs([]string{"/tmp"})
+
+	err := rf.Execute()
+	assert.NoError(t, err)
+
+	rm.connector.AssertCalled(t, "GetLocalCertBundle", mock.Anything)
+}
+
+func TestRunNotGeneratesCertBundleWhenExist(t *testing.T) {
+	rf, rm := setupRun(t, "")
+	rf.SetArgs([]string{"/tmp"})
+
+	err := rf.Execute()
+	assert.NoError(t, err)
+
+	rm.connector.AssertNotCalled(t, "GenerateLocalCertBundle", mock.Anything)
+}
+
+func TestRunGeneratesCertBundleWhenNotExist(t *testing.T) {
+	rf, rm := setupRun(t, "")
+	rf.SetArgs([]string{"/tmp"})
+
+	removeOn(&rm.connector.Mock, "GetLocalCertBundle")
+	rm.connector.On("GetLocalCertBundle", mock.Anything).Return(nil, fmt.Errorf("boom")).Once()
+	rm.connector.On("GetLocalCertBundle", mock.Anything).Return(clients.CertBundle{}, nil).Once()
+
+	err := rf.Execute()
+	assert.NoError(t, err)
+
+	rm.connector.AssertCalled(t, "GenerateLocalCertBundle", mock.Anything)
+}
+
+func TestRunStartsConnectorWhenNotRunning(t *testing.T) {
+	rf, rm := setupRun(t, "")
+	rf.SetArgs([]string{"/tmp"})
+
+	err := rf.Execute()
+	assert.NoError(t, err)
+
+	rm.connector.AssertCalled(t, "Start", mock.Anything)
+}
+
+func TestRunDoesNotStartsConnectorWhenRunning(t *testing.T) {
+	rf, rm := setupRun(t, "")
+	rf.SetArgs([]string{"/tmp"})
+
+	removeOn(&rm.connector.Mock, "IsRunning")
+	rm.connector.On("IsRunning", mock.Anything).Return(true).Once()
+
+	err := rf.Execute()
+	assert.NoError(t, err)
+
+	rm.connector.AssertNotCalled(t, "Start", mock.Anything)
+}
+
+func TestRunConnectorStartErrorWhenGetCertBundleFails(t *testing.T) {
+	rf, rm := setupRun(t, "")
+	rf.SetArgs([]string{"/tmp"})
+
+	removeOn(&rm.connector.Mock, "GetLocalCertBundle")
+	rm.connector.On("GetLocalCertBundle", mock.Anything).Return(clients.CertBundle{}, nil).Once()
+	rm.connector.On("GetLocalCertBundle", mock.Anything).Return(nil, fmt.Errorf("boom")).Once()
+
+	err := rf.Execute()
+	assert.Error(t, err)
+
+	rm.connector.AssertNotCalled(t, "Start", mock.Anything)
 }
 
 func TestRunSetsDestinationFromArgsWhenPresent(t *testing.T) {
@@ -247,23 +341,31 @@ func TestRunOpensBrowserWindowForResources(t *testing.T) {
 
 	removeOn(&rm.engine.Mock, "ApplyWithVariables")
 
+	// should open
 	d := config.NewDocs("test")
 	d.OpenInBrowser = true
 
+	// should open
 	i := config.NewIngress("test")
-	i.Ports = []config.Port{config.Port{Host: "8080", OpenInBrowser: "/"}}
+	i.Source.Driver = config.IngressSourceLocal
+	i.Source.Config.Port = "8080"
+	i.Source.Config.OpenInBrowser = "/"
 
+	// should open
 	c := config.NewContainer("test")
 	c.Ports = []config.Port{config.Port{Host: "8080", OpenInBrowser: "https://test.container.shipyard.run:8080"}}
 
 	// should not be opened
-	d2 := config.NewDocs("test")
-
-	i2 := config.NewIngress("test")
-	i2.Ports = []config.Port{config.Port{Host: "8080", OpenInBrowser: ""}}
-
 	c2 := config.NewContainer("test2")
 	c2.Ports = []config.Port{config.Port{OpenInBrowser: ""}}
+
+	// should not be opened
+	i2 := config.NewIngress("test")
+	i.Source.Driver = config.IngressSourceLocal
+	i2.Source.Config.Port = "8080"
+
+	// should not be opened
+	d2 := config.NewDocs("test2")
 
 	rm.engine.On("ApplyWithVariables", mock.Anything, mock.Anything, mock.Anything).Return(
 		[]config.Resource{d, i, c, d2, i2, c2},
@@ -278,6 +380,9 @@ func TestRunOpensBrowserWindowForResources(t *testing.T) {
 
 	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://test.ingress.shipyard.run:8080/", 30*time.Second)
 	rm.http.AssertCalled(t, "HealthCheckHTTP", "https://test.container.shipyard.run:8080", 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost", 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://test.docs.shipyard.run:80", 30*time.Second)
 }
 
 func TestRunDoesNotOpensBrowserWindowWhenCheckError(t *testing.T) {

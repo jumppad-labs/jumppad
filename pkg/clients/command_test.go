@@ -1,19 +1,60 @@
 package clients
 
 import (
+	"runtime"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/assert"
 )
 
 func setupExecute(t *testing.T) Command {
-	return NewCommand(30*time.Second, hclog.New(&hclog.LoggerOptions{Level: hclog.Debug}))
+	return NewCommand(3*time.Second, hclog.NewNullLogger())
 }
 
 func TestExecuteWithBasicParams(t *testing.T) {
-	t.Skip()
+	command := "sh"
+	args := []string{"-c", "ls"}
+
+	if runtime.GOOS == "windows" {
+		command = "cmd.exe"
+		args = []string{"/c", "dir"}
+	}
+
 	e := setupExecute(t)
 
-	e.Execute(CommandConfig{Command: "ls"})
+	err := e.Execute(CommandConfig{
+		Command: command,
+		Args:    args,
+	})
+
+	assert.NoError(t, err)
+}
+
+func TestExecuteLongRunningTimesOut(t *testing.T) {
+	command := "sh"
+	args := []string{"-c", "sleep 10s"}
+
+	if runtime.GOOS == "windows" {
+		command = "cmd.exe"
+		args = []string{"/c", "ping", "192.0.2.1", "-n", "1", "-w", "100000", ">NUL"}
+	}
+
+	e := setupExecute(t)
+
+	err := e.Execute(CommandConfig{
+		Command: command,
+		Args:    args,
+	})
+
+	assert.Error(t, err)
+	assert.Equal(t, ErrorCommandTimeout, err)
+}
+
+func TestExecuteInvalidCommandReturnsError(t *testing.T) {
+	e := setupExecute(t)
+
+	err := e.Execute(CommandConfig{Command: "nocommand"})
+	assert.Error(t, err)
 }

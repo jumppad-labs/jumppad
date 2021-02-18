@@ -8,10 +8,10 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -72,7 +72,7 @@ func newTestCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cl
 	return func(cmd *cobra.Command, args []string) error {
 		//
 
-		tr := CucumberRunner{cmd, args, e, bp, hc, bc, testFolder, "", force, purge, l, *variables, *variablesFile}
+		tr := CucumberRunner{cmd, args, e, bp, hc, bc, testFolder, "", "", force, purge, l, *variables, *variablesFile}
 		tr.start()
 
 		return nil
@@ -89,6 +89,7 @@ type CucumberRunner struct {
 	bc            clients.System
 	testFolder    string
 	testPath      string
+	basePath      string
 	force         *bool
 	purge         *bool
 	l             hclog.Logger
@@ -110,13 +111,14 @@ func (cr *CucumberRunner) start() {
 		cr.testFolder = "test"
 	}
 
-	cr.testPath = filepath.Join(cr.args[0], cr.testFolder)
-
-	if !filepath.IsAbs(cr.args[0]) {
-		// convert to absolute
-		wd, _ := os.Getwd()
-		cr.testPath = filepath.Join(wd, cr.args[0], cr.testFolder)
+	var err error
+	cr.basePath, err = filepath.Abs(cr.args[0])
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
+
+	cr.testPath = filepath.Join(cr.basePath, cr.testFolder)
 
 	opts.Paths = []string{cr.testPath}
 
@@ -137,8 +139,13 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 	})
 
 	ctx.AfterScenario(func(gs *godog.Scenario, err error) {
-		fmt.Println("")
-		cr.e.Destroy("", true)
+		dest := newDestroyCmd(cr.e.GetClients().Connector)
+		dest.SetArgs([]string{})
+		dest.Execute()
+
+		if err != nil {
+			fmt.Println(output.String())
+		}
 
 		// unset environment vars
 		for k, v := range envVars {
@@ -147,10 +154,6 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 			} else {
 				os.Setenv(k, v)
 			}
-		}
-
-		if err != nil {
-			fmt.Println(output.String())
 		}
 
 		// do we need to pure the cache
@@ -167,6 +170,7 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the following environment variables are set$`, cr.theFollowingEnvironmentVariablesAreSet)
 	ctx.Step(`^the environment variable "([^"]*)" has a value "([^"]*)"$`, cr.theEnvironmentVariableKHasAValueV)
 	ctx.Step(`^the following shipyard variables are set$`, cr.theFollowingShipyardVariablesAreSet)
+	ctx.Step(`^the shipyard variable "([^"]*)" has a value "([^"]*)"$`, cr.theShipyardVariableKHasAValueV)
 	ctx.Step(`^there should be a "([^"]*)" running called "([^"]*)"$`, cr.thereShouldBeAResourceRunningCalled)
 	ctx.Step(`^the following resources should be running$`, cr.theFollowingResourcesShouldBeRunning)
 	ctx.Step(`^a HTTP call to "([^"]*)" should result in status (\d+)$`, cr.aCallToShouldResultInStatus)
@@ -178,6 +182,7 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 	ctx.Step(`^I run the script$`, cr.whenIRunTheScript)
 	ctx.Step(`^I expect the exit code to be (\d+)$`, cr.iExpectTheExitCodeToBe)
 	ctx.Step(`^I expect the response to contain "([^"]*)"$`, cr.iExpectTheResponseToContain)
+	ctx.Step(`^a TCP connection to "([^"]*)" should open$`, aTCPConnectionToShouldOpen)
 }
 
 func FeatureContext(s *godog.Suite) {
@@ -201,15 +206,9 @@ func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
 	args := []string{}
 
 	// if filepath is not absolute then it will be relative to args
-	if path.IsAbs(fp) {
-		args = []string{fp}
-	} else {
-		// is relative to args
-		args = []string{path.Join(cr.args[0], fp)}
-	}
+	absPath := filepath.Join(cr.basePath, fp)
 
-	// convert the args to absolute
-	args[0], _ = filepath.Abs(args[0])
+	args = []string{absPath}
 
 	opts := &hclog.LoggerOptions{
 		Color: hclog.AutoColor,
@@ -243,6 +242,7 @@ func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
 		engine.GetClients().HTTP,
 		engine.GetClients().Browser,
 		vm,
+		engine.GetClients().Connector,
 		&noOpen,
 		cr.force,
 		&version,
@@ -449,6 +449,11 @@ func (cr *CucumberRunner) theEnvironmentVariableKHasAValueV(key, value string) e
 	return nil
 }
 
+func (cr *CucumberRunner) theShipyardVariableKHasAValueV(key, value string) error {
+	cr.variables = append(cr.variables, fmt.Sprintf("%s=%s", strings.TrimSpace(key), strings.TrimSpace(value)))
+	return nil
+}
+
 //ctx.Step(`^the info "([^"]*)" for the running "([^"]*)" running called "([^"]*)" should equal "([^"]*)"$`, cr.theContainerInfoShouldContainer)
 func (cr *CucumberRunner) theResourceInfoShouldContain(path, resource, name, value string) error {
 	s, err := cr.getJSONPath(path, resource, name)
@@ -549,6 +554,23 @@ func (cr *CucumberRunner) iExpectTheResponseToContain(arg1 string) error {
 	}
 
 	return fmt.Errorf("Expected command output to contain %s.\n Output:\n%s", arg1, commandOutput.String())
+}
+
+func aTCPConnectionToShouldOpen(addr string) error {
+
+	var err error
+	for i := 0; i < 5; i++ {
+		var c net.Conn
+		c, err = net.Dial("tcp", addr)
+		if err == nil {
+			c.Close()
+			return nil
+		}
+
+		time.Sleep(10 * time.Second)
+	}
+
+	return err
 }
 
 func (cr *CucumberRunner) executeCommand(cmd string) error {

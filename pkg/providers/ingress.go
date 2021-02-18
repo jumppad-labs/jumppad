@@ -2,6 +2,7 @@ package providers
 
 import (
 	"fmt"
+	"strconv"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
@@ -10,233 +11,190 @@ import (
 	"golang.org/x/xerrors"
 )
 
-const ingressImage = "shipyardrun/ingress:latest"
-
 // Ingress defines a provider for handling connection ingress for a cluster
 type Ingress struct {
-	config *config.Ingress
-	client clients.ContainerTasks
-	log    hclog.Logger
+	config    *config.Ingress
+	client    clients.ContainerTasks
+	connector clients.Connector
+	log       hclog.Logger
 }
 
 // NewIngress creates a new ingress provider
-func NewIngress(c *config.Ingress, cc clients.ContainerTasks, l hclog.Logger) *Ingress {
-	return &Ingress{c, cc, l}
+func NewIngress(
+	c *config.Ingress,
+	cc clients.ContainerTasks,
+	co clients.Connector,
+	l hclog.Logger) *Ingress {
+
+	return &Ingress{c, cc, co, l}
 }
 
-// NewContainerIngress creates a new ingress provider for a container
-func NewContainerIngress(ci *config.ContainerIngress, cc clients.ContainerTasks, l hclog.Logger) *Ingress {
-	c := config.NewIngress(ci.Name)
+func (c *Ingress) Create() error {
+	c.log.Info("Create Ingress", "ref", c.config.Name)
 
-	c.Depends = ci.Depends
-	c.Networks = ci.Networks
-	c.Target = ci.Target
-	c.Ports = ci.Ports
-	c.Config = ci.Config
-
-	return &Ingress{c, cc, l}
-}
-
-// NewNomadIngress creates an ingress type for resources in a Nomad cluster
-func NewNomadIngress(ci *config.NomadIngress, cc clients.ContainerTasks, l hclog.Logger) *Ingress {
-	c := config.NewIngress(ci.Name)
-	c.Depends = ci.Depends
-	c.Networks = ci.Networks
-	c.Target = ci.Cluster
-	c.Ports = ci.Ports
-	c.Config = ci.Config
-
-	c.Service = fmt.Sprintf("%s.%s.%s", ci.Job, ci.Group, ci.Task)
-
-	return &Ingress{c, cc, l}
-}
-
-// NewK8sIngress creates an Ingress from Kubernetes config
-func NewK8sIngress(kc *config.K8sIngress, cc clients.ContainerTasks, l hclog.Logger) *Ingress {
-	// convert the config
-	c := config.NewIngress(kc.Name)
-
-	c.Depends = kc.Depends
-	c.Networks = kc.Networks
-	c.Target = kc.Cluster
-
-	if kc.Deployment != "" {
-		c.Service = fmt.Sprintf("deployment/%s", kc.Deployment)
+	if c.config.Destination.Driver == "local" {
+		return c.exposeLocal()
 	}
 
-	if kc.Service != "" {
-		c.Service = fmt.Sprintf("svc/%s", kc.Service)
-	}
-
-	if kc.Pod != "" {
-		c.Service = kc.Pod
-	}
-
-	c.Namespace = kc.Namespace
-	c.Ports = kc.Ports
-
-	c.Config = kc.Config
-
-	return &Ingress{c, cc, l}
-}
-
-// Create the ingress
-func (i *Ingress) Create() error {
-	i.log.Info("Creating Ingress", "ref", i.config.Name)
-
-	// check the ingress does not already exist
-	// TODO, we can probably extract all of the check and pull logic into a common function
-	ids, err := i.client.FindContainerIDs(i.config.Name, i.config.Type)
-	if len(ids) > 0 {
-		return xerrors.Errorf("Unable to create ingress, and ingress with the name %s already exists: %w", i.config.Name, err)
-	}
-
-	if err != nil {
-		return xerrors.Errorf("Unable to lookup ingress id: %w", err)
-	}
-
-	// pull any images needed for this container
-	err = i.client.PullImage(config.Image{Name: ingressImage}, false)
-	if err != nil {
-		i.log.Error("Error pulling container image", "ref", i.config.Name, "image", ingressImage)
-
-		return err
-	}
-
-	var serviceName string
-	var volumes []config.Volume
-	var env []config.KV
-	command := make([]string, 0)
-
-	target, err := i.config.FindDependentResource(i.config.Target)
-	if err != nil {
-		return err
-	}
-
-	switch target.Info().Type {
-	case config.TypeContainer:
-		serviceName = utils.FQDN(target.Info().Name, string(target.Info().Type))
-	case config.TypeNomadCluster:
-		v := target.(*config.NomadCluster)
-		// if this is a nomad cluster we need to add the nomadconfig and
-		// make sure that the proxy runs in nomad mode
-		serviceName = i.config.Service
-		_, nomadConfigPath := utils.CreateClusterConfigPath(v.Name)
-		nomadConfigDestPath := "/.nomad/config.json"
-
-		volumes = append(volumes, config.Volume{
-			Source:      nomadConfigPath,
-			Destination: nomadConfigDestPath,
-		})
-
-		command = append(command, "--proxy-type")
-		command = append(command, "nomad")
-
-		command = append(command, "--nomad-config")
-		command = append(command, "/.nomad/config.json")
-
-	case config.TypeK8sCluster:
-		//v := target.(*config.K8sCluster)
-		// if this is a k3s cluster we need to add the kubeconfig and
-		// make sure that the proxy runs in kube mode
-		serviceName = i.config.Service
-
-    // set the KUBECONFIG for the ingress, we will copy this file later
-		env = append(env, config.KV{Key: "KUBECONFIG", Value: "/kubeconfig-docker.yaml"})
-
-		command = append(command, "--proxy-type")
-		command = append(command, "kubernetes")
-
-		// if the namespace is not present assume default
-		if i.config.Namespace == "" {
-			i.config.Namespace = "default"
-		}
-
-		command = append(command, "--namespace")
-		command = append(command, i.config.Namespace)
-
-	default:
-		return fmt.Errorf("Only Containers, Kubernetes clusters, and Nomad clusters are supported at present")
-	}
-
-	command = append(command, "--service-name")
-	command = append(command, serviceName)
-
-	// add the ports
-	for _, p := range i.config.Ports {
-		command = append(command, "--ports")
-		command = append(command, fmt.Sprintf("%s:%s", p.Local, p.Remote))
-	}
-
-	// ingress simply crease a container with specific options
-	c := config.NewContainer(i.config.Name)
-	i.config.ResourceInfo.AddChild(c)
-
-	c.Networks = i.config.Networks
-	c.Ports = i.config.Ports
-	c.Image = &config.Image{Name: ingressImage}
-	c.Command = command
-	c.Volumes = volumes
-	c.Environment = env
-
-  id, err := i.client.CreateContainer(c)
-	if err != nil {
-		return err
-	}
-
-  // if this is a Kubernetes ingress we need to copy the Kubernetes config
-  // to the container
-	if target.Info().Type == config.TypeK8sCluster {
-		v := target.(*config.K8sCluster)
-		_, _, kubeConfigPath := utils.CreateKubeConfigPath(v.Name)
-    i.log.Debug("Copy KubeConfig to container","id", id, "file", kubeConfigPath)
-
-    err = i.client.CopyFileToContainer(id, kubeConfigPath, "/")
-	  if err != nil {
-      return err
-	  }
-  }
-
-	// set the state
-	i.config.Status = config.Applied
-
-	return nil
-}
-
-// Destroy the ingress
-func (i *Ingress) Destroy() error {
-	i.log.Info("Destroy Ingress", "ref", i.config.Name, "type", i.config.Type)
-
-	ids, err := i.client.FindContainerIDs(i.config.Name, i.config.Type)
-	if err != nil {
-		return err
-	}
-
-	for _, id := range ids {
-		for _, n := range i.config.Networks {
-			i.log.Debug("Detaching container from network", "ref", i.config.Name, "id", id, "network", n.Name)
-			err := i.client.DetachNetwork(n.Name, id)
-			if err != nil {
-				i.log.Error("Unable to detach network", "ref", i.config.Name, "network", n.Name, "error", err)
-			}
-		}
-
-		err := i.client.RemoveContainer(id)
-		if err != nil {
-			return err
-		}
-
+	if c.config.Destination.Driver == "k8s" {
+		return c.exposeK8sRemote()
 	}
 
 	return nil
 }
 
-// Lookup the id of the ingress
-func (i *Ingress) Lookup() ([]string, error) {
+// Destroy statisfies the interface method but is not implemented by LocalExec
+func (c *Ingress) Destroy() error {
+	c.log.Info("Destroy Ingress", "ref", c.config.Name, "id", c.config.Id)
+
+	err := c.connector.RemoveService(c.config.Id)
+	if err != nil {
+		// fail silently as this should not stop us from destroying the
+		// other resources
+		c.log.Warn("Unable to remove local ingress", "ref", c.config.Name, "id", c.config.Id, "error", err)
+	}
+
+	return nil
+}
+
+// Lookup statisfies the interface method but is not implemented by LocalExec
+func (c *Ingress) Lookup() ([]string, error) {
+	c.log.Debug("Lookup Ingress", "ref", c.config.Name, "id", c.config.Id)
+
 	return []string{}, nil
 }
 
-// Config returns the config for the provider
-func (i *Ingress) Config() ConfigWrapper {
-	return ConfigWrapper{"config.Ingress", i.config}
+func (c *Ingress) exposeLocal() error {
+	// get the target
+	res, err := c.config.FindDependentResource(c.config.Source.Config.Cluster)
+	if err != nil {
+		return err
+	}
+
+	// validate the name
+	if c.config.Name == "connector" {
+		return fmt.Errorf("Service name 'connector' is a reserved name")
+	}
+
+	// validate the remote port, can not be 60000 or 60001 as these
+	// ports are used by the connector service
+	remotePort, err := strconv.Atoi(c.config.Source.Config.Port)
+	if err != nil {
+		return xerrors.Errorf("Unable to parse remote port :%w", err)
+	}
+
+	if remotePort == 60000 || remotePort == 60001 {
+		return fmt.Errorf("Unable to expose local service using remote port %d,"+
+			"ports 60000 and 60001 are reserved for internal use", remotePort)
+	}
+
+	// get the address of the remote connector from the target
+	_, configPath := utils.CreateClusterConfigPath(res.Info().Name)
+
+	cc := &clients.ClusterConfig{}
+	err = cc.Load(configPath, clients.LocalContext)
+	if err != nil {
+		return xerrors.Errorf("Unable to load cluster config :%w", err)
+	}
+
+	if c.config.Destination.Config.Address == "" {
+		return xerrors.Errorf("The address config stanza field must be specified when type 'local'")
+	}
+
+	destAddr := fmt.Sprintf("%s:%s", c.config.Destination.Config.Address, c.config.Destination.Config.Port)
+
+	// sanitize the name to make it uri format
+	serviceName, err := utils.ReplaceNonURIChars(c.config.Name)
+	if err != nil {
+		return xerrors.Errorf("Unable to repace non URI characters in service name %s :%w", c.config.Name, err)
+	}
+
+	// send the request
+	c.log.Debug(
+		"Calling connector to expose local service",
+		"name", serviceName,
+		"remote_port", remotePort,
+		"connector_addr", cc.ConnectorAddress(),
+		"local_addr", destAddr,
+	)
+
+	id, err := c.connector.ExposeService(
+		serviceName,
+		remotePort,
+		cc.ConnectorAddress(),
+		destAddr,
+		"local")
+
+	if err != nil {
+		return xerrors.Errorf("Unable to expose local service to remote cluster :%w", err)
+	}
+
+	c.log.Debug("Successfully exposed service", "id", id)
+	c.config.Id = id
+
+	return nil
+}
+
+func (c *Ingress) exposeK8sRemote() error {
+	// get the target
+	res, err := c.config.FindDependentResource(c.config.Destination.Config.Cluster)
+	if err != nil {
+		return err
+	}
+
+	// get the address of the remote connector from the target
+	_, configPath := utils.CreateClusterConfigPath(res.Info().Name)
+
+	cc := &clients.ClusterConfig{}
+	err = cc.Load(configPath, clients.LocalContext)
+	if err != nil {
+		return xerrors.Errorf("Unable to load cluster config :%w", err)
+	}
+
+	if c.config.Destination.Config.Address == "" {
+		return xerrors.Errorf("Config parameter 'address' is required for desinations of type 'k8s'")
+	}
+
+	destAddr := fmt.Sprintf("%s:%s", c.config.Destination.Config.Address, c.config.Destination.Config.Port)
+
+	localPort, err := strconv.Atoi(c.config.Source.Config.Port)
+	if err != nil {
+		return xerrors.Errorf("Unable to parse remote port :%w", err)
+	}
+
+	if localPort == 30001 || localPort == 30002 {
+		return fmt.Errorf("Unable to expose local service using remote port %d,"+
+			"ports 30001 and 30002 are reserved for internal use", localPort)
+	}
+
+	// sanitize the name to make it uri format
+	serviceName, err := utils.ReplaceNonURIChars(c.config.Name)
+	if err != nil {
+		return xerrors.Errorf("Unable to repace non URI characters in service name %s :%w", c.config.Name, err)
+	}
+
+	// send the request
+	c.log.Debug(
+		"Calling connector to expose remote service",
+		"name", serviceName,
+		"local_port", localPort,
+		"connector_addr", cc.ConnectorAddress(),
+		"local_addr", destAddr,
+	)
+
+	id, err := c.connector.ExposeService(
+		serviceName,
+		localPort,
+		cc.ConnectorAddress(),
+		destAddr,
+		"remote")
+
+	if err != nil {
+		return xerrors.Errorf("Unable to remote cluster service to local machine :%w", err)
+	}
+
+	c.log.Debug("Successfully exposed service", "id", id)
+	c.config.Id = id
+
+	return nil
 }

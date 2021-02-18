@@ -1,5 +1,85 @@
 # Change Log
 
+## version 0.2.0
+* Add new interpolation function to get the ip address of the machine running shipyard
+* Add CreateNamespace config parameter to Helm config
+
+```javascript
+// ingress exposing a local application
+// would enable traffic on the K8s cluster dc1 sent to:
+//      my-local-service.shipyard.svc.cluster.local:9090
+// to be directed to:
+//      localhost:30002
+// on the shipyard host
+ingress "k8s-to-local" {
+  source {
+    driver = "k8s"
+    
+    config {
+      cluster = "k8s_cluster.dc1"
+      port = 9091
+    }
+  }
+  
+  destination {
+    driver = "local"
+    
+    config { 
+      address = "localhost"
+      port = 30002
+    }
+  
+  }
+}
+
+// ingress exposing an application on one K8s cluster to the shipyard host
+// would enable traffic on the shipyard host sent to:
+//      localhost:9090
+// to be directed to:
+//      dc1-service.mynamespace.svc.cluster.local:30002
+// on the dc1 cluster
+ingress "local-to-k8s" {
+  source {
+    driver = "local"
+    
+    config {
+      port = 9092
+    }
+  }
+  
+  destination {
+    driver = "k8s"
+    
+    config {
+      cluster = "k8s_cluster.dc1"
+      address = "k8s-to-local.shipyard.svc"
+      port = 9091
+    }
+  }
+}
+```
+
+* Add ability to define defaults for variables
+
+Variables can also be defined in modules, variables specified as 
+flags, files, or environment override defaults.
+
+```
+variable "mod_network" {
+  default = "modulenetwork"
+}
+
+* New Interpolation functions file_path and file_dir
+
+```
+
+### Ingress
+Major refactor of ingress, implemented K8s and Local
+
+## version 0.1.18
+* Abiility to run with external Docker engine. Shipyard now respects the 
+environment variable `DOCKER_HOST` and can be run on external docker engines.
+
 ## version 0.1.17
 * Compress Shipyard binary to reduce distribution size
 * Add ability to add variables overides with test command

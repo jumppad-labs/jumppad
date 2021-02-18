@@ -21,8 +21,9 @@ func init() {
 	helmLock = sync.Mutex{}
 }
 
+// Helm defines an interface for a client which can manage Helm charts
 type Helm interface {
-	Create(kubeConfig, name, namespace, chartPath, valuesPath string, valuesString map[string]string) error
+	Create(kubeConfig, name, namespace string, createNamespace bool, chartPath, valuesPath string, valuesString map[string]string) error
 	Destroy(kubeConfig, name, namespace string) error
 }
 
@@ -34,7 +35,8 @@ func NewHelm(l hclog.Logger) Helm {
 	return &HelmImpl{l}
 }
 
-func (h *HelmImpl) Create(kubeConfig, name, namespace, chartPath, valuesPath string, valuesString map[string]string) error {
+// Create a new install of the chart
+func (h *HelmImpl) Create(kubeConfig, name, namespace string, createNamespace bool, chartPath, valuesPath string, valuesString map[string]string) error {
 	// set the kubeclient for Helm
 	s := kube.GetConfig(kubeConfig, "default", namespace)
 	cfg := &action.Configuration{}
@@ -49,6 +51,7 @@ func (h *HelmImpl) Create(kubeConfig, name, namespace, chartPath, valuesPath str
 	client := action.NewInstall(cfg)
 	client.ReleaseName = name
 	client.Namespace = namespace
+	client.CreateNamespace = createNamespace
 
 	settings := cli.EnvSettings{}
 	p := getter.All(&settings)

@@ -261,6 +261,11 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 			if err != nil {
 				return err
 			}
+
+			if id, ok := mm["id"].(string); ok {
+				t.Id = id
+			}
+
 			t.Name = mm["name"].(string)
 			t.Type = ResourceType(mm["type"].(string))
 			t.Status = Status(mm["status"].(string))

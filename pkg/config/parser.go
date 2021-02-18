@@ -1,7 +1,5 @@
 package config
 
-// TODO how do we deal with multiple stanza with the same name
-
 import (
 	"context"
 	"errors"
@@ -10,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/gernest/front"
@@ -24,9 +23,6 @@ import (
 	"golang.org/x/xerrors"
 )
 
-// TODO this really needs to be a struct with configuration not
-// separate methods.
-
 var ctx *hcl.EvalContext
 
 func init() {
@@ -40,6 +36,28 @@ type ResourceTypeNotExistError struct {
 
 func (r ResourceTypeNotExistError) Error() string {
 	return fmt.Sprintf("Resource type %s defined in file %s, does not exist. Please check the documentation for supported resources. We love PRs if you would like to create a resource of this type :)", r.Type, r.File)
+}
+
+func ParseSingleFile(file string, c *Config, variables map[string]string, variablesFile string) error {
+	SetVariables(variables)
+	if variablesFile != "" {
+		err := LoadValuesFile(variablesFile)
+		if err != nil {
+			return err
+		}
+	}
+
+	err := ParseVariableFile(file, c)
+	if err != nil {
+		return err
+	}
+
+	err = ParseHCLFile(file, c)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // ParseFolder for Resource, Blueprint, and Variable files
@@ -97,7 +115,39 @@ func ParseFolder(folder string, c *Config, onlyResources bool, variables map[str
 		}
 	}
 
+	// We need to do a two pass parsing, first we check if there are any
+	// default variables which should be added to the collection
+	err := parseVariables(abs, c)
+	if err != nil {
+		return err
+	}
+
 	// Parse Resource files from the current folder
+	err = parseResources(abs, c)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func parseVariables(abs string, c *Config) error {
+	files, err := filepath.Glob(path.Join(abs, "*.hcl"))
+	if err != nil {
+		return err
+	}
+
+	for _, f := range files {
+		err := ParseVariableFile(f, c)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func parseResources(abs string, c *Config) error {
 	files, err := filepath.Glob(path.Join(abs, "*.hcl"))
 	if err != nil {
 		return err
@@ -131,9 +181,14 @@ func LoadValuesFile(path string) error {
 		return errors.New(diag.Error())
 	}
 
+	// add the file functions to the context with a reference to the
+	// current file
+	ctx.Functions["file_path"] = getFilePathFunc(path)
+	ctx.Functions["file_dir"] = getFileDirFunc(path)
+
 	attrs, _ := f.Body.JustAttributes()
 	for name, attr := range attrs {
-		val, _ := attr.Expr.Value(nil)
+		val, _ := attr.Expr.Value(ctx)
 
 		setContextVariable(name, val)
 	}
@@ -142,13 +197,11 @@ func LoadValuesFile(path string) error {
 }
 
 func setContextVariable(key string, value interface{}) {
-	var valMap map[string]cty.Value
+	valMap := map[string]cty.Value{}
 
 	// get the existing map
 	if m, ok := ctx.Variables["var"]; ok {
 		valMap = m.AsValueMap()
-	} else {
-		valMap = map[string]cty.Value{}
 	}
 
 	switch v := value.(type) {
@@ -158,7 +211,17 @@ func setContextVariable(key string, value interface{}) {
 		valMap[key] = v
 	}
 
-	ctx.Variables["var"] = cty.MapVal(valMap)
+	ctx.Variables["var"] = cty.ObjectVal(valMap)
+}
+
+func setContextVariableIfMissing(key string, value interface{}) {
+	if m, ok := ctx.Variables["var"]; ok {
+		if _, ok := m.AsValueMap()[key]; ok {
+			return
+		}
+	}
+
+	setContextVariable(key, value)
 }
 
 // SetVariables allow variables to be set from a collection or environment variables
@@ -265,8 +328,8 @@ func parseYardMarkdown(file string, c *Config) error {
 	return nil
 }
 
-// ParseHCLFile parses a config file and adds it to the config
-func ParseHCLFile(file string, c *Config) error {
+// ParseVariableFile parses a config file for variables
+func ParseVariableFile(file string, c *Config) error {
 	parser := hclparse.NewParser()
 
 	f, diag := parser.ParseHCLFile(file)
@@ -281,6 +344,44 @@ func ParseHCLFile(file string, c *Config) error {
 
 	for _, b := range body.Blocks {
 		switch b.Type {
+		case string(TypeVariable):
+			v := NewVariable(b.Labels[0])
+
+			err := decodeBody(file, b, v)
+			if err != nil {
+				return err
+			}
+
+			val, _ := v.Default.(*hcl.Attribute).Expr.Value(ctx)
+			setContextVariableIfMissing(v.Name, val)
+		}
+	}
+
+	return nil
+}
+
+// ParseHCLFile parses a config file and adds it to the config
+func ParseHCLFile(file string, c *Config) error {
+	parser := hclparse.NewParser()
+	ctx.Functions["file_path"] = getFilePathFunc(file)
+	ctx.Functions["file_dir"] = getFileDirFunc(file)
+
+	f, diag := parser.ParseHCLFile(file)
+	if diag.HasErrors() {
+		return errors.New(diag.Error())
+	}
+
+	body, ok := f.Body.(*hclsyntax.Body)
+	if !ok {
+		return errors.New("Error getting body")
+	}
+
+	for _, b := range body.Blocks {
+		switch b.Type {
+		case string(TypeVariable):
+			//ignore variables in this pass
+			continue
+
 		case string(TypeK8sCluster):
 			cl := NewK8sCluster(b.Labels[0])
 
@@ -600,10 +701,14 @@ func ParseReferences(c *Config) error {
 
 		case TypeIngress:
 			c := r.(*Ingress)
-			for _, n := range c.Networks {
-				c.DependsOn = append(c.DependsOn, n.Name)
+			if c.Source.Config.Cluster != "" {
+				c.DependsOn = append(c.DependsOn, c.Source.Config.Cluster)
 			}
-			c.DependsOn = append(c.DependsOn, c.Target)
+
+			if c.Destination.Config.Cluster != "" {
+				c.DependsOn = append(c.DependsOn, c.Destination.Config.Cluster)
+			}
+
 			c.DependsOn = append(c.DependsOn, c.Depends...)
 
 		case TypeK8sCluster:
@@ -649,6 +754,12 @@ func ParseReferences(c *Config) error {
 		case TypeNomadJob:
 			c := r.(*NomadJob)
 			c.DependsOn = append(c.DependsOn, c.Cluster)
+
+		case TypeLocalIngress:
+			c := r.(*LocalIngress)
+			c.DependsOn = append(c.DependsOn, c.Target)
+			c.DependsOn = append(c.DependsOn, c.Depends...)
+
 			c.DependsOn = append(c.DependsOn, c.Depends...)
 		}
 	}
@@ -685,17 +796,25 @@ func buildContext() *hcl.EvalContext {
 		},
 	})
 
-  var DockerIPFunc = function.New(&function.Spec{
+	var DockerIPFunc = function.New(&function.Spec{
 		Type: function.StaticReturnType(cty.String),
 		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
 			return cty.StringVal(utils.GetDockerIP()), nil
 		},
 	})
 
-  var DockerHostFunc = function.New(&function.Spec{
+	var DockerHostFunc = function.New(&function.Spec{
 		Type: function.StaticReturnType(cty.String),
 		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
 			return cty.StringVal(utils.GetDockerHost()), nil
+		},
+	})
+
+	var ShipyardIPFunc = function.New(&function.Spec{
+		Type: function.StaticReturnType(cty.String),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			ip, _ := utils.GetShipyardIPAndHostname()
+			return cty.StringVal(ip), nil
 		},
 	})
 
@@ -782,8 +901,32 @@ func buildContext() *hcl.EvalContext {
 	ctx.Functions["data"] = DataFunc
 	ctx.Functions["docker_ip"] = DockerIPFunc
 	ctx.Functions["docker_host"] = DockerHostFunc
+	ctx.Functions["shipyard_ip"] = ShipyardIPFunc
+
+	// the functions file_path and file_dir are added dynamically when processing a file
+	// this is because the need a reference to the current file
 
 	return ctx
+}
+
+func getFilePathFunc(path string) function.Function {
+	return function.New(&function.Spec{
+		Type: function.StaticReturnType(cty.String),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			s, err := filepath.Abs(path)
+			return cty.StringVal(s), err
+		},
+	})
+}
+
+func getFileDirFunc(path string) function.Function {
+	return function.New(&function.Spec{
+		Type: function.StaticReturnType(cty.String),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			s, err := filepath.Abs(path)
+			return cty.StringVal(filepath.Dir(s)), err
+		},
+	})
 }
 
 func decodeBody(path string, b *hclsyntax.Block, p interface{}) error {
@@ -803,6 +946,12 @@ func decodeBody(path string, b *hclsyntax.Block, p interface{}) error {
 // ensureAbsolute ensure that the given path is either absolute or
 // if relative is converted to abasolute based on the path of the config
 func ensureAbsolute(path, file string) string {
+	// if the file starts with a / and we are on windows
+	// we should treat this as absolute
+	if runtime.GOOS == "windows" && strings.HasPrefix(path, "/") {
+		return path
+	}
+
 	if filepath.IsAbs(path) {
 		return path
 	}

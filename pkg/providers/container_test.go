@@ -8,8 +8,8 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	assert "github.com/stretchr/testify/require"
 )
 
 func TestContainerCreatesSuccessfully(t *testing.T) {
@@ -29,6 +29,46 @@ func TestContainerCreatesSuccessfully(t *testing.T) {
 	assert.NoError(t, err)
 
 	hc.AssertNotCalled(t, "HealthCheckHTTP", mock.Anything, mock.Anything)
+}
+
+func TestContainerSidecarCreatesContainerSuccessfully(t *testing.T) {
+	md := &mocks.MockContainerTasks{}
+	hc := &mocks.MockHTTP{}
+
+	cc := config.NewSidecar("test")
+	cc.Depends = []string{"network.test"}
+	cc.Image = config.Image{Name: "abc"}
+	cc.Volumes = []config.Volume{config.Volume{}}
+	cc.Command = []string{"hello"}
+	cc.Entrypoint = []string{"hello"}
+	cc.EnvVar = map[string]string{"hello": "world"}
+	cc.HealthCheck = &config.HealthCheck{}
+	cc.Privileged = true
+	cc.Resources = &config.Resources{}
+	cc.Config = &config.Config{}
+
+	md.On("PullImage", cc.Image, false).Once().Return(nil)
+	md.On("CreateContainer", mock.Anything).Once().Return("", nil)
+
+	c := NewContainerSidecar(cc, md, hc, hclog.NewNullLogger())
+	err := c.Create()
+	assert.NoError(t, err)
+
+	ac := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+
+	assert.Equal(t, cc.Name, ac.Name)
+	assert.Equal(t, cc.Depends, ac.Depends)
+	assert.Equal(t, cc.Volumes, ac.Volumes)
+	assert.Equal(t, cc.Command, ac.Command)
+	assert.Equal(t, cc.Entrypoint, ac.Entrypoint)
+	assert.Equal(t, cc.Environment, ac.Environment)
+	assert.Equal(t, cc.EnvVar, ac.EnvVar)
+	assert.Equal(t, cc.HealthCheck, ac.HealthCheck)
+	assert.Equal(t, cc.Image.Name, ac.Image.Name)
+	assert.Equal(t, cc.Privileged, ac.Privileged)
+	assert.Equal(t, cc.Resources, ac.Resources)
+	assert.Equal(t, cc.Type, ac.Type)
+	assert.Equal(t, cc.Config, ac.Config)
 }
 
 func TestContainerRunsHTTPChecks(t *testing.T) {

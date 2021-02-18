@@ -13,3 +13,4 @@ Feature: Kubernetes Cluster
       | consul-http               | ingress     |
     And a HTTP call to "http://consul-http.ingress.shipyard.run:18500/v1/agent/members" should result in status 200
     And a HTTP call to "http://vault-http.ingress.shipyard.run:18200" should result in status 200
+    And a TCP connection to "localhost:8300" should open

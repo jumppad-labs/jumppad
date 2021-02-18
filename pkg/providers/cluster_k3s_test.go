@@ -5,20 +5,24 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/utils"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	assert "github.com/stretchr/testify/require"
 )
 
 // setupClusterMocks sets up a happy path for mocks
-func setupClusterMocks() (*config.K8sCluster, *mocks.MockContainerTasks, *mocks.MockKubernetes, func()) {
+func setupClusterMocks(t *testing.T) (
+	*config.K8sCluster, *mocks.MockContainerTasks, *mocks.MockKubernetes, *clients.ConnectorMock) {
+
 	md := &mocks.MockContainerTasks{}
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{}, nil)
 	md.On("PullImage", mock.Anything, mock.Anything).Return(nil)
@@ -36,12 +40,13 @@ func setupClusterMocks() (*config.K8sCluster, *mocks.MockContainerTasks, *mocks.
 	md.On("DetachNetwork", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	// set the home folder to a temp folder
-	tmpDir, _ := ioutil.TempDir("", "")
-	currentHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
+	tmpDir := t.TempDir()
+	currentHome := os.Getenv(utils.HomeEnvName())
+	os.Setenv(utils.HomeEnvName(), tmpDir)
 
 	// write the kubeconfig
-	kcf, err := os.Create("/tmp/kubeconfig.yaml")
+	_, kubePath, _ := utils.CreateKubeConfigPath(clusterConfig.Name)
+	kcf, err := os.Create(kubePath)
 	if err != nil {
 		panic(err)
 	}
@@ -52,6 +57,17 @@ func setupClusterMocks() (*config.K8sCluster, *mocks.MockContainerTasks, *mocks.
 	mk := &mocks.MockKubernetes{}
 	mk.Mock.On("SetConfig", mock.Anything).Return(nil)
 	mk.Mock.On("HealthCheckPods", mock.Anything, mock.Anything).Return(nil)
+	mk.Mock.On("Apply", mock.Anything, mock.Anything).Return(nil)
+
+	mc := &clients.ConnectorMock{}
+	mc.On("GetLocalCertBundle", mock.Anything).Return(&clients.CertBundle{}, nil)
+	mc.On("GenerateLeafCert",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(&clients.CertBundle{}, nil)
 
 	// copy the config
 	cc := *clusterConfig
@@ -61,10 +77,11 @@ func setupClusterMocks() (*config.K8sCluster, *mocks.MockContainerTasks, *mocks.
 	c.AddResource(&cc)
 	c.AddResource(&cn)
 
-	return &cc, md, mk, func() {
-		os.Setenv("HOME", currentHome)
-		os.RemoveAll(tmpDir)
-	}
+	t.Cleanup(func() {
+		os.Setenv(utils.HomeEnvName(), currentHome)
+	})
+
+	return &cc, md, mk, mc
 }
 
 func TestClusterK3ErrorsWhenUnableToLookupIDs(t *testing.T) {
@@ -72,7 +89,7 @@ func TestClusterK3ErrorsWhenUnableToLookupIDs(t *testing.T) {
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
 	mk := &mocks.MockKubernetes{}
-	p := NewK8sCluster(clusterConfig, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(clusterConfig, md, mk, nil, nil, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -83,28 +100,26 @@ func TestClusterK3ErrorsWhenClusterExists(t *testing.T) {
 	md.On("FindContainerIDs", "server."+clusterConfig.Name, mock.Anything).Return([]string{"abc"}, nil)
 
 	mk := &mocks.MockKubernetes{}
-	p := NewK8sCluster(clusterConfig, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(clusterConfig, md, mk, nil, nil, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
 }
 
 func TestClusterK3PullsImage(t *testing.T) {
-	cc, md, mk, cleanup := setupClusterMocks()
-	defer cleanup()
+	cc, md, mk, mc := setupClusterMocks(t)
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "PullImage", config.Image{Name: "rancher/k3s:v1.0.0"}, false)
+	md.AssertCalled(t, "PullImage", config.Image{Name: "shipyardrun/k3s:v1.18.15"}, false)
 }
 
 func TestClusterK3CreatesANewVolume(t *testing.T) {
-	cc, md, mk, cleanup := setupClusterMocks()
-	defer cleanup()
+	cc, md, mk, mc := setupClusterMocks(t)
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -112,13 +127,12 @@ func TestClusterK3CreatesANewVolume(t *testing.T) {
 }
 
 func TestClusterK3FailsWhenUnableToCreatesANewVolume(t *testing.T) {
-	cc, md, mk, cleanup := setupClusterMocks()
-	defer cleanup()
+	cc, md, mk, mc := setupClusterMocks(t)
 
 	removeOn(&md.Mock, "CreateVolume")
 	md.On("CreateVolume", mock.Anything, mock.Anything).Return("", fmt.Errorf("boom"))
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -126,10 +140,9 @@ func TestClusterK3FailsWhenUnableToCreatesANewVolume(t *testing.T) {
 }
 
 func TestClusterK3CreatesAServer(t *testing.T) {
-	cc, md, mk, cleanup := setupClusterMocks()
-	defer cleanup()
+	cc, md, mk, mc := setupClusterMocks(t)
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -138,7 +151,7 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 
 	// validate the basic details for the server container
 	assert.Contains(t, params.Name, "server")
-	assert.Contains(t, params.Image.Name, "rancher")
+	assert.Contains(t, params.Image.Name, "shipyardrun")
 	assert.Equal(t, clusterNetwork.Name, params.Networks[0].Name)
 	assert.True(t, params.Privileged)
 
@@ -156,14 +169,13 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 
 	localPort, _ = strconv.Atoi(params.Ports[1].Local)
 	hostPort, _ = strconv.Atoi(params.Ports[1].Host)
-	assert.Equal(t, localPort, 30000)
-	assert.GreaterOrEqual(t, hostPort, 64000)
+	assert.GreaterOrEqual(t, hostPort, 30000)
 	assert.Equal(t, "tcp", params.Ports[1].Protocol)
 
-	localPort, _ = strconv.Atoi(params.Ports[2].Local)
-	hostPort, _ = strconv.Atoi(params.Ports[2].Host)
-	assert.Equal(t, localPort, 30001)
-	assert.GreaterOrEqual(t, hostPort, 64000)
+	localPort2, _ := strconv.Atoi(params.Ports[2].Local)
+	hostPort2, _ := strconv.Atoi(params.Ports[2].Host)
+	assert.Equal(t, localPort2, localPort+1)
+	assert.GreaterOrEqual(t, hostPort2, 30000)
 	assert.Equal(t, "tcp", params.Ports[2].Protocol)
 
 	// validate the command
@@ -173,13 +185,12 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 }
 
 func TestClusterK3CreatesAServerWithAdditionalPorts(t *testing.T) {
-	cc, md, mk, cleanup := setupClusterMocks()
-	defer cleanup()
+	cc, md, mk, mc := setupClusterMocks(t)
 
 	cc.Ports = []config.Port{{Local: "8080", Remote: "8080", Host: "8080"}}
 	cc.PortRanges = []config.PortRange{{Range: "8000-9000", EnableHost: true}}
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -196,8 +207,7 @@ func TestClusterK3CreatesAServerWithAdditionalPorts(t *testing.T) {
 }
 
 func TestClusterK3sErrorsIfServerNOTStart(t *testing.T) {
-	cc, md, mk, cleanup := setupClusterMocks()
-	defer cleanup()
+	cc, md, mk, mc := setupClusterMocks(t)
 
 	removeOn(&md.Mock, "ContainerLogs")
 	md.On("ContainerLogs", mock.Anything, true, true).Return(
@@ -205,7 +215,7 @@ func TestClusterK3sErrorsIfServerNOTStart(t *testing.T) {
 		nil,
 	)
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 	startTimeout = 10 * time.Millisecond // reset the startTimeout, do not want to wait 120s
 
 	err := p.Create()
@@ -213,10 +223,10 @@ func TestClusterK3sErrorsIfServerNOTStart(t *testing.T) {
 }
 
 func TestClusterK3sDownloadsConfig(t *testing.T) {
-	cc, md, mk, cleanup := setupClusterMocks()
-	defer cleanup()
+	cc, md, mk, mc := setupClusterMocks(t)
+	_, kubePath, _ := utils.CreateKubeConfigPath(cc.Name)
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -224,34 +234,32 @@ func TestClusterK3sDownloadsConfig(t *testing.T) {
 	params := getCalls(&md.Mock, "CopyFromContainer")[0].Arguments
 	assert.Equal(t, "containerid", params.String(0))
 	assert.Equal(t, "/output/kubeconfig.yaml", params.String(1))
-	assert.Equal(t, "/tmp/kubeconfig.yaml", params.String(2))
+	assert.Equal(t, kubePath, params.String(2))
 }
 
 func TestClusterK3sRaisesErrorWhenUnableToDownloadConfig(t *testing.T) {
-	cc, md, mk, cleanup := setupClusterMocks()
-	defer cleanup()
+	cc, md, mk, mc := setupClusterMocks(t)
 
 	removeOn(&md.Mock, "CopyFromContainer")
 	md.On("CopyFromContainer", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
 }
 
 func TestClusterK3sSetsServerInConfig(t *testing.T) {
-  dh := os.Getenv("DOCKER_HOST")
-  os.Setenv("DOCKER_HOST", "tcp://test.com")
+	dh := os.Getenv("DOCKER_HOST")
+	os.Setenv("DOCKER_HOST", "tcp://localhost")
 
-  t.Cleanup(func() {
-    os.Setenv("DOCKER_HOST", dh)
-  })
+	t.Cleanup(func() {
+		os.Setenv("DOCKER_HOST", dh)
+	})
 
-	cc, md, mk, cleanup := setupClusterMocks()
-	defer cleanup()
+	cc, md, mk, mc := setupClusterMocks(t)
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -267,14 +275,13 @@ func TestClusterK3sSetsServerInConfig(t *testing.T) {
 	// check file contains docker ip
 	d, err := ioutil.ReadAll(f)
 	assert.NoError(t, err)
-  assert.Contains(t, string(d), "test.com")
+	assert.Contains(t, string(d), "https://"+utils.GetDockerIP())
 }
 
 func TestClusterK3sCreatesDockerConfig(t *testing.T) {
-	cc, md, mk, cleanup := setupClusterMocks()
-	defer cleanup()
+	cc, md, mk, mc := setupClusterMocks(t)
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -294,10 +301,9 @@ func TestClusterK3sCreatesDockerConfig(t *testing.T) {
 }
 
 func TestClusterK3sCreatesKubeClient(t *testing.T) {
-	cc, md, mk, cleanup := setupClusterMocks()
-	defer cleanup()
+	cc, md, mk, mc := setupClusterMocks(t)
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -305,23 +311,21 @@ func TestClusterK3sCreatesKubeClient(t *testing.T) {
 }
 
 func TestClusterK3sErrorsWhenFailedToCreateKubeClient(t *testing.T) {
-	cc, md, mk, cleanup := setupClusterMocks()
-	defer cleanup()
+	cc, md, mk, mc := setupClusterMocks(t)
 
 	removeOn(&mk.Mock, "SetConfig")
 	mk.Mock.On("SetConfig", mock.Anything).Return(fmt.Errorf("boom"))
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
 }
 
 func TestClusterK3sWaitsForPods(t *testing.T) {
-	cc, md, mk, cleanup := setupClusterMocks()
-	defer cleanup()
+	cc, md, mk, mc := setupClusterMocks(t)
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -329,22 +333,21 @@ func TestClusterK3sWaitsForPods(t *testing.T) {
 }
 
 func TestClusterK3sErrorsWhenWaitsForPodsFail(t *testing.T) {
-	cc, md, mk, cleanup := setupClusterMocks()
-	defer cleanup()
+	cc, md, mk, mc := setupClusterMocks(t)
+
 	removeOn(&mk.Mock, "HealthCheckPods")
 	mk.On("HealthCheckPods", mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
 }
 
 func TestClusterK3sImportDockerImagesPullsImages(t *testing.T) {
-	cc, md, mk, cleanup := setupClusterMocks()
-	defer cleanup()
+	cc, md, mk, mc := setupClusterMocks(t)
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -353,10 +356,9 @@ func TestClusterK3sImportDockerImagesPullsImages(t *testing.T) {
 }
 
 func TestClusterK3sImportDockerCopiesImages(t *testing.T) {
-	cc, md, mk, cleanup := setupClusterMocks()
-	defer cleanup()
+	cc, md, mk, mc := setupClusterMocks(t)
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -364,22 +366,20 @@ func TestClusterK3sImportDockerCopiesImages(t *testing.T) {
 }
 
 func TestClusterK3sImportDockerCopyImageFailReturnsError(t *testing.T) {
-	cc, md, mk, cleanup := setupClusterMocks()
+	cc, md, mk, mc := setupClusterMocks(t)
 	removeOn(&md.Mock, "CopyLocalDockerImageToVolume")
 	md.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything, mock.Anything).Return("", fmt.Errorf("boom"))
-	defer cleanup()
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
 }
 
 func TestClusterK3sImportDockerRunsExecCommand(t *testing.T) {
-	cc, md, mk, cleanup := setupClusterMocks()
-	defer cleanup()
+	cc, md, mk, mc := setupClusterMocks(t)
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 	err := p.Create()
 
 	assert.NoError(t, err)
@@ -387,23 +387,90 @@ func TestClusterK3sImportDockerRunsExecCommand(t *testing.T) {
 }
 
 func TestClusterK3sImportDockerExecFailReturnsError(t *testing.T) {
-	cc, md, mk, cleanup := setupClusterMocks()
+	cc, md, mk, mc := setupClusterMocks(t)
 	removeOn(&md.Mock, "ExecuteCommand")
 	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
-	defer cleanup()
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.Error(t, err)
 }
 
+func TestClusterK3sGeneratesCertsForConnector(t *testing.T) {
+	cc, md, mk, mc := setupClusterMocks(t)
+
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	mc.AssertCalled(t, "GetLocalCertBundle", mock.Anything)
+	mc.AssertCalled(t,
+		"GenerateLeafCert",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	)
+}
+
+func TestClusterK3sGeneratesCertsForDeployment(t *testing.T) {
+	cc, md, mk, mc := setupClusterMocks(t)
+
+	cp := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
+
+	err := cp.Create()
+	assert.NoError(t, err)
+
+	//args := getCalls(&mk.Mock, "Apply")[0]
+	//path := strings.Split(args.Arguments[0].([]string)[0], "/")
+
+	mc.AssertCalled(t, "GenerateLeafCert", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestClusterK3sDeploysConnector(t *testing.T) {
+	cc, md, mk, mc := setupClusterMocks(t)
+
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	files := []string{
+		"namespace.yaml",
+		"secret.yaml",
+		"rbac.yaml",
+		"deployment.yaml",
+	}
+
+	mk.AssertCalled(t, "Apply", mock.Anything, true)
+
+	args := getCalls(&mk.Mock, "Apply")[0]
+
+	for _, f := range args.Arguments[0].([]string) {
+		_, fn := filepath.Split(f)
+		assert.Contains(t, files, fn)
+	}
+}
+
+func TestClusterK3sWaitsForConnectorStart(t *testing.T) {
+	cc, md, mk, mc := setupClusterMocks(t)
+
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	mk.AssertCalled(t, "HealthCheckPods", []string{"app=connector"}, 60*time.Second)
+}
+
 // Destroy Tests
 func TestClusterK3sDestroyGetsIDr(t *testing.T) {
-	cc, md, mk, cleanup := setupClusterMocks()
-	defer cleanup()
+	cc, md, mk, mc := setupClusterMocks(t)
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
 	err := p.Destroy()
 	assert.NoError(t, err)
@@ -411,24 +478,22 @@ func TestClusterK3sDestroyGetsIDr(t *testing.T) {
 }
 
 func TestClusterK3sDestroyWithFindIDErrorReturnsError(t *testing.T) {
-	cc, md, mk, cleanup := setupClusterMocks()
+	cc, md, mk, mc := setupClusterMocks(t)
 	removeOn(&md.Mock, "FindContainerIDs")
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
-	defer cleanup()
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
 	err := p.Destroy()
 	assert.Error(t, err)
 }
 
 func TestClusterK3sDestroyWithNoIDReturns(t *testing.T) {
-	cc, md, mk, cleanup := setupClusterMocks()
+	cc, md, mk, mc := setupClusterMocks(t)
 	removeOn(&md.Mock, "FindContainerIDs")
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, nil)
-	defer cleanup()
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
 	err := p.Destroy()
 	assert.NoError(t, err)
@@ -436,12 +501,11 @@ func TestClusterK3sDestroyWithNoIDReturns(t *testing.T) {
 }
 
 func TestClusterK3sDestroyRemovesContainer(t *testing.T) {
-	cc, md, mk, cleanup := setupClusterMocks()
+	cc, md, mk, mc := setupClusterMocks(t)
 	removeOn(&md.Mock, "FindContainerIDs")
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"found"}, nil)
-	defer cleanup()
 
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
 	err := p.Destroy()
 	assert.NoError(t, err)
@@ -449,11 +513,10 @@ func TestClusterK3sDestroyRemovesContainer(t *testing.T) {
 }
 
 func TestLookupReturnsIDs(t *testing.T) {
-	cc, md, mk, cleanup := setupClusterMocks()
-	p := NewK8sCluster(cc, md, mk, nil, hclog.NewNullLogger())
+	cc, md, mk, mc := setupClusterMocks(t)
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 	removeOn(&md.Mock, "FindContainerIDs")
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"found"}, nil)
-	defer cleanup()
 
 	ids, err := p.Lookup()
 

@@ -4,11 +4,7 @@ Feature: Docker Container
   and test the resources are created correctly
 
 Scenario: Single Container from Local Blueprint
-  Given the following environment variables are set
-    | key            | value                 |
-    | CONSUL_VERSION | 1.8.0                 |
-    | ENVOY_VERSION  | 1.14.3                |
-  And I have a running blueprint
+  Given I have a running blueprint
   Then the following resources should be running
     | name                      | type      |
     | onprem                    | network   |
@@ -33,16 +29,6 @@ Scenario: Single Container from Local Blueprint with multiple runs
     | consul-container-http     | ingress   |
   And a HTTP call to "http://consul-http.ingress.shipyard.run:8500/v1/status/leader" should result in status 200
   And the response body should contain "10.6.0.200"
-  When I run the script
-  ```
-  #!/bin/bash
-  # Wait for consul to elect a leader
-  sleep 10
-  
-  curl -k http://consul-http.ingress.shipyard.run:8500/v1/status/leader
-  ```
-  Then I expect the exit code to be 0
-  And I expect the response to contain "`.*:8300`"
   When I run the command "curl -k http://1.server.dc1.consul.container.shipyard.run:8500/v1/status/leader"
   Then I expect the exit code to be 0
   Examples:

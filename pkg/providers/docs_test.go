@@ -3,6 +3,7 @@ package providers
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
@@ -13,7 +14,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func setupDocs() (*Docs, *mocks.MockContainerTasks) {
+func setupDocs(t *testing.T) (*Docs, *mocks.MockContainerTasks) {
 	cc := config.NewDocs("tests")
 	cc.IndexTitle = "test"
 	cc.IndexPages = []string{"abc", "123"}
@@ -28,11 +29,18 @@ func setupDocs() (*Docs, *mocks.MockContainerTasks) {
 
 	d := NewDocs(cc, md, hclog.NewNullLogger())
 
+	dh := os.Getenv("DOCKER_HOST")
+	os.Unsetenv("DOCKER_HOST")
+
+	t.Cleanup(func() {
+		os.Setenv("DOCKER_HOST", dh)
+	})
+
 	return d, md
 }
 
 func TestDocsPullsDocsContainer(t *testing.T) {
-	d, md := setupDocs()
+	d, md := setupDocs(t)
 
 	err := d.Create()
 	assert.NoError(t, err)
@@ -42,7 +50,7 @@ func TestDocsPullsDocsContainer(t *testing.T) {
 }
 
 func TestDocsMountsMarkdown(t *testing.T) {
-	d, md := setupDocs()
+	d, md := setupDocs(t)
 
 	err := d.Create()
 	assert.NoError(t, err)
@@ -56,7 +64,7 @@ func TestDocsMountsMarkdown(t *testing.T) {
 }
 
 func TestDocsGeneratesDocusaurusConfig(t *testing.T) {
-	d, md := setupDocs()
+	d, md := setupDocs(t)
 
 	err := d.Create()
 	assert.NoError(t, err)
@@ -78,7 +86,7 @@ func TestDocsGeneratesDocusaurusConfig(t *testing.T) {
 }
 
 func TestDocsSetsDocsPorts(t *testing.T) {
-	d, md := setupDocs()
+	d, md := setupDocs(t)
 
 	err := d.Create()
 	assert.NoError(t, err)
@@ -97,7 +105,7 @@ func TestDocsSetsDocsPorts(t *testing.T) {
 }
 
 func TestDocsSetsDocsPortsWithCustomReload(t *testing.T) {
-	d, md := setupDocs()
+	d, md := setupDocs(t)
 	d.config.LiveReloadPort = 30000
 
 	err := d.Create()
@@ -117,7 +125,7 @@ func TestDocsSetsDocsPortsWithCustomReload(t *testing.T) {
 }
 
 func TestDocsPullsTerminalContainer(t *testing.T) {
-	d, md := setupDocs()
+	d, md := setupDocs(t)
 
 	err := d.Create()
 	assert.NoError(t, err)
@@ -127,7 +135,7 @@ func TestDocsPullsTerminalContainer(t *testing.T) {
 }
 
 func TestCreatesTerminalContainer(t *testing.T) {
-	d, md := setupDocs()
+	d, md := setupDocs(t)
 
 	err := d.Create()
 	assert.NoError(t, err)
@@ -136,7 +144,7 @@ func TestCreatesTerminalContainer(t *testing.T) {
 }
 
 func TestDoesNotCreateTerminalContainerWhenRunning(t *testing.T) {
-	d, md := setupDocs()
+	d, md := setupDocs(t)
 	removeOn(&md.Mock, "FindContainerIDs")
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
 
@@ -147,7 +155,7 @@ func TestDoesNotCreateTerminalContainerWhenRunning(t *testing.T) {
 }
 
 func TestModifiesTerminalContainerToAppendNetworks(t *testing.T) {
-	d, md := setupDocs()
+	d, md := setupDocs(t)
 	removeOn(&md.Mock, "FindContainerIDs")
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
 
@@ -158,7 +166,7 @@ func TestModifiesTerminalContainerToAppendNetworks(t *testing.T) {
 }
 
 func TestDocsMountsDockerSock(t *testing.T) {
-	d, md := setupDocs()
+	d, md := setupDocs(t)
 
 	err := d.Create()
 	assert.NoError(t, err)
@@ -172,7 +180,7 @@ func TestDocsMountsDockerSock(t *testing.T) {
 }
 
 func TestDocsSetsTerminalPorts(t *testing.T) {
-	d, md := setupDocs()
+	d, md := setupDocs(t)
 
 	err := d.Create()
 	assert.NoError(t, err)
@@ -185,7 +193,7 @@ func TestDocsSetsTerminalPorts(t *testing.T) {
 }
 
 func TestDestroyRemovesContainers(t *testing.T) {
-	d, md := setupDocs()
+	d, md := setupDocs(t)
 	removeOn(&md.Mock, "FindContainerIDs")
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
 

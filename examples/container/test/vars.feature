@@ -6,8 +6,7 @@ Feature: Docker Container
 Scenario: Single Container with Shipyard Variables
   Given the following environment variables are set
     | key            | value                 |
-    | CONSUL_VERSION | 1.8.0                 |
-    | ENVOY_VERSION  | 1.14.3                |
+    | BAH            | bah                   |
   And the following shipyard variables are set
     | key            | value                 |
     | something      | set by test           |
@@ -19,3 +18,4 @@ Scenario: Single Container with Shipyard Variables
     | envoy                     | sidecar   |
     | consul-container-http     | ingress   |
   And the info "{.Config.Env}" for the running "container" called "consul" should contain "something=set by test"
+  And the info "{.Config.Env}" for the running "container" called "consul" should contain "foo=bah"

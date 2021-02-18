@@ -10,38 +10,62 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestArgIsLocalRelativeFolder(t *testing.T) {
-	is := IsLocalFolder("./")
-
-	assert.True(t, is)
+func TestIsLocalFolder(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+		want bool
+	}{
+		// TODO: Add test cases.
+		{
+			"False when directory not exist",
+			"/tmpsfsfsd",
+			false,
+		}, {
+			"True when current directory",
+			"./",
+			true,
+		}, {
+			"True when previous directory",
+			"../",
+			true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsLocalFolder(tt.path); got != tt.want {
+				t.Errorf("IsLocalFolder() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
 
-func TestArgIsLocalAbsFolder(t *testing.T) {
+func TestIsLocalAbsFolder(t *testing.T) {
 	is := IsLocalFolder("/tmp")
 
 	assert.True(t, is)
 }
 
-func TestArgIsFolderNotExists(t *testing.T) {
+func TestIsFolderNotExists(t *testing.T) {
 	is := IsLocalFolder("/dfdfdf")
 
 	assert.False(t, is)
 }
 
-func TestArgIsNotFolder(t *testing.T) {
+func TestIsNotFolder(t *testing.T) {
 	is := IsLocalFolder("github.com/")
 
 	assert.False(t, is)
 }
 
-func TestArgIsBlueprintFolder(t *testing.T) {
-	dir, err := GetBlueprintFolder("github.com/org/repo//folder")
+func TestGetBlueprintFolderReturnsFolder(t *testing.T) {
+	dir, err := GetBlueprintFolder("github.com/org/repo//folder?ref=dfdf&foo=bah")
 
 	assert.NoError(t, err)
-	assert.Equal(t, "folder", dir)
+	assert.Equal(t, "folder/ref/dfdf/foo/bah", dir)
 }
 
-func TestArgIsNotBlueprintFolder(t *testing.T) {
+func TestGetBlueprintFolderReturnsError(t *testing.T) {
 	_, err := GetBlueprintFolder("github.com/org/repo/folder")
 
 	assert.Error(t, err)
@@ -85,24 +109,26 @@ func TestFQDNVolumeReturnsCorrectValue(t *testing.T) {
 
 func TestHomeReturnsCorrectValue(t *testing.T) {
 	h := HomeFolder()
-	assert.Equal(t, os.Getenv("HOME"), h)
+	assert.Equal(t, os.Getenv(HomeEnvName()), h)
 }
 
 func TestStateReturnsCorrectValue(t *testing.T) {
 	h := StateDir()
-	assert.Equal(t, filepath.Join(os.Getenv("HOME"), ".shipyard/state"), h)
+	expected := filepath.Join(os.Getenv(HomeEnvName()), ".shipyard/state")
+
+	assert.Equal(t, expected, h)
 }
 
 func TestStatePathReturnsCorrectValue(t *testing.T) {
 	h := StatePath()
-	assert.Equal(t, filepath.Join(os.Getenv("HOME"), ".shipyard/state/state.json"), h)
+	assert.Equal(t, filepath.Join(os.Getenv(HomeEnvName()), ".shipyard/state/state.json"), h)
 }
 
 func TestCreateKubeConfigPathReturnsCorrectValues(t *testing.T) {
-	home := os.Getenv("HOME")
+	home := os.Getenv(HomeEnvName())
 	tmp, _ := ioutil.TempDir("", "")
-	os.Setenv("HOME", tmp)
-	defer os.Setenv("HOME", home)
+	os.Setenv(HomeEnvName(), tmp)
+	defer os.Setenv(HomeEnvName(), home)
 
 	d, f, dp := CreateKubeConfigPath("testing")
 
@@ -117,10 +143,10 @@ func TestCreateKubeConfigPathReturnsCorrectValues(t *testing.T) {
 }
 
 func TestCreateClusterConfigPathReturnsCorrectValues(t *testing.T) {
-	home := os.Getenv("HOME")
+	home := os.Getenv(HomeEnvName())
 	tmp, _ := ioutil.TempDir("", "")
-	os.Setenv("HOME", tmp)
-	defer os.Setenv("HOME", home)
+	os.Setenv(HomeEnvName(), tmp)
+	defer os.Setenv(HomeEnvName(), home)
 
 	d, f := CreateClusterConfigPath("testing")
 
@@ -134,12 +160,12 @@ func TestCreateClusterConfigPathReturnsCorrectValues(t *testing.T) {
 }
 
 func TestShipyardTempReturnsPath(t *testing.T) {
-	home := os.Getenv("HOME")
+	home := os.Getenv(HomeEnvName())
 	tmp, _ := ioutil.TempDir("", "")
-	os.Setenv("HOME", tmp)
+	os.Setenv(HomeEnvName(), tmp)
 
 	t.Cleanup(func() {
-		os.Setenv("HOME", home)
+		os.Setenv(HomeEnvName(), home)
 		os.RemoveAll(tmp)
 	})
 
@@ -153,12 +179,12 @@ func TestShipyardTempReturnsPath(t *testing.T) {
 }
 
 func TestShipyardDataReturnsPath(t *testing.T) {
-	home := os.Getenv("HOME")
+	home := os.Getenv(HomeEnvName())
 	tmp, _ := ioutil.TempDir("", "")
-	os.Setenv("HOME", tmp)
+	os.Setenv(HomeEnvName(), tmp)
 
 	t.Cleanup(func() {
-		os.Setenv("HOME", home)
+		os.Setenv(HomeEnvName(), home)
 		os.RemoveAll(tmp)
 	})
 
@@ -174,13 +200,13 @@ func TestShipyardDataReturnsPath(t *testing.T) {
 func TestShipyardHelmReturnsPath(t *testing.T) {
 	h := GetHelmLocalFolder("test")
 
-	assert.Equal(t, filepath.Join(os.Getenv("HOME"), ".shipyard", "/helm_charts", "/test"), h)
+	assert.Equal(t, filepath.Join(os.Getenv(HomeEnvName()), ".shipyard", "/helm_charts", "/test"), h)
 }
 
 func TestShipyardReleasesReturnsPath(t *testing.T) {
 	r := GetReleasesFolder()
 
-	assert.Equal(t, filepath.Join(os.Getenv("HOME"), ".shipyard", "/releases"), r)
+	assert.Equal(t, filepath.Join(os.Getenv(HomeEnvName()), ".shipyard", "/releases"), r)
 }
 
 func TestIsHCLFile(t *testing.T) {
@@ -218,37 +244,18 @@ func TestIsHCLFile(t *testing.T) {
 }
 
 func TestBlueprintLocalFolder(t *testing.T) {
-	dst := GetBlueprintLocalFolder("github.com/shipyard-run/blueprints//vault-k8s")
+	dst := GetBlueprintLocalFolder("github.com/shipyard-run/blueprints//vault-k8s?ref=dfdf&foo=bah")
 
-	assert.Equal(t, ShipyardHome()+"/blueprints/github.com/shipyard-run/blueprints/vault-k8s", dst)
+	assert.Equal(t, filepath.Join(ShipyardHome(), "/blueprints/github.com/shipyard-run/blueprints/vault-k8s/ref/dfdf/foo/bah"), dst)
 }
 
 func TestDockerHostWithDefaultReturnsCorrectValue(t *testing.T) {
+	dh := os.Getenv("DOCKER_HOST")
+	os.Unsetenv("DOCKER_HOST")
+	t.Cleanup(func() {
+		os.Setenv("DOCKER_HOST", dh)
+	})
+
 	ds := GetDockerHost()
 	assert.Equal(t, "/var/run/docker.sock", ds)
-}
-
-func TestDockerHostWithEnvReturnsCorrectValue(t *testing.T) {
-  dh := os.Getenv("DOCKER_HOST")
-  os.Setenv("DOCKER_HOST", "tcp://abc.123")
-  t.Cleanup(func() { os.Setenv("DOCKER_HOST", dh) })
-
-	ds := GetDockerHost()
-
-  assert.Equal(t, "tcp://abc.123", ds)
-}
-
-func TestDockerIPWithDefaultReturnsCorrectValue(t *testing.T) {
-	ds := GetDockerIP()
-	assert.Equal(t, "localhost", ds)
-}
-
-func TestDockerIPWithEnvReturnsCorrectValue(t *testing.T) {
-  dh := os.Getenv("DOCKER_HOST")
-  os.Setenv("DOCKER_HOST", "tcp://apple.shipyard.run:2342")
-  t.Cleanup(func() { os.Setenv("DOCKER_HOST", dh) })
-
-	ds := GetDockerIP()
-
-  assert.Equal(t, "apple.shipyard.run", ds)
 }
