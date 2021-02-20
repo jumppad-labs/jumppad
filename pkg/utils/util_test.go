@@ -197,10 +197,11 @@ func TestShipyardDataReturnsPath(t *testing.T) {
 	assert.True(t, s.IsDir())
 }
 
-func TestShipyardHelmReturnsPath(t *testing.T) {
-	h := GetHelmLocalFolder("test")
+func TestHelmLocalFolderReturnsPath(t *testing.T) {
+	chart := "github.com/jetstack/cert-manager?ref=v1.2.0/deploy/charts//cert-manager"
+	h := GetHelmLocalFolder(chart)
 
-	assert.Equal(t, filepath.Join(os.Getenv(HomeEnvName()), ".shipyard", "/helm_charts", "/test"), h)
+	assert.Equal(t, filepath.Join(os.Getenv(HomeEnvName()), ".shipyard", "/helm_charts", "github.com/jetstack/cert-manager/ref/v1.2.0/deploy/charts/cert-manager"), h)
 }
 
 func TestShipyardReleasesReturnsPath(t *testing.T) {

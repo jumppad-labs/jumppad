@@ -215,6 +215,7 @@ func IsHCLFile(path string) bool {
 }
 
 func sanitizeBlueprintFolder(blueprint string) string {
+	blueprint = strings.ReplaceAll(blueprint, "//", "/")
 	blueprint = strings.ReplaceAll(blueprint, "?", "/")
 	blueprint = strings.ReplaceAll(blueprint, "&", "/")
 	blueprint = strings.ReplaceAll(blueprint, "=", "/")
@@ -248,8 +249,10 @@ func GetBlueprintLocalFolder(blueprint string) string {
 
 // GetHelmLocalFolder returns the full storage path
 // for the given blueprint URI
-func GetHelmLocalFolder(blueprint string) string {
-	return filepath.Join(ShipyardHome(), "helm_charts", blueprint)
+func GetHelmLocalFolder(chart string) string {
+	chart = sanitizeBlueprintFolder(chart)
+
+	return filepath.Join(ShipyardHome(), "helm_charts", chart)
 }
 
 // GetReleasesFolder return the path of the Shipyard releases

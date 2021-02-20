@@ -1,8 +1,6 @@
 package providers
 
 import (
-	"path/filepath"
-	"strings"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -44,7 +42,7 @@ func (h *Helm) Create() error {
 	if !utils.IsLocalFolder(h.config.Chart) {
 		h.log.Debug("Fetching remote Helm chart", "ref", h.config.Name, "chart", h.config.Chart)
 
-		helmFolder := filepath.Join(utils.GetHelmLocalFolder(""), strings.Replace(h.config.Chart, "//", "/", -1))
+		helmFolder := utils.GetHelmLocalFolder(h.config.Chart)
 
 		err := h.getterClient.Get(h.config.Chart, helmFolder)
 		if err != nil {
