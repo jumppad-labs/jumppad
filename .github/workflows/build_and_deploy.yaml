@@ -203,11 +203,19 @@ jobs:
     steps:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
+        with:
+          ref: ${{ needs.tag.outputs.new_tag }}
 
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
           go-version: 1.15.2
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASS }}
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v1
@@ -229,29 +237,6 @@ jobs:
     outputs:
       new_tag: ${{ needs.tag.outputs.new_tag }}
 
-
-  push_docker:
-    name: Push Docker container to Docker Hub
-    runs-on: ubuntu-latest
-    needs: build_prod
-    steps:
-      -
-        name: Login to DockerHub
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_PASS }}
-
-      - name: Push image
-        run: docker push shipyardrun/shipyard:${{ needs.build_prod.outputs.new_tag }}
-
-      - name: Send status to Discord
-        uses: sarisia/actions-status-discord@v1
-        if: always()
-        with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          tile: ${{ github.job_id }}
-          description: "Push image shipyardrun/shipyard:${{ needs.build_prod.outputs.outputs.new_tag }} to DockerHub"
 
   choco:
     runs-on: windows-latest

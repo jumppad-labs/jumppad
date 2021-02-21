@@ -86,6 +86,5 @@ changelog:
 dockers:
   - image_templates:
     - shipyardrun/shipyard:{{ .Version }}
-    skip_push: true
 signs:
   - artifacts: checksum
