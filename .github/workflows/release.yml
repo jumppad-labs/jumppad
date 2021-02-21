@@ -33,6 +33,12 @@ jobs:
           key: ${{ secrets.GPG_PRIVATE_KEY }}
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+      
+      - name: Send status to Discord
+        uses: sarisia/actions-status-discord@v1
+        if: always()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
 
   choco:
     needs: goreleaser
@@ -74,6 +80,12 @@ jobs:
 
       - name: Choco push
         run: choco push -f
+      
+      - name: Send status to Discord
+        uses: sarisia/actions-status-discord@v1
+        if: always()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
 
   apt:
     needs: goreleaser
@@ -98,6 +110,12 @@ jobs:
     - name: Upload release
       run: |
         curl -F package=@shipyard_${{ steps.tag.outputs.value }}_linux_${{ matrix.arch }} https://${{ secrets.FURY_TOKEN }}@push.fury.io/shipyard-run/
+      
+    - name: Send status to Discord
+      uses: sarisia/actions-status-discord@v1
+      if: always()
+      with:
+        webhook: ${{ secrets.DISCORD_WEBHOOK }}
 
   latest:
     needs: goreleaser
@@ -134,3 +152,9 @@ jobs:
           git add .
           git commit -m "Update version to ${{ steps.tag.outputs.value}}"
           git push
+      
+      - name: Send status to Discord
+        uses: sarisia/actions-status-discord@v1
+        if: always()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}

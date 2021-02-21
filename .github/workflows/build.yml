@@ -151,3 +151,10 @@ jobs:
         uses: mathieudutour/github-tag-action@v5.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }} 
+      
+      - name: Send status to Discord
+        uses: sarisia/actions-status-discord@v1
+        if: always()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          description: "Automatically tagged main branch with new tag: ${{ steps.tag_version.outputs.new_tag }}"
