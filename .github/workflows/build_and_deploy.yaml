@@ -132,6 +132,14 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+
+      - name: Setup Go version
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.15.2
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v1
         with:
@@ -189,10 +197,18 @@ jobs:
       new_tag: ${{ steps.tag_version.outputs.new_tag }}
 
   build_prod:
-    name: Build Dev Version
+    name: Build Prod Version
     needs: tag
     runs-on: ubuntu-latest
     steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+
+      - name: Setup Go version
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.15.2
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v1
         with:
