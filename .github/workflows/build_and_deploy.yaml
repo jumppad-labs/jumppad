@@ -226,6 +226,9 @@ jobs:
           tile: ${{ github.job_id }}
           description: "Build prod version and upload artifacts"
 
+    outputs:
+      new_tag: ${{ needs.tag.outputs.new_tag }}
+
 
   push_docker:
     name: Push Docker container to Docker Hub
@@ -240,7 +243,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASS }}
 
       - name: Push image
-        run: docker push shipyardrun/shipyard:${{ needs.tag.outputs.new_tag }}
+        run: docker push shipyardrun/shipyard:${{ needs.build_prod.outputs.new_tag }}
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
@@ -248,7 +251,7 @@ jobs:
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           tile: ${{ github.job_id }}
-          description: "Push image shipyardrun/shipyard:${{ needs.tag.outputs.outputs.new_tag }} to DockerHub"
+          description: "Push image shipyardrun/shipyard:${{ needs.build_prod.outputs.outputs.new_tag }} to DockerHub"
 
   choco:
     runs-on: windows-latest
@@ -268,7 +271,7 @@ jobs:
         id: tag
         uses: ashley-taylor/regex-property-action@v1.0
         with:
-          value: ${{ needs.tag.outputs.new_tag }}
+          value: ${{ needs.build_prod.outputs.new_tag }}
           regex: "v"
           replacement: ""
 
@@ -311,7 +314,7 @@ jobs:
       id: tag
       uses: ashley-taylor/regex-property-action@v1.0
       with:
-        value: ${{ needs.tag.outputs.outputs.new_tag }}
+        value: ${{ needs.build_prod.outputs.new_tag }}
         regex: "v"
         replacement: ""
 
@@ -329,7 +332,7 @@ jobs:
       with:
         tile: ${{ github.job_id }}
         webhook: ${{ secrets.DISCORD_WEBHOOK }}
-        description: "Push new version ${{ needs.tag.outputs.outputs.new_tag }} to Apt"
+        description: "Push new version ${{ needs.build_prod.outputs.new_tag }} to Apt"
 
   update_website:
     needs: build_prod
@@ -352,8 +355,8 @@ jobs:
         id: tag
         uses: ashley-taylor/regex-property-action@v1.0
         with:
-          value: ${{ github.ref }}
-          regex: "refs/tags/v"
+          value: ${{ needs.build_prod.outputs.new_tag }}
+          regex: "v"
           replacement: ""
 
       - name: Write version
@@ -373,4 +376,4 @@ jobs:
         with:
           tile: ${{ github.job_id }}
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          description: "Update website with latest version ${{ needs.tag.outputs.outputs.new_tag }}"
+          description: "Update website with latest version ${{ needs.build_prod.outputs.new_tag }}"
