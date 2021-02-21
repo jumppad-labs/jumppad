@@ -240,7 +240,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASS }}
 
       - name: Push image
-        run: docker push shipyardrun/shipyard:${{ needs.tag.outputs.outputs.new_tag }}
+        run: docker push shipyardrun/shipyard:${{ needs.tag.outputs.new_tag }}
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
@@ -268,7 +268,7 @@ jobs:
         id: tag
         uses: ashley-taylor/regex-property-action@v1.0
         with:
-          value: ${{ needs.tag.outputs.outputs.new_tag }}
+          value: ${{ needs.tag.outputs.new_tag }}
           regex: "v"
           replacement: ""
 
