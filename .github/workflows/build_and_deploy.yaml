@@ -36,8 +36,7 @@ jobs:
         if: always()
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
-
-
+          tile: ${{ github.job_id }}
 
   functional_test:
     name: Functional Test
@@ -73,6 +72,8 @@ jobs:
         if: always()
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          tile: ${{ github.job_id }}
+          description: "Functional tests for ${{matrix.folder}}"
 
   e2e_linux:
     name: Linux E2E Tests
@@ -95,6 +96,8 @@ jobs:
         if: always()
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          tile: ${{ github.job_id }}
+          description: "End to end tests for Linux"
 
   e2e_mac:
     name: Mac E2E Tests
@@ -115,6 +118,8 @@ jobs:
         if: always()
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          tile: ${{ github.job_id }}
+          description: "End to end tests for MacOS amd64"
 
   build_dev:
     name: Build Dev Version
@@ -147,6 +152,14 @@ jobs:
             dist/shipyard_linux_arm_7
             dist/shipyard_linux_arm_6
             dist/shipyard_windows_amd64
+
+      - name: Send status to Discord
+        uses: sarisia/actions-status-discord@v1
+        if: always()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          tile: ${{ github.job_id }}
+          description: "Build dev version and upload artifacts"
 
   tag:
     name: Tag latest release
@@ -188,6 +201,14 @@ jobs:
           key: ${{ secrets.GPG_PRIVATE_KEY }}
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: Send status to Discord
+        uses: sarisia/actions-status-discord@v1
+        if: always()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          tile: ${{ github.job_id }}
+          description: "Build prod version and upload artifacts"
 
 
   push_docker:
