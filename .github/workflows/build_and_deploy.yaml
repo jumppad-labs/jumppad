@@ -1,12 +1,12 @@
 ---
 
-name: Build
+name: Build And Deploy
 on: [push]
 jobs:
-  build:
+  test:
     env:
       GONOSUMDB: "github.com/moby/moby"
-    name: Build and Test
+    name: Unit Test
     runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
@@ -26,27 +26,6 @@ jobs:
         run: |
           go test -v -race -coverprofile=coverage.txt -covermode=atomic -short ./...
 
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v1
-        with:
-          version: v0.147.2
-          args: release --rm-dist --snapshot
-          key: ${{ secrets.GPG_PRIVATE_KEY }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: shipyard
-          path: |
-            dist/shipyard_darwin_amd64
-            dist/shipyard_linux_amd64
-            dist/shipyard_linux_arm64
-            dist/shipyard_linux_arm_7
-            dist/shipyard_linux_arm_6
-            dist/shipyard_windows_amd64
-
       - name: Upload Code Coverage
         uses: codecov/codecov-action@v1
         with:
@@ -58,10 +37,12 @@ jobs:
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
 
+
+
   functional_test:
     name: Functional Test
     runs-on: ubuntu-latest
-    needs: build
+    needs: test
 
     strategy:
       matrix:
@@ -135,11 +116,43 @@ jobs:
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
 
+  build_dev:
+    name: Build Dev Version
+    needs:
+      - test
+      - functional_test
+      - e2e_mac
+      - e2e_linux
+    if: ${{ github.ref != 'refs/heads/main' }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v1
+        with:
+          version: v0.147.2
+          args: release --rm-dist --snapshot
+          key: ${{ secrets.GPG_PRIVATE_KEY }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: shipyard
+          path: |
+            dist/shipyard_darwin_amd64
+            dist/shipyard_linux_amd64
+            dist/shipyard_linux_arm64
+            dist/shipyard_linux_arm_7
+            dist/shipyard_linux_arm_6
+            dist/shipyard_windows_amd64
+
   tag:
     name: Tag latest release
     runs-on: ubuntu-latest
     needs:
-      - build
+      - test
       - functional_test
       - e2e_mac
       - e2e_linux
@@ -162,11 +175,25 @@ jobs:
     outputs:
       new_tag: ${{ steps.tag_version.outputs.new_tag }}
 
+  build_prod:
+    name: Build Dev Version
+    needs: tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v1
+        with:
+          version: v0.147.2
+          args: release --rm-dist
+          key: ${{ secrets.GPG_PRIVATE_KEY }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
 
   push_docker:
     name: Push Docker container to Docker Hub
     runs-on: ubuntu-latest
-    needs: tag
+    needs: build_prod
     steps:
       -
         name: Login to DockerHub
@@ -188,7 +215,7 @@ jobs:
 
   choco:
     runs-on: windows-latest
-    needs: tag
+    needs: build_prod
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -236,7 +263,7 @@ jobs:
           description: "Push new version ${{ needs.tag.outputs.outputs.new_tag }} to Chocolatey"
 
   apt:
-    needs: tag
+    needs: build_prod
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -268,7 +295,7 @@ jobs:
         description: "Push new version ${{ needs.tag.outputs.outputs.new_tag }} to Apt"
 
   update_website:
-    needs: tag
+    needs: build_prod
     runs-on: ubuntu-latest
 
     steps:

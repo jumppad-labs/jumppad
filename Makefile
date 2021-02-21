@@ -52,4 +52,4 @@ install_local:
 	sudo cp bin/yard-dev /usr/local/bin/yard-dev
 
 test_releaser:
-	goreleaser release --snapshot --rm-dist
+	goreleaser release --rm-dist --snapshot
