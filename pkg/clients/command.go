@@ -20,6 +20,7 @@ type CommandConfig struct {
 	WorkingDirectory string
 	RunInBackground  bool
 	LogFilePath      string
+	Timeout          time.Duration
 }
 
 type Command interface {
@@ -64,8 +65,13 @@ func (c *CommandImpl) Execute(config CommandConfig) (int, error) {
 	// done chan
 	doneCh := make(chan done)
 
+	timeout := c.timeout
+	if config.Timeout != (0 * time.Millisecond) {
+		timeout = config.Timeout
+	}
+
 	// wait for timeout
-	t := time.After(c.timeout)
+	t := time.After(timeout)
 	var pidfile string
 	var pid int
 	var err error

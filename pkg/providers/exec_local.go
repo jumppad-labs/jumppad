@@ -3,6 +3,7 @@ package providers
 import (
 	"fmt"
 	"path/filepath"
+	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
@@ -40,6 +41,20 @@ func (c *ExecLocal) Create() error {
 	// create the folders for logs and pids
 	logPath := filepath.Join(utils.LogsDir(), fmt.Sprintf("exec_%s.log", c.config.Name))
 
+	// do we have a duration to parse
+	var d time.Duration
+	var err error
+	if c.config.Timeout != "" {
+		d, err = time.ParseDuration(c.config.Timeout)
+		if err != nil {
+			return fmt.Errorf("Unable to parse Duration for timeout: %s", err)
+		}
+
+		if c.config.Daemon {
+			c.log.Warn("Timeout will be ignored when exec is running in daemon mode")
+		}
+	}
+
 	// create the config
 	cc := clients.CommandConfig{
 		Command:          c.config.Command,
@@ -48,6 +63,7 @@ func (c *ExecLocal) Create() error {
 		WorkingDirectory: c.config.WorkingDirectory,
 		RunInBackground:  c.config.Daemon,
 		LogFilePath:      logPath,
+		Timeout:          d,
 	}
 
 	// set the env vars
