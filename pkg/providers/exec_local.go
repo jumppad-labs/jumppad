@@ -90,7 +90,10 @@ func (c *ExecLocal) Destroy() error {
 			return nil
 		}
 
-		return c.client.Kill(c.config.Pid)
+		err := c.client.Kill(c.config.Pid)
+		if err != nil {
+			c.log.Warn("Error cleaning up daemonized process", "error", err)
+		}
 	}
 
 	return nil
