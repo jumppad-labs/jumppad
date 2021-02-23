@@ -1,5 +1,10 @@
 # Change Log
 
+## version 0.2.10
+* Add capability to run `local_exec` commands as a daemon
+* Add timeout to `local_exec`
+* Move `Creating TLS certificates` message to debug log
+
 ## version 0.2.0
 * Add new interpolation function to get the ip address of the machine running shipyard
 * Add CreateNamespace config parameter to Helm config
