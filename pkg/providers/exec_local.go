@@ -2,10 +2,12 @@ package providers
 
 import (
 	"fmt"
+	"path/filepath"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 )
 
 // ExecLocal provider allows the execution of arbitrary commands
@@ -35,16 +37,25 @@ func (c *ExecLocal) Create() error {
 		envs = append(envs, fmt.Sprintf("%s=%s", k, v))
 	}
 
+	// create the folders for logs and pids
+	logPath := filepath.Join(utils.LogsDir(), fmt.Sprintf("exec_%s.log", c.config.Name))
+
 	// create the config
 	cc := clients.CommandConfig{
 		Command:          c.config.Command,
 		Args:             c.config.Arguments,
 		Env:              envs,
 		WorkingDirectory: c.config.WorkingDirectory,
+		RunInBackground:  c.config.Daemon,
+		LogFilePath:      logPath,
 	}
 
 	// set the env vars
-	err := c.client.Execute(cc)
+	p, err := c.client.Execute(cc)
+	c.config.Pid = p
+
+	c.log.Debug("Started process", "ref", c.config.Name, "pid", c.config.Pid)
+
 	if err != nil {
 		return err
 	}
@@ -54,6 +65,18 @@ func (c *ExecLocal) Create() error {
 
 // Destroy statisfies the interface method but is not implemented by LocalExec
 func (c *ExecLocal) Destroy() error {
+	if c.config.Daemon {
+		// attempt to destroy the process
+		c.log.Info("Stopping locally executing script", "ref", c.config.Name, "pid", c.config.Pid)
+
+		if c.config.Pid < 1 {
+			c.log.Warn("Unable to stop local process, no pid")
+			return nil
+		}
+
+		return c.client.Kill(c.config.Pid)
+	}
+
 	return nil
 }
 

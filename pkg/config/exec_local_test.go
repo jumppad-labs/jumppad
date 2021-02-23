@@ -16,6 +16,8 @@ func TestExecLocalCreatesCorrectly(t *testing.T) {
 	assert.Equal(t, "setup_vault", ex.Info().Name)
 	assert.Equal(t, TypeExecLocal, ex.Info().Type)
 	assert.Equal(t, PendingCreation, ex.Info().Status)
+	assert.Equal(t, "./", ex.(*ExecLocal).WorkingDirectory)
+	assert.True(t, ex.(*ExecLocal).Daemon)
 
 	// assert.Equal(t, dir+"/scripts/setup_vault.sh", ExecLocal(*ex).Script)
 }
@@ -23,5 +25,8 @@ func TestExecLocalCreatesCorrectly(t *testing.T) {
 var execLocalRelative = `
 exec_local "setup_vault" {
   cmd = "./scripts/setup_vault.sh"
+  args = [ "root", "abc" ] 
+  working_directory = "./"
+  daemon = true
 }
 `

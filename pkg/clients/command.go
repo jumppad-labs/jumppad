@@ -3,11 +3,11 @@ package clients
 import (
 	"fmt"
 	"os"
-	"os/exec"
-	"sync"
+	"path/filepath"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/shipyard-run/gohup"
 )
 
 var ErrorCommandTimeout = fmt.Errorf("Command timed out before completing")
@@ -17,10 +17,13 @@ type CommandConfig struct {
 	Args             []string
 	Env              []string
 	WorkingDirectory string
+	RunInBackground  bool
+	LogFilePath      string
 }
 
 type Command interface {
-	Execute(config CommandConfig) error
+	Execute(config CommandConfig) (int, error)
+	Kill(pid int) error
 }
 
 // Command executes local commands
@@ -34,63 +37,89 @@ func NewCommand(maxCommandTime time.Duration, l hclog.Logger) Command {
 	return &CommandImpl{maxCommandTime, l}
 }
 
-// Execute the given command
-func (c *CommandImpl) Execute(config CommandConfig) error {
+type done struct {
+	pid int
+	err error
+}
 
-	cmd := exec.Command(
-		config.Command,
-		config.Args...,
-	)
+// Execute the given command
+func (c *CommandImpl) Execute(config CommandConfig) (int, error) {
+	lp := &gohup.LocalProcess{}
+	o := gohup.Options{
+		Path:    config.Command,
+		Args:    config.Args,
+		Logfile: config.LogFilePath,
+	}
 
 	// add the default environment variables
-	cmd.Env = os.Environ()
+	o.Env = os.Environ()
 
 	if config.Env != nil {
-		cmd.Env = append(cmd.Env, config.Args...)
+		o.Env = append(o.Env, config.Args...)
 	}
 
 	if config.WorkingDirectory != "" {
-		cmd.Dir = config.WorkingDirectory
+		o.Dir = config.WorkingDirectory
 	}
 
-	c.log.Debug("Running command", "cmd", config.Command, "args", config.Args, "dir", config.WorkingDirectory, "env", config.Env)
-
-	// set the standard out and error to the logger
-	cmd.Stdout = c.log.StandardWriter(&hclog.StandardLoggerOptions{InferLevels: true})
-	cmd.Stderr = c.log.StandardWriter(&hclog.StandardLoggerOptions{InferLevels: true})
-
 	// done chan
-	done := make(chan error)
-
-	cm := sync.Mutex{}
+	doneCh := make(chan done)
 
 	// wait for timeout
 	t := time.After(c.timeout)
+	var pidfile string
+	var pid int
+	var err error
 
 	go func() {
-		cm.Lock()
+		c.log.Debug(
+			"Running command",
+			"cmd", config.Command,
+			"args", config.Args,
+			"dir", config.WorkingDirectory,
+			"env", config.Env,
+			"pid", pidfile,
+			"background", config.RunInBackground,
+			"log_file", config.LogFilePath,
+		)
 
-		err := cmd.Start()
-
-		cm.Unlock()
-
+		pid, pidfile, err = lp.Start(o)
 		if err != nil {
-			done <- err
+			doneCh <- done{err: err}
 		}
 
-		err = cmd.Wait()
-		done <- err
+		// if not background wait for complete
+		if !config.RunInBackground {
+			for {
+				s, err := lp.QueryStatus(pidfile)
+				if err != nil {
+					doneCh <- done{err: err, pid: pid}
+				}
+
+				if s == gohup.StatusStopped {
+					break
+				}
+
+				time.Sleep(200 * time.Millisecond)
+			}
+		}
+
+		doneCh <- done{err: err, pid: pid}
 	}()
 
 	select {
 	case <-t:
-		cm.Lock()
-		defer cm.Unlock()
-
 		// kill the running process
-		cmd.Process.Kill()
-		return ErrorCommandTimeout
-	case err := <-done:
-		return err
+		lp.Stop(pidfile)
+		return pid, ErrorCommandTimeout
+	case d := <-doneCh:
+		return d.pid, d.err
 	}
+}
+
+// Kill a process with the given pid
+func (c *CommandImpl) Kill(pid int) error {
+	lp := gohup.LocalProcess{}
+
+	return lp.Stop(filepath.Join(os.TempDir(), fmt.Sprintf("%d.pid", pid)))
 }
