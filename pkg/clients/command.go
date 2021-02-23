@@ -55,11 +55,7 @@ func (c *CommandImpl) Execute(config CommandConfig) (int, error) {
 	}
 
 	// add the default environment variables
-	o.Env = os.Environ()
-
-	if config.Env != nil {
-		o.Env = append(o.Env, config.Args...)
-	}
+	o.Env = config.Env
 
 	if config.WorkingDirectory != "" {
 		o.Dir = config.WorkingDirectory
