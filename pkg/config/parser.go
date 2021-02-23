@@ -586,10 +586,6 @@ func ParseHCLFile(file string, c *Config) error {
 				return err
 			}
 
-			if !utils.IsLocalFolder(h.Command) {
-				h.Command = ensureAbsolute(h.Command, file)
-			}
-
 			c.AddResource(h)
 
 		case string(TypeExecRemote):
