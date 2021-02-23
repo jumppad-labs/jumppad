@@ -4,12 +4,5 @@ Feature: Docker Container
   and test the resources are created correctly
 
 Scenario: Two Local Execed Apps Running As Daemon
-    Given I have a running blueprint
-    When I run the script 
-      ```
-      #!/bin/bash
-      sleep 1
-      ps -ax
-      ps -a | grep sleep
-      ```
-    Then I expect the exit code to be 0
+  Given I have a running blueprint
+  Then a HTTP call to "http://localhost:8500/v1/status/leader" should result in status 200

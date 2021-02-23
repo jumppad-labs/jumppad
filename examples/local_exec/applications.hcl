@@ -1,27 +1,15 @@
- exec_local "exec_app_a" {
-  cmd = "sleep"
-  args = [
-    "60",
-  ]
-
-  env {
-    key = "CONSUL_HTTP_ADDR"
-    value = "http://consul.container.shipyard.run:8500"
-  }
-  
-  daemon = true
+ exec_local "install" {
+  cmd = "./fetch.sh"
 } 
  
- exec_local "exec_app_b" {
-  cmd = "sleep"
-  args = [
-    "60",
-  ]
+ exec_local "run" {
+  depends_on = ["exec_local.install"]
 
-  env {
-    key = "CONSUL_HTTP_ADDR"
-    value = "http://consul.container.shipyard.run:8500"
-  }
+  cmd = "/tmp/consul"
+  args = [
+    "agent",
+    "-dev",
+  ]
   
   daemon = true
 } 
