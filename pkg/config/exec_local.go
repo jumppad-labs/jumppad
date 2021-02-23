@@ -8,7 +8,7 @@ type ExecLocal struct {
 	ResourceInfo
 
 	// Id stores the ID of the created connector service
-	Pid int `json:"pid"`
+	Pid int `json:"pid,omitempty" state:"true"`
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 

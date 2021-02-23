@@ -126,3 +126,18 @@ func TestConfigMergesWithExistingItemDoesNOTSetsPendingUpdateWhenOtherStatus(t *
 	assert.Len(t, c.Resources, 9)
 	assert.Equal(t, c.Resources[0].Info().Status, PendingCreation)
 }
+
+func TestConfigMergesWithExistingItemRetainsStateFields(t *testing.T) {
+	c, cleanup := setupConfigTests(t)
+	defer cleanup()
+
+	c.Resources[0].Info().Status = Applied
+
+	c2 := New()
+	c2.AddResource(NewIngress("config"))
+
+	c.Merge(c2)
+
+	assert.Len(t, c.Resources, 9)
+	assert.Equal(t, "myid", c.Resources[1].(*Ingress).Id)
+}
