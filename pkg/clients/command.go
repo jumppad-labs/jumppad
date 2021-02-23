@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -44,6 +45,8 @@ type done struct {
 
 // Execute the given command
 func (c *CommandImpl) Execute(config CommandConfig) (int, error) {
+	mutex := sync.Mutex{}
+
 	lp := &gohup.LocalProcess{}
 	o := gohup.Options{
 		Path:    config.Command,
@@ -83,10 +86,12 @@ func (c *CommandImpl) Execute(config CommandConfig) (int, error) {
 			"log_file", config.LogFilePath,
 		)
 
+		mutex.Lock()
 		pid, pidfile, err = lp.Start(o)
 		if err != nil {
 			doneCh <- done{err: err}
 		}
+		mutex.Unlock()
 
 		// if not background wait for complete
 		if !config.RunInBackground {
@@ -110,7 +115,9 @@ func (c *CommandImpl) Execute(config CommandConfig) (int, error) {
 	select {
 	case <-t:
 		// kill the running process
+		mutex.Lock()
 		lp.Stop(pidfile)
+		mutex.Unlock()
 		return pid, ErrorCommandTimeout
 	case d := <-doneCh:
 		return d.pid, d.err
