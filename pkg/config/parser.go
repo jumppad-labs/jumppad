@@ -604,6 +604,18 @@ func ParseHCLFile(file string, c *Config) error {
 
 			c.AddResource(h)
 
+		case string(TypeTemplate):
+			i := NewTemplate(b.Labels[0])
+
+			err := decodeBody(file, b, i)
+			if err != nil {
+				return err
+			}
+
+			i.Destination = ensureAbsolute(i.Destination, file)
+
+			c.AddResource(i)
+
 		case string(TypeModule):
 			m := NewModule(b.Labels[0])
 
@@ -697,6 +709,10 @@ func ParseReferences(c *Config) error {
 
 		case TypeExecLocal:
 			c := r.(*ExecLocal)
+			c.DependsOn = append(c.DependsOn, c.Depends...)
+
+		case TypeTemplate:
+			c := r.(*Template)
 			c.DependsOn = append(c.DependsOn, c.Depends...)
 
 		case TypeIngress:

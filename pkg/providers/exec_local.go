@@ -2,10 +2,13 @@ package providers
 
 import (
 	"fmt"
+	"path/filepath"
+	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 )
 
 // ExecLocal provider allows the execution of arbitrary commands
@@ -35,16 +38,40 @@ func (c *ExecLocal) Create() error {
 		envs = append(envs, fmt.Sprintf("%s=%s", k, v))
 	}
 
+	// create the folders for logs and pids
+	logPath := filepath.Join(utils.LogsDir(), fmt.Sprintf("exec_%s.log", c.config.Name))
+
+	// do we have a duration to parse
+	var d time.Duration
+	var err error
+	if c.config.Timeout != "" {
+		d, err = time.ParseDuration(c.config.Timeout)
+		if err != nil {
+			return fmt.Errorf("Unable to parse Duration for timeout: %s", err)
+		}
+
+		if c.config.Daemon {
+			c.log.Warn("Timeout will be ignored when exec is running in daemon mode")
+		}
+	}
+
 	// create the config
 	cc := clients.CommandConfig{
 		Command:          c.config.Command,
 		Args:             c.config.Arguments,
 		Env:              envs,
 		WorkingDirectory: c.config.WorkingDirectory,
+		RunInBackground:  c.config.Daemon,
+		LogFilePath:      logPath,
+		Timeout:          d,
 	}
 
 	// set the env vars
-	err := c.client.Execute(cc)
+	p, err := c.client.Execute(cc)
+	c.config.Pid = p
+
+	c.log.Debug("Started process", "ref", c.config.Name, "pid", c.config.Pid)
+
 	if err != nil {
 		return err
 	}
@@ -54,6 +81,21 @@ func (c *ExecLocal) Create() error {
 
 // Destroy statisfies the interface method but is not implemented by LocalExec
 func (c *ExecLocal) Destroy() error {
+	if c.config.Daemon {
+		// attempt to destroy the process
+		c.log.Info("Stopping locally executing script", "ref", c.config.Name, "pid", c.config.Pid)
+
+		if c.config.Pid < 1 {
+			c.log.Warn("Unable to stop local process, no pid")
+			return nil
+		}
+
+		err := c.client.Kill(c.config.Pid)
+		if err != nil {
+			c.log.Warn("Error cleaning up daemonized process", "error", err)
+		}
+	}
+
 	return nil
 }
 

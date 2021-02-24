@@ -7,12 +7,6 @@ module "consul" {
 	source = "../container"
 }
 
-module "docs" {
-  depends_on = ["container_ingress.consul-container-http-2"]
-	
-  source = "../docs"
-}
-
 container_ingress "consul-container-http-2" {
   target  = "container.consul"
 
@@ -25,4 +19,10 @@ container_ingress "consul-container-http-2" {
     remote = 8500
     host   = 18600
   }
+}
+
+module "docs" {
+  depends_on = ["container_ingress.consul-container-http-2"]
+	
+  source = "../docs"
 }

@@ -420,6 +420,8 @@ func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
 		return providers.NewNetwork(c.(*config.Network), cc.Docker, cc.Logger)
 	case config.TypeOutput:
 		return providers.NewNull(c.Info(), cc.Logger)
+	case config.TypeTemplate:
+		return providers.NewTemplate(c.(*config.Template), cc.Logger)
 	}
 
 	return nil

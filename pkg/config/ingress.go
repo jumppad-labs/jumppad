@@ -14,7 +14,7 @@ type Ingress struct {
 	ResourceInfo
 
 	// Id stores the ID of the created connector service
-	Id string `json:"id"`
+	Id string `json:"id" state:"true"`
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 

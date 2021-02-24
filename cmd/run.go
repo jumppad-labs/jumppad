@@ -107,7 +107,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 		// create the certificates for the connector
 		if cb, err := cc.GetLocalCertBundle(utils.CertsDir("")); err != nil || cb == nil {
 			// generate certs
-			cmd.Println("Generating TLS Certificates for Ingress")
+			l.Debug("Generating TLS Certificates for Ingress", "path", utils.CertsDir(""))
 			_, err := cc.GenerateLocalCertBundle(utils.CertsDir(""))
 			if err != nil {
 				return fmt.Errorf("Unable to generate connector certificates: %s", err)
@@ -121,7 +121,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 				return fmt.Errorf("Unable to get certificates to secure ingress: %s", err)
 			}
 
-			cmd.Println("Starting Ingress")
+			l.Debug("Starting Ingress")
 
 			err = cc.Start(cb)
 			if err != nil {

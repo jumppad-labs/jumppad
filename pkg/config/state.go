@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/shipyard-run/shipyard/pkg/utils"
@@ -262,10 +263,6 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 				return err
 			}
 
-			if id, ok := mm["id"].(string); ok {
-				t.Id = id
-			}
-
 			t.Name = mm["name"].(string)
 			t.Type = ResourceType(mm["type"].(string))
 			t.Status = Status(mm["status"].(string))
@@ -428,6 +425,27 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 			}
 			c.AddResource(&t)
 
+		case TypeTemplate:
+			t := Template{}
+			err := mapstructure.Decode(mm, &t)
+			if err != nil {
+				return err
+			}
+			t.Name = mm["name"].(string)
+			t.Type = ResourceType(mm["type"].(string))
+			t.Status = Status(mm["status"].(string))
+
+			if m, ok := mm["module"].(string); ok {
+				t.Module = m
+			}
+
+			if d, ok := mm["depends_on"].([]interface{}); ok {
+				for _, i := range d {
+					t.DependsOn = append(t.DependsOn, i.(string))
+				}
+			}
+			c.AddResource(&t)
+
 		}
 	}
 
@@ -454,6 +472,22 @@ func (c *Config) Merge(c2 *Config) {
 
 				// make sure the reference is the world view not the local view
 				c.Resources[i].Info().Config = c
+
+				// we need to preserve any data elements which are used to store state values
+				vOld := reflect.ValueOf(cc).Elem()
+				vNew := reflect.ValueOf(cc2).Elem()
+				t := reflect.TypeOf(cc).Elem()
+
+				for i := 0; i < t.NumField(); i++ {
+					// Get the field tag value
+					oldValue := vOld.Field(i)
+					tagVal := t.Field(i).Tag.Get("state")
+
+					// if we have a state tag copy the values from the original
+					if tagVal == "true" {
+						vNew.Field(i).Set(oldValue)
+					}
+				}
 
 				found = true
 				break

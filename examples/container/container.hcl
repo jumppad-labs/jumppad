@@ -6,8 +6,43 @@ variable "envoy_version" {
   default = "1.14.3"
 }
 
+template "consul_config" {
+
+  source = <<EOF
+data_dir = "#{{ .Vars.data_dir }}"
+log_level = "DEBUG"
+
+datacenter = "dc1"
+primary_datacenter = "dc1"
+
+server = true
+
+bootstrap_expect = 1
+ui = true
+
+bind_addr = "0.0.0.0"
+client_addr = "0.0.0.0"
+advertise_addr = "10.6.0.200"
+
+ports {
+  grpc = 8502
+}
+
+connect {
+  enabled = true
+}
+EOF
+
+  destination = "./consul_config/consul.hcl"
+
+  vars = {
+    data_dir = "/tmp"
+  }
+}
 
 container "consul" {
+  depends_on = ["template.consul_config"]
+
   image   {
     name = "consul:${var.consul_version}"
   }
