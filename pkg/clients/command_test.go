@@ -94,7 +94,7 @@ func TestExecuteBackgroundWithBasicParams(t *testing.T) {
 	}
 }
 
-func TestKillRemovesProcess(t *testing.T) {
+func TestKillRemovesProcessWhenRunning(t *testing.T) {
 	command := "sh"
 	args := []string{"-c", "sleep 10s"}
 

@@ -46,6 +46,23 @@ func TestTemplateProcessesCorrectly(t *testing.T) {
 	assert.Contains(t, string(d), `data_dir = "something"`)
 }
 
+func TestTemplateOverwritesExistingFile(t *testing.T) {
+	tmpl, provider := setupTemplate(t)
+
+	f, err := os.Create(tmpl.Destination)
+	assert.NoError(t, err)
+	f.WriteString("Some text in the file")
+	f.Close()
+
+	err = provider.Create()
+	assert.NoError(t, err)
+
+	d, err := ioutil.ReadFile(tmpl.Destination)
+	assert.NoError(t, err)
+
+	assert.Contains(t, string(d), `data_dir = "something"`)
+}
+
 func TestTemplateDestroyRemovesDestination(t *testing.T) {
 	tmpl, provider := setupTemplate(t)
 

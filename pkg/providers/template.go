@@ -45,9 +45,11 @@ func (c *Template) Create() error {
 		return fmt.Errorf("Error processing template: %s", err)
 	}
 
-	if _, err := os.Stat(c.config.Destination); !os.IsNotExist(err) {
-		err := os.RemoveAll(c.config.Destination)
-		return fmt.Errorf("Unable to delete destination file: %s", err)
+	if fi, _ := os.Stat(c.config.Destination); fi != nil {
+		err = os.RemoveAll(c.config.Destination)
+		if err != nil {
+			return fmt.Errorf("Unable to delete destination file: %s", err)
+		}
 	}
 
 	err = os.MkdirAll(filepath.Dir(c.config.Destination), os.ModePerm)

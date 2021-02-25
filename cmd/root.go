@@ -114,5 +114,15 @@ func Execute(v, c, d string) error {
 	commit = c
 	date = d
 
-	return rootCmd.Execute()
+	err := rootCmd.Execute()
+
+	if err != nil {
+		fmt.Println(discordHelp)
+	}
+
+	return err
 }
+
+var discordHelp = `
+### For help and support join our community on Discord: https://discord.gg/ZuEFPJU69D ###
+`

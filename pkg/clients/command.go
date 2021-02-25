@@ -129,6 +129,11 @@ func (c *CommandImpl) Execute(config CommandConfig) (int, error) {
 // Kill a process with the given pid
 func (c *CommandImpl) Kill(pid int) error {
 	lp := gohup.LocalProcess{}
+	pidPath := filepath.Join(os.TempDir(), fmt.Sprintf("%d.pid", pid))
 
-	return lp.Stop(filepath.Join(os.TempDir(), fmt.Sprintf("%d.pid", pid)))
+	if s, _ := lp.QueryStatus(pidPath); s == gohup.StatusRunning {
+		return lp.Stop(pidPath)
+	}
+
+	return nil
 }
