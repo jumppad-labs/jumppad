@@ -71,10 +71,12 @@ func (c *Template) Create() error {
 func (c *Template) Destroy() error {
 	if _, err := os.Stat(c.config.Destination); !os.IsNotExist(err) {
 		err := os.RemoveAll(c.config.Destination)
-		c.log.Warn("Unable to delete template file",
-			"ref", c.config.Name,
-			"destination", c.config.Destination,
-			"error", err)
+		if err != nil {
+			c.log.Warn("Unable to delete template file",
+				"ref", c.config.Name,
+				"destination", c.config.Destination,
+				"error", err)
+		}
 	}
 
 	return nil
