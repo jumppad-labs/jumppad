@@ -294,7 +294,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 				cmd.Println("")
 
 				if runtime.GOOS == "windows" {
-					cmd.Println(`@FOR /f "tokens=*" %i IN ('shipyard env') DO @%i`)
+					cmd.Println(`Invoke-Expression "shipyard env" | ForEach-Object { Invoke-Expression $_ }`)
 				} else {
 					cmd.Println("eval $(shipyard env)")
 				}

@@ -333,7 +333,6 @@ func compileShipyardBinary(path string) error {
 					tmpBinary = tmpBinary + ".exe"
 				}
 
-				fmt.Println("Building temporary connector binary", tmpBinary)
 				os.RemoveAll(tmpBinary)
 
 				outwriter := bytes.NewBufferString("")

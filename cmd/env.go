@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
@@ -27,7 +28,7 @@ func newEnvCmd(e shipyard.Engine) *cobra.Command {
   eval $(shipyard env)
     
   # Set environment variables on Windows based systems
-  @FOR /f "tokens=*" %i IN ('shipyard env') DO @%
+  Invoke-Expression "shipyard env" | ForEach-Object { Invoke-Expression $_ }
 `,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -41,20 +42,21 @@ func newEnvCmd(e shipyard.Engine) *cobra.Command {
 
 			prefix := "export "
 			if runtime.GOOS == "windows" {
-				prefix = ""
+				prefix = "$Env:"
 			}
 
 			if c.Blueprint != nil && len(c.Blueprint.Environment) > 0 {
 				for _, env := range c.Blueprint.Environment {
-					fmt.Printf("%s%s=%s\n", prefix, env.Key, env.Value)
+					env.Value = strings.ReplaceAll(env.Value, `\`, `\\`)
+					fmt.Printf("%s%s=\"%s\"\n", prefix, env.Key, env.Value)
 				}
 			}
 
 			// add output variables
-
 			for _, r := range c.Resources {
 				if r.Info().Type == config.TypeOutput {
-					fmt.Printf("%s%s=%s\n", prefix, r.Info().Name, r.(*config.Output).Value)
+					val := strings.ReplaceAll(r.(*config.Output).Value, `\`, `\\`)
+					fmt.Printf("%s%s=\"%s\"\n", prefix, r.Info().Name, val)
 				}
 			}
 			return nil
