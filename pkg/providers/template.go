@@ -45,8 +45,12 @@ func (c *Template) Create() error {
 		return fmt.Errorf("Error processing template: %s", err)
 	}
 
-	if _, err := os.Stat(c.config.Destination); !os.IsNotExist(err) {
-		err := os.RemoveAll(c.config.Destination)
+	if _, err := os.Stat(c.config.Destination); os.IsNotExist(err) {
+		return nil
+	}
+
+	err = os.RemoveAll(c.config.Destination)
+	if err != nil {
 		return fmt.Errorf("Unable to delete destination file: %s", err)
 	}
 
