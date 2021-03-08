@@ -657,6 +657,13 @@ func ParseHCLFile(file string, c *Config) error {
 				c.AddResource(r)
 			}
 
+			// modules will reset the context file path as they recurse
+			// into other folders. They should have a separate context but
+			// for now just reset the file path to ensure any other resources
+			// parsed after the module have the correct path
+			ctx.Functions["file_path"] = getFilePathFunc(file)
+			ctx.Functions["file_dir"] = getFileDirFunc(file)
+
 		default:
 			return ResourceTypeNotExistError{string(b.Type), file}
 		}
