@@ -382,7 +382,7 @@ func GetShipyardBinaryPath() string {
 	return tmpBinary
 }
 
-// returns the hostname for the current machine
+// GetHostname returns the hostname for the current machine
 func GetHostname() string {
 	hn, err := os.Hostname()
 	if err != nil {
@@ -392,6 +392,7 @@ func GetHostname() string {
 	return hn
 }
 
+// GetLocalIPAddress returns a list of ip addressses for the local machine
 func GetLocalIPAddresses() []string {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
@@ -409,16 +410,16 @@ func GetLocalIPAddresses() []string {
 	return addresses
 }
 
-// GetShipyardIPAndHostname returns the IP Address of the machine
-// running shipyard
-func GetShipyardIPAndHostname() (string, string) {
+// GetLocalIPAndHostname returns the IP Address of the machine
+// running shipyard and the hostname for that machine
+func GetLocalIPAndHostname() (string, string) {
 	addrs, err := net.InterfaceAddrs()
 
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	var currentIP, currentNetworkHardwareName string
+	var currentIP string
 
 	for _, address := range addrs {
 
@@ -426,11 +427,10 @@ func GetShipyardIPAndHostname() (string, string) {
 		// = GET LOCAL IP ADDRESS
 		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
 			if ipnet.IP.To4() != nil {
-				fmt.Println("Current IP address : ", ipnet.IP.String())
 				currentIP = ipnet.IP.String()
 			}
 		}
 	}
 
-	return currentIP, currentNetworkHardwareName
+	return currentIP, GetHostname()
 }

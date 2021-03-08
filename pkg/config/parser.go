@@ -331,6 +331,8 @@ func parseYardMarkdown(file string, c *Config) error {
 // ParseVariableFile parses a config file for variables
 func ParseVariableFile(file string, c *Config) error {
 	parser := hclparse.NewParser()
+	ctx.Functions["file_path"] = getFilePathFunc(file)
+	ctx.Functions["file_dir"] = getFileDirFunc(file)
 
 	f, diag := parser.ParseHCLFile(file)
 	if diag.HasErrors() {
@@ -442,7 +444,7 @@ func ParseHCLFile(file string, c *Config) error {
 				h.Chart = ensureAbsolute(h.Chart, file)
 			}
 
-			if h.Values != "" && utils.IsLocalFolder(ensureAbsolute(h.Values, file)) {
+			if h.Values != "" {
 				h.Values = ensureAbsolute(h.Values, file)
 			}
 
@@ -829,7 +831,7 @@ func buildContext() *hcl.EvalContext {
 	var ShipyardIPFunc = function.New(&function.Spec{
 		Type: function.StaticReturnType(cty.String),
 		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
-			ip, _ := utils.GetShipyardIPAndHostname()
+			ip, _ := utils.GetLocalIPAndHostname()
 			return cty.StringVal(ip), nil
 		},
 	})
@@ -940,6 +942,7 @@ func getFileDirFunc(path string) function.Function {
 		Type: function.StaticReturnType(cty.String),
 		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
 			s, err := filepath.Abs(path)
+
 			return cty.StringVal(filepath.Dir(s)), err
 		},
 	})

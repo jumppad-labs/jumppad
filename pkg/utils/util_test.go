@@ -260,3 +260,10 @@ func TestDockerHostWithDefaultReturnsCorrectValue(t *testing.T) {
 	ds := GetDockerHost()
 	assert.Equal(t, "/var/run/docker.sock", ds)
 }
+
+func TestGetLocalIPAndHostnameReturnsCorrectly(t *testing.T) {
+	ip, host := GetLocalIPAndHostname()
+
+	assert.NotEqual(t, ip, "")
+	assert.NotEqual(t, host, "")
+}
