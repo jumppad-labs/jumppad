@@ -413,24 +413,14 @@ func GetLocalIPAddresses() []string {
 // GetLocalIPAndHostname returns the IP Address of the machine
 // running shipyard and the hostname for that machine
 func GetLocalIPAndHostname() (string, string) {
-	addrs, err := net.InterfaceAddrs()
 
+	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	var currentIP string
+	defer conn.Close()
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
 
-	for _, address := range addrs {
-
-		// check the address type and if it is not a loopback the display it
-		// = GET LOCAL IP ADDRESS
-		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				currentIP = ipnet.IP.String()
-			}
-		}
-	}
-
-	return currentIP, GetHostname()
+	return localAddr.IP.String(), GetHostname()
 }

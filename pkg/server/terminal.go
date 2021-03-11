@@ -6,8 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"syscall"
-	"unsafe"
 
 	"github.com/creack/pty"
 
@@ -29,11 +27,11 @@ func (a *API) terminalWebsocket(c *websocket.Conn) {
 
 	var cmd *exec.Cmd
 	if target == "local" {
-		a.log.Debug("Connecting to local terminal")
-
-		if runtime.GOOS == "Windows" {
+		if runtime.GOOS == "windows" {
+			a.log.Debug("Connecting to local terminal windows")
 			cmd = exec.Command("powershell.exe")
 		} else {
+			a.log.Debug("Connecting to local terminal linux")
 			cmd = exec.Command("bash")
 		}
 	} else {
@@ -107,15 +105,15 @@ func (a *API) terminalWebsocket(c *websocket.Conn) {
 
 			a.log.Debug("Resizing terminal")
 			// #nosec G103
-			_, _, errno := syscall.Syscall(
-				syscall.SYS_IOCTL,
-				tty.Fd(),
-				syscall.TIOCSWINSZ,
-				uintptr(unsafe.Pointer(&resizeMessage)),
-			)
-			if errno != 0 {
-				a.log.Error("Unable to resize terminal")
-			}
+			//_, _, errno := syscall.Syscall(
+			//	syscall.SYS_IOCTL,
+			//	tty.Fd(),
+			//	syscall.TIOCSWINSZ,
+			//	uintptr(unsafe.Pointer(&resizeMessage)),
+			//)
+			//if errno != 0 {
+			//	a.log.Error("Unable to resize terminal")
+			//}
 		default:
 			a.log.Error("Unknown data", "type", dataTypeBuf[0])
 		}
