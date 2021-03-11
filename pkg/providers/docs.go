@@ -46,10 +46,10 @@ func (i *Docs) Create() error {
 	}
 
 	// create the terminal server container
-	err = i.createTerminalContainer()
-	if err != nil {
-		return err
-	}
+	//err = i.createTerminalContainer()
+	//if err != nil {
+	//	return err
+	//}
 
 	// set the state
 	i.config.Status = config.Applied
@@ -120,6 +120,14 @@ func (i *Docs) createDocsContainer() error {
 			Remote: "37950",
 			Host:   fmt.Sprintf("%d", i.config.LiveReloadPort),
 		},
+	}
+
+	// add the environment variables for the
+	// ip and port of the terminal server
+	localIP, _ := utils.GetLocalIPAndHostname()
+	cc.EnvVar = map[string]string{
+		"TERMINAL_SERVER_IP":   localIP,
+		"TERMINAL_SERVER_PORT": "3000",
 	}
 
 	_, err = i.client.CreateContainer(cc)

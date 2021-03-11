@@ -15,6 +15,7 @@ import (
 	"github.com/shipyard-run/connector/http"
 	"github.com/shipyard-run/connector/protos/shipyard"
 	"github.com/shipyard-run/connector/remote"
+	"github.com/shipyard-run/shipyard/pkg/server"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
@@ -105,11 +106,17 @@ func newConnectorRunCommand() *cobra.Command {
 			// start the http server in the background
 			l.Info("Starting HTTP server", "bind_addr", httpBindAddr)
 			httpS := http.NewLocalServer(pathCertRoot, pathCertServer, pathKeyServer, grpcBindAddr, httpBindAddr, l)
+
 			err = httpS.Serve()
 			if err != nil {
 				l.Error("Unable to start HTTP server", "error", err)
 				os.Exit(1)
 			}
+
+			// start the API server
+			// we should look at merging the connector server and the API server
+			api := server.New(l.Named("api_server"))
+			api.Start()
 
 			c := make(chan os.Signal, 1)
 			signal.Notify(c, os.Interrupt)
@@ -127,6 +134,7 @@ func newConnectorRunCommand() *cobra.Command {
 
 	connectorRunCmd.Flags().StringVarP(&grpcBindAddr, "grpc-bind", "", ":9090", "Bind address for the gRPC API")
 	connectorRunCmd.Flags().StringVarP(&httpBindAddr, "http-bind", "", ":9091", "Bind address for the HTTP API")
+	connectorRunCmd.Flags().StringVarP(&httpBindAddr, "terminal-bind", "", ":9092", "Bind address for the Terminal Server API")
 	connectorRunCmd.Flags().StringVarP(&pathCertRoot, "root-cert-path", "", "", "Path for the PEM encoded TLS root certificate")
 	connectorRunCmd.Flags().StringVarP(&pathCertServer, "server-cert-path", "", "", "Path for the servers PEM encoded TLS certificate")
 	connectorRunCmd.Flags().StringVarP(&pathKeyServer, "server-key-path", "", "", "Path for the servers PEM encoded Private Key")
