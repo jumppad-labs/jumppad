@@ -54,4 +54,6 @@ replace github.com/docker/docker => github.com/docker/engine v1.4.2-0.2018071815
 
 replace golang.org/x/sys => golang.org/x/sys v0.0.0-20190830141801-acfa387b8d69
 
+replace github.com/creack/pty => github.com/jeffreystoke/pty v1.1.12-0.20201126201855-c1c1e24408f9
+
 //replace github.com/shipyard-run/connector => ../connector
