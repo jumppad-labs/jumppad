@@ -109,6 +109,7 @@ func newConnectorRunCommand() *cobra.Command {
 			httpS := http.NewLocalServer(pathCertRoot, pathCertServer, pathKeyServer, grpcBindAddr, httpBindAddr, l)
 
 			err = httpS.Serve()
+			l.Info("Started")
 			if err != nil {
 				l.Error("Unable to start HTTP server", "error", err)
 				os.Exit(1)

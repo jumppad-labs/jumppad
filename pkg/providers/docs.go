@@ -121,7 +121,7 @@ func (i *Docs) createDocsContainer() error {
 	localIP, _ := utils.GetLocalIPAndHostname()
 	cc.EnvVar = map[string]string{
 		"TERMINAL_SERVER_IP":   localIP,
-		"TERMINAL_SERVER_PORT": "30002",
+		"TERMINAL_SERVER_PORT": "30003",
 	}
 
 	_, err = i.client.CreateContainer(cc)

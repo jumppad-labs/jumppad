@@ -135,7 +135,7 @@ func TestDocsSetsTerminalPorts(t *testing.T) {
 	// main port
 	localIP, _ := utils.GetLocalIPAndHostname()
 	assert.Equal(t, localIP, params.EnvVar["TERMINAL_SERVER_IP"])
-	assert.Equal(t, "30002", params.EnvVar["TERMINAL_SERVER_PORT"])
+	assert.Equal(t, "30003", params.EnvVar["TERMINAL_SERVER_PORT"])
 }
 
 func TestDestroyRemovesContainers(t *testing.T) {

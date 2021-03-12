@@ -23,21 +23,23 @@ func (a *API) terminalWebsocket(c *websocket.Conn) {
 	workdir := c.Query("workdir", "/")
 	user := c.Query("user", "root")
 	target := c.Query("target", "local")
-	shell := c.Query("shell", "/bin/bash")
+	shell := c.Query("shell", "")
 
 	var cmd *exec.Cmd
 	if target == "local" {
+		defaultShell := "bash"
 		if runtime.GOOS == "windows" {
-			a.log.Debug("Connecting to local terminal windows")
-			cmd = exec.Command("powershell.exe")
-		} else {
-			a.log.Debug("Connecting to local terminal linux")
-			cmd = exec.Command("bash")
+			defaultShell = "powershell.exe"
 		}
+
+		a.log.Debug("Connecting to local terminal", "shell", defaultShell)
+		cmd = exec.Command(defaultShell)
+		cmd.Dir = workdir
 	} else {
 		a.log.Debug("Connecting to remote Docker container", "workdir", workdir, "user", user, "target", target, "shell", shell)
 		cmd = exec.Command("docker", "exec", "-ti", "-w", workdir, "-u", user, target, shell)
 	}
+
 	cmd.Env = append(os.Environ(), "TERM=xterm")
 
 	tty, err := pty.Start(cmd)

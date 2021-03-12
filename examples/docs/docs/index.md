@@ -12,4 +12,4 @@ sidebar_label: Example Page
 
 ## Local terminal
 
-<Terminal target="local"/>
+<Terminal target="local" workdir="/bin"/>
