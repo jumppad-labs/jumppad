@@ -177,6 +177,15 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 			}
 		}
 
+		// update status every 30s to let people know we are still running
+		statusUpdate := time.NewTicker(15 * time.Second)
+
+		go func() {
+			for _ = range statusUpdate.C {
+				logger.Info("Please wait, still creating resources ...")
+			}
+		}()
+
 		res, err := e.ApplyWithVariables(dst, vars, *variablesFile)
 		if err != nil {
 			return fmt.Errorf("Unable to apply blueprint: %s", err)
@@ -271,6 +280,9 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 			wg.Wait()
 			l.Debug("Browser windows open")
 		}
+
+		// kill the timer
+		statusUpdate.Stop()
 
 		// if we have a blueprint show the header
 		if e.Blueprint() != nil {
