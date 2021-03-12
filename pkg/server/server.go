@@ -8,15 +8,21 @@ import (
 )
 
 type API struct {
-	app *fiber.App
-	log hclog.Logger
+	bindAddr string
+	app      *fiber.App
+	log      hclog.Logger
 }
 
 // New creates a new server
-func New(l hclog.Logger) *API {
+func New(addr string, l hclog.Logger) *API {
+	config := fiber.Config{
+		DisableStartupMessage: true,
+	}
+
 	return &API{
-		app: fiber.New(),
-		log: l,
+		bindAddr: addr,
+		app:      fiber.New(config),
+		log:      l,
 	}
 }
 
@@ -37,7 +43,7 @@ func (s *API) Start() {
 	s.app.Get("/terminal", websocket.New(s.terminalWebsocket))
 
 	// Start the server but do not block
-	go s.app.Listen(":3000")
+	go s.app.Listen(s.bindAddr)
 }
 
 // Stop the API server

@@ -25,6 +25,7 @@ import (
 func newConnectorRunCommand() *cobra.Command {
 	var grpcBindAddr string
 	var httpBindAddr string
+	var apiBindAddr string
 	var pathCertRoot string
 	var pathCertServer string
 	var pathKeyServer string
@@ -115,7 +116,8 @@ func newConnectorRunCommand() *cobra.Command {
 
 			// start the API server
 			// we should look at merging the connector server and the API server
-			api := server.New(l.Named("api_server"))
+			l.Info("Starting API server", "bind_addr", apiBindAddr)
+			api := server.New(apiBindAddr, l.Named("api_server"))
 			api.Start()
 
 			c := make(chan os.Signal, 1)
@@ -134,7 +136,7 @@ func newConnectorRunCommand() *cobra.Command {
 
 	connectorRunCmd.Flags().StringVarP(&grpcBindAddr, "grpc-bind", "", ":9090", "Bind address for the gRPC API")
 	connectorRunCmd.Flags().StringVarP(&httpBindAddr, "http-bind", "", ":9091", "Bind address for the HTTP API")
-	connectorRunCmd.Flags().StringVarP(&httpBindAddr, "terminal-bind", "", ":9092", "Bind address for the Terminal Server API")
+	connectorRunCmd.Flags().StringVarP(&apiBindAddr, "api-bind", "", ":9092", "Bind address for the API Server")
 	connectorRunCmd.Flags().StringVarP(&pathCertRoot, "root-cert-path", "", "", "Path for the PEM encoded TLS root certificate")
 	connectorRunCmd.Flags().StringVarP(&pathCertServer, "server-cert-path", "", "", "Path for the servers PEM encoded TLS certificate")
 	connectorRunCmd.Flags().StringVarP(&pathKeyServer, "server-key-path", "", "", "Path for the servers PEM encoded Private Key")

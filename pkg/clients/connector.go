@@ -74,6 +74,7 @@ type ConnectorOptions struct {
 	BinaryPath   string
 	GrpcBind     string
 	HTTPBind     string
+	APIBind      string
 	LogLevel     string
 	PidFile      string
 }
@@ -91,6 +92,7 @@ func DefaultConnectorOptions() ConnectorOptions {
 	co.BinaryPath = utils.GetShipyardBinaryPath()
 	co.GrpcBind = ":30001"
 	co.HTTPBind = ":30002"
+	co.APIBind = ":30003"
 	co.LogLevel = "info"
 	co.PidFile = utils.GetConnectorPIDFile()
 
@@ -118,6 +120,7 @@ func (c *ConnectorImpl) Start(cb *CertBundle) error {
 			"run",
 			"--grpc-bind", c.options.GrpcBind,
 			"--http-bind", c.options.HTTPBind,
+			"--api-bind", c.options.APIBind,
 			"--root-cert-path", cb.RootCertPath,
 			"--server-cert-path", cb.LeafCertPath,
 			"--server-key-path", cb.LeafKeyPath,
