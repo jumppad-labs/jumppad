@@ -8,7 +8,6 @@ Feature: Documentation
     Then the following resources should be running
       | name                    | type      |
       | docs                    | docs      |
-      | terminal                | docs      |
     And a HTTP call to "http://docs.docs.shipyard.run:8080/" should result in status 200
 
   Scenario: Documentation with different version
@@ -16,5 +15,4 @@ Feature: Documentation
     Then the following resources should be running
       | name                    | type      |
       | docs                    | docs      |
-      | terminal                | docs      |
     And a HTTP call to "http://docs.docs.shipyard.run:8080/" should result in status 200

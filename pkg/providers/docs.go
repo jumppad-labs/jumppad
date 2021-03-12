@@ -45,12 +45,6 @@ func (i *Docs) Create() error {
 		return err
 	}
 
-	// create the terminal server container
-	err = i.createTerminalContainer()
-	if err != nil {
-		return err
-	}
-
 	// set the state
 	i.config.Status = config.Applied
 
@@ -122,63 +116,16 @@ func (i *Docs) createDocsContainer() error {
 		},
 	}
 
-	_, err = i.client.CreateContainer(cc)
-	return err
-}
-
-// There should only ever be one terminal container running, if the terminal already exists then
-// we should no create another but instead add the required networks.
-// this is going to cause a problem with Taint as tainting any docs will destroy
-// the Terminal. When the terminal recreates it will only come back up with the
-// networks defined in the current config.
-// This should be an edge case and would mostly likely occur when someone is using modules
-// but Mystic Nic predicts a future GitHub issue on this.
-// So why is Mystic Nic not fixing this right now, mainly because he needs to ship a feature
-// needed by Kerim fast and is willing to take the first bullet.
-func (i *Docs) createTerminalContainer() error {
-	// does the container exist
-	ids, err := i.client.FindContainerIDs("terminal", config.TypeDocs)
-	if err == nil && len(ids) == 1 {
-		return i.updateTerminalNetworks(ids[0])
-	}
-
-	// create the container config
-	cc := config.NewContainer("terminal")
-	i.config.ResourceInfo.AddChild(cc)
-
-	cc.Networks = i.config.Networks
-	cc.Image = &config.Image{Name: fmt.Sprintf("%s:%s", terminalImageName, terminalVersion)}
-
-	// pull the image
-	err = i.client.PullImage(*cc.Image, false)
-	if err != nil {
-		return err
-	}
-
-	// TODO we are mounting the docker sock, need to look at how this works on Windows
-	cc.Volumes = make([]config.Volume, 0)
-	cc.Volumes = append(
-		cc.Volumes,
-		config.Volume{
-			Source:      utils.GetDockerHost(),
-			Destination: "/var/run/docker.sock",
-		},
-	)
-
-	cc.Ports = []config.Port{
-		config.Port{
-			Protocol: "tcp",
-			Host:     "27950",
-			Local:    "27950",
-		},
+	// add the environment variables for the
+	// ip and port of the terminal server
+	localIP, _ := utils.GetLocalIPAndHostname()
+	cc.EnvVar = map[string]string{
+		"TERMINAL_SERVER_IP":   localIP,
+		"TERMINAL_SERVER_PORT": "30003",
 	}
 
 	_, err = i.client.CreateContainer(cc)
 	return err
-}
-
-func (i *Docs) updateTerminalNetworks(id string) error {
-	return nil
 }
 
 // Destroy the documentation container
@@ -198,14 +145,6 @@ func (i *Docs) Destroy() error {
 		}
 	}
 
-	// remove the terminal server
-	ids, err = i.client.FindContainerIDs("terminal", i.config.Type)
-	for _, id := range ids {
-		err := i.client.RemoveContainer(id)
-		if err != nil {
-			return err
-		}
-	}
 	return nil
 }
 

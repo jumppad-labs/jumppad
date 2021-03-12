@@ -6,13 +6,19 @@ require (
 	github.com/MichaelMure/go-term-markdown v0.1.3
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/aws/aws-sdk-go v1.33.5 // indirect
+	github.com/creack/pty v1.1.11
 	github.com/cucumber/godog v0.10.0
 	github.com/cucumber/messages-go/v10 v10.0.3
 	github.com/docker/docker v1.4.2-0.20200203170920-46ec8731fbce
 	github.com/docker/go-connections v0.4.0
 	github.com/gernest/front v0.0.0-20181129160812-ed80ca338b88
 	github.com/go-delve/delve v1.5.1 // indirect
+	github.com/gofiber/fiber v1.14.6
+	github.com/gofiber/fiber/v2 v2.5.0
+	github.com/gofiber/websocket/v2 v2.0.2
 	github.com/google/martian v2.1.0+incompatible
+	github.com/gorilla/mux v1.7.4
+	github.com/gorilla/websocket v1.4.2
 	github.com/gosuri/uitable v0.0.4
 	github.com/hashicorp/go-getter v1.5.1
 	github.com/hashicorp/go-hclog v0.15.0
@@ -21,6 +27,7 @@ require (
 	github.com/hashicorp/terraform v0.12.29
 	github.com/hokaccha/go-prettyjson v0.0.0-20190818114111-108c894c2c0e
 	github.com/kr/pretty v0.2.0
+	github.com/kr/pty v1.1.5
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/mapstructure v1.4.0
 	github.com/samalba/dockerclient v0.0.0-20160531175551-a30362618471 // indirect
@@ -46,5 +53,7 @@ require (
 replace github.com/docker/docker => github.com/docker/engine v1.4.2-0.20180718150940-a3ef7e9a9bda
 
 replace golang.org/x/sys => golang.org/x/sys v0.0.0-20190830141801-acfa387b8d69
+
+replace github.com/creack/pty => github.com/jeffreystoke/pty v1.1.12-0.20201126201855-c1c1e24408f9
 
 //replace github.com/shipyard-run/connector => ../connector

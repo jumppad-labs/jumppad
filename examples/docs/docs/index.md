@@ -4,8 +4,12 @@ title: Index Page
 sidebar_label: Example Page
 ---
 
-# Look at the terminal!!! 
+# Look at the terminal!!!
+
+## Remote terminal
 
 <Terminal target="docs.docs.shipyard.run" shell="/bin/bash" workdir="/" user="root" />
 
-Something
+## Local terminal
+
+<Terminal target="local" workdir="/bin"/>
