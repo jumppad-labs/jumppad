@@ -450,6 +450,16 @@ func ParseHCLFile(file string, c *Config) error {
 
 			c.AddResource(h)
 
+		case string(TypeImageCache):
+			i := NewImageCache(b.Labels[0])
+
+			err := decodeBody(file, b, i)
+			if err != nil {
+				return err
+			}
+
+			c.AddResource(i)
+
 		case string(TypeK8sIngress):
 			i := NewK8sIngress(b.Labels[0])
 
@@ -510,6 +520,10 @@ func ParseHCLFile(file string, c *Config) error {
 			}
 
 			c.AddResource(n)
+
+			// always add this network as a dependency of the image cache
+			ic := c.FindResourcesByType(string(TypeImageCache))[0].(*ImageCache)
+			ic.DependsOn = append(ic.DependsOn, "network."+n.Name)
 
 		case string(TypeIngress):
 			i := NewIngress(b.Labels[0])
@@ -642,7 +656,8 @@ func ParseHCLFile(file string, c *Config) error {
 			// set the absolute path
 			m.Source = ensureAbsolute(m.Source, file)
 
-			conf := New()
+			// create a new config with cache
+			conf := New(true)
 			// recursively parse references for the module
 			// ensure we do load the values which might be in module folders
 			err = ParseFolder(m.Source, conf, true, nil, "")

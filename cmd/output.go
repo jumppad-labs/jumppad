@@ -18,7 +18,7 @@ var outputCmd = &cobra.Command{
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		// load the stack
-		c := config.New()
+		c := config.New(true)
 		err := c.FromJSON(utils.StatePath())
 		if err != nil {
 			fmt.Println("Unable to load state", err)

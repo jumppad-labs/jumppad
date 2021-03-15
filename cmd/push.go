@@ -44,7 +44,7 @@ func newPushCmd(ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTT
 			}
 
 			// find the cluster in the state
-			sc := config.New()
+			sc := config.New(true)
 			err := sc.FromJSON(utils.StatePath())
 			if err != nil {
 				return xerrors.Errorf("No resources are running, start a stack with 'shipyard run [blueprint]'")

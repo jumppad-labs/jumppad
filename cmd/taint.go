@@ -23,7 +23,7 @@ var taintCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		c := config.New()
+		c := config.New(true)
 		err := c.FromJSON(utils.StatePath())
 		if err != nil {
 			fmt.Println("Unable to load state", err)

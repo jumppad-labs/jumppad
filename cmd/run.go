@@ -341,7 +341,7 @@ func buildBrowserPath(n, p string, t config.ResourceType, path string) string {
 
 func bluePrintInState() bool {
 	//load the state
-	sc := config.New()
+	sc := config.New(true)
 	sc.FromJSON(utils.StatePath())
 
 	return sc.Blueprint != nil

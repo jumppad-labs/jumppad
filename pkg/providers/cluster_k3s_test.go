@@ -73,7 +73,7 @@ func setupClusterMocks(t *testing.T) (
 	cc := *clusterConfig
 	cn := *clusterNetwork
 
-	c := config.New()
+	c := config.New(true)
 	c.AddResource(&cc)
 	c.AddResource(&cn)
 
@@ -93,6 +93,14 @@ func TestClusterK3ErrorsWhenUnableToLookupIDs(t *testing.T) {
 
 	err := p.Create()
 	assert.Error(t, err)
+}
+
+func TestClusterK3UsesCustomVersion(t *testing.T) {
+	t.Fatal("not implemented")
+}
+
+func TestClusterK3UsesEnvironment(t *testing.T) {
+	t.Fatal("not implemented")
 }
 
 func TestClusterK3ErrorsWhenClusterExists(t *testing.T) {

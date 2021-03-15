@@ -24,7 +24,7 @@ func setupK8sConfig() (*clients.MockKubernetes, *K8sConfig) {
 	kc.Cluster = "k8s_cluster.testcluster"
 	kc.Paths = []string{"/tmp/something"}
 
-	cc := config.New()
+	cc := config.New(true)
 	cc.AddResource(kc)
 	cc.AddResource(c)
 

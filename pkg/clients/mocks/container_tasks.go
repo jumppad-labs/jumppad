@@ -82,7 +82,7 @@ func (d *MockContainerTasks) CopyFromContainer(id, src, dst string) error {
 	return args.Error(0)
 }
 
-func (d*MockContainerTasks) CopyFileToContainer(id, src, dst string) error {
+func (d *MockContainerTasks) CopyFileToContainer(id, src, dst string) error {
 	args := d.Called(id, src, dst)
 
 	return args.Error(0)
@@ -96,6 +96,11 @@ func (d *MockContainerTasks) CopyLocalDockerImageToVolume(images []string, volum
 	}
 
 	return nil, args.Error(1)
+}
+
+func (d *MockContainerTasks) CopyFilesToVolume(volume string, files []string, path string, force bool) error {
+	args := d.Called(volume, files, path, force)
+	return args.Error(0)
 }
 
 func (d *MockContainerTasks) ExecuteCommand(id string, command []string, env []string, workingDirectory string, writer io.Writer) error {

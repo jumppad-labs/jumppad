@@ -101,8 +101,11 @@ func (e ResourceExistsError) Error() string {
 }
 
 // New creates a new Config
-func New() *Config {
+func New(createCache bool) *Config {
 	c := &Config{}
+
+	if createCache {
+	}
 
 	return c
 }

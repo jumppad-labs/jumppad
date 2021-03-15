@@ -38,7 +38,7 @@ func newExecCmd(dt clients.ContainerTasks) *cobra.Command {
 			parameters, command := parseParameters(args)
 
 			// find a list of resources in the current stack
-			sc := config.New()
+			sc := config.New(true)
 			err := sc.FromJSON(utils.StatePath())
 			if err != nil {
 				return fmt.Errorf("No resources are running, start a stack with 'shipyard run [blueprint]'")

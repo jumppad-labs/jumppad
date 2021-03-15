@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -22,7 +23,8 @@ import (
 
 // https://github.com/rancher/k3d/blob/master/cli/commands.go
 
-const k3sBaseImage = "shipyardrun/k3s:v1.18.15"
+const k3sBaseImage = "shipyardrun/k3s"
+const k3sBaseVersion = "v1.18.15"
 
 var startTimeout = (300 * time.Second)
 
@@ -79,9 +81,12 @@ func (c *K8sCluster) createK3s() error {
 		return ErrorClusterExists
 	}
 
+	if c.config.Version == "" {
+		c.config.Version = k3sBaseVersion
+	}
+
 	// set the image
-	//image := fmt.Sprintf("%s:%s", k3sBaseImage, c.config.Version)
-	image := k3sBaseImage
+	image := fmt.Sprintf("%s:%s", k3sBaseImage, c.config.Version)
 
 	// pull the container image
 	err = c.client.PullImage(config.Image{Name: image}, false)
@@ -108,7 +113,7 @@ func (c *K8sCluster) createK3s() error {
 	cc.Volumes = []config.Volume{
 		config.Volume{
 			Source:      volID,
-			Destination: "/images",
+			Destination: "/cache",
 			Type:        "volume",
 		},
 	}
@@ -118,11 +123,23 @@ func (c *K8sCluster) createK3s() error {
 		cc.Volumes = append(cc.Volumes, v)
 	}
 
+	// load the CA from a file
+	ca, err := ioutil.ReadFile(filepath.Join(utils.CertsDir(""), "/root.cert"))
+	if err != nil {
+		return fmt.Errorf("Unable to read root CA for proxy: %s", err)
+	}
+
 	// set the environment variables for the K3S_KUBECONFIG_OUTPUT and K3S_CLUSTER_SECRET
 	cc.Environment = []config.KV{
 		config.KV{Key: "K3S_KUBECONFIG_OUTPUT", Value: "/output/kubeconfig.yaml"},
 		config.KV{Key: "K3S_CLUSTER_SECRET", Value: "mysupersecret"}, // This should be random
+		config.KV{Key: "HTTP_PROXY", Value: "http://docker-cache.container.shipyard.run:3128/"},
+		config.KV{Key: "HTTPS_PROXY", Value: "http://docker-cache.container.shipyard.run:3128/"},
+		config.KV{Key: "PROXY_CA", Value: string(ca)},
 	}
+
+	// Add any custom environment variables
+	cc.EnvVar = c.config.EnvVar
 
 	// set the API server port to a random number 64000 - 65000
 	apiPort := rand.Intn(1000) + 64000
@@ -443,7 +460,7 @@ func (c *K8sCluster) ImportLocalDockerImages(name string, id string, images []co
 
 	// import to volume
 	vn := utils.FQDNVolumeName(name)
-	imagesFile, err := c.client.CopyLocalDockerImageToVolume(imgs, vn, force)
+	imagesFile, err := c.client.CopyLocalDockerImagesToVolume(imgs, vn, force)
 	if err != nil {
 		return err
 	}
@@ -451,7 +468,7 @@ func (c *K8sCluster) ImportLocalDockerImages(name string, id string, images []co
 	for _, i := range imagesFile {
 		// execute the command to import the image
 		// write any command output to the logger
-		err = c.client.ExecuteCommand(id, []string{"ctr", "image", "import", "/images/" + i}, nil, "/", c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
+		err = c.client.ExecuteCommand(id, []string{"ctr", "image", "import", i}, nil, "/", c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
 		if err != nil {
 			return err
 		}

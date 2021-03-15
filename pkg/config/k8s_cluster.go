@@ -20,6 +20,8 @@ type K8sCluster struct {
 
 	Ports      []Port      `hcl:"port,block" json:"ports,omitempty"`             // ports to expose
 	PortRanges []PortRange `hcl:"port_range,block" json:"port_ranges,omitempty"` // range of ports to expose
+
+	EnvVar map[string]string `hcl:"env_var,optional" json:"env_var,omitempty"` // environment variables to set when starting the container
 }
 
 // NewK8sCluster creates new Cluster config with the correct defaults

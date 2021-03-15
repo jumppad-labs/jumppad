@@ -299,7 +299,7 @@ func (e *EngineImpl) Destroy(path string, allResources bool) error {
 	}
 
 	// remove any destroyed nodes from the state
-	cn := config.New()
+	cn := config.New(true)
 	for _, i := range e.config.Resources {
 		if i.Info().Status != config.Destroyed {
 			cn.AddResource(i)
@@ -337,7 +337,7 @@ func (e *EngineImpl) Blueprint() *config.Blueprint {
 
 func (e *EngineImpl) readConfig(path string, variables map[string]string, variablesFile string) (*dag.AcyclicGraph, error) {
 	// load the new config
-	cc := config.New()
+	cc := config.New(true)
 	if path != "" {
 		if utils.IsHCLFile(path) {
 			err := config.ParseSingleFile(path, cc, variables, variablesFile)
@@ -356,7 +356,7 @@ func (e *EngineImpl) readConfig(path string, variables map[string]string, variab
 	}
 
 	// load the existing state
-	sc := config.New()
+	sc := config.New(true)
 	err := sc.FromJSON(utils.StatePath())
 	if err != nil {
 		// we do not have any state to create a new one
@@ -365,6 +365,15 @@ func (e *EngineImpl) readConfig(path string, variables map[string]string, variab
 
 	// merge the state and items to be created or deleted
 	sc.Merge(cc)
+
+	// check to see we have an image cache
+	// if not create one
+	_, err = sc.FindResource("docker-cache")
+	if err != nil {
+		// add a default resource for the docker caching proxy
+		proxy := config.NewImageCache("docker-cache")
+		sc.AddResource(proxy)
+	}
 
 	// set the config
 	e.config = sc
@@ -404,6 +413,8 @@ func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
 		return providers.NewHelm(c.(*config.Helm), cc.Kubernetes, cc.Helm, cc.Getter, cc.Logger)
 	case config.TypeIngress:
 		return providers.NewIngress(c.(*config.Ingress), cc.ContainerTasks, cc.Connector, cc.Logger)
+	case config.TypeImageCache:
+		return providers.NewImageCache(c.(*config.ImageCache), cc.ContainerTasks, cc.HTTP, cc.Logger)
 	case config.TypeK8sCluster:
 		return providers.NewK8sCluster(c.(*config.K8sCluster), cc.ContainerTasks, cc.Kubernetes, cc.HTTP, cc.Connector, cc.Logger)
 	case config.TypeK8sConfig:

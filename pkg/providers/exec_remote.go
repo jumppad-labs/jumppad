@@ -107,6 +107,7 @@ func (c *ExecRemote) createRemoteExecContainer() (string, error) {
 
 	cc.Networks = c.config.Networks
 	cc.Image = c.config.Image
+	cc.Entrypoint = []string{}
 	cc.Command = []string{"tail", "-f", "/dev/null"} // ensure container does not immediately exit
 	cc.Volumes = c.config.Volumes
 

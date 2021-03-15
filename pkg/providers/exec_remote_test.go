@@ -33,7 +33,7 @@ func testRemoteExecSetupMocks() (*config.ExecRemote, *config.Network, *mocks.Moc
 	cont := config.NewContainer("test")
 	cont.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "network.wan"}}
 
-	c := config.New()
+	c := config.New(true)
 	c.AddResource(net)
 	c.AddResource(trex)
 	c.AddResource(cont)

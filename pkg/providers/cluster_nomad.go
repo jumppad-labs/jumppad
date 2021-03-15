@@ -323,7 +323,7 @@ func (c *NomadCluster) createClientNode(index int, image, volumeID, configDir, s
 	cc.Volumes = []config.Volume{
 		config.Volume{
 			Source:      volumeID,
-			Destination: "/images",
+			Destination: "/cache",
 			Type:        "volume",
 		},
 		config.Volume{
@@ -359,7 +359,7 @@ func (c *NomadCluster) ImportLocalDockerImages(name string, id string, images []
 
 	// import to volume
 	vn := utils.FQDNVolumeName(name)
-	imagesFile, err := c.client.CopyLocalDockerImageToVolume(imgs, vn, force)
+	imagesFile, err := c.client.CopyLocalDockerImagesToVolume(imgs, vn, force)
 	if err != nil {
 		return err
 	}
@@ -367,7 +367,7 @@ func (c *NomadCluster) ImportLocalDockerImages(name string, id string, images []
 	// execute the command to import the image
 	// write any command output to the logger
 	for _, i := range imagesFile {
-		err = c.client.ExecuteCommand(id, []string{"docker", "load", "-i", "/images/" + i}, nil, "/", c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
+		err = c.client.ExecuteCommand(id, []string{"docker", "load", "-i", i}, nil, "/", c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
 		if err != nil {
 			return err
 		}

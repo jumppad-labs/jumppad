@@ -31,7 +31,7 @@ require (
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/mapstructure v1.4.0
 	github.com/samalba/dockerclient v0.0.0-20160531175551-a30362618471 // indirect
-	github.com/shipyard-run/connector v0.0.16
+	github.com/shipyard-run/connector v0.0.18
 	github.com/shipyard-run/gohup v0.2.2
 	github.com/shipyard-run/version-manager v0.0.5
 	github.com/shipyard/shipyard v3.0.0+incompatible // indirect

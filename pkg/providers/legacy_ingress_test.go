@@ -23,7 +23,7 @@ func testIngressCreateMocks() (*mocks.MockContainerTasks, *config.Config) {
 
 	testCluster.Driver = "k3s"
 
-	c := config.New()
+	c := config.New(true)
 
 	tic := testIngressConfig
 	c.AddResource(&tic)

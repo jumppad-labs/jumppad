@@ -50,20 +50,25 @@ type ContainerTasks interface {
 	ContainerLogs(id string, stdOut, stdErr bool) (io.ReadCloser, error)
 	// CopyFromContainer allows the copying of a file from a container
 	CopyFromContainer(id, src, dst string) error
-  // CopyToContainer allows a file to be copied into a container
+	// CopyToContainer allows a file to be copied into a container
 	CopyFileToContainer(id, src, dst string) error
 	// CopyLocaDockerImageToVolume copies the docker images to the docker volume as a
 	// compressed archive.
 	// the path in the docker volume where the archive is created is returned
 	// along with any errors.
-	CopyLocalDockerImageToVolume(images []string, volume string, force bool) ([]string, error)
+	CopyLocalDockerImagesToVolume(images []string, volume string, force bool) ([]string, error)
+
+	//CopyFilesToVolume copies the files to the path in a Docker volume
+	CopyFilesToVolume(volume string, files []string, path string, force bool) ([]string, error)
 	// Execute command allows the execution of commands in a running docker container
 	// id is the id of the container to execute the command in
 	// command is a slice of strings to execute
 	// writer [optional] will be used to write any output from the command execution.
 	ExecuteCommand(id string, command []string, env []string, workingDirectory string, writer io.Writer) error
-	// AttachNetwork disconnects a container from the network
-	AttachNetwork(network, containerid string) error
+	// AttachNetwork attaches a container to a network
+	// if aliases is set an alias for the container name will be added
+	// if ipAddress is not null then a user defined ipaddress will be used
+	AttachNetwork(network, containerid string, aliases []string, ipaddress string) error
 	// DetatchNetwork disconnects a container from the network
 	DetachNetwork(network, containerid string) error
 	// ListNetworks lists the networks a container is attached to

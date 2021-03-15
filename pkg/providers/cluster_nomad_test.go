@@ -48,7 +48,7 @@ func setupNomadClusterMocks(t *testing.T) (*config.NomadCluster, *mocks.MockCont
 	cc := *clusterNomadConfig
 	cn := *clusterNetwork
 
-	c := config.New()
+	c := config.New(true)
 	c.AddResource(&cc)
 	c.AddResource(&cn)
 

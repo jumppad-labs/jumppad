@@ -11,6 +11,7 @@ import (
 	"os"
 	gosignal "os/signal"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -242,21 +243,8 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 				return "", xerrors.Errorf("Network not found: %w", err)
 			}
 
-			d.l.Debug("Attaching container to network", "ref", c.Name, "network", n.Name)
-			es := &network.EndpointSettings{NetworkID: net.Info().Name}
+			err = d.AttachNetwork(net.Info().Name, cont.ID, n.Aliases, n.IPAddress)
 
-			// if we have network aliases defined, add them to the network connection
-			if n.Aliases != nil && len(n.Aliases) > 0 {
-				es.Aliases = n.Aliases
-			}
-
-			// are we binding to a specific ip
-			if n.IPAddress != "" {
-				d.l.Debug("Assigning static ip address", "ref", c.Name, "network", n.Name, "ip_address", n.IPAddress)
-				es.IPAMConfig = &network.EndpointIPAMConfig{IPv4Address: n.IPAddress}
-			}
-
-			err = d.c.NetworkConnect(context.Background(), net.Info().Name, cont.ID, es)
 			if err != nil {
 				// if we fail to connect to the network roll back the container
 				errRemove := d.RemoveContainer(cont.ID)
@@ -512,7 +500,7 @@ var importMutex = sync.Mutex{}
 
 // CopyLocalDockerImageToVolume writes multiple Docker images to a Docker container as a compressed archive
 // returns the filename of the archive and an error if one occured
-func (d *DockerTasks) CopyLocalDockerImageToVolume(images []string, volume string, force bool) ([]string, error) {
+func (d *DockerTasks) CopyLocalDockerImagesToVolume(images []string, volume string, force bool) ([]string, error) {
 	d.l.Debug("Writing docker images to volume", "images", images, "volume", volume)
 
 	// make sure this operation runs sequentially as we do not want to update the same volume at the same time
@@ -522,45 +510,8 @@ func (d *DockerTasks) CopyLocalDockerImageToVolume(images []string, volume strin
 
 	savedImages := []string{}
 
-	// make sure we have the alpine image needed to copy
-	err := d.PullImage(config.Image{Name: "alpine:latest"}, false)
-	if err != nil {
-		return nil, xerrors.Errorf("Unable pull alpine:latest for importing images: %w", err)
-	}
-
-	// create a dummy container to import to volume
-	cc := config.NewContainer("temp-import")
-
-	cc.Image = &config.Image{Name: "alpine:latest"}
-	cc.Volumes = []config.Volume{
-		config.Volume{
-			Source:      volume,
-			Destination: "/images",
-			Type:        "volume",
-		},
-	}
-	cc.Command = []string{"tail", "-f", "/dev/null"}
-
-	tmpID, err := d.CreateContainer(cc)
-	if err != nil {
-		return nil, xerrors.Errorf("unable to create dummy container for importing images: %w", err)
-	}
-	defer d.RemoveContainer(tmpID)
-
-	// add each image individually
 	for _, i := range images {
-		compressedImageName := fmt.Sprintf("%s.tar", base64.StdEncoding.EncodeToString([]byte(i)))
-
-		// check if the image exists if we are not doing a forced update
-		if !d.force && !force {
-			err := d.ExecuteCommand(tmpID, []string{"find", "/images/" + compressedImageName}, nil, "/", nil)
-			if err == nil {
-				// we have the image already
-				d.l.Debug("Image already cached", "image", i)
-				savedImages = append(savedImages, compressedImageName)
-				continue
-			}
-		}
+		compressedImageName := fmt.Sprintf("%s", base64.StdEncoding.EncodeToString([]byte(i)))
 
 		d.l.Debug("Copying image to container", "image", i)
 		imageFile, err := d.saveImageToTempFile(i, compressedImageName)
@@ -570,17 +521,75 @@ func (d *DockerTasks) CopyLocalDockerImageToVolume(images []string, volume strin
 
 		// clean up after ourselfs
 		defer os.Remove(imageFile)
-
-		err = d.CopyFileToContainer(utils.FQDN(cc.Name, string(cc.Type)), imageFile, "/images")
-		if err != nil {
-			return nil, err
-		}
-
-		savedImages = append(savedImages, compressedImageName)
+		savedImages = append(savedImages, imageFile)
 	}
 
-	// return the name of the archive
-	return savedImages, nil
+	// copy the images to a volume
+	return d.CopyFilesToVolume(volume, savedImages, "/images", force)
+}
+
+// CopyFileToVolume copies a file to a Docker volume
+// returns the names of the stored files
+func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, path string, force bool) ([]string, error) {
+	// make sure we have the alpine image needed to copy
+	err := d.PullImage(config.Image{Name: "alpine:latest"}, false)
+	if err != nil {
+		return nil, xerrors.Errorf("Unable pull alpine:latest for importing images: %w", err)
+	}
+
+	// create a dummy container to import to volume
+	cc := config.NewContainer(fmt.Sprintf("%d-import", time.Now().UnixNano()))
+
+	cc.Image = &config.Image{Name: "alpine:latest"}
+	cc.Volumes = []config.Volume{
+		config.Volume{
+			Source:      volumeID,
+			Destination: "/cache",
+			Type:        "volume",
+		},
+	}
+	cc.Command = []string{"tail", "-f", "/dev/null"}
+
+	tmpID, err := d.CreateContainer(cc)
+	if err != nil {
+		return nil, xerrors.Errorf("unable to create dummy container for importing files: %w", err)
+	}
+
+	defer d.RemoveContainer(tmpID)
+
+	// create the directory paths
+	destPath := filepath.Join("/cache", path)
+	err = d.ExecuteCommand(tmpID, []string{"mkdir", "-p", destPath}, nil, "/", nil)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to create destination path in volume: %s", err)
+	}
+
+	// add each file individually
+	imported := []string{}
+	for _, f := range filenames {
+		// get the filename part
+		name := filepath.Base(f)
+		destFile := filepath.Join(destPath, name)
+
+		// check if the image exists if we are not doing a forced update
+		if !d.force && !force {
+			err := d.ExecuteCommand(tmpID, []string{"find", destPath, name}, nil, "/", nil)
+			if err == nil {
+				// we have the image already
+				d.l.Debug("File already cached", "name", name, "path", path)
+				continue
+			}
+		}
+
+		err = d.CopyFileToContainer(utils.FQDN(cc.Name, string(cc.Type)), f, destPath)
+		if err != nil {
+			return nil, fmt.Errorf("Unable to copy file to container: %s", err)
+		}
+
+		imported = append(imported, destFile)
+	}
+
+	return imported, nil
 }
 
 // CopyFileToContainer copies the file at path filename to the container containerID and
@@ -843,8 +852,22 @@ func (d *DockerTasks) resizeTTY(id string, out *streams.Out) error {
 	return nil
 }
 
-func (d *DockerTasks) AttachNetwork(network, containerid string) error {
-	return fmt.Errorf("Not implemented")
+func (d *DockerTasks) AttachNetwork(net, containerid string, aliases []string, ipaddress string) error {
+	d.l.Debug("Attaching container to network", "ref", containerid, "network", net)
+	es := &network.EndpointSettings{NetworkID: net}
+
+	// if we have network aliases defined, add them to the network connection
+	if aliases != nil && len(aliases) > 0 {
+		es.Aliases = aliases
+	}
+
+	// are we binding to a specific ip
+	if ipaddress != "" {
+		d.l.Debug("Assigning static ip address", "ref", containerid, "network", net, "ip_address", ipaddress)
+		es.IPAMConfig = &network.EndpointIPAMConfig{IPv4Address: ipaddress}
+	}
+
+	return d.c.NetworkConnect(context.Background(), net, containerid, es)
 }
 
 // ListNetworks lists the networks a container is attached to
