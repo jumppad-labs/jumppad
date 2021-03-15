@@ -34,48 +34,22 @@ func (c *ImageCache) Create() error {
 		return err
 	}
 
-	if ids != nil && len(ids) > 0 {
-		return ErrorClusterExists
+	id := ""
+
+	if ids == nil || len(ids) == 0 {
+		var err error
+		id, err = c.createImageCache()
+		if err != nil {
+			return err
+		}
+	} else {
+		c.log.Debug("ImageCache already exists, not recreating")
+		id = ids[0]
 	}
 
-	// Create the volume to store the cache
-	// if this volume exists it will not be recreated
-	volID, err := c.client.CreateVolume("images")
-	if err != nil {
-		return err
-	}
-
-	// copy the ca and key
-	cert := filepath.Join(utils.CertsDir(""), "root.cert")
-	key := filepath.Join(utils.CertsDir(""), "root.key")
-
-	_, err = c.client.CopyFilesToVolume(volID, []string{cert, key}, "/ca", true)
-	if err != nil {
-		return fmt.Errorf("Unable to copy certificates for image cache: %s", err)
-	}
-
-	// create the container
-	cc := config.NewContainer(c.config.Name)
-	cc.Image = &config.Image{Name: cacheImage}
-
-	cc.Volumes = []config.Volume{
-		config.Volume{
-			Source:      utils.FQDNVolumeName("images"),
-			Destination: "/cache",
-			Type:        "volume",
-		},
-	}
-
-	cc.EnvVar = map[string]string{
-		"CA_KEY_FILE":         "/cache/ca/root.key",
-		"CA_CRT_FILE":         "/cache/ca/root.cert",
-		"DOCKER_MIRROR_CACHE": "/cache/docker",
-	}
-
-	id, err := c.client.CreateContainer(cc)
-	if err != nil {
-		return err
-	}
+	// remove all networks first
+	// we should probably do a proper comparison
+	c.detatchFromNetworks(id)
 
 	// connect to networks
 	for _, n := range c.config.DependsOn {
@@ -91,9 +65,51 @@ func (c *ImageCache) Create() error {
 		if err != nil {
 			return fmt.Errorf("Unable to attach cache to network: %s", err)
 		}
+
+		c.config.Networks = append(c.config.Networks, n)
 	}
 
 	return nil
+}
+
+func (c *ImageCache) createImageCache() (string, error) {
+	// Create the volume to store the cache
+	// if this volume exists it will not be recreated
+	volID, err := c.client.CreateVolume("images")
+	if err != nil {
+		return "", err
+	}
+
+	// copy the ca and key
+	cert := filepath.Join(utils.CertsDir(""), "root.cert")
+	key := filepath.Join(utils.CertsDir(""), "root.key")
+
+	_, err = c.client.CopyFilesToVolume(volID, []string{cert, key}, "/ca", true)
+	if err != nil {
+		return "", fmt.Errorf("Unable to copy certificates for image cache: %s", err)
+	}
+
+	// create the container
+	cc := config.NewContainer(c.config.Name)
+	cc.Image = &config.Image{Name: cacheImage}
+
+	cc.Volumes = []config.Volume{
+		config.Volume{
+			Source:      utils.FQDNVolumeName("images"),
+			Destination: "/cache",
+			Type:        "volume",
+		},
+	}
+
+	cc.EnvVar = map[string]string{
+		"CA_KEY_FILE":           "/cache/ca/root.key",
+		"CA_CRT_FILE":           "/cache/ca/root.cert",
+		"DOCKER_MIRROR_CACHE":   "/cache/docker",
+		"ENABLE_MANIFEST_CACHE": "true",
+		"REGISTRIES":            "k8s.gcr.io gcr.io asia.gcr.io eu.gcr.io us.gcr.io quay.io ghcr.io",
+	}
+
+	return c.client.CreateContainer(cc)
 }
 
 func (c *ImageCache) Destroy() error {
@@ -104,28 +120,37 @@ func (c *ImageCache) Destroy() error {
 		return err
 	}
 
+	// remove all networks that the container is attached to
 	if len(ids) > 0 {
 		for _, id := range ids {
-			for _, n := range c.config.DependsOn {
-				target, err := c.config.FindDependentResource(n)
-				if err != nil {
-					// ignore this resource
-					continue
-				}
-
-				if target.Info().Type == config.TypeNetwork {
-					err := c.client.DetachNetwork(target.Info().Name, id)
-					if err != nil {
-						c.log.Error("Unable to detach network", "ref", c.config.Name, "network", target.Info().Name)
-					}
-				}
-			}
+			c.detatchFromNetworks(id)
 		}
 	}
 
 	c.client.RemoveContainer(ids[0])
 
 	return nil
+}
+
+func (c *ImageCache) detatchFromNetworks(id string) {
+	for _, n := range c.config.Networks {
+		target, err := c.config.FindDependentResource(n)
+		if err != nil {
+			// ignore this resource
+			continue
+		}
+
+		if target.Info().Type == config.TypeNetwork {
+			c.log.Debug("Detaching container from network", "ref", c.config.Name, "id", id, "network", n)
+
+			err := c.client.DetachNetwork(target.Info().Name, id)
+			if err != nil {
+				c.log.Error("Unable to detach network", "ref", c.config.Name, "network", target.Info().Name)
+			}
+		}
+	}
+
+	c.config.Networks = []string{}
 }
 
 func (c *ImageCache) Lookup() ([]string, error) {

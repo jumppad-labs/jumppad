@@ -8,9 +8,12 @@ type ImageCache struct {
 	// embedded type holding name, etc
 	ResourceInfo
 
-	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
+	Networks []string `json:"networks" state:"true"` // Attach to the correct network // only when Image is specified
 }
 
 func NewImageCache(name string) *ImageCache {
-	return &ImageCache{ResourceInfo: ResourceInfo{Name: name, Type: TypeImageCache, Status: PendingCreation}}
+	return &ImageCache{
+		ResourceInfo: ResourceInfo{Name: name, Type: TypeImageCache, Status: PendingCreation},
+		Networks:     []string{},
+	}
 }

@@ -187,7 +187,8 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 		if r, ok := v.(config.Resource); ok &&
 			(r.Info().Status == config.PendingCreation ||
 				r.Info().Status == config.PendingModification ||
-				r.Info().Status == config.Failed) {
+				r.Info().Status == config.Failed ||
+				r.Info().Status == config.PendingUpdate) {
 
 			// get the provider to create the resource
 			p := e.getProvider(r, e.clients)
@@ -207,11 +208,18 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 				}
 			}
 
-			// create the resource
-			createErr := p.Create()
-			if createErr != nil {
-				r.Info().Status = config.Failed
-				return diags.Append(createErr)
+			// create the resource if it does not exist
+			// has failed, awaiting modification
+			// or is an ImageCache
+			if r.Info().Status == config.PendingCreation ||
+				r.Info().Status == config.PendingModification ||
+				r.Info().Status == config.Failed ||
+				(r.Info().Status == config.PendingUpdate && r.Info().Type == config.TypeImageCache) {
+				createErr := p.Create()
+				if createErr != nil {
+					r.Info().Status = config.Failed
+					return diags.Append(createErr)
+				}
 			}
 
 			// set the status
@@ -227,15 +235,6 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 	tf := w.Wait()
 	if tf.Err() != nil {
 		err = tf.Err()
-	}
-
-	// update the status of anything which is pending update as this
-	// is not currently implemented
-	// eventually we should compare resources and update as required
-	for _, i := range e.config.Resources {
-		if i.Info().Status == config.PendingUpdate {
-			i.Info().Status = config.Applied
-		}
 	}
 
 	if len(e.config.Resources) > 0 {
@@ -336,8 +335,31 @@ func (e *EngineImpl) Blueprint() *config.Blueprint {
 }
 
 func (e *EngineImpl) readConfig(path string, variables map[string]string, variablesFile string) (*dag.AcyclicGraph, error) {
-	// load the new config
+	// create the new config
 	cc := config.New(true)
+
+	// load the existing state
+	sc := config.New(true)
+	err := sc.FromJSON(utils.StatePath())
+	if err != nil {
+		// we do not have any state to create a new one
+		e.log.Debug("Statefile does not exist")
+	}
+
+	// check to see we have an image cache
+	// if not create one
+	cache, err := sc.FindResource("docker-cache")
+	if err != nil {
+		// add a default resource for the docker caching proxy
+		proxy := config.NewImageCache("docker-cache")
+		sc.AddResource(proxy)
+
+		cache = proxy
+	}
+
+	// add the cache to the new config so we can parse networks
+	cc.AddResource(cache)
+
 	if path != "" {
 		if utils.IsHCLFile(path) {
 			err := config.ParseSingleFile(path, cc, variables, variablesFile)
@@ -355,25 +377,8 @@ func (e *EngineImpl) readConfig(path string, variables map[string]string, variab
 		config.ParseReferences(cc)
 	}
 
-	// load the existing state
-	sc := config.New(true)
-	err := sc.FromJSON(utils.StatePath())
-	if err != nil {
-		// we do not have any state to create a new one
-		e.log.Debug("Statefile does not exist")
-	}
-
 	// merge the state and items to be created or deleted
 	sc.Merge(cc)
-
-	// check to see we have an image cache
-	// if not create one
-	_, err = sc.FindResource("docker-cache")
-	if err != nil {
-		// add a default resource for the docker caching proxy
-		proxy := config.NewImageCache("docker-cache")
-		sc.AddResource(proxy)
-	}
 
 	// set the config
 	e.config = sc
