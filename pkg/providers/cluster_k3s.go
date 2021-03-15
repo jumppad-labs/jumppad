@@ -24,7 +24,7 @@ import (
 // https://github.com/rancher/k3d/blob/master/cli/commands.go
 
 const k3sBaseImage = "shipyardrun/k3s"
-const k3sBaseVersion = "v1.18.15"
+const k3sBaseVersion = "v1.18.16"
 
 var startTimeout = (300 * time.Second)
 
