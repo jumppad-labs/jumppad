@@ -82,7 +82,7 @@ func createContainerConfig() (*config.Container, *config.Network, *config.Networ
 
 	cc2.Name = "testcontainer2"
 
-	c := config.New(true)
+	c := config.New()
 	c.AddResource(&cc)
 	c.AddResource(&cc2)
 	c.AddResource(&cn)

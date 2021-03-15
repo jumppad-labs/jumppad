@@ -66,7 +66,7 @@ func newPurgeCmdFunc(dt clients.Docker, il clients.ImageLog, l hclog.Logger) fun
 			}
 		}
 
-		l.Info("Removing cached images for clusters")
+		l.Info("Removing Docker image cache")
 		err = dt.VolumeRemove(context.Background(), utils.FQDNVolumeName("images"), true)
 		if err != nil {
 			l.Error("Unable to remove cached image volume", "error", err)

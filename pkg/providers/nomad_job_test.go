@@ -17,7 +17,7 @@ func setupNomadJobMocks() (*config.NomadJob, *mocks.MockNomad) {
 	cn := *clusterNetwork
 	jc := *nomadJob
 
-	c := config.New(true)
+	c := config.New()
 	c.AddResource(&cc)
 	c.AddResource(&cn)
 	c.AddResource(&jc)

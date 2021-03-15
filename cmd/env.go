@@ -33,7 +33,7 @@ func newEnvCmd(e shipyard.Engine) *cobra.Command {
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			c := config.New(true)
+			c := config.New()
 			err := c.FromJSON(utils.StatePath())
 			if err != nil {
 				fmt.Println("Unable to load state", err)

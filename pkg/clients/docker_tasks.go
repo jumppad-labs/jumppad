@@ -498,7 +498,7 @@ func (d *DockerTasks) CopyFromContainer(id, src, dst string) error {
 
 var importMutex = sync.Mutex{}
 
-// CopyLocalDockerImageToVolume writes multiple Docker images to a Docker container as a compressed archive
+// CopyLocalDockerImagesToVolume writes multiple Docker images to a Docker container as a compressed archive
 // returns the filename of the archive and an error if one occured
 func (d *DockerTasks) CopyLocalDockerImagesToVolume(images []string, volume string, force bool) ([]string, error) {
 	d.l.Debug("Writing docker images to volume", "images", images, "volume", volume)
@@ -573,7 +573,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 
 		// check if the image exists if we are not doing a forced update
 		if !d.force && !force {
-			err := d.ExecuteCommand(tmpID, []string{"find", destPath, name}, nil, "/", nil)
+			err := d.ExecuteCommand(tmpID, []string{"find", destFile}, nil, "/", nil)
 			if err == nil {
 				// we have the image already
 				d.l.Debug("File already cached", "name", name, "path", path)

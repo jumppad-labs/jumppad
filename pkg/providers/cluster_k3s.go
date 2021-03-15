@@ -130,16 +130,20 @@ func (c *K8sCluster) createK3s() error {
 	}
 
 	// set the environment variables for the K3S_KUBECONFIG_OUTPUT and K3S_CLUSTER_SECRET
-	cc.Environment = []config.KV{
-		config.KV{Key: "K3S_KUBECONFIG_OUTPUT", Value: "/output/kubeconfig.yaml"},
-		config.KV{Key: "K3S_CLUSTER_SECRET", Value: "mysupersecret"}, // This should be random
-		config.KV{Key: "HTTP_PROXY", Value: "http://docker-cache.container.shipyard.run:3128/"},
-		config.KV{Key: "HTTPS_PROXY", Value: "http://docker-cache.container.shipyard.run:3128/"},
-		config.KV{Key: "PROXY_CA", Value: string(ca)},
-	}
 
 	// Add any custom environment variables
-	cc.EnvVar = c.config.EnvVar
+	cc.EnvVar = map[string]string{}
+
+	cc.EnvVar["K3S_KUBECONFIG_OUTPUT"] = "/output/kubeconfig.yaml"
+	cc.EnvVar["K3S_CLUSTER_SECRET"] = "mysupersecret"
+	cc.EnvVar["HTTP_PROXY"] = "http://docker-cache.container.shipyard.run:3128/"
+	cc.EnvVar["HTTPS_PROXY"] = "http://docker-cache.container.shipyard.run:3128/"
+	cc.EnvVar["PROXY_CA"] = string(ca)
+
+	// add any custom environment variables
+	for k, v := range c.config.EnvVar {
+		cc.EnvVar[k] = v
+	}
 
 	// set the API server port to a random number 64000 - 65000
 	apiPort := rand.Intn(1000) + 64000

@@ -298,7 +298,7 @@ func (e *EngineImpl) Destroy(path string, allResources bool) error {
 	}
 
 	// remove any destroyed nodes from the state
-	cn := config.New(true)
+	cn := config.New()
 	for _, i := range e.config.Resources {
 		if i.Info().Status != config.Destroyed {
 			cn.AddResource(i)
@@ -336,10 +336,10 @@ func (e *EngineImpl) Blueprint() *config.Blueprint {
 
 func (e *EngineImpl) readConfig(path string, variables map[string]string, variablesFile string) (*dag.AcyclicGraph, error) {
 	// create the new config
-	cc := config.New(true)
+	cc := config.New()
 
 	// load the existing state
-	sc := config.New(true)
+	sc := config.New()
 	err := sc.FromJSON(utils.StatePath())
 	if err != nil {
 		// we do not have any state to create a new one

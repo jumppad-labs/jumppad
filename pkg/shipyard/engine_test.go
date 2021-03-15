@@ -125,12 +125,20 @@ func TestApplyWithSingleFile(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, "onprem", (*mp)[0].Config().Info().Name)
-	assert.Equal(t, "consul", (*mp)[1].Config().Info().Name)
 
-	c, ok := (*mp)[1].Config().(*config.Container)
-	assert.True(t, ok)
+	// can either be consul or the image cache
+	assert.Contains(t, []string{"consul", "docker-cache"}, (*mp)[2].Config().Info().Name)
+}
 
-	assert.Equal(t, "consul:1.6.1", c.Image.Name)
+func TestApplyAddsImageCache(t *testing.T) {
+	e, _, _, cleanup := setupTests(nil)
+	defer cleanup()
+
+	_, err := e.Apply("../../examples/single_file/container.hcl")
+	assert.NoError(t, err)
+
+	dc := e.ResourceCountForType(string(config.TypeImageCache))
+	assert.Equal(t, 1, dc)
 }
 
 func TestApplyWithSingleFileAndVariables(t *testing.T) {
@@ -142,10 +150,7 @@ func TestApplyWithSingleFileAndVariables(t *testing.T) {
 
 	assert.Equal(t, "onprem", (*mp)[0].Config().Info().Name)
 
-	c, ok := (*mp)[1].Config().(*config.Container)
-	assert.True(t, ok)
-
-	assert.Equal(t, "consul:1.8.1", c.Image.Name)
+	assert.Contains(t, []string{"consul", "docker-cache", "local_connector"}, (*mp)[1].Config().Info().Name)
 }
 
 func TestApplyCallsProviderInCorrectOrder(t *testing.T) {
@@ -159,14 +164,14 @@ func TestApplyCallsProviderInCorrectOrder(t *testing.T) {
 	assert.Equal(t, "cloud", (*mp)[0].Config().Info().Name)
 
 	// due to paralel nature of the DAG, these two elements will be first
-	assert.Contains(t, []string{"k3s", "local_connector"}, (*mp)[1].Config().Info().Name)
+	assert.Contains(t, []string{"docker-cache", "k3s", "local_connector"}, (*mp)[1].Config().Info().Name)
 
 	// due to paralel nature of the DAG, these two elements can appear in any order
-	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "consul-lan", "k3s"}, (*mp)[2].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "consul-lan", "k3s"}, (*mp)[3].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "consul-lan", "k3s"}, (*mp)[4].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "consul-lan", "k3s"}, (*mp)[5].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "consul-lan", "k3s"}, (*mp)[6].Config().Info().Name)
+	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault", "vault-http", "consul-lan", "k3s"}, (*mp)[2].Config().Info().Name)
+	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault", "vault-http", "consul-lan", "k3s"}, (*mp)[3].Config().Info().Name)
+	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault", "vault-http", "consul-lan", "k3s"}, (*mp)[4].Config().Info().Name)
+	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault", "vault-http", "consul-lan", "k3s"}, (*mp)[5].Config().Info().Name)
+	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault", "vault-http", "consul-lan", "k3s"}, (*mp)[6].Config().Info().Name)
 }
 
 func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
@@ -177,7 +182,7 @@ func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
 	assert.NoError(t, err)
 
 	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Create", 7)
+	testAssertMethodCalled(t, mp, "Create", 8)
 	//assert.Len(t, res, 4)
 }
 
@@ -190,7 +195,7 @@ func TestApplyCallsProviderDestroyForResourcesPendingorFailed(t *testing.T) {
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1)
-	testAssertMethodCalled(t, mp, "Create", 1)
+	testAssertMethodCalled(t, mp, "Create", 2) // ImageCache is always created
 }
 
 func TestApplyReturnsErrorWhenProviderDestroyForResourcesPendingorFailed(t *testing.T) {
@@ -202,7 +207,7 @@ func TestApplyReturnsErrorWhenProviderDestroyForResourcesPendingorFailed(t *test
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1)
-	testAssertMethodCalled(t, mp, "Create", 0)
+	testAssertMethodCalled(t, mp, "Create", 1) // ImageCache is always created
 }
 
 func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
@@ -234,9 +239,8 @@ func TestApplySetsStatusForEachResource(t *testing.T) {
 	_, err := e.Apply("")
 	assert.NoError(t, err)
 
-	// should not call create as this is pending update
-	testAssertMethodCalled(t, mp, "Create", 0)
-	assert.Len(t, *mp, 0)
+	// should only call create and destroy for the cache as this is pending update
+	testAssertMethodCalled(t, mp, "Create", 1) // ImageCache is always created
 }
 
 func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
@@ -247,7 +251,7 @@ func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
 	assert.NoError(t, err)
 
 	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 7)
+	testAssertMethodCalled(t, mp, "Destroy", 8)
 }
 
 func TestDestroyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
@@ -258,7 +262,7 @@ func TestDestroyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 	assert.Error(t, err)
 
 	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 6)
+	testAssertMethodCalled(t, mp, "Destroy", 7)
 }
 
 func TestDestroyFailSetsStatus(t *testing.T) {
@@ -269,8 +273,8 @@ func TestDestroyFailSetsStatus(t *testing.T) {
 	assert.Error(t, err)
 
 	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 7)
-	assert.Equal(t, config.Failed, (*mp)[6].Config().Info().Status)
+	testAssertMethodCalled(t, mp, "Destroy", 8)
+	assert.Equal(t, config.Failed, (*mp)[7].Config().Info().Status)
 }
 
 func TestDestroyCallsProviderDestroyInCorrectOrder(t *testing.T) {
@@ -281,15 +285,16 @@ func TestDestroyCallsProviderDestroyInCorrectOrder(t *testing.T) {
 	assert.NoError(t, err)
 
 	// due to paralel nature of the DAG, these elements can appear in any order
-	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "k3s"}, (*mp)[0].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "k3s"}, (*mp)[1].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "k3s"}, (*mp)[2].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "k3s"}, (*mp)[3].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "k3s"}, (*mp)[4].Config().Info().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "k3s"}, (*mp)[5].Config().Info().Name)
+	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "k3s"}, (*mp)[0].Config().Info().Name)
+	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "k3s"}, (*mp)[1].Config().Info().Name)
+	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "k3s"}, (*mp)[2].Config().Info().Name)
+	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "k3s"}, (*mp)[3].Config().Info().Name)
+	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "k3s"}, (*mp)[4].Config().Info().Name)
+	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "k3s"}, (*mp)[5].Config().Info().Name)
+	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "k3s"}, (*mp)[6].Config().Info().Name)
 
 	// should be last to be removed
-	assert.Equal(t, "cloud", (*mp)[6].Config().Info().Name)
+	assert.Equal(t, "cloud", (*mp)[7].Config().Info().Name)
 
 }
 

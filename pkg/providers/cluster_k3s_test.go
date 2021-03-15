@@ -33,7 +33,7 @@ func setupClusterMocks(t *testing.T) (
 		nil,
 	)
 	md.On("CopyFromContainer", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	md.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything, mock.Anything).Return([]string{"/images/file.tar.gz"}, nil)
+	md.On("CopyLocalDockerImagesToVolume", mock.Anything, mock.Anything, mock.Anything).Return([]string{"/images/file.tar.gz"}, nil)
 	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("RemoveContainer", mock.Anything).Return(nil)
 	md.On("RemoveVolume", mock.Anything).Return(nil)
@@ -43,6 +43,15 @@ func setupClusterMocks(t *testing.T) (
 	tmpDir := t.TempDir()
 	currentHome := os.Getenv(utils.HomeEnvName())
 	os.Setenv(utils.HomeEnvName(), tmpDir)
+
+	// create the fake cert
+	certfile := filepath.Join(utils.CertsDir(""), "/root.cert")
+	cf, err := os.Create(certfile)
+	if err != nil {
+		panic(err)
+	}
+	cf.WriteString("CA")
+	cf.Close()
 
 	// write the kubeconfig
 	_, kubePath, _ := utils.CreateKubeConfigPath(clusterConfig.Name)
@@ -73,7 +82,7 @@ func setupClusterMocks(t *testing.T) (
 	cc := *clusterConfig
 	cn := *clusterNetwork
 
-	c := config.New(true)
+	c := config.New()
 	c.AddResource(&cc)
 	c.AddResource(&cn)
 
@@ -95,12 +104,22 @@ func TestClusterK3ErrorsWhenUnableToLookupIDs(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestClusterK3UsesCustomVersion(t *testing.T) {
-	t.Fatal("not implemented")
-}
+func TestClusterK3SetsEnvironment(t *testing.T) {
+	cc, md, mk, mc := setupClusterMocks(t)
+	cc.Version = ""
 
-func TestClusterK3UsesEnvironment(t *testing.T) {
-	t.Fatal("not implemented")
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+
+	assert.Equal(t, params.EnvVar["K3S_KUBECONFIG_OUTPUT"], "/output/kubeconfig.yaml")
+	assert.Equal(t, params.EnvVar["K3S_CLUSTER_SECRET"], "mysupersecret")
+	assert.Equal(t, params.EnvVar["HTTP_PROXY"], "http://docker-cache.container.shipyard.run:3128/")
+	assert.Equal(t, params.EnvVar["HTTPS_PROXY"], "http://docker-cache.container.shipyard.run:3128/")
+	assert.Equal(t, params.EnvVar["PROXY_CA"], "CA")
 }
 
 func TestClusterK3ErrorsWhenClusterExists(t *testing.T) {
@@ -114,14 +133,25 @@ func TestClusterK3ErrorsWhenClusterExists(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestClusterK3PullsImage(t *testing.T) {
+func TestClusterK3PullsImageUsingBase(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
+	cc.Version = ""
 
 	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
 	md.AssertCalled(t, "PullImage", config.Image{Name: "shipyardrun/k3s:v1.18.15"}, false)
+}
+
+func TestClusterK3PullsImageUsingCustom(t *testing.T) {
+	cc, md, mk, mc := setupClusterMocks(t)
+
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+	md.AssertCalled(t, "PullImage", config.Image{Name: "shipyardrun/k3s:v1.0.0"}, false)
 }
 
 func TestClusterK3CreatesANewVolume(t *testing.T) {
@@ -165,7 +195,7 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 
 	// validate that the volume is correctly set
 	assert.Equal(t, "123", params.Volumes[0].Source)
-	assert.Equal(t, "/images", params.Volumes[0].Destination)
+	assert.Equal(t, "/cache", params.Volumes[0].Destination)
 	assert.Equal(t, "volume", params.Volumes[0].Type)
 
 	// validate the API port is set
@@ -370,13 +400,13 @@ func TestClusterK3sImportDockerCopiesImages(t *testing.T) {
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "CopyLocalDockerImageToVolume", []string{"consul:1.6.1", "vault:1.6.1"}, utils.FQDNVolumeName(utils.ImageVolumeName), false)
+	md.AssertCalled(t, "CopyLocalDockerImagesToVolume", []string{"consul:1.6.1", "vault:1.6.1"}, utils.FQDNVolumeName(utils.ImageVolumeName), false)
 }
 
 func TestClusterK3sImportDockerCopyImageFailReturnsError(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
-	removeOn(&md.Mock, "CopyLocalDockerImageToVolume")
-	md.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything, mock.Anything).Return("", fmt.Errorf("boom"))
+	removeOn(&md.Mock, "CopyLocalDockerImagesToVolume")
+	md.On("CopyLocalDockerImagesToVolume", mock.Anything, mock.Anything, mock.Anything).Return("", fmt.Errorf("boom"))
 
 	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 

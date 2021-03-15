@@ -61,7 +61,7 @@ var resumeCmd = &cobra.Command{
 		}
 
 		// get the health checks from the config and test
-		con := config.New(true)
+		con := config.New()
 		err = con.FromJSON(utils.StatePath())
 		if err != nil {
 			l.Error("Unable to load state", "error", err)

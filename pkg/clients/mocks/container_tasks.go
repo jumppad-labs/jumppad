@@ -88,7 +88,7 @@ func (d *MockContainerTasks) CopyFileToContainer(id, src, dst string) error {
 	return args.Error(0)
 }
 
-func (d *MockContainerTasks) CopyLocalDockerImageToVolume(images []string, volume string, force bool) ([]string, error) {
+func (d *MockContainerTasks) CopyLocalDockerImagesToVolume(images []string, volume string, force bool) ([]string, error) {
 	args := d.Called(images, volume, force)
 
 	if a, ok := args.Get(0).([]string); ok {
@@ -98,9 +98,14 @@ func (d *MockContainerTasks) CopyLocalDockerImageToVolume(images []string, volum
 	return nil, args.Error(1)
 }
 
-func (d *MockContainerTasks) CopyFilesToVolume(volume string, files []string, path string, force bool) error {
+func (d *MockContainerTasks) CopyFilesToVolume(volume string, files []string, path string, force bool) ([]string, error) {
 	args := d.Called(volume, files, path, force)
-	return args.Error(0)
+
+	if a, ok := args.Get(0).([]string); ok {
+		return a, args.Error(1)
+	}
+
+	return nil, args.Error(1)
 }
 
 func (d *MockContainerTasks) ExecuteCommand(id string, command []string, env []string, workingDirectory string, writer io.Writer) error {
@@ -115,8 +120,8 @@ func (d *MockContainerTasks) DetachNetwork(network, containerid string) error {
 	return args.Error(0)
 }
 
-func (d *MockContainerTasks) AttachNetwork(network, containerid string) error {
-	args := d.Called(network, containerid)
+func (d *MockContainerTasks) AttachNetwork(network, containerid string, aliases []string, ipaddress string) error {
+	args := d.Called(network, containerid, aliases, ipaddress)
 
 	return args.Error(0)
 }

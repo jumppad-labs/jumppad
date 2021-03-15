@@ -49,7 +49,7 @@ func (c *ImageCache) Create() error {
 
 	// remove all networks first
 	// we should probably do a proper comparison
-	c.detatchFromNetworks(id)
+	c.detachFromNetworks(id)
 
 	// connect to networks
 	for _, n := range c.config.DependsOn {
@@ -107,6 +107,7 @@ func (c *ImageCache) createImageCache() (string, error) {
 		"DOCKER_MIRROR_CACHE":   "/cache/docker",
 		"ENABLE_MANIFEST_CACHE": "true",
 		"REGISTRIES":            "k8s.gcr.io gcr.io asia.gcr.io eu.gcr.io us.gcr.io quay.io ghcr.io",
+		"ALLOW_PUSH":            "true",
 	}
 
 	return c.client.CreateContainer(cc)
@@ -123,16 +124,15 @@ func (c *ImageCache) Destroy() error {
 	// remove all networks that the container is attached to
 	if len(ids) > 0 {
 		for _, id := range ids {
-			c.detatchFromNetworks(id)
+			c.detachFromNetworks(id)
+			c.client.RemoveContainer(id)
 		}
 	}
-
-	c.client.RemoveContainer(ids[0])
 
 	return nil
 }
 
-func (c *ImageCache) detatchFromNetworks(id string) {
+func (c *ImageCache) detachFromNetworks(id string) {
 	for _, n := range c.config.Networks {
 		target, err := c.config.FindDependentResource(n)
 		if err != nil {
