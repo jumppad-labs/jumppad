@@ -4,7 +4,7 @@ helm "consul" {
   values = "./helm/consul-values.yaml"
   
   health_check {
-    timeout = "60s"
+    timeout = "120s"
     pods = ["release=consul"]
   }
 }
