@@ -6,8 +6,10 @@ import (
 	"math/rand"
 	"os"
 	"path"
+	"path/filepath"
 	"sync"
 
+	"github.com/Masterminds/semver"
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
@@ -16,7 +18,7 @@ import (
 )
 
 const nomadBaseImage = "shipyardrun/nomad"
-const nomadBaseVersion = "v0.12.7"
+const nomadBaseVersion = "v0.12.8"
 
 const dataDir = `
 data_dir = "/etc/nomad.d/data"
@@ -289,6 +291,12 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 		},
 	}
 
+	cc.EnvVar = map[string]string{}
+	err = c.appendProxyEnv(cc)
+	if err != nil {
+		return "", "", "", err
+	}
+
 	id, err := c.client.CreateContainer(cc)
 	if err != nil {
 		return "", "", "", err
@@ -338,10 +346,43 @@ func (c *NomadCluster) createClientNode(index int, image, volumeID, configDir, s
 		cc.Volumes = append(cc.Volumes, v)
 	}
 
-	// set the environment variables for the K3S_KUBECONFIG_OUTPUT and K3S_CLUSTER_SECRET
 	cc.Environment = c.config.Environment
 
+	cc.EnvVar = map[string]string{}
+	err := c.appendProxyEnv(cc)
+	if err != nil {
+		return "", err
+	}
+
 	return c.client.CreateContainer(cc)
+}
+
+func (c *NomadCluster) appendProxyEnv(cc *config.Container) error {
+	// only add the variables for the cache when the kubernetes version is >= v1.18.16
+	sv, err := semver.NewConstraint(">= v0.12.8")
+	if err != nil {
+		// Handle constraint not being parsable.
+		return err
+	}
+
+	v, err := semver.NewVersion(c.config.Version)
+	if err != nil {
+		return fmt.Errorf("Kubernetes version is not valid semantic version: %s", err)
+	}
+
+	if sv.Check(v) {
+		// load the CA from a file
+		ca, err := ioutil.ReadFile(filepath.Join(utils.CertsDir(""), "/root.cert"))
+		if err != nil {
+			return fmt.Errorf("Unable to read root CA for proxy: %s", err)
+		}
+
+		cc.EnvVar["HTTP_PROXY"] = "http://docker-cache.container.shipyard.run:3128/"
+		cc.EnvVar["HTTPS_PROXY"] = "http://docker-cache.container.shipyard.run:3128/"
+		cc.EnvVar["PROXY_CA"] = string(ca)
+	}
+
+	return nil
 }
 
 // ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster

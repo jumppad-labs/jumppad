@@ -1,5 +1,5 @@
 nomad_cluster "dev" {
-  version = "v0.12.7"
+  version = "v0.12.8"
   client_nodes = "${var.client_nodes}"
 
   network {

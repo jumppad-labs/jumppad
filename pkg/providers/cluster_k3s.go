@@ -124,17 +124,10 @@ func (c *K8sCluster) createK3s() error {
 		cc.Volumes = append(cc.Volumes, v)
 	}
 
-	// load the CA from a file
-	ca, err := ioutil.ReadFile(filepath.Join(utils.CertsDir(""), "/root.cert"))
-	if err != nil {
-		return fmt.Errorf("Unable to read root CA for proxy: %s", err)
-	}
-
-	// set the environment variables for the K3S_KUBECONFIG_OUTPUT and K3S_CLUSTER_SECRET
-
 	// Add any custom environment variables
 	cc.EnvVar = map[string]string{}
 
+	// set the environment variables for the K3S_KUBECONFIG_OUTPUT and K3S_CLUSTER_SECRET
 	cc.EnvVar["K3S_KUBECONFIG_OUTPUT"] = "/output/kubeconfig.yaml"
 	cc.EnvVar["K3S_CLUSTER_SECRET"] = "mysupersecret"
 
@@ -151,6 +144,12 @@ func (c *K8sCluster) createK3s() error {
 	}
 
 	if sv.Check(v) {
+		// load the CA from a file
+		ca, err := ioutil.ReadFile(filepath.Join(utils.CertsDir(""), "/root.cert"))
+		if err != nil {
+			return fmt.Errorf("Unable to read root CA for proxy: %s", err)
+		}
+
 		cc.EnvVar["HTTP_PROXY"] = "http://docker-cache.container.shipyard.run:3128/"
 		cc.EnvVar["HTTPS_PROXY"] = "http://docker-cache.container.shipyard.run:3128/"
 		cc.EnvVar["PROXY_CA"] = string(ca)

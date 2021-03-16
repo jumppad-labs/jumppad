@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
@@ -19,6 +20,7 @@ import (
 
 // setupClusterMocks sets up a happy path for mocks
 func setupNomadClusterMocks(t *testing.T) (*config.NomadCluster, *mocks.MockContainerTasks, *mocks.MockNomad) {
+
 	md := &mocks.MockContainerTasks{}
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{}, nil)
 	md.On("PullImage", mock.Anything, mock.Anything).Return(nil)
@@ -40,9 +42,12 @@ func setupNomadClusterMocks(t *testing.T) (*config.NomadCluster, *mocks.MockCont
 	mh.On("HealthCheckAPI", mock.Anything).Return(nil)
 
 	// set the home folder to a temp folder
-	tmpDir, _ := ioutil.TempDir("", "")
+	tmpDir := t.TempDir()
 	currentHome := os.Getenv("HOME")
 	os.Setenv("HOME", tmpDir)
+
+	cafile := filepath.Join(utils.CertsDir(""), "root.cert")
+	ioutil.WriteFile(cafile, []byte("CA"), os.ModePerm)
 
 	// copy the config
 	cc := *clusterNomadConfig
@@ -54,7 +59,6 @@ func setupNomadClusterMocks(t *testing.T) (*config.NomadCluster, *mocks.MockCont
 
 	t.Cleanup(func() {
 		os.Setenv("HOME", currentHome)
-		os.RemoveAll(tmpDir)
 	})
 
 	return &cc, md, mh
@@ -323,6 +327,46 @@ func TestClusterNomadImportDockerExecFailReturnsError(t *testing.T) {
 
 	err := p.Create()
 	assert.Error(t, err)
+}
+
+func TestClusterNomadSetsEnvironmentOnServer(t *testing.T) {
+	cc, md, mh := setupNomadClusterMocks(t)
+	cc.Version = ""
+	cc.ClientNodes = 1
+
+	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+
+	assert.Equal(t, params.EnvVar["HTTP_PROXY"], "http://docker-cache.container.shipyard.run:3128/")
+	assert.Equal(t, params.EnvVar["HTTPS_PROXY"], "http://docker-cache.container.shipyard.run:3128/")
+	assert.Equal(t, params.EnvVar["PROXY_CA"], "CA")
+
+	params = getCalls(&md.Mock, "CreateContainer")[1].Arguments[0].(*config.Container)
+
+	assert.Equal(t, params.EnvVar["HTTP_PROXY"], "http://docker-cache.container.shipyard.run:3128/")
+	assert.Equal(t, params.EnvVar["HTTPS_PROXY"], "http://docker-cache.container.shipyard.run:3128/")
+	assert.Equal(t, params.EnvVar["PROXY_CA"], "CA")
+}
+
+func TestClusterNomadDoesNotSetProxyEnvironmentWithWrongVersion(t *testing.T) {
+	cc, md, mh := setupNomadClusterMocks(t)
+	cc.Version = "v0.12.1"
+	cc.ClientNodes = 1
+
+	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	assert.Empty(t, params.EnvVar["HTTP_PROXY"])
+
+	params = getCalls(&md.Mock, "CreateContainer")[1].Arguments[0].(*config.Container)
+	assert.Empty(t, params.EnvVar["HTTP_PROXY"])
 }
 
 // Destroy Tests
