@@ -366,7 +366,7 @@ func (n *NomadImpl) getJobAllocations(job string) ([]map[string]interface{}, err
 	jobDetail := make([]map[string]interface{}, 0)
 	err = json.NewDecoder(resp.Body).Decode(&jobDetail)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Unable to query jobs in Nomad server: %s: %s", n.c.APIAddress(), err)
 	}
 
 	return jobDetail, err
