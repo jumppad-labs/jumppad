@@ -577,6 +577,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 			if err == nil {
 				// we have the image already
 				d.l.Debug("File already cached", "name", name, "path", path)
+				imported = append(imported, destFile)
 				continue
 			}
 		}

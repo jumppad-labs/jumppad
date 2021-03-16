@@ -163,7 +163,7 @@ func (c *NomadCluster) createNomad() error {
 	}
 
 	// import the images to the servers container d instance
-	// importing images means that k3s does not need to pull from a remote docker hub
+	// importing images means that Nomad does not need to pull from a remote docker hub
 	if c.config.Images != nil && len(c.config.Images) > 0 {
 		// import into the server
 		err := c.ImportLocalDockerImages("images", serverID, c.config.Images, false)
@@ -258,7 +258,7 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 	cc.Volumes = []config.Volume{
 		config.Volume{
 			Source:      volumeID,
-			Destination: "/images",
+			Destination: "/cache",
 			Type:        "volume",
 		},
 		config.Volume{
@@ -367,6 +367,7 @@ func (c *NomadCluster) ImportLocalDockerImages(name string, id string, images []
 	// execute the command to import the image
 	// write any command output to the logger
 	for _, i := range imagesFile {
+		fmt.Println(i)
 		err = c.client.ExecuteCommand(id, []string{"docker", "load", "-i", i}, nil, "/", c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
 		if err != nil {
 			return err

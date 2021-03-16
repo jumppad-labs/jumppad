@@ -300,7 +300,7 @@ func (n *NomadImpl) Endpoints(job, group, task string) ([]map[string]string, err
 		allocDetail := allocation{}
 		err = json.NewDecoder(resp.Body).Decode(&allocDetail)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Error getting endpoints from server: %s: err", n.c.APIAddress(), err)
 		}
 
 		ports := []string{}
