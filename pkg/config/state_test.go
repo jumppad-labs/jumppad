@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/shipyard-run/shipyard/pkg/utils"
-	"github.com/stretchr/testify/assert"
+	assert "github.com/stretchr/testify/require"
 )
 
 func setupConfigTests(t *testing.T) (*Config, func()) {
@@ -96,22 +96,43 @@ func TestConfigMergesAddingItems(t *testing.T) {
 
 	c.Merge(c2)
 
-	assert.Len(t, c.Resources, 10)
+	assert.Len(t, c.Resources, 11)
 }
 
 func TestConfigMergesWithExistingItemSetsPendingUpdateWhenApplied(t *testing.T) {
 	c, cleanup := setupConfigTests(t)
 	defer cleanup()
 
-	c.Resources[0].Info().Status = Applied
+	c.Resources[1].Info().Status = Applied
 
 	c2 := New()
 	c2.AddResource(NewContainer("config"))
 
+	cacheNew := NewImageCache("docker-cache")
+	c2.AddResource(cacheNew)
+
 	c.Merge(c2)
 
-	assert.Len(t, c.Resources, 9)
-	assert.Equal(t, c.Resources[0].Info().Status, PendingUpdate)
+	assert.Len(t, c.Resources, 10)
+	assert.Equal(t, c.Resources[1].Info().Status, PendingUpdate)
+}
+
+func TestConfigMergesWithExistingItemSetsItemCacheToPendingCreationWhenApplied(t *testing.T) {
+	c, cleanup := setupConfigTests(t)
+	defer cleanup()
+
+	c.Resources[1].Info().Status = Applied
+
+	c2 := New()
+	c2.AddResource(NewContainer("config"))
+
+	cacheNew := NewImageCache("docker-cache")
+	c2.AddResource(cacheNew)
+
+	c.Merge(c2)
+
+	assert.Len(t, c.Resources, 10)
+	assert.Equal(t, c.Resources[0].Info().Status, PendingCreation)
 }
 
 func TestConfigMergesWithExistingItemDoesNOTSetsPendingUpdateWhenOtherStatus(t *testing.T) {
@@ -125,7 +146,7 @@ func TestConfigMergesWithExistingItemDoesNOTSetsPendingUpdateWhenOtherStatus(t *
 
 	c.Merge(c2)
 
-	assert.Len(t, c.Resources, 9)
+	assert.Len(t, c.Resources, 10)
 	assert.Equal(t, c.Resources[0].Info().Status, PendingCreation)
 }
 
@@ -140,8 +161,8 @@ func TestConfigMergesWithExistingItemRetainsStateFields(t *testing.T) {
 
 	c.Merge(c2)
 
-	assert.Len(t, c.Resources, 9)
-	assert.Equal(t, "myid", c.Resources[1].(*Ingress).Id)
+	assert.Len(t, c.Resources, 10)
+	assert.Equal(t, "myid", c.Resources[2].(*Ingress).Id)
 }
 
 func TestConfigMergesWithExistingItemAppendsDependencyOnCache(t *testing.T) {
