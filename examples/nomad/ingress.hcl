@@ -12,24 +12,6 @@ container_ingress "consul-http" {
   }
 }
 
-nomad_ingress "nomad-http" {
-  cluster  = "nomad_cluster.dev"
-  job = ""
-  group = ""
-  task = ""
-
-  port {
-    local  = 4646
-    remote = 4646
-    host   = 14646
-    open_in_browser = "/"
-  }
-
-  network  {
-    name = "network.cloud"
-  }
-}
-
 nomad_ingress "fake-service-1" {
   cluster  = "nomad_cluster.dev"
   job = "example_1"

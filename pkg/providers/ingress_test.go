@@ -23,7 +23,7 @@ func testIngressCreateMockConnector(t *testing.T, name string) *clients.Connecto
 		os.Setenv("HOME", h)
 	})
 
-	cc := &clients.ClusterConfig{}
+	cc := &utils.ClusterConfig{}
 	cc.LocalAddress = "localhost"
 	cc.ConnectorPort = 3234
 	cc.APIPort = 1321

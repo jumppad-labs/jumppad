@@ -156,7 +156,7 @@ func TestClusterNomadCreatesAServer(t *testing.T) {
 
 	// validate that the volume is correctly set
 	assert.Equal(t, "123", params.Volumes[0].Source)
-	assert.Equal(t, "/images", params.Volumes[0].Destination)
+	assert.Equal(t, "/cache", params.Volumes[0].Destination)
 	assert.Equal(t, "volume", params.Volumes[0].Type)
 
 	// validate that the config volume has been added

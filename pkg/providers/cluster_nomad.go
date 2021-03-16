@@ -156,7 +156,7 @@ func (c *NomadCluster) createNomad() error {
 	}
 
 	// ensure all client nodes are up
-	c.nomadClient.SetConfig(configPath, string(clients.LocalContext))
+	c.nomadClient.SetConfig(configPath, string(utils.LocalContext))
 	err = c.nomadClient.HealthCheckAPI(startTimeout)
 	if err != nil {
 		return err
@@ -208,8 +208,8 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 	}
 
 	// generate the config file
-	nomadConfig := clients.ClusterConfig{
-		LocalAddress:  "localhost",
+	nomadConfig := utils.ClusterConfig{
+		LocalAddress:  utils.GetDockerIP(),
 		RemoteAddress: utils.FQDN(fmt.Sprintf("server.%s", c.config.Name), string(c.config.Type)),
 		ConnectorPort: connectorPort,
 		APIPort:       apiPort,

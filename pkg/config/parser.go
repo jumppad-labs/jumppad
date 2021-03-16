@@ -941,6 +941,28 @@ func buildContext() *hcl.EvalContext {
 		},
 	})
 
+	var ClusterAPIFunc = function.New(&function.Spec{
+		Params: []function.Parameter{
+			{
+				Name:             "name",
+				Type:             cty.String,
+				AllowDynamicType: true,
+			},
+		},
+		Type: function.StaticReturnType(cty.String),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			_, configPath := utils.CreateClusterConfigPath(args[0].AsString())
+			conf := utils.ClusterConfig{}
+			err := conf.Load(configPath, utils.LocalContext)
+
+			if err != nil {
+				return cty.StringVal(""), err
+			}
+
+			return cty.StringVal(conf.APIAddress()), nil
+		},
+	})
+
 	ctx := &hcl.EvalContext{
 		Functions: map[string]function.Function{},
 		Variables: map[string]cty.Value{},
@@ -956,6 +978,7 @@ func buildContext() *hcl.EvalContext {
 	ctx.Functions["docker_ip"] = DockerIPFunc
 	ctx.Functions["docker_host"] = DockerHostFunc
 	ctx.Functions["shipyard_ip"] = ShipyardIPFunc
+	ctx.Functions["cluster_api"] = ClusterAPIFunc
 
 	// the functions file_path and file_dir are added dynamically when processing a file
 	// this is because the need a reference to the current file
