@@ -552,16 +552,16 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 
 	tmpID, err := d.CreateContainer(cc)
 	if err != nil {
-		return nil, xerrors.Errorf("unable to create dummy container for importing files: %w", err)
+		return nil, xerrors.Errorf("Unable to create dummy container for importing files: %w", err)
 	}
 
 	defer d.RemoveContainer(tmpID)
 
-	// create the directory paths
-	destPath := filepath.Join("/cache", path)
+	// create the directory paths ensure unix paths for containers
+	destPath := filepath.ToSlash(filepath.Join("/cache", path))
 	err = d.ExecuteCommand(tmpID, []string{"mkdir", "-p", destPath}, nil, "/", nil)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to create destination path in volume: %s", err)
+		return nil, fmt.Errorf("Unable to create destination path %s in volume: %s", destPath, err)
 	}
 
 	// add each file individually
@@ -584,7 +584,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 
 		err = d.CopyFileToContainer(utils.FQDN(cc.Name, string(cc.Type)), f, destPath)
 		if err != nil {
-			return nil, fmt.Errorf("Unable to copy file to container: %s", err)
+			return nil, fmt.Errorf("Unable to copy file %s to container: %s", f, err)
 		}
 
 		imported = append(imported, destFile)
