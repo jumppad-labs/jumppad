@@ -11,7 +11,7 @@ type Port struct {
 
 // PortRange allows a range of ports to be mapped
 type PortRange struct {
-	Range      string `hcl:"range" json:"local"`                                // Local port in the container
-	EnableHost bool   `hcl:"enable_host,optional" json:"enable_host,omitempty"` // Host port
-	Protocol   string `hcl:"protocol,optional" json:"protocol,omitempty"`       // Protocol tcp, udp
+	Range      string `hcl:"range" json:"local" mapstructure:"local"`                                      // Local port in the container
+	EnableHost bool   `hcl:"enable_host,optional" json:"enable_host,omitempty" mapstructure:"enable_host"` // Host port
+	Protocol   string `hcl:"protocol,optional" json:"protocol,omitempty"`                                  // Protocol tcp, udp
 }

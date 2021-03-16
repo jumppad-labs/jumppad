@@ -6,7 +6,7 @@ const TypeNomadCluster ResourceType = "nomad_cluster"
 // Cluster is a config stanza which defines a Kubernetes or a Nomad cluster
 type NomadCluster struct {
 	// embedded type holding name, etc
-	ResourceInfo
+	ResourceInfo `mapstructure:",squash"`
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 
@@ -29,5 +29,5 @@ func NewNomadCluster(name string) *NomadCluster {
 
 // ClusterConfig defines arbitary config to set for the cluster
 type ClusterConfig struct {
-	ConsulHTTPAddr string `hcl:"consul_http_addr,optional" json:"consul_http_addr,omitempty"`
+	ConsulHTTPAddr string `hcl:"consul_http_addr,optional" json:"consul_http_addr,omitempty" mapstructure:"consul_http_addr"`
 }

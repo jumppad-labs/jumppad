@@ -52,7 +52,7 @@ type ResourceInfo struct {
 	// Status is the current status of the resource, this is always PendingCreation initially
 	Status Status `json:"status,omitempty"`
 	// DependsOn is a list of objects which must exist before this resource can be applied
-	DependsOn []string `json:"depends_on,omitempty"`
+	DependsOn []string `json:"depends_on,omitempty" mapstructure:"depends_on"`
 	// Module is the name of the module if a resource has been loaded from a module
 	Module string `json:"module,omitempty"`
 

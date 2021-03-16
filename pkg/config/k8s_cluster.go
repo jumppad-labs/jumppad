@@ -6,7 +6,7 @@ const TypeK8sCluster ResourceType = "k8s_cluster"
 // K8sCluster is a config stanza which defines a Kubernetes or a Nomad cluster
 type K8sCluster struct {
 	// embedded type holding name, etc.
-	ResourceInfo
+	ResourceInfo `mapstructure:",squash"`
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 
@@ -18,10 +18,10 @@ type K8sCluster struct {
 	Images  []Image  `hcl:"image,block" json:"images,omitempty"`
 	Volumes []Volume `hcl:"volume,block" json:"volumes,omitempty"` // volumes to attach to the cluster
 
-	Ports      []Port      `hcl:"port,block" json:"ports,omitempty"`             // ports to expose
-	PortRanges []PortRange `hcl:"port_range,block" json:"port_ranges,omitempty"` // range of ports to expose
+	Ports      []Port      `hcl:"port,block" json:"ports,omitempty"`                                       // ports to expose
+	PortRanges []PortRange `hcl:"port_range,block" json:"port_ranges,omitempty" mapstructure:"port_range"` // range of ports to expose
 
-	EnvVar map[string]string `hcl:"env_var,optional" json:"env_var,omitempty"` // environment variables to set when starting the container
+	EnvVar map[string]string `hcl:"env_var,optional" json:"env_var,omitempty" mapstructure:"env_var"` // environment variables to set when starting the container
 }
 
 // NewK8sCluster creates new Cluster config with the correct defaults

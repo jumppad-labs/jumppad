@@ -195,7 +195,7 @@ func TestApplyCallsProviderDestroyForResourcesPendingorFailed(t *testing.T) {
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1)
-	testAssertMethodCalled(t, mp, "Create", 2) // ImageCache is always created
+	testAssertMethodCalled(t, mp, "Create", 1) // ImageCache is always created
 }
 
 func TestApplyReturnsErrorWhenProviderDestroyForResourcesPendingorFailed(t *testing.T) {

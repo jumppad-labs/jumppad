@@ -661,6 +661,14 @@ func ParseHCLFile(file string, c *Config) error {
 
 			// create a new config with cache
 			conf := New()
+
+			// add the docker-cache from the main config
+			ics := c.FindResourcesByType(string(TypeImageCache))
+			if ics != nil && len(ics) == 1 {
+				ic := ics[0].(*ImageCache)
+				conf.AddResource(ic)
+			}
+
 			// recursively parse references for the module
 			// ensure we do load the values which might be in module folders
 			err = ParseFolder(m.Source, conf, true, nil, "")
@@ -670,9 +678,12 @@ func ParseHCLFile(file string, c *Config) error {
 
 			// add the parsed resources to the main but add the module name
 			for _, r := range conf.Resources {
-				r.Info().Module = m.Name
-				r.Info().DependsOn = m.Depends
-				c.AddResource(r)
+				// don't add the image cache as that is already on the config
+				if r.Info().Type != TypeImageCache {
+					r.Info().Module = m.Name
+					r.Info().DependsOn = m.Depends
+					c.AddResource(r)
+				}
 			}
 
 			// modules will reset the context file path as they recurse

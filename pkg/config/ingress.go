@@ -11,7 +11,7 @@ const (
 
 // Ingress defines an ingress service mapping ports between local host and resources like containers and kube cluster
 type Ingress struct {
-	ResourceInfo
+	ResourceInfo `mapstructure:",squash"`
 
 	// Id stores the ID of the created connector service
 	Id string `json:"id" state:"true"`
@@ -36,7 +36,7 @@ type TrafficConfig struct {
 	Cluster       string `hcl:"cluster,optional" json:"cluster,omitempty"`
 	Address       string `hcl:"address,optional" json:"address,omitempty"`
 	Port          string `hcl:"port" json:"port"`
-	OpenInBrowser string `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"`
+	OpenInBrowser string `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty" mapstructure:"open_in_browser"`
 }
 
 // NewIngress creates a new ingress with the correct defaults

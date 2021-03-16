@@ -183,50 +183,56 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 	// walk the dag and apply the config
 	w := dag.Walker{}
 	w.Callback = func(v dag.Vertex) (diags tfdiags.Diagnostics) {
-		// check if the resource needs to be created and if so create
-		if r, ok := v.(config.Resource); ok &&
-			(r.Info().Status == config.PendingCreation ||
-				r.Info().Status == config.PendingModification ||
-				r.Info().Status == config.Failed ||
-				r.Info().Status == config.PendingUpdate) {
 
-			// get the provider to create the resource
-			p := e.getProvider(r, e.clients)
+		r, ok := v.(config.Resource)
 
-			if p == nil {
-				r.Info().Status = config.Failed
-				return diags.Append(fmt.Errorf("Unable to create provider for resource Name: %s, Type: %s", r.Info().Name, r.Info().Type))
-			}
-
-			// if we are pending modification or failed try remove the old instance and
-			// create again
-			if r.Info().Status == config.PendingModification || r.Info().Status == config.Failed {
-				err = p.Destroy()
-				if err != nil {
-					r.Info().Status = config.Failed
-					return diags.Append(err)
-				}
-			}
-
-			// create the resource if it does not exist
-			// has failed, awaiting modification
-			// or is an ImageCache
-			if r.Info().Status == config.PendingCreation ||
-				r.Info().Status == config.PendingModification ||
-				r.Info().Status == config.Failed ||
-				(r.Info().Status == config.PendingUpdate && r.Info().Type == config.TypeImageCache) {
-				createErr := p.Create()
-				if createErr != nil {
-					r.Info().Status = config.Failed
-					return diags.Append(createErr)
-				}
-			}
-
-			// set the status
-			r.Info().Status = config.Applied
-
-			appendResources(&createdResource, r)
+		// not a resource quit
+		if !ok {
+			return nil
 		}
+
+		// get the provider to create the resource
+		p := e.getProvider(r, e.clients)
+
+		if p == nil {
+			r.Info().Status = config.Failed
+			return diags.Append(fmt.Errorf("Unable to create provider for resource Name: %s, Type: %s", r.Info().Name, r.Info().Type))
+		}
+
+		switch r.Info().Status {
+		// Normal case for PendingUpdate is do nothing
+		case config.PendingUpdate:
+			// Do nothing for normal PendingUpdates
+			if r.Info().Type != config.TypeImageCache {
+				break
+			}
+
+			// TypeImageCache is always re-created
+			fallthrough // Destroy before create
+		// PendingModification causes a resource to be
+		// destroyed before created
+		case config.PendingModification:
+			fallthrough
+		// Always attempt to destroy and re-create failed resources
+		case config.Failed:
+			err = p.Destroy()
+			if err != nil {
+				r.Info().Status = config.Failed
+				return diags.Append(err)
+			}
+		// Create new resources
+		case config.PendingCreation:
+			createErr := p.Create()
+			if createErr != nil {
+				r.Info().Status = config.Failed
+				return diags.Append(createErr)
+			}
+		}
+
+		// set the status
+		r.Info().Status = config.Applied
+
+		appendResources(&createdResource, r)
 
 		return nil
 	}
@@ -340,9 +346,12 @@ func (e *EngineImpl) readConfig(path string, variables map[string]string, variab
 
 	// load the existing state
 	sc := config.New()
-	err := sc.FromJSON(utils.StatePath())
-	if err != nil {
-		// we do not have any state to create a new one
+	if _, err := os.Stat(utils.StatePath()); err == nil {
+		err := sc.FromJSON(utils.StatePath())
+		if err != nil {
+			return nil, fmt.Errorf("Error parsing state: %s", err)
+		}
+	} else {
 		e.log.Debug("Statefile does not exist")
 	}
 

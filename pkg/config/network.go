@@ -5,7 +5,7 @@ const TypeNetwork ResourceType = "network"
 
 // Network defines a Docker network
 type Network struct {
-	ResourceInfo
+	ResourceInfo `mapstructure:",squash"`
 
 	Subnet string `hcl:"subnet" json:"subnet"`
 }

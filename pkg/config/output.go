@@ -4,7 +4,8 @@ const TypeOutput ResourceType = "output"
 
 // Output defines an output variable which can be set by a module
 type Output struct {
-	ResourceInfo
+	ResourceInfo `mapstructure:",squash"`
+
 	Value string `hcl:"value,optional" json:"value,omitempty"` // command to use when starting the container
 }
 

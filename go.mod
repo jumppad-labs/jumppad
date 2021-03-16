@@ -30,6 +30,7 @@ require (
 	github.com/kr/pty v1.1.5
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/mapstructure v1.4.0
+	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e
 	github.com/samalba/dockerclient v0.0.0-20160531175551-a30362618471 // indirect
 	github.com/shipyard-run/connector v0.0.18
 	github.com/shipyard-run/gohup v0.2.2
