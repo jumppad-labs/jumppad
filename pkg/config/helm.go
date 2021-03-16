@@ -16,7 +16,7 @@ type Helm struct {
 
 	// ChartName is the name of the chart, if not present
 	// uses the name of the resource block
-	ChartName string `hcl:"chart_name,optional" json:"chart_name,omitempty" mapstructure: "chart_name"`
+	ChartName string `hcl:"chart_name,optional" json:"chart_name,omitempty" mapstructure:"chart_name"`
 
 	// Namespace is the Kubernetes namespace
 	Namespace string `hcl:"namespace,optional" json:"namespace,omitempty"`
