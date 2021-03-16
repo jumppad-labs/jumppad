@@ -181,6 +181,12 @@ func (c *Config) Merge(c2 *Config) {
 					status = PendingUpdate
 				}
 
+				if cc2.Info().Type == TypeImageCache {
+					// always set Image Cache to Pending Creation to
+					// force recreation to attach any new networks
+					status = PendingCreation
+				}
+
 				c.Resources[i] = cc2
 				c.Resources[i].Info().Status = status
 

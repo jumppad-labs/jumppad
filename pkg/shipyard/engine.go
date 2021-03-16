@@ -201,14 +201,6 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 
 		switch r.Info().Status {
 		// Normal case for PendingUpdate is do nothing
-		case config.PendingUpdate:
-			// Do nothing for normal PendingUpdates
-			if r.Info().Type != config.TypeImageCache {
-				break
-			}
-
-			// TypeImageCache is always re-created
-			fallthrough // Destroy before create
 		// PendingModification causes a resource to be
 		// destroyed before created
 		case config.PendingModification:
@@ -227,6 +219,8 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 				r.Info().Status = config.Failed
 				return diags.Append(createErr)
 			}
+		case config.PendingUpdate:
+			// do nothing for pending updates
 		}
 
 		// set the status
