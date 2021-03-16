@@ -21,6 +21,7 @@ func setupImageCacheTests(t *testing.T) (*config.ImageCache, *mocks.MockContaine
 	hc := &mocks.MockHTTP{}
 
 	md.On("CreateContainer", mock.Anything).Once().Return("abc", nil)
+	md.On("PullImage", mock.Anything, mock.Anything).Once().Return(nil)
 	md.On("CreateVolume", "images").Once().Return("images", nil)
 	md.On("CopyFileToContainer", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("CopyFilesToVolume", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
@@ -52,6 +53,16 @@ func TestImageCacheCreateCreatesVolume(t *testing.T) {
 	assert.NoError(t, err)
 
 	md.AssertCalled(t, "CreateVolume", "images")
+}
+
+func TestImageCachePullsImage(t *testing.T) {
+	cc, md, hc := setupImageCacheTests(t)
+
+	c := NewImageCache(cc, md, hc, hclog.NewNullLogger())
+	err := c.Create()
+	assert.NoError(t, err)
+
+	md.AssertCalled(t, "PullImage", config.Image{Name: cacheImage}, false)
 }
 
 func TestImageCacheCreateAddsVolumes(t *testing.T) {

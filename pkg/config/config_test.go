@@ -7,13 +7,16 @@ import (
 )
 
 func testSetupConfig(t *testing.T) *Config {
+	cache := NewImageCache("docker-cache")
 	net1 := NewNetwork("cloud")
 	cl1 := NewK8sCluster("test.dev")
 	cl1.DependsOn = []string{"network.cloud"}
+	cache.DependsOn = []string{"network.cloud"}
 
 	c := New()
 	c.AddResource(net1)
 	c.AddResource(cl1)
+	c.AddResource(cache)
 
 	return c
 }
@@ -99,7 +102,7 @@ func TestRemoveResourceRemoves(t *testing.T) {
 
 	err := c.RemoveResource(c.Resources[0])
 	assert.NoError(t, err)
-	assert.Len(t, c.Resources, 1)
+	assert.Len(t, c.Resources, 2)
 }
 
 func TestRemoveResourceNotFoundReturnsError(t *testing.T) {
@@ -107,7 +110,7 @@ func TestRemoveResourceNotFoundReturnsError(t *testing.T) {
 
 	err := c.RemoveResource(nil)
 	assert.Error(t, err)
-	assert.Len(t, c.Resources, 2)
+	assert.Len(t, c.Resources, 3)
 }
 
 func TestDoYaLikeDAGGeneratesAGraph(t *testing.T) {
@@ -117,7 +120,7 @@ func TestDoYaLikeDAGGeneratesAGraph(t *testing.T) {
 	assert.NoError(t, err)
 
 	// check that all resources are added and dependencies created
-	assert.Len(t, d.Edges(), 2)
+	assert.Len(t, d.Edges(), 3)
 }
 
 func TestDoYaLikeDAGAddsDependencies(t *testing.T) {
@@ -127,7 +130,8 @@ func TestDoYaLikeDAGAddsDependencies(t *testing.T) {
 	assert.NoError(t, err)
 
 	// check the dependency tree of a cluster
-	s, err := g.Descendents(c.Resources[1])
+	network, _ := c.FindResource("image_cache.docker-cache")
+	s, err := g.Descendents(network)
 	assert.NoError(t, err)
 
 	// check that the network and a blueprint is returned

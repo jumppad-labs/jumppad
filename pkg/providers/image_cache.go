@@ -89,6 +89,12 @@ func (c *ImageCache) createImageCache() (string, error) {
 		return "", fmt.Errorf("Unable to copy certificates for image cache: %s", err)
 	}
 
+	// pull the container image
+	err = c.client.PullImage(config.Image{Name: cacheImage}, false)
+	if err != nil {
+		return "", err
+	}
+
 	// create the container
 	cc := config.NewContainer(c.config.Name)
 	cc.Image = &config.Image{Name: cacheImage}

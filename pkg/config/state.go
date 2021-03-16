@@ -179,12 +179,12 @@ func (c *Config) Merge(c2 *Config) {
 				// do not update the status for resources we need to re-create or have not yet been created
 				if status == Applied {
 					status = PendingUpdate
-				}
 
-				if cc2.Info().Type == TypeImageCache {
-					// always set Image Cache to Pending Creation to
-					// force recreation to attach any new networks
-					status = PendingCreation
+					if cc2.Info().Type == TypeImageCache {
+						// always set Image Cache to Pending Creation to
+						// force recreation to attach any new networks
+						status = PendingCreation
+					}
 				}
 
 				c.Resources[i] = cc2
@@ -206,6 +206,27 @@ func (c *Config) Merge(c2 *Config) {
 					// if we have a state tag copy the values from the original
 					if tagVal == "true" {
 						vNew.Field(i).Set(oldValue)
+					}
+				}
+
+				// if image cache we should merge dependson
+				if cc2.Info().Type == TypeImageCache {
+					if cc2.Info().DependsOn == nil {
+						cc2.Info().DependsOn = []string{}
+					}
+
+					for _, dOld := range cc.Info().DependsOn {
+						var found = false
+						for _, dNew := range cc2.Info().DependsOn {
+							if dOld == dNew {
+								found = true
+								break
+							}
+						}
+
+						if !found {
+							cc2.Info().DependsOn = append(cc2.Info().DependsOn, dOld)
+						}
 					}
 				}
 

@@ -21,6 +21,12 @@ func setupConfigTests(t *testing.T) (*Config, func()) {
 
 	// create a config with all resource types
 	c := New()
+
+	// add the image cache
+	cache := NewImageCache("docker-cache")
+	cache.DependsOn = []string{"network.config"}
+	c.AddResource(cache)
+
 	con := NewContainer("config")
 	con.Info().Module = "tester"
 	c.AddResource(con)
@@ -136,6 +142,25 @@ func TestConfigMergesWithExistingItemRetainsStateFields(t *testing.T) {
 
 	assert.Len(t, c.Resources, 9)
 	assert.Equal(t, "myid", c.Resources[1].(*Ingress).Id)
+}
+
+func TestConfigMergesWithExistingItemAppendsDependencyOnCache(t *testing.T) {
+	c, cleanup := setupConfigTests(t)
+	defer cleanup()
+
+	c.Resources[0].Info().Status = Applied
+
+	c2 := New()
+	c2.AddResource(NewNetwork("new"))
+
+	cacheNew := NewImageCache("docker-cache")
+	cacheNew.DependsOn = []string{"network.new"}
+	c2.AddResource(cacheNew)
+
+	c.Merge(c2)
+
+	cache, _ := c.FindResource("image_cache.docker-cache")
+	assert.Len(t, cache.Info().DependsOn, 2)
 }
 
 var complexState = `
