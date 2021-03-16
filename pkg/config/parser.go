@@ -956,7 +956,7 @@ func buildContext() *hcl.EvalContext {
 			err := conf.Load(configPath, utils.LocalContext)
 
 			if err != nil {
-				return cty.StringVal(""), err
+				return cty.StringVal(""), nil
 			}
 
 			return cty.StringVal(conf.APIAddress()), nil
