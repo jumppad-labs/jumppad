@@ -13,7 +13,7 @@ type ExecLocal struct {
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 
 	Command          string   `hcl:"cmd,optional" json:"cmd,omitempty" mapstructure:"cmd"`                                           // Command to execute
-	Arguments        []string `hcl:"args,optional" json:"args,omitempty"`                                                            // only used when combined with Command
+	Arguments        []string `hcl:"args,optional" json:"args,omitempty" mapstructure:"args"`                                        // only used when combined with Command
 	WorkingDirectory string   `hcl:"working_directory,optional" json:"working_directory,omitempty" mapstructure:"working_directory"` // Working directory to execute commands
 	Daemon           bool     `hcl:"daemon,optional" json:"daemon,omitempty"`                                                        // Should the process run as a daemon
 	Timeout          string   `hcl:"timeout,optional" json:"timeout,omitempty"`                                                      // Set the timeout for the command
