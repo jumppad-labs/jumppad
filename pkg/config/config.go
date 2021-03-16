@@ -238,7 +238,6 @@ func (c *Config) DoYaLikeDAGs() (*dag.AcyclicGraph, error) {
 
 		// if no deps add to root node
 		if !hasDeps {
-			fmt.Println("adding root", resource)
 			graph.Connect(dag.BasicEdge(root, resource))
 		}
 	}
