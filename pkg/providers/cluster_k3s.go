@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
@@ -136,9 +137,24 @@ func (c *K8sCluster) createK3s() error {
 
 	cc.EnvVar["K3S_KUBECONFIG_OUTPUT"] = "/output/kubeconfig.yaml"
 	cc.EnvVar["K3S_CLUSTER_SECRET"] = "mysupersecret"
-	cc.EnvVar["HTTP_PROXY"] = "http://docker-cache.container.shipyard.run:3128/"
-	cc.EnvVar["HTTPS_PROXY"] = "http://docker-cache.container.shipyard.run:3128/"
-	cc.EnvVar["PROXY_CA"] = string(ca)
+
+	// only add the variables for the cache when the kubernetes version is >= v1.18.16
+	sv, err := semver.NewConstraint(">= v1.18.16")
+	if err != nil {
+		// Handle constraint not being parsable.
+		return err
+	}
+
+	v, err := semver.NewVersion(c.config.Version)
+	if err != nil {
+		return fmt.Errorf("Kubernetes version is not valid semantic version: %s", err)
+	}
+
+	if sv.Check(v) {
+		cc.EnvVar["HTTP_PROXY"] = "http://docker-cache.container.shipyard.run:3128/"
+		cc.EnvVar["HTTPS_PROXY"] = "http://docker-cache.container.shipyard.run:3128/"
+		cc.EnvVar["PROXY_CA"] = string(ca)
+	}
 
 	// add any custom environment variables
 	for k, v := range c.config.EnvVar {

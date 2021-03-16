@@ -3,6 +3,7 @@ module github.com/shipyard-run/shipyard
 go 1.15
 
 require (
+	github.com/Masterminds/semver v1.5.0
 	github.com/MichaelMure/go-term-markdown v0.1.3
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/aws/aws-sdk-go v1.33.5 // indirect

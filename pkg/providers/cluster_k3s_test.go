@@ -122,6 +122,20 @@ func TestClusterK3SetsEnvironment(t *testing.T) {
 	assert.Equal(t, params.EnvVar["PROXY_CA"], "CA")
 }
 
+func TestClusterK3DoesNotSetProxyEnvironmentWithWrongVersion(t *testing.T) {
+	cc, md, mk, mc := setupClusterMocks(t)
+	cc.Version = "v1.12.1"
+
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+
+	assert.Empty(t, params.EnvVar["HTTP_PROXY"])
+}
+
 func TestClusterK3ErrorsWhenClusterExists(t *testing.T) {
 	md := &mocks.MockContainerTasks{}
 	md.On("FindContainerIDs", "server."+clusterConfig.Name, mock.Anything).Return([]string{"abc"}, nil)
