@@ -210,6 +210,8 @@ func (c *Config) Merge(c2 *Config) {
 				}
 
 				// if image cache we should merge dependson
+				// this needs to be moved to the config object
+				// and should be implemented for each config type
 				if cc2.Info().Type == TypeImageCache {
 					if cc2.Info().DependsOn == nil {
 						cc2.Info().DependsOn = []string{}

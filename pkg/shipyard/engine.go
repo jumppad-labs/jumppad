@@ -205,13 +205,17 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 		// destroyed before created
 		case config.PendingModification:
 			fallthrough
-		// Always attempt to destroy and re-create failed resources
+
+			// Always attempt to destroy and re-create failed resources
 		case config.Failed:
 			err = p.Destroy()
 			if err != nil {
 				r.Info().Status = config.Failed
 				return diags.Append(err)
 			}
+
+			fallthrough // failed resources should always attempt recreation
+
 		// Create new resources
 		case config.PendingCreation:
 			createErr := p.Create()
@@ -219,6 +223,7 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 				r.Info().Status = config.Failed
 				return diags.Append(createErr)
 			}
+
 		case config.PendingUpdate:
 			// do nothing for pending updates
 		}

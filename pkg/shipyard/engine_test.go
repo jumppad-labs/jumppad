@@ -186,7 +186,7 @@ func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
 	//assert.Len(t, res, 4)
 }
 
-func TestApplyCallsProviderDestroyForResourcesPendingorFailed(t *testing.T) {
+func TestApplyCallsProviderDestroyAndCreateForResourcesFailed(t *testing.T) {
 	e, _, mp, cleanup := setupTestsWithState(nil, failedState)
 	defer cleanup()
 
@@ -195,7 +195,19 @@ func TestApplyCallsProviderDestroyForResourcesPendingorFailed(t *testing.T) {
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1)
-	testAssertMethodCalled(t, mp, "Create", 1) // ImageCache is always created
+	testAssertMethodCalled(t, mp, "Create", 2) // ImageCache is always created
+}
+
+func TestApplyCallsProviderDestroyForResourcesPendingModification(t *testing.T) {
+	e, _, mp, cleanup := setupTestsWithState(nil, modificationState)
+	defer cleanup()
+
+	_, err := e.Apply("")
+	assert.NoError(t, err)
+
+	// should have call create for each provider
+	testAssertMethodCalled(t, mp, "Destroy", 1)
+	testAssertMethodCalled(t, mp, "Create", 2) // ImageCache is always created
 }
 
 func TestApplyReturnsErrorWhenProviderDestroyForResourcesPendingorFailed(t *testing.T) {
@@ -321,6 +333,20 @@ var failedState = `
 	{
       "name": "dc1",
       "status": "failed",
+      "subnet": "10.15.0.0/16",
+      "type": "network"
+	}
+  ]
+}
+`
+
+var modificationState = `
+{
+  "blueprint": null,
+  "resources": [
+	{
+      "name": "dc1",
+      "status": "pending_modification",
       "subnet": "10.15.0.0/16",
       "type": "network"
 	}
