@@ -11,3 +11,9 @@ const ImageVolumeName string = "images"
 
 // Name of the Cache resource
 const CacheResourceName string = "docker-cache"
+
+// Address of the proxy used for caching docker images
+const ProxyAddress string = "http://docker-cache.container.shipayard.run:3128"
+
+// Addresses to bypass when using a HTTP Proxy
+const ProxyBypass string = "localhost,127.0.0.1,cluster.local,shipyard.run,svc,consul"

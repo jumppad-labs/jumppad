@@ -117,8 +117,10 @@ func TestClusterK3SetsEnvironment(t *testing.T) {
 
 	assert.Equal(t, params.EnvVar["K3S_KUBECONFIG_OUTPUT"], "/output/kubeconfig.yaml")
 	assert.Equal(t, params.EnvVar["K3S_CLUSTER_SECRET"], "mysupersecret")
-	assert.Equal(t, params.EnvVar["HTTP_PROXY"], "http://docker-cache.container.shipyard.run:3128/")
-	assert.Equal(t, params.EnvVar["HTTPS_PROXY"], "http://docker-cache.container.shipyard.run:3128/")
+	assert.Equal(t, params.EnvVar["HTTP_PROXY"], utils.ProxyAddress)
+	assert.Equal(t, params.EnvVar["HTTPS_PROXY"], utils.ProxyAddress)
+	assert.Equal(t, params.EnvVar["NO_PROXY"], utils.ProxyBypass)
+
 	assert.Equal(t, params.EnvVar["PROXY_CA"], "CA")
 }
 

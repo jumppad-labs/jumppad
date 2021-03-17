@@ -150,8 +150,9 @@ func (c *K8sCluster) createK3s() error {
 			return fmt.Errorf("Unable to read root CA for proxy: %s", err)
 		}
 
-		cc.EnvVar["HTTP_PROXY"] = "http://docker-cache.container.shipyard.run:3128/"
-		cc.EnvVar["HTTPS_PROXY"] = "http://docker-cache.container.shipyard.run:3128/"
+		cc.EnvVar["HTTP_PROXY"] = utils.ProxyAddress
+		cc.EnvVar["HTTPS_PROXY"] = utils.ProxyAddress
+		cc.EnvVar["NO_PROXY"] = utils.ProxyBypass
 		cc.EnvVar["PROXY_CA"] = string(ca)
 	}
 
