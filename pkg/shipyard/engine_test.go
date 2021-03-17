@@ -274,7 +274,7 @@ func TestDestroyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 	assert.Error(t, err)
 
 	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 7)
+	testAssertMethodCalled(t, mp, "Destroy", 6)
 }
 
 func TestDestroyFailSetsStatus(t *testing.T) {

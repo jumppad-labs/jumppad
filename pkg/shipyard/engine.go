@@ -199,6 +199,8 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 			return diags.Append(fmt.Errorf("Unable to create provider for resource Name: %s, Type: %s", r.Info().Name, r.Info().Type))
 		}
 
+		fmt.Println(r.Info().Name, r.Info().Status)
+
 		switch r.Info().Status {
 		// Normal case for PendingUpdate is do nothing
 		// PendingModification causes a resource to be
@@ -208,6 +210,7 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 
 			// Always attempt to destroy and re-create failed resources
 		case config.Failed:
+			fmt.Println(r.Info().Name, r.Info().Status, "failed")
 			err = p.Destroy()
 			if err != nil {
 				r.Info().Status = config.Failed
@@ -218,6 +221,7 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 
 		// Create new resources
 		case config.PendingCreation:
+			fmt.Println(r.Info().Name, r.Info().Status, "create")
 			createErr := p.Create()
 			if createErr != nil {
 				r.Info().Status = config.Failed

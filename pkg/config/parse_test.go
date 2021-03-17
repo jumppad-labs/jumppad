@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/shipyard-run/shipyard/pkg/utils"
 	assert "github.com/stretchr/testify/require"
 )
 
@@ -319,6 +320,48 @@ func TestParseFileFunctionReadCorrectly(t *testing.T) {
 	}
 
 	assert.True(t, validEnv)
+}
+
+func TestParseAddsCacheDependencyToK8sResources(t *testing.T) {
+	absoluteFolderPath, err := filepath.Abs("../../examples/single_k3s_cluster")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c := New()
+
+	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
+	assert.NoError(t, err)
+
+	err = ParseReferences(c)
+	assert.NoError(t, err)
+
+	// check variable has been interpolated
+	r, err := c.FindResource("k8s_cluster.k3s")
+	assert.NoError(t, err)
+
+	assert.Contains(t, r.Info().DependsOn, fmt.Sprintf("%s.%s", string(TypeImageCache), utils.CacheResourceName))
+}
+
+func TestParseAddsCacheDependencyToNomadResources(t *testing.T) {
+	absoluteFolderPath, err := filepath.Abs("../../examples/nomad")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c := New()
+
+	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
+	assert.NoError(t, err)
+
+	err = ParseReferences(c)
+	assert.NoError(t, err)
+
+	// check variable has been interpolated
+	r, err := c.FindResource("nomad_cluster.dev")
+	assert.NoError(t, err)
+
+	assert.Contains(t, r.Info().DependsOn, fmt.Sprintf("%s.%s", string(TypeImageCache), utils.CacheResourceName))
 }
 
 /*

@@ -772,6 +772,10 @@ func ParseReferences(c *Config) error {
 			}
 			c.DependsOn = append(c.DependsOn, c.Depends...)
 
+			// always add a dependency of the cache as this is
+			// required by all clusters
+			c.DependsOn = append(c.DependsOn, fmt.Sprintf("%s.%s", TypeImageCache, utils.CacheResourceName))
+
 		case TypeHelm:
 			c := r.(*Helm)
 			c.DependsOn = append(c.DependsOn, c.Cluster)
@@ -796,6 +800,9 @@ func ParseReferences(c *Config) error {
 				c.DependsOn = append(c.DependsOn, n.Name)
 			}
 			c.DependsOn = append(c.DependsOn, c.Depends...)
+			// always add a dependency of the cache as this is
+			// required by all clusters
+			c.DependsOn = append(c.DependsOn, fmt.Sprintf("%s.%s", TypeImageCache, utils.CacheResourceName))
 
 		case TypeNomadIngress:
 			c := r.(*NomadIngress)
