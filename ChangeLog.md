@@ -1,5 +1,31 @@
 # Change Log
 
+## version v0.3.0
+
+### Image Caching
+
+To save bandwidth all containers launched from Kubernetes and Nomad clusters are cached by Shipyard. Currently images
+from the following registries are cached:
+
+* k8s.gcr.io 
+* gcr.io 
+* asia.gcr.io 
+* eu.gcr.io 
+* us.gcr.io 
+* quay.io
+* ghcr.io"
+* docker.io
+
+Previously only images created from the `container` resource were cached, this change will make substantial speed and bandwidth improvements when creating Shipyard resources once the image has been cached.
+
+Shipyard launches a pull through cache when resources are created
+
+### Other changes
+* Add max_restart_count to containers and sidecars
+* Add function to retrieve the ipa
+* Move terminal server to embedded in Shipyard binary
+* Add capability to have a local terminal instance in Docs.
+
 ## version 0.2.10
 * Add capability to run `local_exec` commands as a daemon
 * Add timeout to `local_exec`

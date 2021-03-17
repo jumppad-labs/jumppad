@@ -11,7 +11,7 @@ func setupTestConfig(t *testing.T, contents string) (*Config, string, func()) {
 	dir, cleanup := createTestFiles(t)
 	createNamedFile(t, dir, "*.hcl", contents)
 
-	c := &Config{}
+	c := New()
 	err := ParseFolder(dir, c, false, nil, "")
 	assert.NoError(t, err)
 

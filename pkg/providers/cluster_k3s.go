@@ -10,9 +10,11 @@ import (
 	"math/rand"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
@@ -22,7 +24,8 @@ import (
 
 // https://github.com/rancher/k3d/blob/master/cli/commands.go
 
-const k3sBaseImage = "shipyardrun/k3s:v1.18.15"
+const k3sBaseImage = "shipyardrun/k3s"
+const k3sBaseVersion = "v1.18.16"
 
 var startTimeout = (300 * time.Second)
 
@@ -79,9 +82,12 @@ func (c *K8sCluster) createK3s() error {
 		return ErrorClusterExists
 	}
 
+	if c.config.Version == "" {
+		c.config.Version = k3sBaseVersion
+	}
+
 	// set the image
-	//image := fmt.Sprintf("%s:%s", k3sBaseImage, c.config.Version)
-	image := k3sBaseImage
+	image := fmt.Sprintf("%s:%s", k3sBaseImage, c.config.Version)
 
 	// pull the container image
 	err = c.client.PullImage(config.Image{Name: image}, false)
@@ -108,7 +114,7 @@ func (c *K8sCluster) createK3s() error {
 	cc.Volumes = []config.Volume{
 		config.Volume{
 			Source:      volID,
-			Destination: "/images",
+			Destination: "/cache",
 			Type:        "volume",
 		},
 	}
@@ -118,10 +124,41 @@ func (c *K8sCluster) createK3s() error {
 		cc.Volumes = append(cc.Volumes, v)
 	}
 
+	// Add any custom environment variables
+	cc.EnvVar = map[string]string{}
+
 	// set the environment variables for the K3S_KUBECONFIG_OUTPUT and K3S_CLUSTER_SECRET
-	cc.Environment = []config.KV{
-		config.KV{Key: "K3S_KUBECONFIG_OUTPUT", Value: "/output/kubeconfig.yaml"},
-		config.KV{Key: "K3S_CLUSTER_SECRET", Value: "mysupersecret"}, // This should be random
+	cc.EnvVar["K3S_KUBECONFIG_OUTPUT"] = "/output/kubeconfig.yaml"
+	cc.EnvVar["K3S_CLUSTER_SECRET"] = "mysupersecret"
+
+	// only add the variables for the cache when the kubernetes version is >= v1.18.16
+	sv, err := semver.NewConstraint(">= v1.18.16")
+	if err != nil {
+		// Handle constraint not being parsable.
+		return err
+	}
+
+	v, err := semver.NewVersion(c.config.Version)
+	if err != nil {
+		return fmt.Errorf("Kubernetes version is not valid semantic version: %s", err)
+	}
+
+	if sv.Check(v) {
+		// load the CA from a file
+		ca, err := ioutil.ReadFile(filepath.Join(utils.CertsDir(""), "/root.cert"))
+		if err != nil {
+			return fmt.Errorf("Unable to read root CA for proxy: %s", err)
+		}
+
+		cc.EnvVar["HTTP_PROXY"] = utils.ProxyAddress
+		cc.EnvVar["HTTPS_PROXY"] = utils.ProxyAddress
+		cc.EnvVar["NO_PROXY"] = utils.ProxyBypass
+		cc.EnvVar["PROXY_CA"] = string(ca)
+	}
+
+	// add any custom environment variables
+	for k, v := range c.config.EnvVar {
+		cc.EnvVar[k] = v
 	}
 
 	// set the API server port to a random number 64000 - 65000
@@ -130,7 +167,7 @@ func (c *K8sCluster) createK3s() error {
 	args := []string{"server", fmt.Sprintf("--https-listen-port=%d", apiPort)}
 
 	// save the config
-	clusterConfig := clients.ClusterConfig{
+	clusterConfig := utils.ClusterConfig{
 		LocalAddress:  utils.GetDockerIP(),
 		RemoteAddress: fmt.Sprintf("server.%s", c.config.Name),
 		APIPort:       apiPort,
@@ -443,7 +480,7 @@ func (c *K8sCluster) ImportLocalDockerImages(name string, id string, images []co
 
 	// import to volume
 	vn := utils.FQDNVolumeName(name)
-	imagesFile, err := c.client.CopyLocalDockerImageToVolume(imgs, vn, force)
+	imagesFile, err := c.client.CopyLocalDockerImagesToVolume(imgs, vn, force)
 	if err != nil {
 		return err
 	}
@@ -451,7 +488,7 @@ func (c *K8sCluster) ImportLocalDockerImages(name string, id string, images []co
 	for _, i := range imagesFile {
 		// execute the command to import the image
 		// write any command output to the logger
-		err = c.client.ExecuteCommand(id, []string{"ctr", "image", "import", "/images/" + i}, nil, "/", c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
+		err = c.client.ExecuteCommand(id, []string{"ctr", "image", "import", i}, nil, "/", c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
 		if err != nil {
 			return err
 		}

@@ -6,7 +6,7 @@ const TypeLocalIngress ResourceType = "local_ingress"
 // LocalIngress defines an ingress that exposes an application or service
 // running on the local machine to a remote host
 type LocalIngress struct {
-	ResourceInfo
+	ResourceInfo `mapstructure:",squash"`
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 

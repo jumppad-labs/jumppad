@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 	"golang.org/x/xerrors"
 )
 
@@ -36,7 +37,7 @@ type Nomad interface {
 type NomadImpl struct {
 	httpClient HTTP
 	l          hclog.Logger
-	c          *ClusterConfig
+	c          *utils.ClusterConfig
 	backoff    time.Duration
 }
 
@@ -56,8 +57,8 @@ type createRequest struct {
 
 // SetConfig loads the Nomad config from a file
 func (n *NomadImpl) SetConfig(nomadconfig string, context string) error {
-	c := &ClusterConfig{}
-	err := c.Load(nomadconfig, Context(context))
+	c := &utils.ClusterConfig{}
+	err := c.Load(nomadconfig, utils.Context(context))
 	if err != nil {
 		return err
 	}
@@ -300,7 +301,7 @@ func (n *NomadImpl) Endpoints(job, group, task string) ([]map[string]string, err
 		allocDetail := allocation{}
 		err = json.NewDecoder(resp.Body).Decode(&allocDetail)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Error getting endpoints from server: %s: err: %s", n.c.APIAddress(), err)
 		}
 
 		ports := []string{}
@@ -366,7 +367,7 @@ func (n *NomadImpl) getJobAllocations(job string) ([]map[string]interface{}, err
 	jobDetail := make([]map[string]interface{}, 0)
 	err = json.NewDecoder(resp.Body).Decode(&jobDetail)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Unable to query jobs in Nomad server: %s: %s", n.c.APIAddress(), err)
 	}
 
 	return jobDetail, err

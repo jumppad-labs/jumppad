@@ -5,7 +5,7 @@ const TypeTemplate ResourceType = "template"
 
 // Template allows the process of user defined templates
 type Template struct {
-	ResourceInfo
+	ResourceInfo `mapstructure:",squash"`
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 

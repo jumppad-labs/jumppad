@@ -1,15 +1,36 @@
-package clients
+package utils
 
 import (
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
+const configNomad = `
+{
+  "local_address": "localhost",
+  "remote_address": "server.dev.nomad_cluster.shipyard.run",
+  "api_port": 64124,
+  "remote_api_port": 4646,
+  "connector_port": 64648,
+  "node_count": 1,
+  "ssl": false
+}
+`
+
+func setupNomadTests(t *testing.T) string {
+	tmp := t.TempDir()
+	configFile := filepath.Join(tmp, "config.json")
+	ioutil.WriteFile(configFile, []byte(configNomad), os.ModePerm)
+
+	return configFile
+}
+
 func TestConfigLoadsCorrectly(t *testing.T) {
-	fp, tmpDir, _ := setupNomadTests(t)
-	defer os.RemoveAll(tmpDir)
+	fp := setupNomadTests(t)
 
 	nc := &ClusterConfig{}
 	err := nc.Load(fp, "local")
@@ -26,8 +47,7 @@ func TestNomadConfigLoadReturnsErrorWhenFileNotExist(t *testing.T) {
 }
 
 func TestConfiSavesFile(t *testing.T) {
-	fp, tmpDir, _ := setupNomadTests(t)
-	defer os.RemoveAll(tmpDir)
+	fp := setupNomadTests(t)
 
 	nc := &ClusterConfig{
 		LocalAddress:  "nomad",

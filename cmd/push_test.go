@@ -15,7 +15,7 @@ func setupPush(state string) (*cobra.Command, *mocks.MockContainerTasks, func())
 	mt := &mocks.MockContainerTasks{}
 	mt.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
 	mt.On("PullImage", mock.Anything, false).Return(nil)
-	mt.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything, mock.Anything).Return([]string{"/images/file.tar"}, nil)
+	mt.On("CopyLocalDockerImagesToVolume", mock.Anything, mock.Anything, mock.Anything).Return([]string{"/images/file.tar"}, nil)
 	mt.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mt.On("SetForcePull", mock.Anything).Return(nil)
 
@@ -75,7 +75,7 @@ func TestPushK8sClusterIDNotFoundReturnsError(t *testing.T) {
 	err := c.Execute()
 	assert.NoError(t, err)
 
-	mt.AssertNotCalled(t, "CopyLocalDockerImageToVolume", mock.Anything, mock.Anything, mock.Anything)
+	mt.AssertNotCalled(t, "CopyLocalDockerImagesToVolume", mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestPushWithForceSetsFlag(t *testing.T) {
@@ -87,7 +87,7 @@ func TestPushWithForceSetsFlag(t *testing.T) {
 	err := c.Execute()
 	assert.NoError(t, err)
 
-	mt.AssertCalled(t, "CopyLocalDockerImageToVolume", mock.Anything, mock.Anything, true)
+	mt.AssertCalled(t, "CopyLocalDockerImagesToVolume", mock.Anything, mock.Anything, true)
 	mt.AssertCalled(t, "SetForcePull", mock.Anything, mock.Anything, mock.Anything)
 }
 
@@ -99,7 +99,7 @@ func TestPushK8sClusterPushesImage(t *testing.T) {
 	err := c.Execute()
 	assert.NoError(t, err)
 
-	mt.AssertCalled(t, "CopyLocalDockerImageToVolume", mock.Anything, mock.Anything, true)
+	mt.AssertCalled(t, "CopyLocalDockerImagesToVolume", mock.Anything, mock.Anything, true)
 }
 
 func TestPushNomadClusterIDErrorReturnsError(t *testing.T) {
@@ -125,7 +125,7 @@ func TestPushNomadClusterIDNotFoundReturnsError(t *testing.T) {
 	err := c.Execute()
 	assert.NoError(t, err)
 
-	mt.AssertNotCalled(t, "CopyLocalDockerImageToVolume", mock.Anything, mock.Anything, mock.Anything)
+	mt.AssertNotCalled(t, "CopyLocalDockerImagesToVolume", mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestPushNomadClusterPushesImage(t *testing.T) {
@@ -136,7 +136,7 @@ func TestPushNomadClusterPushesImage(t *testing.T) {
 	err := c.Execute()
 	assert.NoError(t, err)
 
-	mt.AssertCalled(t, "CopyLocalDockerImageToVolume", mock.Anything, mock.Anything, mock.Anything)
+	mt.AssertCalled(t, "CopyLocalDockerImagesToVolume", mock.Anything, mock.Anything, mock.Anything)
 }
 
 var clusterState = `

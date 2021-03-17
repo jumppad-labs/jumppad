@@ -46,6 +46,7 @@ func TestContainerSidecarCreatesContainerSuccessfully(t *testing.T) {
 	cc.Privileged = true
 	cc.Resources = &config.Resources{}
 	cc.Config = &config.Config{}
+	cc.MaxRestartCount = 10
 
 	md.On("PullImage", cc.Image, false).Once().Return(nil)
 	md.On("CreateContainer", mock.Anything).Once().Return("", nil)
@@ -69,6 +70,7 @@ func TestContainerSidecarCreatesContainerSuccessfully(t *testing.T) {
 	assert.Equal(t, cc.Resources, ac.Resources)
 	assert.Equal(t, cc.Type, ac.Type)
 	assert.Equal(t, cc.Config, ac.Config)
+	assert.Equal(t, cc.MaxRestartCount, ac.MaxRestartCount)
 }
 
 func TestContainerRunsHTTPChecks(t *testing.T) {

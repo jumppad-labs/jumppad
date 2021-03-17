@@ -5,7 +5,7 @@ const TypeNomadIngress ResourceType = "nomad_ingress"
 
 // NomadIngress defines an ingress service mapping ports between local host or docker network and the target
 type NomadIngress struct {
-	ResourceInfo
+	ResourceInfo `mapstructure:",squash"`
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 

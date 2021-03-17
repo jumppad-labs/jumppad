@@ -11,11 +11,12 @@
       "request": "launch",
       "mode": "debug",
       "program": "${workspaceFolder}",
-      "env": {},
+      "env": {
+        "LOG_LEVEL": "debug"
+      },
       "args": [
         "run",
-        "--var=client_nodes=3",
-        "./examples/nomad"
+        "./examples/single_k3s_cluster"
       ]
     },    {
       "name": "Debug - Destroy",

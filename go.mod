@@ -3,6 +3,7 @@ module github.com/shipyard-run/shipyard
 go 1.15
 
 require (
+	github.com/Masterminds/semver v1.5.0
 	github.com/MichaelMure/go-term-markdown v0.1.3
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/aws/aws-sdk-go v1.33.5 // indirect
@@ -30,8 +31,9 @@ require (
 	github.com/kr/pty v1.1.5
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/mapstructure v1.4.0
+	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e
 	github.com/samalba/dockerclient v0.0.0-20160531175551-a30362618471 // indirect
-	github.com/shipyard-run/connector v0.0.16
+	github.com/shipyard-run/connector v0.0.18
 	github.com/shipyard-run/gohup v0.2.2
 	github.com/shipyard-run/version-manager v0.0.5
 	github.com/shipyard/shipyard v3.0.0+incompatible // indirect

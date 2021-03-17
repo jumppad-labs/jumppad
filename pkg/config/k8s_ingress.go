@@ -5,7 +5,7 @@ const TypeK8sIngress ResourceType = "k8s_ingress"
 
 // K8sIngress defines an ingress service mapping ports between local host or docker network and the target
 type K8sIngress struct {
-	ResourceInfo
+	ResourceInfo `mapstructure:",squash"`
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 

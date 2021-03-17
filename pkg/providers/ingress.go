@@ -91,8 +91,8 @@ func (c *Ingress) exposeLocal() error {
 	// get the address of the remote connector from the target
 	_, configPath := utils.CreateClusterConfigPath(res.Info().Name)
 
-	cc := &clients.ClusterConfig{}
-	err = cc.Load(configPath, clients.LocalContext)
+	cc := &utils.ClusterConfig{}
+	err = cc.Load(configPath, utils.LocalContext)
 	if err != nil {
 		return xerrors.Errorf("Unable to load cluster config :%w", err)
 	}
@@ -145,8 +145,8 @@ func (c *Ingress) exposeK8sRemote() error {
 	// get the address of the remote connector from the target
 	_, configPath := utils.CreateClusterConfigPath(res.Info().Name)
 
-	cc := &clients.ClusterConfig{}
-	err = cc.Load(configPath, clients.LocalContext)
+	cc := &utils.ClusterConfig{}
+	err = cc.Load(configPath, utils.LocalContext)
 	if err != nil {
 		return xerrors.Errorf("Unable to load cluster config :%w", err)
 	}

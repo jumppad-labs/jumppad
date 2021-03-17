@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
@@ -19,6 +20,7 @@ import (
 
 // setupClusterMocks sets up a happy path for mocks
 func setupNomadClusterMocks(t *testing.T) (*config.NomadCluster, *mocks.MockContainerTasks, *mocks.MockNomad) {
+
 	md := &mocks.MockContainerTasks{}
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{}, nil)
 	md.On("PullImage", mock.Anything, mock.Anything).Return(nil)
@@ -29,7 +31,7 @@ func setupNomadClusterMocks(t *testing.T) (*config.NomadCluster, *mocks.MockCont
 		nil,
 	)
 	md.On("CopyFromContainer", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	md.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything, mock.Anything).Return([]string{"file.tar.gz"}, nil)
+	md.On("CopyLocalDockerImagesToVolume", mock.Anything, mock.Anything, mock.Anything).Return([]string{"file.tar.gz"}, nil)
 	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("RemoveContainer", mock.Anything).Return(nil)
 	md.On("RemoveVolume", mock.Anything).Return(nil)
@@ -40,9 +42,12 @@ func setupNomadClusterMocks(t *testing.T) (*config.NomadCluster, *mocks.MockCont
 	mh.On("HealthCheckAPI", mock.Anything).Return(nil)
 
 	// set the home folder to a temp folder
-	tmpDir, _ := ioutil.TempDir("", "")
+	tmpDir := t.TempDir()
 	currentHome := os.Getenv("HOME")
 	os.Setenv("HOME", tmpDir)
+
+	cafile := filepath.Join(utils.CertsDir(""), "root.cert")
+	ioutil.WriteFile(cafile, []byte("CA"), os.ModePerm)
 
 	// copy the config
 	cc := *clusterNomadConfig
@@ -54,7 +59,6 @@ func setupNomadClusterMocks(t *testing.T) (*config.NomadCluster, *mocks.MockCont
 
 	t.Cleanup(func() {
 		os.Setenv("HOME", currentHome)
-		os.RemoveAll(tmpDir)
 	})
 
 	return &cc, md, mh
@@ -156,7 +160,7 @@ func TestClusterNomadCreatesAServer(t *testing.T) {
 
 	// validate that the volume is correctly set
 	assert.Equal(t, "123", params.Volumes[0].Source)
-	assert.Equal(t, "/images", params.Volumes[0].Destination)
+	assert.Equal(t, "/cache", params.Volumes[0].Destination)
 	assert.Equal(t, "volume", params.Volumes[0].Type)
 
 	// validate that the config volume has been added
@@ -219,7 +223,7 @@ func TestClusterNomadCreatesClientNodesWithCorrectDetails(t *testing.T) {
 
 	// validate that the volume is correctly set
 	assert.Equal(t, "123", params.Volumes[0].Source)
-	assert.Equal(t, "/images", params.Volumes[0].Destination)
+	assert.Equal(t, "/cache", params.Volumes[0].Destination)
 	assert.Equal(t, "volume", params.Volumes[0].Type)
 
 	// validate that the config volume has been added
@@ -286,13 +290,13 @@ func TestClusterNomadImportDockerCopiesImages(t *testing.T) {
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "CopyLocalDockerImageToVolume", []string{"consul:1.6.1", "vault:1.6.1"}, "images.volume.shipyard.run", false)
+	md.AssertCalled(t, "CopyLocalDockerImagesToVolume", []string{"consul:1.6.1", "vault:1.6.1"}, "images.volume.shipyard.run", false)
 }
 
 func TestClusterNomadImportDockerCopyImageFailReturnsError(t *testing.T) {
 	cc, md, mh := setupNomadClusterMocks(t)
-	removeOn(&md.Mock, "CopyLocalDockerImageToVolume")
-	md.On("CopyLocalDockerImageToVolume", mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
+	removeOn(&md.Mock, "CopyLocalDockerImagesToVolume")
+	md.On("CopyLocalDockerImagesToVolume", mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
 	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
 
@@ -309,7 +313,7 @@ func TestClusterNomadImportDockerRunsExecCommand(t *testing.T) {
 	err := p.Create()
 	assert.NoError(t, err)
 
-	importCommand := []string{"docker", "load", "-i", "/images/file.tar.gz"}
+	importCommand := []string{"docker", "load", "-i", "file.tar.gz"}
 	md.AssertCalled(t, "ExecuteCommand", "containerid", importCommand, mock.Anything, mock.Anything, mock.Anything)
 }
 
@@ -323,6 +327,48 @@ func TestClusterNomadImportDockerExecFailReturnsError(t *testing.T) {
 
 	err := p.Create()
 	assert.Error(t, err)
+}
+
+func TestClusterNomadSetsEnvironmentOnServer(t *testing.T) {
+	cc, md, mh := setupNomadClusterMocks(t)
+	cc.Version = ""
+	cc.ClientNodes = 1
+
+	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+
+	assert.Equal(t, params.EnvVar["HTTP_PROXY"], utils.ProxyAddress)
+	assert.Equal(t, params.EnvVar["HTTPS_PROXY"], utils.ProxyAddress)
+	assert.Equal(t, params.EnvVar["NO_PROXY"], utils.ProxyBypass)
+	assert.Equal(t, params.EnvVar["PROXY_CA"], "CA")
+
+	params = getCalls(&md.Mock, "CreateContainer")[1].Arguments[0].(*config.Container)
+
+	assert.Equal(t, params.EnvVar["HTTP_PROXY"], utils.ProxyAddress)
+	assert.Equal(t, params.EnvVar["HTTPS_PROXY"], utils.ProxyAddress)
+	assert.Equal(t, params.EnvVar["NO_PROXY"], utils.ProxyBypass)
+	assert.Equal(t, params.EnvVar["PROXY_CA"], "CA")
+}
+
+func TestClusterNomadDoesNotSetProxyEnvironmentWithWrongVersion(t *testing.T) {
+	cc, md, mh := setupNomadClusterMocks(t)
+	cc.Version = "v0.12.1"
+	cc.ClientNodes = 1
+
+	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	assert.Empty(t, params.EnvVar["HTTP_PROXY"])
+
+	params = getCalls(&md.Mock, "CreateContainer")[1].Arguments[0].(*config.Container)
+	assert.Empty(t, params.EnvVar["HTTP_PROXY"])
 }
 
 // Destroy Tests

@@ -450,6 +450,16 @@ func ParseHCLFile(file string, c *Config) error {
 
 			c.AddResource(h)
 
+		case string(TypeImageCache):
+			i := NewImageCache(b.Labels[0])
+
+			err := decodeBody(file, b, i)
+			if err != nil {
+				return err
+			}
+
+			c.AddResource(i)
+
 		case string(TypeK8sIngress):
 			i := NewK8sIngress(b.Labels[0])
 
@@ -510,6 +520,13 @@ func ParseHCLFile(file string, c *Config) error {
 			}
 
 			c.AddResource(n)
+
+			// always add this network as a dependency of the image cache
+			ics := c.FindResourcesByType(string(TypeImageCache))
+			if ics != nil && len(ics) == 1 {
+				ic := ics[0].(*ImageCache)
+				ic.DependsOn = append(ic.DependsOn, "network."+n.Name)
+			}
 
 		case string(TypeIngress):
 			i := NewIngress(b.Labels[0])
@@ -642,7 +659,16 @@ func ParseHCLFile(file string, c *Config) error {
 			// set the absolute path
 			m.Source = ensureAbsolute(m.Source, file)
 
+			// create a new config with cache
 			conf := New()
+
+			// add the docker-cache from the main config
+			ics := c.FindResourcesByType(string(TypeImageCache))
+			if ics != nil && len(ics) == 1 {
+				ic := ics[0].(*ImageCache)
+				conf.AddResource(ic)
+			}
+
 			// recursively parse references for the module
 			// ensure we do load the values which might be in module folders
 			err = ParseFolder(m.Source, conf, true, nil, "")
@@ -652,9 +678,12 @@ func ParseHCLFile(file string, c *Config) error {
 
 			// add the parsed resources to the main but add the module name
 			for _, r := range conf.Resources {
-				r.Info().Module = m.Name
-				r.Info().DependsOn = m.Depends
-				c.AddResource(r)
+				// don't add the image cache as that is already on the config
+				if r.Info().Type != TypeImageCache {
+					r.Info().Module = m.Name
+					r.Info().DependsOn = m.Depends
+					c.AddResource(r)
+				}
 			}
 
 			// modules will reset the context file path as they recurse
@@ -743,6 +772,10 @@ func ParseReferences(c *Config) error {
 			}
 			c.DependsOn = append(c.DependsOn, c.Depends...)
 
+			// always add a dependency of the cache as this is
+			// required by all clusters
+			c.DependsOn = append(c.DependsOn, fmt.Sprintf("%s.%s", TypeImageCache, utils.CacheResourceName))
+
 		case TypeHelm:
 			c := r.(*Helm)
 			c.DependsOn = append(c.DependsOn, c.Cluster)
@@ -767,6 +800,9 @@ func ParseReferences(c *Config) error {
 				c.DependsOn = append(c.DependsOn, n.Name)
 			}
 			c.DependsOn = append(c.DependsOn, c.Depends...)
+			// always add a dependency of the cache as this is
+			// required by all clusters
+			c.DependsOn = append(c.DependsOn, fmt.Sprintf("%s.%s", TypeImageCache, utils.CacheResourceName))
 
 		case TypeNomadIngress:
 			c := r.(*NomadIngress)
@@ -912,6 +948,28 @@ func buildContext() *hcl.EvalContext {
 		},
 	})
 
+	var ClusterAPIFunc = function.New(&function.Spec{
+		Params: []function.Parameter{
+			{
+				Name:             "name",
+				Type:             cty.String,
+				AllowDynamicType: true,
+			},
+		},
+		Type: function.StaticReturnType(cty.String),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			_, configPath := utils.CreateClusterConfigPath(args[0].AsString())
+			conf := utils.ClusterConfig{}
+			err := conf.Load(configPath, utils.LocalContext)
+
+			if err != nil {
+				return cty.StringVal(""), nil
+			}
+
+			return cty.StringVal(conf.APIAddress()), nil
+		},
+	})
+
 	ctx := &hcl.EvalContext{
 		Functions: map[string]function.Function{},
 		Variables: map[string]cty.Value{},
@@ -927,6 +985,7 @@ func buildContext() *hcl.EvalContext {
 	ctx.Functions["docker_ip"] = DockerIPFunc
 	ctx.Functions["docker_host"] = DockerHostFunc
 	ctx.Functions["shipyard_ip"] = ShipyardIPFunc
+	ctx.Functions["cluster_api"] = ClusterAPIFunc
 
 	// the functions file_path and file_dir are added dynamically when processing a file
 	// this is because the need a reference to the current file

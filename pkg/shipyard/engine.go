@@ -183,42 +183,55 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 	// walk the dag and apply the config
 	w := dag.Walker{}
 	w.Callback = func(v dag.Vertex) (diags tfdiags.Diagnostics) {
-		// check if the resource needs to be created and if so create
-		if r, ok := v.(config.Resource); ok &&
-			(r.Info().Status == config.PendingCreation ||
-				r.Info().Status == config.PendingModification ||
-				r.Info().Status == config.Failed) {
 
-			// get the provider to create the resource
-			p := e.getProvider(r, e.clients)
+		r, ok := v.(config.Resource)
 
-			if p == nil {
+		// not a resource quit
+		if !ok {
+			return nil
+		}
+
+		// get the provider to create the resource
+		p := e.getProvider(r, e.clients)
+
+		if p == nil {
+			r.Info().Status = config.Failed
+			return diags.Append(fmt.Errorf("Unable to create provider for resource Name: %s, Type: %s", r.Info().Name, r.Info().Type))
+		}
+
+		switch r.Info().Status {
+		// Normal case for PendingUpdate is do nothing
+		// PendingModification causes a resource to be
+		// destroyed before created
+		case config.PendingModification:
+			fallthrough
+
+			// Always attempt to destroy and re-create failed resources
+		case config.Failed:
+			err = p.Destroy()
+			if err != nil {
 				r.Info().Status = config.Failed
-				return diags.Append(fmt.Errorf("Unable to create provider for resource Name: %s, Type: %s", r.Info().Name, r.Info().Type))
+				return diags.Append(err)
 			}
 
-			// if we are pending modification or failed try remove the old instance and
-			// create again
-			if r.Info().Status == config.PendingModification || r.Info().Status == config.Failed {
-				err = p.Destroy()
-				if err != nil {
-					r.Info().Status = config.Failed
-					return diags.Append(err)
-				}
-			}
+			fallthrough // failed resources should always attempt recreation
 
-			// create the resource
+		// Create new resources
+		case config.PendingCreation:
 			createErr := p.Create()
 			if createErr != nil {
 				r.Info().Status = config.Failed
 				return diags.Append(createErr)
 			}
 
-			// set the status
-			r.Info().Status = config.Applied
-
-			appendResources(&createdResource, r)
+		case config.PendingUpdate:
+			// do nothing for pending updates
 		}
+
+		// set the status
+		r.Info().Status = config.Applied
+
+		appendResources(&createdResource, r)
 
 		return nil
 	}
@@ -227,15 +240,6 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 	tf := w.Wait()
 	if tf.Err() != nil {
 		err = tf.Err()
-	}
-
-	// update the status of anything which is pending update as this
-	// is not currently implemented
-	// eventually we should compare resources and update as required
-	for _, i := range e.config.Resources {
-		if i.Info().Status == config.PendingUpdate {
-			i.Info().Status = config.Applied
-		}
 	}
 
 	if len(e.config.Resources) > 0 {
@@ -336,8 +340,34 @@ func (e *EngineImpl) Blueprint() *config.Blueprint {
 }
 
 func (e *EngineImpl) readConfig(path string, variables map[string]string, variablesFile string) (*dag.AcyclicGraph, error) {
-	// load the new config
+	// create the new config
 	cc := config.New()
+
+	// load the existing state
+	sc := config.New()
+	if _, err := os.Stat(utils.StatePath()); err == nil {
+		err := sc.FromJSON(utils.StatePath())
+		if err != nil {
+			return nil, fmt.Errorf("Error parsing state: %s", err)
+		}
+	} else {
+		e.log.Debug("Statefile does not exist")
+	}
+
+	// check to see we have an image cache
+	// if not create one
+	cache, err := sc.FindResource("docker-cache")
+	if err != nil {
+		// add a default resource for the docker caching proxy
+		proxy := config.NewImageCache("docker-cache")
+		sc.AddResource(proxy)
+
+		cache = proxy
+	}
+
+	// add the cache to the new config so we can parse networks
+	cc.AddResource(cache)
+
 	if path != "" {
 		if utils.IsHCLFile(path) {
 			err := config.ParseSingleFile(path, cc, variables, variablesFile)
@@ -353,14 +383,6 @@ func (e *EngineImpl) readConfig(path string, variables map[string]string, variab
 
 		// if we are loading from files create the deps
 		config.ParseReferences(cc)
-	}
-
-	// load the existing state
-	sc := config.New()
-	err := sc.FromJSON(utils.StatePath())
-	if err != nil {
-		// we do not have any state to create a new one
-		e.log.Debug("Statefile does not exist")
 	}
 
 	// merge the state and items to be created or deleted
@@ -404,6 +426,8 @@ func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
 		return providers.NewHelm(c.(*config.Helm), cc.Kubernetes, cc.Helm, cc.Getter, cc.Logger)
 	case config.TypeIngress:
 		return providers.NewIngress(c.(*config.Ingress), cc.ContainerTasks, cc.Connector, cc.Logger)
+	case config.TypeImageCache:
+		return providers.NewImageCache(c.(*config.ImageCache), cc.ContainerTasks, cc.HTTP, cc.Logger)
 	case config.TypeK8sCluster:
 		return providers.NewK8sCluster(c.(*config.K8sCluster), cc.ContainerTasks, cc.Kubernetes, cc.HTTP, cc.Connector, cc.Logger)
 	case config.TypeK8sConfig:

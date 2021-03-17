@@ -5,7 +5,7 @@ const TypeK8sConfig ResourceType = "k8s_config"
 
 // K8sConfig applies and deletes and deletes Kubernetes configuration
 type K8sConfig struct {
-	ResourceInfo
+	ResourceInfo `mapstructure:",squash"`
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 
@@ -14,7 +14,7 @@ type K8sConfig struct {
 	// Path of a file or directory of Kubernetes config files to apply
 	Paths []string `hcl:"paths" validator:"filepath" json:"paths"`
 	// WaitUntilReady when set to true waits until all resources have been created and are in a "Running" state
-	WaitUntilReady bool `hcl:"wait_until_ready"`
+	WaitUntilReady bool `hcl:"wait_until_ready" json:"wait_until_ready" mapstructure:"wait_until_ready"`
 
 	// HealthCheck defines a health check for the resource
 	HealthCheck *HealthCheck `hcl:"health_check,block" json:"health_check,omitempty" mapstructure:"health_check"`

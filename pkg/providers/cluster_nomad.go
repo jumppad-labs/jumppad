@@ -6,8 +6,10 @@ import (
 	"math/rand"
 	"os"
 	"path"
+	"path/filepath"
 	"sync"
 
+	"github.com/Masterminds/semver"
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
@@ -16,7 +18,7 @@ import (
 )
 
 const nomadBaseImage = "shipyardrun/nomad"
-const nomadBaseVersion = "v0.12.7"
+const nomadBaseVersion = "v0.12.8"
 
 const dataDir = `
 data_dir = "/etc/nomad.d/data"
@@ -156,14 +158,14 @@ func (c *NomadCluster) createNomad() error {
 	}
 
 	// ensure all client nodes are up
-	c.nomadClient.SetConfig(configPath, string(clients.LocalContext))
+	c.nomadClient.SetConfig(configPath, string(utils.LocalContext))
 	err = c.nomadClient.HealthCheckAPI(startTimeout)
 	if err != nil {
 		return err
 	}
 
 	// import the images to the servers container d instance
-	// importing images means that k3s does not need to pull from a remote docker hub
+	// importing images means that Nomad does not need to pull from a remote docker hub
 	if c.config.Images != nil && len(c.config.Images) > 0 {
 		// import into the server
 		err := c.ImportLocalDockerImages("images", serverID, c.config.Images, false)
@@ -208,8 +210,8 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 	}
 
 	// generate the config file
-	nomadConfig := clients.ClusterConfig{
-		LocalAddress:  "localhost",
+	nomadConfig := utils.ClusterConfig{
+		LocalAddress:  utils.GetDockerIP(),
 		RemoteAddress: utils.FQDN(fmt.Sprintf("server.%s", c.config.Name), string(c.config.Type)),
 		ConnectorPort: connectorPort,
 		APIPort:       apiPort,
@@ -258,7 +260,7 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 	cc.Volumes = []config.Volume{
 		config.Volume{
 			Source:      volumeID,
-			Destination: "/images",
+			Destination: "/cache",
 			Type:        "volume",
 		},
 		config.Volume{
@@ -287,6 +289,12 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 			Host:     fmt.Sprintf("%d", connectorPort),
 			Protocol: "tcp",
 		},
+	}
+
+	cc.EnvVar = map[string]string{}
+	err = c.appendProxyEnv(cc)
+	if err != nil {
+		return "", "", "", err
 	}
 
 	id, err := c.client.CreateContainer(cc)
@@ -323,7 +331,7 @@ func (c *NomadCluster) createClientNode(index int, image, volumeID, configDir, s
 	cc.Volumes = []config.Volume{
 		config.Volume{
 			Source:      volumeID,
-			Destination: "/images",
+			Destination: "/cache",
 			Type:        "volume",
 		},
 		config.Volume{
@@ -338,10 +346,44 @@ func (c *NomadCluster) createClientNode(index int, image, volumeID, configDir, s
 		cc.Volumes = append(cc.Volumes, v)
 	}
 
-	// set the environment variables for the K3S_KUBECONFIG_OUTPUT and K3S_CLUSTER_SECRET
 	cc.Environment = c.config.Environment
 
+	cc.EnvVar = map[string]string{}
+	err := c.appendProxyEnv(cc)
+	if err != nil {
+		return "", err
+	}
+
 	return c.client.CreateContainer(cc)
+}
+
+func (c *NomadCluster) appendProxyEnv(cc *config.Container) error {
+	// only add the variables for the cache when the kubernetes version is >= v1.18.16
+	sv, err := semver.NewConstraint(">= v0.12.8")
+	if err != nil {
+		// Handle constraint not being parsable.
+		return err
+	}
+
+	v, err := semver.NewVersion(c.config.Version)
+	if err != nil {
+		return fmt.Errorf("Kubernetes version is not valid semantic version: %s", err)
+	}
+
+	if sv.Check(v) {
+		// load the CA from a file
+		ca, err := ioutil.ReadFile(filepath.Join(utils.CertsDir(""), "/root.cert"))
+		if err != nil {
+			return fmt.Errorf("Unable to read root CA for proxy: %s", err)
+		}
+
+		cc.EnvVar["HTTP_PROXY"] = utils.ProxyAddress
+		cc.EnvVar["HTTPS_PROXY"] = utils.ProxyAddress
+		cc.EnvVar["NO_PROXY"] = utils.ProxyBypass
+		cc.EnvVar["PROXY_CA"] = string(ca)
+	}
+
+	return nil
 }
 
 // ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
@@ -359,7 +401,7 @@ func (c *NomadCluster) ImportLocalDockerImages(name string, id string, images []
 
 	// import to volume
 	vn := utils.FQDNVolumeName(name)
-	imagesFile, err := c.client.CopyLocalDockerImageToVolume(imgs, vn, force)
+	imagesFile, err := c.client.CopyLocalDockerImagesToVolume(imgs, vn, force)
 	if err != nil {
 		return err
 	}
@@ -367,7 +409,8 @@ func (c *NomadCluster) ImportLocalDockerImages(name string, id string, images []
 	// execute the command to import the image
 	// write any command output to the logger
 	for _, i := range imagesFile {
-		err = c.client.ExecuteCommand(id, []string{"docker", "load", "-i", "/images/" + i}, nil, "/", c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
+		fmt.Println(i)
+		err = c.client.ExecuteCommand(id, []string{"docker", "load", "-i", i}, nil, "/", c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
 		if err != nil {
 			return err
 		}
