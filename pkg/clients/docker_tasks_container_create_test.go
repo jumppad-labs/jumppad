@@ -402,6 +402,34 @@ func TestContainerConfiguresResources(t *testing.T) {
 	assert.Equal(t, hc.Resources.CpusetCpus, "1,4")
 }
 
+func TestContainerConfiguresRetryWhenCountGreater0(t *testing.T) {
+	cc, _, _, md, mic := createContainerConfig()
+	cc.MaxRestartCount = 10
+
+	err := setupContainer(t, cc, md, mic)
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
+	hc := params[2].(*container.HostConfig)
+	assert.NotEmpty(t, hc.Resources)
+
+	assert.Equal(t, hc.RestartPolicy.MaximumRetryCount, 10)
+	assert.Equal(t, hc.RestartPolicy.Name, "on-failure")
+}
+
+func TestContainerNotConfiguresRetryWhen0(t *testing.T) {
+	cc, _, _, md, mic := createContainerConfig()
+
+	err := setupContainer(t, cc, md, mic)
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
+	hc := params[2].(*container.HostConfig)
+	assert.NotEmpty(t, hc.Resources)
+
+	assert.Equal(t, hc.RestartPolicy.MaximumRetryCount, 0)
+}
+
 // removeOn is a utility function for removing Expectations from mock objects
 func removeOn(m *mock.Mock, method string) {
 	ec := m.ExpectedCalls

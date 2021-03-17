@@ -26,6 +26,8 @@ type Sidecar struct {
 
 	// health checks for the container
 	HealthCheck *HealthCheck `hcl:"health_check,block" json:"health_check,omitempty" mapstructure:"health_check"`
+
+	MaxRestartCount int `hcl:"max_restart_count,optional" json:"max_restart_count,omitempty" mapstructure:"max_restart_count"`
 }
 
 // NewSidecar returns a new Container resource with the correct default options

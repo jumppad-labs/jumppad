@@ -37,6 +37,7 @@ func NewContainerSidecar(cs *config.Sidecar, cl clients.ContainerTasks, hc clien
 	co.Resources = cs.Resources
 	co.Type = cs.Type
 	co.Config = cs.Config
+	co.MaxRestartCount = cs.MaxRestartCount
 
 	return &Container{co, cl, hc, l}
 }

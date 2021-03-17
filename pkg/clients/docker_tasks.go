@@ -90,6 +90,10 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 	hc := &container.HostConfig{}
 	nc := &network.NetworkingConfig{}
 
+	if c.MaxRestartCount > 0 {
+		hc.RestartPolicy = container.RestartPolicy{Name: "on-failure", MaximumRetryCount: c.MaxRestartCount}
+	}
+
 	// https: //docs.docker.com/config/containers/resource_constraints/#cpu
 	rc := container.Resources{}
 	if c.Resources != nil {
