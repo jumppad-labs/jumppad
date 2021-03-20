@@ -161,8 +161,8 @@ func (c *K8sCluster) createK3s() error {
 		cc.EnvVar[k] = v
 	}
 
-	// set the API server port to a random number 64000 - 65000
-	apiPort := rand.Intn(1000) + 64000
+	// set the API server port to a random number
+	apiPort := rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
 	connectorPort := rand.Intn(2767) + 30000
 	args := []string{"server", fmt.Sprintf("--https-listen-port=%d", apiPort)}
 

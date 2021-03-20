@@ -175,14 +175,16 @@ func TestClusterNomadCreatesAServer(t *testing.T) {
 	intLocal, _ := strconv.Atoi(params.Ports[0].Local)
 	intHost, _ := strconv.Atoi(params.Ports[0].Host)
 	assert.GreaterOrEqual(t, intLocal, 4646)
-	assert.GreaterOrEqual(t, intHost, 64000)
+	assert.GreaterOrEqual(t, intHost, utils.MinRandomPort)
+	assert.LessOrEqual(t, intHost, utils.MaxRandomPort)
 	assert.Equal(t, "tcp", params.Ports[0].Protocol)
 
 	// validate the Connector port is set
 	intLocal, _ = strconv.Atoi(params.Ports[1].Local)
 	intHost, _ = strconv.Atoi(params.Ports[1].Host)
 	assert.GreaterOrEqual(t, intLocal, 19090)
-	assert.GreaterOrEqual(t, intHost, 64000)
+	assert.GreaterOrEqual(t, intHost, utils.MinRandomPort)
+	assert.LessOrEqual(t, intHost, utils.MaxRandomPort)
 	assert.Equal(t, "tcp", params.Ports[0].Protocol)
 }
 

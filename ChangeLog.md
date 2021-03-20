@@ -2,6 +2,9 @@
 
 ## version v0.3.1
 
+* Set max random ports for clusters to 64000
+
+## version v0.3.1
 ### Image Caching
 
 To save bandwidth all containers launched from Kubernetes and Nomad clusters are cached by Shipyard. Currently images

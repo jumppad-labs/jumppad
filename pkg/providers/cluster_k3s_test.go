@@ -217,8 +217,9 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 	// validate the API port is set
 	localPort, _ := strconv.Atoi(params.Ports[0].Local)
 	hostPort, _ := strconv.Atoi(params.Ports[0].Host)
-	assert.GreaterOrEqual(t, localPort, 64000)
-	assert.GreaterOrEqual(t, hostPort, 64000)
+	assert.GreaterOrEqual(t, localPort, utils.MinRandomPort)
+	assert.LessOrEqual(t, localPort, utils.MaxRandomPort)
+	assert.Equal(t, hostPort, localPort)
 	assert.Equal(t, "tcp", params.Ports[0].Protocol)
 
 	localPort, _ = strconv.Atoi(params.Ports[1].Local)

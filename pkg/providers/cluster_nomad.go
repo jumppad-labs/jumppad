@@ -200,8 +200,8 @@ func (c *NomadCluster) createNomad() error {
 
 func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (string, string, string, error) {
 	// set the API server port to a random number 64000 - 65000
-	apiPort := rand.Intn(1000) + 64000
-	connectorPort := rand.Intn(1000) + 64000
+	apiPort := rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
+	connectorPort := rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
 
 	// if the node count is 0 we are creating a combo client server
 	nodeCount := 1
