@@ -73,7 +73,6 @@ func (n *NomadImpl) HealthCheckAPI(timeout time.Duration) error {
 	n.l.Debug("Performing Nomad health check", "address", address)
 	st := time.Now()
 	for {
-		fmt.Println("ok")
 		if time.Now().Sub(st) > timeout {
 			n.l.Error("Timeout wating for Nomad healthcheck", "address", address)
 

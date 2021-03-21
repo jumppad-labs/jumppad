@@ -78,13 +78,13 @@ func (n *NomadJob) Destroy() error {
 	n.log.Info("Destroy Nomad Job", "ref", n.config.Name)
 
 	// find the cluster
-	cc, err := n.config.ResourceInfo.FindDependentResource(n.config.Cluster)
+	_, err := n.config.ResourceInfo.FindDependentResource(n.config.Cluster)
 	if err != nil {
 		return err
 	}
 
 	// load the config
-	clusterConfig, _ := utils.GetClusterConfig(cc.Info().Name)
+	clusterConfig, _ := utils.GetClusterConfig(n.config.Cluster)
 	n.client.SetConfig(clusterConfig, string(utils.LocalContext))
 
 	err = n.client.Stop(n.config.Paths)
