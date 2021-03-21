@@ -237,16 +237,17 @@ func TestClusterNomadCreatesClientNodesWithCorrectDetails(t *testing.T) {
 	assert.Equal(t, "/files", params.Volumes[2].Destination)
 }
 
-func TestClusterNomadGeneratesConfig(t *testing.T) {
+func TestClusterNomadSetsNodeCountInConfig(t *testing.T) {
 	cc, md, mh := setupNomadClusterMocks(t)
+	cc.ClientNodes = 10
 
 	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
 
-	_, configPath := utils.CreateClusterConfigPath(cc.Name)
-	assert.FileExists(t, configPath)
+	conf, _ := utils.GetClusterConfig(string(config.TypeNomadCluster) + "." + cc.Name)
+	assert.Equal(t, cc.ClientNodes, conf.NodeCount)
 }
 
 func TestClusterNomadHealthChecksAPI(t *testing.T) {
@@ -435,6 +436,22 @@ func TestClusterNomadDestroyRemovesContainer(t *testing.T) {
 	err := p.Destroy()
 	assert.NoError(t, err)
 	md.AssertNumberOfCalls(t, "RemoveContainer", 4)
+}
+
+func TestClusterNomadDestroyRemovesConfig(t *testing.T) {
+	cc, md, mh := setupNomadClusterMocks(t)
+	removeOn(&md.Mock, "FindContainerIDs")
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"found"}, nil)
+
+	_, dir := utils.GetClusterConfig(string(cc.Info().Type) + "." + cc.Info().Name)
+
+	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+
+	err := p.Destroy()
+	assert.NoError(t, err)
+	md.AssertCalled(t, "RemoveContainer", mock.Anything)
+
+	assert.NoDirExists(t, dir)
 }
 
 var clusterNomadConfig = &config.NomadCluster{

@@ -43,7 +43,7 @@ func (c *Ingress) Create() error {
 	return nil
 }
 
-// Destroy statisfies the interface method but is not implemented by LocalExec
+// Destroy satisfies the interface method but is not implemented by LocalExec
 func (c *Ingress) Destroy() error {
 	c.log.Info("Destroy Ingress", "ref", c.config.Name, "id", c.config.Id)
 
@@ -57,7 +57,7 @@ func (c *Ingress) Destroy() error {
 	return nil
 }
 
-// Lookup statisfies the interface method but is not implemented by LocalExec
+// Lookup satisfies the interface method but is not implemented by LocalExec
 func (c *Ingress) Lookup() ([]string, error) {
 	c.log.Debug("Lookup Ingress", "ref", c.config.Name, "id", c.config.Id)
 
@@ -66,7 +66,7 @@ func (c *Ingress) Lookup() ([]string, error) {
 
 func (c *Ingress) exposeLocal() error {
 	// get the target
-	res, err := c.config.FindDependentResource(c.config.Source.Config.Cluster)
+	_, err := c.config.FindDependentResource(c.config.Source.Config.Cluster)
 	if err != nil {
 		return err
 	}
@@ -89,13 +89,7 @@ func (c *Ingress) exposeLocal() error {
 	}
 
 	// get the address of the remote connector from the target
-	_, configPath := utils.CreateClusterConfigPath(res.Info().Name)
-
-	cc := &utils.ClusterConfig{}
-	err = cc.Load(configPath, utils.LocalContext)
-	if err != nil {
-		return xerrors.Errorf("Unable to load cluster config :%w", err)
-	}
+	clusterConfig, _ := utils.GetClusterConfig(c.config.Source.Config.Cluster)
 
 	if c.config.Destination.Config.Address == "" {
 		return xerrors.Errorf("The address config stanza field must be specified when type 'local'")
@@ -114,16 +108,17 @@ func (c *Ingress) exposeLocal() error {
 		"Calling connector to expose local service",
 		"name", serviceName,
 		"remote_port", remotePort,
-		"connector_addr", cc.ConnectorAddress(),
+		"connector_addr", clusterConfig.ConnectorAddress(utils.LocalContext),
 		"local_addr", destAddr,
 	)
 
 	id, err := c.connector.ExposeService(
 		serviceName,
 		remotePort,
-		cc.ConnectorAddress(),
+		clusterConfig.ConnectorAddress(utils.LocalContext),
 		destAddr,
-		"local")
+		"local",
+	)
 
 	if err != nil {
 		return xerrors.Errorf("Unable to expose local service to remote cluster :%w", err)
@@ -143,13 +138,7 @@ func (c *Ingress) exposeK8sRemote() error {
 	}
 
 	// get the address of the remote connector from the target
-	_, configPath := utils.CreateClusterConfigPath(res.Info().Name)
-
-	cc := &utils.ClusterConfig{}
-	err = cc.Load(configPath, utils.LocalContext)
-	if err != nil {
-		return xerrors.Errorf("Unable to load cluster config :%w", err)
-	}
+	clusterConfig, _ := utils.GetClusterConfig(string(res.Info().Type) + "." + res.Info().Name)
 
 	if c.config.Destination.Config.Address == "" {
 		return xerrors.Errorf("Config parameter 'address' is required for desinations of type 'k8s'")
@@ -178,14 +167,14 @@ func (c *Ingress) exposeK8sRemote() error {
 		"Calling connector to expose remote service",
 		"name", serviceName,
 		"local_port", localPort,
-		"connector_addr", cc.ConnectorAddress(),
+		"connector_addr", clusterConfig.ConnectorAddress(utils.LocalContext),
 		"local_addr", destAddr,
 	)
 
 	id, err := c.connector.ExposeService(
 		serviceName,
 		localPort,
-		cc.ConnectorAddress(),
+		clusterConfig.ConnectorAddress(utils.LocalContext),
 		destAddr,
 		"remote")
 

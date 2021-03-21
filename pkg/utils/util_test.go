@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/gosuri/uitable/util/strutil"
-	"github.com/stretchr/testify/assert"
+	assert "github.com/stretchr/testify/require"
 )
 
 func TestIsLocalFolder(t *testing.T) {
@@ -142,21 +142,77 @@ func TestCreateKubeConfigPathReturnsCorrectValues(t *testing.T) {
 	assert.True(t, s.IsDir())
 }
 
-func TestCreateClusterConfigPathReturnsCorrectValues(t *testing.T) {
+func setupClusterConfigTest(t *testing.T) {
 	home := os.Getenv(HomeEnvName())
-	tmp, _ := ioutil.TempDir("", "")
+	tmp := t.TempDir()
 	os.Setenv(HomeEnvName(), tmp)
-	defer os.Setenv(HomeEnvName(), home)
 
-	d, f := CreateClusterConfigPath("testing")
+	t.Cleanup(func() {
+		os.Setenv(HomeEnvName(), home)
+	})
+}
+func TestGetClusterConfigReturnsExistingConfig(t *testing.T) {
+	setupClusterConfigTest(t)
 
-	assert.Equal(t, filepath.Join(tmp, ".shipyard", "config", "testing"), d)
-	assert.Equal(t, filepath.Join(tmp, ".shipyard", "config", "testing", "config.json"), f)
+	configDir := filepath.Join(ShipyardHome(), "config", "testing")
+	os.MkdirAll(configDir, os.ModePerm)
 
-	// check creates folder
-	s, err := os.Stat(d)
+	// create the temp config
+	cc := ClusterConfig{
+		LocalAddress: "testing",
+	}
+
+	err := cc.Save(filepath.Join(configDir, "config.json"))
 	assert.NoError(t, err)
-	assert.True(t, s.IsDir())
+
+	conf, dir := GetClusterConfig("nomad_cluster.testing")
+
+	assert.Equal(t, cc.LocalAddress, conf.LocalAddress)
+	assert.Equal(t, configDir, dir)
+}
+
+func TestGetClusterConfigReturnsEmptyWhenUnableToParseName(t *testing.T) {
+	setupClusterConfigTest(t)
+
+	conf, dir := GetClusterConfig("nomad")
+
+	assert.Equal(t, "", conf.LocalAddress)
+	assert.Equal(t, "", dir)
+}
+
+func TestGetClusterConfigCreatesNewNomadConfig(t *testing.T) {
+	setupClusterConfigTest(t)
+	configDir := filepath.Join(ShipyardHome(), "config", "testing")
+
+	conf, dir := GetClusterConfig("nomad_cluster.testing")
+
+	assert.Contains(t, GetDockerIP(), conf.LocalAddress)
+	assert.Equal(t, 4646, conf.RemoteAPIPort)
+	assert.Equal(t, "server.testing.nomad_cluster.shipyard.run", conf.RemoteAddress)
+	assert.Equal(t, GetDockerIP(), conf.LocalAddress)
+	assert.Equal(t, configDir, dir)
+}
+
+func TestGetClusterConfigTwiceReturnsSameConfig(t *testing.T) {
+	setupClusterConfigTest(t)
+
+	conf, _ := GetClusterConfig("nomad_cluster.testing")
+	conf2, _ := GetClusterConfig("nomad_cluster.testing")
+
+	assert.Equal(t, conf2.ConnectorAddress(LocalContext), conf.ConnectorAddress(LocalContext))
+}
+
+func TestGetClusterConfigCreatesNewKubernetesConfig(t *testing.T) {
+	setupClusterConfigTest(t)
+	configDir := filepath.Join(ShipyardHome(), "config", "testing")
+
+	conf, dir := GetClusterConfig("k8s_cluster.testing")
+
+	assert.Contains(t, GetDockerIP(), conf.LocalAddress)
+	assert.Equal(t, conf.APIPort, conf.RemoteAPIPort)
+	assert.Equal(t, "server.testing.k8s_cluster.shipyard.run", conf.RemoteAddress)
+	assert.Equal(t, GetDockerIP(), conf.LocalAddress)
+	assert.Equal(t, configDir, dir)
 }
 
 func TestShipyardTempReturnsPath(t *testing.T) {

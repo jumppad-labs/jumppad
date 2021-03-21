@@ -14,22 +14,16 @@ import (
 )
 
 func testIngressCreateMockConnector(t *testing.T, name string) *clients.ConnectorMock {
-	h := os.Getenv("HOME")
+	h := os.Getenv(utils.HomeEnvName())
 	td := t.TempDir()
 
-	os.Setenv("HOME", td)
+	os.Setenv(utils.HomeEnvName(), td)
 
 	t.Cleanup(func() {
-		os.Setenv("HOME", h)
+		os.Setenv(utils.HomeEnvName(), h)
 	})
 
-	cc := &utils.ClusterConfig{}
-	cc.LocalAddress = "localhost"
-	cc.ConnectorPort = 3234
-	cc.APIPort = 1321
-
-	_, configPath := utils.CreateClusterConfigPath("test")
-	cc.Save(configPath)
+	utils.GetClusterConfig(string(config.TypeK8sCluster) + ".test")
 
 	m := &clients.ConnectorMock{}
 	m.On("ExposeService", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("12345", nil)
@@ -122,6 +116,8 @@ func TestIngressExposeLocalCallsExpose(t *testing.T) {
 	tc := testIngressExposeK8sLocalConfig
 	c.AddResource(&tc)
 
+	clusterConfig, _ := utils.GetClusterConfig(testIngressExposeK8sLocalConfig.Source.Config.Cluster)
+
 	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
 
 	err := p.Create()
@@ -132,7 +128,7 @@ func TestIngressExposeLocalCallsExpose(t *testing.T) {
 	mc.AssertCalled(t, "ExposeService",
 		tc.Name,
 		port,
-		"localhost:3234",
+		clusterConfig.ConnectorAddress(utils.LocalContext),
 		tc.Destination.Config.Address+":"+tc.Destination.Config.Port,
 		"local")
 
@@ -209,6 +205,8 @@ func TestIngressExposeRemoteCallsExpose(t *testing.T) {
 	tc := testIngressExposesLocalK8sServiceConfig
 	c.AddResource(&tc)
 
+	clusterConfig, _ := utils.GetClusterConfig(testIngressExposeK8sLocalConfig.Source.Config.Cluster)
+
 	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
 
 	err := p.Create()
@@ -219,7 +217,7 @@ func TestIngressExposeRemoteCallsExpose(t *testing.T) {
 	mc.AssertCalled(t, "ExposeService",
 		tc.Name,
 		port,
-		"localhost:3234",
+		clusterConfig.ConnectorAddress(utils.LocalContext),
 		tc.Destination.Config.Address+":"+tc.Destination.Config.Port,
 		"remote")
 

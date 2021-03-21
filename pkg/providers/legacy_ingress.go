@@ -121,7 +121,7 @@ func (i *LegacyIngress) Create() error {
 		// if this is a nomad cluster we need to add the nomadconfig and
 		// make sure that the proxy runs in nomad mode
 		serviceName = i.config.Service
-		_, nomadConfigPath := utils.CreateClusterConfigPath(v.Name)
+		_, nomadConfigPath := utils.GetClusterConfig(string(config.TypeNomadCluster) + "." + v.Name)
 		nomadConfigDestPath := "/.nomad/config.json"
 
 		volumes = append(volumes, config.Volume{

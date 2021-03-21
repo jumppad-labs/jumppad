@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
@@ -162,40 +161,25 @@ func (c *K8sCluster) createK3s() error {
 	}
 
 	// set the API server port to a random number
-	apiPort := rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
-	connectorPort := rand.Intn(2767) + 30000
-	args := []string{"server", fmt.Sprintf("--https-listen-port=%d", apiPort)}
+	clusterConfig, _ := utils.GetClusterConfig(string(config.TypeK8sCluster) + "." + c.config.Name)
 
-	// save the config
-	clusterConfig := utils.ClusterConfig{
-		LocalAddress:  utils.GetDockerIP(),
-		RemoteAddress: fmt.Sprintf("server.%s", c.config.Name),
-		APIPort:       apiPort,
-		ConnectorPort: connectorPort,
-		NodeCount:     1,
-	}
-	_, configPath := utils.CreateClusterConfigPath(c.config.Name)
-
-	err = clusterConfig.Save(configPath)
-	if err != nil {
-		return xerrors.Errorf("Unable to generate Cluster config: %w", err)
-	}
+	args := []string{"server", fmt.Sprintf("--https-listen-port=%d", clusterConfig.APIPort)}
 
 	// expose the API server and Connector ports
 	cc.Ports = []config.Port{
 		config.Port{
-			Local:    fmt.Sprintf("%d", apiPort),
-			Host:     fmt.Sprintf("%d", apiPort),
+			Local:    fmt.Sprintf("%d", clusterConfig.APIPort),
+			Host:     fmt.Sprintf("%d", clusterConfig.APIPort),
 			Protocol: "tcp",
 		},
 		config.Port{
-			Local:    fmt.Sprintf("%d", connectorPort),
-			Host:     fmt.Sprintf("%d", connectorPort),
+			Local:    fmt.Sprintf("%d", clusterConfig.ConnectorPort),
+			Host:     fmt.Sprintf("%d", clusterConfig.ConnectorPort),
 			Protocol: "tcp",
 		},
 		config.Port{
-			Local:    fmt.Sprintf("%d", connectorPort+1),
-			Host:     fmt.Sprintf("%d", connectorPort+1),
+			Local:    fmt.Sprintf("%d", clusterConfig.ConnectorPort+1),
+			Host:     fmt.Sprintf("%d", clusterConfig.ConnectorPort+1),
 			Protocol: "tcp",
 		},
 	}
@@ -274,7 +258,7 @@ func (c *K8sCluster) createK3s() error {
 
 	// start the connectorService
 	c.log.Debug("Deploying connector")
-	return c.deployConnector(connectorPort, connectorPort+1)
+	return c.deployConnector(clusterConfig.ConnectorPort, clusterConfig.ConnectorPort+1)
 }
 
 func (c *K8sCluster) waitForStart(id string) error {
@@ -519,6 +503,9 @@ func (c *K8sCluster) destroyK3s() error {
 			return err
 		}
 	}
+
+	_, path := utils.GetClusterConfig(string(c.config.Type) + "." + c.config.Name)
+	os.RemoveAll(path)
 
 	return nil
 }

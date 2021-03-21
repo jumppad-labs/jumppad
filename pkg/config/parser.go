@@ -434,7 +434,7 @@ func ParseHCLFile(file string, c *Config, moduleName string, dependsOn []string)
 	}
 
 	for _, b := range body.Blocks {
-		fmt.Printf("Parsing: %s, type: %s\n", file, b.Type)
+		//fmt.Printf("Parsing: %s, type: %s\n", file, b.Type)
 
 		switch b.Type {
 		case string(TypeVariable):
@@ -1027,15 +1027,9 @@ func buildContext() *hcl.EvalContext {
 		},
 		Type: function.StaticReturnType(cty.String),
 		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
-			_, configPath := utils.CreateClusterConfigPath(args[0].AsString())
-			conf := utils.ClusterConfig{}
-			err := conf.Load(configPath, utils.LocalContext)
+			conf, _ := utils.GetClusterConfig(args[0].AsString())
 
-			if err != nil {
-				return cty.StringVal(""), nil
-			}
-
-			return cty.StringVal(conf.APIAddress()), nil
+			return cty.StringVal(conf.APIAddress(utils.LocalContext)), nil
 		},
 	})
 

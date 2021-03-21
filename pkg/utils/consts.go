@@ -18,5 +18,5 @@ const ProxyAddress string = "http://docker-cache.container.shipyard.run:3128"
 // Addresses to bypass when using a HTTP Proxy
 const ProxyBypass string = "localhost,127.0.0.1,cluster.local,shipyard.run,svc,consul"
 
-const MaxRandomPort = 50000
-const MinRandomPort = 40000
+const MaxRandomPort = 32767
+const MinRandomPort = 30000

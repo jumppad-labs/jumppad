@@ -567,6 +567,22 @@ func TestClusterK3sDestroyRemovesContainer(t *testing.T) {
 	md.AssertCalled(t, "RemoveContainer", mock.Anything)
 }
 
+func TestClusterK3sDestroyRemovesConfig(t *testing.T) {
+	cc, md, mk, mc := setupClusterMocks(t)
+	removeOn(&md.Mock, "FindContainerIDs")
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"found"}, nil)
+
+	_, dir := utils.GetClusterConfig(string(cc.Info().Type) + "." + cc.Info().Name)
+
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
+
+	err := p.Destroy()
+	assert.NoError(t, err)
+	md.AssertCalled(t, "RemoveContainer", mock.Anything)
+
+	assert.NoDirExists(t, dir)
+}
+
 func TestLookupReturnsIDs(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
 	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
