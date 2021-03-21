@@ -129,6 +129,12 @@ func ParseFolder(folder string, c *Config, onlyResources bool, moduleName string
 		return err
 	}
 
+	// Finally parse the outputs
+	err = parseOutputs(abs, c)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -142,6 +148,54 @@ func parseVariables(abs string, c *Config) error {
 		err := ParseVariableFile(f, c)
 		if err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+func parseOutputs(abs string, c *Config) error {
+	files, err := filepath.Glob(path.Join(abs, "*.hcl"))
+	if err != nil {
+		return err
+	}
+
+	for _, f := range files {
+		err := parseOutputFile(f, c)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func parseOutputFile(file string, c *Config) error {
+	parser := hclparse.NewParser()
+	ctx.Functions["file_path"] = getFilePathFunc(file)
+	ctx.Functions["file_dir"] = getFileDirFunc(file)
+
+	f, diag := parser.ParseHCLFile(file)
+	if diag.HasErrors() {
+		return errors.New(diag.Error())
+	}
+
+	body, ok := f.Body.(*hclsyntax.Body)
+	if !ok {
+		return errors.New("Error getting body")
+	}
+
+	for _, b := range body.Blocks {
+		switch b.Type {
+		case string(TypeOutput):
+			v := NewOutput(b.Labels[0])
+
+			err := decodeBody(file, b, v)
+			if err != nil {
+				return err
+			}
+
+			c.AddResource(v)
 		}
 	}
 
@@ -380,9 +434,17 @@ func ParseHCLFile(file string, c *Config, moduleName string, dependsOn []string)
 	}
 
 	for _, b := range body.Blocks {
+		fmt.Printf("Parsing: %s, type: %s\n", file, b.Type)
+
 		switch b.Type {
 		case string(TypeVariable):
-			//ignore variables in this pass
+			// do nothing this is only here to
+			// stop the resource not found error
+			continue
+
+		case string(TypeOutput):
+			// do nothing this is only here to
+			// stop the resource not found error
 			continue
 
 		case string(TypeK8sCluster):
@@ -399,18 +461,6 @@ func ParseHCLFile(file string, c *Config, moduleName string, dependsOn []string)
 			// make sure mount paths are absolute
 			for i, v := range cl.Volumes {
 				cl.Volumes[i].Source = ensureAbsolute(v.Source, file)
-			}
-
-			c.AddResource(cl)
-
-		case string(TypeOutput):
-			cl := NewOutput(b.Labels[0])
-			cl.Info().Module = moduleName
-			cl.Info().DependsOn = dependsOn
-
-			err := decodeBody(file, b, cl)
-			if err != nil {
-				return err
 			}
 
 			c.AddResource(cl)

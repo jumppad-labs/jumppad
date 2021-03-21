@@ -205,6 +205,7 @@ func (c *Config) DoYaLikeDAGs() (*dag.AcyclicGraph, error) {
 
 	// Loop over all resources and add to dag
 	for _, resource := range c.Resources {
+		//fmt.Printf("Resource: %s, Type: %s\n", resource.Info().Name, resource.Info().Type)
 		graph.Add(resource)
 	}
 
