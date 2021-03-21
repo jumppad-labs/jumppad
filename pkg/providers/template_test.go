@@ -46,6 +46,19 @@ func TestTemplateProcessesCorrectly(t *testing.T) {
 	assert.Contains(t, string(d), `data_dir = "something"`)
 }
 
+func TestTemplateWriteSourceWhenNoVars(t *testing.T) {
+	tmpl, provider := setupTemplate(t)
+	provider.config.Vars = nil
+
+	err := provider.Create()
+	assert.NoError(t, err)
+
+	d, err := ioutil.ReadFile(tmpl.Destination)
+	assert.NoError(t, err)
+
+	assert.Contains(t, string(d), `data_dir = "#{{ .Vars.data_dir }}"`)
+}
+
 func TestTemplateOverwritesExistingFile(t *testing.T) {
 	tmpl, provider := setupTemplate(t)
 
