@@ -12,7 +12,7 @@ func setupTestConfig(t *testing.T, contents string) (*Config, string, func()) {
 	createNamedFile(t, dir, "*.hcl", contents)
 
 	c := New()
-	err := ParseFolder(dir, c, false, nil, "")
+	err := ParseFolder(dir, c, false, "", []string{}, nil, "")
 	assert.NoError(t, err)
 
 	err = ParseReferences(c)

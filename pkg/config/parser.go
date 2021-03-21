@@ -52,7 +52,7 @@ func ParseSingleFile(file string, c *Config, variables map[string]string, variab
 		return err
 	}
 
-	err = ParseHCLFile(file, c)
+	err = ParseHCLFile(file, c, "", []string{})
 	if err != nil {
 		return err
 	}
@@ -62,9 +62,10 @@ func ParseSingleFile(file string, c *Config, variables map[string]string, variab
 
 // ParseFolder for Resource, Blueprint, and Variable files
 // The onlyResources parameter allows you to specfiy that the parser
-// only reads resource files and will ignore Blueprint and Varaible files.
+// moduleName is the name of the module, this should be set to a blank string for the root module
+// only reads resource files and will ignore Blueprint and Variable files.
 // This is useful when recursively parsing such as when reading Modules
-func ParseFolder(folder string, c *Config, onlyResources bool, variables map[string]string, variablesFile string) error {
+func ParseFolder(folder string, c *Config, onlyResources bool, moduleName string, dependsOn []string, variables map[string]string, variablesFile string) error {
 	abs, _ := filepath.Abs(folder)
 
 	// load the variables
@@ -123,7 +124,7 @@ func ParseFolder(folder string, c *Config, onlyResources bool, variables map[str
 	}
 
 	// Parse Resource files from the current folder
-	err = parseResources(abs, c)
+	err = parseResources(abs, c, moduleName, dependsOn)
 	if err != nil {
 		return err
 	}
@@ -147,14 +148,14 @@ func parseVariables(abs string, c *Config) error {
 	return nil
 }
 
-func parseResources(abs string, c *Config) error {
+func parseResources(abs string, c *Config, moduleName string, dependsOn []string) error {
 	files, err := filepath.Glob(path.Join(abs, "*.hcl"))
 	if err != nil {
 		return err
 	}
 
 	for _, f := range files {
-		err := ParseHCLFile(f, c)
+		err := ParseHCLFile(f, c, moduleName, dependsOn)
 		if err != nil {
 			return err
 		}
@@ -363,7 +364,7 @@ func ParseVariableFile(file string, c *Config) error {
 }
 
 // ParseHCLFile parses a config file and adds it to the config
-func ParseHCLFile(file string, c *Config) error {
+func ParseHCLFile(file string, c *Config, moduleName string, dependsOn []string) error {
 	parser := hclparse.NewParser()
 	ctx.Functions["file_path"] = getFilePathFunc(file)
 	ctx.Functions["file_dir"] = getFileDirFunc(file)
@@ -386,6 +387,8 @@ func ParseHCLFile(file string, c *Config) error {
 
 		case string(TypeK8sCluster):
 			cl := NewK8sCluster(b.Labels[0])
+			cl.Info().Module = moduleName
+			cl.Info().DependsOn = dependsOn
 
 			err := decodeBody(file, b, cl)
 			if err != nil {
@@ -402,6 +405,8 @@ func ParseHCLFile(file string, c *Config) error {
 
 		case string(TypeOutput):
 			cl := NewOutput(b.Labels[0])
+			cl.Info().Module = moduleName
+			cl.Info().DependsOn = dependsOn
 
 			err := decodeBody(file, b, cl)
 			if err != nil {
@@ -412,6 +417,8 @@ func ParseHCLFile(file string, c *Config) error {
 
 		case string(TypeK8sConfig):
 			h := NewK8sConfig(b.Labels[0])
+			h.Info().Module = moduleName
+			h.Info().DependsOn = dependsOn
 
 			err := decodeBody(file, b, h)
 			if err != nil {
@@ -427,6 +434,8 @@ func ParseHCLFile(file string, c *Config) error {
 
 		case string(TypeHelm):
 			h := NewHelm(b.Labels[0])
+			h.Info().Module = moduleName
+			h.Info().DependsOn = dependsOn
 
 			err := decodeBody(file, b, h)
 			if err != nil {
@@ -452,6 +461,8 @@ func ParseHCLFile(file string, c *Config) error {
 
 		case string(TypeImageCache):
 			i := NewImageCache(b.Labels[0])
+			i.Info().Module = moduleName
+			i.Info().DependsOn = dependsOn
 
 			err := decodeBody(file, b, i)
 			if err != nil {
@@ -462,6 +473,8 @@ func ParseHCLFile(file string, c *Config) error {
 
 		case string(TypeK8sIngress):
 			i := NewK8sIngress(b.Labels[0])
+			i.Info().Module = moduleName
+			i.Info().DependsOn = dependsOn
 
 			err := decodeBody(file, b, i)
 			if err != nil {
@@ -472,6 +485,8 @@ func ParseHCLFile(file string, c *Config) error {
 
 		case string(TypeNomadCluster):
 			cl := NewNomadCluster(b.Labels[0])
+			cl.Info().Module = moduleName
+			cl.Info().DependsOn = dependsOn
 
 			err := decodeBody(file, b, cl)
 			if err != nil {
@@ -488,6 +503,8 @@ func ParseHCLFile(file string, c *Config) error {
 
 		case string(TypeNomadJob):
 			h := NewNomadJob(b.Labels[0])
+			h.Info().Module = moduleName
+			h.Info().DependsOn = dependsOn
 
 			err := decodeBody(file, b, h)
 			if err != nil {
@@ -503,6 +520,8 @@ func ParseHCLFile(file string, c *Config) error {
 
 		case string(TypeNomadIngress):
 			i := NewNomadIngress(b.Labels[0])
+			i.Info().Module = moduleName
+			i.Info().DependsOn = dependsOn
 
 			err := decodeBody(file, b, i)
 			if err != nil {
@@ -513,6 +532,8 @@ func ParseHCLFile(file string, c *Config) error {
 
 		case string(TypeNetwork):
 			n := NewNetwork(b.Labels[0])
+			n.Info().Module = moduleName
+			n.Info().DependsOn = dependsOn
 
 			err := decodeBody(file, b, n)
 			if err != nil {
@@ -530,6 +551,8 @@ func ParseHCLFile(file string, c *Config) error {
 
 		case string(TypeIngress):
 			i := NewIngress(b.Labels[0])
+			i.Info().Module = moduleName
+			i.Info().DependsOn = dependsOn
 
 			err := decodeBody(file, b, i)
 			if err != nil {
@@ -540,6 +563,8 @@ func ParseHCLFile(file string, c *Config) error {
 
 		case string(TypeContainer):
 			co := NewContainer(b.Labels[0])
+			co.Info().Module = moduleName
+			co.Info().DependsOn = dependsOn
 
 			err := decodeBody(file, b, co)
 			if err != nil {
@@ -563,6 +588,8 @@ func ParseHCLFile(file string, c *Config) error {
 
 		case string(TypeContainerIngress):
 			i := NewContainerIngress(b.Labels[0])
+			i.Info().Module = moduleName
+			i.Info().DependsOn = dependsOn
 
 			err := decodeBody(file, b, i)
 			if err != nil {
@@ -573,6 +600,8 @@ func ParseHCLFile(file string, c *Config) error {
 
 		case string(TypeSidecar):
 			s := NewSidecar(b.Labels[0])
+			s.Info().Module = moduleName
+			s.Info().DependsOn = dependsOn
 
 			err := decodeBody(file, b, s)
 			if err != nil {
@@ -587,6 +616,8 @@ func ParseHCLFile(file string, c *Config) error {
 
 		case string(TypeDocs):
 			do := NewDocs(b.Labels[0])
+			do.Info().Module = moduleName
+			do.Info().DependsOn = dependsOn
 
 			err := decodeBody(file, b, do)
 			if err != nil {
@@ -599,6 +630,8 @@ func ParseHCLFile(file string, c *Config) error {
 
 		case string(TypeExecLocal):
 			h := NewExecLocal(b.Labels[0])
+			h.Info().Module = moduleName
+			h.Info().DependsOn = dependsOn
 
 			err := decodeBody(file, b, h)
 			if err != nil {
@@ -609,6 +642,8 @@ func ParseHCLFile(file string, c *Config) error {
 
 		case string(TypeExecRemote):
 			h := NewExecRemote(b.Labels[0])
+			h.Info().Module = moduleName
+			h.Info().DependsOn = dependsOn
 
 			err := decodeBody(file, b, h)
 			if err != nil {
@@ -625,6 +660,8 @@ func ParseHCLFile(file string, c *Config) error {
 
 		case string(TypeTemplate):
 			i := NewTemplate(b.Labels[0])
+			i.Info().Module = moduleName
+			i.Info().DependsOn = dependsOn
 
 			err := decodeBody(file, b, i)
 			if err != nil {
@@ -636,7 +673,9 @@ func ParseHCLFile(file string, c *Config) error {
 			c.AddResource(i)
 
 		case string(TypeModule):
-			m := NewModule(b.Labels[0])
+			moduleName := b.Labels[0]
+			m := NewModule(moduleName)
+			m.Info().Module = moduleName
 
 			err := decodeBody(file, b, m)
 			if err != nil {
@@ -659,31 +698,11 @@ func ParseHCLFile(file string, c *Config) error {
 			// set the absolute path
 			m.Source = ensureAbsolute(m.Source, file)
 
-			// create a new config with cache
-			conf := New()
-
-			// add the docker-cache from the main config
-			ics := c.FindResourcesByType(string(TypeImageCache))
-			if ics != nil && len(ics) == 1 {
-				ic := ics[0].(*ImageCache)
-				conf.AddResource(ic)
-			}
-
 			// recursively parse references for the module
 			// ensure we do load the values which might be in module folders
-			err = ParseFolder(m.Source, conf, true, nil, "")
+			err = ParseFolder(m.Source, c, true, moduleName, m.Depends, nil, "")
 			if err != nil {
 				return err
-			}
-
-			// add the parsed resources to the main but add the module name
-			for _, r := range conf.Resources {
-				// don't add the image cache as that is already on the config
-				if r.Info().Type != TypeImageCache {
-					r.Info().Module = m.Name
-					r.Info().DependsOn = m.Depends
-					c.AddResource(r)
-				}
 			}
 
 			// modules will reset the context file path as they recurse
