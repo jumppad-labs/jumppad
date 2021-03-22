@@ -344,7 +344,7 @@ func (c *NomadCluster) createClientNode(index int, image, volumeID, configDir, s
 
 func (c *NomadCluster) appendProxyEnv(cc *config.Container) error {
 	// only add the variables for the cache when the kubernetes version is >= v1.18.16
-	sv, err := semver.NewConstraint(">= v0.12.8")
+	sv, err := semver.NewConstraint(">= v0.11.8")
 	if err != nil {
 		// Handle constraint not being parsable.
 		return err
@@ -352,7 +352,7 @@ func (c *NomadCluster) appendProxyEnv(cc *config.Container) error {
 
 	v, err := semver.NewVersion(c.config.Version)
 	if err != nil {
-		return fmt.Errorf("Kubernetes version is not valid semantic version: %s", err)
+		return fmt.Errorf("Nomad version is not valid semantic version: %s", err)
 	}
 
 	if sv.Check(v) {

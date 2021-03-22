@@ -359,7 +359,7 @@ func TestClusterNomadSetsEnvironmentOnServer(t *testing.T) {
 
 func TestClusterNomadDoesNotSetProxyEnvironmentWithWrongVersion(t *testing.T) {
 	cc, md, mh := setupNomadClusterMocks(t)
-	cc.Version = "v0.12.1"
+	cc.Version = "v0.11.7"
 	cc.ClientNodes = 1
 
 	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
