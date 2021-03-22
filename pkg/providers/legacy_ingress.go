@@ -10,7 +10,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-const ingressImage = "shipyardrun/ingress:latest"
+const ingressImage = "shipyardrun/ingress:v0.3.0"
 
 // Ingress defines a provider for handling connection ingress for a cluster
 type LegacyIngress struct {
