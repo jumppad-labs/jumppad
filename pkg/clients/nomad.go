@@ -302,12 +302,26 @@ func (n *NomadImpl) Endpoints(job, group, task string) ([]map[string]string, err
 
 		ports := []string{}
 
-		//find the ports used by the task
+		// find the ports used by the task
 		for _, tg := range allocDetail.Job.TaskGroups {
 			if tg.Name == group {
+				// non connect services will have their ports
+				// coded in the driver config block
 				for _, t := range tg.Tasks {
 					if t.Name == task {
-						ports = t.Config.Ports
+						ports = append(ports, t.Config.Ports...)
+					}
+				}
+
+				// connect services will have this coded
+				// in the groups network block
+				for _, n := range tg.Networks {
+					for _, dp := range n.DynamicPorts {
+						ports = append(ports, dp.Label)
+					}
+
+					for _, dp := range n.ReservedPorts {
+						ports = append(ports, dp.Label)
 					}
 				}
 			}
@@ -398,8 +412,9 @@ type job struct {
 }
 
 type taskGroup struct {
-	Name  string
-	Tasks []task
+	Name     string
+	Tasks    []task
+	Networks []allocNetwork
 }
 
 type task struct {
