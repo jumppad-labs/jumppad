@@ -25,7 +25,7 @@ func TestRunParsesBlueprintInMarkdownFormat(t *testing.T) {
 	}
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
+	err = ParseFolder(absoluteFolderPath, c, false, "", []string{}, nil, "")
 	assert.NoError(t, err)
 
 	assert.NotNil(t, c.Blueprint)
@@ -47,7 +47,7 @@ func TestRunParsesBlueprintInHCLFormat(t *testing.T) {
 	}
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
+	err = ParseFolder(absoluteFolderPath, c, false, "", []string{}, nil, "")
 	assert.NoError(t, err)
 
 	assert.NotNil(t, c.Blueprint)
@@ -58,7 +58,7 @@ func TestLoadsVariablesFiles(t *testing.T) {
 	assert.NoError(t, err)
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
+	err = ParseFolder(absoluteFolderPath, c, false, "", []string{}, nil, "")
 	assert.NoError(t, err)
 
 	// check variable has been interpolated
@@ -85,7 +85,7 @@ func TestLoadsVariablesFromOptionalFile(t *testing.T) {
 	assert.NoError(t, err)
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c, false, nil, absoluteVarsPath)
+	err = ParseFolder(absoluteFolderPath, c, false, "", []string{}, nil, absoluteVarsPath)
 	assert.NoError(t, err)
 
 	// check variable has been interpolated
@@ -111,7 +111,7 @@ func TestOverridesVariablesFilesWithFlag(t *testing.T) {
 	}
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c, false, map[string]string{"something": "else"}, "")
+	err = ParseFolder(absoluteFolderPath, c, false, "", []string{}, map[string]string{"something": "else"}, "")
 	assert.NoError(t, err)
 
 	// check variable has been interpolated
@@ -142,7 +142,7 @@ func TestOverridesVariablesFilesWithEnv(t *testing.T) {
 	})
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
+	err = ParseFolder(absoluteFolderPath, c, false, "", []string{}, nil, "")
 	assert.NoError(t, err)
 
 	// check variable has been interpolated
@@ -168,7 +168,7 @@ func TestVariablesSetFromDefault(t *testing.T) {
 	}
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
+	err = ParseFolder(absoluteFolderPath, c, false, "", []string{}, nil, "")
 	assert.NoError(t, err)
 
 	// check variable has been interpolated
@@ -192,7 +192,7 @@ func TestOverridesVariableDefaultsWithEnv(t *testing.T) {
 	})
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
+	err = ParseFolder(absoluteFolderPath, c, false, "", []string{}, nil, "")
 	assert.NoError(t, err)
 
 	// check variable has been interpolated
@@ -210,7 +210,7 @@ func TestVariablesSetFromDefaultModule(t *testing.T) {
 	}
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
+	err = ParseFolder(absoluteFolderPath, c, false, "", []string{}, nil, "")
 	assert.NoError(t, err)
 
 	// check variable has been interpolated
@@ -234,7 +234,7 @@ func TestOverridesVariablesSetFromDefaultModuleWithEnv(t *testing.T) {
 	})
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
+	err = ParseFolder(absoluteFolderPath, c, false, "", []string{}, nil, "")
 	assert.NoError(t, err)
 
 	// check variable has been interpolated
@@ -252,7 +252,7 @@ func TestDoesNotLoadsVariablesFilesFromInsideModules(t *testing.T) {
 	}
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
+	err = ParseFolder(absoluteFolderPath, c, false, "", []string{}, nil, "")
 	assert.NoError(t, err)
 
 	// check variable has been interpolated
@@ -279,7 +279,7 @@ func TestParseModuleCreatesResources(t *testing.T) {
 	}
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
+	err = ParseFolder(absoluteFolderPath, c, false, "", []string{}, nil, "")
 	assert.NoError(t, err)
 
 	// count the resources, should create 10
@@ -303,7 +303,7 @@ func TestParseFileFunctionReadCorrectly(t *testing.T) {
 	}
 
 	c := New()
-	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
+	err = ParseFolder(absoluteFolderPath, c, false, "", []string{}, nil, "")
 	assert.NoError(t, err)
 
 	// check variable has been interpolated
@@ -330,7 +330,7 @@ func TestParseAddsCacheDependencyToK8sResources(t *testing.T) {
 
 	c := New()
 
-	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
+	err = ParseFolder(absoluteFolderPath, c, false, "", []string{}, nil, "")
 	assert.NoError(t, err)
 
 	err = ParseReferences(c)
@@ -351,7 +351,7 @@ func TestParseAddsCacheDependencyToNomadResources(t *testing.T) {
 
 	c := New()
 
-	err = ParseFolder(absoluteFolderPath, c, false, nil, "")
+	err = ParseFolder(absoluteFolderPath, c, false, "", []string{}, nil, "")
 	assert.NoError(t, err)
 
 	err = ParseReferences(c)

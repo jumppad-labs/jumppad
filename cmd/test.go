@@ -316,15 +316,20 @@ func (cr *CucumberRunner) thereShouldBeAResourceRunningCalled(resource string, n
 			return err
 		}
 
-		if len(cl) == 1 {
+		runningCount := 0
+		for _, c := range cl {
 			// check to see if the container has failed
-			if cl[0].State == "exited" {
+			if c.State == "exited" {
 				return fmt.Errorf("container exited prematurely")
 			}
 
-			if cl[0].State == "running" {
-				return nil
+			if c.State == "running" {
+				runningCount++
 			}
+		}
+
+		if runningCount == len(cl) {
+			return nil
 		}
 
 		// wait a few seconds before trying again

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net"
 	"net/url"
 	"os"
@@ -88,11 +89,30 @@ func CreateKubeConfigPath(name string) (dir, filePath string, dockerPath string)
 	return
 }
 
-// CreateClusterConfigPath creates the file path for the Cluster config
+// GetClusterConfig creates the file path for the Cluster config
 // which stores details such as the API server location
-func CreateClusterConfigPath(name string) (dir, filePath string) {
-	dir = filepath.Join(ShipyardHome(), "/config/", name)
-	filePath = filepath.Join(dir, "/config.json")
+func GetClusterConfig(name string) (ClusterConfig, string) {
+	// check if the file exists return if so
+
+	// split the name
+	parts := strings.Split(name, ".")
+	if len(parts) < 2 {
+		return ClusterConfig{}, ""
+	}
+
+	if parts[0] != "nomad_cluster" && parts[0] != "k8s_cluster" {
+		return ClusterConfig{}, ""
+	}
+
+	dir := filepath.Join(ShipyardHome(), "/config/", parts[1])
+	filePath := filepath.Join(dir, "/config.json")
+
+	if _, err := os.Stat(filePath); err == nil {
+		cc := ClusterConfig{}
+		cc.Load(filePath)
+
+		return cc, dir
+	}
 
 	// create the folders
 	err := os.MkdirAll(dir, 0755)
@@ -100,7 +120,28 @@ func CreateClusterConfigPath(name string) (dir, filePath string) {
 		panic(err)
 	}
 
-	return
+	//// create the config file
+	//// set the API server port to a random number 64000 - 65000
+	apiPort := rand.Intn(MaxRandomPort-MinRandomPort) + MinRandomPort
+	connectorPort := rand.Intn(MaxRandomPort-MinRandomPort) + MinRandomPort
+
+	remoteAPIPort := 4646
+	if parts[0] == "k8s_cluster" {
+		remoteAPIPort = apiPort
+	}
+
+	// generate the config file
+	config := ClusterConfig{
+		LocalAddress:  GetDockerIP(),
+		RemoteAddress: FQDN(fmt.Sprintf("server.%s", parts[1]), parts[0]),
+		ConnectorPort: connectorPort,
+		APIPort:       apiPort,
+		RemoteAPIPort: remoteAPIPort,
+	}
+
+	config.Save(filePath)
+
+	return config, dir
 }
 
 // HomeFolder returns the users homefolder this will be $HOME on windows and mac and

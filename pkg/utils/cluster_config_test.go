@@ -33,7 +33,7 @@ func TestConfigLoadsCorrectly(t *testing.T) {
 	fp := setupNomadTests(t)
 
 	nc := &ClusterConfig{}
-	err := nc.Load(fp, "local")
+	err := nc.Load(fp)
 	assert.NoError(t, err)
 
 	assert.Equal(t, "localhost", nc.LocalAddress)
@@ -42,7 +42,7 @@ func TestConfigLoadsCorrectly(t *testing.T) {
 
 func TestNomadConfigLoadReturnsErrorWhenFileNotExist(t *testing.T) {
 	nc := &ClusterConfig{}
-	err := nc.Load("file.json", "local")
+	err := nc.Load("file.json")
 	assert.Error(t, err)
 }
 
@@ -60,7 +60,7 @@ func TestConfiSavesFile(t *testing.T) {
 
 	// check the old file was deleted and the new file was written
 	nc2 := &ClusterConfig{}
-	err = nc2.Load(fp, LocalContext)
+	err = nc2.Load(fp)
 	assert.NoError(t, err)
 
 	assert.Equal(t, "nomad", nc2.LocalAddress)
@@ -68,25 +68,25 @@ func TestConfiSavesFile(t *testing.T) {
 }
 
 func TestConfigReturnsAPIFQDN(t *testing.T) {
-	nc := ClusterConfig{LocalAddress: "localhost", APIPort: 4646, context: LocalContext}
+	nc := ClusterConfig{LocalAddress: "localhost", APIPort: 4646}
 
-	assert.Equal(t, "http://localhost:4646", nc.APIAddress())
+	assert.Equal(t, "http://localhost:4646", nc.APIAddress(LocalContext))
 }
 
 func TestConfigReturnsLocalAPIFQDNSSL(t *testing.T) {
-	nc := ClusterConfig{LocalAddress: "localhost", APIPort: 4646, SSL: true, context: LocalContext}
+	nc := ClusterConfig{LocalAddress: "localhost", APIPort: 4646, SSL: true}
 
-	assert.Equal(t, "https://localhost:4646", nc.APIAddress())
+	assert.Equal(t, "https://localhost:4646", nc.APIAddress(LocalContext))
 }
 
 func TestConfigReturnsRemoteAPIFQDNSSL(t *testing.T) {
-	nc := ClusterConfig{LocalAddress: "localhost", RemoteAddress: "nomad.remote", APIPort: 4646, RemoteAPIPort: 4646, SSL: true, context: RemoteContext}
+	nc := ClusterConfig{LocalAddress: "localhost", RemoteAddress: "nomad.remote", APIPort: 4646, RemoteAPIPort: 4646, SSL: true}
 
-	assert.Equal(t, "https://nomad.remote:4646", nc.APIAddress())
+	assert.Equal(t, "https://nomad.remote:4646", nc.APIAddress(RemoteContext))
 }
 
 func TestConfigReturnsConnectorFQDN(t *testing.T) {
-	nc := ClusterConfig{LocalAddress: "localhost", ConnectorPort: 4646, context: LocalContext}
+	nc := ClusterConfig{LocalAddress: "localhost", ConnectorPort: 4646}
 
-	assert.Equal(t, "localhost:4646", nc.ConnectorAddress())
+	assert.Equal(t, "localhost:4646", nc.ConnectorAddress(LocalContext))
 }

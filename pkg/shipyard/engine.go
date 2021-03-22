@@ -375,7 +375,7 @@ func (e *EngineImpl) readConfig(path string, variables map[string]string, variab
 				return nil, err
 			}
 		} else {
-			err := config.ParseFolder(path, cc, false, variables, variablesFile)
+			err := config.ParseFolder(path, cc, false, "", []string{}, variables, variablesFile)
 			if err != nil {
 				return nil, err
 			}

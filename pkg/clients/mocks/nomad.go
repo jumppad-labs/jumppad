@@ -3,6 +3,7 @@ package mocks
 import (
 	"time"
 
+	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -10,7 +11,7 @@ type MockNomad struct {
 	mock.Mock
 }
 
-func (m *MockNomad) SetConfig(c string, ctx string) error {
+func (m *MockNomad) SetConfig(c utils.ClusterConfig, ctx string) error {
 	args := m.Called(c, ctx)
 
 	return args.Error(0)

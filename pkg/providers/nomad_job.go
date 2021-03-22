@@ -34,11 +34,8 @@ func (n *NomadJob) Create() error {
 	}
 
 	// load the config
-	_, configPath := utils.CreateClusterConfigPath(cc.Info().Name)
-	err = n.client.SetConfig(configPath, string(utils.LocalContext))
-	if err != nil {
-		return xerrors.Errorf("Unable to load nomad config %s: %w", configPath, err)
-	}
+	clusterConfig, _ := utils.GetClusterConfig(string(cc.Info().Type) + "." + cc.Info().Name)
+	n.client.SetConfig(clusterConfig, string(utils.LocalContext))
 
 	err = n.client.Create(n.config.Paths)
 	if err != nil {
@@ -81,22 +78,18 @@ func (n *NomadJob) Destroy() error {
 	n.log.Info("Destroy Nomad Job", "ref", n.config.Name)
 
 	// find the cluster
-	cc, err := n.config.ResourceInfo.FindDependentResource(n.config.Cluster)
+	_, err := n.config.ResourceInfo.FindDependentResource(n.config.Cluster)
 	if err != nil {
 		return err
 	}
 
 	// load the config
-	_, configPath := utils.CreateClusterConfigPath(cc.Info().Name)
-	err = n.client.SetConfig(configPath, string(utils.LocalContext))
-	if err != nil {
-		n.log.Error("Unable to load Nomad config", "config", configPath, "error", err)
-		return nil
-	}
+	clusterConfig, _ := utils.GetClusterConfig(n.config.Cluster)
+	n.client.SetConfig(clusterConfig, string(utils.LocalContext))
 
 	err = n.client.Stop(n.config.Paths)
 	if err != nil {
-		n.log.Error("Unable to destroy Nomad job", "config", configPath, "error", err)
+		n.log.Error("Unable to destroy Nomad job", "error", err)
 		return nil
 	}
 

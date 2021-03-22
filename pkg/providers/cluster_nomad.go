@@ -3,7 +3,6 @@ package providers
 import (
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
@@ -18,7 +17,7 @@ import (
 )
 
 const nomadBaseImage = "shipyardrun/nomad"
-const nomadBaseVersion = "v0.12.8"
+const nomadBaseVersion = "v0.11.8"
 
 const dataDir = `
 data_dir = "/etc/nomad.d/data"
@@ -125,7 +124,7 @@ func (c *NomadCluster) createNomad() error {
 		isClient = false
 	}
 
-	serverID, configDir, configPath, err := c.createServerNode(image, volID, isClient)
+	serverID, clusterConfig, configPath, err := c.createServerNode(image, volID, isClient)
 	if err != nil {
 		return err
 	}
@@ -138,8 +137,8 @@ func (c *NomadCluster) createNomad() error {
 	var clientError error
 	for i := 0; i < c.config.ClientNodes; i++ {
 		// create client node asyncronously
-		go func(i int, image, volID, configDir, name string) {
-			clientID, err := c.createClientNode(i, image, volID, configDir, name)
+		go func(i int, image, volID, configPath, name string) {
+			clientID, err := c.createClientNode(i, image, volID, configPath, name)
 			if err != nil {
 				clientError = err
 			}
@@ -149,7 +148,7 @@ func (c *NomadCluster) createNomad() error {
 			cMutex.Unlock()
 
 			clWait.Done()
-		}(i+1, image, volID, configDir, utils.FQDN(fmt.Sprintf("server.%s", c.config.Name), string(config.TypeNomadCluster)))
+		}(i+1, image, volID, configPath, utils.FQDN(fmt.Sprintf("server.%s", c.config.Name), string(config.TypeNomadCluster)))
 	}
 
 	clWait.Wait()
@@ -158,7 +157,7 @@ func (c *NomadCluster) createNomad() error {
 	}
 
 	// ensure all client nodes are up
-	c.nomadClient.SetConfig(configPath, string(utils.LocalContext))
+	c.nomadClient.SetConfig(clusterConfig, string(utils.LocalContext))
 	err = c.nomadClient.HealthCheckAPI(startTimeout)
 	if err != nil {
 		return err
@@ -198,32 +197,18 @@ func (c *NomadCluster) createNomad() error {
 	return nil
 }
 
-func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (string, string, string, error) {
-	// set the API server port to a random number 64000 - 65000
-	apiPort := rand.Intn(1000) + 64000
-	connectorPort := rand.Intn(1000) + 64000
-
+func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (string, utils.ClusterConfig, string, error) {
 	// if the node count is 0 we are creating a combo client server
 	nodeCount := 1
 	if c.config.ClientNodes > 0 {
 		nodeCount = c.config.ClientNodes
 	}
 
-	// generate the config file
-	nomadConfig := utils.ClusterConfig{
-		LocalAddress:  utils.GetDockerIP(),
-		RemoteAddress: utils.FQDN(fmt.Sprintf("server.%s", c.config.Name), string(c.config.Type)),
-		ConnectorPort: connectorPort,
-		APIPort:       apiPort,
-		RemoteAPIPort: 4646,
-		NodeCount:     nodeCount,
-	}
-	configDir, configPath := utils.CreateClusterConfigPath(c.config.Name)
+	conf, configDir := utils.GetClusterConfig(string(config.TypeNomadCluster) + "." + c.config.Name)
 
-	err := nomadConfig.Save(configPath)
-	if err != nil {
-		return "", "", "", xerrors.Errorf("Unable to generate Nomad config: %w", err)
-	}
+	// add the nodecount to the config and save
+	conf.NodeCount = nodeCount
+	conf.Save(filepath.Join(configDir, "config.json"))
 
 	// generate the server config
 	sc := dataDir + "\n" + serverConfig
@@ -281,28 +266,28 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 	cc.Ports = []config.Port{
 		config.Port{
 			Local:    "4646",
-			Host:     fmt.Sprintf("%d", apiPort),
+			Host:     fmt.Sprintf("%d", conf.APIPort),
 			Protocol: "tcp",
 		},
 		config.Port{
 			Local:    "19090",
-			Host:     fmt.Sprintf("%d", connectorPort),
+			Host:     fmt.Sprintf("%d", conf.ConnectorPort),
 			Protocol: "tcp",
 		},
 	}
 
 	cc.EnvVar = map[string]string{}
-	err = c.appendProxyEnv(cc)
+	err := c.appendProxyEnv(cc)
 	if err != nil {
-		return "", "", "", err
+		return "", utils.ClusterConfig{}, "", err
 	}
 
 	id, err := c.client.CreateContainer(cc)
 	if err != nil {
-		return "", "", "", err
+		return "", utils.ClusterConfig{}, "", err
 	}
 
-	return id, configDir, configPath, nil
+	return id, conf, configDir, nil
 }
 
 func (c *NomadCluster) createClientNode(index int, image, volumeID, configDir, serverID string) (string, error) {
@@ -359,7 +344,7 @@ func (c *NomadCluster) createClientNode(index int, image, volumeID, configDir, s
 
 func (c *NomadCluster) appendProxyEnv(cc *config.Container) error {
 	// only add the variables for the cache when the kubernetes version is >= v1.18.16
-	sv, err := semver.NewConstraint(">= v0.12.8")
+	sv, err := semver.NewConstraint(">= v0.11.8")
 	if err != nil {
 		// Handle constraint not being parsable.
 		return err
@@ -367,7 +352,7 @@ func (c *NomadCluster) appendProxyEnv(cc *config.Container) error {
 
 	v, err := semver.NewVersion(c.config.Version)
 	if err != nil {
-		return fmt.Errorf("Kubernetes version is not valid semantic version: %s", err)
+		return fmt.Errorf("Nomad version is not valid semantic version: %s", err)
 	}
 
 	if sv.Check(v) {
@@ -409,7 +394,6 @@ func (c *NomadCluster) ImportLocalDockerImages(name string, id string, images []
 	// execute the command to import the image
 	// write any command output to the logger
 	for _, i := range imagesFile {
-		fmt.Println(i)
 		err = c.client.ExecuteCommand(id, []string{"docker", "load", "-i", i}, nil, "/", c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
 		if err != nil {
 			return err
@@ -435,6 +419,10 @@ func (c *NomadCluster) destroyNomad() error {
 			return err
 		}
 	}
+
+	// remove the config
+	_, path := utils.GetClusterConfig(string(c.config.Type) + "." + c.config.Name)
+	os.RemoveAll(path)
 
 	return nil
 }

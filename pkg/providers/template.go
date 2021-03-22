@@ -32,6 +32,19 @@ func (c *Template) Create() error {
 		return fmt.Errorf("Template source empty")
 	}
 
+	if c.config.Vars == nil || len(c.config.Vars) == 0 {
+		// no variables just write the file
+		f, err := os.Create(c.config.Destination)
+		if err != nil {
+			return fmt.Errorf("Unable to create destination file for template: %s", err)
+		}
+		defer f.Close()
+
+		_, err = f.WriteString(c.config.Source)
+
+		return err
+	}
+
 	tmpl := template.New("template").Delims("#{{", "}}")
 
 	t, err := tmpl.Parse(c.config.Source)

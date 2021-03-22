@@ -42,13 +42,11 @@ const LocalContext Context = "local"
 const RemoteContext Context = "remote"
 
 // Load the config from a file
-func (n *ClusterConfig) Load(file string, context Context) error {
+func (n *ClusterConfig) Load(file string) error {
 	f, err := os.Open(file)
 	if err != nil {
 		return err
 	}
-
-	n.context = context
 
 	return json.NewDecoder(f).Decode(n)
 }
@@ -74,13 +72,13 @@ func (n *ClusterConfig) Save(file string) error {
 }
 
 // APIAddress returns the FQDN for the API server
-func (n *ClusterConfig) APIAddress() string {
+func (n *ClusterConfig) APIAddress(context Context) string {
 	protocol := "http"
 	if n.SSL {
 		protocol = "https"
 	}
 
-	if n.context == LocalContext {
+	if context == LocalContext {
 		return fmt.Sprintf("%s://%s:%d", protocol, n.LocalAddress, n.APIPort)
 	}
 
@@ -88,8 +86,8 @@ func (n *ClusterConfig) APIAddress() string {
 }
 
 // ConnectorAddress returns the FQDN for the gRPC endpoing of the Connector
-func (n *ClusterConfig) ConnectorAddress() string {
-	if n.context == LocalContext {
+func (n *ClusterConfig) ConnectorAddress(context Context) string {
+	if context == LocalContext {
 		return fmt.Sprintf("%s:%d", n.LocalAddress, n.ConnectorPort)
 	}
 

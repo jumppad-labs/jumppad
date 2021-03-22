@@ -175,14 +175,16 @@ func TestClusterNomadCreatesAServer(t *testing.T) {
 	intLocal, _ := strconv.Atoi(params.Ports[0].Local)
 	intHost, _ := strconv.Atoi(params.Ports[0].Host)
 	assert.GreaterOrEqual(t, intLocal, 4646)
-	assert.GreaterOrEqual(t, intHost, 64000)
+	assert.GreaterOrEqual(t, intHost, utils.MinRandomPort)
+	assert.LessOrEqual(t, intHost, utils.MaxRandomPort)
 	assert.Equal(t, "tcp", params.Ports[0].Protocol)
 
 	// validate the Connector port is set
 	intLocal, _ = strconv.Atoi(params.Ports[1].Local)
 	intHost, _ = strconv.Atoi(params.Ports[1].Host)
 	assert.GreaterOrEqual(t, intLocal, 19090)
-	assert.GreaterOrEqual(t, intHost, 64000)
+	assert.GreaterOrEqual(t, intHost, utils.MinRandomPort)
+	assert.LessOrEqual(t, intHost, utils.MaxRandomPort)
 	assert.Equal(t, "tcp", params.Ports[0].Protocol)
 }
 
@@ -235,16 +237,17 @@ func TestClusterNomadCreatesClientNodesWithCorrectDetails(t *testing.T) {
 	assert.Equal(t, "/files", params.Volumes[2].Destination)
 }
 
-func TestClusterNomadGeneratesConfig(t *testing.T) {
+func TestClusterNomadSetsNodeCountInConfig(t *testing.T) {
 	cc, md, mh := setupNomadClusterMocks(t)
+	cc.ClientNodes = 10
 
 	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
 
-	_, configPath := utils.CreateClusterConfigPath(cc.Name)
-	assert.FileExists(t, configPath)
+	conf, _ := utils.GetClusterConfig(string(config.TypeNomadCluster) + "." + cc.Name)
+	assert.Equal(t, cc.ClientNodes, conf.NodeCount)
 }
 
 func TestClusterNomadHealthChecksAPI(t *testing.T) {
@@ -356,7 +359,7 @@ func TestClusterNomadSetsEnvironmentOnServer(t *testing.T) {
 
 func TestClusterNomadDoesNotSetProxyEnvironmentWithWrongVersion(t *testing.T) {
 	cc, md, mh := setupNomadClusterMocks(t)
-	cc.Version = "v0.12.1"
+	cc.Version = "v0.11.7"
 	cc.ClientNodes = 1
 
 	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
@@ -433,6 +436,22 @@ func TestClusterNomadDestroyRemovesContainer(t *testing.T) {
 	err := p.Destroy()
 	assert.NoError(t, err)
 	md.AssertNumberOfCalls(t, "RemoveContainer", 4)
+}
+
+func TestClusterNomadDestroyRemovesConfig(t *testing.T) {
+	cc, md, mh := setupNomadClusterMocks(t)
+	removeOn(&md.Mock, "FindContainerIDs")
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"found"}, nil)
+
+	_, dir := utils.GetClusterConfig(string(cc.Info().Type) + "." + cc.Info().Name)
+
+	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+
+	err := p.Destroy()
+	assert.NoError(t, err)
+	md.AssertCalled(t, "RemoveContainer", mock.Anything)
+
+	assert.NoDirExists(t, dir)
 }
 
 var clusterNomadConfig = &config.NomadCluster{

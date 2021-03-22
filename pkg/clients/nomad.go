@@ -16,7 +16,7 @@ import (
 // Nomad defines an interface for a Nomad client
 type Nomad interface {
 	// SetConfig for the client, path is a valid Nomad JSON config file
-	SetConfig(string, string) error
+	SetConfig(utils.ClusterConfig, string) error
 	// Create jobs in the provided files
 	Create(files []string) error
 	// Stop jobs in the provided files
@@ -39,6 +39,7 @@ type NomadImpl struct {
 	l          hclog.Logger
 	c          *utils.ClusterConfig
 	backoff    time.Duration
+	context    string
 }
 
 // NewNomad creates a new Nomad client
@@ -56,14 +57,9 @@ type createRequest struct {
 }
 
 // SetConfig loads the Nomad config from a file
-func (n *NomadImpl) SetConfig(nomadconfig string, context string) error {
-	c := &utils.ClusterConfig{}
-	err := c.Load(nomadconfig, utils.Context(context))
-	if err != nil {
-		return err
-	}
-
-	n.c = c
+func (n *NomadImpl) SetConfig(nomadconfig utils.ClusterConfig, context string) error {
+	n.c = &nomadconfig
+	n.context = context
 
 	return nil
 }
@@ -71,7 +67,7 @@ func (n *NomadImpl) SetConfig(nomadconfig string, context string) error {
 // HealthCheckAPI executes a HTTP heathcheck for a Nomad cluster
 func (n *NomadImpl) HealthCheckAPI(timeout time.Duration) error {
 	// get the address and the nodecount from the config
-	address := n.c.APIAddress()
+	address := n.c.APIAddress(utils.Context(n.context))
 	nodeCount := n.c.NodeCount
 
 	n.l.Debug("Performing Nomad health check", "address", address)
@@ -127,7 +123,7 @@ func (n *NomadImpl) HealthCheckAPI(timeout time.Duration) error {
 					}
 
 					n.l.Debug("Driver status", "node", nodeName, "driver", k, "healthy", healthy)
-					if healthy != true {
+					if !healthy {
 						driversHealthy = false
 					}
 				}
@@ -162,7 +158,7 @@ func (n *NomadImpl) Create(files []string) error {
 		// submit the job top the API
 		cr := fmt.Sprintf(`{"Job": %s}`, string(jsonJob))
 
-		r, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/v1/jobs", n.c.APIAddress()), bytes.NewReader([]byte(cr)))
+		r, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/v1/jobs", n.c.APIAddress(utils.Context(n.context))), bytes.NewReader([]byte(cr)))
 		if err != nil {
 			return xerrors.Errorf("Unable to create http request: %w", err)
 		}
@@ -192,7 +188,7 @@ func (n *NomadImpl) Stop(files []string) error {
 		}
 
 		// stop the job
-		r, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/v1/job/%s", n.c.APIAddress(), id), nil)
+		r, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/v1/job/%s", n.c.APIAddress(utils.Context(n.context)), id), nil)
 		if err != nil {
 			return xerrors.Errorf("Unable to create http request: %w", err)
 		}
@@ -226,7 +222,7 @@ func (n *NomadImpl) ParseJob(file string) ([]byte, error) {
 	jobData, _ := json.Marshal(rd)
 
 	// validate the config with the Nomad API
-	r, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/v1/jobs/parse", n.c.APIAddress()), bytes.NewReader(jobData))
+	r, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/v1/jobs/parse", n.c.APIAddress(utils.Context(n.context))), bytes.NewReader(jobData))
 	if err != nil {
 		return nil, xerrors.Errorf("Unable to create http request: %w", err)
 	}
@@ -282,7 +278,7 @@ func (n *NomadImpl) Endpoints(job, group, task string) ([]map[string]string, err
 
 	// get the allocation details for each endpoint
 	for _, j := range jobs {
-		r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v1/allocation/%s", n.c.APIAddress(), j["ID"]), nil)
+		r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v1/allocation/%s", n.c.APIAddress(utils.Context(n.context)), j["ID"]), nil)
 		if err != nil {
 			return nil, xerrors.Errorf("Unable to create http request: %w", err)
 		}
@@ -301,17 +297,31 @@ func (n *NomadImpl) Endpoints(job, group, task string) ([]map[string]string, err
 		allocDetail := allocation{}
 		err = json.NewDecoder(resp.Body).Decode(&allocDetail)
 		if err != nil {
-			return nil, fmt.Errorf("Error getting endpoints from server: %s: err: %s", n.c.APIAddress(), err)
+			return nil, fmt.Errorf("Error getting endpoints from server: %s: err: %s", n.c.APIAddress(utils.Context(n.context)), err)
 		}
 
 		ports := []string{}
 
-		//find the ports used by the task
+		// find the ports used by the task
 		for _, tg := range allocDetail.Job.TaskGroups {
 			if tg.Name == group {
+				// non connect services will have their ports
+				// coded in the driver config block
 				for _, t := range tg.Tasks {
 					if t.Name == task {
-						ports = t.Config.Ports
+						ports = append(ports, t.Config.Ports...)
+					}
+				}
+
+				// connect services will have this coded
+				// in the groups network block
+				for _, n := range tg.Networks {
+					for _, dp := range n.DynamicPorts {
+						ports = append(ports, dp.Label)
+					}
+
+					for _, dp := range n.ReservedPorts {
+						ports = append(ports, dp.Label)
 					}
 				}
 			}
@@ -348,7 +358,7 @@ func (n *NomadImpl) Endpoints(job, group, task string) ([]map[string]string, err
 
 func (n *NomadImpl) getJobAllocations(job string) ([]map[string]interface{}, error) {
 	// get the allocations for the job
-	r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v1/job/%s/allocations", n.c.APIAddress(), job), nil)
+	r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v1/job/%s/allocations", n.c.APIAddress(utils.Context(n.context)), job), nil)
 	if err != nil {
 		return nil, xerrors.Errorf("Unable to create http request: %w", err)
 	}
@@ -367,7 +377,7 @@ func (n *NomadImpl) getJobAllocations(job string) ([]map[string]interface{}, err
 	jobDetail := make([]map[string]interface{}, 0)
 	err = json.NewDecoder(resp.Body).Decode(&jobDetail)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to query jobs in Nomad server: %s: %s", n.c.APIAddress(), err)
+		return nil, fmt.Errorf("Unable to query jobs in Nomad server: %s: %s", n.c.APIAddress(utils.Context(n.context)), err)
 	}
 
 	return jobDetail, err
@@ -402,8 +412,9 @@ type job struct {
 }
 
 type taskGroup struct {
-	Name  string
-	Tasks []task
+	Name     string
+	Tasks    []task
+	Networks []allocNetwork
 }
 
 type task struct {

@@ -217,8 +217,9 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 	// validate the API port is set
 	localPort, _ := strconv.Atoi(params.Ports[0].Local)
 	hostPort, _ := strconv.Atoi(params.Ports[0].Host)
-	assert.GreaterOrEqual(t, localPort, 64000)
-	assert.GreaterOrEqual(t, hostPort, 64000)
+	assert.GreaterOrEqual(t, localPort, utils.MinRandomPort)
+	assert.LessOrEqual(t, localPort, utils.MaxRandomPort)
+	assert.Equal(t, hostPort, localPort)
 	assert.Equal(t, "tcp", params.Ports[0].Protocol)
 
 	localPort, _ = strconv.Atoi(params.Ports[1].Local)
@@ -564,6 +565,22 @@ func TestClusterK3sDestroyRemovesContainer(t *testing.T) {
 	err := p.Destroy()
 	assert.NoError(t, err)
 	md.AssertCalled(t, "RemoveContainer", mock.Anything)
+}
+
+func TestClusterK3sDestroyRemovesConfig(t *testing.T) {
+	cc, md, mk, mc := setupClusterMocks(t)
+	removeOn(&md.Mock, "FindContainerIDs")
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"found"}, nil)
+
+	_, dir := utils.GetClusterConfig(string(cc.Info().Type) + "." + cc.Info().Name)
+
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
+
+	err := p.Destroy()
+	assert.NoError(t, err)
+	md.AssertCalled(t, "RemoveContainer", mock.Anything)
+
+	assert.NoDirExists(t, dir)
 }
 
 func TestLookupReturnsIDs(t *testing.T) {

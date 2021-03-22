@@ -10,7 +10,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-const ingressImage = "shipyardrun/ingress:latest"
+const ingressImage = "shipyardrun/ingress:v0.3.0"
 
 // Ingress defines a provider for handling connection ingress for a cluster
 type LegacyIngress struct {
@@ -121,8 +121,8 @@ func (i *LegacyIngress) Create() error {
 		// if this is a nomad cluster we need to add the nomadconfig and
 		// make sure that the proxy runs in nomad mode
 		serviceName = i.config.Service
-		_, nomadConfigPath := utils.CreateClusterConfigPath(v.Name)
-		nomadConfigDestPath := "/.nomad/config.json"
+		_, nomadConfigPath := utils.GetClusterConfig(string(config.TypeNomadCluster) + "." + v.Name)
+		nomadConfigDestPath := "/.nomad/"
 
 		volumes = append(volumes, config.Volume{
 			Source:      nomadConfigPath,

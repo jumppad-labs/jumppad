@@ -264,9 +264,9 @@ func TestIngressNomadTargetConfiguresNomadConfig(t *testing.T) {
 	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
 
 	// check the volume mount is set
-	_, path := utils.CreateClusterConfigPath("test")
+	_, path := utils.GetClusterConfig(string(config.TypeNomadCluster) + "." + "test")
 	assert.Equal(t, path, params.Volumes[0].Source)
-	assert.Equal(t, "/.nomad/config.json", params.Volumes[0].Destination)
+	assert.Equal(t, "/.nomad/", params.Volumes[0].Destination)
 }
 
 func TestIngressNomadTargetConfiguresCommand(t *testing.T) {
