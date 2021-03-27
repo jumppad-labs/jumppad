@@ -52,7 +52,7 @@ func ParseSingleFile(file string, c *Config, variables map[string]string, variab
 		return err
 	}
 
-	err = ParseHCLFile(file, c, "", []string{})
+	err = ParseHCLFile(file, c, "", false, []string{})
 	if err != nil {
 		return err
 	}
@@ -63,9 +63,20 @@ func ParseSingleFile(file string, c *Config, variables map[string]string, variab
 // ParseFolder for Resource, Blueprint, and Variable files
 // The onlyResources parameter allows you to specfiy that the parser
 // moduleName is the name of the module, this should be set to a blank string for the root module
+// disabled sets the disabled flag on all resources, this is used when parsing a module that
+//  has the disabled flag set
 // only reads resource files and will ignore Blueprint and Variable files.
 // This is useful when recursively parsing such as when reading Modules
-func ParseFolder(folder string, c *Config, onlyResources bool, moduleName string, dependsOn []string, variables map[string]string, variablesFile string) error {
+func ParseFolder(
+	folder string,
+	c *Config,
+	onlyResources bool,
+	moduleName string,
+	disabled bool,
+	dependsOn []string,
+	variables map[string]string,
+	variablesFile string) error {
+
 	abs, _ := filepath.Abs(folder)
 
 	// load the variables
@@ -124,7 +135,7 @@ func ParseFolder(folder string, c *Config, onlyResources bool, moduleName string
 	}
 
 	// Parse Resource files from the current folder
-	err = parseResources(abs, c, moduleName, dependsOn)
+	err = parseResources(abs, c, moduleName, disabled, dependsOn)
 	if err != nil {
 		return err
 	}
@@ -202,14 +213,14 @@ func parseOutputFile(file string, c *Config) error {
 	return nil
 }
 
-func parseResources(abs string, c *Config, moduleName string, dependsOn []string) error {
+func parseResources(abs string, c *Config, moduleName string, disabled bool, dependsOn []string) error {
 	files, err := filepath.Glob(path.Join(abs, "*.hcl"))
 	if err != nil {
 		return err
 	}
 
 	for _, f := range files {
-		err := ParseHCLFile(f, c, moduleName, dependsOn)
+		err := ParseHCLFile(f, c, moduleName, disabled, dependsOn)
 		if err != nil {
 			return err
 		}
@@ -418,7 +429,7 @@ func ParseVariableFile(file string, c *Config) error {
 }
 
 // ParseHCLFile parses a config file and adds it to the config
-func ParseHCLFile(file string, c *Config, moduleName string, dependsOn []string) error {
+func ParseHCLFile(file string, c *Config, moduleName string, disabled bool, dependsOn []string) error {
 	parser := hclparse.NewParser()
 	ctx.Functions["file_path"] = getFilePathFunc(file)
 	ctx.Functions["file_dir"] = getFileDirFunc(file)
@@ -463,7 +474,18 @@ func ParseHCLFile(file string, c *Config, moduleName string, dependsOn []string)
 				cl.Volumes[i].Source = ensureAbsolute(v.Source, file)
 			}
 
-			c.AddResource(cl)
+			setDisabled(cl, disabled)
+
+			err = c.AddResource(cl)
+			if err != nil {
+				return fmt.Errorf(
+					"Unable to add resource %s.%s in file %s: %s",
+					b.Type,
+					b.Labels[0],
+					file,
+					err,
+				)
+			}
 
 		case string(TypeK8sConfig):
 			h := NewK8sConfig(b.Labels[0])
@@ -480,7 +502,18 @@ func ParseHCLFile(file string, c *Config, moduleName string, dependsOn []string)
 				h.Paths[i] = ensureAbsolute(p, file)
 			}
 
-			c.AddResource(h)
+			setDisabled(h, disabled)
+
+			err = c.AddResource(h)
+			if err != nil {
+				return fmt.Errorf(
+					"Unable to add resource %s.%s in file %s: %s",
+					b.Type,
+					b.Labels[0],
+					file,
+					err,
+				)
+			}
 
 		case string(TypeHelm):
 			h := NewHelm(b.Labels[0])
@@ -507,7 +540,18 @@ func ParseHCLFile(file string, c *Config, moduleName string, dependsOn []string)
 				h.Values = ensureAbsolute(h.Values, file)
 			}
 
-			c.AddResource(h)
+			setDisabled(h, disabled)
+
+			err = c.AddResource(h)
+			if err != nil {
+				return fmt.Errorf(
+					"Unable to add resource %s.%s in file %s: %s",
+					b.Type,
+					b.Labels[0],
+					file,
+					err,
+				)
+			}
 
 		case string(TypeImageCache):
 			i := NewImageCache(b.Labels[0])
@@ -519,7 +563,18 @@ func ParseHCLFile(file string, c *Config, moduleName string, dependsOn []string)
 				return err
 			}
 
-			c.AddResource(i)
+			setDisabled(i, disabled)
+
+			err = c.AddResource(i)
+			if err != nil {
+				return fmt.Errorf(
+					"Unable to add resource %s.%s in file %s: %s",
+					b.Type,
+					b.Labels[0],
+					file,
+					err,
+				)
+			}
 
 		case string(TypeK8sIngress):
 			i := NewK8sIngress(b.Labels[0])
@@ -531,7 +586,18 @@ func ParseHCLFile(file string, c *Config, moduleName string, dependsOn []string)
 				return err
 			}
 
-			c.AddResource(i)
+			setDisabled(i, disabled)
+
+			err = c.AddResource(i)
+			if err != nil {
+				return fmt.Errorf(
+					"Unable to add resource %s.%s in file %s: %s",
+					b.Type,
+					b.Labels[0],
+					file,
+					err,
+				)
+			}
 
 		case string(TypeNomadCluster):
 			cl := NewNomadCluster(b.Labels[0])
@@ -549,7 +615,18 @@ func ParseHCLFile(file string, c *Config, moduleName string, dependsOn []string)
 				cl.Volumes[i].Source = ensureAbsolute(v.Source, file)
 			}
 
-			c.AddResource(cl)
+			setDisabled(cl, disabled)
+
+			err = c.AddResource(cl)
+			if err != nil {
+				return fmt.Errorf(
+					"Unable to add resource %s.%s in file %s: %s",
+					b.Type,
+					b.Labels[0],
+					file,
+					err,
+				)
+			}
 
 		case string(TypeNomadJob):
 			h := NewNomadJob(b.Labels[0])
@@ -566,6 +643,7 @@ func ParseHCLFile(file string, c *Config, moduleName string, dependsOn []string)
 				h.Paths[i] = ensureAbsolute(p, file)
 			}
 
+			setDisabled(h, disabled)
 			c.AddResource(h)
 
 		case string(TypeNomadIngress):
@@ -578,7 +656,18 @@ func ParseHCLFile(file string, c *Config, moduleName string, dependsOn []string)
 				return err
 			}
 
-			c.AddResource(i)
+			setDisabled(i, disabled)
+
+			err = c.AddResource(i)
+			if err != nil {
+				return fmt.Errorf(
+					"Unable to add resource %s.%s in file %s: %s",
+					b.Type,
+					b.Labels[0],
+					file,
+					err,
+				)
+			}
 
 		case string(TypeNetwork):
 			n := NewNetwork(b.Labels[0])
@@ -590,7 +679,18 @@ func ParseHCLFile(file string, c *Config, moduleName string, dependsOn []string)
 				return err
 			}
 
-			c.AddResource(n)
+			setDisabled(n, disabled)
+
+			err = c.AddResource(n)
+			if err != nil {
+				return fmt.Errorf(
+					"Unable to add resource %s.%s in file %s: %s",
+					b.Type,
+					b.Labels[0],
+					file,
+					err,
+				)
+			}
 
 			// always add this network as a dependency of the image cache
 			ics := c.FindResourcesByType(string(TypeImageCache))
@@ -609,7 +709,18 @@ func ParseHCLFile(file string, c *Config, moduleName string, dependsOn []string)
 				return err
 			}
 
-			c.AddResource(i)
+			setDisabled(i, disabled)
+
+			err = c.AddResource(i)
+			if err != nil {
+				return fmt.Errorf(
+					"Unable to add resource %s.%s in file %s: %s",
+					b.Type,
+					b.Labels[0],
+					file,
+					err,
+				)
+			}
 
 		case string(TypeContainer):
 			co := NewContainer(b.Labels[0])
@@ -634,7 +745,18 @@ func ParseHCLFile(file string, c *Config, moduleName string, dependsOn []string)
 				co.Build.Context = ensureAbsolute(co.Build.Context, file)
 			}
 
-			c.AddResource(co)
+			setDisabled(co, disabled)
+
+			err = c.AddResource(co)
+			if err != nil {
+				return fmt.Errorf(
+					"Unable to add resource %s.%s in file %s: %s",
+					b.Type,
+					b.Labels[0],
+					file,
+					err,
+				)
+			}
 
 		case string(TypeContainerIngress):
 			i := NewContainerIngress(b.Labels[0])
@@ -646,7 +768,18 @@ func ParseHCLFile(file string, c *Config, moduleName string, dependsOn []string)
 				return err
 			}
 
-			c.AddResource(i)
+			setDisabled(i, disabled)
+
+			err = c.AddResource(i)
+			if err != nil {
+				return fmt.Errorf(
+					"Unable to add resource %s.%s in file %s: %s",
+					b.Type,
+					b.Labels[0],
+					file,
+					err,
+				)
+			}
 
 		case string(TypeSidecar):
 			s := NewSidecar(b.Labels[0])
@@ -662,7 +795,18 @@ func ParseHCLFile(file string, c *Config, moduleName string, dependsOn []string)
 				s.Volumes[i].Source = ensureAbsolute(v.Source, file)
 			}
 
-			c.AddResource(s)
+			setDisabled(s, disabled)
+
+			err = c.AddResource(s)
+			if err != nil {
+				return fmt.Errorf(
+					"Unable to add resource %s.%s in file %s: %s",
+					b.Type,
+					b.Labels[0],
+					file,
+					err,
+				)
+			}
 
 		case string(TypeDocs):
 			do := NewDocs(b.Labels[0])
@@ -676,7 +820,18 @@ func ParseHCLFile(file string, c *Config, moduleName string, dependsOn []string)
 
 			do.Path = ensureAbsolute(do.Path, file)
 
+			setDisabled(do, disabled)
+
 			c.AddResource(do)
+			if err != nil {
+				return fmt.Errorf(
+					"Unable to add resource %s.%s in file %s: %s",
+					b.Type,
+					b.Labels[0],
+					file,
+					err,
+				)
+			}
 
 		case string(TypeExecLocal):
 			h := NewExecLocal(b.Labels[0])
@@ -688,7 +843,18 @@ func ParseHCLFile(file string, c *Config, moduleName string, dependsOn []string)
 				return err
 			}
 
-			c.AddResource(h)
+			setDisabled(h, disabled)
+
+			err = c.AddResource(h)
+			if err != nil {
+				return fmt.Errorf(
+					"Unable to add resource %s.%s in file %s: %s",
+					b.Type,
+					b.Labels[0],
+					file,
+					err,
+				)
+			}
 
 		case string(TypeExecRemote):
 			h := NewExecRemote(b.Labels[0])
@@ -706,7 +872,18 @@ func ParseHCLFile(file string, c *Config, moduleName string, dependsOn []string)
 				h.Volumes[i].Source = ensureAbsolute(v.Source, file)
 			}
 
-			c.AddResource(h)
+			setDisabled(h, disabled)
+
+			err = c.AddResource(h)
+			if err != nil {
+				return fmt.Errorf(
+					"Unable to add resource %s.%s in file %s: %s",
+					b.Type,
+					b.Labels[0],
+					file,
+					err,
+				)
+			}
 
 		case string(TypeTemplate):
 			i := NewTemplate(b.Labels[0])
@@ -720,7 +897,18 @@ func ParseHCLFile(file string, c *Config, moduleName string, dependsOn []string)
 
 			i.Destination = ensureAbsolute(i.Destination, file)
 
-			c.AddResource(i)
+			setDisabled(i, disabled)
+
+			err = c.AddResource(i)
+			if err != nil {
+				return fmt.Errorf(
+					"Unable to add resource %s.%s in file %s: %s",
+					b.Type,
+					b.Labels[0],
+					file,
+					err,
+				)
+			}
 
 		case string(TypeModule):
 			moduleName := b.Labels[0]
@@ -748,9 +936,12 @@ func ParseHCLFile(file string, c *Config, moduleName string, dependsOn []string)
 			// set the absolute path
 			m.Source = ensureAbsolute(m.Source, file)
 
+			// if the module is disabled ensure
+			setDisabled(m, disabled)
+
 			// recursively parse references for the module
 			// ensure we do load the values which might be in module folders
-			err = ParseFolder(m.Source, c, true, moduleName, m.Depends, nil, "")
+			err = ParseFolder(m.Source, c, true, moduleName, m.Disabled, m.Depends, nil, "")
 			if err != nil {
 				return err
 			}
@@ -1132,4 +1323,12 @@ func getFiles(source, dest string) error {
 	}
 
 	return nil
+}
+
+// setDisabled sets the disabled flag on a resource when the
+// parent is disabled
+func setDisabled(r Resource, parentDisabled bool) {
+	if parentDisabled {
+		r.Info().Disabled = true
+	}
 }

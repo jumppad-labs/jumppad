@@ -26,3 +26,10 @@ module "docs" {
 	
   source = "../docs"
 }
+
+module "k8s" {
+  disabled = true
+  depends_on = ["container_ingress.consul-container-http-2"]
+	
+  source = "../local_exec"
+}

@@ -40,6 +40,14 @@ EOF
   }
 }
 
+container "consul_disabled" {
+  disabled = true
+
+  image   {
+    name = "consul:${var.consul_version}"
+  }
+}
+
 container "consul" {
   depends_on = ["template.consul_config"]
 
