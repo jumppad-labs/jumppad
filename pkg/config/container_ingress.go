@@ -5,7 +5,7 @@ const TypeContainerIngress ResourceType = "container_ingress"
 
 // ContainerIngress defines an ingress service mapping ports between local host or docker network and the target
 type ContainerIngress struct {
-	ResourceInfo `mapstructure:",squash"`
+	ResourceInfo `hcl:",remain" mapstructure:",squash"`
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 

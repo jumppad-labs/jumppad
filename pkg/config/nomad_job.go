@@ -5,7 +5,7 @@ const TypeNomadJob ResourceType = "nomad_job"
 
 // NomadJob applies and deletes and deletes Nomad cluster jobs
 type NomadJob struct {
-	ResourceInfo `mapstructure:",squash"`
+	ResourceInfo `hcl:",remain"	mapstructure:",squash"`
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 

@@ -6,7 +6,7 @@ const TypeNomadCluster ResourceType = "nomad_cluster"
 // Cluster is a config stanza which defines a Kubernetes or a Nomad cluster
 type NomadCluster struct {
 	// embedded type holding name, etc
-	ResourceInfo `mapstructure:",squash"`
+	ResourceInfo `hcl:",remain" mapstructure:",squash"`
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 

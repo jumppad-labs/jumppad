@@ -141,7 +141,7 @@ func ParseFolder(
 	}
 
 	// Finally parse the outputs
-	err = parseOutputs(abs, c)
+	err = parseOutputs(abs, disabled, c)
 	if err != nil {
 		return err
 	}
@@ -165,14 +165,14 @@ func parseVariables(abs string, c *Config) error {
 	return nil
 }
 
-func parseOutputs(abs string, c *Config) error {
+func parseOutputs(abs string, disabled bool, c *Config) error {
 	files, err := filepath.Glob(path.Join(abs, "*.hcl"))
 	if err != nil {
 		return err
 	}
 
 	for _, f := range files {
-		err := parseOutputFile(f, c)
+		err := parseOutputFile(f, disabled, c)
 		if err != nil {
 			return err
 		}
@@ -181,7 +181,7 @@ func parseOutputs(abs string, c *Config) error {
 	return nil
 }
 
-func parseOutputFile(file string, c *Config) error {
+func parseOutputFile(file string, disabled bool, c *Config) error {
 	parser := hclparse.NewParser()
 	ctx.Functions["file_path"] = getFilePathFunc(file)
 	ctx.Functions["file_dir"] = getFileDirFunc(file)
@@ -205,6 +205,8 @@ func parseOutputFile(file string, c *Config) error {
 			if err != nil {
 				return err
 			}
+
+			setDisabled(v, disabled)
 
 			c.AddResource(v)
 		}
@@ -1075,13 +1077,6 @@ func ParseReferences(c *Config) error {
 		case TypeNomadJob:
 			c := r.(*NomadJob)
 			c.DependsOn = append(c.DependsOn, c.Cluster)
-
-		case TypeLocalIngress:
-			c := r.(*LocalIngress)
-			c.DependsOn = append(c.DependsOn, c.Target)
-			c.DependsOn = append(c.DependsOn, c.Depends...)
-
-			c.DependsOn = append(c.DependsOn, c.Depends...)
 		}
 	}
 

@@ -10,7 +10,7 @@ const TypeLegacyIngress ResourceType = "legacy_ingress"
 //       * NomadIngress
 //       * ContainerIngress
 type LegacyIngress struct {
-	ResourceInfo `mapstructure:",squash"`
+	ResourceInfo `hcl:",remain" mapstructure:",squash"`
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 

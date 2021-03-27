@@ -6,7 +6,7 @@ const TypeDocs ResourceType = "docs"
 // Docs allows the running of a Docusaurus container which can be used for
 // online tutorials or documentation
 type Docs struct {
-	ResourceInfo `mapstructure:",squash"`
+	ResourceInfo `hcl:",remain" mapstructure:",squash"`
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 

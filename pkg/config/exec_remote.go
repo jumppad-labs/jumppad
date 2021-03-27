@@ -5,7 +5,7 @@ const TypeExecRemote ResourceType = "exec_remote"
 
 // ExecRemote allows commands to be executed in remote containers
 type ExecRemote struct {
-	ResourceInfo `mapstructure:",squash"`
+	ResourceInfo `hcl:",remain" mapstructure:",squash"`
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 

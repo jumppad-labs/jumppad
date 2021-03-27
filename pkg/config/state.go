@@ -111,10 +111,6 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 			out = &K8sConfig{}
 		case TypeK8sIngress:
 			out = &K8sIngress{}
-		case TypeLegacyIngress:
-			out = &LegacyIngress{}
-		case TypeLocalIngress:
-			out = &LocalIngress{}
 		case TypeModule:
 			out = &Module{}
 		case TypeNetwork:

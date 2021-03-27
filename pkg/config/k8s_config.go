@@ -5,7 +5,7 @@ const TypeK8sConfig ResourceType = "k8s_config"
 
 // K8sConfig applies and deletes and deletes Kubernetes configuration
 type K8sConfig struct {
-	ResourceInfo `mapstructure:",squash"`
+	ResourceInfo `hcl:",remain" mapstructure:",squash"`
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 

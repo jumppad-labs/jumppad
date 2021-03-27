@@ -5,7 +5,7 @@ const TypeExecLocal ResourceType = "exec_local"
 
 // ExecLocal allows commands to be executed on the local machine
 type ExecLocal struct {
-	ResourceInfo `mapstructure:",squash"`
+	ResourceInfo `hcl:",remain" mapstructure:",squash"`
 
 	// Id stores the ID of the created connector service
 	Pid int `json:"pid,omitempty" state:"true"`
