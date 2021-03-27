@@ -22,11 +22,11 @@ import (
 
 var lock = sync.Mutex{}
 
-func setupTests(returnVals map[string]error) (Engine, *config.Config, *[]*mocks.MockProvider, func()) {
+func setupTests(returnVals map[string]error) (Engine, *[]*mocks.MockProvider, func()) {
 	return setupTestsBase(returnVals, "")
 }
 
-func setupTestsWithState(returnVals map[string]error, state string) (Engine, *config.Config, *[]*mocks.MockProvider, func()) {
+func setupTestsWithState(returnVals map[string]error, state string) (Engine, *[]*mocks.MockProvider, func()) {
 	return setupTestsBase(returnVals, state)
 }
 
@@ -60,7 +60,7 @@ func setupState(state string) func() {
 	}
 }
 
-func setupTestsBase(returnVals map[string]error, state string) (Engine, *config.Config, *[]*mocks.MockProvider, func()) {
+func setupTestsBase(returnVals map[string]error, state string) (Engine, *[]*mocks.MockProvider, func()) {
 	log.SetOutput(ioutil.Discard)
 
 	p := &[]*mocks.MockProvider{}
@@ -72,7 +72,7 @@ func setupTestsBase(returnVals map[string]error, state string) (Engine, *config.
 		getProvider: generateProviderMock(p, returnVals),
 	}
 
-	return e, nil, p, setupState(state)
+	return e, p, setupState(state)
 }
 
 func generateProviderMock(mp *[]*mocks.MockProvider, returnVals map[string]error) getProviderFunc {
@@ -118,7 +118,7 @@ func TestNewCreatesClients(t *testing.T) {
 }
 
 func TestApplyWithSingleFile(t *testing.T) {
-	e, _, mp, cleanup := setupTests(nil)
+	e, mp, cleanup := setupTests(nil)
 	defer cleanup()
 
 	_, err := e.Apply("../../examples/single_file/container.hcl")
@@ -131,7 +131,7 @@ func TestApplyWithSingleFile(t *testing.T) {
 }
 
 func TestApplyAddsImageCache(t *testing.T) {
-	e, _, _, cleanup := setupTests(nil)
+	e, _, cleanup := setupTests(nil)
 	defer cleanup()
 
 	_, err := e.Apply("../../examples/single_file/container.hcl")
@@ -142,7 +142,7 @@ func TestApplyAddsImageCache(t *testing.T) {
 }
 
 func TestApplyWithSingleFileAndVariables(t *testing.T) {
-	e, _, mp, cleanup := setupTests(nil)
+	e, mp, cleanup := setupTests(nil)
 	defer cleanup()
 
 	_, err := e.ApplyWithVariables("../../examples/single_file/container.hcl", nil, "../../examples/single_file/default.vars")
@@ -154,7 +154,7 @@ func TestApplyWithSingleFileAndVariables(t *testing.T) {
 }
 
 func TestApplyCallsProviderInCorrectOrder(t *testing.T) {
-	e, _, mp, cleanup := setupTests(nil)
+	e, mp, cleanup := setupTests(nil)
 	defer cleanup()
 
 	_, err := e.Apply("../../examples/single_k3s_cluster")
@@ -175,7 +175,7 @@ func TestApplyCallsProviderInCorrectOrder(t *testing.T) {
 }
 
 func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
-	e, _, mp, cleanup := setupTests(nil)
+	e, mp, cleanup := setupTests(nil)
 	defer cleanup()
 
 	_, err := e.Apply("../../examples/single_k3s_cluster")
@@ -186,8 +186,28 @@ func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
 	//assert.Len(t, res, 4)
 }
 
+func TestApplyNotCallsProviderDestroyAndCreateForResourcesDisabled(t *testing.T) {
+	e, mp, cleanup := setupTestsWithState(nil, disabledState)
+	defer cleanup()
+
+	_, err := e.Apply("")
+	assert.NoError(t, err)
+
+	// should have call create for each provider
+	testAssertMethodCalled(t, mp, "Destroy", 0)
+	testAssertMethodCalled(t, mp, "Create", 2) // ImageCache is always created
+
+	// check state of disabled remains disabled
+	c := config.New()
+	c.FromJSON(utils.StatePath())
+
+	r, err := c.FindResource("container.dc1")
+	assert.NoError(t, err)
+	assert.Equal(t, config.Disabled, r.Info().Status)
+}
+
 func TestApplyCallsProviderDestroyAndCreateForResourcesFailed(t *testing.T) {
-	e, _, mp, cleanup := setupTestsWithState(nil, failedState)
+	e, mp, cleanup := setupTestsWithState(nil, failedState)
 	defer cleanup()
 
 	_, err := e.Apply("")
@@ -199,7 +219,7 @@ func TestApplyCallsProviderDestroyAndCreateForResourcesFailed(t *testing.T) {
 }
 
 func TestApplyCallsProviderDestroyForResourcesPendingModification(t *testing.T) {
-	e, _, mp, cleanup := setupTestsWithState(nil, modificationState)
+	e, mp, cleanup := setupTestsWithState(nil, modificationState)
 	defer cleanup()
 
 	_, err := e.Apply("")
@@ -211,7 +231,7 @@ func TestApplyCallsProviderDestroyForResourcesPendingModification(t *testing.T) 
 }
 
 func TestApplyReturnsErrorWhenProviderDestroyForResourcesPendingorFailed(t *testing.T) {
-	e, _, mp, cleanup := setupTestsWithState(map[string]error{"dc1": fmt.Errorf("boom")}, failedState)
+	e, mp, cleanup := setupTestsWithState(map[string]error{"dc1": fmt.Errorf("boom")}, failedState)
 	defer cleanup()
 
 	_, err := e.Apply("")
@@ -223,7 +243,7 @@ func TestApplyReturnsErrorWhenProviderDestroyForResourcesPendingorFailed(t *test
 }
 
 func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
-	e, _, mp, cleanup := setupTests(map[string]error{"cloud": fmt.Errorf("boom")})
+	e, mp, cleanup := setupTests(map[string]error{"cloud": fmt.Errorf("boom")})
 	defer cleanup()
 
 	_, err := e.Apply("../../examples/single_k3s_cluster")
@@ -234,7 +254,7 @@ func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 }
 
 func TestApplyCallsProviderCreateErrorStopsExecution(t *testing.T) {
-	e, _, mp, cleanup := setupTests(map[string]error{"cloud": fmt.Errorf("boom")})
+	e, mp, cleanup := setupTests(map[string]error{"cloud": fmt.Errorf("boom")})
 	defer cleanup()
 
 	_, err := e.Apply("../../examples/single_k3s_cluster")
@@ -245,7 +265,7 @@ func TestApplyCallsProviderCreateErrorStopsExecution(t *testing.T) {
 }
 
 func TestApplySetsStatusForEachResource(t *testing.T) {
-	e, _, mp, cleanup := setupTestsWithState(nil, mergedState)
+	e, mp, cleanup := setupTestsWithState(nil, mergedState)
 	defer cleanup()
 
 	_, err := e.Apply("")
@@ -256,7 +276,7 @@ func TestApplySetsStatusForEachResource(t *testing.T) {
 }
 
 func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
-	e, _, mp, cleanup := setupTests(nil)
+	e, mp, cleanup := setupTests(nil)
 	defer cleanup()
 
 	err := e.Destroy("../../examples/single_k3s_cluster", true)
@@ -266,8 +286,27 @@ func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
 	testAssertMethodCalled(t, mp, "Destroy", 8)
 }
 
+func TestDestroyNotCallsProviderDestroyForResourcesDisabled(t *testing.T) {
+	e, mp, cleanup := setupTestsWithState(nil, disabledState)
+	defer cleanup()
+
+	err := e.Destroy("", true)
+	assert.NoError(t, err)
+
+	// should have call create for each provider
+	testAssertMethodCalled(t, mp, "Destroy", 2)
+	testAssertMethodCalled(t, mp, "Create", 0) // ImageCache is always created
+
+	// check state of disabled remains disabled
+	c := config.New()
+	c.FromJSON(utils.StatePath())
+
+	_, err = c.FindResource("container.dc1")
+	assert.Error(t, err) // resource should not exist
+}
+
 func TestDestroyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
-	e, _, mp, cleanup := setupTests(map[string]error{"k3s": fmt.Errorf("boom")})
+	e, mp, cleanup := setupTests(map[string]error{"k3s": fmt.Errorf("boom")})
 	defer cleanup()
 
 	err := e.Destroy("../../examples/single_k3s_cluster", true)
@@ -278,7 +317,7 @@ func TestDestroyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 }
 
 func TestDestroyFailSetsStatus(t *testing.T) {
-	e, _, mp, cleanup := setupTests(map[string]error{"cloud": fmt.Errorf("boom")})
+	e, mp, cleanup := setupTests(map[string]error{"cloud": fmt.Errorf("boom")})
 	defer cleanup()
 
 	err := e.Destroy("../../examples/single_k3s_cluster", true)
@@ -290,7 +329,7 @@ func TestDestroyFailSetsStatus(t *testing.T) {
 }
 
 func TestDestroyCallsProviderDestroyInCorrectOrder(t *testing.T) {
-	e, _, mp, cleanup := setupTests(nil)
+	e, mp, cleanup := setupTests(nil)
 	defer cleanup()
 
 	err := e.Destroy("../../examples/single_k3s_cluster", true)
@@ -363,6 +402,25 @@ var mergedState = `
       "status": "pending_update",
       "subnet": "10.15.0.0/16",
       "type": "network"
+	}
+  ]
+}
+`
+
+var disabledState = `
+{
+  "blueprint": null,
+  "resources": [
+	{
+      "name": "dc1",
+      "status": "pending_creation",
+      "subnet": "10.15.0.0/16",
+      "type": "network"
+	},
+	{
+      "name": "dc1",
+      "status": "disabled",
+      "type": "container"
 	}
   ]
 }

@@ -1331,4 +1331,10 @@ func setDisabled(r Resource, parentDisabled bool) {
 	if parentDisabled {
 		r.Info().Disabled = true
 	}
+
+	// when the resource is disabled set the status
+	// so the engine will not create or delete it
+	if r.Info().Disabled {
+		r.Info().Status = "disabled"
+	}
 }

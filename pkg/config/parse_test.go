@@ -381,6 +381,7 @@ func TestParseProcessesDisabled(t *testing.T) {
 	r, err := c.FindResource("container.consul_disabled")
 	assert.NoError(t, err)
 	assert.Equal(t, r.Info().Disabled, true)
+	assert.Equal(t, Disabled, r.Info().Status)
 }
 
 func TestParseProcessesDisabledOnModuleSettingChildDisabled(t *testing.T) {

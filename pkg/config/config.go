@@ -37,6 +37,10 @@ const Failed Status = "failed"
 // Destroyed means the resource has been destroyed
 const Destroyed Status = "destroyed"
 
+// Disabled means the resource will be ignored by the engine and no resources
+// will be created or destroyed
+const Disabled Status = "disabled"
+
 type Resource interface {
 	Info() *ResourceInfo
 	FindDependentResource(string) (Resource, error)

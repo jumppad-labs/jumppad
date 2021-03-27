@@ -226,10 +226,15 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 
 		case config.PendingUpdate:
 			// do nothing for pending updates
+
+		case config.Disabled:
+			// do nothing for disabled updates
 		}
 
-		// set the status
-		r.Info().Status = config.Applied
+		// set the status only if not disabled
+		if r.Info().Status != config.Disabled {
+			r.Info().Status = config.Applied
+		}
 
 		appendResources(&createdResource, r)
 
@@ -265,7 +270,9 @@ func (e *EngineImpl) Destroy(path string, allResources bool) error {
 	// make sure we destroy everything
 	if allResources {
 		for _, i := range e.config.Resources {
-			i.Info().Status = config.PendingUpdate
+			if i.Info().Status != config.Disabled {
+				i.Info().Status = config.PendingUpdate
+			}
 		}
 	}
 
@@ -273,24 +280,36 @@ func (e *EngineImpl) Destroy(path string, allResources bool) error {
 	w := dag.Walker{}
 	w.Reverse = true
 	w.Callback = func(v dag.Vertex) (diags tfdiags.Diagnostics) {
+
 		// check if the resource needs to be created and if so create
-		if r, ok := v.(config.Resource); ok && r.Info().Status == config.PendingUpdate {
-			// get the provider to create the resource
-			p := e.getProvider(r, e.clients)
-			if p == nil {
-				r.Info().Status = config.Failed
-				return diags.Append(fmt.Errorf("Unable to create provider for resource Name: %s, Type: %s", r.Info().Name, r.Info().Type))
-			}
+		if r, ok := v.(config.Resource); ok {
+			switch r.Info().Status {
+			case config.PendingUpdate:
+				// do nothing for disabled resources
+				if r.Info().Status == config.Disabled {
+					r.Info().Status = config.Destroyed
+					return nil
+				}
 
-			// execute
-			destroyErr := p.Destroy()
-			if destroyErr != nil {
-				r.Info().Status = config.Failed
-				return diags.Append(destroyErr)
-			}
+				// get the provider to create the resource
+				p := e.getProvider(r, e.clients)
+				if p == nil {
+					r.Info().Status = config.Failed
+					return diags.Append(fmt.Errorf("Unable to create provider for resource Name: %s, Type: %s", r.Info().Name, r.Info().Type))
+				}
 
-			// set the status
-			r.Info().Status = config.Destroyed
+				// execute
+				destroyErr := p.Destroy()
+				if destroyErr != nil {
+					r.Info().Status = config.Failed
+					return diags.Append(destroyErr)
+				}
+
+				fallthrough
+			case config.Disabled:
+				// set the status
+				r.Info().Status = config.Destroyed
+			}
 		}
 
 		return nil
@@ -375,7 +394,7 @@ func (e *EngineImpl) readConfig(path string, variables map[string]string, variab
 				return nil, err
 			}
 		} else {
-			err := config.ParseFolder(path, cc, false, "", []string{}, variables, variablesFile)
+			err := config.ParseFolder(path, cc, false, "", false, []string{}, variables, variablesFile)
 			if err != nil {
 				return nil, err
 			}
