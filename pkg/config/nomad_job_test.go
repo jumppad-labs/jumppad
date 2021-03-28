@@ -34,8 +34,13 @@ network "test" {
 }
 
 nomad_job "test" {
-	cluster = "nomad_cluster.dc1"
-	paths = []
+  cluster = "nomad_cluster.dev"
+
+  paths = ["./app_config/example2.nomad"]
+  health_check {
+    timeout = "60s"
+    nomad_jobs = ["example_2"]
+  }
 }
 `
 
@@ -46,7 +51,12 @@ network "test" {
 
 nomad_job "test" {
 	disabled = true
-	cluster = "nomad_cluster.dc1"
-	paths = []
+  cluster = "nomad_cluster.dev"
+
+  paths = ["./app_config/example2.nomad"]
+  health_check {
+    timeout = "60s"
+    nomad_jobs = ["example_2"]
+  }
 }
 `
