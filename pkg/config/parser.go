@@ -61,7 +61,7 @@ func ParseSingleFile(file string, c *Config, variables map[string]string, variab
 }
 
 // ParseFolder for Resource, Blueprint, and Variable files
-// The onlyResources parameter allows you to specfiy that the parser
+// The onlyResources parameter allows you to specify that the parser
 // moduleName is the name of the module, this should be set to a blank string for the root module
 // disabled sets the disabled flag on all resources, this is used when parsing a module that
 //  has the disabled flag set
@@ -545,29 +545,6 @@ func ParseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			setDisabled(h, disabled)
 
 			err = c.AddResource(h)
-			if err != nil {
-				return fmt.Errorf(
-					"Unable to add resource %s.%s in file %s: %s",
-					b.Type,
-					b.Labels[0],
-					file,
-					err,
-				)
-			}
-
-		case string(TypeImageCache):
-			i := NewImageCache(b.Labels[0])
-			i.Info().Module = moduleName
-			i.Info().DependsOn = dependsOn
-
-			err := decodeBody(file, b, i)
-			if err != nil {
-				return err
-			}
-
-			setDisabled(i, disabled)
-
-			err = c.AddResource(i)
 			if err != nil {
 				return fmt.Errorf(
 					"Unable to add resource %s.%s in file %s: %s",

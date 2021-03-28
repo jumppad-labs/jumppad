@@ -104,6 +104,33 @@ func TestLoadsVariablesFromOptionalFile(t *testing.T) {
 	assert.True(t, validEnv)
 }
 
+func TestLoadsVariablesFilesForSingleFile(t *testing.T) {
+	absoluteFilePath, err := filepath.Abs("../../examples/container/container.hcl")
+	assert.NoError(t, err)
+
+	absoluteVarsPath, err := filepath.Abs("../../examples/override.vars")
+	assert.NoError(t, err)
+
+	c := New()
+	err = ParseSingleFile(absoluteFilePath, c, map[string]string{}, absoluteVarsPath)
+	assert.NoError(t, err)
+
+	// check variable has been interpolated
+	r, err := c.FindResource("container.consul")
+	assert.NoError(t, err)
+
+	validEnv := false
+	con := r.(*Container)
+	for _, e := range con.Environment {
+		// should contain a key called "something" with a value "else"
+		if e.Key == "something" && e.Value == "else" {
+			validEnv = true
+		}
+	}
+
+	assert.True(t, validEnv)
+}
+
 func TestOverridesVariablesFilesWithFlag(t *testing.T) {
 	absoluteFolderPath, err := filepath.Abs("../../examples/container")
 	if err != nil {
@@ -406,6 +433,56 @@ func TestParseProcessesDisabledOnModuleSettingChildDisabled(t *testing.T) {
 	r, err = c.FindResource("exec_local.run")
 	assert.NoError(t, err)
 	assert.Equal(t, true, r.Info().Disabled)
+}
+
+func TestParseProcessesShipyardFunctions(t *testing.T) {
+	tDir := t.TempDir()
+	home := os.Getenv(utils.HomeEnvName())
+	os.Setenv(utils.HomeEnvName(), tDir)
+	t.Cleanup(func() {
+		os.Setenv(utils.HomeEnvName(), home)
+	})
+
+	absoluteFolderPath, err := filepath.Abs("../../examples/functions")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	absoluteFilePath, err := filepath.Abs("../../examples/functions/container.hcl")
+	assert.NoError(t, err)
+
+	absoluteVarsPath, err := filepath.Abs("../../examples/override.vars")
+	assert.NoError(t, err)
+
+	_, kubeConfigFile, kubeConfigDockerFile := utils.CreateKubeConfigPath("dc1")
+
+	ip, _ := utils.GetLocalIPAndHostname()
+	clusterConf, _ := utils.GetClusterConfig("nomad_cluster.dc1")
+	clusterIP := clusterConf.APIAddress(utils.LocalContext)
+
+	c := New()
+	err = ParseSingleFile(absoluteFilePath, c, map[string]string{}, absoluteVarsPath)
+	assert.NoError(t, err)
+
+	// check variable has been interpolated
+	r, err := c.FindResource("container.consul")
+	assert.NoError(t, err)
+
+	cc := r.(*Container)
+
+	assert.Equal(t, absoluteFolderPath, cc.EnvVar["file_dir"])
+	assert.Equal(t, absoluteFilePath, cc.EnvVar["file_path"])
+	assert.Equal(t, os.Getenv("HOME"), cc.EnvVar["env"])
+	assert.Equal(t, kubeConfigFile, cc.EnvVar["k8s_config"])
+	assert.Equal(t, kubeConfigDockerFile, cc.EnvVar["k8s_config_docker"])
+	assert.Equal(t, os.Getenv("HOME"), cc.EnvVar["home"])
+	assert.Equal(t, utils.ShipyardHome(), cc.EnvVar["shipyard"])
+	assert.Contains(t, cc.EnvVar["file"], "version=\"consul:1.8.1\"")
+	assert.Equal(t, utils.GetDataFolder("mine"), cc.EnvVar["data"])
+	assert.Equal(t, utils.GetDockerIP(), cc.EnvVar["docker_ip"])
+	assert.Equal(t, utils.GetDockerHost(), cc.EnvVar["docker_host"])
+	assert.Equal(t, ip, cc.EnvVar["shipyard_ip"])
+	assert.Equal(t, clusterIP, cc.EnvVar["cluster_api"])
 }
 
 /*
