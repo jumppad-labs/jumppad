@@ -6,6 +6,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestNewCreatesHelm(t *testing.T) {
+	c := NewHelm("abc")
+
+	assert.Equal(t, "abc", c.Name)
+	assert.Equal(t, TypeHelm, c.Type)
+}
+
 func TestHelmCreatesCorrectly(t *testing.T) {
 	c, _, cleanup := setupTestConfig(t, helmDefault)
 	defer cleanup()

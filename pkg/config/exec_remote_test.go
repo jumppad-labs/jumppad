@@ -7,6 +7,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestNewCreatesExecRemote(t *testing.T) {
+	c := NewExecLocal("abc")
+
+	assert.Equal(t, "abc", c.Name)
+	assert.Equal(t, TypeExecRemote, c.Type)
+}
+
 func TestExecRemoteCreatesCorrectly(t *testing.T) {
 	c, dir, cleanup := setupTestConfig(t, execRemoteRelative)
 	defer cleanup()

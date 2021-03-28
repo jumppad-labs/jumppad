@@ -6,6 +6,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestNewCreatesDocs(t *testing.T) {
+	c := NewDocs("abc")
+
+	assert.Equal(t, "abc", c.Name)
+	assert.Equal(t, TypeDocs, c.Type)
+}
+
 func TestDocsCreatesCorrectly(t *testing.T) {
 	c, _, cleanup := setupTestConfig(t, docsDefault)
 	defer cleanup()

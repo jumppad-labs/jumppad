@@ -6,6 +6,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestNewCreatesExecLocal(t *testing.T) {
+	c := NewExecLocal("abc")
+
+	assert.Equal(t, "abc", c.Name)
+	assert.Equal(t, TypeExecLocal, c.Type)
+}
+
 func TestExecLocalCreatesCorrectly(t *testing.T) {
 	c, _, cleanup := setupTestConfig(t, execLocalRelative)
 	defer cleanup()

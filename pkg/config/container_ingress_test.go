@@ -6,6 +6,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestNewCreatesContainerIngress(t *testing.T) {
+	c := NewContainerIngress("abc")
+
+	assert.Equal(t, "abc", c.Name)
+	assert.Equal(t, TypeContainerIngress, c.Type)
+}
+
 func TestContainerIngressCreatesCorrectly(t *testing.T) {
 	c, _, cleanup := setupTestConfig(t, containerIngressDefault)
 	defer cleanup()
