@@ -37,6 +37,10 @@ const Failed Status = "failed"
 // Destroyed means the resource has been destroyed
 const Destroyed Status = "destroyed"
 
+// Disabled means the resource will be ignored by the engine and no resources
+// will be created or destroyed
+const Disabled Status = "disabled"
+
 type Resource interface {
 	Info() *ResourceInfo
 	FindDependentResource(string) (Resource, error)
@@ -55,6 +59,8 @@ type ResourceInfo struct {
 	DependsOn []string `json:"depends_on,omitempty" mapstructure:"depends_on"`
 	// Module is the name of the module if a resource has been loaded from a module
 	Module string `json:"module,omitempty"`
+	// Enabled determines if a resource is enabled and should be processed
+	Disabled bool `hcl:"disabled,optional" json:"disabled,omitempty"`
 
 	// parent container
 	Config *Config `json:"-"`

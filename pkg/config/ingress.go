@@ -11,7 +11,7 @@ const (
 
 // Ingress defines an ingress service mapping ports between local host and resources like containers and kube cluster
 type Ingress struct {
-	ResourceInfo `mapstructure:",squash"`
+	ResourceInfo `hcl:",remain" mapstructure:",squash"`
 
 	// Id stores the ID of the created connector service
 	Id string `json:"id" state:"true"`

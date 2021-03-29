@@ -6,7 +6,7 @@ const TypeContainer ResourceType = "container"
 // Container defines a structure for creating Docker containers
 type Container struct {
 	// embedded type holding name, etc
-	ResourceInfo `mapstructure:",squash"`
+	ResourceInfo `hcl:",remain" mapstructure:",squash"`
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 

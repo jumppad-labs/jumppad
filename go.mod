@@ -13,13 +13,8 @@ require (
 	github.com/docker/docker v1.4.2-0.20200203170920-46ec8731fbce
 	github.com/docker/go-connections v0.4.0
 	github.com/gernest/front v0.0.0-20181129160812-ed80ca338b88
-	github.com/go-delve/delve v1.5.1 // indirect
-	github.com/gofiber/fiber v1.14.6
 	github.com/gofiber/fiber/v2 v2.5.0
 	github.com/gofiber/websocket/v2 v2.0.2
-	github.com/google/martian v2.1.0+incompatible
-	github.com/gorilla/mux v1.7.4
-	github.com/gorilla/websocket v1.4.2
 	github.com/gosuri/uitable v0.0.4
 	github.com/hashicorp/go-getter v1.5.1
 	github.com/hashicorp/go-hclog v0.15.0
@@ -27,16 +22,12 @@ require (
 	github.com/hashicorp/hcl2 v0.0.0-20191002203319-fb75b3253c80
 	github.com/hashicorp/terraform v0.12.29
 	github.com/hokaccha/go-prettyjson v0.0.0-20190818114111-108c894c2c0e
-	github.com/kr/pretty v0.2.0
-	github.com/kr/pty v1.1.5
+	github.com/mattn/go-colorable v0.1.7 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/mapstructure v1.4.0
-	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e
-	github.com/samalba/dockerclient v0.0.0-20160531175551-a30362618471 // indirect
 	github.com/shipyard-run/connector v0.0.18
 	github.com/shipyard-run/gohup v0.2.2
 	github.com/shipyard-run/version-manager v0.0.5
-	github.com/shipyard/shipyard v3.0.0+incompatible // indirect
 	github.com/spf13/cobra v1.1.1
 	github.com/stretchr/testify v1.6.1
 	github.com/zclconf/go-cty v1.5.1
@@ -44,7 +35,6 @@ require (
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 	google.golang.org/api v0.30.0 // indirect
 	google.golang.org/grpc v1.33.1
-	gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c // indirect
 	helm.sh/helm/v3 v3.4.1
 	k8s.io/api v0.19.3
 	k8s.io/apimachinery v0.19.3

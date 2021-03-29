@@ -11,7 +11,7 @@ func setupBlueprints(t *testing.T, contents string) (*Config, func()) {
 	createNamedFile(t, dir, "*.yard", contents)
 
 	c := &Config{}
-	err := ParseFolder(dir, c, false, "", []string{}, nil, "")
+	err := ParseFolder(dir, c, false, "", false, []string{}, nil, "")
 	assert.NoError(t, err)
 
 	return c, cleanup

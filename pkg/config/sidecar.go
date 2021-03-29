@@ -6,7 +6,7 @@ const TypeSidecar ResourceType = "sidecar"
 // Sidecar defines a structure for creating Docker containers
 type Sidecar struct {
 	// embedded type holding name, etc
-	ResourceInfo `mapstructure:",squash"`
+	ResourceInfo `hcl:",remain" mapstructure:",squash"`
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 

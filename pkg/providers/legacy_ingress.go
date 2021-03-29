@@ -33,6 +33,7 @@ func NewContainerIngress(ci *config.ContainerIngress, cc clients.ContainerTasks,
 	c.Target = ci.Target
 	c.Ports = ci.Ports
 	c.Config = ci.Config
+	c.Disabled = ci.Disabled
 
 	return &LegacyIngress{c, cc, l}
 }
@@ -45,6 +46,7 @@ func NewNomadIngress(ci *config.NomadIngress, cc clients.ContainerTasks, l hclog
 	c.Target = ci.Cluster
 	c.Ports = ci.Ports
 	c.Config = ci.Config
+	c.Disabled = ci.Disabled
 
 	c.Service = fmt.Sprintf("%s.%s.%s", ci.Job, ci.Group, ci.Task)
 
@@ -59,6 +61,7 @@ func NewK8sIngress(kc *config.K8sIngress, cc clients.ContainerTasks, l hclog.Log
 	c.Depends = kc.Depends
 	c.Networks = kc.Networks
 	c.Target = kc.Cluster
+	c.Disabled = kc.Disabled
 
 	if kc.Deployment != "" {
 		c.Service = fmt.Sprintf("deployment/%s", kc.Deployment)

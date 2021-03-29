@@ -6,7 +6,7 @@ const TypeModule ResourceType = "module"
 // Module allows Shipyard configuration to be imported from external folder or
 // GitHub repositories
 type Module struct {
-	ResourceInfo `mapstructure:",squash"`
+	ResourceInfo `hcl:",remain" mapstructure:",squash"`
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 

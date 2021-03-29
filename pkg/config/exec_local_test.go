@@ -6,6 +6,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestNewCreatesExecLocal(t *testing.T) {
+	c := NewExecLocal("abc")
+
+	assert.Equal(t, "abc", c.Name)
+	assert.Equal(t, TypeExecLocal, c.Type)
+}
+
 func TestExecLocalCreatesCorrectly(t *testing.T) {
 	c, _, cleanup := setupTestConfig(t, execLocalRelative)
 	defer cleanup()
@@ -18,12 +25,30 @@ func TestExecLocalCreatesCorrectly(t *testing.T) {
 	assert.Equal(t, PendingCreation, ex.Info().Status)
 	assert.Equal(t, "./", ex.(*ExecLocal).WorkingDirectory)
 	assert.True(t, ex.(*ExecLocal).Daemon)
+}
 
-	// assert.Equal(t, dir+"/scripts/setup_vault.sh", ExecLocal(*ex).Script)
+func TestExecLocalSetsDisabled(t *testing.T) {
+	c, _, cleanup := setupTestConfig(t, execLocalDisabled)
+	defer cleanup()
+
+	ex, err := c.FindResource("exec_local.setup_vault")
+	assert.NoError(t, err)
+
+	assert.Equal(t, Disabled, ex.Info().Status)
 }
 
 var execLocalRelative = `
 exec_local "setup_vault" {
+  cmd = "./scripts/setup_vault.sh"
+  args = [ "root", "abc" ] 
+  working_directory = "./"
+  daemon = true
+}
+`
+var execLocalDisabled = `
+exec_local "setup_vault" {
+	disabled = true
+
   cmd = "./scripts/setup_vault.sh"
   args = [ "root", "abc" ] 
   working_directory = "./"
