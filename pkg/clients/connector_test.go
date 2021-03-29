@@ -3,12 +3,16 @@ package clients
 import (
 	"fmt"
 	"math/rand"
+	"net"
 	"os"
 	"path"
 	"testing"
 	"time"
 
+	"github.com/shipyard-run/connector/protos/shipyard"
+	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/utils"
+	"github.com/stretchr/testify/mock"
 	assert "github.com/stretchr/testify/require"
 )
 
@@ -21,6 +25,12 @@ func TestConnectorSuite(t *testing.T) {
 	suiteTemp = t.TempDir()
 	suiteBinary = utils.GetShipyardBinaryPath()
 
+	home := os.Getenv(utils.HomeEnvName())
+	os.Setenv(utils.HomeEnvName(), suiteTemp)
+	t.Cleanup(func() {
+		os.Setenv(utils.HomeEnvName(), home)
+	})
+
 	suiteOptions.LogDirectory = os.TempDir()
 	suiteOptions.BinaryPath = suiteBinary
 	suiteOptions.GrpcBind = fmt.Sprintf(":%d", rand.Intn(1000)+20000)
@@ -30,13 +40,15 @@ func TestConnectorSuite(t *testing.T) {
 	t.Run("Fetches certificates", testFetchesLocalCertBundle)
 	t.Run("Generates a leaf certificate", testGenerateCreatesLeaf)
 	t.Run("Starts Connector correctly", testStartsConnector)
+	t.Run("Calls expose", testExposeServiceCallsExpose)
+	t.Run("Calls remove", testRemoveServiceCallsRemove)
 }
 
 func testGenerateCreatesBundle(t *testing.T) {
 	c := NewConnector(suiteOptions)
 
 	var err error
-	suiteCertBundle, err = c.GenerateLocalCertBundle(suiteTemp)
+	suiteCertBundle, err = c.GenerateLocalCertBundle(utils.CertsDir(""))
 	assert.NoError(t, err)
 
 	assert.FileExists(t, suiteCertBundle.RootCertPath)
@@ -48,7 +60,7 @@ func testGenerateCreatesBundle(t *testing.T) {
 func testFetchesLocalCertBundle(t *testing.T) {
 	c := NewConnector(suiteOptions)
 
-	cb, err := c.GetLocalCertBundle(suiteTemp)
+	cb, err := c.GetLocalCertBundle(utils.CertsDir(""))
 	assert.NoError(t, err)
 	assert.NotNil(t, cb)
 }
@@ -81,8 +93,9 @@ func testStartsConnector(t *testing.T) {
 	err := c.Start(suiteCertBundle)
 	assert.NoError(t, err)
 
-	// make sure we stop even if we fail
-	defer c.Stop()
+	t.Cleanup(func() {
+		c.Stop()
+	})
 
 	// check the logfile
 	assert.FileExists(t, path.Join(os.TempDir(), "connector.log"))
@@ -91,4 +104,70 @@ func testStartsConnector(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		return c.IsRunning()
 	}, 3*time.Second, 100*time.Millisecond)
+}
+
+func testExposeServiceCallsExpose(t *testing.T) {
+	// ensure the socket has been released from the previous test
+	assert.Eventually(t, func() bool {
+		_, err := net.Dial("tcp", suiteOptions.GrpcBind)
+		return err != nil
+	}, 2*time.Second, 100*time.Millisecond)
+
+	ts := mocks.NewMockConnectorServer()
+	ts.On("ExposeService", mock.Anything, mock.Anything).Return(&shipyard.ExposeResponse{}, nil)
+
+	_, err := ts.Start(suiteOptions.GrpcBind, suiteCertBundle.RootCertPath, suiteCertBundle.RootKeyPath, suiteCertBundle.LeafCertPath, suiteCertBundle.LeafKeyPath)
+	assert.NoError(t, err)
+
+	t.Cleanup(func() {
+		ts.Stop()
+	})
+
+	r := &shipyard.ExposeRequest{}
+	r.Service = &shipyard.Service{
+		Name:                "test",
+		RemoteConnectorAddr: "remoteaddr",
+		DestinationAddr:     "destaddr",
+		SourcePort:          8080,
+		Type:                shipyard.ServiceType_REMOTE,
+	}
+
+	c := NewConnector(suiteOptions)
+	_, err = c.ExposeService(
+		r.Service.Name,
+		int(r.Service.SourcePort),
+		r.Service.RemoteConnectorAddr,
+		r.Service.DestinationAddr,
+		"remote",
+	)
+	assert.NoError(t, err)
+
+	ts.AssertCalled(t, "ExposeService", mock.Anything, r)
+}
+
+func testRemoveServiceCallsRemove(t *testing.T) {
+	// ensure the socket has been released from the previous test
+	assert.Eventually(t, func() bool {
+		_, err := net.Dial("tcp", suiteOptions.GrpcBind)
+		return err != nil
+	}, 2*time.Second, 100*time.Millisecond)
+
+	ts := mocks.NewMockConnectorServer()
+	ts.On("DestroyService", mock.Anything, mock.Anything).Return(&shipyard.NullMessage{}, nil)
+
+	_, err := ts.Start(suiteOptions.GrpcBind, suiteCertBundle.RootCertPath, suiteCertBundle.RootKeyPath, suiteCertBundle.LeafCertPath, suiteCertBundle.LeafKeyPath)
+	assert.NoError(t, err)
+
+	t.Cleanup(func() {
+		ts.Stop()
+	})
+
+	r := &shipyard.DestroyRequest{}
+	r.Id = "tester"
+
+	c := NewConnector(suiteOptions)
+	err = c.RemoveService(r.Id)
+	assert.NoError(t, err)
+
+	ts.AssertCalled(t, "DestroyService", mock.Anything, r)
 }

@@ -6,6 +6,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestNewCreatesK8sIngress(t *testing.T) {
+	c := NewK8sIngress("abc")
+
+	assert.Equal(t, "abc", c.Name)
+	assert.Equal(t, TypeK8sIngress, c.Type)
+}
+
 func TestK8sIngressCreatesCorrectly(t *testing.T) {
 	c, _, cleanup := setupTestConfig(t, k8sIngressDefault)
 	defer cleanup()

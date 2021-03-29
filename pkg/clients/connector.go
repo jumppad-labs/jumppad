@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/shipyard-run/connector/crypto"
 	"github.com/shipyard-run/connector/protos/shipyard"
@@ -188,8 +189,15 @@ func (c *ConnectorImpl) GenerateLocalCertBundle(out string) (*CertBundle, error)
 		return nil, err
 	}
 
+	grcpParts := strings.Split(c.options.GrpcBind, ":")
+	httpParts := strings.Split(c.options.GrpcBind, ":")
+
 	ips := utils.GetLocalIPAddresses()
-	host := []string{utils.GetHostname(), "localhost:30001", "localhost:30002"}
+	host := []string{
+		utils.GetHostname(),
+		fmt.Sprintf("localhost:%s", grcpParts[1]),
+		fmt.Sprintf("localhost:%s", httpParts[1]),
+	}
 
 	return c.GenerateLeafCert(cb.RootKeyPath, cb.RootCertPath, host, ips, out)
 }
@@ -267,7 +275,7 @@ func (c *ConnectorImpl) GenerateLeafCert(
 		return nil, err
 	}
 
-	hosts := []string{"localhost", "*.shipyard.run", ":30001"}
+	hosts := []string{"localhost", "*.shipyard.run", c.options.GrpcBind}
 	hosts = append(hosts, host...)
 
 	lc, err := crypto.GenerateLeaf(
@@ -299,14 +307,15 @@ func (c *ConnectorImpl) ExposeService(
 	direction string,
 ) (string, error) {
 
-	cb, err := c.GetLocalCertBundle(utils.CertsDir(""))
+	dir := utils.CertsDir("")
+	cb, err := c.GetLocalCertBundle(dir)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Unable to find certificate at location: %s, error: %s", dir, err)
 	}
 
-	cl, err := getClient(cb, "localhost:30001")
+	cl, err := getClient(cb, c.options.GrpcBind)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Unable to create grpc client: %s", err)
 	}
 
 	t := shipyard.ServiceType_LOCAL
@@ -338,7 +347,7 @@ func (c *ConnectorImpl) RemoveService(id string) error {
 		return err
 	}
 
-	cl, err := getClient(cb, "localhost:30001")
+	cl, err := getClient(cb, c.options.GrpcBind)
 	if err != nil {
 		return err
 	}

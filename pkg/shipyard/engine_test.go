@@ -275,6 +275,34 @@ func TestApplySetsStatusForEachResource(t *testing.T) {
 	testAssertMethodCalled(t, mp, "Create", 1) // ImageCache is always created
 }
 
+func TestParseConfig(t *testing.T) {
+	e, mp, cleanup := setupTests(nil)
+	defer cleanup()
+
+	err := e.ParseConfig("../../examples/single_file/container.hcl")
+	assert.NoError(t, err)
+
+	assert.Equal(t, 3, e.(*EngineImpl).config.ResourceCount())
+
+	// should not have crated any providers
+	testAssertMethodCalled(t, mp, "Create", 0)
+	testAssertMethodCalled(t, mp, "Destroy", 0)
+}
+
+func TestParseWithVariables(t *testing.T) {
+	e, mp, cleanup := setupTests(nil)
+	defer cleanup()
+
+	err := e.ParseConfigWithVariables("../../examples/single_file/container.hcl", nil, "../../examples/single_file/default.vars")
+	assert.NoError(t, err)
+
+	assert.Equal(t, 3, e.(*EngineImpl).config.ResourceCount())
+
+	// should not have crated any providers
+	testAssertMethodCalled(t, mp, "Create", 0)
+	testAssertMethodCalled(t, mp, "Destroy", 0)
+}
+
 func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
 	e, mp, cleanup := setupTests(nil)
 	defer cleanup()

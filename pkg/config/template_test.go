@@ -6,6 +6,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestNewCreatesTemplate(t *testing.T) {
+	c := NewTemplate("abc")
+
+	assert.Equal(t, "abc", c.Name)
+	assert.Equal(t, TypeTemplate, c.Type)
+}
+
 func TestTemplateCreatesCorrectly(t *testing.T) {
 	c, _, cleanup := setupTestConfig(t, templateDefault)
 	defer cleanup()

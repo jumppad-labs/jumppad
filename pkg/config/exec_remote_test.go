@@ -8,7 +8,7 @@ import (
 )
 
 func TestNewCreatesExecRemote(t *testing.T) {
-	c := NewExecLocal("abc")
+	c := NewExecRemote("abc")
 
 	assert.Equal(t, "abc", c.Name)
 	assert.Equal(t, TypeExecRemote, c.Type)

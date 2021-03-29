@@ -6,6 +6,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestNewCreatesSidecar(t *testing.T) {
+	c := NewSidecar("abc")
+
+	assert.Equal(t, "abc", c.Name)
+	assert.Equal(t, TypeSidecar, c.Type)
+}
+
 func TestSidecarCreatesCorrectly(t *testing.T) {
 	c, _, cleanup := setupTestConfig(t, sidecarDefault)
 	defer cleanup()

@@ -6,6 +6,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestNewCreatesNetwork(t *testing.T) {
+	c := NewNetwork("abc")
+
+	assert.Equal(t, "abc", c.Name)
+	assert.Equal(t, TypeNetwork, c.Type)
+}
+
 func TestNetworkCreatesCorrectly(t *testing.T) {
 	c, _, cleanup := setupTestConfig(t, networkDefault)
 	defer cleanup()

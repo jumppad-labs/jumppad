@@ -6,6 +6,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestNewCreatesNomadJob(t *testing.T) {
+	c := NewNomadJob("abc")
+
+	assert.Equal(t, "abc", c.Name)
+	assert.Equal(t, TypeNomadJob, c.Type)
+}
+
 func TestNomadJobCreatesCorrectly(t *testing.T) {
 	c, _, cleanup := setupTestConfig(t, nomadJobDefault)
 	defer cleanup()

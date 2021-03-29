@@ -139,10 +139,16 @@ func (e *EngineImpl) GetClients() *Clients {
 	return e.clients
 }
 
+// ParseConfig parses the given Shipyard files and creating the resource types but does
+// not apply or destroy the resources.
+// This function can be used to check the validity of a configuration without making changes
 func (e *EngineImpl) ParseConfig(path string) error {
 	return e.ParseConfigWithVariables(path, nil, "")
 }
 
+// ParseConfigWithVariables parses the given Shipyard files and creating the resource types but does
+// not apply or destroy the resources.
+// This function can be used to check the validity of a configuration without making changes
 func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]string, variablesFile string) error {
 	_, err := e.readConfig(path, vars, variablesFile)
 	if err != nil {
@@ -152,6 +158,7 @@ func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]strin
 	return nil
 }
 
+// Apply the configuration and create or destroy the resources
 func (e *EngineImpl) Apply(path string) ([]config.Resource, error) {
 	return e.ApplyWithVariables(path, nil, "")
 }
