@@ -179,10 +179,12 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 
 		// update status every 30s to let people know we are still running
 		statusUpdate := time.NewTicker(15 * time.Second)
+		startTime := time.Now()
 
 		go func() {
-			for _ = range statusUpdate.C {
-				logger.Info("Please wait, still creating resources ...")
+			for range statusUpdate.C {
+				elapsedTime := time.Now().Sub(startTime).String()
+				logger.Info("Please wait, still creating resources [Elapsed Time: " + elapsedTime + "]")
 			}
 		}()
 

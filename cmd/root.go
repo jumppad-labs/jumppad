@@ -23,9 +23,9 @@ var engine shipyard.Engine
 var logger hclog.Logger
 var engineClients *shipyard.Clients
 
-var version string
-var date string
-var commit string
+var version string // set by build process
+var date string    // set by build process
+var commit string  // set by build process
 
 func init() {
 	var vm gvm.Versions
@@ -33,7 +33,7 @@ func init() {
 	// setup dependencies
 	logger = createLogger()
 	engine, vm = createEngine(logger)
-	engineClients := engine.GetClients()
+	engineClients = engine.GetClients()
 
 	//cobra.OnInitialize(configure)
 

@@ -67,6 +67,9 @@ var statusCmd = &cobra.Command{
 				case config.Failed:
 					status = fmt.Sprintf(Red, "FAILED")
 					failedCount++
+				case config.Disabled:
+					status = fmt.Sprintf(Teal, "DISABLED")
+					failedCount++
 				default:
 					pendingCount++
 				}

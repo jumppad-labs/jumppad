@@ -46,9 +46,11 @@ var commandExitCode = 0
 func newTestCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, l hclog.Logger) *cobra.Command {
 	var testFolder string
 	var force bool
+	var dontDestroy bool
 	var purge bool
 	var variables []string
 	var variablesFile string
+	var tags string
 
 	var testCmd = &cobra.Command{
 		Use:                   "test [blueprint]",
@@ -56,7 +58,7 @@ func newTestCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc client
 		Long:                  `Run functional tests for the blueprint, this command will start the shipyard blueprint `,
 		DisableFlagsInUseLine: true,
 		Args:                  cobra.ArbitraryArgs,
-		RunE:                  newTestCmdFunc(e, bp, hc, bc, testFolder, &force, &purge, &variables, &variablesFile, l),
+		RunE:                  newTestCmdFunc(e, bp, hc, bc, testFolder, &force, &purge, &variables, &variablesFile, &tags, &dontDestroy, l),
 	}
 
 	testCmd.Flags().StringVarP(&testFolder, "test-folder", "", "", "Specify the folder containing the functional tests.")
@@ -64,15 +66,28 @@ func newTestCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc client
 	testCmd.Flags().BoolVarP(&purge, "purge", "", false, "When set to true Shipyard will remove any cached images or blueprints")
 	testCmd.Flags().StringSliceVarP(&variables, "var", "", nil, "Allows setting variables from the command line, variables are specified as a key and value, e.g --var key=value. Can be specified multiple times")
 	testCmd.Flags().StringVarP(&variablesFile, "vars-file", "", "", "Load variables from a location other than *.vars files in the blueprint folder. E.g --vars-file=./file.vars")
+	testCmd.Flags().StringVarP(&tags, "tags", "", "", "Test tags to run e.g. @wip, @wip,@new, when not set all tests are run")
+	testCmd.Flags().BoolVarP(&dontDestroy, "dont-destroy", "", false, "When set to true, Shipyard does not destroy the blueprint after executing the tests")
 
 	return testCmd
 }
 
-func newTestCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, testFolder string, force *bool, purge *bool, variables *[]string, variablesFile *string, l hclog.Logger) func(cmd *cobra.Command, args []string) error {
-	return func(cmd *cobra.Command, args []string) error {
-		//
+func newTestCmdFunc(
+	e shipyard.Engine,
+	bp clients.Getter,
+	hc clients.HTTP,
+	bc clients.System,
+	testFolder string,
+	force *bool,
+	purge *bool,
+	variables *[]string,
+	variablesFile *string,
+	tags *string,
+	dontDestroy *bool,
+	l hclog.Logger) func(cmd *cobra.Command, args []string) error {
 
-		tr := CucumberRunner{cmd, args, e, bp, hc, bc, testFolder, "", "", force, purge, l, *variables, *variablesFile}
+	return func(cmd *cobra.Command, args []string) error {
+		tr := CucumberRunner{cmd, args, e, bp, hc, bc, testFolder, "", "", force, purge, l, *variables, nil, *variablesFile, *tags, dontDestroy}
 		tr.start()
 
 		return nil
@@ -93,8 +108,11 @@ type CucumberRunner struct {
 	force         *bool
 	purge         *bool
 	l             hclog.Logger
+	baseVariables []string
 	variables     []string
 	variablesFile string
+	tags          string
+	dontDestroy   *bool
 }
 
 // Initialize the functional tests
@@ -121,6 +139,7 @@ func (cr *CucumberRunner) start() {
 	cr.testPath = filepath.Join(cr.basePath, cr.testFolder)
 
 	opts.Paths = []string{cr.testPath}
+	opts.Tags = cr.tags
 
 	status := godog.TestSuite{
 		Name:                "Blueprint test",
@@ -133,15 +152,25 @@ func (cr *CucumberRunner) start() {
 
 func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 	ctx.BeforeScenario(func(gs *godog.Scenario) {
+		// ensure the variables are not carried over from a previous scenario
 		envVars = map[string]string{}
 		commandOutput = bytes.NewBufferString("")
 		commandExitCode = 0
+		cr.variables = cr.baseVariables
+
+		cr.e, _ = createEngine(cr.l)
+
+		fmt.Println("vars", cr.variables)
+
+		// do we need to pure the cache
+		if *cr.purge {
+			pc := newPurgeCmdFunc(cr.e.GetClients().Docker, cr.e.GetClients().ImageLog, cr.e.GetClients().Logger)
+			pc(cr.cmd, cr.args)
+		}
 	})
 
 	ctx.AfterScenario(func(gs *godog.Scenario, err error) {
-		dest := newDestroyCmd(cr.e.GetClients().Connector)
-		dest.SetArgs([]string{})
-		dest.Execute()
+		// only destroy when the dont-destroy flag is false
 
 		if err != nil {
 			fmt.Println(output.String())
@@ -156,11 +185,14 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 			}
 		}
 
-		// do we need to pure the cache
-		if *cr.purge {
-			pc := newPurgeCmdFunc(cr.e.GetClients().Docker, cr.e.GetClients().ImageLog, cr.e.GetClients().Logger)
-			pc(cr.cmd, cr.args)
+		if *cr.dontDestroy {
+			fmt.Println("Not automatically destroying resources, run the command 'shipyard destroy' manually")
+			return
 		}
+
+		dest := newDestroyCmd(cr.e.GetClients().Connector)
+		dest.SetArgs([]string{})
+		dest.Execute()
 	})
 
 	ctx.Step(`^I have a running blueprint$`, cr.iRunApply)
@@ -183,9 +215,6 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 	ctx.Step(`^I expect the exit code to be (\d+)$`, cr.iExpectTheExitCodeToBe)
 	ctx.Step(`^I expect the response to contain "([^"]*)"$`, cr.iExpectTheResponseToContain)
 	ctx.Step(`^a TCP connection to "([^"]*)" should open$`, aTCPConnectionToShouldOpen)
-}
-
-func FeatureContext(s *godog.Suite) {
 }
 
 func (cr *CucumberRunner) iRunApply() error {
@@ -256,12 +285,15 @@ func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
 	if os.Getenv("LOG_LEVEL") != "debug" {
 		cr.cmd.SetOut(output)
 		cr.cmd.SetErr(output)
+	} else {
+		logger.Debug("Running test with", "variables", cr.variables)
 	}
 
 	err := rc(cr.cmd, args)
 	if err != nil {
 		fmt.Println(output.String())
 	}
+
 	return err
 }
 
@@ -361,7 +393,7 @@ var respBody = ""
 func (cr *CucumberRunner) aCallToShouldResultInStatus(arg1 string, arg2 int) error {
 	// try 5 times
 	var err error
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 60; i++ {
 		var resp *http.Response
 		var netClient = &http.Client{
 			Timeout: time.Second * 10,
@@ -379,7 +411,7 @@ func (cr *CucumberRunner) aCallToShouldResultInStatus(arg1 string, arg2 int) err
 			err = fmt.Errorf("Expected status code %d, got %d", arg2, resp.StatusCode)
 		}
 
-		time.Sleep(10 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 
 	return err

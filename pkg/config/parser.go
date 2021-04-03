@@ -25,10 +25,6 @@ import (
 
 var ctx *hcl.EvalContext
 
-func init() {
-	ctx = buildContext()
-}
-
 type ResourceTypeNotExistError struct {
 	Type string
 	File string
@@ -39,25 +35,8 @@ func (r ResourceTypeNotExistError) Error() string {
 }
 
 func ParseSingleFile(file string, c *Config, variables map[string]string, variablesFile string) error {
-	SetVariables(variables)
-	if variablesFile != "" {
-		err := LoadValuesFile(variablesFile)
-		if err != nil {
-			return err
-		}
-	}
-
-	err := ParseVariableFile(file, c)
-	if err != nil {
-		return err
-	}
-
-	err = ParseHCLFile(file, c, "", false, []string{})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	ctx = buildContext()
+	return parseFile(file, c, variables, variablesFile)
 }
 
 // ParseFolder for Resource, Blueprint, and Variable files
@@ -77,9 +56,54 @@ func ParseFolder(
 	variables map[string]string,
 	variablesFile string) error {
 
+	ctx = buildContext()
+	return parseFolder(
+		folder,
+		c,
+		onlyResources,
+		moduleName,
+		disabled,
+		dependsOn,
+		variables,
+		variablesFile,
+	)
+}
+
+func parseFile(file string, c *Config, variables map[string]string, variablesFile string) error {
+	SetVariables(variables)
+	if variablesFile != "" {
+		err := LoadValuesFile(variablesFile)
+		if err != nil {
+			return err
+		}
+	}
+
+	err := parseVariableFile(file, c)
+	if err != nil {
+		return err
+	}
+
+	err = parseHCLFile(file, c, "", false, []string{})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func parseFolder(
+	folder string,
+	c *Config,
+	onlyResources bool,
+	moduleName string,
+	disabled bool,
+	dependsOn []string,
+	variables map[string]string,
+	variablesFile string) error {
+
 	abs, _ := filepath.Abs(folder)
 
-	// load the variables
+	// load the variables from the root of the blueprint
 	if !onlyResources {
 		variableFiles, err := filepath.Glob(path.Join(abs, "*.vars"))
 		if err != nil {
@@ -93,16 +117,16 @@ func ParseFolder(
 			}
 		}
 
-		// setup any variables which are passed as environment variables or in the collection
-		SetVariables(variables)
-
-		// load variables from any custom files
+		// load variables from any custom files set on the command line
 		if variablesFile != "" {
 			err := LoadValuesFile(variablesFile)
 			if err != nil {
 				return err
 			}
 		}
+
+		// setup any variables which are passed as environment variables or in the collection
+		SetVariables(variables)
 
 		// pick up the blueprint file
 		yardFilesHCL, err := filepath.Glob(path.Join(abs, "*.yard"))
@@ -120,7 +144,7 @@ func ParseFolder(
 		yardFiles = append(yardFiles, yardFilesMD...)
 
 		if len(yardFiles) > 0 {
-			err := ParseYardFile(yardFiles[0], c)
+			err := parseYardFile(yardFiles[0], c)
 			if err != nil {
 				return err
 			}
@@ -149,90 +173,8 @@ func ParseFolder(
 	return nil
 }
 
-func parseVariables(abs string, c *Config) error {
-	files, err := filepath.Glob(path.Join(abs, "*.hcl"))
-	if err != nil {
-		return err
-	}
-
-	for _, f := range files {
-		err := ParseVariableFile(f, c)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func parseOutputs(abs string, disabled bool, c *Config) error {
-	files, err := filepath.Glob(path.Join(abs, "*.hcl"))
-	if err != nil {
-		return err
-	}
-
-	for _, f := range files {
-		err := parseOutputFile(f, disabled, c)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func parseOutputFile(file string, disabled bool, c *Config) error {
-	parser := hclparse.NewParser()
-	ctx.Functions["file_path"] = getFilePathFunc(file)
-	ctx.Functions["file_dir"] = getFileDirFunc(file)
-
-	f, diag := parser.ParseHCLFile(file)
-	if diag.HasErrors() {
-		return errors.New(diag.Error())
-	}
-
-	body, ok := f.Body.(*hclsyntax.Body)
-	if !ok {
-		return errors.New("Error getting body")
-	}
-
-	for _, b := range body.Blocks {
-		switch b.Type {
-		case string(TypeOutput):
-			v := NewOutput(b.Labels[0])
-
-			err := decodeBody(file, b, v)
-			if err != nil {
-				return err
-			}
-
-			setDisabled(v, disabled)
-
-			c.AddResource(v)
-		}
-	}
-
-	return nil
-}
-
-func parseResources(abs string, c *Config, moduleName string, disabled bool, dependsOn []string) error {
-	files, err := filepath.Glob(path.Join(abs, "*.hcl"))
-	if err != nil {
-		return err
-	}
-
-	for _, f := range files {
-		err := ParseHCLFile(f, c, moduleName, disabled, dependsOn)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // ParseYardFile parses a blueprint configuration file
-func ParseYardFile(file string, c *Config) error {
+func parseYardFile(file string, c *Config) error {
 	if filepath.Ext(file) == ".yard" {
 		return parseYardHCL(file, c)
 	}
@@ -264,34 +206,6 @@ func LoadValuesFile(path string) error {
 	return nil
 }
 
-func setContextVariable(key string, value interface{}) {
-	valMap := map[string]cty.Value{}
-
-	// get the existing map
-	if m, ok := ctx.Variables["var"]; ok {
-		valMap = m.AsValueMap()
-	}
-
-	switch v := value.(type) {
-	case string:
-		valMap[key] = cty.StringVal(v)
-	case cty.Value:
-		valMap[key] = v
-	}
-
-	ctx.Variables["var"] = cty.ObjectVal(valMap)
-}
-
-func setContextVariableIfMissing(key string, value interface{}) {
-	if m, ok := ctx.Variables["var"]; ok {
-		if _, ok := m.AsValueMap()[key]; ok {
-			return
-		}
-	}
-
-	setContextVariable(key, value)
-}
-
 // SetVariables allow variables to be set from a collection or environment variables
 // Precedence should be file, env, vars
 func SetVariables(vars map[string]string) {
@@ -309,95 +223,8 @@ func SetVariables(vars map[string]string) {
 	}
 }
 
-func parseYardHCL(file string, c *Config) error {
-	parser := hclparse.NewParser()
-
-	f, diag := parser.ParseHCLFile(file)
-	if diag.HasErrors() {
-		return errors.New(diag.Error())
-	}
-
-	body, ok := f.Body.(*hclsyntax.Body)
-	if !ok {
-		return errors.New("Error getting body")
-	}
-
-	bp := &Blueprint{}
-
-	diag = gohcl.DecodeBody(body, ctx, bp)
-	if diag.HasErrors() {
-		return errors.New(diag.Error())
-	}
-
-	c.Blueprint = bp
-
-	return nil
-}
-
-// parseYardMarkdown extracts the blueprint information from the frontmatter
-// when a blueprint file is of type markdown
-func parseYardMarkdown(file string, c *Config) error {
-	f, err := os.Open(file)
-	if err != nil {
-		return err
-	}
-
-	m := front.NewMatter()
-	m.Handle("---", front.YAMLHandler)
-
-	fr, body, err := m.Parse(f)
-	if err != nil && err != front.ErrIsEmpty {
-		fmt.Println("Error parsing README.md", err)
-		return nil
-	}
-
-	bp := &Blueprint{}
-	bp.HealthCheckTimeout = "30s"
-
-	// set the default health check
-
-	if a, ok := fr["author"].(string); ok {
-		bp.Author = a
-	}
-
-	if a, ok := fr["title"].(string); ok {
-		bp.Title = a
-	}
-
-	if a, ok := fr["slug"].(string); ok {
-		bp.Slug = a
-	}
-
-	if a, ok := fr["browser_windows"].(string); ok {
-		bp.BrowserWindows = strings.Split(a, ",")
-	}
-
-	if a, ok := fr["health_check_timeout"].(string); ok {
-		bp.HealthCheckTimeout = a
-	}
-
-	if a, ok := fr["shipyard_version"].(string); ok {
-		bp.ShipyardVersion = a
-	}
-
-	if envs, ok := fr["env"].([]interface{}); ok {
-		bp.Environment = []KV{}
-		for _, e := range envs {
-			parts := strings.Split(e.(string), "=")
-			if len(parts) == 2 {
-				bp.Environment = append(bp.Environment, KV{Key: parts[0], Value: parts[1]})
-			}
-		}
-	}
-
-	bp.Intro = body
-
-	c.Blueprint = bp
-	return nil
-}
-
 // ParseVariableFile parses a config file for variables
-func ParseVariableFile(file string, c *Config) error {
+func parseVariableFile(file string, c *Config) error {
 	parser := hclparse.NewParser()
 	ctx.Functions["file_path"] = getFilePathFunc(file)
 	ctx.Functions["file_dir"] = getFileDirFunc(file)
@@ -430,8 +257,8 @@ func ParseVariableFile(file string, c *Config) error {
 	return nil
 }
 
-// ParseHCLFile parses a config file and adds it to the config
-func ParseHCLFile(file string, c *Config, moduleName string, disabled bool, dependsOn []string) error {
+// parseHCLFile parses a config file and adds it to the config
+func parseHCLFile(file string, c *Config, moduleName string, disabled bool, dependsOn []string) error {
 	parser := hclparse.NewParser()
 	ctx.Functions["file_path"] = getFilePathFunc(file)
 	ctx.Functions["file_dir"] = getFileDirFunc(file)
@@ -623,7 +450,17 @@ func ParseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			}
 
 			setDisabled(h, disabled)
-			c.AddResource(h)
+
+			err = c.AddResource(h)
+			if err != nil {
+				return fmt.Errorf(
+					"Unable to add resource %s.%s in file %s: %s",
+					b.Type,
+					b.Labels[0],
+					file,
+					err,
+				)
+			}
 
 		case string(TypeNomadIngress):
 			i := NewNomadIngress(b.Labels[0])
@@ -920,7 +757,7 @@ func ParseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 
 			// recursively parse references for the module
 			// ensure we do load the values which might be in module folders
-			err = ParseFolder(m.Source, c, true, moduleName, m.Disabled, m.Depends, nil, "")
+			err = parseFolder(m.Source, c, true, moduleName, m.Disabled, m.Depends, nil, "")
 			if err != nil {
 				return err
 			}
@@ -1057,6 +894,205 @@ func ParseReferences(c *Config) error {
 		}
 	}
 
+	return nil
+}
+
+func parseVariables(abs string, c *Config) error {
+	files, err := filepath.Glob(path.Join(abs, "*.hcl"))
+	if err != nil {
+		return err
+	}
+
+	for _, f := range files {
+		err := parseVariableFile(f, c)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func parseOutputs(abs string, disabled bool, c *Config) error {
+	files, err := filepath.Glob(path.Join(abs, "*.hcl"))
+	if err != nil {
+		return err
+	}
+
+	for _, f := range files {
+		err := parseOutputFile(f, disabled, c)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func parseOutputFile(file string, disabled bool, c *Config) error {
+	parser := hclparse.NewParser()
+	ctx.Functions["file_path"] = getFilePathFunc(file)
+	ctx.Functions["file_dir"] = getFileDirFunc(file)
+
+	f, diag := parser.ParseHCLFile(file)
+	if diag.HasErrors() {
+		return errors.New(diag.Error())
+	}
+
+	body, ok := f.Body.(*hclsyntax.Body)
+	if !ok {
+		return errors.New("Error getting body")
+	}
+
+	for _, b := range body.Blocks {
+		switch b.Type {
+		case string(TypeOutput):
+			v := NewOutput(b.Labels[0])
+
+			err := decodeBody(file, b, v)
+			if err != nil {
+				return err
+			}
+
+			setDisabled(v, disabled)
+
+			c.AddResource(v)
+		}
+	}
+
+	return nil
+}
+
+func parseResources(abs string, c *Config, moduleName string, disabled bool, dependsOn []string) error {
+	files, err := filepath.Glob(path.Join(abs, "*.hcl"))
+	if err != nil {
+		return err
+	}
+
+	for _, f := range files {
+		err := parseHCLFile(f, c, moduleName, disabled, dependsOn)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func setContextVariable(key string, value interface{}) {
+	valMap := map[string]cty.Value{}
+
+	// get the existing map
+	if m, ok := ctx.Variables["var"]; ok {
+		valMap = m.AsValueMap()
+	}
+
+	switch v := value.(type) {
+	case string:
+		valMap[key] = cty.StringVal(v)
+		//fmt.Println("Adding String Var", key, v)
+	case cty.Value:
+		valMap[key] = v
+		//fmt.Println("Adding Var", key, v)
+	}
+
+	ctx.Variables["var"] = cty.ObjectVal(valMap)
+}
+
+func setContextVariableIfMissing(key string, value interface{}) {
+	if m, ok := ctx.Variables["var"]; ok {
+		if _, ok := m.AsValueMap()[key]; ok {
+			return
+		}
+	}
+
+	setContextVariable(key, value)
+}
+
+func parseYardHCL(file string, c *Config) error {
+	parser := hclparse.NewParser()
+
+	f, diag := parser.ParseHCLFile(file)
+	if diag.HasErrors() {
+		return errors.New(diag.Error())
+	}
+
+	body, ok := f.Body.(*hclsyntax.Body)
+	if !ok {
+		return errors.New("Error getting body")
+	}
+
+	bp := &Blueprint{}
+
+	diag = gohcl.DecodeBody(body, ctx, bp)
+	if diag.HasErrors() {
+		return errors.New(diag.Error())
+	}
+
+	c.Blueprint = bp
+
+	return nil
+}
+
+// parseYardMarkdown extracts the blueprint information from the frontmatter
+// when a blueprint file is of type markdown
+func parseYardMarkdown(file string, c *Config) error {
+	f, err := os.Open(file)
+	if err != nil {
+		return err
+	}
+
+	m := front.NewMatter()
+	m.Handle("---", front.YAMLHandler)
+
+	fr, body, err := m.Parse(f)
+	if err != nil && err != front.ErrIsEmpty {
+		fmt.Println("Error parsing README.md", err)
+		return nil
+	}
+
+	bp := &Blueprint{}
+	bp.HealthCheckTimeout = "30s"
+
+	// set the default health check
+
+	if a, ok := fr["author"].(string); ok {
+		bp.Author = a
+	}
+
+	if a, ok := fr["title"].(string); ok {
+		bp.Title = a
+	}
+
+	if a, ok := fr["slug"].(string); ok {
+		bp.Slug = a
+	}
+
+	if a, ok := fr["browser_windows"].(string); ok {
+		bp.BrowserWindows = strings.Split(a, ",")
+	}
+
+	if a, ok := fr["health_check_timeout"].(string); ok {
+		bp.HealthCheckTimeout = a
+	}
+
+	if a, ok := fr["shipyard_version"].(string); ok {
+		bp.ShipyardVersion = a
+	}
+
+	if envs, ok := fr["env"].([]interface{}); ok {
+		bp.Environment = []KV{}
+		for _, e := range envs {
+			parts := strings.Split(e.(string), "=")
+			if len(parts) == 2 {
+				bp.Environment = append(bp.Environment, KV{Key: parts[0], Value: parts[1]})
+			}
+		}
+	}
+
+	bp.Intro = body
+
+	c.Blueprint = bp
 	return nil
 }
 
