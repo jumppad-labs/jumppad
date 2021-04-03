@@ -173,7 +173,6 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 	}
 
 	if variablesFile != "" {
-
 		variablesFile, err = filepath.Abs(variablesFile)
 		if err != nil {
 			return nil, err

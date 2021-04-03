@@ -40,6 +40,7 @@ func (c *Template) Create() error {
 		}
 		defer f.Close()
 
+		c.log.Debug("Template output", "ref", c.config.Name, "destination", c.config.Source)
 		_, err = f.WriteString(c.config.Source)
 
 		return err
@@ -77,6 +78,8 @@ func (c *Template) Create() error {
 	defer f.Close()
 
 	f.WriteString(bs.String())
+
+	c.log.Debug("Template output", "ref", c.config.Name, "destination", bs.String())
 
 	return nil
 }
