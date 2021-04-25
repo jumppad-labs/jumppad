@@ -88,12 +88,36 @@ func TestContainerRunsHTTPChecks(t *testing.T) {
 	md.On("PullImage", *cc.Image, false).Once().Return(nil)
 	md.On("CreateContainer", cc).Once().Return("", nil)
 
-	hc.On("HealthCheckHTTP", mock.Anything, mock.Anything).Return(nil)
+	hc.On("HealthCheckHTTP", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	err := c.Create()
 	assert.NoError(t, err)
 
-	hc.AssertCalled(t, "HealthCheckHTTP", "http://localhost:8500", 30*time.Second)
+	hc.AssertCalled(t, "HealthCheckHTTP", "http://localhost:8500", []int{200}, 30*time.Second)
+}
+
+func TestContainerRunsHTTPChecksWithCustomStatusCodes(t *testing.T) {
+	cc := config.NewContainer("tests")
+	cc.Image = &config.Image{}
+	cc.HealthCheck = &config.HealthCheck{
+		Timeout:          "30s",
+		HTTP:             "http://localhost:8500",
+		HTTPSuccessCodes: []int{200, 429},
+	}
+
+	md := &mocks.MockContainerTasks{}
+	hc := &mocks.MockHTTP{}
+	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
+
+	md.On("PullImage", *cc.Image, false).Once().Return(nil)
+	md.On("CreateContainer", cc).Once().Return("", nil)
+
+	hc.On("HealthCheckHTTP", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	err := c.Create()
+	assert.NoError(t, err)
+
+	hc.AssertCalled(t, "HealthCheckHTTP", "http://localhost:8500", []int{200, 429}, 30*time.Second)
 }
 
 func TestContainerDoesNOTCreateWhenPullImageFail(t *testing.T) {

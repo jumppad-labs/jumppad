@@ -84,7 +84,13 @@ func (c *Container) internalCreate() error {
 			return err
 		}
 
-		return c.httpClient.HealthCheckHTTP(hc, d)
+		// do we have custom status codes, if not use 200
+		codes := c.config.HealthCheck.HTTPSuccessCodes
+		if codes == nil {
+			codes = []int{200}
+		}
+
+		return c.httpClient.HealthCheckHTTP(hc, codes, d)
 	}
 
 	return nil

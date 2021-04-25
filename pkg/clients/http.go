@@ -12,10 +12,10 @@ import (
 // HTTP defines an interface for a HTTP client
 type HTTP interface {
 	// HealthCheckHTTP makes a HTTP GET request to the given URI and
-	// if a successful status 200 is returned the method returns a nil error.
-	// If it is not possible to contact the URI or if any status other than 200 is returned
+	// if a successful status []codes is returned the method returns a nil error.
+	// If it is not possible to contact the URI or if any status other than the passed codes is returned
 	// by the upstream, then the URI is retried until the timeout elapses.
-	HealthCheckHTTP(uri string, timeout time.Duration) error
+	HealthCheckHTTP(uri string, codes []int, timeout time.Duration) error
 	// Do executes a HTTP request and returns the response
 	Do(r *http.Request) (*http.Response, error)
 }
@@ -35,7 +35,7 @@ func NewHTTP(backoff time.Duration, l hclog.Logger) HTTP {
 }
 
 // HealthCheckHTTP checks a http or HTTPS endpoint for a status 200
-func (h *HTTPImpl) HealthCheckHTTP(address string, timeout time.Duration) error {
+func (h *HTTPImpl) HealthCheckHTTP(address string, codes []int, timeout time.Duration) error {
 	h.l.Debug("Performing health check for address", "address", address)
 	st := time.Now()
 	for {
@@ -46,7 +46,7 @@ func (h *HTTPImpl) HealthCheckHTTP(address string, timeout time.Duration) error 
 		}
 
 		resp, err := h.httpc.Get(address)
-		if err == nil && resp.StatusCode == 200 {
+		if err == nil && assertResponseCode(codes, resp.StatusCode) {
 			h.l.Debug("Health check complete", "address", address)
 			return nil
 		}
@@ -54,6 +54,16 @@ func (h *HTTPImpl) HealthCheckHTTP(address string, timeout time.Duration) error 
 		// backoff
 		time.Sleep(h.backoff)
 	}
+}
+
+func assertResponseCode(codes []int, responseCode int) bool {
+	for _, c := range codes {
+		if responseCode == c {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Do executes a HTTP request and returns the response
