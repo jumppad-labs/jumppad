@@ -15,7 +15,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.15.2
+          go-version: 1.16.3
 
       - name: Get dependencies
         run: |
@@ -61,7 +61,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.15.2
+          go-version: 1.16.3
 
       - name: Run tests
         run: |
@@ -87,7 +87,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.15.2
+          go-version: 1.16.3
 
       - name: E2E test for build binary
         run: make test_e2e_cmd
@@ -139,12 +139,12 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.15.2
+          go-version: 1.16.3
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v1
         with:
-          version: v0.147.2
+          version: v0.164.0
           args: release --rm-dist --snapshot
           key: ${{ secrets.GPG_PRIVATE_KEY }}
         env:
@@ -210,7 +210,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.15.2
+          go-version: 1.16.3
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -221,7 +221,7 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v1
         with:
-          version: v0.147.2
+          version: v0.164.0
           args: release --rm-dist
           key: ${{ secrets.GPG_PRIVATE_KEY }}
         env:
