@@ -160,8 +160,6 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 
 		cr.e, _ = createEngine(cr.l)
 
-		fmt.Println("vars", cr.variables)
-
 		// do we need to pure the cache
 		if *cr.purge {
 			pc := newPurgeCmdFunc(cr.e.GetClients().Docker, cr.e.GetClients().ImageLog, cr.e.GetClients().Logger)
