@@ -267,7 +267,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 			for _, b := range browserList {
 				go func(uri string) {
 					// health check the URL
-					err := hc.HealthCheckHTTP(uri, checkDuration)
+					err := hc.HealthCheckHTTP(uri, []int{200}, checkDuration)
 					if err == nil {
 						be := bc.OpenBrowser(uri)
 						if be != nil {

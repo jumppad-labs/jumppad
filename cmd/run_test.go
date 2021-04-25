@@ -33,7 +33,7 @@ type runMocks struct {
 
 func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
 	mockHTTP := &clientmocks.MockHTTP{}
-	mockHTTP.On("HealthCheckHTTP", mock.Anything, mock.Anything).Return(nil)
+	mockHTTP.On("HealthCheckHTTP", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	mockGetter := &clientmocks.Getter{}
 	mockGetter.On("Get", mock.Anything, mock.Anything).Return(nil)
@@ -303,8 +303,8 @@ func TestRunOpensBrowserWindow(t *testing.T) {
 	rm.http.AssertNumberOfCalls(t, "HealthCheckHTTP", 2)
 	rm.system.AssertNumberOfCalls(t, "OpenBrowser", 2)
 
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost", 30*time.Second)
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost", []int{200}, 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", []int{200}, 30*time.Second)
 }
 
 func TestRunOpensBrowserWindowWithCustomTimeout(t *testing.T) {
@@ -317,8 +317,8 @@ func TestRunOpensBrowserWindowWithCustomTimeout(t *testing.T) {
 	rm.http.AssertNumberOfCalls(t, "HealthCheckHTTP", 2)
 	rm.system.AssertNumberOfCalls(t, "OpenBrowser", 2)
 
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost", 60*time.Second)
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", 60*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost", []int{200}, 60*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", []int{200}, 60*time.Second)
 }
 
 func TestRunOpensBrowserWindowWithInvalidTimeout(t *testing.T) {
@@ -331,8 +331,8 @@ func TestRunOpensBrowserWindowWithInvalidTimeout(t *testing.T) {
 	rm.http.AssertNumberOfCalls(t, "HealthCheckHTTP", 2)
 	rm.system.AssertNumberOfCalls(t, "OpenBrowser", 2)
 
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost", 30*time.Second)
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost", []int{200}, 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", []int{200}, 30*time.Second)
 }
 
 func TestRunOpensBrowserWindowForResources(t *testing.T) {
@@ -378,11 +378,11 @@ func TestRunOpensBrowserWindowForResources(t *testing.T) {
 	rm.http.AssertNumberOfCalls(t, "HealthCheckHTTP", 5)
 	rm.system.AssertNumberOfCalls(t, "OpenBrowser", 5)
 
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://test.ingress.shipyard.run:8080/", 30*time.Second)
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "https://test.container.shipyard.run:8080", 30*time.Second)
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost", 30*time.Second)
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", 30*time.Second)
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://test.docs.shipyard.run:80", 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://test.ingress.shipyard.run:8080/", []int{200}, 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "https://test.container.shipyard.run:8080", []int{200}, 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost", []int{200}, 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", []int{200}, 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://test.docs.shipyard.run:80", []int{200}, 30*time.Second)
 }
 
 func TestRunDoesNotOpensBrowserWindowWhenCheckError(t *testing.T) {
@@ -390,7 +390,7 @@ func TestRunDoesNotOpensBrowserWindowWhenCheckError(t *testing.T) {
 	rf.SetArgs([]string{"/tmp"})
 
 	removeOn(&rm.http.Mock, "HealthCheckHTTP")
-	rm.http.On("HealthCheckHTTP", mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
+	rm.http.On("HealthCheckHTTP", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
 	err := rf.Execute()
 	assert.NoError(t, err)

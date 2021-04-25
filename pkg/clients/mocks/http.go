@@ -15,8 +15,8 @@ type MockHTTP struct {
 	mock.Mock
 }
 
-func (m *MockHTTP) HealthCheckHTTP(uri string, timeout time.Duration) error {
-	args := m.Called(uri, timeout)
+func (m *MockHTTP) HealthCheckHTTP(uri string, codes []int, timeout time.Duration) error {
+	args := m.Called(uri, codes, timeout)
 
 	return args.Error(0)
 }

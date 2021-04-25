@@ -29,7 +29,18 @@ func TestHTTPHealthCallsGet(t *testing.T) {
 
 	c := NewHTTP(1*time.Millisecond, hclog.NewNullLogger())
 
-	err := c.HealthCheckHTTP(url, 10*time.Millisecond)
+	err := c.HealthCheckHTTP(url, []int{200}, 10*time.Millisecond)
+	assert.NoError(t, err)
+	assert.Len(t, *reqs, 1)
+}
+
+func TestHTTPHealthCallsGetMultipleStatusCodes(t *testing.T) {
+	url, reqs, cleanup := testSetupHTTPBasicServer(http.StatusNoContent, "")
+	defer cleanup()
+
+	c := NewHTTP(1*time.Millisecond, hclog.NewNullLogger())
+
+	err := c.HealthCheckHTTP(url, []int{200, 204}, 10*time.Millisecond)
 	assert.NoError(t, err)
 	assert.Len(t, *reqs, 1)
 }
@@ -40,7 +51,7 @@ func TestHTTPHealthRetryiesOnServerErrorCode(t *testing.T) {
 
 	c := NewHTTP(1*time.Millisecond, hclog.NewNullLogger())
 
-	err := c.HealthCheckHTTP(url, 10*time.Millisecond)
+	err := c.HealthCheckHTTP(url, []int{200}, 10*time.Millisecond)
 	assert.Error(t, err)
 	assert.Greater(t, len(*reqs), 1)
 }
@@ -51,7 +62,7 @@ func TestHTTPHealthErrorsOnClientError(t *testing.T) {
 
 	c := NewHTTP(1*time.Millisecond, hclog.NewNullLogger())
 
-	err := c.HealthCheckHTTP("http://127.0.0.2:19091", 10*time.Millisecond)
+	err := c.HealthCheckHTTP("http://127.0.0.2:19091", []int{200}, 10*time.Millisecond)
 	assert.Error(t, err)
 	assert.Len(t, *reqs, 0)
 }
