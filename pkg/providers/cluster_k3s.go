@@ -69,6 +69,9 @@ func (c *K8sCluster) Lookup() ([]string, error) {
 }
 
 func (c *K8sCluster) createK3s() error {
+	// create a named log
+	c.log = c.log.Named(c.config.Name)
+
 	c.log.Info("Creating Cluster", "ref", c.config.Name)
 
 	// check the cluster does not already exist
@@ -228,7 +231,7 @@ func (c *K8sCluster) createK3s() error {
 	// before progressing
 	// we might also need to wait for the api services to become ready
 	// this could be done with the folowing command kubectl get apiservice
-	err = c.kubeClient.SetConfig(config)
+	c.kubeClient, err = c.kubeClient.SetConfig(config)
 	if err != nil {
 		return err
 	}
@@ -384,7 +387,8 @@ func (c *K8sCluster) deployConnector(grpcPort, httpPort int) error {
 			fmt.Sprintf("%s:%d", utils.GetDockerIP(), grpcPort),
 		},
 		[]string{utils.GetDockerIP()},
-		utils.CertsDir(c.config.Name))
+		utils.CertsDir(c.config.Name),
+	)
 
 	if err != nil {
 		return fmt.Errorf("Unable to generate leaf certificates for ingress: %s", err)

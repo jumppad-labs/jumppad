@@ -164,7 +164,7 @@ func healthCheckHelm(h *config.Helm) error {
 	}
 
 	_, conf, _ := utils.CreateKubeConfigPath(cl.Info().Name)
-	err = kc.SetConfig(conf)
+	kc, err = kc.SetConfig(conf)
 	if err != nil {
 		return nil
 	}
@@ -185,7 +185,7 @@ func healthCheckK8sConfig(h *config.K8sConfig) error {
 	}
 
 	_, conf, _ := utils.CreateKubeConfigPath(cl.Info().Name)
-	err = kc.SetConfig(conf)
+	kc, err = kc.SetConfig(conf)
 	if err != nil {
 		return nil
 	}

@@ -1,4 +1,4 @@
-package mocks
+package clients
 
 import (
 	"time"
@@ -11,10 +11,10 @@ type MockKubernetes struct {
 	mock.Mock
 }
 
-func (m *MockKubernetes) SetConfig(kubeconfig string) error {
+func (m *MockKubernetes) SetConfig(kubeconfig string) (Kubernetes, error) {
 	args := m.Called(kubeconfig)
 
-	return args.Error(0)
+	return m, args.Error(0)
 }
 
 func (m *MockKubernetes) GetPods(selector string) (*v1.PodList, error) {

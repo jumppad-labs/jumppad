@@ -56,7 +56,7 @@ func (h *Helm) Create() error {
 	// set the KubeConfig for the kubernetes client
 	// this is used by the healthchecks
 	h.log.Debug("Using Kubernetes config", "ref", h.config.Name, "path", kcPath)
-	err = h.kubeClient.SetConfig(kcPath)
+	h.kubeClient, err = h.kubeClient.SetConfig(kcPath)
 	if err != nil {
 		return xerrors.Errorf("unable to create Kubernetes client: %w", err)
 	}

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
@@ -19,7 +20,7 @@ func setupPush(state string) (*cobra.Command, *mocks.MockContainerTasks, func())
 	mt.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mt.On("SetForcePull", mock.Anything).Return(nil)
 
-	mk := &mocks.MockKubernetes{}
+	mk := &clients.MockKubernetes{}
 	mh := &mocks.MockHTTP{}
 	mn := &mocks.MockNomad{}
 

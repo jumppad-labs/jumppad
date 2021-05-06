@@ -1,0 +1,75 @@
+# Available parameters and their default values for the Consul chart.
+# Server, when enabled, configures a server cluster to run. This should
+# be disabled if you plan on connecting to a Consul cluster external to
+# the Kube cluster.
+server:
+  enabled: true
+  replicas: 1
+  bootstrapExpect: 1 # Should <= replicas count
+
+  # storage and storageClass are the settings for configuring stateful
+  # storage for the server pods. storage should be set to the disk size of
+  # the attached volume. storageClass is the class of storage which defaults
+  # to null (the Kube cluster will pick the default).
+  storage: 64Mi
+  storageClass: local-path
+
+# Client, when enabled, configures Consul clients to run on every node
+# within the Kube cluster. The current deployment model follows a traditional
+# DC where a single agent is deployed per node.
+client:
+  enabled: true
+
+  # grpc should be set to true if the gRPC listener should be enabled.
+  # This should be set to true if connectInject or meshGateway is enabled.
+  grpc: true
+
+ui:
+  # True if you want to enable the Consul UI. The UI will run only
+  # on the server nodes. This makes UI access via the service below (if
+  # enabled) predictable rather than "any node" if you're running Consul
+  # clients as well.
+  enabled: true
+
+  # True if you want to create a Service entry for the Consul UI.
+  #
+  # serviceType can be used to control the type of service created. For
+  # example, setting this to "LoadBalancer" will create an external load
+  # balancer (for supported K8S installations) to access the UI.
+  service:
+    enabled: true
+    type: null
+    # This should be a multi-line string mapping directly to the a map of
+    # the annotations to apply to the UI service
+    annotations: null
+    # Additional ServiceSpec values
+    # This should be a multi-line string mapping directly to a Kubernetes
+    # ServiceSpec object.
+    additionalSpec: null
+
+# ConnectInject will enable the automatic Connect sidecar injector.
+connectInject:
+  enabled: true
+  image: null  # image for consul-k8s that contains the injector
+  default: false  # true will inject by default, otherwise requires annotation
+
+  # Requires Consul v1.5+ and consul-k8s v0.8.1+
+  centralConfig:
+    enabled: "true"
+
+    # defaultProtocol allows you to specify a convenience default protocol if
+    # most of your services are of the same protocol type. The individual annotation
+    # on any given pod will override this value. A protocol must be provided,
+    # either through this setting or individual annotation, for a service to be
+    # registered correctly. Valid values are "http", "http2", "grpc" and "tcp".
+    defaultProtocol: "tcp"
+
+    # proxyDefaults is a raw json string that will be applied to all Connect
+    # proxy sidecar pods that can include any valid configuration for the
+    # configured proxy.
+    proxyDefaults: |
+      {
+        "envoy_prometheus_bind_addr": "0.0.0.0:9102",
+         "envoy_extra_static_clusters_json": "{\"connect_timeout\": \"3.000s\", \"dns_lookup_family\": \"V4_ONLY\", \"lb_policy\": \"ROUND_ROBIN\", \"load_assignment\": { \"cluster_name\": \"jaeger_9411\", \"endpoints\": [ { \"lb_endpoints\": [ {\"endpoint\": { \"address\": { \"socket_address\": { \"address\": \"jaeger\", \"port_value\": 9411, \"protocol\": \"TCP\" } } } } ] } ] }, \"name\": \"jaeger_9411\", \"type\": \"STRICT_DNS\" }",
+         "envoy_tracing_json": "{ \"http\": { \"config\": { \"collector_cluster\": \"jaeger_9411\", \"collector_endpoint\": \"/api/v2/spans\" }, \"name\": \"envoy.zipkin\" } }"
+      }

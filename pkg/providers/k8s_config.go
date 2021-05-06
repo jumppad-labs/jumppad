@@ -82,7 +82,7 @@ func (c *K8sConfig) setup() error {
 	}
 
 	_, destPath, _ := utils.CreateKubeConfigPath(cluster.Info().Name)
-	err = c.client.SetConfig(destPath)
+	c.client, err = c.client.SetConfig(destPath)
 	if err != nil {
 		return xerrors.Errorf("unable to create Kubernetes client: %w", err)
 	}
