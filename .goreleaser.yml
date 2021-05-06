@@ -38,7 +38,8 @@ builds:
 brews:
   -
     name: shipyard
-    github:
+    goarm: 7
+    tap:
       owner: shipyard-run
       name: homebrew-repo
 
