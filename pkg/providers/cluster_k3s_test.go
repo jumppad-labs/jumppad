@@ -21,7 +21,7 @@ import (
 
 // setupClusterMocks sets up a happy path for mocks
 func setupClusterMocks(t *testing.T) (
-	*config.K8sCluster, *mocks.MockContainerTasks, *mocks.MockKubernetes, *clients.ConnectorMock) {
+	*config.K8sCluster, *mocks.MockContainerTasks, *clients.MockKubernetes, *clients.ConnectorMock) {
 
 	md := &mocks.MockContainerTasks{}
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{}, nil)
@@ -63,7 +63,7 @@ func setupClusterMocks(t *testing.T) (
 	kcf.Close()
 
 	// create the Kubernetes client mock
-	mk := &mocks.MockKubernetes{}
+	mk := &clients.MockKubernetes{}
 	mk.Mock.On("SetConfig", mock.Anything).Return(nil)
 	mk.Mock.On("HealthCheckPods", mock.Anything, mock.Anything).Return(nil)
 	mk.Mock.On("Apply", mock.Anything, mock.Anything).Return(nil)
@@ -97,7 +97,7 @@ func TestClusterK3ErrorsWhenUnableToLookupIDs(t *testing.T) {
 	md := &mocks.MockContainerTasks{}
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
-	mk := &mocks.MockKubernetes{}
+	mk := &clients.MockKubernetes{}
 	p := NewK8sCluster(clusterConfig, md, mk, nil, nil, hclog.NewNullLogger())
 
 	err := p.Create()
@@ -142,7 +142,7 @@ func TestClusterK3ErrorsWhenClusterExists(t *testing.T) {
 	md := &mocks.MockContainerTasks{}
 	md.On("FindContainerIDs", "server."+clusterConfig.Name, mock.Anything).Return([]string{"abc"}, nil)
 
-	mk := &mocks.MockKubernetes{}
+	mk := &clients.MockKubernetes{}
 	p := NewK8sCluster(clusterConfig, md, mk, nil, nil, hclog.NewNullLogger())
 
 	err := p.Create()

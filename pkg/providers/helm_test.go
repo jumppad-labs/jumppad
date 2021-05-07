@@ -7,15 +7,16 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
-	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
+	"github.com/shipyard-run/shipyard/pkg/clients"
+	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-func setupHelm() (*clients.MockHelm, *clients.MockKubernetes, *clients.Getter, *config.Config, *Helm) {
-	mh := &clients.MockHelm{}
+func setupHelm() (*mocks.MockHelm, *clients.MockKubernetes, *mocks.Getter, *config.Config, *Helm) {
+	mh := &mocks.MockHelm{}
 	mh.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mh.On("Destroy", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
@@ -23,7 +24,7 @@ func setupHelm() (*clients.MockHelm, *clients.MockKubernetes, *clients.Getter, *
 	kc.On("SetConfig", mock.Anything).Return(nil)
 	kc.On("HealthCheckPods", mock.Anything, mock.Anything).Return(nil)
 
-	mg := &clients.Getter{}
+	mg := &mocks.Getter{}
 	mg.On("Get", mock.Anything, mock.Anything).Return(nil)
 
 	cl := config.NewK8sCluster("tester")

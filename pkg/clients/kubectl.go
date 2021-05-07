@@ -20,7 +20,7 @@ import (
 
 // Kubernetes defines an interface for a Kuberenetes client
 type Kubernetes interface {
-	SetConfig(string) error
+	SetConfig(string) (Kubernetes, error)
 	GetPods(string) (*v1.PodList, error)
 	HealthCheckPods(selectors []string, timeout time.Duration) error
 	Apply(files []string, waitUntilReady bool) error
@@ -41,23 +41,25 @@ func NewKubernetes(t time.Duration, l hclog.Logger) Kubernetes {
 	return &KubernetesImpl{timeout: t, l: l}
 }
 
-// SetConfig for the Kubernetes cluster
-func (k *KubernetesImpl) SetConfig(kubeconfig string) error {
-	k.configPath = kubeconfig
+// SetConfig for the Kubernetes cluster and clones the client
+func (k *KubernetesImpl) SetConfig(kubeconfig string) (Kubernetes, error) {
+	kc := NewKubernetes(k.timeout, k.l).(*KubernetesImpl)
 
+	kc.configPath = kubeconfig
+	kc.l = kc.l.With("config", kc.configPath)
 	st := time.Now()
 	for {
-		err := k.setConfig()
+		err := kc.setConfig()
 		if err == nil {
 			break
 		}
 
-		if time.Now().Sub(st) > k.timeout {
-			return xerrors.Errorf("Error waiting for kubeclient: %w", err)
+		if time.Now().Sub(st) > kc.timeout {
+			return nil, xerrors.Errorf("Error waiting for kubeclient: %w", err)
 		}
 	}
 
-	return nil
+	return kc, nil
 }
 
 // setConfig retries setting the config and building the client APIs
@@ -174,11 +176,13 @@ func (k *KubernetesImpl) healthCheckSingle(selector string, timeout time.Duratio
 		// GetPods may return an error if the API server is not available
 		pl, err := k.GetPods(selector)
 		if err != nil {
+			k.l.Debug("Error getting pods, will retry", "selector", selector, "error", err)
 			continue
 		}
 
 		// there should be at least 1 pod
 		if len(pl.Items) < 1 {
+			k.l.Debug("Less than one item returned, will retry", "selector", selector)
 			continue
 		}
 

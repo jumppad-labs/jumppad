@@ -6,7 +6,7 @@ import (
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
-	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
+	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/stretchr/testify/assert"
