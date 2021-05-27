@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -395,7 +396,12 @@ func (cr *CucumberRunner) aCallToShouldResultInStatus(arg1 string, arg2 int) err
 		var resp *http.Response
 		var netClient = &http.Client{
 			Timeout: time.Second * 10,
+			Transport: &http.Transport{
+				// Disable cert validation
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
 		}
+
 		resp, err = netClient.Get(arg1)
 
 		if err == nil && resp.StatusCode == arg2 {
