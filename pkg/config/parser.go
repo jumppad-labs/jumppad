@@ -987,13 +987,22 @@ func setContextVariable(key string, value interface{}) {
 		valMap = m.AsValueMap()
 	}
 
+	// if the value is string bool convert to a boolean
+	if value == "true" {
+		value = true
+	}
+
+	if value == "false" {
+		value = false
+	}
+
 	switch v := value.(type) {
 	case string:
 		valMap[key] = cty.StringVal(v)
-		//fmt.Println("Adding String Var", key, v)
+	case bool:
+		valMap[key] = cty.BoolVal(v)
 	case cty.Value:
 		valMap[key] = v
-		//fmt.Println("Adding Var", key, v)
 	}
 
 	ctx.Variables["var"] = cty.ObjectVal(valMap)
