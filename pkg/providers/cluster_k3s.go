@@ -239,9 +239,9 @@ func (c *K8sCluster) createK3s() error {
 	err = c.kubeClient.HealthCheckPods([]string{""}, startTimeout)
 	if err != nil {
 		// fetch the logs from the container before exit
-		lr, err := c.client.ContainerLogs(id, true, true)
-		if err != nil {
-			c.log.Error("Unable to get logs from container", "error", err)
+		lr, lerr := c.client.ContainerLogs(id, true, true)
+		if lerr != nil {
+			c.log.Error("Unable to get logs from container", "error", lerr)
 		}
 
 		// copy the logs to the output
