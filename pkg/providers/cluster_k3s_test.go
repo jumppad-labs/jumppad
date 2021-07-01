@@ -236,7 +236,8 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 	// validate the command
 	assert.Equal(t, "server", params.Command[0])
 	assert.Contains(t, params.Command[1], params.Ports[0].Local)
-	assert.Contains(t, params.Command[2], "traefik")
+	assert.Contains(t, params.Command[2], "--kube-proxy-arg=")
+	assert.Contains(t, params.Command[3], "traefik")
 }
 
 func TestClusterK3CreatesAServerWithAdditionalPorts(t *testing.T) {

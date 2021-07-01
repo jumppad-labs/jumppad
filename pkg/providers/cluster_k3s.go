@@ -166,7 +166,15 @@ func (c *K8sCluster) createK3s() error {
 	// set the API server port to a random number
 	clusterConfig, _ := utils.GetClusterConfig(string(config.TypeK8sCluster) + "." + c.config.Name)
 
-	args := []string{"server", fmt.Sprintf("--https-listen-port=%d", clusterConfig.APIPort)}
+	// Set the default startup args
+	// Also set netfilter settings to fix behaviour introduced in Linux Kernel 5.12
+	// https://k3d.io/faq/faq/#solved-nodes-fail-to-start-or-get-stuck-in-notready-state-with-log-nf_conntrack_max-permission-denied
+	args := []string{
+		"server",
+		fmt.Sprintf("--https-listen-port=%d", clusterConfig.APIPort),
+		"--kube-proxy-arg=conntrack-max-per-core=0",
+		"--no-deploy=traefik",
+	}
 
 	// expose the API server and Connector ports
 	cc.Ports = []config.Port{
@@ -190,8 +198,6 @@ func (c *K8sCluster) createK3s() error {
 	cc.PortRanges = c.config.PortRanges
 	cc.Ports = append(cc.Ports, c.config.Ports...)
 
-	// disable the installation of traefik
-	args = append(args, "--no-deploy=traefik")
 	cc.Command = args
 
 	id, err := c.client.CreateContainer(cc)
