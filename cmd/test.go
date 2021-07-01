@@ -397,6 +397,10 @@ func (cr *CucumberRunner) aCallToShouldResultInStatus(arg1 string, arg2 int) err
 		var netClient = &http.Client{
 			Timeout: time.Second * 10,
 			Transport: &http.Transport{
+				Dial: (&net.Dialer{
+					Timeout: 5 * time.Second,
+				}).Dial,
+				TLSHandshakeTimeout: 5 * time.Second,
 				// Disable cert validation
 				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 			},

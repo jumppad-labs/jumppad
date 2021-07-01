@@ -145,7 +145,7 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v1
         with:
-          version: v0.164.0
+          version: v0.172.1
           args: release --rm-dist --snapshot
           key: ${{ secrets.GPG_PRIVATE_KEY }}
         env:
@@ -156,6 +156,7 @@ jobs:
         with:
           name: shipyard
           path: |
+            dist/shipyard_darwin_arm64
             dist/shipyard_darwin_amd64
             dist/shipyard_linux_amd64
             dist/shipyard_linux_arm64
