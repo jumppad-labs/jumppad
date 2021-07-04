@@ -614,7 +614,7 @@ spec:
       containers:
       - name: connector
         imagePullPolicy: IfNotPresent
-        image: shipyardrun/connector:v0.0.16
+        image: shipyardrun/connector:v0.1.0
         ports:
           - name: grpc
             containerPort: 60000
