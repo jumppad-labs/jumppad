@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
@@ -74,24 +75,24 @@ func newPurgeCmdFunc(dt clients.Docker, il clients.ImageLog, l hclog.Logger) fun
 		}
 
 		hcp := utils.GetBlueprintLocalFolder("")
-		l.Info("Removing Blueprints", "path", hcp)
+		l.Info("Removing cached blueprints", "path", hcp)
 		err = os.RemoveAll(hcp)
+		if err != nil {
+			l.Error("Unable to remove cached blueprints", "error", err)
+			bHasError = true
+		}
+
+		bcp := utils.GetHelmLocalFolder("")
+		l.Info("Removing cached Helm charts", "path", bcp)
+		err = os.RemoveAll(bcp)
 		if err != nil {
 			l.Error("Unable to remove cached Helm charts", "error", err)
 			bHasError = true
 		}
 
-		bcp := utils.GetHelmLocalFolder("")
-		l.Info("Removing Helm charts", "path", bcp)
-		err = os.RemoveAll(bcp)
-		if err != nil {
-			l.Error("Unable to remove cached Blueprints", "error", err)
-			bHasError = true
-		}
-
 		// delete the releases
 		rcp := utils.GetReleasesFolder()
-		l.Info("Removing releases", "path", rcp)
+		l.Info("Removing cached releases", "path", rcp)
 		err = os.RemoveAll(rcp)
 		if err != nil {
 			l.Error("Unable to remove cached Releases", "error", err)
@@ -99,10 +100,18 @@ func newPurgeCmdFunc(dt clients.Docker, il clients.ImageLog, l hclog.Logger) fun
 		}
 
 		dcp := utils.GetDataFolder("")
-		l.Info("Removing data folder", "path", dcp)
+		l.Info("Removing data folders", "path", dcp)
 		err = os.RemoveAll(dcp)
 		if err != nil {
-			l.Error("Unable to remove Data folder", "error", err)
+			l.Error("Unable to remove data folder", "error", err)
+			bHasError = true
+		}
+
+		cp := path.Join(utils.ShipyardHome(), "config")
+		l.Info("Removing config", "path", cp)
+		err = os.RemoveAll(cp)
+		if err != nil {
+			l.Error("Unable to remove config folder", "error", err)
 			bHasError = true
 		}
 
