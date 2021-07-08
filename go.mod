@@ -5,7 +5,8 @@ go 1.16
 require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/MichaelMure/go-term-markdown v0.1.3
-	github.com/Microsoft/go-winio v0.4.17 // indirect
+	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
+	github.com/TwinProduction/go-color v1.0.0
 	github.com/aws/aws-sdk-go v1.33.5 // indirect
 	github.com/containerd/cgroups v1.0.1 // indirect
 	github.com/containerd/continuity v0.1.0 // indirect
