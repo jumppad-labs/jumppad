@@ -1,6 +1,8 @@
 package clients
 
 import (
+	"context"
+	"io"
 	"time"
 
 	"github.com/stretchr/testify/mock"
@@ -25,6 +27,12 @@ func (m *MockKubernetes) GetPods(selector string) (*v1.PodList, error) {
 	}
 
 	return nil, args.Error(1)
+}
+
+func (m *MockKubernetes) GetPodLogs(ctx context.Context, pod *v1.Pod, plOpts *v1.PodLogOptions) (io.ReadCloser, error) {
+	// todo
+	// m.Called(ctx, pod,plOpts) unsure
+	return nil,nil
 }
 
 func (m *MockKubernetes) Apply(files []string, waitUntilReady bool) error {

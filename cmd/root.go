@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	
 	"github.com/hashicorp/go-hclog"
 	gvm "github.com/shipyard-run/version-manager"
@@ -29,20 +30,18 @@ var date string    // set by build process
 var commit string  // set by build process
 
 func init() {
+	
 	var vm gvm.Versions
-
+	
 	// setup dependencies
 	logger = createLogger()
 	engine, vm = createEngine(logger)
 	engineClients = engine.GetClients()
-
+	
 	//cobra.OnInitialize(configure)
-
+	
 	//rootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.shipyard/config)")
 	
-	rootCmd.AddCommand(logCmd)
-	
-	/*
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(outputCmd)
@@ -57,19 +56,17 @@ func init() {
 	rootCmd.AddCommand(newPurgeCmd(engineClients.Docker, engineClients.ImageLog, logger))
 	rootCmd.AddCommand(taintCmd)
 	rootCmd.AddCommand(newExecCmd(engineClients.ContainerTasks))
-	// rootCmd.AddCommand(newVersionCmd(vm))
+	rootCmd.AddCommand(newVersionCmd(vm))
 	rootCmd.AddCommand(uninstallCmd)
 	rootCmd.AddCommand(newPushCmd(engineClients.ContainerTasks, engineClients.Kubernetes, engineClients.HTTP, engineClients.Nomad, logger))
-	
-	
+	rootCmd.AddCommand(logCmd(os.Stdout, engine))
 	// add the server commands
 	rootCmd.AddCommand(connectorCmd)
 	connectorCmd.AddCommand(newConnectorRunCommand())
 	connectorCmd.AddCommand(connectorStopCmd)
 	connectorCmd.AddCommand(newConnectorCertCmd())
 	
-	 */
-	rootCmd.AddCommand(newVersionCmd(vm))
+
 }
 
 func createEngine(l hclog.Logger) (shipyard.Engine, gvm.Versions) {

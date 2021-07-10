@@ -3,6 +3,7 @@ package clients
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -25,6 +26,7 @@ type Kubernetes interface {
 	HealthCheckPods(selectors []string, timeout time.Duration) error
 	Apply(files []string, waitUntilReady bool) error
 	Delete(files []string) error
+	GetPodLogs(ctx context.Context,  pod *v1.Pod, plOpts *v1.PodLogOptions) (io.ReadCloser, error)
 }
 
 // KubernetesImpl is a concrete implementation of a Kubernetes client
@@ -88,10 +90,16 @@ func (k *KubernetesImpl) setConfig() error {
 	return nil
 }
 
+// GetPodLogs returns a io.ReadCloser,err for a given pod's logs
+func (k *KubernetesImpl) GetPodLogs(ctx context.Context, pod *v1.Pod, plOpts *v1.PodLogOptions) (io.ReadCloser, error){
+	return k.clientset.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, plOpts).Stream(ctx)
+}
+
 // GetPods returns the Kubernetes pods based on the label selector
 func (k *KubernetesImpl) GetPods(selector string) (*v1.PodList, error) {
-	lo := metav1.ListOptions{
-		LabelSelector: selector,
+	lo := metav1.ListOptions{}
+	if selector != ""{
+		lo.LabelSelector = selector
 	}
 	pl, err := k.client.Pods("").List(context.Background(), lo)
 	if err != nil {
