@@ -1,10 +1,12 @@
 package clients
 
 import (
+	"bytes"
 	"context"
 	"io"
+	"io/ioutil"
 	"time"
-
+	
 	"github.com/stretchr/testify/mock"
 	v1 "k8s.io/api/core/v1"
 )
@@ -29,10 +31,10 @@ func (m *MockKubernetes) GetPods(selector string) (*v1.PodList, error) {
 	return nil, args.Error(1)
 }
 
-func (m *MockKubernetes) GetPodLogs(ctx context.Context, pod *v1.Pod, plOpts *v1.PodLogOptions) (io.ReadCloser, error) {
-	// todo
-	// m.Called(ctx, pod,plOpts) unsure
-	return nil,nil
+func (m *MockKubernetes) GetPodLogs(ctx context.Context, podName, nameSpace string) (io.ReadCloser, error){
+	args := m.Called(ctx, podName, nameSpace)
+	ior := ioutil.NopCloser(bytes.NewBufferString("Running pod ..."))
+	return ior, args.Error(1)
 }
 
 func (m *MockKubernetes) Apply(files []string, waitUntilReady bool) error {

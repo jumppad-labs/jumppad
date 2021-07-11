@@ -28,8 +28,8 @@ import (
 
 // print cli utility debug
 const debug = false
-// todo
-const testKubeCfgFile = "/Users/ishan/.shipyard/config/k3s/kubeconfig.yaml" // os.Getenv("KUBECONFIG") ?
+var testKubeCfgFile = os.Getenv("KUBECONFIG")
+
 // bpLogs defines the options for obtaining logs for a shipyard blueprint that is currently running
 type bpLogs struct {
 	// stdOud
@@ -126,7 +126,7 @@ func printStack(out *os.File){
 		_, _ = fmt.Fprintln(out, fmt.Sprintf("%-8s\t%s", typ, names))
 	}
 }
-// catchInterrupt sets up a os signal catch routine to stop all stream
+// catchInterrupt sets up a os signal catch routine to stop all streams
 // and exit the shipyard cli utility. It return a os.signal channel and
 // contextWithCancel
 func catchInterrupt() (chan os.Signal, context.Context, context.CancelFunc) {
@@ -142,7 +142,7 @@ func printDebug(i ...interface{}) {
 		fmt.Println(i...)
 	}
 }
-// InitSLogs creates a bpLogs object and initialises
+// InitSLogs creates a bpLogs object
 func InitSLogs(out *os.File) *bpLogs {
 	return &bpLogs{
 		commonOut:      out,
@@ -201,12 +201,11 @@ func (slog *bpLogs)kubernetesLogs(ctx context.Context, client clients.Kubernetes
 		return false
 	}
 	logging := false
-	var plOpts v1.PodLogOptions
 	for _, pod := range pl.Items {
 		if strings.Compare(string(pod.Status.Phase), "Running") == 0 &&
 			strings.Contains(pod.Namespace, "default") { // todo replace strings.contains with label selector?
 			go func(ctx context.Context, pod v1.Pod) {
-				if logReader, err := client.GetPodLogs(ctx, &pod, &plOpts); err == nil {
+				if logReader, err := client.GetPodLogs(ctx, pod.Name, pod.Namespace); err == nil {
 					sOutPrefix := color.Ize(slog.nextColor(), pod.Name)
 					slog.addReader(ctx, sOutPrefix, logReader)
 				}
@@ -219,7 +218,7 @@ func (slog *bpLogs)kubernetesLogs(ctx context.Context, client clients.Kubernetes
 
 // getDockerInfo returns a list of docker containers along with a flag to indicate any error
 func getDockerInfo(ctx context.Context, client clients.Docker) ([]types.Container, bool) {
-	filter := filters.NewArgs()
+	filter := filters.NewArgs() // equivalent for k8 ?
 	filter.Add("name", "shipyard")
 	filter.Add("status", "running")
 	containers, err := client.ContainerList(ctx, types.ContainerListOptions{
@@ -258,13 +257,16 @@ func (slog *bpLogs)addReader(ctx context.Context, prefix string, logReader io.Re
 		printDebug("Added reader for", prefix)
 		for {
 			select {
-			case <-ctx.Done():
+			case <- ctx.Done():
 				printDebug("stopped reader for", prefix)
 				return
 			default:
 				for scanner.Scan() {
 					log := "[" + prefix + "] " + scanner.Text()
-					_, _ = fmt.Fprintln(slog.commonOut, log)
+					_, err := fmt.Fprintln(slog.commonOut, log)
+					if err != nil {
+						fmt.Println(err.Error())
+					}
 				}
 			}
 		}
