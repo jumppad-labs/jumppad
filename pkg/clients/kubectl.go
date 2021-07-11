@@ -26,7 +26,7 @@ type Kubernetes interface {
 	HealthCheckPods(selectors []string, timeout time.Duration) error
 	Apply(files []string, waitUntilReady bool) error
 	Delete(files []string) error
-	GetPodLogs(ctx context.Context,  pod *v1.Pod, plOpts *v1.PodLogOptions) (io.ReadCloser, error)
+	GetPodLogs(ctx context.Context, podName, nameSpace string) (io.ReadCloser, error)
 }
 
 // KubernetesImpl is a concrete implementation of a Kubernetes client
@@ -91,8 +91,9 @@ func (k *KubernetesImpl) setConfig() error {
 }
 
 // GetPodLogs returns a io.ReadCloser,err for a given pod's logs
-func (k *KubernetesImpl) GetPodLogs(ctx context.Context, pod *v1.Pod, plOpts *v1.PodLogOptions) (io.ReadCloser, error){
-	return k.clientset.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, plOpts).Stream(ctx)
+func (k *KubernetesImpl) GetPodLogs(ctx context.Context, podName, nameSpace string) (io.ReadCloser, error){
+	var plOpts v1.PodLogOptions
+	return k.clientset.CoreV1().Pods(nameSpace).GetLogs(podName, &plOpts).Stream(ctx)
 }
 
 // GetPods returns the Kubernetes pods based on the label selector
