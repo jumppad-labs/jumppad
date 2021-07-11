@@ -18,6 +18,7 @@ import (
 // These tests only run successfully when a blueprint is running,
 // It tests whether the streamed stack/cluster logs are greater than the specified size.
 // not sure how to add this to `test_feature`
+
 const bluePrintDockerLogSize int64 = 10000 // Kb
 const bluePrintClusterLogSize int64 = 10000 // Kb
 const bluePrintListSize = 100 // Kb
@@ -114,11 +115,12 @@ func checkBlueprintRunning(t *testing.T) (bool,bool) {
 	}
 	return false, false
 }
-// Requires a currently running shipyard blueprint of a Kubernetes cluster
+// make test_unit will fail here if k8s blueprint isn't running
 // `shipyard run github.com/shipyard-run/shipyard/examples/single_k3s_cluster`
+// `export $kubecofig..`
 // `go test log_test.go log.go -v -cover`
-//  not sure how to add this to mock
-func TestLogCmd(t *testing.T) {
+// func TestLogCmd(t *testing.T) {
+func testLogCmd(t *testing.T) {
 	checkBlueprintRunning(t)
 	// t.Parallel()
 	engine, err := shipyard.New(hclog.NewNullLogger())
