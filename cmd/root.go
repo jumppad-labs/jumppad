@@ -5,11 +5,10 @@ import (
 	"os"
 	
 	"github.com/hashicorp/go-hclog"
-	gvm "github.com/shipyard-run/version-manager"
-	
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/shipyard-run/shipyard/pkg/utils"
-	
+	gvm "github.com/shipyard-run/version-manager"
+
 	"github.com/spf13/cobra"
 )
 
@@ -65,8 +64,6 @@ func init() {
 	connectorCmd.AddCommand(newConnectorRunCommand())
 	connectorCmd.AddCommand(connectorStopCmd)
 	connectorCmd.AddCommand(newConnectorCertCmd())
-	
-
 }
 
 func createEngine(l hclog.Logger) (shipyard.Engine, gvm.Versions) {
