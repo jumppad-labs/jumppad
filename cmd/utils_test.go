@@ -1,6 +1,8 @@
 package cmd
 
-import "github.com/stretchr/testify/mock"
+import (
+	"github.com/stretchr/testify/mock"
+)
 
 // removeOn is a utility function for removing Expectations from mock objects
 func removeOn(m *mock.Mock, method string) {

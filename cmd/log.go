@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/signal"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 	
@@ -18,7 +17,6 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
@@ -26,113 +24,178 @@ import (
 	"github.com/shipyard-run/shipyard/pkg/utils"
 )
 
-// print cli utility debug
+// print debug
 const debug = false
-var testKubeCfgFile = os.Getenv("KUBECONFIG")
+
+// this is for auto-complete only which is not yet implemented
+const cKey = "containers"
+const k8Key = "k8s_cluster"
+const format = "%-8s\t%s"
 
 // bpLogs defines the options for obtaining logs for a shipyard blueprint that is currently running
 type bpLogs struct {
-	// stdOud
+	// output to redirect the logs
 	commonOut *os.File
+	// cancelling on user interrupt
+	closeLogs chan os.Signal
+	ctx context.Context
+	cancel context.CancelFunc
 	// print cli utility debug
 	debugOn         bool
-	// follow stdout, stdErr options for container, pods
+	// follow stdout, stdErr options for docker container
 	dockerLogsOpts types.ContainerLogsOptions
-	podLogOptions v1.PodLogOptions
 	// shipyard engine
 	engineClients *shipyard.Clients
-	// terminal colors
-	once      sync.Once
-	colors         []string
-	nextColorIndex int
+	// color
+	color colorI
+	
+	// cl map[string]types.Container // containers
+	// pl map[string]v1.Pod // pods
+	
+	// from blueprint
+	stack stackI // type<->container/clusterName
+	// after client connection
+	connections stackI
+	
 }
 
 func logCmd(out *os.File, engine shipyard.Engine) *cobra.Command {
 	return &cobra.Command{
-		Use:   "log -- <command> ... ",
-		Short: "Tails logs for the all containers of the currently active blueprint",
-		Long:  `Tails logs for the all containers of the currently active blueprint`,
+		Use:   "log <command> ",
+		Short: "Tails logs for all containers/clusters of the currently active blueprint (wip)",
+		Long:  `Tails logs for all containers/clusters of the currently active blueprint (wip)`,
 		Example: `
-# Tail logs for either all docker containers or all cluster pods in a in the stack
-shipyard log containers
+# List containers & clusters from the current shipyard blueprint
+	shipyard log
 
-# Tail logs for a kubernetes cluster
-shipyard log kubernetes
+# Tail logs for all shipyard containers
+	shipyard log containers
+
+# Tail logs for all kubernetes clusters
+	shipyard log kubernetes
 	`,
 		Args: cobra.ArbitraryArgs,
+		/*
+		 ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			
+			bp := newStack(parseStack())
+			
+			//fmt.Println(bp.toNames(typeBpTypes, ""))
+			//fmt.Println(bp.toNames(typeBpContainers, cKey))
+			//fmt.Println(bp.toNames(typeBpClusters, k8Key))
+			
+			//slog := InitSLogs(out)
+			//slog.engineClients = engine.GetClients()
+			//connectKube(slog, slog.engineClients.Kubernetes)
+			//fetchAllContainers(slog)
+		
+			//slog.PrintToOutput(fmt.Sprintf(format, cKey, slog.stack.toNames(typeConnContainers, cKey)))
+			//slog.PrintToOutput(fmt.Sprintf(format, "pods -", slog.stack.toNames(typeConnPods, "todo_not_used")))
+		
+			return bp.toNames(typeBpTypes, ""), cobra.ShellCompDirectiveDefault
+		},
+		*/
+		
 		Run: func(cmd *cobra.Command, args []string) {
-			// initialise and set engine
+			
 			slog := InitSLogs(out)
-			// Stop tailing logs on user interrupt
-			closeLogs, ctx, cancel := catchInterrupt()
-			// parseInput and start logging to StdOut
-			parseInput(args, slog, engine, ctx)
-			// cancel all streams on user interrupt
-			<-closeLogs
-			cancel()
+	
+			// execInput and start logging to StdOut
+			if len(args) == 0 {
+				// print stack
+				slog.stack.printStack(slog.commonOut)
+				slog.PrintToOutput(slog.stack.toNames(typeBpTypes, ""))
+				slog.PrintToOutput(fmt.Sprintf(format, cKey, slog.stack.toNames(typeBpContainers, cKey)))
+				slog.PrintToOutput(fmt.Sprintf(format, k8Key, slog.stack.toNames(typeBpClusters, k8Key)))
+				
+				// `go test` throws error if os.exit() is called during a test case.
+				// This check is only to ensure os.exit() is called only in non-test case
+				if slog.commonOut == os.Stdout{
+					os.Exit(0)
+				}else {
+					return
+				}
+			}
+			slog.engineClients = engine.GetClients()
+			
+			// check args and print logs
+			if slog.execInput(args){
+				// wait till user interrupt
+				<- slog.closeLogs
+			}
+			// cancel streams and exit
+			slog.cancel()
 			if debug {
-				time.Sleep(500 * time.Millisecond) // ensures all close statements gets printed
+				time.Sleep(500 * time.Millisecond) // ensures all debug statements gets printed before exit
 			}
 		},
 	}
 }
-
-// parseInput parse cli inputs and starts streaming the logs.
-// todo -> better cli parsing
-func parseInput(args []string, slog *bpLogs, engine shipyard.Engine, ctx context.Context) {
-	if len(args) == 0 {
-		printStack(slog.commonOut)
-		// `go test` throws error if os.exit() is called during a test case.
-		// This check only ensure os.exit() is called only in case of StdOut
-		if slog.commonOut == os.Stdout{
-			os.Exit(0)
+// InitSLogs creates a bpLogs object and parses the current shipyard stack
+func InitSLogs(out *os.File) *bpLogs {
+	// Routine to catch user interrupt to stop tailing the logs
+	closeLogs, ctx, cancel := catchInterrupt()
+	slog:= &bpLogs{
+		commonOut:      out,
+		closeLogs: closeLogs,
+		ctx: ctx,
+		cancel: cancel,
+		debugOn:        debug,
+		color: newColor(),
+		dockerLogsOpts: types.ContainerLogsOptions{
+			ShowStdout: true, // always true
+			ShowStderr: true, // can be false
+			Follow:     true, // always true, can stop with ctrl+c
+		},
+		//pl: make(map[string]v1.Pod),
+		//cl: make(map[string]types.Container),
+		
+		// for auto-complete
+		connections : newStack(nil), // connections
+		stack : newStack(parseStack()), // blueprint
+	}
+	return slog
+}
+// execInput parse cli inputs and starts streaming the logs.
+// todo -> flags?
+func (slog *bpLogs) execInput(args []string) bool {
+	
+	switch args[0] {
+	case "containers":
+		if !slog.allContainerLogs() {
+			slog.PrintToOutput("Could not get docker containers")
+			return false
+		}
+		return  true
+	case "kubernetes":
+		if connectKube(slog, slog.engineClients.Kubernetes) {
+			if !slog.kubernetesLogs() {
+				slog.PrintToOutput("Could not load connect to pods")
+				return false
+			}
+			return  true
 		}else {
-			return
+			slog.PrintToOutput("Could not load KubeConfig")
+			return false
 		}
+	default:
+		slog.PrintToOutput("Bad args")
+		return false
 	}
-	slog.engineClients = engine.GetClients()
+}
 
-	if strings.Compare(args[0], "containers") == 0 { // `shipyard log containers`
-		if !slog.dockerLogs(ctx, slog.engineClients.Docker) {
-			fmt.Println("Could not get docker containers")
-			os.Exit(1)
-		}
-	} else if strings.Compare(args[0], "kubernetes") == 0 { // `shipyard log kubernetes`
-		if !slog.kubernetesLogs(ctx, slog.engineClients.Kubernetes) {
-			fmt.Println("Could not load KubeConfig / Connect to Kubernetes")
-			os.Exit(1)
-		}
-	} else {
-		fmt.Println("Bad args")
-		os.Exit(1)
-	}
+// PrintToOutput prints to configured *os.File
+func (slog *bpLogs)PrintToOutput(i... interface{}){
+	_, _ = fmt.Fprintln(slog.commonOut, i...)
 }
-// printStack in case of `shipyard log`
-// todo improve parsing
-func printStack(out *os.File){
-	c := config.New()
-	err := c.FromJSON(utils.StatePath())
-	if err != nil {
-		fmt.Println("Unable to load state", err)
-		os.Exit(1)
-	}
-	stack := make(map[string][]string)
-	for _, r := range c.Resources {
-		// if string(r.Info().Type) == "k8s_cluster" || string(r.Info().Type) == "container"{
-			stack[string(r.Info().Type)] = append(stack[string(r.Info().Type)], r.Info().Name)
-		// }
-	}
-	for typ, names := range stack{
-		_, _ = fmt.Fprintln(out, fmt.Sprintf("%-8s\t%s", typ, names))
-	}
-}
+
 // catchInterrupt sets up a os signal catch routine to stop all streams
 // and exit the shipyard cli utility. It return a os.signal channel and
 // contextWithCancel
 func catchInterrupt() (chan os.Signal, context.Context, context.CancelFunc) {
 	closeLogs := make(chan os.Signal, 1)
-	signal.Notify(closeLogs, os.Interrupt, syscall.SIGHUP,
-		syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	signal.Notify(closeLogs, os.Interrupt, syscall.SIGHUP, syscall.SIGINT,
+		syscall.SIGTERM, syscall.SIGQUIT)
 	// to cancel engine.client log streams
 	ctx, cancel := context.WithCancel(context.Background())
 	return closeLogs, ctx, cancel
@@ -142,113 +205,142 @@ func printDebug(i ...interface{}) {
 		fmt.Println(i...)
 	}
 }
-// InitSLogs creates a bpLogs object
-func InitSLogs(out *os.File) *bpLogs {
-	return &bpLogs{
-		commonOut:      out,
-		debugOn:        debug,
-		once:           sync.Once{},
-		colors:         nil,
-		nextColorIndex: 0,
-		dockerLogsOpts: types.ContainerLogsOptions{
-			ShowStdout: true, // always true
-			ShowStderr: true, // can be false
-			Follow:     true, // always true, can stop with ctrl+c
-		},
-		podLogOptions: v1.PodLogOptions{
-			TypeMeta:  metav1.TypeMeta{},
-			Container: "",
-			Follow:    true, // always true, can stop with ctrl+c
-		},
+
+// parse the stack and save resources to a map
+func parseStack() map[string][]string{
+	c := config.New()
+	err := c.FromJSON(utils.StatePath())
+	if err != nil {
+		fmt.Println("Unable to load state", err)
+		os.Exit(1)
 	}
+	stack := make(map[string][]string)
+	for _, r := range c.Resources {
+		// if string(r.Info().Type) == "k8s_cluster" || string(r.Info().Type) == "container"{ // not sure
+			stack[string(r.Info().Type)] = append(stack[string(r.Info().Type)], r.Info().Name)
+		// }
+	}
+	return stack
 }
 
-func (slog *bpLogs)dockerLogs(ctx context.Context, client clients.Docker) bool {
-	defer ctx.Done()
-	containers, done := getDockerInfo(ctx, client)
+func (slog *bpLogs) allContainerLogs() bool {
+	defer slog.ctx.Done()
+	containers, done := fetchAllContainers(slog)
 	if !done {
 		return false
 	}
+	c := slog.engineClients.Docker
 	for _, container := range containers {
-		if logReader, err := client.ContainerLogs(ctx, container.ID, slog.dockerLogsOpts); err == nil {
+		if logReader, err := c.ContainerLogs(slog.ctx, container.ID, slog.dockerLogsOpts); err == nil {
 			// colorize container's prefix
-			sOutPrefix := color.Ize(slog.nextColor(), container.Names[0][1:])
+			sOutPrefix := color.Ize(slog.color.nextColor(), container.Names[0][1:])
 			if slog.dockerLogsOpts.ShowStderr {
 				// logReader has both stdout and stderr, de-mux them
-				go slog.splitAndAddReaders(ctx, sOutPrefix, logReader)
+				go slog.splitAndAddReaders(sOutPrefix, logReader)
 			} else {
-				slog.addReader(ctx, sOutPrefix, logReader)
+				slog.startLogging(sOutPrefix, logReader)
 			}
 		}
 	}
 	return true
 }
 
-func (slog *bpLogs)kubernetesLogs(ctx context.Context, client clients.Kubernetes) bool {
-	if _, err := os.Stat(testKubeCfgFile); err != nil{
-		return false
-		
-	}
-	config, err := client.SetConfig(testKubeCfgFile)
-	if err != nil {
-		printDebug(err.Error())
+func (slog *bpLogs)kubernetesLogs() bool {
+	pl, ok := slog.getPods()
+	if !ok {
 		return false
 	}
-	client = config
-	pl, err := client.GetPods("")
-	if err != nil {
-		printDebug(err.Error())
-		return false
-	}
-	logging := false
 	for _, pod := range pl.Items {
-		if strings.Compare(string(pod.Status.Phase), "Running") == 0 &&
+		if "Running" == string(pod.Status.Phase) &&
 			strings.Contains(pod.Namespace, "default") { // todo replace strings.contains with label selector?
-			go func(ctx context.Context, pod v1.Pod) {
-				if logReader, err := client.GetPodLogs(ctx, pod.Name, pod.Namespace); err == nil {
-					sOutPrefix := color.Ize(slog.nextColor(), pod.Name)
-					slog.addReader(ctx, sOutPrefix, logReader)
+			go func(pod v1.Pod) {
+				if logReader, err := slog.engineClients.Kubernetes.GetPodLogs(slog.ctx,
+						pod.Name, pod.Namespace); err == nil {
+					sOutPrefix := color.Ize(slog.color.nextColor(), pod.Name)
+					slog.startLogging(sOutPrefix, logReader)
 				}
-			}(ctx, pod)
-			logging = true // true if at least one pod is running
+			}(pod)
 		}
 	}
-	return logging
+	return true
 }
 
-// getDockerInfo returns a list of docker containers along with a flag to indicate any error
-func getDockerInfo(ctx context.Context, client clients.Docker) ([]types.Container, bool) {
+// connectKube connects if $KubeConfig is set
+func connectKube(slog *bpLogs, cli clients.Kubernetes) bool{
+	var err error
+	if _, err = os.Stat(os.Getenv("KUBECONFIG")); err != nil {
+		printDebug(err.Error())
+		return false
+	}
+	slog.engineClients.Kubernetes, err = cli.SetConfig(os.Getenv("KUBECONFIG"))
+	if err != nil {
+		printDebug(err.Error())
+		return false
+	}
+	// return all for now
+	return fetchAllPods(slog)
+}
+
+func fetchAllPods(slog *bpLogs) bool {
+	pl, ok := slog.getPods()
+	defaultPods := new([]v1.Pod)
+	if ok {
+		for _, pod := range pl.Items {
+			if strings.Contains(pod.Namespace, "default"){ // todo
+				// slog.pl[pod.Name] = pod
+				*defaultPods = append(*defaultPods, pod)
+			}
+		}
+	}
+	slog.stack.addConn("todo_not_used", *defaultPods) // []v1.Pod
+	return ok
+}
+func (slog *bpLogs) getPods() (*v1.PodList, bool) {
+	pl, err := slog.engineClients.Kubernetes.GetPods("")
+	if err != nil {
+		printDebug(err.Error())
+		return nil, false
+	}
+	return pl, true
+}
+
+// fetchAllContainers returns a list of docker containers along with a flag to indicate any error
+func fetchAllContainers(slog *bpLogs) ([]types.Container, bool) {
 	filter := filters.NewArgs() // equivalent for k8 ?
 	filter.Add("name", "shipyard")
 	filter.Add("status", "running")
-	containers, err := client.ContainerList(ctx, types.ContainerListOptions{
+	containers, err := slog.engineClients.Docker.ContainerList(slog.ctx, types.ContainerListOptions{
 		Filters: filter,
 	})
 	if err != nil || len(containers) == 0 {
 		return nil, false
 	}
+	// for _, c := range containers {
+		// slog.cl[c.Names[0][1:]] = c
+	// }
+	slog.stack.addConn(cKey, containers) // []types.Container
 	return containers, true
 }
 
 // splitAndAddReaders splits a io.ReadCloser that is multiplexed as a common StdOut + StdErr
-// into two separate io.ReadCloser. It then calls addReader for both streams
-func (slog *bpLogs)splitAndAddReaders(ctx context.Context, prefix string, logReader io.ReadCloser) {
+// into two separate io.ReadCloser. It then calls startLogging for both streams
+func (slog *bpLogs)splitAndAddReaders(prefix string, logReader io.ReadCloser) {
 	// Create io pipes to split logReader to StdOut and StdErr
 	stdOutReadr, dstOut := io.Pipe()
 	stdErrReadr, dstErr := io.Pipe()
 
 	// close io pipes when ctx is cancelled
-	go waitClose(prefix, ctx, logReader, dstOut, dstErr, stdOutReadr, stdErrReadr)
+	go waitClose(prefix, slog.ctx, logReader, dstOut, dstErr, stdOutReadr, stdErrReadr)
+	
 	// de-multiplex logReader to stdout and stderr streams
 	go deMuxStream(prefix, dstOut, dstErr, logReader)
-
-	sOutPrefix := prefix
-	sErrPrefix := sOutPrefix + color.Ize(color.Red, "*")
-	slog.addReader(ctx, sOutPrefix, stdOutReadr)
-	slog.addReader(ctx, sErrPrefix, stdErrReadr)
+	
+	slog.startLogging(prefix, stdOutReadr)
+	slog.startLogging(prefix, stdErrReadr)
 }
-// addReader reads from the io.ReadCloser, adds the prefix and prints to the common out
-func (slog *bpLogs)addReader(ctx context.Context, prefix string, logReader io.ReadCloser) {
+
+// startLogging reads from the io.ReadCloser, adds the prefix and prints to the common out
+func (slog *bpLogs) startLogging(prefix string, logReader io.ReadCloser) {
 	go func() {
 		defer func(logReader io.ReadCloser) {
 			_ = logReader.Close()
@@ -257,7 +349,7 @@ func (slog *bpLogs)addReader(ctx context.Context, prefix string, logReader io.Re
 		printDebug("Added reader for", prefix)
 		for {
 			select {
-			case <- ctx.Done():
+			case <- slog.ctx.Done():
 				printDebug("stopped reader for", prefix)
 				return
 			default:
@@ -290,26 +382,4 @@ func waitClose(name string, ctx context.Context, logReader io.ReadCloser, dstOut
 	_ = stdOutReadr.Close()
 	_ = stdErrReadr.Close()
 	printDebug("Stopped reading log streams for ", name)
-}
-
-// nextColor returns a color for the prefix in the case of combined logs
-func (slog *bpLogs)nextColor() string {
-	slog.once.Do(func() {
-		// one time initialization
-		slog.colors = append(slog.colors, color.Blue)
-		slog.colors = append(slog.colors, color.Green)
-		slog.colors = append(slog.colors, color.Purple)
-		slog.colors = append(slog.colors, color.Yellow)
-		slog.colors = append(slog.colors, color.Bold)
-		slog.colors = append(slog.colors, color.Gray)
-		// excluded red as it is used later to denote *StdErr*
-		slog.nextColorIndex = 0
-	})
-	// rotate index
-	if slog.nextColorIndex == len(slog.colors) {
-		slog.nextColorIndex = 0
-	}
-	c := slog.colors[slog.nextColorIndex]
-	slog.nextColorIndex++
-	return c
 }
