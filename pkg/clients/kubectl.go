@@ -98,7 +98,9 @@ func (k *KubernetesImpl) GetPodLogs(ctx context.Context, podName, nameSpace stri
 
 // GetPods returns the Kubernetes pods based on the label selector
 func (k *KubernetesImpl) GetPods(selector string) (*v1.PodList, error) {
-	lo := metav1.ListOptions{LabelSelector : selector}
+	lo := metav1.ListOptions{
+		LabelSelector: selector,
+	}
 	pl, err := k.client.Pods("").List(context.Background(), lo)
 	if err != nil {
 		return nil, err

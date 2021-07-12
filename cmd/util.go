@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
-	
+
 	"github.com/TwinProduction/go-color"
 	"github.com/docker/docker/api/types"
 	"github.com/hashicorp/go-hclog"
@@ -32,6 +32,7 @@ const (
 	typeConnContainers
 	typeConnPods
 )
+
 // stackI is an interface that can be used for shell auto-complete
 // based on either static stack file or after client connections
 type stackI interface {
@@ -44,13 +45,13 @@ type stackI interface {
 }
 
 type stacks struct {
-	stack     map[string][]string // type<->container/clusterName
-	conn      map[string]interface{} // type<->[]types.Container/[]v1.pod
+	stack map[string][]string    // type<->container/clusterName
+	conn  map[string]interface{} // type<->[]types.Container/[]v1.pod
 }
 
 // newStack returns a stackI interface that is initialised with the provided
 // stack blueprint
-func newStack(m map[string][]string) stackI{
+func newStack(m map[string][]string) stackI {
 	return &stacks{stack: m, conn: make(map[string]interface{})}
 }
 
@@ -60,12 +61,14 @@ func (stack *stacks) printStack(out *os.File) {
 		_, _ = fmt.Fprintf(out, "%-8s\t%s\n", typ, names)
 	}
 }
+
 // addConn adds a new value to the connections.
 func (stack *stacks) addConn(key string, list interface{}) {
 	stack.conn[key] = list
 }
+
 // toNames returns the value for the key type casted to []string
-func (stack *stacks) toNames(typ int, key string) []string{
+func (stack *stacks) toNames(typ int, key string) []string {
 	t := new([]string)
 	switch typ {
 	case typeBpContainers:
@@ -81,7 +84,7 @@ func (stack *stacks) toNames(typ int, key string) []string{
 			*t = append(*t, c.Names[0][1:])
 		}
 	case typeConnPods:
-		for _, c := range stack.conn[key].([]v1.Pod){
+		for _, c := range stack.conn[key].([]v1.Pod) {
 			*t = append(*t, c.Name)
 		}
 	}
@@ -95,8 +98,9 @@ type colorI interface {
 type colour struct {
 	colors         []string
 	nextColorIndex int
-	mx sync.Mutex
+	mx             sync.Mutex
 }
+
 // nextColor returns a color from a list of colors
 func (c *colour) nextColor() string {
 	c.mx.Lock()
@@ -108,8 +112,9 @@ func (c *colour) nextColor() string {
 	c.nextColorIndex = 0
 	return c.colors[c.nextColorIndex]
 }
+
 // newColor returns a colorI interface
-func newColor() colorI{
+func newColor() colorI {
 	c := colour{}
 	c.colors = append(c.colors, color.Blue)
 	c.colors = append(c.colors, color.Green)
@@ -118,7 +123,7 @@ func newColor() colorI{
 	c.colors = append(c.colors, color.Bold)
 	c.colors = append(c.colors, color.Gray)
 	c.colors = append(c.colors, color.Red)
-	
+
 	c.nextColorIndex = 0
 	c.mx = sync.Mutex{}
 	return &c
