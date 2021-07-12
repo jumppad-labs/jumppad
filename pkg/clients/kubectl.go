@@ -90,7 +90,7 @@ func (k *KubernetesImpl) setConfig() error {
 	return nil
 }
 
-// GetPodLogs returns a io.ReadCloser,err for a given pod's logs
+// GetPodLogs returns a io.ReadCloser,err for a given pods' logs
 func (k *KubernetesImpl) GetPodLogs(ctx context.Context, podName, nameSpace string) (io.ReadCloser, error){
 	var plOpts v1.PodLogOptions
 	return k.clientset.CoreV1().Pods(nameSpace).GetLogs(podName, &plOpts).Stream(ctx)
@@ -98,10 +98,7 @@ func (k *KubernetesImpl) GetPodLogs(ctx context.Context, podName, nameSpace stri
 
 // GetPods returns the Kubernetes pods based on the label selector
 func (k *KubernetesImpl) GetPods(selector string) (*v1.PodList, error) {
-	lo := metav1.ListOptions{}
-	if selector != ""{
-		lo.LabelSelector = selector
-	}
+	lo := metav1.ListOptions{LabelSelector : selector}
 	pl, err := k.client.Pods("").List(context.Background(), lo)
 	if err != nil {
 		return nil, err
