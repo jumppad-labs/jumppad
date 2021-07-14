@@ -13,6 +13,8 @@ import (
 )
 
 func newEnvCmd(e shipyard.Engine) *cobra.Command {
+	var unset bool
+
 	envCmd := &cobra.Command{
 		Use:   "env",
 		Short: "Prints environment variables defined by the blueprint",
@@ -29,6 +31,12 @@ func newEnvCmd(e shipyard.Engine) *cobra.Command {
     
   # Set environment variables on Windows based systems
   Invoke-Expression "shipyard env" | ForEach-Object { Invoke-Expression $_ }
+
+  # Unset environment variables on Linux based systems
+  eval $(shipyard env --unset)
+
+  # Unset environment variables on Windows based systems
+  Invoke-Expression "shipyard env --unset" | ForEach-Object { Invoke-Expression $_ }
 `,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -41,6 +49,9 @@ func newEnvCmd(e shipyard.Engine) *cobra.Command {
 			}
 
 			prefix := "export "
+			if unset {
+				prefix = "unset "
+			}
 			if runtime.GOOS == "windows" {
 				prefix = "$Env:"
 			}
@@ -64,5 +75,6 @@ func newEnvCmd(e shipyard.Engine) *cobra.Command {
 		SilenceUsage: true,
 	}
 
+	envCmd.Flags().BoolVarP(&unset, "unset", "", false, "When set to true Shipyard will print unset commands for environment variables defined by the blueprint")
 	return envCmd
 }

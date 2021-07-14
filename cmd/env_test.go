@@ -48,6 +48,20 @@ func TestSetsEnvironmentVariables(t *testing.T) {
 	assert.Contains(t, `export apples="pears"`, out.String())
 }
 
+func TestUnsetsEnvironmentVariables(t *testing.T) {
+	en := setupEnvState(t, envState)
+	en.Flags().Set("unset", "true")
+	out := bytes.NewBufferString("")
+	en.SetOutput(out)
+
+	err := en.Execute()
+	assert.NoError(t, err)
+
+	assert.Contains(t, `unset foo="bar"`, out.String())
+	assert.Contains(t, `unset abc="12\"3"`, out.String())
+	assert.Contains(t, `unset apples="pears"`, out.String())
+}
+
 var envState = `
 {
   "blueprint": {
