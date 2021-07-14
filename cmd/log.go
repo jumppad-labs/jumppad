@@ -28,7 +28,7 @@ import (
 const debug = false
 
 // this is for auto-complete only which is not yet implemented
-const cKey = "containers"
+const cKey = "container"
 const k8Key = "k8s_cluster"
 const format = "%-8s\t%s"
 
@@ -70,8 +70,8 @@ func logCmd(out *os.File, engine shipyard.Engine) *cobra.Command {
 # Tail logs for all shipyard containers
 	shipyard log containers
 
-# Tail logs for all kubernetes clusters
-	shipyard log kubernetes
+# Tail logs for a kubernetes clusters
+	shipyard log cluster $cluster-name
 	`,
 		Args: cobra.ArbitraryArgs,
 		/*
@@ -103,9 +103,10 @@ func logCmd(out *os.File, engine shipyard.Engine) *cobra.Command {
 			if len(args) == 0 {
 				// print stack
 				slog.stack.printStack(slog.commonOut)
-				slog.PrintToOutput(slog.stack.toNames(typeBpTypes, ""))
-				slog.PrintToOutput(fmt.Sprintf(format, cKey, slog.stack.toNames(typeBpContainers, cKey)))
-				slog.PrintToOutput(fmt.Sprintf(format, k8Key, slog.stack.toNames(typeBpClusters, k8Key)))
+				// slog.PrintToOutput("")
+				// slog.PrintToOutput(slog.stack.toNames(typeBpTypes, ""))
+				// slog.PrintToOutput(fmt.Sprintf(format, cKey, slog.stack.toNames(typeBpContainers, cKey)))
+				// slog.PrintToOutput(fmt.Sprintf(format, k8Key, slog.stack.toNames(typeBpClusters, k8Key)))
 
 				// `go test` throws error if os.exit() is called during a test case.
 				// This check is only to ensure os.exit() is called only in non-test case
@@ -168,15 +169,20 @@ func (slog *bpLogs) execInput(args []string) bool {
 			return false
 		}
 		return true
-	case "kubernetes":
-		if connectKube(slog, slog.engineClients.Kubernetes) {
-			if !slog.kubernetesLogs() {
-				slog.PrintToOutput("Could not load connect to pods")
+	case "cluster":
+		if len(args) == 2{
+			if connectKube(slog, slog.engineClients.Kubernetes, args[1]) {
+				if !slog.kubernetesLogs() {
+					slog.PrintToOutput("Could not load connect to pods")
+					return false
+				}
+				return true
+			} else {
+				slog.PrintToOutput("Could not load KubeConfig")
 				return false
 			}
-			return true
-		} else {
-			slog.PrintToOutput("Could not load KubeConfig")
+		}else {
+			slog.PrintToOutput("Cluster not found")
 			return false
 		}
 	default:
@@ -217,8 +223,9 @@ func parseStack() map[string][]string {
 	}
 	stack := make(map[string][]string)
 	for _, r := range c.Resources {
-		// if string(r.Info().Type) == "k8s_cluster" || string(r.Info().Type) == "container"{ // not sure
-		stack[string(r.Info().Type)] = append(stack[string(r.Info().Type)], r.Info().Name)
+		 if string(r.Info().Type) == "k8s_cluster" || string(r.Info().Type) == "container" && r.Info().Status == "applied" { // not sure
+			stack[string(r.Info().Type)] = append(stack[string(r.Info().Type)], r.Info().Name)
+		}
 		// }
 	}
 	return stack
@@ -231,7 +238,13 @@ func (slog *bpLogs) allContainerLogs() bool {
 		return false
 	}
 	c := slog.engineClients.Docker
+	logging := false
 	for _, container := range containers {
+		if strings.Contains(container.Names[0], "docker-cache") ||
+			strings.Contains(container.Names[0], "k8s_cluster") ||
+			strings.Contains(container.Names[0], "ingress.shipyard.run") {
+			continue
+		}
 		if logReader, err := c.ContainerLogs(slog.ctx, container.ID, slog.dockerLogsOpts); err == nil {
 			// colorize container's prefix
 			sOutPrefix := color.Ize(slog.color.nextColor(), container.Names[0][1:])
@@ -241,9 +254,10 @@ func (slog *bpLogs) allContainerLogs() bool {
 			} else {
 				slog.startLogging(sOutPrefix, logReader)
 			}
+			logging = true
 		}
 	}
-	return true
+	return logging
 }
 
 func (slog *bpLogs) kubernetesLogs() bool {
@@ -267,13 +281,17 @@ func (slog *bpLogs) kubernetesLogs() bool {
 }
 
 // connectKube connects if $KubeConfig is set
-func connectKube(slog *bpLogs, cli clients.Kubernetes) bool {
+func connectKube(slog *bpLogs, cli clients.Kubernetes, clusterName string) bool {
 	var err error
-	if _, err = os.Stat(os.Getenv("KUBECONFIG")); err != nil {
+	kubeCfg := fmt.Sprintf("%s/config/%s/kubeconfig.yaml",utils.ShipyardHome(), clusterName)
+//	if _, err = os.Stat(os.Getenv("KUBECONFIG")); err != nil {
+	if _, err = os.Stat(kubeCfg); err != nil {
 		printDebug(err.Error())
 		return false
 	}
-	slog.engineClients.Kubernetes, err = cli.SetConfig(os.Getenv("KUBECONFIG"))
+	// slog.engineClients.Kubernetes, err = cli.SetConfig(os.Getenv("KUBECONFIG"))
+	slog.engineClients.Kubernetes, err = cli.SetConfig(kubeCfg)
+	
 	if err != nil {
 		printDebug(err.Error())
 		return false
