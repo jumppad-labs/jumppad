@@ -1,15 +1,16 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"syscall"
 	"testing"
 	"time"
-
+	
 	"github.com/hashicorp/go-hclog"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
-
+	
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 )
@@ -19,10 +20,10 @@ import (
 // not sure how to add this to `test_feature`
 
 // single_k3s_cluster
-const bluePrintDockerLogSize int64 = 10000  // Kb
-const bluePrintClusterLogSize int64 = 10000 // Kb
-const bluePrintListSize = 10                // Kb
-
+const bluePrintDockerLogSize int64 = 10000  // Bytes
+const bluePrintClusterLogSize int64 = 5000 // Bytes
+const bluePrintListSize = 10                // Bytes
+const invalidParamSize = 5
 // signal cli exit
 const UserInterruptTime = 3 * time.Second
 
@@ -34,16 +35,16 @@ func mockStdOut(t *testing.T) *os.File {
 	return tmpFile
 }
 
-// checks shipyard config exists and env is valid
-func checkK8sRunning(t *testing.T) bool {
-	if assert.FileExists(t, utils.StatePath(), "No docker+k8 blueprint is running,"+
-		"`shipyard run github.com/shipyard-run/shipyard/examples/single_k3s_cluster`") {
-		if assert.Contains(t, os.Getenv("KUBECONFIG"), ".yaml",
-			"KUBECONFIG not set") {
-			return true
-		}
+// checks shipyard config exists
+func checkK8sRunning(t *testing.T) string {
+	stat, err := os.Stat(fmt.Sprintf("%s/config/k3s/kubeconfig-docker.yaml",utils.ShipyardHome()))
+	if err == nil && stat != nil {
+		fmt.Println("running")
+		return "k3s"
+	}else {
+		fmt.Println("running not")
+		return ""
 	}
-	return false
 }
 
 // runCmdThenInterruptIt Tests whether output from cli utility is greater than the
@@ -85,9 +86,9 @@ func testCommand(t *testing.T, engine shipyard.Engine, args []string, expectedSi
 	runCmdThenInterruptIt(t, listCmd, listFile, expectedSize)
 }
 
-// make test_unit will fail here if k8s blueprint isn't running
+// make test_unit will fail here if either a container or single_k3s_cluster isn't running
 // `shipyard run github.com/shipyard-run/shipyard/examples/single_k3s_cluster`
-// `export $kubecofig..`
+// `clusterName is set to k3s in checkK8sRunning()`
 // `go test log_test.go log.go util.go -v -cover -race `
 // {{uncomment}} func TestLogCmd(t *testing.T) {
 func testLogCmd(t *testing.T) {
@@ -101,16 +102,33 @@ func testLogCmd(t *testing.T) {
 	})
 
 	t.Run("Test `shipyard log badcommand`", func(t *testing.T) {
-		testCommand(t, engine, []string{"something"}, 4)
+		testCommand(t, engine, []string{"something"}, invalidParamSize)
 	})
-
-	t.Run("Test `shipyard log containers`", func(t *testing.T) {
-		testCommand(t, engine, []string{"containers"}, bluePrintClusterLogSize)
+	
+	// no cluster name
+	t.Run("Test `shipyard log cluster`", func(t *testing.T) {
+		testCommand(t, engine, []string{"cluster"}, invalidParamSize)
 	})
-
-	if checkK8sRunning(t) {
-		t.Run("Test `shipyard log kubernetes`", func(t *testing.T) {
-			testCommand(t, engine, []string{"kubernetes"}, bluePrintDockerLogSize)
+	
+	// invalid cluster name
+	t.Run("Test `shipyard log cluster badName`", func(t *testing.T) {
+		testCommand(t, engine, []string{"cluster", "badName"}, invalidParamSize)
+	})
+	
+	// no containers running
+	t.Run("Test `shipyard log container` (with no containers running)", func(t *testing.T) {
+		testCommand(t, engine, []string{"container"}, invalidParamSize)
+	})
+	
+	// either k8s_clusters are running, or containers are running
+	clusterName := checkK8sRunning(t)
+	if clusterName != ""{
+		t.Run("Test `shipyard log cluster`", func(t *testing.T) {
+			testCommand(t, engine, []string{"cluster", clusterName}, bluePrintDockerLogSize)
+		})
+	}else {
+		t.Run("Test `shipyard log containers`", func(t *testing.T) {
+			testCommand(t, engine, []string{"containers"}, bluePrintClusterLogSize)
 		})
 	}
 
