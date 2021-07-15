@@ -36,7 +36,7 @@ func newEnvCmd(e shipyard.Engine) *cobra.Command {
   eval $(shipyard env --unset)
 
   # Unset environment variables on Windows based systems
-  Invoke-Expression "shipyard env --unset" | ForEach-Object { Invoke-Expression $_ }
+  Invoke-Expression "shipyard env --unset" | ForEach-Object { Remove-Item $_ }
 `,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -74,7 +74,11 @@ func newEnvCmd(e shipyard.Engine) *cobra.Command {
 			for _, r := range c.Resources {
 				if r.Info().Type == config.TypeOutput {
 					val := strings.ReplaceAll(r.(*config.Output).Value, `\`, `\\`)
-					fmt.Printf("%s%s=\"%s\"\n", prefix, r.Info().Name, val)
+					if unset {
+						fmt.Printf("%s%s\n", prefix, r.Info().Name)
+					} else {
+						fmt.Printf("%s%s=\"%s\"\n", prefix, r.Info().Name, val)
+					}
 				}
 			}
 			return nil
