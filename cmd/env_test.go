@@ -57,9 +57,9 @@ func TestUnsetsEnvironmentVariables(t *testing.T) {
 	err := en.Execute()
 	assert.NoError(t, err)
 
-	assert.Contains(t, `unset foo="bar"`, out.String())
-	assert.Contains(t, `unset abc="12\"3"`, out.String())
-	assert.Contains(t, `unset apples="pears"`, out.String())
+	assert.Contains(t, `unset foo`, out.String())
+	assert.Contains(t, `unset abc`, out.String())
+	assert.Contains(t, `unset apples`, out.String())
 }
 
 var envState = `

@@ -54,12 +54,19 @@ func newEnvCmd(e shipyard.Engine) *cobra.Command {
 			}
 			if runtime.GOOS == "windows" {
 				prefix = "$Env:"
+				if unset {
+					prefix = "Env:\\"
+				}
 			}
 
 			if c.Blueprint != nil && len(c.Blueprint.Environment) > 0 {
 				for _, env := range c.Blueprint.Environment {
 					env.Value = strings.ReplaceAll(env.Value, `\`, `\\`)
-					fmt.Printf("%s%s=\"%s\"\n", prefix, env.Key, env.Value)
+					if unset {
+						fmt.Printf("%s%s\n", prefix, env.Key)
+					} else {
+						fmt.Printf("%s%s=\"%s\"\n", prefix, env.Key, env.Value)
+					}
 				}
 			}
 
