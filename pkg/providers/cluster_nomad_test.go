@@ -32,7 +32,7 @@ func setupNomadClusterMocks(t *testing.T) (*config.NomadCluster, *mocks.MockCont
 	)
 	md.On("CopyFromContainer", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("CopyLocalDockerImagesToVolume", mock.Anything, mock.Anything, mock.Anything).Return([]string{"file.tar.gz"}, nil)
-	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("RemoveContainer", mock.Anything).Return(nil)
 	md.On("RemoveVolume", mock.Anything).Return(nil)
 	md.On("DetachNetwork", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -317,14 +317,14 @@ func TestClusterNomadImportDockerRunsExecCommand(t *testing.T) {
 	assert.NoError(t, err)
 
 	importCommand := []string{"docker", "load", "-i", "file.tar.gz"}
-	md.AssertCalled(t, "ExecuteCommand", "containerid", importCommand, mock.Anything, mock.Anything, mock.Anything)
+	md.AssertCalled(t, "ExecuteCommand", "containerid", importCommand, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestClusterNomadImportDockerExecFailReturnsError(t *testing.T) {
 	//TODO implement the docker import command
 	cc, md, mh := setupNomadClusterMocks(t)
 	removeOn(&md.Mock, "ExecuteCommand")
-	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
+	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
 	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
 
