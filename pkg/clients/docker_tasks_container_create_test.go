@@ -432,7 +432,7 @@ func TestContainerNotConfiguresRetryWhen0(t *testing.T) {
 
 func TestContainerAddUserWhenSpecified(t *testing.T) {
 	cc, _, _, md, mic := createContainerConfig()
-	cc.User = &config.User{
+	cc.RunAs = &config.User{
 		User:  "1010",
 		Group: "1011",
 	}

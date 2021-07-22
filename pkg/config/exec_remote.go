@@ -26,7 +26,7 @@ type ExecRemote struct {
 	EnvVar      map[string]string `hcl:"env_var,optional" json:"env_var,omitempty" mapstructure:"env_var"` // environment variables to set when starting the container
 
 	// User block for mapping the user id and group id inside the container
-	User *User `hcl:"user,block" json:"user,omitempty"`
+	RunAs *User `hcl:"run_as,block" json:"run_as,omitempty"`
 }
 
 // NewExecRemote creates a ExecRemote resorurce with the detault values

@@ -134,7 +134,7 @@ func TestRemoteExecExecutesCommand(t *testing.T) {
 
 func TestRemoteExecRunsAsUserWhenSpecified(t *testing.T) {
 	trex, _, md := testRemoteExecSetupMocks()
-	trex.User = &config.User{
+	trex.RunAs = &config.User{
 		User:  "1010",
 		Group: "1011",
 	}

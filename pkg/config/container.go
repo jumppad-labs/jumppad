@@ -33,14 +33,14 @@ type Container struct {
 	MaxRestartCount int `hcl:"max_restart_count,optional" json:"max_restart_count,omitempty" mapstructure:"max_restart_count"`
 
 	// User block for mapping the user id and group id inside the container
-	User *User `hcl:"user,block" json:"user,omitempty"`
+	RunAs *User `hcl:"run_as,block" json:"run_as,omitempty"`
 }
 
 type User struct {
 	// Username or UserID of the user to run the container as
-	User string `hcl:"user_id" json:"user_id,omitempty" mapstructure:"user_id"`
+	User string `hcl:"user" json:"user,omitempty" mapstructure:"user"`
 	// Groupname GroupID of the user to run the container as
-	Group string `hcl:"group_id" json:"group_id,omitempty" mapstructure:"group_id"`
+	Group string `hcl:"group" json:"group,omitempty" mapstructure:"group"`
 }
 
 // NewContainer returns a new Container resource with the correct default options

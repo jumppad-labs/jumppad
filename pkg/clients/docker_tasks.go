@@ -76,8 +76,8 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 
 	// set the user details
 	var user string
-	if c.User != nil {
-		user = fmt.Sprintf("%s:%s", c.User.User, c.User.Group)
+	if c.RunAs != nil {
+		user = fmt.Sprintf("%s:%s", c.RunAs.User, c.RunAs.Group)
 	}
 
 	// create the container config
