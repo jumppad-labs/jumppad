@@ -430,6 +430,21 @@ func TestContainerNotConfiguresRetryWhen0(t *testing.T) {
 	assert.Equal(t, hc.RestartPolicy.MaximumRetryCount, 0)
 }
 
+func TestContainerAddUserWhenSpecified(t *testing.T) {
+	cc, _, _, md, mic := createContainerConfig()
+	cc.User = &config.User{
+		User:  "1010",
+		Group: "1011",
+	}
+
+	err := setupContainer(t, cc, md, mic)
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
+	dc := params[1].(*container.Config)
+	assert.Equal(t, "1010:1011", dc.User)
+}
+
 // removeOn is a utility function for removing Expectations from mock objects
 func removeOn(m *mock.Mock, method string) {
 	ec := m.ExpectedCalls

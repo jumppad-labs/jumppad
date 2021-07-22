@@ -482,7 +482,7 @@ func (c *K8sCluster) ImportLocalDockerImages(name string, id string, images []co
 	for _, i := range imagesFile {
 		// execute the command to import the image
 		// write any command output to the logger
-		err = c.client.ExecuteCommand(id, []string{"ctr", "image", "import", i}, nil, "/", c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
+		err = c.client.ExecuteCommand(id, []string{"ctr", "image", "import", i}, nil, "/", "", "", c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
 		if err != nil {
 			return err
 		}

@@ -74,6 +74,12 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
 
+	// set the user details
+	var user string
+	if c.User != nil {
+		user = fmt.Sprintf("%s:%s", c.User.User, c.User.Group)
+	}
+
 	// create the container config
 	dc := &container.Config{
 		Hostname:     c.Name,
@@ -84,6 +90,7 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
+		User:         user,
 	}
 
 	// create the host and network configs
@@ -563,7 +570,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 
 	// create the directory paths ensure unix paths for containers
 	destPath := filepath.ToSlash(filepath.Join("/cache", path))
-	err = d.ExecuteCommand(tmpID, []string{"mkdir", "-p", destPath}, nil, "/", nil)
+	err = d.ExecuteCommand(tmpID, []string{"mkdir", "-p", destPath}, nil, "/", "", "", nil)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to create destination path %s in volume: %s", destPath, err)
 	}
@@ -577,7 +584,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 
 		// check if the image exists if we are not doing a forced update
 		if !d.force && !force {
-			err := d.ExecuteCommand(tmpID, []string{"find", destFile}, nil, "/", nil)
+			err := d.ExecuteCommand(tmpID, []string{"find", destFile}, nil, "/", "", "", nil)
 			if err == nil {
 				// we have the image already
 				d.l.Debug("File already cached", "name", name, "path", path)
@@ -658,13 +665,19 @@ func (d *DockerTasks) CopyFileToContainer(containerID, filename, path string) er
 // id is the id of the container to execute the command in
 // command is a slice of strings to execute
 // writer [optional] will be used to write any output from the command execution.
-func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, workingDir string, writer io.Writer) error {
+func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, workingDir string, user, group string, writer io.Writer) error {
+	// set the user details
+	if user != "" && group != "" {
+		user = fmt.Sprintf("%s:%s", user, group)
+	}
+
 	execid, err := d.c.ContainerExecCreate(context.Background(), id, types.ExecConfig{
 		Cmd:          command,
 		AttachStdout: true,
 		AttachStderr: true,
 		Env:          env,
 		WorkingDir:   workingDir,
+		User:         user,
 	})
 
 	if err != nil {
