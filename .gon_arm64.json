@@ -5,7 +5,7 @@
         "password":  "@env:AC_PASSWORD"
     },
     "sign" :{
-        "application_identity" : "C5BFB9F36BB5C098AF1465F4D6DEDA7B7A90AC29"
+        "application_identity" : "905981E813C49FB938D0628A509372B33FEE3EC4"
     },
     "dmg" :{
         "output_path":  "./dist/shipyard_arm64.dmg",
