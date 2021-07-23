@@ -19,9 +19,6 @@ builds:
   ldflags:
     - -s -w -X main.version={{.Version}} -X main.date={{.CommitDate}} -X main.commit={{.Commit}}
 
-  hooks:
-    post: ./upx.sh {{ .Path }}
-
   goos:
     - linux
     - darwin
