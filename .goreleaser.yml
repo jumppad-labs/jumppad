@@ -19,8 +19,8 @@ builds:
   ldflags:
     - -s -w -X main.version={{.Version}} -X main.date={{.CommitDate}} -X main.commit={{.Commit}}
 
-  #hooks:
-  #  post: ./upx.sh {{ .Path }}
+  hooks:
+    post: ./upx.sh {{ .Path }}
 
   goos:
     - linux
@@ -73,6 +73,8 @@ archives:
     amd64: x86_64
   format_overrides:
   - goos: windows
+    format: zip
+  - goos: darwin
     format: zip
 checksum:
   name_template: 'checksums.txt'
