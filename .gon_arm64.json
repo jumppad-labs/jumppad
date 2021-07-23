@@ -1,0 +1,17 @@
+{
+    "source" : ["./dist/shipyard_darwin_arm64/shipyard"],
+    "bundle_id" : "run.shipyard.shipyard",
+    "apple_id": {
+        "password":  "@env:AC_PASSWORD"
+    },
+    "sign" :{
+        "application_identity" : "C5BFB9F36BB5C098AF1465F4D6DEDA7B7A90AC29"
+    },
+    "dmg" :{
+        "output_path":  "./dist/shipyard_arm64.dmg",
+        "volume_name":  "shipyard"
+    },
+    "zip" :{
+        "output_path" : "./dist/shipyard_arm64.zip"
+    }
+}
