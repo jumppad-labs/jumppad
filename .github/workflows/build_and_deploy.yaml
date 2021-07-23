@@ -20,7 +20,7 @@ jobs:
       - name: Get dependencies
         run: |
           go version
-          go get -v -t ./...
+          echo "go get -v -t ./..."
 
       - name: Unit Test
         run: |
@@ -221,6 +221,10 @@ jobs:
         p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
         # The password used to import the PKCS12 file.
         p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
+    
+    - name: List identities
+      run: |
+        security find-identity
 
     - name: Install gon via HomeBrew for code signing and app notarization
       run: |
