@@ -16,7 +16,7 @@ func testRemoteExecSetupMocks() (*config.ExecRemote, *config.Network, *mocks.Moc
 	md.On("CreateContainer", mock.Anything).Return("1234", nil)
 	md.On("PullImage", mock.Anything, mock.Anything).Return(nil)
 	md.On("FindContainerIDs", mock.Anything).Return([]string{"1234"}, nil)
-	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("RemoveContainer", mock.Anything).Return(nil)
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"1234"}, nil)
 
@@ -119,21 +119,41 @@ func TestRemoteExecExecutesCommand(t *testing.T) {
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	md.AssertCalled(t, "ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 
-	params := getCalls(&md.Mock, "ExecuteCommand")[0].Arguments[1].([]string)
-	env := getCalls(&md.Mock, "ExecuteCommand")[0].Arguments[2].([]string)
-	wd := getCalls(&md.Mock, "ExecuteCommand")[0].Arguments[3].(string)
+	args := getCalls(&md.Mock, "ExecuteCommand")[0].Arguments
+	params := args[1].([]string)
+	env := args[2].([]string)
+	wd := args[3].(string)
+
 	assert.Equal(t, trex.Command, params[0])
 	assert.Equal(t, trex.Arguments[0], params[1])
 	assert.Equal(t, trex.WorkingDirectory, wd)
 	assert.Contains(t, env, fmt.Sprintf("%s=%s", trex.Environment[0].Key, trex.Environment[0].Value))
 }
 
+func TestRemoteExecRunsAsUserWhenSpecified(t *testing.T) {
+	trex, _, md := testRemoteExecSetupMocks()
+	trex.RunAs = &config.User{
+		User:  "1010",
+		Group: "1011",
+	}
+
+	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
+	err := p.Create()
+	assert.NoError(t, err)
+
+	user := getCalls(&md.Mock, "ExecuteCommand")[0].Arguments[4].(string)
+	group := getCalls(&md.Mock, "ExecuteCommand")[0].Arguments[5].(string)
+
+	assert.Equal(t, "1010", user)
+	assert.Equal(t, "1011", group)
+}
+
 func TestRemoteExecExecutesCommandFailReturnsError(t *testing.T) {
 	trex, _, md := testRemoteExecSetupMocks()
 	removeOn(&md.Mock, "ExecuteCommand")
-	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
+	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
 	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
 

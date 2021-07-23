@@ -108,8 +108,8 @@ func (d *MockContainerTasks) CopyFilesToVolume(volume string, files []string, pa
 	return nil, args.Error(1)
 }
 
-func (d *MockContainerTasks) ExecuteCommand(id string, command []string, env []string, workingDirectory string, writer io.Writer) error {
-	args := d.Called(id, command, env, workingDirectory, writer)
+func (d *MockContainerTasks) ExecuteCommand(id string, command []string, env []string, workingDirectory string, user, group string, writer io.Writer) error {
+	args := d.Called(id, command, env, workingDirectory, user, group, writer)
 
 	return args.Error(0)
 }
