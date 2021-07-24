@@ -320,7 +320,6 @@ jobs:
   notorize_mac_prod:
     name: Notrize binaries for Mac
     needs: 
-      - tag
       - build_prod
     runs-on: macos-latest
     steps:
@@ -365,28 +364,39 @@ jobs:
         AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
       run: |
         gon -log-level=debug -log-json ./.gon_amd64.json
+      
+    - name: Remove v in Tag
+      id: tag
+      uses: ashley-taylor/regex-property-action@v1.0
+      with:
+        value: ${{ needs.build_prod.outputs.new_tag }}
+        regex: "v"
+        replacement: ""
     
     - name: Rename files
       run: |
-        mv ./dist/shipyard_arm64.dmg ./release/shipyard_${{ needs.tag.outputs.new_tag }}_Darwin_arm64.zip
-        mv ./dist/shipyard_amd64.dmg ./release/shipyard_${{ needs.tag.outputs.new_tag }}_Darwin_x86_64.zip
+        ls -las ./dist
+        rm -f ./dist/shipyard_${{ steps.tag.outputs.value }}_Darwin_arm64.zip
+        rm -f ./dist/shipyard_${{ steps.tag.outputs.value }}_Darwin_x86_64.zip
+        mv ./dist/shipyard_arm64.zip ./dist/shipyard_${{ steps.tag.outputs.value }}_Darwin_arm64.zip
+        mv ./dist/shipyard_amd64.zip ./dist/shipyard_${{ steps.tag.outputs.value }}_Darwin_x86_64.zip
 
     - name: Upload Mac Arm binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: shipyard_${{ needs.tag.outputs.new_tag }}_Darwin_arm64.zip
-        asset_name: ./release/shipyard_${{ needs.tag.outputs.new_tag }}_Darwin_arm64.zip
-        tag: ${{ needs.tag.outputs.new_tag }}
+        file: shipyard_${{ steps.tag.outputs.value }}_Darwin_arm64.zip
+        asset_name: ./dist/shipyard_${{ steps.tag.outputs.value }}_Darwin_arm64.zip
+        tag: ${{ needs.build_prod.outputs.new_tag }}
         overwrite: true
     
     - name: Upload Mac AMD binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: shipyard_${{ needs.tag.outputs.new_tag }}_Darwin_amd64.zip
-        asset_name: ./release/shipyard_${{ needs.tag.outputs.new_tag }}_Darwin_amd64.zip
-        tag: ${{ needs.tag.outputs.new_tag }}
+        file: shipyard_${{ steps.tag.outputs.value }}_Darwin_amd64.zip
+        asset_name: ./dist/shipyard_${{ steps.tag.outputs.value }}_Darwin_amd64.zip
+        tag: ${{ needs.build_prod.outputs.new_tag }}
         overwrite: true
 
     - name: Send status to Discord
@@ -395,7 +405,7 @@ jobs:
       with:
         webhook: ${{ secrets.DISCORD_WEBHOOK }}
         tile: ${{ github.job_id }}
-        description: "Notorize Mac applications"
+        description: "Notorize Mac Prod applications and release assets"
 
   choco:
     runs-on: windows-latest
