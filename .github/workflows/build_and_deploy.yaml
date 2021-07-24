@@ -293,6 +293,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: shipyard
+          path: |
+            dist/shipyard_darwin_arm64
+            dist/shipyard_darwin_amd64
+            dist/shipyard_linux_amd64
+            dist/shipyard_linux_arm64
+            dist/shipyard_linux_arm_7
+            dist/shipyard_linux_arm_6
+            dist/shipyard_windows_amd64
+
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
         if: always()
