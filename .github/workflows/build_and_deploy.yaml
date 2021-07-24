@@ -306,7 +306,9 @@ jobs:
   
   notorize_mac_prod:
     name: Notrize binaries for Mac
-    needs: build_prod
+    needs: 
+      - tag
+      - build_prod
     runs-on: macos-latest
     steps:
     - name: Checkout
@@ -355,12 +357,24 @@ jobs:
       run: |
         mv ./dist/shipyard_arm64.dmg ./release/shipyard_${{ needs.tag.outputs.new_tag }}_Darwin_arm64.zip
         mv ./dist/shipyard_amd64.dmg ./release/shipyard_${{ needs.tag.outputs.new_tag }}_Darwin_x86_64.zip
-    
-    - name: Update release
-      uses: johnwbyrd/update-release@v1
+
+    - name: Upload Mac Arm binaries to release
+      uses: svenstaro/upload-release-action@v2
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        files: ./release/shipyard_${{ needs.tag.outputs.new_tag }}_Darwin_arm64.zip ./release/shipyard_${{ needs.tag.outputs.new_tag }}_Darwin_x86_64.zip
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: shipyard_${{ needs.tag.outputs.new_tag }}_Darwin_arm64.zip
+        asset_name: ./release/shipyard_${{ needs.tag.outputs.new_tag }}_Darwin_arm64.zip
+        tag: ${{ needs.tag.outputs.new_tag }}
+        overwrite: true
+    
+    - name: Upload Mac AMD binaries to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: shipyard_${{ needs.tag.outputs.new_tag }}_Darwin_amd64.zip
+        asset_name: ./release/shipyard_${{ needs.tag.outputs.new_tag }}_Darwin_amd64.zip
+        tag: ${{ needs.tag.outputs.new_tag }}
+        overwrite: true
 
     - name: Send status to Discord
       uses: sarisia/actions-status-discord@v1
