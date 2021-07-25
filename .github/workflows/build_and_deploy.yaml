@@ -394,8 +394,8 @@ jobs:
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ./dist/shipyard_${{ steps.tag.outputs.value }}_Darwin_amd64.zip
-        asset_name: shipyard_${{ steps.tag.outputs.value }}_Darwin_amd64.zip
+        file: ./dist/shipyard_${{ steps.tag.outputs.value }}_Darwin_x86_64.zip
+        asset_name: shipyard_${{ steps.tag.outputs.value }}_Darwin_x86_64.zip
         tag: ${{ needs.build_prod.outputs.new_tag }}
         overwrite: true
 
