@@ -420,6 +420,7 @@ jobs:
         description: "Notorize Mac Prod applications and release assets"
 
   github_release:
+    name: Create GitHub Release
     needs: 
       - notorize_mac_prod
       - tag
@@ -478,6 +479,7 @@ jobs:
           dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.deb
 
   brew:
+    name: Release to HomeBrew
     needs: 
       - github_release
       - tag
@@ -504,11 +506,11 @@ jobs:
     - name: Generate HomeBrew config
       run: |
         export VERSION=${{ needs.tag.outputs.new_version }}
-        export DARWIN_ARM64_SHA=$(sha256sum  shipyard_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip | cut -d " " -f 1)
-        export DARWIN_x86_SHA=$(sha256sum  shipyard_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip | cut -d " " -f 1)
-        export LINUX_ARM64_SHA=$(sha256sum  shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz | cut -d " " -f 1)
-        export LINUX_ARM7_SHA=$(sha256sum  shipyard_${{ needs.tag.outputs.new_version }}_linux_arm7.tar.gz | cut -d " " -f 1)
-        export LINUX_x86_SHA=$(sha256sum  shipyard_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz | cut -d " " -f 1)
+        export DARWIN_ARM64_SHA=$(sha256sum  ./dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip | cut -d " " -f 1)
+        export DARWIN_x86_SHA=$(sha256sum  ./dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip | cut -d " " -f 1)
+        export LINUX_ARM64_SHA=$(sha256sum  ./dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz | cut -d " " -f 1)
+        export LINUX_ARM7_SHA=$(sha256sum  ./dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_arm7.tar.gz | cut -d " " -f 1)
+        export LINUX_x86_SHA=$(sha256sum  ./dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz | cut -d " " -f 1)
 
         cat <<- EOF > ./shipyard.rb
         # typed: false
@@ -521,23 +523,23 @@ jobs:
           bottle :unneeded
 
           if OS.mac? && Hardware::CPU.intel?
-            url "https://github.com/shipyard-run/shipyard/releases/download/v##VERSION##/shipyard_${VERSION}_Darwin_x86_64.zip"
-            sha256 "${DARWIN_x86_SHA##}"
+            url "https://github.com/shipyard-run/shipyard/releases/download/v${VERSION}/shipyard_${VERSION}_Darwin_x86_64.zip"
+            sha256 "${DARWIN_x86_SHA}"
           end
           if OS.mac? && Hardware::CPU.arm?
-            url "https://github.com/shipyard-run/shipyard/releases/download/v##VERSION##/shipyard_${VERSION}_Darwin_arm64.zip"
+            url "https://github.com/shipyard-run/shipyard/releases/download/v${VERSION}/shipyard_${VERSION}_Darwin_arm64.zip"
             sha256 "${DARWIN_ARM64_SHA}"
           end
           if OS.linux? && Hardware::CPU.intel?
-            url "https://github.com/shipyard-run/shipyard/releases/download/v##VERSION##/shipyard_${VERSION}_Linux_x86_64.tar.gz"
+            url "https://github.com/shipyard-run/shipyard/releases/download/v${VERSION}/shipyard_${VERSION}_Linux_x86_64.tar.gz"
             sha256 "${LINUX_x86_SHA}"
           end
           if OS.linux? && Hardware::CPU.arm? && !Hardware::CPU.is_64_bit?
-            url "https://github.com/shipyard-run/shipyard/releases/download/v##VERSION##/shipyard_${VERSION}_Linux_armv7.tar.gz"
+            url "https://github.com/shipyard-run/shipyard/releases/download/v${VERSION}/shipyard_${VERSION}_Linux_armv7.tar.gz"
             sha256 "${LINUX_ARM7_SHA}"
           end
           if OS.linux? && Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-            url "https://github.com/shipyard-run/shipyard/releases/download/v##VERSION##/shipyard_${VERSION}_Linux_arm64.tar.gz"
+            url "https://github.com/shipyard-run/shipyard/releases/download/v${VERSION}/shipyard_${VERSION}_Linux_arm64.tar.gz"
             sha256 "${LINUX_ARM64_SHA}"
           end
 
@@ -548,6 +550,7 @@ jobs:
         EOF
 
         cat ./shipyard.rb
+        rm -rf ./dist
       
     - name: Push update
       run: |
@@ -556,6 +559,7 @@ jobs:
         git push
 
   choco:
+    name: Update Chocolatey repository
     runs-on: windows-latest
     needs:
       - github_release
@@ -599,6 +603,7 @@ jobs:
           description: "Push new version ${{ needs.tag.outputs.new_version }} to Chocolatey"
 
   apt:
+    name: Update fury.io Apt repository
     needs:
       - github_release
       - tag
@@ -625,6 +630,7 @@ jobs:
         description: "Push new version ${{ needs.tag.outputs.new_version }} to Apt"
 
   update_website:
+    name: Update Shipyard website with latest version
     needs:
       - github_release
       - tag
