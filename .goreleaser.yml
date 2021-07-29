@@ -5,8 +5,6 @@ before:
   hooks:
     # You may remove this if you don't use go modules.
     - go mod download
-    # you may remove this if you don't need go generate
-    - go generate ./...
 builds:
 -
   env:
@@ -32,20 +30,6 @@ builds:
     - 7
     - 6
 
-brews:
-  -
-    name: shipyard
-    goarm: 7
-    tap:
-      owner: shipyard-run
-      name: homebrew-repo
-
-    commit_author:
-      name: shipyardbot
-      email: mail@shipyard.run
-
-    homepage: "https://shipyard.run/"
-
 nfpms:
   -
     package_name: shipyard
@@ -63,9 +47,9 @@ snapcrafts:
 
 archives:
 - replacements:
-    darwin: Darwin
-    linux: Linux
-    windows: Windows
+    darwin: darwin
+    linux: linux
+    windows: windows
     386: i386
     amd64: x86_64
   format_overrides:
@@ -73,8 +57,6 @@ archives:
     format: zip
   - goos: darwin
     format: zip
-checksum:
-  name_template: 'checksums.txt'
 snapshot:
   name_template: "{{ .Version }}-next"
 changelog:
@@ -83,8 +65,6 @@ changelog:
     exclude:
     - '^docs:'
     - '^test:'
-dockers:
-  - image_templates:
-    - shipyardrun/shipyard:{{ .Version }}
-signs:
-  - artifacts: checksum
+
+release:
+  disable:  true
