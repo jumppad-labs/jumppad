@@ -23,7 +23,6 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
-	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/signal"
 	"github.com/docker/docker/pkg/term"
@@ -31,6 +30,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients/streams"
 	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/targz"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"golang.org/x/xerrors"
 )
@@ -410,9 +410,10 @@ func (d *DockerTasks) BuildContainer(config *config.Container, force bool) (stri
 		Tags:       []string{imageName},
 	}
 
-	buildCtx, _ := archive.TarWithOptions(config.Build.Context, &archive.TarOptions{})
+	var buf bytes.Buffer
+	targz.Compress(config.Build.Context, &buf)
 
-	resp, err := d.c.ImageBuild(context.Background(), buildCtx, buildOpts)
+	resp, err := d.c.ImageBuild(context.Background(), &buf, buildOpts)
 	if err != nil {
 		return "", err
 	}
