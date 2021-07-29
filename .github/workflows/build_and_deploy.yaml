@@ -264,7 +264,7 @@ jobs:
         id: version
         uses: ashley-taylor/regex-property-action@v1.0
         with:
-          value: ${{ steps.tag_version.outputs.new_tag }}
+          value: ${{ steps.tag.outputs.new_tag }}
           regex: "v"
           replacement: ""
 
@@ -421,7 +421,7 @@ jobs:
 
   github_release:
     needs: 
-      - build_prod
+      - notorize_mac_prod
       - tag
     runs-on: ubuntu-latest
     steps:
