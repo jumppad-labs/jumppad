@@ -154,7 +154,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: shipyard
+          name: shipyard_binaries
           path: |
             dist/shipyard_darwin_arm64
             dist/shipyard_darwin_amd64
@@ -172,33 +172,6 @@ jobs:
           tile: ${{ github.job_id }}
           description: "Build dev version and upload artifacts"
 
-  tag:
-    name: Tag latest release
-    runs-on: ubuntu-latest
-    needs:
-      - test
-      - functional_test
-      - e2e_mac
-      - e2e_linux
-    if: ${{ github.ref == 'refs/heads/main' }}
-
-    steps:
-      - name: Bump version and push tag
-        id: tag_version
-        uses: mathieudutour/github-tag-action@v5.2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Send status to Discord
-        uses: sarisia/actions-status-discord@v1
-        if: always()
-        with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          description: "Automatically tagged main branch with new tag: ${{ steps.tag_version.outputs.new_tag }}"
-
-    outputs:
-      new_tag: ${{ steps.tag_version.outputs.new_tag }}
-
   notorize_mac_dev:
     name: Notrize binaries for Mac
     needs: build_dev
@@ -211,7 +184,7 @@ jobs:
     - name: Download-Binaries
       uses: actions/download-artifact@v2
       with:
-        name: shipyard
+        name: shipyard_binaries
         path: dist/
     
     - name: Import Code-Signing Certificates
@@ -263,6 +236,42 @@ jobs:
         tile: ${{ github.job_id }}
         description: "Notorize Mac applications"
 
+  tag:
+    name: Tag latest release
+    runs-on: ubuntu-latest
+    needs:
+      - test
+      - functional_test
+      - e2e_mac
+      - e2e_linux
+    if: ${{ github.ref == 'refs/heads/main' }}
+
+    steps:
+      - name: Bump version and push tag
+        id: tag
+        uses: mathieudutour/github-tag-action@v5.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Send status to Discord
+        uses: sarisia/actions-status-discord@v1
+        if: always()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          description: "Automatically tagged main branch with new tag: ${{ steps.tag_version.outputs.new_tag }}"
+    
+      - name: Remove v in Tag
+        id: version
+        uses: ashley-taylor/regex-property-action@v1.0
+        with:
+          value: ${{ steps.tag_version.outputs.new_tag }}
+          regex: "v"
+          replacement: ""
+
+    outputs:
+      new_tag: ${{ steps.tag.outputs.new_tag }}
+      new_version: ${{ steps.version.outputs.value }}
+
   build_prod:
     name: Build Prod Version
     needs: tag
@@ -296,7 +305,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: shipyard
+          name: shipyard_binaries
           path: |
             dist/shipyard_darwin_arm64
             dist/shipyard_darwin_amd64
@@ -306,6 +315,29 @@ jobs:
             dist/shipyard_linux_arm_6
             dist/shipyard_windows_amd64
 
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: shipyard_archives
+          path: |
+            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.rpm
+            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz
+            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.tar.gz
+            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.deb
+            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.rpm
+            dist/shipyard_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip
+            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz
+            dist/shipyard_${{ needs.tag.outputs.new_version }}_windows_armv6.zip
+            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.deb
+            dist/shipyard_${{ needs.tag.outputs.new_version }}_windows_armv7.zip
+            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.rpm
+            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.deb
+            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.tar.gz
+            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.rpm
+            dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
+            dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
+            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.deb
+
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
         if: always()
@@ -313,14 +345,12 @@ jobs:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           tile: ${{ github.job_id }}
           description: "Build prod version and upload artifacts"
-
-    outputs:
-      new_tag: ${{ needs.tag.outputs.new_tag }}
   
   notorize_mac_prod:
     name: Notrize binaries for Mac
     needs: 
       - build_prod
+      - tag
     runs-on: macos-latest
     steps:
     - name: Checkout
@@ -331,7 +361,7 @@ jobs:
     - name: Download-Binaries
       uses: actions/download-artifact@v2
       with:
-        name: shipyard
+        name: shipyard_binaries
         path: dist/
     
     - name: Import Code-Signing Certificates
@@ -364,40 +394,22 @@ jobs:
         AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
       run: |
         gon -log-level=debug -log-json ./.gon_amd64.json
-      
-    - name: Remove v in Tag
-      id: tag
-      uses: ashley-taylor/regex-property-action@v1.0
-      with:
-        value: ${{ needs.build_prod.outputs.new_tag }}
-        regex: "v"
-        replacement: ""
     
     - name: Rename files
       run: |
         ls -las ./dist
-        rm -f ./dist/shipyard_${{ steps.tag.outputs.value }}_Darwin_arm64.zip
-        rm -f ./dist/shipyard_${{ steps.tag.outputs.value }}_Darwin_x86_64.zip
-        mv ./dist/shipyard_arm64.zip ./dist/shipyard_${{ steps.tag.outputs.value }}_Darwin_arm64.zip
-        mv ./dist/shipyard_amd64.zip ./dist/shipyard_${{ steps.tag.outputs.value }}_Darwin_x86_64.zip
-
-    - name: Upload Mac Arm binaries to release
-      uses: svenstaro/upload-release-action@v2
+        rm -f ./dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
+        rm -f ./dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
+        mv ./dist/shipyard_arm64.zip ./dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
+        mv ./dist/shipyard_amd64.zip ./dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
+      
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
       with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ./dist/shipyard_${{ steps.tag.outputs.value }}_Darwin_arm64.zip
-        asset_name: shipyard_${{ steps.tag.outputs.value }}_Darwin_arm64.zip
-        tag: ${{ needs.build_prod.outputs.new_tag }}
-        overwrite: true
-    
-    - name: Upload Mac AMD binaries to release
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ./dist/shipyard_${{ steps.tag.outputs.value }}_Darwin_x86_64.zip
-        asset_name: shipyard_${{ steps.tag.outputs.value }}_Darwin_x86_64.zip
-        tag: ${{ needs.build_prod.outputs.new_tag }}
-        overwrite: true
+        name: shipyard_archives
+        path: |
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
 
     - name: Send status to Discord
       uses: sarisia/actions-status-discord@v1
@@ -407,9 +419,147 @@ jobs:
         tile: ${{ github.job_id }}
         description: "Notorize Mac Prod applications and release assets"
 
+  github_release:
+    needs: 
+      - build_prod
+      - tag
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download-Binaries
+      uses: actions/download-artifact@v2
+      with:
+        name: shipyard_archives
+        path: dist/
+
+    - name: Generate SHA256 checksums
+      run: |
+        cd dist
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.rpm > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.tar.gz > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.deb > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.rpm > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_windows_armv6.zip > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.deb > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_windows_armv7.zip > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.rpm > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.deb > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.tar.gz > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.rpm > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.deb > checksums.txt
+
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ needs.tag.outputs.new_tag }}
+        token: ${{ secrets.GH_TOKEN }}
+        files: |
+          dist/checksums.txt
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.rpm
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.tar.gz
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.deb
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.rpm
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_windows_armv6.zip
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.deb
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_windows_armv7.zip
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.rpm
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.deb
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.tar.gz
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.rpm
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.deb
+
+  brew:
+    needs: 
+      - github_release
+      - tag
+    runs-on: ubuntu-latest
+    steps:
+    -
+      name: Checkout
+      uses: actions/checkout@v2
+      with:
+        repository: 'shipyard-run/homebrew-repo'
+        token: '${{ secrets.GH_TOKEN }}'
+
+    - name: Configure Git
+      run: |
+        git config user.email "mail@shipyard.run"
+        git config user.name "Shipyard Bot"
+
+    - name: Download-Binaries
+      uses: actions/download-artifact@v2
+      with:
+        name: shipyard_archives
+        path: dist/
+    
+    - name: Generate HomeBrew config
+      run: |
+        export VERSION=${{ needs.tag.outputs.new_version }}
+        export DARWIN_ARM64_SHA=$(sha256sum  shipyard_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip | cut -d " " -f 1)
+        export DARWIN_x86_SHA=$(sha256sum  shipyard_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip | cut -d " " -f 1)
+        export LINUX_ARM64_SHA=$(sha256sum  shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz | cut -d " " -f 1)
+        export LINUX_ARM7_SHA=$(sha256sum  shipyard_${{ needs.tag.outputs.new_version }}_linux_arm7.tar.gz | cut -d " " -f 1)
+        export LINUX_x86_SHA=$(sha256sum  shipyard_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz | cut -d " " -f 1)
+
+        cat <<- EOF > ./shipyard.rb
+        # typed: false
+        # frozen_string_literal: true
+
+        class Shipyard < Formula
+          desc ""
+          homepage "https://shipyard.run/"
+          version "${VERSION}"
+          bottle :unneeded
+
+          if OS.mac? && Hardware::CPU.intel?
+            url "https://github.com/shipyard-run/shipyard/releases/download/v##VERSION##/shipyard_${VERSION}_Darwin_x86_64.zip"
+            sha256 "${DARWIN_x86_SHA##}"
+          end
+          if OS.mac? && Hardware::CPU.arm?
+            url "https://github.com/shipyard-run/shipyard/releases/download/v##VERSION##/shipyard_${VERSION}_Darwin_arm64.zip"
+            sha256 "${DARWIN_ARM64_SHA}"
+          end
+          if OS.linux? && Hardware::CPU.intel?
+            url "https://github.com/shipyard-run/shipyard/releases/download/v##VERSION##/shipyard_${VERSION}_Linux_x86_64.tar.gz"
+            sha256 "${LINUX_x86_SHA}"
+          end
+          if OS.linux? && Hardware::CPU.arm? && !Hardware::CPU.is_64_bit?
+            url "https://github.com/shipyard-run/shipyard/releases/download/v##VERSION##/shipyard_${VERSION}_Linux_armv7.tar.gz"
+            sha256 "${LINUX_ARM7_SHA}"
+          end
+          if OS.linux? && Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
+            url "https://github.com/shipyard-run/shipyard/releases/download/v##VERSION##/shipyard_${VERSION}_Linux_arm64.tar.gz"
+            sha256 "${LINUX_ARM64_SHA}"
+          end
+
+          def install
+            bin.install "shipyard"
+          end
+        end
+        EOF
+
+        cat ./shipyard.rb
+      
+    - name: Push update
+      run: |
+        git add .
+        git commit -m "Update version to ${{ needs.tag.outputs.new_tag }}"
+        git push
+
   choco:
     runs-on: windows-latest
-    needs: build_prod
+    needs:
+      - github_release
+      - tag
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -421,23 +571,15 @@ jobs:
           choco install checksum -y
           choco install wget -y
 
-      - name: Tag
-        id: tag
-        uses: ashley-taylor/regex-property-action@v1.0
-        with:
-          value: ${{ needs.build_prod.outputs.new_tag }}
-          regex: "v"
-          replacement: ""
-
       - name: Replace checksum
         run: |
-          wget "https://github.com/shipyard-run/shipyard/releases/download/v${{ steps.tag.outputs.value }}/shipyard_${{ steps.tag.outputs.value }}_Windows_x86_64.zip"
-          powershell -Command "(gc tools/chocolateyinstall.ps1) -replace '__checksum__', '$(checksum -t sha256 -f shipyard_${{ steps.tag.outputs.value }}_Windows_x86_64.zip)' | Out-File -encoding ASCII tools/chocolateyinstall.ps1"
+          wget "https://github.com/shipyard-run/shipyard/releases/download/v${{ needs.tag.outputs.new_version }}/shipyard_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip"
+          powershell -Command "(gc tools/chocolateyinstall.ps1) -replace '__checksum__', '$(checksum -t sha256 -f shipyard_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip)' | Out-File -encoding ASCII tools/chocolateyinstall.ps1"
 
       - name: Replace version
         run: |
-          powershell -Command "(gc shipyard.nuspec) -replace '__version__', '${{ steps.tag.outputs.value }}' | Out-File -encoding ASCII shipyard.nuspec"
-          powershell -Command "(gc tools/chocolateyinstall.ps1) -replace '__version__', '${{ steps.tag.outputs.value }}' | Out-File -encoding ASCII tools\chocolateyinstall.ps1"
+          powershell -Command "(gc shipyard.nuspec) -replace '__version__', '${{ needs.tag.outputs.new_version }}' | Out-File -encoding ASCII shipyard.nuspec"
+          powershell -Command "(gc tools/chocolateyinstall.ps1) -replace '__version__', '${{ needs.tag.outputs.new_version }}' | Out-File -encoding ASCII tools\chocolateyinstall.ps1"
 
       - name: Choco login
         run: choco apikey -k ${{ secrets.CHOCO_API_KEY }} -s https://push.chocolatey.org/
@@ -454,31 +596,25 @@ jobs:
         with:
           tile: ${{ github.job_id }}
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          description: "Push new version ${{ needs.tag.outputs.outputs.new_tag }} to Chocolatey"
+          description: "Push new version ${{ needs.tag.outputs.new_version }} to Chocolatey"
 
   apt:
-    needs: build_prod
+    needs:
+      - github_release
+      - tag
     runs-on: ubuntu-latest
     strategy:
       matrix:
         arch: ["amd64.deb", "arm64.deb", "armv7.deb", "amd64.rpm", "arm64.rpm", "armv7.rpm"]
 
     steps:
-    - name: Tag
-      id: tag
-      uses: ashley-taylor/regex-property-action@v1.0
-      with:
-        value: ${{ needs.build_prod.outputs.new_tag }}
-        regex: "v"
-        replacement: ""
-
     - name: Download release
       run: |
-        wget "https://github.com/shipyard-run/shipyard/releases/download/v${{ steps.tag.outputs.value }}/shipyard_${{ steps.tag.outputs.value }}_linux_${{ matrix.arch }}"
+        wget "https://github.com/shipyard-run/shipyard/releases/download/v${{ needs.tag.outputs.new_version }}/shipyard_${{ needs.tag.outputs.new_version }}_linux_${{ matrix.arch }}"
 
     - name: Upload release
       run: |
-        curl -F package=@shipyard_${{ steps.tag.outputs.value }}_linux_${{ matrix.arch }} https://${{ secrets.FURY_TOKEN }}@push.fury.io/shipyard-run/
+        curl -F package=@shipyard_${{ needs.tag.outputs.new_version }}_linux_${{ matrix.arch }} https://${{ secrets.FURY_TOKEN }}@push.fury.io/shipyard-run/
 
     - name: Send status to Discord
       uses: sarisia/actions-status-discord@v1
@@ -486,10 +622,12 @@ jobs:
       with:
         tile: ${{ github.job_id }}
         webhook: ${{ secrets.DISCORD_WEBHOOK }}
-        description: "Push new version ${{ needs.build_prod.outputs.new_tag }} to Apt"
+        description: "Push new version ${{ needs.tag.outputs.new_version }} to Apt"
 
   update_website:
-    needs: build_prod
+    needs:
+      - github_release
+      - tag
     runs-on: ubuntu-latest
 
     steps:
@@ -505,23 +643,14 @@ jobs:
           git config user.email "mail@shipyard.run"
           git config user.name "Shipyard Bot"
 
-      - name: Tag
-        id: tag
-        uses: ashley-taylor/regex-property-action@v1.0
-        with:
-          value: ${{ needs.build_prod.outputs.new_tag }}
-          regex: "v"
-          replacement: ""
-
       - name: Write version
         run: |
-          echo "${{ steps.tag.outputs.value }}" > ./static/latest
+          echo "${{ needs.tag.outputs.new_version }}" > ./static/latest
 
       - name: Push update
         run: |
-
           git add .
-          git commit -m "Update version to ${{ steps.tag.outputs.value}}"
+          git commit -m "Update version to ${{ needs.tag.outputs.new_version }}"
           git push
 
       - name: Send status to Discord
@@ -530,4 +659,4 @@ jobs:
         with:
           tile: ${{ github.job_id }}
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          description: "Update website with latest version ${{ needs.build_prod.outputs.new_tag }}"
+          description: "Update website with latest version ${{ needs.tag.outputs.new_version }}"
