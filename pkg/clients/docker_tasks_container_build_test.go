@@ -37,7 +37,7 @@ func TestBuildListsImagesAndErrorWhenError(t *testing.T) {
 	cc := config.NewContainer("test")
 	cc.Build = &config.Build{Context: "./context"}
 
-	dt := NewDockerTasks(md, nil, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, nil, &TarGz{}, hclog.NewNullLogger())
 
 	_, err := dt.BuildContainer(cc, false)
 
@@ -48,7 +48,7 @@ func TestBuildListsImagesAndDoesNotBuildWhenExists(t *testing.T) {
 	cc := config.NewContainer("test")
 	cc.Build = &config.Build{Context: "./context"}
 
-	dt := NewDockerTasks(md, nil, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, nil, &TarGz{}, hclog.NewNullLogger())
 
 	in, err := dt.BuildContainer(cc, false)
 
@@ -64,7 +64,7 @@ func TestBuildListsImagesAndBuildsWhenNotExists(t *testing.T) {
 	cc := config.NewContainer("test")
 	cc.Build = &config.Build{Context: "./context"}
 
-	dt := NewDockerTasks(md, nil, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, nil, &TarGz{}, hclog.NewNullLogger())
 
 	in, err := dt.BuildContainer(cc, false)
 
@@ -83,7 +83,7 @@ func TestBuildListsImagesAndBuildsWhenNotExistsCustomDockerfile(t *testing.T) {
 	cc := config.NewContainer("test")
 	cc.Build = &config.Build{Context: "./context", File: "./Dockerfile-test"}
 
-	dt := NewDockerTasks(md, nil, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, nil, &TarGz{}, hclog.NewNullLogger())
 
 	in, err := dt.BuildContainer(cc, false)
 

@@ -20,7 +20,7 @@ func TestContainerLogsCalled(t *testing.T) {
 	)
 	mic := &mocks.ImageLog{}
 
-	dt := NewDockerTasks(md, mic, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())
 
 	rc, err := dt.ContainerLogs("123", true, true)
 	assert.NotNil(t, rc)

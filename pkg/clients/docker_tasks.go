@@ -23,7 +23,6 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
-	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/signal"
 	"github.com/docker/docker/pkg/term"
@@ -39,13 +38,14 @@ import (
 type DockerTasks struct {
 	c     Docker
 	il    ImageLog
-	force bool
 	l     hclog.Logger
+	tg    *TarGz
+	force bool
 }
 
 // NewDockerTasks creates a DockerTasks with the given Docker client
-func NewDockerTasks(c Docker, il ImageLog, l hclog.Logger) *DockerTasks {
-	return &DockerTasks{c: c, il: il, l: l}
+func NewDockerTasks(c Docker, il ImageLog, tg *TarGz, l hclog.Logger) *DockerTasks {
+	return &DockerTasks{c: c, il: il, tg: tg, l: l}
 }
 
 // SetForcePull sets a global override for the DockerTasks, when set to true
@@ -410,9 +410,10 @@ func (d *DockerTasks) BuildContainer(config *config.Container, force bool) (stri
 		Tags:       []string{imageName},
 	}
 
-	buildCtx, _ := archive.TarWithOptions(config.Build.Context, &archive.TarOptions{})
+	var buf bytes.Buffer
+	d.tg.Compress(&buf, &TarGzOptions{OmitRoot: true}, config.Build.Context)
 
-	resp, err := d.c.ImageBuild(context.Background(), buildCtx, buildOpts)
+	resp, err := d.c.ImageBuild(context.Background(), &buf, buildOpts)
 	if err != nil {
 		return "", err
 	}

@@ -14,7 +14,7 @@ import (
 func TestContainerRemoveCallsRemoveGently(t *testing.T) {
 	md := &mocks.MockDocker{}
 	mic := &clients.ImageLog{}
-	dt := NewDockerTasks(md, mic, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())
 
 	md.On("ContainerRemove", mock.Anything, "test", types.ContainerRemoveOptions{Force: false, RemoveVolumes: true}).Return(nil)
 
@@ -26,7 +26,7 @@ func TestContainerRemoveCallsRemoveGently(t *testing.T) {
 func TestContainerRemoveFailsCallsRemoveForcefully(t *testing.T) {
 	md := &mocks.MockDocker{}
 	mic := &clients.ImageLog{}
-	dt := NewDockerTasks(md, mic, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())
 
 	md.On("ContainerRemove", mock.Anything, "test", types.ContainerRemoveOptions{Force: false, RemoveVolumes: true}).Return(fmt.Errorf("boom"))
 	md.On("ContainerRemove", mock.Anything, "test", types.ContainerRemoveOptions{Force: true, RemoveVolumes: true}).Return(nil)

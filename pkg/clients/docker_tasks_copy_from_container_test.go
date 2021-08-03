@@ -28,7 +28,7 @@ func TestCopyFromContainerCopiesFile(t *testing.T) {
 		types.ContainerPathStat{},
 		nil,
 	)
-	dt := NewDockerTasks(md, mic, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())
 
 	tmpDir, _ := ioutil.TempDir("", "")
 	defer os.RemoveAll(tmpDir)
@@ -53,7 +53,7 @@ func TestCopyFromContainerReturnsErrorOnDockerError(t *testing.T) {
 		types.ContainerPathStat{},
 		fmt.Errorf("boom"),
 	)
-	dt := NewDockerTasks(md, mic, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())
 
 	err := dt.CopyFromContainer(id, src, "/new.hcl")
 	assert.Error(t, err)

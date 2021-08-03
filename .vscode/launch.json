@@ -57,7 +57,7 @@
       },
       "args": [
         "test",
-        "/home/nicj/go/src/github.com/shipyard-run/blueprints/modules/kubernetes-consul",
+        "./examples/build",
       ]
     }
   ]

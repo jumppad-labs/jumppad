@@ -14,7 +14,7 @@ import (
 
 func TestCreateVolumeDoesNothingWhenVolumeExists(t *testing.T) {
 	_, _, _, md, mic := createContainerConfig()
-	p := NewDockerTasks(md, mic, hclog.NewNullLogger())
+	p := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())
 
 	removeOn(&md.Mock, "VolumeList")
 	f := filters.NewArgs()
@@ -29,7 +29,7 @@ func TestCreateVolumeDoesNothingWhenVolumeExists(t *testing.T) {
 
 func TestCreateVolumeReturnsErrorWhenVolumeListError(t *testing.T) {
 	_, _, _, md, mic := createContainerConfig()
-	p := NewDockerTasks(md, mic, hclog.NewNullLogger())
+	p := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())
 
 	removeOn(&md.Mock, "VolumeList")
 	f := filters.NewArgs()
@@ -44,7 +44,7 @@ func TestCreateVolumeReturnsErrorWhenVolumeListError(t *testing.T) {
 
 func TestCreateVolumeCreatesSuccesfully(t *testing.T) {
 	_, _, _, md, mic := createContainerConfig()
-	p := NewDockerTasks(md, mic, hclog.NewNullLogger())
+	p := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())
 
 	id, err := p.CreateVolume("test")
 	assert.NoError(t, err)
@@ -55,7 +55,7 @@ func TestCreateVolumeCreatesSuccesfully(t *testing.T) {
 
 func TestRemoveVolumeRemotesSuccesfully(t *testing.T) {
 	_, _, _, md, mic := createContainerConfig()
-	p := NewDockerTasks(md, mic, hclog.NewNullLogger())
+	p := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())
 
 	err := p.RemoveVolume("test")
 	assert.NoError(t, err)
