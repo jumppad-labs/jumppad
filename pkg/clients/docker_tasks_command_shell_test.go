@@ -29,7 +29,7 @@ func setupShellMocks() (*DockerTasks, *clients.MockDocker) {
 	mic := &clients.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
 
-	p := NewDockerTasks(md, mic, hclog.NewNullLogger())
+	p := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())
 
 	return p, md
 }

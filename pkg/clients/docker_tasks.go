@@ -30,7 +30,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients/streams"
 	"github.com/shipyard-run/shipyard/pkg/config"
-	"github.com/shipyard-run/shipyard/pkg/targz"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"golang.org/x/xerrors"
 )
@@ -39,13 +38,14 @@ import (
 type DockerTasks struct {
 	c     Docker
 	il    ImageLog
-	force bool
 	l     hclog.Logger
+	tg    *TarGz
+	force bool
 }
 
 // NewDockerTasks creates a DockerTasks with the given Docker client
-func NewDockerTasks(c Docker, il ImageLog, l hclog.Logger) *DockerTasks {
-	return &DockerTasks{c: c, il: il, l: l}
+func NewDockerTasks(c Docker, il ImageLog, tg *TarGz, l hclog.Logger) *DockerTasks {
+	return &DockerTasks{c: c, il: il, tg: tg, l: l}
 }
 
 // SetForcePull sets a global override for the DockerTasks, when set to true
@@ -411,7 +411,7 @@ func (d *DockerTasks) BuildContainer(config *config.Container, force bool) (stri
 	}
 
 	var buf bytes.Buffer
-	targz.Compress(config.Build.Context, &buf)
+	d.tg.Compress(&buf, &TarGzOptions{OmitRoot: true}, config.Build.Context)
 
 	resp, err := d.c.ImageBuild(context.Background(), &buf, buildOpts)
 	if err != nil {
