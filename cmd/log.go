@@ -5,10 +5,12 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"os/signal"
 
 	"github.com/docker/docker/api/types"
+	"github.com/fatih/color"
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
@@ -37,6 +39,16 @@ func newLogCmd(engine shipyard.Engine, dc clients.Docker) *cobra.Command {
 	}
 
 	return logCmd
+}
+
+var termColors = []color.Attribute{
+	color.FgRed,
+	color.FgGreen,
+	color.FgYellow,
+	color.FgBlue,
+	color.FgMagenta,
+	color.FgCyan,
+	color.FgWhite,
 }
 
 func newLogCmdFunc(dc clients.Docker) func(cmd *cobra.Command, args []string) error {
@@ -78,7 +90,7 @@ func newLogCmdFunc(dc clients.Docker) func(cmd *cobra.Command, args []string) er
 			)
 
 			if err == nil {
-				go copyLogOutput(rc, log)
+				go writeLogOutput(rc, r.Info().Name, getRandomColor(), log)
 			} else {
 				log.Error("Unable to get logs for container", "error", err)
 			}
@@ -93,8 +105,14 @@ func newLogCmdFunc(dc clients.Docker) func(cmd *cobra.Command, args []string) er
 	}
 }
 
-func copyLogOutput(rc io.ReadCloser, log hclog.Logger) {
+func getRandomColor() color.Attribute {
+	return termColors[rand.Intn(len(termColors)-1)]
+}
+
+func writeLogOutput(rc io.ReadCloser, name string, c color.Attribute, log hclog.Logger) {
 	hdr := make([]byte, 8)
+	colorWriter := color.New(c)
+
 	for {
 		_, err := rc.Read(hdr)
 		if err != nil {
@@ -108,9 +126,11 @@ func copyLogOutput(rc io.ReadCloser, log hclog.Logger) {
 		default:
 			w = os.Stderr
 		}
+
 		count := binary.BigEndian.Uint32(hdr[4:])
 		dat := make([]byte, count)
 		_, err = rc.Read(dat)
-		fmt.Fprint(w, string(dat))
+
+		colorWriter.Fprintf(w, "[%s]   %s", name, string(dat))
 	}
 }
