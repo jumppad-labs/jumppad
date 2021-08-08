@@ -123,7 +123,7 @@ func (c *ImageCache) createImageCache() (string, error) {
 func (c *ImageCache) Destroy() error {
 	c.log.Info("Destroy ImageCache", "ref", c.config.Name)
 
-	ids, err := c.client.FindContainerIDs(c.config.Name, config.TypeContainer)
+	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.Type)
 	if err != nil {
 		return err
 	}

@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
+	"sync"
 
 	"github.com/docker/docker/api/types"
 	"github.com/fatih/color"
@@ -54,6 +55,9 @@ var termColors = []color.Attribute{
 func newLogCmdFunc(dc clients.Docker) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		log := hclog.Default()
+		sigs := make(chan os.Signal, 1)
+		signal.Notify(sigs, os.Interrupt)
+		waitGroup := sync.WaitGroup{}
 
 		// get the list of resources that can be logged
 		c := config.New()
@@ -90,15 +94,24 @@ func newLogCmdFunc(dc clients.Docker) func(cmd *cobra.Command, args []string) er
 			)
 
 			if err == nil {
-				go writeLogOutput(rc, r.Info().Name, getRandomColor(), log)
+				go func(rc io.ReadCloser, name string, c color.Attribute, log hclog.Logger) {
+					waitGroup.Add(1)
+					writeLogOutput(rc, name, c, log)
+					waitGroup.Done()
+				}(rc, r.Info().Name, getRandomColor(), log)
 			} else {
 				log.Error("Unable to get logs for container", "error", err)
 			}
 		}
 
+		// send an interupt when the waitgroup is done
+		go func() {
+			waitGroup.Wait()
+			log.Info("No more logs to tail")
+			sigs <- os.Interrupt
+		}()
+
 		// block until a signal is received
-		sigs := make(chan os.Signal, 1)
-		signal.Notify(sigs, os.Interrupt)
 		<-sigs
 
 		return nil
@@ -116,7 +129,8 @@ func writeLogOutput(rc io.ReadCloser, name string, c color.Attribute, log hclog.
 	for {
 		_, err := rc.Read(hdr)
 		if err != nil {
-			log.Error("Unable to read from log stream", "error", err)
+			log.Error("Unable to read from log stream", "name", name, "error", err)
+			return
 		}
 
 		var w io.Writer
