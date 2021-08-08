@@ -100,7 +100,7 @@ func TestImageCacheCreateAddsEnvironmentVariables(t *testing.T) {
 	assert.Equal(t, conf.EnvVar["CA_CRT_FILE"], "/cache/ca/root.cert")
 	assert.Equal(t, conf.EnvVar["DOCKER_MIRROR_CACHE"], "/cache/docker")
 	assert.Equal(t, conf.EnvVar["ENABLE_MANIFEST_CACHE"], "true")
-	assert.Equal(t, conf.EnvVar["REGISTRIES"], "k8s.gcr.io gcr.io asia.gcr.io eu.gcr.io us.gcr.io quay.io ghcr.io")
+	assert.Equal(t, conf.EnvVar["REGISTRIES"], "k8s.gcr.io gcr.io asia.gcr.io eu.gcr.io us.gcr.io quay.io ghcr.io docker.pkg.github.com")
 	assert.Equal(t, conf.EnvVar["ALLOW_PUSH"], "true")
 }
 

@@ -1,135 +1,146 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
-	"syscall"
 	"testing"
-	"time"
-	
-	"github.com/hashicorp/go-hclog"
+
+	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/spf13/cobra"
-	"github.com/stretchr/testify/assert"
-	
-	"github.com/shipyard-run/shipyard/pkg/shipyard"
-	"github.com/shipyard-run/shipyard/pkg/utils"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
-// These tests only run successfully when a blueprint is running,
-// It tests whether the streamed stack/cluster logs are greater than the specified size.
-// not sure how to add this to `test_feature`
+func setupLog(t *testing.T) (*cobra.Command, *mocks.MockDocker) {
+	// setup the statefile
+	t.Cleanup(setupState(logState))
 
-// single_k3s_cluster
-const bluePrintDockerLogSize int64 = 10000  // Bytes
-const bluePrintClusterLogSize int64 = 5000 // Bytes
-const bluePrintListSize = 10                // Bytes
-const invalidParamSize = 5
-// signal cli exit
-const UserInterruptTime = 3 * time.Second
+	md := &mocks.MockDocker{}
+	md.On("ContainerLogs", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+	lc := newLogCmd(nil, md)
 
-// setupFile sets up a tmp *os.File to redirect cli logs
-func mockStdOut(t *testing.T) *os.File {
-	cwd, _ := os.Getwd()
-	tmpFile, err := os.CreateTemp(cwd, ".tmp.logs.")
-	assert.NoError(t, err)
-	return tmpFile
+	return lc, md
 }
 
-// checks shipyard config exists
-func checkK8sRunning(t *testing.T) string {
-	stat, err := os.Stat(fmt.Sprintf("%s/config/k3s/kubeconfig-docker.yaml",utils.ShipyardHome()))
-	if err == nil && stat != nil {
-		fmt.Println("running")
-		return "k3s"
-	}else {
-		fmt.Println("running not")
-		return ""
-	}
+func TestLogWithAllCallsDockerLog(t *testing.T) {
+	lc, md := setupLog(t)
+
+	// call the command
+	err := lc.Execute()
+	require.NoError(t, err)
+
+	// check that the docker client was called
+	md.AssertCalled(t, "ContainerLogs", mock.Anything, "consul.container.shipyard.run", mock.Anything)
+	md.AssertCalled(t, "ContainerLogs", mock.Anything, "docker-cache.container.shipyard.run", mock.Anything)
 }
 
-// runCmdThenInterruptIt Tests whether output from cli utility is greater than the
-// expectedSize
-func runCmdThenInterruptIt(t *testing.T, logs *cobra.Command, tmpFile *os.File, expectedSize int64) {
-	defer func(tmpFile *os.File) {
-		assert.NoError(t, os.Remove(tmpFile.Name()))
-	}(tmpFile)
-	// user interrupt, to stop tailing logs
-	go func() {
-		<-time.After(UserInterruptTime)
-		err := syscall.Kill(syscall.Getpid(), syscall.SIGINT)
-		assert.NoError(t, err)
-	}()
-	// execute the cli log command, which runs until interrupt
-	err := logs.Execute()
-	assert.NoError(t, err)
-
-	// not sure how else to verify whether logs worked on not
-	stats, _ := os.Stat(tmpFile.Name())
-	assert.NotNil(t, stats)
-
-	// fmt.Println(stats.Size())
-	assert.Greater(t, stats.Size(), expectedSize, "Response size is lower than expected")
-}
-
-func testCommand(t *testing.T, engine shipyard.Engine, args []string, expectedSize int64) {
-	t.Parallel()
-
-	listFile := mockStdOut(t)
-
-	// `shipyard log`
-	listCmd := logCmd(listFile, engine)
-
-	// add cli args
-	listCmd.SetArgs(args)
-
-	// run cli and verify output size
-	runCmdThenInterruptIt(t, listCmd, listFile, expectedSize)
-}
-
-// make test_unit will fail here if either a container or single_k3s_cluster isn't running
-// `shipyard run github.com/shipyard-run/shipyard/examples/single_k3s_cluster`
-// `clusterName is set to k3s in checkK8sRunning()`
-// `go test log_test.go log.go util.go -v -cover -race `
-// {{uncomment}} func TestLogCmd(t *testing.T) {
-func testLogCmd(t *testing.T) {
-	// t.Parallel()
-
-	engine, err := shipyard.New(hclog.NewNullLogger())
-	assert.NoError(t, err)
-
-	t.Run("Test `shipyard log`", func(t *testing.T) {
-		testCommand(t, engine, nil, bluePrintListSize)
-	})
-
-	t.Run("Test `shipyard log badcommand`", func(t *testing.T) {
-		testCommand(t, engine, []string{"something"}, invalidParamSize)
-	})
-	
-	// no cluster name
-	t.Run("Test `shipyard log cluster`", func(t *testing.T) {
-		testCommand(t, engine, []string{"cluster"}, invalidParamSize)
-	})
-	
-	// invalid cluster name
-	t.Run("Test `shipyard log cluster badName`", func(t *testing.T) {
-		testCommand(t, engine, []string{"cluster", "badName"}, invalidParamSize)
-	})
-	
-	// no containers running
-	t.Run("Test `shipyard log container` (with no containers running)", func(t *testing.T) {
-		testCommand(t, engine, []string{"container"}, invalidParamSize)
-	})
-	
-	// either k8s_clusters are running, or containers are running
-	clusterName := checkK8sRunning(t)
-	if clusterName != ""{
-		t.Run("Test `shipyard log cluster`", func(t *testing.T) {
-			testCommand(t, engine, []string{"cluster", clusterName}, bluePrintDockerLogSize)
-		})
-	}else {
-		t.Run("Test `shipyard log containers`", func(t *testing.T) {
-			testCommand(t, engine, []string{"containers"}, bluePrintClusterLogSize)
-		})
-	}
-
-}
+var logState = `
+{
+ "resources": [
+    {
+      "name": "docker-cache",
+      "type": "image_cache",
+      "status": "applied",
+      "depends_on": [
+        "network.onprem"
+      ],
+      "networks": [
+        "network.onprem"
+      ]
+    },
+    {
+      "name": "consul_config",
+      "type": "template",
+      "status": "applied",
+      "source": "data_dir = \"#{{ .Vars.data_dir }}\"\nlog_level = \"DEBUG\"\n\ndatacenter = \"dc1\"\nprimary_datacenter = \"dc1\"\n\nserver = true\n\nbootstrap_expect = 1\nui = true\n\nbind_addr = \"0.0.0.0\"\nclient_addr = \"0.0.0.0\"\nadvertise_addr = \"10.6.0.200\"\n\nports {\n  grpc = 8502\n}\n\nconnect {\n  enabled = true\n}\n",
+      "destination": "/home/nicj/go/src/github.com/shipyard-run/shipyard/examples/container/consul_config/consul.hcl",
+      "vars": {
+        "data_dir": "/tmp"
+      }
+    },
+    {
+      "name": "consul_disabled",
+      "type": "container",
+      "status": "disabled",
+      "disabled": true,
+      "image": {
+        "name": "consul:1.8.1"
+      },
+      "build": null
+    },
+    {
+      "name": "consul",
+      "type": "container",
+      "status": "applied",
+      "depends_on": [
+        "network.onprem",
+        "template.consul_config"
+      ],
+      "depends": [
+        "template.consul_config"
+      ],
+      "networks": [
+        {
+          "name": "network.onprem",
+          "ip_address": "10.6.0.200",
+          "aliases": [
+            "myalias"
+          ]
+        }
+      ],
+      "image": {
+        "name": "consul:1.8.1"
+      },
+      "build": null,
+      "command": [
+        "consul",
+        "agent",
+        "-config-file=/config/consul.hcl"
+      ],
+      "environment": [
+        {
+          "key": "something",
+          "value": "blah blah"
+        },
+        {
+          "key": "foo",
+          "value": ""
+        },
+        {
+          "key": "file",
+          "value": "this is the contents of a file"
+        },
+        {
+          "key": "abc",
+          "value": "123"
+        },
+        {
+          "key": "SHIPYARD_FOLDER",
+          "value": "/home/nicj/.shipyard"
+        },
+        {
+          "key": "HOME_FOLDER",
+          "value": "/home/nicj"
+        }
+      ],
+      "volumes": [
+        {
+          "source": "/home/nicj/go/src/github.com/shipyard-run/shipyard/examples/container/consul_config",
+          "destination": "/config"
+        }
+      ],
+      "port_ranges": [
+        {
+          "local": "8500-8502",
+          "enable_host": true
+        }
+      ],
+      "resources": {
+        "cpu": 2000,
+        "cpu_pin": [
+          0,
+          1
+        ],
+        "memory": 1024
+      }
+    }
+	]
+}`

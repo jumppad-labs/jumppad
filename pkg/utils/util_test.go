@@ -98,8 +98,8 @@ func TestFQDNReturnsCorrectValue(t *testing.T) {
 }
 
 func TestFQDNReplacesInvalidChars(t *testing.T) {
-	fq := FQDN("tes&t", "type")
-	assert.Equal(t, "tes-t.type.shipyard.run", fq)
+	fq := FQDN("tes&t", "k8s_cluster")
+	assert.Equal(t, "tes-t.k8s-cluster.shipyard.run", fq)
 }
 
 func TestFQDNVolumeReturnsCorrectValue(t *testing.T) {

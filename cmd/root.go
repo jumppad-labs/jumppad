@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
-	
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/shipyard-run/shipyard/pkg/utils"
@@ -29,18 +29,18 @@ var date string    // set by build process
 var commit string  // set by build process
 
 func init() {
-	
+
 	var vm gvm.Versions
-	
+
 	// setup dependencies
 	logger = createLogger()
 	engine, vm = createEngine(logger)
 	engineClients = engine.GetClients()
-	
+
 	//cobra.OnInitialize(configure)
-	
+
 	//rootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.shipyard/config)")
-	
+
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(outputCmd)
@@ -58,7 +58,7 @@ func init() {
 	rootCmd.AddCommand(newVersionCmd(vm))
 	rootCmd.AddCommand(uninstallCmd)
 	rootCmd.AddCommand(newPushCmd(engineClients.ContainerTasks, engineClients.Kubernetes, engineClients.HTTP, engineClients.Nomad, logger))
-	rootCmd.AddCommand(logCmd(os.Stdout, engine))
+	rootCmd.AddCommand(newLogCmd(engine, engineClients.Docker))
 	// add the server commands
 	rootCmd.AddCommand(connectorCmd)
 	connectorCmd.AddCommand(newConnectorRunCommand())
@@ -84,12 +84,11 @@ func createEngine(l hclog.Logger) (shipyard.Engine, gvm.Versions) {
 			goarch = "x86_64"
 		}
 
-		// zip is used on windows as tar is not available by default
 		switch goos {
 		case "linux":
 			return fmt.Sprintf("shipyard_%s_%s_%s.tar.gz", version, goos, goarch)
 		case "darwin":
-			return fmt.Sprintf("shipyard_%s_%s_%s.tar.gz", version, goos, goarch)
+			return fmt.Sprintf("shipyard_%s_%s_%s.zip", version, goos, goarch)
 		case "windows":
 			return fmt.Sprintf("shipyard_%s_%s_%s.zip", version, goos, goarch)
 		}
@@ -108,6 +107,18 @@ func createEngine(l hclog.Logger) (shipyard.Engine, gvm.Versions) {
 	vm := gvm.New(o)
 
 	return engine, vm
+}
+
+func createLogger() hclog.Logger {
+
+	opts := &hclog.LoggerOptions{Color: hclog.AutoColor}
+
+	// set the log level
+	if lev := os.Getenv("LOG_LEVEL"); lev != "" {
+		opts.Level = hclog.LevelFromString(lev)
+	}
+
+	return hclog.New(opts)
 }
 
 // Execute the root command

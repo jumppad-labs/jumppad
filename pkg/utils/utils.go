@@ -52,14 +52,15 @@ func ReplaceNonURIChars(s string) (string, error) {
 
 // FQDN generates the full qualified name for a container
 func FQDN(name, typeName string) string {
+	fqdn := fmt.Sprintf("%s.%s.shipyard.run", name, typeName)
+
 	// ensure that the name is valid for URI schema
-	cleanName, err := ReplaceNonURIChars(name)
+	cleanName, err := ReplaceNonURIChars(fqdn)
 	if err != nil {
 		panic(err)
 	}
 
-	fqdn := fmt.Sprintf("%s.%s.shipyard.run", cleanName, typeName)
-	return fqdn
+	return cleanName
 }
 
 // FQDNVolumeName creates a full qualified volume name
