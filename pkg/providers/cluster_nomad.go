@@ -136,7 +136,7 @@ func (c *NomadCluster) createNomad() error {
 
 	var clientError error
 	for i := 0; i < c.config.ClientNodes; i++ {
-		// create client node asyncronously
+		// create client node asynchronously
 		go func(i int, image, volID, configPath, name string) {
 			clientID, err := c.createClientNode(i, image, volID, configPath, name)
 			if err != nil {

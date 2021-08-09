@@ -29,7 +29,7 @@ func (c *ImageCache) Create() error {
 	c.log.Info("Creating ImageCache", "ref", c.config.Name)
 
 	// check the cache does not already exist
-	ids, err := c.client.FindContainerIDs(c.config.Name, config.TypeContainer)
+	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.Type)
 	if err != nil {
 		return err
 	}
@@ -97,6 +97,7 @@ func (c *ImageCache) createImageCache() (string, error) {
 
 	// create the container
 	cc := config.NewContainer(c.config.Name)
+	cc.Type = c.config.Type
 	cc.Image = &config.Image{Name: cacheImage}
 
 	cc.Volumes = []config.Volume{
@@ -112,7 +113,7 @@ func (c *ImageCache) createImageCache() (string, error) {
 		"CA_CRT_FILE":           "/cache/ca/root.cert",
 		"DOCKER_MIRROR_CACHE":   "/cache/docker",
 		"ENABLE_MANIFEST_CACHE": "true",
-		"REGISTRIES":            "k8s.gcr.io gcr.io asia.gcr.io eu.gcr.io us.gcr.io quay.io ghcr.io",
+		"REGISTRIES":            "k8s.gcr.io gcr.io asia.gcr.io eu.gcr.io us.gcr.io quay.io ghcr.io docker.pkg.github.com",
 		"ALLOW_PUSH":            "true",
 	}
 
@@ -122,7 +123,7 @@ func (c *ImageCache) createImageCache() (string, error) {
 func (c *ImageCache) Destroy() error {
 	c.log.Info("Destroy ImageCache", "ref", c.config.Name)
 
-	ids, err := c.client.FindContainerIDs(c.config.Name, config.TypeContainer)
+	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.Type)
 	if err != nil {
 		return err
 	}
