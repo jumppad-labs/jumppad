@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"io"
+	"sync"
 	"testing"
 
 	"github.com/docker/docker/api/types"
@@ -18,13 +19,32 @@ const (
 	logStdErr = 0
 )
 
+type testWriter struct {
+	Buffer *bytes.Buffer
+	mutex  sync.Mutex
+}
+
+func newTestWriter() *testWriter {
+	return &testWriter{
+		Buffer: bytes.NewBuffer([]byte("")),
+		mutex:  sync.Mutex{},
+	}
+}
+
+func (tw *testWriter) Write(p []byte) (n int, err error) {
+	tw.mutex.Lock()
+	defer tw.mutex.Unlock()
+
+	return tw.Buffer.Write(p)
+}
+
 func setupLog(t *testing.T, logStream int) (*cobra.Command, *mocks.MockDocker, *bytes.Buffer, *bytes.Buffer) {
 	// setup the statefile
 	t.Cleanup(setupState(logState))
 
 	// hijack stdout and stderr
-	stdout := bytes.NewBuffer([]byte(""))
-	stderr := bytes.NewBuffer([]byte(""))
+	stdout := newTestWriter()
+	stderr := newTestWriter()
 
 	log := createLogOutput(logStream)
 
@@ -62,7 +82,7 @@ func setupLog(t *testing.T, logStream int) (*cobra.Command, *mocks.MockDocker, *
 
 	lc := newLogCmd(nil, md, stdout, stderr)
 
-	return lc, md, stdout, stderr
+	return lc, md, stdout.Buffer, stderr.Buffer
 }
 
 // createLogOutput creates a byte array that is formatted as a docker log
