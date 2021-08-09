@@ -176,6 +176,8 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 		return nil, err
 	}
 
+	e.log.Info("Creating resources from configuration", "path", path)
+
 	if variablesFile != "" {
 		variablesFile, err = filepath.Abs(variablesFile)
 		if err != nil {

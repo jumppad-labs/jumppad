@@ -40,6 +40,26 @@ func setupLog(t *testing.T, logStream int) (*cobra.Command, *mocks.MockDocker, *
 		nil,
 	)
 
+	md.On("ContainerLogs", mock.Anything, mock.Anything, mock.Anything).Once().Return(
+		io.NopCloser(bytes.NewBuffer(log)),
+		nil,
+	)
+
+	md.On("ContainerLogs", mock.Anything, mock.Anything, mock.Anything).Once().Return(
+		io.NopCloser(bytes.NewBuffer(log)),
+		nil,
+	)
+
+	md.On("ContainerLogs", mock.Anything, mock.Anything, mock.Anything).Once().Return(
+		io.NopCloser(bytes.NewBuffer(log)),
+		nil,
+	)
+
+	md.On("ContainerLogs", mock.Anything, mock.Anything, mock.Anything).Once().Return(
+		io.NopCloser(bytes.NewBuffer(log)),
+		nil,
+	)
+
 	lc := newLogCmd(nil, md, stdout, stderr)
 
 	return lc, md, stdout, stderr
@@ -80,8 +100,13 @@ func TestLogWithAllCallsDockerLog(t *testing.T) {
 		Tail:       "40",
 	}
 
+	md.AssertNumberOfCalls(t, "ContainerLogs", 6)
 	md.AssertCalled(t, "ContainerLogs", mock.Anything, "consul.container.shipyard.run", logOptions)
 	md.AssertCalled(t, "ContainerLogs", mock.Anything, "docker-cache.image-cache.shipyard.run", logOptions)
+	md.AssertCalled(t, "ContainerLogs", mock.Anything, "server.dev.k8s-cluster.shipyard.run", logOptions)
+	md.AssertCalled(t, "ContainerLogs", mock.Anything, "server.dev.nomad-cluster.shipyard.run", logOptions)
+	md.AssertCalled(t, "ContainerLogs", mock.Anything, "1.client.dev.nomad-cluster.shipyard.run", logOptions)
+	md.AssertCalled(t, "ContainerLogs", mock.Anything, "2.client.dev.nomad-cluster.shipyard.run", logOptions)
 }
 
 func TestLogWithSpecificResourceCallsDockerLog(t *testing.T) {
@@ -147,14 +172,15 @@ var logState = `
       ]
     },
     {
-      "name": "consul_config",
-      "type": "template",
+      "name": "dev",
+      "type": "nomad_cluster",
       "status": "applied",
-      "source": "data_dir = \"#{{ .Vars.data_dir }}\"\nlog_level = \"DEBUG\"\n\ndatacenter = \"dc1\"\nprimary_datacenter = \"dc1\"\n\nserver = true\n\nbootstrap_expect = 1\nui = true\n\nbind_addr = \"0.0.0.0\"\nclient_addr = \"0.0.0.0\"\nadvertise_addr = \"10.6.0.200\"\n\nports {\n  grpc = 8502\n}\n\nconnect {\n  enabled = true\n}\n",
-      "destination": "/home/nicj/go/src/github.com/shipyard-run/shipyard/examples/container/consul_config/consul.hcl",
-      "vars": {
-        "data_dir": "/tmp"
-      }
+			"client_nodes": 2
+    },
+    {
+      "name": "dev",
+      "type": "k8s_cluster",
+      "status": "applied"
     },
     {
       "name": "consul_disabled",

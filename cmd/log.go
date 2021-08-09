@@ -82,6 +82,30 @@ func newLogCmdFunc(dc clients.Docker, stdout, stderr io.Writer) func(cmd *cobra.
 				if !r.Info().Disabled {
 					loggable = append(loggable, r)
 				}
+			case config.TypeK8sCluster:
+				if !r.Info().Disabled {
+					loggable = append(loggable, r)
+				}
+			case config.TypeNomadCluster:
+				if !r.Info().Disabled {
+					loggable = append(loggable, r)
+				}
+			case config.TypeSidecar:
+				if !r.Info().Disabled {
+					loggable = append(loggable, r)
+				}
+			case config.TypeK8sIngress:
+				if !r.Info().Disabled {
+					loggable = append(loggable, r)
+				}
+			case config.TypeNomadIngress:
+				if !r.Info().Disabled {
+					loggable = append(loggable, r)
+				}
+			case config.TypeContainerIngress:
+				if !r.Info().Disabled {
+					loggable = append(loggable, r)
+				}
 			case config.TypeImageCache:
 				loggable = append(loggable, r)
 			}
@@ -90,25 +114,51 @@ func newLogCmdFunc(dc clients.Docker, stdout, stderr io.Writer) func(cmd *cobra.
 		ctx := context.Background()
 
 		for _, r := range loggable {
-			rc, err := dc.ContainerLogs(
-				ctx,
-				utils.FQDN(r.Info().Name, string(r.Info().Type)),
-				types.ContainerLogsOptions{
-					ShowStdout: true,
-					ShowStderr: true,
-					Follow:     true,
-					Tail:       "40",
-				},
-			)
+			if r.Info().Disabled {
+				continue
+			}
 
-			if err == nil {
-				waitGroup.Add(1)
-				go func(rc io.ReadCloser, name string, c color.Attribute, log hclog.Logger) {
-					writeLogOutput(rc, stdout, stderr, name, c, log)
-					waitGroup.Done()
-				}(rc, r.Info().Name, getRandomColor(), log)
-			} else {
-				log.Error("Unable to get logs for container", "error", err)
+			// resources can containe more than one container
+			containers := []string{}
+
+			// override the name for certain resources
+			switch r.Info().Type {
+			case config.TypeK8sCluster:
+				containers = append(containers, "server."+r.Info().Name)
+			case config.TypeNomadCluster:
+				containers = append(containers, "server."+r.Info().Name)
+
+				// add the client nodes
+				nomad := r.(*config.NomadCluster)
+				for n := 0; n < nomad.ClientNodes; n++ {
+					containers = append(containers, fmt.Sprintf("%d.client.%s", n+1, r.Info().Name))
+				}
+
+			default:
+				containers = append(containers, r.Info().Name)
+			}
+
+			for _, container := range containers {
+				rc, err := dc.ContainerLogs(
+					ctx,
+					utils.FQDN(container, string(r.Info().Type)),
+					types.ContainerLogsOptions{
+						ShowStdout: true,
+						ShowStderr: true,
+						Follow:     true,
+						Tail:       "40",
+					},
+				)
+
+				if err == nil {
+					waitGroup.Add(1)
+					go func(rc io.ReadCloser, name string, c color.Attribute, log hclog.Logger) {
+						writeLogOutput(rc, stdout, stderr, name, c, log)
+						waitGroup.Done()
+					}(rc, container, getRandomColor(), log)
+				} else {
+					log.Error("Unable to get logs for container", "error", err)
+				}
 			}
 		}
 

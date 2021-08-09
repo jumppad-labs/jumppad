@@ -29,7 +29,7 @@ func (c *ImageCache) Create() error {
 	c.log.Info("Creating ImageCache", "ref", c.config.Name)
 
 	// check the cache does not already exist
-	ids, err := c.client.FindContainerIDs(c.config.Name, config.TypeContainer)
+	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.Type)
 	if err != nil {
 		return err
 	}
