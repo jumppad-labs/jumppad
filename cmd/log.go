@@ -20,7 +20,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newLogCmd(engine shipyard.Engine, dc clients.Docker) *cobra.Command {
+func newLogCmd(engine shipyard.Engine, dc clients.Docker, stdout, stderr io.Writer) *cobra.Command {
 	logCmd := &cobra.Command{
 		Use:   "log <command> ",
 		Short: "Tails logs for running shipyard resources",
@@ -31,12 +31,9 @@ func newLogCmd(engine shipyard.Engine, dc clients.Docker) *cobra.Command {
 
 	# Tail logs for a specific resource
 	shipyard log container.nginx
-
-	# Tail logs for a kubernetes pod or deployment
-	shipyard logs k8s_cluster.dev deployment/nginx
 	`,
 		Args: cobra.ArbitraryArgs,
-		RunE: newLogCmdFunc(dc),
+		RunE: newLogCmdFunc(dc, stdout, stderr),
 	}
 
 	return logCmd
@@ -52,7 +49,7 @@ var termColors = []color.Attribute{
 	color.FgWhite,
 }
 
-func newLogCmdFunc(dc clients.Docker) func(cmd *cobra.Command, args []string) error {
+func newLogCmdFunc(dc clients.Docker, stdout, stderr io.Writer) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		log := hclog.Default()
 		sigs := make(chan os.Signal, 1)
@@ -63,12 +60,23 @@ func newLogCmdFunc(dc clients.Docker) func(cmd *cobra.Command, args []string) er
 		c := config.New()
 		err := c.FromJSON(utils.StatePath())
 		if err != nil {
-			fmt.Println("Unable to load state", err)
-			os.Exit(1)
+			return fmt.Errorf("unable to load state file, check you have running resources: %s", err)
+		}
+
+		// if an argument is provided, only tail logs for that resource
+		// first validate that the resource exists
+		resources := c.Resources
+		if len(args) > 0 {
+			r, err := c.FindResource(args[0])
+			if err != nil {
+				return fmt.Errorf("unable to find resource: %s", err)
+			}
+
+			resources = []config.Resource{r}
 		}
 
 		loggable := []config.Resource{}
-		for _, r := range c.Resources {
+		for _, r := range resources {
 			switch r.Info().Type {
 			case config.TypeContainer:
 				if !r.Info().Disabled {
@@ -94,9 +102,9 @@ func newLogCmdFunc(dc clients.Docker) func(cmd *cobra.Command, args []string) er
 			)
 
 			if err == nil {
+				waitGroup.Add(1)
 				go func(rc io.ReadCloser, name string, c color.Attribute, log hclog.Logger) {
-					waitGroup.Add(1)
-					writeLogOutput(rc, name, c, log)
+					writeLogOutput(rc, stdout, stderr, name, c, log)
 					waitGroup.Done()
 				}(rc, r.Info().Name, getRandomColor(), log)
 			} else {
@@ -122,7 +130,7 @@ func getRandomColor() color.Attribute {
 	return termColors[rand.Intn(len(termColors)-1)]
 }
 
-func writeLogOutput(rc io.ReadCloser, name string, c color.Attribute, log hclog.Logger) {
+func writeLogOutput(rc io.ReadCloser, stdout, stderr io.Writer, name string, c color.Attribute, log hclog.Logger) {
 	hdr := make([]byte, 8)
 	colorWriter := color.New(c)
 
@@ -136,9 +144,9 @@ func writeLogOutput(rc io.ReadCloser, name string, c color.Attribute, log hclog.
 		var w io.Writer
 		switch hdr[0] {
 		case 1:
-			w = os.Stdout
+			w = stdout
 		default:
-			w = os.Stderr
+			w = stderr
 		}
 
 		count := binary.BigEndian.Uint32(hdr[4:])

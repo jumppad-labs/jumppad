@@ -58,7 +58,7 @@ func init() {
 	rootCmd.AddCommand(newVersionCmd(vm))
 	rootCmd.AddCommand(uninstallCmd)
 	rootCmd.AddCommand(newPushCmd(engineClients.ContainerTasks, engineClients.Kubernetes, engineClients.HTTP, engineClients.Nomad, logger))
-	rootCmd.AddCommand(newLogCmd(engine, engineClients.Docker))
+	rootCmd.AddCommand(newLogCmd(engine, engineClients.Docker, os.Stdout, os.Stderr))
 	// add the server commands
 	rootCmd.AddCommand(connectorCmd)
 	connectorCmd.AddCommand(newConnectorRunCommand())
