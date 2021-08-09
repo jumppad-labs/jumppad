@@ -22,9 +22,10 @@ import (
 
 func newLogCmd(engine shipyard.Engine, dc clients.Docker, stdout, stderr io.Writer) *cobra.Command {
 	logCmd := &cobra.Command{
-		Use:   "log <command> ",
-		Short: "Tails logs for running shipyard resources",
-		Long:  "Tails logs for running shipyard resources",
+		Use:     "log <command> ",
+		Short:   "Tails logs for running shipyard resources",
+		Long:    "Tails logs for running shipyard resources",
+		Aliases: []string{"logs"},
 		Example: `
   # Tail logs for all running resources
 	shipyard log

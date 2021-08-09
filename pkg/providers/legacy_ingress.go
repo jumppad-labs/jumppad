@@ -34,6 +34,7 @@ func NewContainerIngress(ci *config.ContainerIngress, cc clients.ContainerTasks,
 	c.Ports = ci.Ports
 	c.Config = ci.Config
 	c.Disabled = ci.Disabled
+	c.Type = ci.Type
 
 	return &LegacyIngress{c, cc, l}
 }
@@ -47,6 +48,7 @@ func NewNomadIngress(ci *config.NomadIngress, cc clients.ContainerTasks, l hclog
 	c.Ports = ci.Ports
 	c.Config = ci.Config
 	c.Disabled = ci.Disabled
+	c.Type = ci.Type
 
 	c.Service = fmt.Sprintf("%s.%s.%s", ci.Job, ci.Group, ci.Task)
 
@@ -62,6 +64,7 @@ func NewK8sIngress(kc *config.K8sIngress, cc clients.ContainerTasks, l hclog.Log
 	c.Networks = kc.Networks
 	c.Target = kc.Cluster
 	c.Disabled = kc.Disabled
+	c.Type = kc.Type
 
 	if kc.Deployment != "" {
 		c.Service = fmt.Sprintf("deployment/%s", kc.Deployment)
@@ -89,7 +92,7 @@ func (i *LegacyIngress) Create() error {
 
 	// check the ingress does not already exist
 	// TODO, we can probably extract all of the check and pull logic into a common function
-	ids, err := i.client.FindContainerIDs(i.config.Name, config.TypeIngress)
+	ids, err := i.client.FindContainerIDs(i.config.Name, i.config.Type)
 	if len(ids) > 0 {
 		return xerrors.Errorf("Unable to create ingress, and ingress with the name %s already exists: %w", i.config.Name, err)
 	}
@@ -175,7 +178,6 @@ func (i *LegacyIngress) Create() error {
 	c := config.NewContainer(i.config.Name)
 
 	i.config.ResourceInfo.AddChild(c)
-	c.Type = config.TypeIngress // override the resource type
 
 	c.Networks = i.config.Networks
 	c.Ports = i.config.Ports
@@ -212,7 +214,7 @@ func (i *LegacyIngress) Create() error {
 func (i *LegacyIngress) Destroy() error {
 	i.log.Info("Destroy Ingress", "ref", i.config.Name, "type", i.config.Type)
 
-	ids, err := i.client.FindContainerIDs(i.config.Name, config.TypeIngress)
+	ids, err := i.client.FindContainerIDs(i.config.Name, i.config.Type)
 	if err != nil {
 		return err
 	}
