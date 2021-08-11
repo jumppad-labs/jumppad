@@ -508,7 +508,7 @@ func (c *K8sCluster) destroyK3s() error {
 			}
 		}
 
-		err := c.client.RemoveContainer(i)
+		err := c.client.RemoveContainer(i, false)
 		if err != nil {
 			return err
 		}

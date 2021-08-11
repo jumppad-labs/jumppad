@@ -228,7 +228,9 @@ func (i *LegacyIngress) Destroy() error {
 			}
 		}
 
-		err := i.client.RemoveContainer(id)
+		// force remove as the container might get stuck due to the socat process
+		// this is safe for this container
+		err := i.client.RemoveContainer(id, true)
 		if err != nil {
 			return err
 		}

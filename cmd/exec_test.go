@@ -49,7 +49,7 @@ func setupExec(state string) (*cobra.Command, *mocks.MockContainerTasks, func())
 	mt.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
 	mt.On("CreateShell", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mt.On("CreateContainer", mock.Anything).Return("123", nil)
-	mt.On("RemoveContainer", mock.Anything).Return(nil)
+	mt.On("RemoveContainer", mock.Anything, mock.Anything).Return(nil)
 	mt.On("PullImage", config.Image{Name: "shipyardrun/ingress:latest"}, false).Return(nil)
 
 	return newExecCmd(mt), mt, setupState(state)
@@ -190,7 +190,7 @@ func TestExecK8sCallsRemove(t *testing.T) {
 	err := c.Execute()
 	assert.NoError(t, err)
 
-	mt.AssertCalled(t, "RemoveContainer", mock.Anything)
+	mt.AssertCalled(t, "RemoveContainer", mock.Anything, true)
 }
 
 func TestExecCreatesShellInCluster(t *testing.T) {

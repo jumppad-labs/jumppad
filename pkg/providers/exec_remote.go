@@ -102,7 +102,7 @@ func (c *ExecRemote) Create() error {
 
 	// destroy the container if we created one
 	if c.config.Target == "" {
-		c.client.RemoveContainer(targetID)
+		c.client.RemoveContainer(targetID, true)
 	}
 
 	return err

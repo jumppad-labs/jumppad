@@ -25,7 +25,7 @@ func setupDocs(t *testing.T) (*Docs, *mocks.MockContainerTasks) {
 	md.On("PullImage", mock.Anything, false).Return(nil)
 	md.On("CreateContainer", mock.Anything).Return("", nil)
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, nil)
-	md.On("RemoveContainer", mock.Anything).Return(nil)
+	md.On("RemoveContainer", mock.Anything, true).Return(nil)
 
 	d := NewDocs(cc, md, hclog.NewNullLogger())
 

@@ -176,7 +176,7 @@ func createK8sShell(r config.Resource, dt clients.ContainerTasks, pod, container
 	if err != nil {
 		return fmt.Errorf("Could not create exec container. Error: %s", err)
 	}
-	defer dt.RemoveContainer(tools)
+	defer dt.RemoveContainer(tools, true)
 
 	in, stdout, _ := term.StdStreams()
 	err = dt.CreateShell(tools, append(exec, command...), in, stdout, stdout)

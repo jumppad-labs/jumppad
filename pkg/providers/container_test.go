@@ -146,7 +146,7 @@ func TestContainerDestroysCorrectlyWhenContainerExists(t *testing.T) {
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
 	md.On("FindContainerIDs", cc.Name, cc.Type).Return([]string{"abc"}, nil)
-	md.On("RemoveContainer", "abc").Return(nil)
+	md.On("RemoveContainer", "abc", false).Return(nil)
 	md.On("DetachNetwork", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	err := c.Destroy()

@@ -139,7 +139,7 @@ func (i *Docs) Destroy() error {
 	}
 
 	for _, id := range ids {
-		err := i.client.RemoveContainer(id)
+		err := i.client.RemoveContainer(id, true)
 		if err != nil {
 			return err
 		}

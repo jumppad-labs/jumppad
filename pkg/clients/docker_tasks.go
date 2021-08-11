@@ -246,7 +246,7 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 		for _, n := range c.Networks {
 			net, err := c.FindDependentResource(n.Name)
 			if err != nil {
-				errRemove := d.RemoveContainer(cont.ID)
+				errRemove := d.RemoveContainer(cont.ID, false)
 				if errRemove != nil {
 					return "", xerrors.Errorf("Unable to connect container to network %s, unable to roll back container: %w", n.Name, err)
 				}
@@ -258,7 +258,7 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 
 			if err != nil {
 				// if we fail to connect to the network roll back the container
-				errRemove := d.RemoveContainer(cont.ID)
+				errRemove := d.RemoveContainer(cont.ID, false)
 				if errRemove != nil {
 					return "", xerrors.Errorf("Unable to connect container to network %s, unable to roll back container: %w", n.Name, err)
 				}
@@ -365,16 +365,26 @@ func (d *DockerTasks) FindContainerIDs(containerName string, typeName config.Res
 }
 
 // RemoveContainer with the given id
-func (d *DockerTasks) RemoveContainer(id string) error {
-	// try and shutdown graceful
-	err := d.c.ContainerRemove(context.Background(), id, types.ContainerRemoveOptions{Force: false, RemoveVolumes: true})
+func (d *DockerTasks) RemoveContainer(id string, force bool) error {
+	var err error
+	if !force {
+		// try and shutdown graceful
+		timeout := 60 * time.Second
+		err = d.c.ContainerStop(context.Background(), id, &timeout)
+		if err == nil {
+			d.l.Debug("Container stopped gracefully, removing", "container", id)
+			err = d.c.ContainerRemove(context.Background(), id, types.ContainerRemoveOptions{Force: false, RemoveVolumes: true})
+			if err == nil {
+				return nil
+			}
+		}
 
-	// unable to shutdown graceful try force
-	if err != nil {
-		return d.c.ContainerRemove(context.Background(), id, types.ContainerRemoveOptions{Force: true, RemoveVolumes: true})
+		d.l.Debug("Unable to stop container gracefully, trying force", "container", id, "error", err)
 	}
 
-	return nil
+	// unable to shutdown graceful try force
+	d.l.Debug("Forcefully remove", "container", id)
+	return d.c.ContainerRemove(context.Background(), id, types.ContainerRemoveOptions{Force: true, RemoveVolumes: true})
 }
 
 func (d *DockerTasks) BuildContainer(config *config.Container, force bool) (string, error) {
@@ -567,7 +577,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 		return nil, xerrors.Errorf("Unable to create dummy container for importing files: %w", err)
 	}
 
-	defer d.RemoveContainer(tmpID)
+	defer d.RemoveContainer(tmpID, true)
 
 	// create the directory paths ensure unix paths for containers
 	destPath := filepath.ToSlash(filepath.Join("/cache", path))

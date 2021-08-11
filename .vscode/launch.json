@@ -16,7 +16,7 @@
       },
       "args": [
         "run",
-        "./examples/single_k3s_cluster"
+        "/home/nicj/go/src/github.com/hashicorp/service-based-networking/consul-vms/users-1"
       ]
     },    {
       "name": "Debug - Destroy",
@@ -29,6 +29,7 @@
       },
       "args": [
         "destroy",
+        "/home/nicj/go/src/github.com/hashicorp/service-based-networking/consul-vms/users-1"
       ]
     },
     {

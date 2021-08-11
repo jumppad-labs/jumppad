@@ -17,7 +17,7 @@ func testRemoteExecSetupMocks() (*config.ExecRemote, *config.Network, *mocks.Moc
 	md.On("PullImage", mock.Anything, mock.Anything).Return(nil)
 	md.On("FindContainerIDs", mock.Anything).Return([]string{"1234"}, nil)
 	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	md.On("RemoveContainer", mock.Anything).Return(nil)
+	md.On("RemoveContainer", mock.Anything, true).Return(nil)
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"1234"}, nil)
 
 	trex := &config.ExecRemote{
@@ -167,7 +167,7 @@ func TestRemoteExecRemovesContainer(t *testing.T) {
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "RemoveContainer", "1234")
+	md.AssertCalled(t, "RemoveContainer", "1234", true)
 }
 
 /*

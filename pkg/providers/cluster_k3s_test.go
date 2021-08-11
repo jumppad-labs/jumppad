@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
@@ -17,7 +18,6 @@ import (
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/stretchr/testify/mock"
 	assert "github.com/stretchr/testify/require"
-
 )
 
 // setupClusterMocks sets up a happy path for mocks
@@ -36,7 +36,7 @@ func setupClusterMocks(t *testing.T) (
 	md.On("CopyFromContainer", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("CopyLocalDockerImagesToVolume", mock.Anything, mock.Anything, mock.Anything).Return([]string{"/images/file.tar.gz"}, nil)
 	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	md.On("RemoveContainer", mock.Anything).Return(nil)
+	md.On("RemoveContainer", mock.Anything, mock.Anything).Return(nil)
 	md.On("RemoveVolume", mock.Anything).Return(nil)
 	md.On("DetachNetwork", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
@@ -68,8 +68,8 @@ func setupClusterMocks(t *testing.T) (
 	mk.Mock.On("SetConfig", mock.Anything).Return(nil)
 	mk.Mock.On("HealthCheckPods", mock.Anything, mock.Anything).Return(nil)
 	mk.Mock.On("Apply", mock.Anything, mock.Anything).Return(nil)
-	mk.Mock.On("GetPodLogs", mock.Anything, mock.Anything, mock.Anything).Return(nil,nil)
-	
+	mk.Mock.On("GetPodLogs", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+
 	mc := &clients.ConnectorMock{}
 	mc.On("GetLocalCertBundle", mock.Anything).Return(&clients.CertBundle{}, nil)
 	mc.On("GenerateLeafCert",
@@ -404,19 +404,18 @@ func TestClusterK3sErrorsWhenWaitsForPodsFail(t *testing.T) {
 
 func TestClusterK3sStreamsLogsWhenRunning(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
-	
+
 	mk.On("GetPodLogs", mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
 
 	err := p.Create()
 	assert.NoError(t, err)
-	
+
 	logReader, err := mk.GetPodLogs(context.TODO(), mock.Anything, mock.Anything)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, logReader)
 	assert.NoError(t, logReader.Close())
 }
-
 
 func TestClusterK3sImportDockerImagesPullsImages(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
@@ -571,7 +570,7 @@ func TestClusterK3sDestroyWithNoIDReturns(t *testing.T) {
 
 	err := p.Destroy()
 	assert.NoError(t, err)
-	md.AssertNotCalled(t, "RemoveContainer", mock.Anything)
+	md.AssertNotCalled(t, "RemoveContainer", mock.Anything, mock.Anything)
 }
 
 func TestClusterK3sDestroyRemovesContainer(t *testing.T) {
@@ -583,7 +582,7 @@ func TestClusterK3sDestroyRemovesContainer(t *testing.T) {
 
 	err := p.Destroy()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "RemoveContainer", mock.Anything)
+	md.AssertCalled(t, "RemoveContainer", mock.Anything, false)
 }
 
 func TestClusterK3sDestroyRemovesConfig(t *testing.T) {
@@ -597,7 +596,7 @@ func TestClusterK3sDestroyRemovesConfig(t *testing.T) {
 
 	err := p.Destroy()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "RemoveContainer", mock.Anything)
+	md.AssertCalled(t, "RemoveContainer", mock.Anything, false)
 
 	assert.NoDirExists(t, dir)
 }

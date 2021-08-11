@@ -24,7 +24,7 @@ type ContainerTasks interface {
 	// returns error when unable to read info such as when the container does not exist.
 	ContainerInfo(id string) (interface{}, error)
 	// RemoveContainer stops and removes a running container
-	RemoveContainer(id string) error
+	RemoveContainer(id string, force bool) error
 	// BuildContainer builds a container based on the given configuration
 	// If a cahced image already exists Build will noop
 	// When force is specificed BuildContainer will rebuild the container regardless of cached images

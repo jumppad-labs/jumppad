@@ -111,16 +111,8 @@ func (c *Container) internalDestroy() error {
 
 	if len(ids) > 0 {
 		for _, id := range ids {
-			if c.config.Type == config.TypeContainer {
-				for _, n := range c.config.Networks {
-					err := c.client.DetachNetwork(n.Name, id)
-					if err != nil {
-						c.log.Warn("Unable to detach network", "ref", c.config.Name, "network", n.Name)
-					}
-				}
-			}
+			err := c.client.RemoveContainer(id, false)
 
-			err := c.client.RemoveContainer(id)
 			if err != nil {
 				return err
 			}
