@@ -103,6 +103,7 @@ func setupContainerMocks() (*clients.MockDocker, *clients.ImageLog) {
 	md.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(container.ContainerCreateCreatedBody{ID: "test"}, nil)
 	md.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	md.On("ContainerStop", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("NetworkConnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("NetworkDisconnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)

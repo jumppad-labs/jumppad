@@ -27,8 +27,8 @@ func (m *MockContainerTasks) ContainerInfo(id string) (interface{}, error) {
 	return args.Get(0), args.Error(1)
 }
 
-func (m *MockContainerTasks) RemoveContainer(id string) error {
-	args := m.Called(id)
+func (m *MockContainerTasks) RemoveContainer(id string, force bool) error {
+	args := m.Called(id, force)
 
 	return args.Error(0)
 }

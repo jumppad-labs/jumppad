@@ -131,8 +131,7 @@ func (c *ImageCache) Destroy() error {
 	// remove all networks that the container is attached to
 	if len(ids) > 0 {
 		for _, id := range ids {
-			c.detachFromNetworks(id)
-			c.client.RemoveContainer(id)
+			c.client.RemoveContainer(id, true)
 		}
 	}
 

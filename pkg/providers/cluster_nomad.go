@@ -444,7 +444,7 @@ func (c *NomadCluster) destroyNode(id string) error {
 			}
 		}
 
-		err := c.client.RemoveContainer(i)
+		err := c.client.RemoveContainer(i, false)
 		if err != nil {
 			return err
 		}

@@ -33,7 +33,7 @@ func setupNomadClusterMocks(t *testing.T) (*config.NomadCluster, *mocks.MockCont
 	md.On("CopyFromContainer", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("CopyLocalDockerImagesToVolume", mock.Anything, mock.Anything, mock.Anything).Return([]string{"file.tar.gz"}, nil)
 	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	md.On("RemoveContainer", mock.Anything).Return(nil)
+	md.On("RemoveContainer", mock.Anything, mock.Anything).Return(nil)
 	md.On("RemoveVolume", mock.Anything).Return(nil)
 	md.On("DetachNetwork", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
@@ -449,7 +449,7 @@ func TestClusterNomadDestroyRemovesConfig(t *testing.T) {
 
 	err := p.Destroy()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "RemoveContainer", mock.Anything)
+	md.AssertCalled(t, "RemoveContainer", mock.Anything, mock.Anything)
 
 	assert.NoDirExists(t, dir)
 }
