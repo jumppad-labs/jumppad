@@ -2,7 +2,6 @@ package providers
 
 import (
 	"fmt"
-	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
@@ -110,7 +109,7 @@ func (c *ExecRemote) Create() error {
 
 func (c *ExecRemote) createRemoteExecContainer() (string, error) {
 	// generate the ID for the new container based on the clock time and a string
-	cc := config.NewContainer(fmt.Sprintf("%d.remote_exec", time.Now().Nanosecond()))
+	cc := config.NewContainer(fmt.Sprintf("%s.remote_exec", c.config.Name))
 	c.config.ResourceInfo.AddChild(cc)
 
 	cc.Networks = c.config.Networks
