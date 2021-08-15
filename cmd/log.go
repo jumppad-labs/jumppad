@@ -9,15 +9,16 @@ import (
 	"os"
 	"os/signal"
 	"sync"
-
+	
 	"github.com/docker/docker/api/types"
 	"github.com/fatih/color"
 	"github.com/hashicorp/go-hclog"
+	"github.com/spf13/cobra"
+	
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/shipyard-run/shipyard/pkg/utils"
-	"github.com/spf13/cobra"
 )
 
 func newLogCmd(engine shipyard.Engine, dc clients.Docker, stdout, stderr io.Writer) *cobra.Command {
@@ -34,6 +35,41 @@ func newLogCmd(engine shipyard.Engine, dc clients.Docker, stdout, stderr io.Writ
 	shipyard log container.nginx
 	`,
 		Args: cobra.ArbitraryArgs,
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			// return []string{"Ernest", "Rick", "Mary"}, cobra.ShellCompDirectiveNoFileComp
+			loggable, err := getLoggable(args)
+			if err != nil {
+				return []string{"error", "loading", "stack"}, cobra.ShellCompDirectiveNoFileComp
+			}
+			containers := []string{}
+			
+			for _, r := range loggable {
+				if r.Info().Disabled {
+					continue
+				}
+				
+				// resources can contain more than one container
+				
+				// override the name for certain resources
+				switch r.Info().Type {
+				case config.TypeK8sCluster:
+					containers = append(containers, "server."+r.Info().Name)
+				case config.TypeNomadCluster:
+					containers = append(containers, "server."+r.Info().Name)
+					
+					// add the client nodes
+					nomad := r.(*config.NomadCluster)
+					for n := 0; n < nomad.ClientNodes; n++ {
+						containers = append(containers, fmt.Sprintf("%d.client.%s", n+1, r.Info().Name))
+					}
+				
+				default:
+					containers = append(containers, r.Info().Name)
+				}
+			}
+			return containers, cobra.ShellCompDirectiveNoFileComp
+			
+		},
 		RunE: newLogCmdFunc(dc, stdout, stderr),
 	}
 
@@ -56,89 +92,39 @@ func newLogCmdFunc(dc clients.Docker, stdout, stderr io.Writer) func(cmd *cobra.
 		sigs := make(chan os.Signal, 1)
 		signal.Notify(sigs, os.Interrupt)
 		waitGroup := sync.WaitGroup{}
-
-		// get the list of resources that can be logged
-		c := config.New()
-		err := c.FromJSON(utils.StatePath())
+		
+		loggable, err := getLoggable(args)
 		if err != nil {
-			return fmt.Errorf("unable to load state file, check you have running resources: %s", err)
+			return err
 		}
-
-		// if an argument is provided, only tail logs for that resource
-		// first validate that the resource exists
-		resources := c.Resources
-		if len(args) > 0 {
-			r, err := c.FindResource(args[0])
-			if err != nil {
-				return fmt.Errorf("unable to find resource: %s", err)
-			}
-
-			resources = []config.Resource{r}
-		}
-
-		loggable := []config.Resource{}
-		for _, r := range resources {
-			switch r.Info().Type {
-			case config.TypeContainer:
-				if !r.Info().Disabled {
-					loggable = append(loggable, r)
-				}
-			case config.TypeK8sCluster:
-				if !r.Info().Disabled {
-					loggable = append(loggable, r)
-				}
-			case config.TypeNomadCluster:
-				if !r.Info().Disabled {
-					loggable = append(loggable, r)
-				}
-			case config.TypeSidecar:
-				if !r.Info().Disabled {
-					loggable = append(loggable, r)
-				}
-			case config.TypeK8sIngress:
-				if !r.Info().Disabled {
-					loggable = append(loggable, r)
-				}
-			case config.TypeNomadIngress:
-				if !r.Info().Disabled {
-					loggable = append(loggable, r)
-				}
-			case config.TypeContainerIngress:
-				if !r.Info().Disabled {
-					loggable = append(loggable, r)
-				}
-			case config.TypeImageCache:
-				loggable = append(loggable, r)
-			}
-		}
-
+		
 		ctx := context.Background()
-
+		
 		for _, r := range loggable {
 			if r.Info().Disabled {
 				continue
 			}
-
+			
 			// resources can containe more than one container
 			containers := []string{}
-
+			
 			// override the name for certain resources
 			switch r.Info().Type {
 			case config.TypeK8sCluster:
 				containers = append(containers, "server."+r.Info().Name)
 			case config.TypeNomadCluster:
 				containers = append(containers, "server."+r.Info().Name)
-
+				
 				// add the client nodes
 				nomad := r.(*config.NomadCluster)
 				for n := 0; n < nomad.ClientNodes; n++ {
 					containers = append(containers, fmt.Sprintf("%d.client.%s", n+1, r.Info().Name))
 				}
-
+			
 			default:
 				containers = append(containers, r.Info().Name)
 			}
-
+			
 			for _, container := range containers {
 				rc, err := dc.ContainerLogs(
 					ctx,
@@ -150,7 +136,7 @@ func newLogCmdFunc(dc clients.Docker, stdout, stderr io.Writer) func(cmd *cobra.
 						Tail:       "40",
 					},
 				)
-
+				
 				if err == nil {
 					waitGroup.Add(1)
 					go func(rc io.ReadCloser, name string, c color.Attribute, log hclog.Logger) {
@@ -162,19 +148,77 @@ func newLogCmdFunc(dc clients.Docker, stdout, stderr io.Writer) func(cmd *cobra.
 				}
 			}
 		}
-
-		// send an interupt when the waitgroup is done
+		
+		// send an interrupt when the waitGroup is done
 		go func() {
 			waitGroup.Wait()
 			log.Info("No more logs to tail")
 			sigs <- os.Interrupt
 		}()
-
+		
 		// block until a signal is received
 		<-sigs
-
+		
 		return nil
 	}
+}
+
+func getLoggable(args []string) ([]config.Resource, error) {
+	// get the list of resources that can be logged
+	c := config.New()
+	err := c.FromJSON(utils.StatePath())
+	if err != nil {
+		return nil, fmt.Errorf("unable to load state file, check you have running resources: %s", err)
+	}
+	
+	// if an argument is provided, only tail logs for that resource
+	// first validate that the resource exists
+	resources := c.Resources
+	if len(args) > 0 {
+		r, err := c.FindResource(args[0])
+		if err != nil {
+			return nil, fmt.Errorf("unable to find resource: %s", err)
+		}
+		
+		resources = []config.Resource{r}
+	}
+	
+	loggable := []config.Resource{}
+	for _, r := range resources {
+		switch r.Info().Type {
+		case config.TypeContainer:
+			if !r.Info().Disabled {
+				loggable = append(loggable, r)
+			}
+		case config.TypeK8sCluster:
+			if !r.Info().Disabled {
+				loggable = append(loggable, r)
+			}
+		case config.TypeNomadCluster:
+			if !r.Info().Disabled {
+				loggable = append(loggable, r)
+			}
+		case config.TypeSidecar:
+			if !r.Info().Disabled {
+				loggable = append(loggable, r)
+			}
+		case config.TypeK8sIngress:
+			if !r.Info().Disabled {
+				loggable = append(loggable, r)
+			}
+		case config.TypeNomadIngress:
+			if !r.Info().Disabled {
+				loggable = append(loggable, r)
+			}
+		case config.TypeContainerIngress:
+			if !r.Info().Disabled {
+				loggable = append(loggable, r)
+			}
+		case config.TypeImageCache:
+			loggable = append(loggable, r)
+		}
+	}
+	return loggable, nil
 }
 
 func getRandomColor() color.Attribute {
