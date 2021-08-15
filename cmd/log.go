@@ -35,13 +35,19 @@ func newLogCmd(engine shipyard.Engine, dc clients.Docker, stdout, stderr io.Writ
 	shipyard log container.nginx
 	`,
 		Args: cobra.ArbitraryArgs,
-		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			// return []string{"Ernest", "Rick", "Mary"}, cobra.ShellCompDirectiveNoFileComp
+		ValidArgsFunction: getResources,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			log := hclog.Default()
+			sigs := make(chan os.Signal, 1)
+			signal.Notify(sigs, os.Interrupt)
+			waitGroup := sync.WaitGroup{}
+			
 			loggable, err := getLoggable(args)
 			if err != nil {
-				return []string{"error", "loading", "stack"}, cobra.ShellCompDirectiveNoFileComp
+				return err
 			}
-			containers := []string{}
+			
+			ctx := context.Background()
 			
 			for _, r := range loggable {
 				if r.Info().Disabled {
@@ -49,6 +55,7 @@ func newLogCmd(engine shipyard.Engine, dc clients.Docker, stdout, stderr io.Writ
 				}
 				
 				// resources can contain more than one container
+				containers := []string{}
 				
 				// override the name for certain resources
 				switch r.Info().Type {
@@ -66,14 +73,83 @@ func newLogCmd(engine shipyard.Engine, dc clients.Docker, stdout, stderr io.Writ
 				default:
 					containers = append(containers, r.Info().Name)
 				}
+				
+				for _, container := range containers {
+					rc, err := dc.ContainerLogs(
+						ctx,
+						utils.FQDN(container, string(r.Info().Type)),
+						types.ContainerLogsOptions{
+							ShowStdout: true,
+							ShowStderr: true,
+							Follow:     true,
+							Tail:       "40",
+						},
+					)
+					
+					if err == nil {
+						waitGroup.Add(1)
+						go func(rc io.ReadCloser, name string, c color.Attribute, log hclog.Logger) {
+							writeLogOutput(rc, stdout, stderr, name, c, log)
+							waitGroup.Done()
+						}(rc, container, getRandomColor(), log)
+					} else {
+						log.Error("Unable to get logs for container", "error", err)
+					}
+				}
 			}
-			return containers, cobra.ShellCompDirectiveNoFileComp
 			
+			// send an interrupt when the waitGroup is done
+			go func() {
+				waitGroup.Wait()
+				log.Info("No more logs to tail")
+				sigs <- os.Interrupt
+			}()
+			
+			// block until a signal is received
+			<-sigs
+			
+			return nil
 		},
-		RunE: newLogCmdFunc(dc, stdout, stderr),
 	}
 
 	return logCmd
+}
+
+func getResources(cmd *cobra.Command, args []string, complete string) ([]string, cobra.ShellCompDirective) {
+	loggable, err := getLoggable(args)
+	if err != nil {
+		return []string{err.Error()}, cobra.ShellCompDirectiveNoFileComp
+	}
+	
+	// all containers from all loggable resources
+	var allContainers []string
+	
+	for _, r := range loggable {
+		if r.Info().Disabled {
+			continue
+		}
+		var containers []string
+		// override the name for certain resources
+		switch r.Info().Type {
+		case config.TypeContainer:
+			containers = append(containers, "container."+r.Info().Name)
+		case config.TypeK8sCluster:
+			containers = append(containers, "server."+r.Info().Name)
+		case config.TypeNomadCluster:
+			containers = append(containers, "server."+r.Info().Name)
+			// add the client nodes
+			nomad := r.(*config.NomadCluster)
+			for n := 0; n < nomad.ClientNodes; n++ {
+				containers = append(containers, fmt.Sprintf("%d.client.%s", n+1, r.Info().Name))
+			}
+		default:
+			// no need to log these, right?
+			// containers = append(containers, r.Info().Name)
+		}
+		allContainers = append(allContainers, containers...)
+	}
+	return allContainers, cobra.ShellCompDirectiveNoFileComp
+	
 }
 
 var termColors = []color.Attribute{
@@ -86,83 +162,8 @@ var termColors = []color.Attribute{
 	color.FgWhite,
 }
 
-func newLogCmdFunc(dc clients.Docker, stdout, stderr io.Writer) func(cmd *cobra.Command, args []string) error {
-	return func(cmd *cobra.Command, args []string) error {
-		log := hclog.Default()
-		sigs := make(chan os.Signal, 1)
-		signal.Notify(sigs, os.Interrupt)
-		waitGroup := sync.WaitGroup{}
-		
-		loggable, err := getLoggable(args)
-		if err != nil {
-			return err
-		}
-		
-		ctx := context.Background()
-		
-		for _, r := range loggable {
-			if r.Info().Disabled {
-				continue
-			}
-			
-			// resources can containe more than one container
-			containers := []string{}
-			
-			// override the name for certain resources
-			switch r.Info().Type {
-			case config.TypeK8sCluster:
-				containers = append(containers, "server."+r.Info().Name)
-			case config.TypeNomadCluster:
-				containers = append(containers, "server."+r.Info().Name)
-				
-				// add the client nodes
-				nomad := r.(*config.NomadCluster)
-				for n := 0; n < nomad.ClientNodes; n++ {
-					containers = append(containers, fmt.Sprintf("%d.client.%s", n+1, r.Info().Name))
-				}
-			
-			default:
-				containers = append(containers, r.Info().Name)
-			}
-			
-			for _, container := range containers {
-				rc, err := dc.ContainerLogs(
-					ctx,
-					utils.FQDN(container, string(r.Info().Type)),
-					types.ContainerLogsOptions{
-						ShowStdout: true,
-						ShowStderr: true,
-						Follow:     true,
-						Tail:       "40",
-					},
-				)
-				
-				if err == nil {
-					waitGroup.Add(1)
-					go func(rc io.ReadCloser, name string, c color.Attribute, log hclog.Logger) {
-						writeLogOutput(rc, stdout, stderr, name, c, log)
-						waitGroup.Done()
-					}(rc, container, getRandomColor(), log)
-				} else {
-					log.Error("Unable to get logs for container", "error", err)
-				}
-			}
-		}
-		
-		// send an interrupt when the waitGroup is done
-		go func() {
-			waitGroup.Wait()
-			log.Info("No more logs to tail")
-			sigs <- os.Interrupt
-		}()
-		
-		// block until a signal is received
-		<-sigs
-		
-		return nil
-	}
-}
-
+// if this methods returns and error, it will get returned as shell-completion data
+// otherwise fmt.println() gets lost
 func getLoggable(args []string) ([]config.Resource, error) {
 	// get the list of resources that can be logged
 	c := config.New()

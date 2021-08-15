@@ -6,12 +6,13 @@ import (
 	"io"
 	"sync"
 	"testing"
-
+	
 	"github.com/docker/docker/api/types"
-	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	
+	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 )
 
 const (
