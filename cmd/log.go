@@ -80,8 +80,8 @@ func getResources(cmd *cobra.Command, args []string, complete string) ([]string,
 				containers = append(containers, fmt.Sprintf("%d.client.%s", n+1, r.Info().Name))
 			}
 		default:
-			// no need to log these, right?
-			// containers = append(containers, r.Info().Name)
+			// These containers throw error
+			containers = append(containers, r.Info().Name)
 		}
 		allContainers = append(allContainers, containers...)
 	}
