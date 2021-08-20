@@ -33,7 +33,7 @@ type Container struct {
 	MaxRestartCount int `hcl:"max_restart_count,optional" json:"max_restart_count,omitempty" mapstructure:"max_restart_count"`
 
 	// User block for mapping the user id and group id inside the container
-	RunAs *User `hcl:"run_as,block" json:"run_as,omitempty"`
+	RunAs *User `hcl:"run_as,block" json:"run_as,omitempty" mapstructure:"run_as"`
 }
 
 type User struct {
