@@ -415,6 +415,18 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 				return err
 			}
 
+			if cl.ServerConfig != "" {
+				cl.ServerConfig = ensureAbsolute(cl.ServerConfig, file)
+			}
+
+			if cl.ClientConfig != "" {
+				cl.ClientConfig = ensureAbsolute(cl.ClientConfig, file)
+			}
+
+			if cl.ConsulConfig != "" {
+				cl.ConsulConfig = ensureAbsolute(cl.ConsulConfig, file)
+			}
+
 			// Process volumes
 			// make sure mount paths are absolute
 			for i, v := range cl.Volumes {

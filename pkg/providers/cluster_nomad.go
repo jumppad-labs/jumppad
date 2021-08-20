@@ -17,7 +17,7 @@ import (
 )
 
 const nomadBaseImage = "shipyardrun/nomad"
-const nomadBaseVersion = "v0.11.8"
+const nomadBaseVersion = "1.1.3"
 
 const dataDir = `
 data_dir = "/etc/nomad.d/data"
@@ -228,7 +228,7 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 		}
 	}
 
-	// write the config to a file
+	// write the nomad config to a file
 	serverConfigPath := path.Join(configDir, "server_config.hcl")
 	ioutil.WriteFile(serverConfigPath, []byte(sc), os.ModePerm)
 
@@ -253,6 +253,32 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 			Destination: "/etc/nomad.d/config.hcl",
 			Type:        "bind",
 		},
+		config.Volume{
+			Source:      "",
+			Destination: "/sys/fs/cgroup",
+			Type:        "tmpfs",
+		},
+		config.Volume{
+			Source:      "",
+			Destination: "/run",
+			Type:        "tmpfs",
+		},
+		config.Volume{
+			Source:      "",
+			Destination: "/run/lock",
+			Type:        "tmpfs",
+		},
+	}
+
+	// Add the custom consul config if set
+	if c.config.ConsulConfig != "" {
+		vol := config.Volume{
+			Source:      c.config.ConsulConfig,
+			Destination: "/etc/consul.d/config/user_config.hcl",
+			Type:        "bind",
+		}
+
+		cc.Volumes = append(cc.Volumes, vol)
 	}
 
 	// if there are any custom volumes to mount
@@ -324,6 +350,32 @@ func (c *NomadCluster) createClientNode(index int, image, volumeID, configDir, s
 			Destination: "/etc/nomad.d/config.hcl",
 			Type:        "bind",
 		},
+		config.Volume{
+			Source:      "",
+			Destination: "/sys/fs/cgroup",
+			Type:        "tmpfs",
+		},
+		config.Volume{
+			Source:      "",
+			Destination: "/run",
+			Type:        "tmpfs",
+		},
+		config.Volume{
+			Source:      "",
+			Destination: "/run/lock",
+			Type:        "tmpfs",
+		},
+	}
+
+	// Add the custom consul config if set
+	if c.config.ConsulConfig != "" {
+		vol := config.Volume{
+			Source:      c.config.ConsulConfig,
+			Destination: "/etc/consul.d/config/user_config.hcl",
+			Type:        "bind",
+		}
+
+		cc.Volumes = append(cc.Volumes, vol)
 	}
 
 	// if there are any custom volumes to mount
@@ -343,19 +395,29 @@ func (c *NomadCluster) createClientNode(index int, image, volumeID, configDir, s
 }
 
 func (c *NomadCluster) appendProxyEnv(cc *config.Container) error {
-	// only add the variables for the cache when the kubernetes version is >= v1.18.16
-	sv, err := semver.NewConstraint(">= v0.11.8")
-	if err != nil {
-		// Handle constraint not being parsable.
-		return err
+
+	// only add the variables for the cache when the nomad version is >= v0.11.8 or
+	// is using the dev version
+	usesCache := false
+	if c.config.Version == "dev" {
+		usesCache = true
+	} else {
+
+		sv, err := semver.NewConstraint(">= v0.11.8")
+		if err != nil {
+			// Handle constraint not being parsable.
+			return err
+		}
+
+		v, err := semver.NewVersion(c.config.Version)
+		if err != nil {
+			return fmt.Errorf("Nomad version is not valid semantic version: %s", err)
+		}
+
+		usesCache = sv.Check(v)
 	}
 
-	v, err := semver.NewVersion(c.config.Version)
-	if err != nil {
-		return fmt.Errorf("Nomad version is not valid semantic version: %s", err)
-	}
-
-	if sv.Check(v) {
+	if usesCache {
 		// load the CA from a file
 		ca, err := ioutil.ReadFile(filepath.Join(utils.CertsDir(""), "/root.cert"))
 		if err != nil {

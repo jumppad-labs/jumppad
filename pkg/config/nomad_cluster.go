@@ -19,6 +19,7 @@ type NomadCluster struct {
 	Images       []Image  `hcl:"image,block" json:"images,omitempty"`
 	ServerConfig string   `hcl:"server_config,optional" json:"server_config,omitempty" mapstructure:"server_config"`
 	ClientConfig string   `hcl:"client_config,optional" json:"client_config,omitempty" mapstructure:"client_config"`
+	ConsulConfig string   `hcl:"consul_config,optional" json:"consul_config,omitempty" mapstructure:"consul_config"`
 	Volumes      []Volume `hcl:"volume,block" json:"volumes,omitempty"` // volumes to attach to the cluster
 }
 
