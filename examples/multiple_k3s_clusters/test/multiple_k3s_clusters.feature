@@ -10,7 +10,7 @@ Feature: Multiple Kubernetes Clusters
       | cloud                     | network     |
       | server.dc1                | k8s_cluster |
       | server.dc2                | k8s_cluster |
-      | consul-http-dc1           | ingress     |
-      | consul-http-dc2           | ingress     |
+      | consul-http-dc1           | k8s_ingress |
+      | consul-http-dc2           | k8s_ingress |
     And a HTTP call to "http://localhost:18500/v1/agent/members" should result in status 200
     And a HTTP call to "http://localhost:18501/v1/agent/members" should result in status 200
