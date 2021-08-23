@@ -496,6 +496,7 @@ jobs:
       run: |
         git config user.email "mail@shipyard.run"
         git config user.name "Shipyard Bot"
+        git pull origin main
 
     - name: Download-Binaries
       uses: actions/download-artifact@v2
@@ -509,7 +510,7 @@ jobs:
         export DARWIN_ARM64_SHA=$(sha256sum  ./dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip | cut -d " " -f 1)
         export DARWIN_x86_SHA=$(sha256sum  ./dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip | cut -d " " -f 1)
         export LINUX_ARM64_SHA=$(sha256sum  ./dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz | cut -d " " -f 1)
-        export LINUX_ARM7_SHA=$(sha256sum  ./dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_arm7.tar.gz | cut -d " " -f 1)
+        export LINUX_ARM7_SHA=$(sha256sum  ./dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.tar.gz | cut -d " " -f 1)
         export LINUX_x86_SHA=$(sha256sum  ./dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz | cut -d " " -f 1)
 
         cat <<- EOF > ./shipyard.rb
@@ -523,23 +524,23 @@ jobs:
           bottle :unneeded
 
           if OS.mac? && Hardware::CPU.intel?
-            url "https://github.com/shipyard-run/shipyard/releases/download/v${VERSION}/shipyard_${VERSION}_Darwin_x86_64.zip"
+            url "https://github.com/shipyard-run/shipyard/releases/download/v${VERSION}/shipyard_${VERSION}_darwin_x86_64.zip"
             sha256 "${DARWIN_x86_SHA}"
           end
           if OS.mac? && Hardware::CPU.arm?
-            url "https://github.com/shipyard-run/shipyard/releases/download/v${VERSION}/shipyard_${VERSION}_Darwin_arm64.zip"
+            url "https://github.com/shipyard-run/shipyard/releases/download/v${VERSION}/shipyard_${VERSION}_darwin_arm64.zip"
             sha256 "${DARWIN_ARM64_SHA}"
           end
           if OS.linux? && Hardware::CPU.intel?
-            url "https://github.com/shipyard-run/shipyard/releases/download/v${VERSION}/shipyard_${VERSION}_Linux_x86_64.tar.gz"
+            url "https://github.com/shipyard-run/shipyard/releases/download/v${VERSION}/shipyard_${VERSION}_linux_x86_64.tar.gz"
             sha256 "${LINUX_x86_SHA}"
           end
           if OS.linux? && Hardware::CPU.arm? && !Hardware::CPU.is_64_bit?
-            url "https://github.com/shipyard-run/shipyard/releases/download/v${VERSION}/shipyard_${VERSION}_Linux_armv7.tar.gz"
+            url "https://github.com/shipyard-run/shipyard/releases/download/v${VERSION}/shipyard_${VERSION}_linux_armv7.tar.gz"
             sha256 "${LINUX_ARM7_SHA}"
           end
           if OS.linux? && Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-            url "https://github.com/shipyard-run/shipyard/releases/download/v${VERSION}/shipyard_${VERSION}_Linux_arm64.tar.gz"
+            url "https://github.com/shipyard-run/shipyard/releases/download/v${VERSION}/shipyard_${VERSION}_linux_arm64.tar.gz"
             sha256 "${LINUX_ARM64_SHA}"
           end
 
