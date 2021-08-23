@@ -6,11 +6,11 @@ Feature: Docker Container
 Scenario: Single Container from Local Blueprint
   Given I have a running blueprint
   Then the following resources should be running
-    | name                      | type      |
-    | onprem                    | network   |
-    | consul                    | container |
-    | envoy                     | sidecar   |
-    | consul-container-http     | ingress   |
+    | name                      | type                |
+    | onprem                    | network             |
+    | consul                    | container           |
+    | envoy                     | sidecar             |
+    | consul-container-http     | container_ingress   |
   And the info "{.HostConfig.PortBindings['8500/'][0].HostPort}" for the running "container" called "consul" should equal "8500"
   And the info "{.HostConfig.PortBindings['8500/'][0].HostPort}" for the running "container" called "consul" should contain "85"
   And the info "{.HostConfig.PortBindings['8501/']}" for the running "container" called "consul" should exist"
@@ -22,11 +22,11 @@ Scenario: Single Container from Local Blueprint with multiple runs
   And the environment variable "ENVOY_VERSION" has a value "<envoy>"
   And I have a running blueprint
   Then the following resources should be running
-    | name                      | type      |
-    | onprem                    | network   |
-    | consul                    | container |
-    | envoy                     | sidecar   |
-    | consul-container-http     | ingress   |
+    | name                      | type                |
+    | onprem                    | network             |
+    | consul                    | container           |
+    | envoy                     | sidecar             |
+    | consul-container-http     | container_ingress   |
   And a HTTP call to "http://consul-http.ingress.shipyard.run:8500/v1/status/leader" should result in status 200
   And the response body should contain "10.6.0.200"
   When I run the command "curl -k http://1.server.dc1.consul.container.shipyard.run:8500/v1/status/leader"
