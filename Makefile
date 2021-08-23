@@ -24,8 +24,8 @@ test_functional:
 	go run main.go test ./examples/single_k3s_cluster
 
 test_e2e_cmd: install_local
-	yard-dev run --no-browser github.com/shipyard-run/blueprints//consul-terminating-gateways
-	yard-dev destroy
+	shipyard run --no-browser github.com/shipyard-run/blueprints//consul-terminating-gateways
+	shipyard destroy
 
 test_docker:
 	docker build -t shipyard-run/tests -f Dockerfile.test .
@@ -49,7 +49,7 @@ build-windows:
 
 install_local:
 	go build -ldflags "-X main.version=${git_commit}" -o bin/shipyard main.go
-	sudo mv /usr/local/bin/shipyard /usr/local/bin/shipyard-old
+	sudo mv /usr/local/bin/shipyard /usr/local/bin/shipyard-old || true
 	sudo cp bin/shipyard /usr/local/bin/shipyard
 
 remove_local:
