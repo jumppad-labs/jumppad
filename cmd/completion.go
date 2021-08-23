@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"os"
-	
+
 	"github.com/spf13/cobra"
 )
 
@@ -29,10 +29,19 @@ Zsh:
   $ echo "autoload -U compinit; compinit" >> ~/.zshrc
 
   # To load completions for each session, execute once:
-  $ ./shipyard completion zsh > "${fpath[1]}/_shipyard"
+  $ shipyard completion zsh > "${fpath[1]}/_shipyard"
 
   # You will need to start a new shell for this setup to take effect.
   # I also had to disable oh-my-zsh calls in ~/.zshrc
+
+oh-my-zsh:
+  # If shell completion is not already enabled in your environment,
+  # you will need to enable it.  You can execute the following once:
+
+  $ echo "autoload -U compinit; compinit" >> ~/.zshrc
+
+	# Install the completion code for shipyard into the oh-my-zsh completion folder
+	$ shipyard completion zsh > ~/.oh-my-zsh/completions/_shipyard
 
 fish:
 

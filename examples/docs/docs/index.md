@@ -8,6 +8,12 @@ sidebar_label: Example Page
 
 ## Remote terminal
 
+List the contents of the directory
+
+```
+ls -las
+```
+
 <Terminal target="docs.docs.shipyard.run" shell="/bin/bash" workdir="/" user="root" />
 
 ## Local terminal

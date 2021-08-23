@@ -48,8 +48,13 @@ build-windows:
 	CGO_ENABLED=0 GOOS=windows go build -ldflags "-X main.version=${git_commit}" -o bin/yard-windows.exe main.go
 
 install_local:
-	go build -ldflags "-X main.version=${git_commit}" -o bin/yard-dev main.go
-	sudo cp bin/yard-dev /usr/local/bin/yard-dev
+	go build -ldflags "-X main.version=${git_commit}" -o bin/shipyard main.go
+	sudo mv /usr/local/bin/shipyard /usr/local/bin/shipyard-old
+	sudo cp bin/shipyard /usr/local/bin/shipyard
+
+remove_local:
+	sudo rm /usrlocal/bin/shipyard
+	sudo mv /usr/local/bin/shipyard-old /usr/local/bin/shipyard
 
 test_releaser:
 	goreleaser release --rm-dist --snapshot
