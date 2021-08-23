@@ -1,14 +1,14 @@
 module "k8s" {
   depends_on = ["module.consul"]
-  source = "github.com/shipyard-run/shipyard//examples/single_k3s_cluster?ref=testing"
+  source     = "github.com/shipyard-run/shipyard//examples/single_k3s_cluster?ref=testing"
 }
 
 module "consul" {
-	source = "../container"
+  source = "../container"
 }
 
 container_ingress "consul-container-http-2" {
-  target  = "container.consul"
+  target = "container.consul"
 
   network {
     name = "network.onprem"
@@ -23,13 +23,13 @@ container_ingress "consul-container-http-2" {
 
 module "docs" {
   depends_on = ["container_ingress.consul-container-http-2"]
-	
+
   source = "../docs"
 }
 
-module "k8s" {
-  disabled = true
+module "k8s_exec" {
+  disabled   = true
   depends_on = ["container_ingress.consul-container-http-2"]
-	
+
   source = "../local_exec"
 }
