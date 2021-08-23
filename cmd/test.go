@@ -332,9 +332,9 @@ func (cr *CucumberRunner) theFollowingResourcesShouldBeRunning(arg1 *godog.Table
 func (cr *CucumberRunner) thereShouldBeAResourceRunningCalled(resource string, name string) error {
 	fqdn := utils.FQDN(name, resource)
 
-	// a container can start immediately and then it can crash, this can cause a false positive for the test
-	// wait a few seconds to ensure the state does not change
-	time.Sleep(5 * time.Second)
+	// ensure that the container starts and stays running,
+	// we use checkcount to test multiple times before passing
+	checkCount := 0
 
 	// we need to check this a number of times to make sure it is not just a slow starting container
 	for i := 0; i < 100; i++ {
@@ -347,7 +347,6 @@ func (cr *CucumberRunner) thereShouldBeAResourceRunningCalled(resource string, n
 			return err
 		}
 
-		runningCount := 0
 		for _, c := range cl {
 			// check to see if the container has failed
 			if c.State == "exited" {
@@ -355,11 +354,11 @@ func (cr *CucumberRunner) thereShouldBeAResourceRunningCalled(resource string, n
 			}
 
 			if c.State == "running" {
-				runningCount++
+				checkCount++
 			}
 		}
 
-		if runningCount == len(cl) {
+		if checkCount == 5 {
 			return nil
 		}
 

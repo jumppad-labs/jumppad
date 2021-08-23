@@ -3,7 +3,7 @@ container "consul" {
     name = "consul:1.10.1"
   }
 
-  command = ["consul", "agent", "-config-file=/config/consul.hcl"]
+  command = ["consul", "agent", "-config-file=/config/config.hcl"]
 
   volume {
     source      = "./consul_config/server.hcl"
