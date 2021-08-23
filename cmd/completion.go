@@ -40,8 +40,8 @@ oh-my-zsh:
 
   $ echo "autoload -U compinit; compinit" >> ~/.zshrc
 
-	# Install the completion code for shipyard into the oh-my-zsh completion folder
-	$ shipyard completion zsh > ~/.oh-my-zsh/completions/_shipyard
+  # Install the completion code for shipyard into the oh-my-zsh completion folder
+  $ shipyard completion zsh > ~/.oh-my-zsh/completions/_shipyard
 
 fish:
 
