@@ -349,6 +349,17 @@ func TestParseFileFunctionReadCorrectly(t *testing.T) {
 	assert.True(t, validEnv)
 }
 
+func TestParseContainerWithNoLabelReturnsError(t *testing.T) {
+	absoluteFolderPath, err := filepath.Abs("../../examples/invalid/container.hcl")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c := New()
+	err = ParseSingleFile(absoluteFolderPath, c, map[string]string{}, "")
+	assert.Error(t, err)
+}
+
 func TestParseAddsCacheDependencyToK8sResources(t *testing.T) {
 	absoluteFolderPath, err := filepath.Abs("../../examples/single_k3s_cluster")
 	if err != nil {

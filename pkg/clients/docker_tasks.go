@@ -369,7 +369,7 @@ func (d *DockerTasks) RemoveContainer(id string, force bool) error {
 	var err error
 	if !force {
 		// try and shutdown graceful
-		timeout := 60 * time.Second
+		timeout := 30 * time.Second
 		err = d.c.ContainerStop(context.Background(), id, &timeout)
 		if err == nil {
 			d.l.Debug("Container stopped gracefully, removing", "container", id)

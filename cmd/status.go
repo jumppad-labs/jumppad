@@ -28,6 +28,7 @@ const (
 )
 
 var jsonFlag bool
+var resourceType string
 
 var statusCmd = &cobra.Command{
 	Use:   "status",
@@ -52,28 +53,75 @@ var statusCmd = &cobra.Command{
 
 			fmt.Println(string(s))
 		} else {
+			fmt.Println()
+			fmt.Printf("%-13s %-30s %s\n", "STATUS", "RESOURCE", "FQDN")
 
 			createdCount := 0
 			failedCount := 0
 			pendingCount := 0
 
-			fmt.Println()
+			// sort the resources
+			resources := map[config.ResourceType][]config.Resource{}
+
 			for _, r := range c.Resources {
-				status := fmt.Sprintf(White, "PENDING")
-				switch r.Info().Status {
-				case config.Applied:
-					status = fmt.Sprintf(Green, "CREATED")
-					createdCount++
-				case config.Failed:
-					status = fmt.Sprintf(Red, "FAILED")
-					failedCount++
-				case config.Disabled:
-					status = fmt.Sprintf(Teal, "DISABLED")
-					failedCount++
-				default:
-					pendingCount++
+				if resources[r.Info().Type] == nil {
+					resources[r.Info().Type] = []config.Resource{}
 				}
-				fmt.Printf(" [ %s ] %s.%s\n", status, r.Info().Type, r.Info().Name)
+
+				resources[r.Info().Type] = append(resources[r.Info().Type], r)
+			}
+
+			for _, ress := range resources {
+				for _, r := range ress {
+					if resourceType != "" && string(r.Info().Type) != resourceType {
+						continue
+					}
+
+					status := fmt.Sprintf(White, "[ PENDING ]  ")
+					switch r.Info().Status {
+					case config.Applied:
+						status = fmt.Sprintf(Green, "[ CREATED ]  ")
+						createdCount++
+					case config.Failed:
+						status = fmt.Sprintf(Red, "[ FAILED ]   ")
+						failedCount++
+					case config.Disabled:
+						status = fmt.Sprintf(Teal, "[ DISABLED ] ")
+						failedCount++
+					default:
+						pendingCount++
+					}
+
+					res := fmt.Sprintf("%s.%s", r.Info().Type, r.Info().Name)
+					fqdn := utils.FQDN(r.Info().Name, string(r.Info().Type))
+
+					switch r.Info().Type {
+					case config.TypeNomadCluster:
+						fmt.Printf("%-13s %-30s %s\n", status, res, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Info().Name, string(r.Info().Type))))
+
+						// add the client nodes
+						nomad := r.(*config.NomadCluster)
+						for n := 0; n < nomad.ClientNodes; n++ {
+							fmt.Printf("%-13s %-30s %s\n", "", "", fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Info().Name, string(r.Info().Type))))
+						}
+					case config.TypeK8sCluster:
+						fmt.Printf("%-13s %-30s %s\n", status, res, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Info().Name, string(r.Info().Type))))
+					case config.TypeContainer:
+						fallthrough
+					case config.TypeSidecar:
+						fallthrough
+					case config.TypeK8sIngress:
+						fallthrough
+					case config.TypeNomadIngress:
+						fallthrough
+					case config.TypeContainerIngress:
+						fallthrough
+					case config.TypeImageCache:
+						fmt.Printf("%-13s %-30s %s\n", status, res, fqdn)
+					default:
+						fmt.Printf("%-13s %-30s %s\n", status, res, "")
+					}
+				}
 			}
 
 			fmt.Println()
@@ -84,4 +132,5 @@ var statusCmd = &cobra.Command{
 
 func init() {
 	statusCmd.Flags().BoolVarP(&jsonFlag, "json", "", false, "Output the status as JSON")
+	statusCmd.Flags().StringVarP(&resourceType, "type", "", "", "Resource type used to filter status list")
 }

@@ -16,6 +16,6 @@ Scenario: Single Container with Shipyard Variables
     | onprem                    | network   |
     | consul                    | container |
     | envoy                     | sidecar   |
-    | consul-container-http     | ingress   |
+    | consul-container-http     | container_ingress   |
   And the info "{.Config.Env}" for the running "container" called "consul" should contain "something=set by test"
   And the info "{.Config.Env}" for the running "container" called "consul" should contain "foo=bah"

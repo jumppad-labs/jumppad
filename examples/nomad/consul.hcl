@@ -1,16 +1,16 @@
 container "consul" {
-  image   {
-    name = "consul:1.7.1"
+  image {
+    name = "consul:1.10.1"
   }
 
-  command = ["consul", "agent", "-config-file=/config/consul.hcl"]
+  command = ["consul", "agent", "-config-file=/config/config.hcl"]
 
   volume {
-    source      = "./consul_config"
-    destination = "/config"
+    source      = "./consul_config/server.hcl"
+    destination = "/config/config.hcl"
   }
 
-  network  {
+  network {
     name = "network.cloud"
   }
 }

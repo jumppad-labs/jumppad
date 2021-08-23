@@ -1,5 +1,11 @@
 # Change Log
 
+## version v0.3.28
+* Add bash completion for `logs` command
+* Format status output to make clearer
+* Add new Nomad verison 1.1.3
+* Return error message when resource has no name
+
 ## version v0.3.1
 
 * Set max random ports for clusters to 64000

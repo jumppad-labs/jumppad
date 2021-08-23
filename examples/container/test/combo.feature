@@ -16,4 +16,4 @@ Scenario: Test multiple blueprints
     | docs                      | docs      |
     | consul                    | container |
     | envoy                     | sidecar   |
-    | consul-container-http     | ingress   |
+    | consul-container-http     | container_ingress   |

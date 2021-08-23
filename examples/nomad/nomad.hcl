@@ -1,5 +1,4 @@
 nomad_cluster "dev" {
-  version = "v0.12.8"
   client_nodes = "${var.client_nodes}"
 
   network {
@@ -10,19 +9,11 @@ nomad_cluster "dev" {
     name = "consul:1.8.0"
   }
 
-  volume {
-    source = "/tmp"
-    destination = "/files"
-  }
+  consul_config = "./consul_config/agent.hcl"
 
-  env {
-    key = "CONSUL_SERVER"
-    value = "consul.container.shipyard.run"
-  }
-  
-  env {
-    key = "CONSUL_DATACENTER"
-    value = "dc1"
+  volume {
+    source      = "/tmp"
+    destination = "/files"
   }
 }
 
@@ -31,7 +22,7 @@ nomad_job "consul" {
 
   paths = ["./app_config/example2.nomad"]
   health_check {
-    timeout = "60s"
+    timeout    = "60s"
     nomad_jobs = ["example_2"]
   }
 }

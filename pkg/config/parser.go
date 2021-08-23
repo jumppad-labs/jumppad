@@ -274,7 +274,12 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 	}
 
 	for _, b := range body.Blocks {
-		//fmt.Printf("Parsing: %s, type: %s\n", file, b.Type)
+		// check the resource has a name
+		if len(b.Labels) == 0 {
+			return fmt.Errorf("Error in file '%s': resource '%s' has no name, please specify resources using the syntax 'resource_type \"name\" {}'", file, b.Type)
+		}
+
+		name := b.Labels[0]
 
 		switch b.Type {
 		case string(TypeVariable):
@@ -288,7 +293,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			continue
 
 		case string(TypeK8sCluster):
-			cl := NewK8sCluster(b.Labels[0])
+			cl := NewK8sCluster(name)
 			cl.Info().Module = moduleName
 			cl.Info().DependsOn = dependsOn
 
@@ -317,7 +322,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			}
 
 		case string(TypeK8sConfig):
-			h := NewK8sConfig(b.Labels[0])
+			h := NewK8sConfig(name)
 			h.Info().Module = moduleName
 			h.Info().DependsOn = dependsOn
 
@@ -345,7 +350,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			}
 
 		case string(TypeHelm):
-			h := NewHelm(b.Labels[0])
+			h := NewHelm(name)
 			h.Info().Module = moduleName
 			h.Info().DependsOn = dependsOn
 
@@ -383,7 +388,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			}
 
 		case string(TypeK8sIngress):
-			i := NewK8sIngress(b.Labels[0])
+			i := NewK8sIngress(name)
 			i.Info().Module = moduleName
 			i.Info().DependsOn = dependsOn
 
@@ -406,13 +411,25 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			}
 
 		case string(TypeNomadCluster):
-			cl := NewNomadCluster(b.Labels[0])
+			cl := NewNomadCluster(name)
 			cl.Info().Module = moduleName
 			cl.Info().DependsOn = dependsOn
 
 			err := decodeBody(file, b, cl)
 			if err != nil {
 				return err
+			}
+
+			if cl.ServerConfig != "" {
+				cl.ServerConfig = ensureAbsolute(cl.ServerConfig, file)
+			}
+
+			if cl.ClientConfig != "" {
+				cl.ClientConfig = ensureAbsolute(cl.ClientConfig, file)
+			}
+
+			if cl.ConsulConfig != "" {
+				cl.ConsulConfig = ensureAbsolute(cl.ConsulConfig, file)
 			}
 
 			// Process volumes
@@ -435,7 +452,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			}
 
 		case string(TypeNomadJob):
-			h := NewNomadJob(b.Labels[0])
+			h := NewNomadJob(name)
 			h.Info().Module = moduleName
 			h.Info().DependsOn = dependsOn
 
@@ -463,7 +480,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			}
 
 		case string(TypeNomadIngress):
-			i := NewNomadIngress(b.Labels[0])
+			i := NewNomadIngress(name)
 			i.Info().Module = moduleName
 			i.Info().DependsOn = dependsOn
 
@@ -486,7 +503,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			}
 
 		case string(TypeNetwork):
-			n := NewNetwork(b.Labels[0])
+			n := NewNetwork(name)
 			n.Info().Module = moduleName
 			n.Info().DependsOn = dependsOn
 
@@ -516,7 +533,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			}
 
 		case string(TypeIngress):
-			i := NewIngress(b.Labels[0])
+			i := NewIngress(name)
 			i.Info().Module = moduleName
 			i.Info().DependsOn = dependsOn
 
@@ -539,7 +556,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			}
 
 		case string(TypeContainer):
-			co := NewContainer(b.Labels[0])
+			co := NewContainer(name)
 			co.Info().Module = moduleName
 			co.Info().DependsOn = dependsOn
 
@@ -575,7 +592,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			}
 
 		case string(TypeContainerIngress):
-			i := NewContainerIngress(b.Labels[0])
+			i := NewContainerIngress(name)
 			i.Info().Module = moduleName
 			i.Info().DependsOn = dependsOn
 
@@ -598,7 +615,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			}
 
 		case string(TypeSidecar):
-			s := NewSidecar(b.Labels[0])
+			s := NewSidecar(name)
 			s.Info().Module = moduleName
 			s.Info().DependsOn = dependsOn
 
@@ -625,7 +642,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			}
 
 		case string(TypeDocs):
-			do := NewDocs(b.Labels[0])
+			do := NewDocs(name)
 			do.Info().Module = moduleName
 			do.Info().DependsOn = dependsOn
 
@@ -650,7 +667,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			}
 
 		case string(TypeExecLocal):
-			h := NewExecLocal(b.Labels[0])
+			h := NewExecLocal(name)
 			h.Info().Module = moduleName
 			h.Info().DependsOn = dependsOn
 
@@ -673,7 +690,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			}
 
 		case string(TypeExecRemote):
-			h := NewExecRemote(b.Labels[0])
+			h := NewExecRemote(name)
 			h.Info().Module = moduleName
 			h.Info().DependsOn = dependsOn
 
@@ -702,7 +719,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			}
 
 		case string(TypeTemplate):
-			i := NewTemplate(b.Labels[0])
+			i := NewTemplate(name)
 			i.Info().Module = moduleName
 			i.Info().DependsOn = dependsOn
 
@@ -727,7 +744,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			}
 
 		case string(TypeModule):
-			moduleName := b.Labels[0]
+			moduleName := name
 			m := NewModule(moduleName)
 			m.Info().Module = moduleName
 
