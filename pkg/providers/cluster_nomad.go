@@ -17,7 +17,7 @@ import (
 )
 
 const nomadBaseImage = "shipyardrun/nomad"
-const nomadBaseVersion = "1.1.3"
+const nomadBaseVersion = "1.1.4"
 
 const dataDir = `
 data_dir = "/etc/nomad.d/data"
@@ -213,19 +213,9 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 	// generate the server config
 	sc := dataDir + "\n" + serverConfig
 
-	// if we have custom server config use that
-	if c.config.ServerConfig != "" {
-		sc = dataDir + "\n" + c.config.ServerConfig
-	}
-
 	// if the server also functions as a client
 	if isClient {
 		sc = sc + "\n" + fmt.Sprintf(clientConfig, "localhost")
-
-		// if we have custom client config use that
-		if c.config.ClientConfig != "" {
-			sc = sc + c.config.ClientConfig
-		}
 	}
 
 	// write the nomad config to a file
@@ -268,6 +258,28 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 			Destination: "/run/lock",
 			Type:        "tmpfs",
 		},
+	}
+
+	// Add any user config if set
+	if c.config.ServerConfig != "" {
+		vol := config.Volume{
+			Source:      c.config.ServerConfig,
+			Destination: "/etc/nomad.d/server_user_config.hcl",
+			Type:        "bind",
+		}
+
+		cc.Volumes = append(cc.Volumes, vol)
+	}
+
+	// Add any user config if set
+	if c.config.ClientConfig != "" {
+		vol := config.Volume{
+			Source:      c.config.ClientConfig,
+			Destination: "/etc/nomad.d/client_user_config.hcl",
+			Type:        "bind",
+		}
+
+		cc.Volumes = append(cc.Volumes, vol)
 	}
 
 	// Add the custom consul config if set
@@ -320,12 +332,7 @@ func (c *NomadCluster) createClientNode(index int, image, volumeID, configDir, s
 	// generate the client config
 	sc := dataDir + "\n" + fmt.Sprintf(clientConfig, serverID)
 
-	// if we have custom config use that
-	if c.config.ClientConfig != "" {
-		sc = dataDir + "\n" + c.config.ClientConfig
-	}
-
-	// write the config to a file
+	// write the default config to a file
 	clientConfigPath := path.Join(configDir, "client_config.hcl")
 	ioutil.WriteFile(clientConfigPath, []byte(sc), os.ModePerm)
 
@@ -365,6 +372,17 @@ func (c *NomadCluster) createClientNode(index int, image, volumeID, configDir, s
 			Destination: "/run/lock",
 			Type:        "tmpfs",
 		},
+	}
+
+	// Add any user config if set
+	if c.config.ClientConfig != "" {
+		vol := config.Volume{
+			Source:      c.config.ClientConfig,
+			Destination: "/etc/nomad.d/user_config.hcl",
+			Type:        "bind",
+		}
+
+		cc.Volumes = append(cc.Volumes, vol)
 	}
 
 	// Add the custom consul config if set
