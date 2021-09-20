@@ -34,7 +34,7 @@ var containerConfig = &config.Container{
 			Destination:                 "/data",
 			ReadOnly:                    false,
 			BindPropagation:             "shared",
-			BindPropagationNotRecursive: true,
+			BindPropagationNonRecursive: true,
 		},
 	},
 	Environment: []config.KV{
