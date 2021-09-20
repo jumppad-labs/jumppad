@@ -177,7 +177,7 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 
 		var bindOptions *mount.BindOptions
 		if t == mount.TypeBind {
-			bindOptions = &mount.BindOptions{Propagation: bp, NonRecursive: vc.BindPropagationNotRecursive}
+			bindOptions = &mount.BindOptions{Propagation: bp, NonRecursive: vc.BindPropagationNonRecursive}
 		}
 
 		// create the mount

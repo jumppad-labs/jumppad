@@ -68,7 +68,7 @@ type Volume struct {
 	Type                        string `hcl:"type,optional" json:"type,omitempty"`                                                                                                   // type of the volume to mount [bind, volume, tmpfs]
 	ReadOnly                    bool   `hcl:"read_only,optional" json:"read_only,omitempty" mapstructure:"read_only"`                                                                // specify that the volume is mounted read only
 	BindPropagation             string `hcl:"bind_propagation,optional" json:"bind_propagation,omitempty" mapstructure:"bind_propagation"`                                           // propagation mode for bind mounts [shared, private, slave, rslave, rprivate]
-	BindPropagationNotRecursive bool   `hcl:"bind_propagation_not_recursive,optional" json:"bind_propagation_not_recursive,omitempty" mapstructure:"bind_propagation_not_recursive"` // recursive bind mount, default true
+	BindPropagationNonRecursive bool   `hcl:"bind_propagation_non_recursive,optional" json:"bind_propagation_non_recursive,omitempty" mapstructure:"bind_propagation_non_recursive"` // recursive bind mount, default true
 }
 
 // KV is a key/value type
