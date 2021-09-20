@@ -14,6 +14,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/go-hclog"
+	"github.com/mohae/deepcopy"
 	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/utils"
@@ -29,8 +30,11 @@ var containerConfig = &config.Container{
 	Command:      []string{"tail", "-f", "/dev/null"},
 	Volumes: []config.Volume{
 		config.Volume{
-			Source:      "/tmp",
-			Destination: "/data",
+			Source:                      "/tmp",
+			Destination:                 "/data",
+			ReadOnly:                    false,
+			BindPropagation:             "shared",
+			BindPropagationNotRecursive: true,
 		},
 	},
 	Environment: []config.KV{
@@ -75,22 +79,22 @@ var containerConfig = &config.Container{
 }
 
 func createContainerConfig() (*config.Container, *config.Network, *config.Network, *clients.MockDocker, *clients.ImageLog) {
-	cc := *containerConfig
-	cc2 := *containerConfig
-	cn := *containerNetwork
-	wn := *wanNetwork
+	cc := deepcopy.Copy(containerConfig).(*config.Container)
+	cc2 := deepcopy.Copy(containerConfig).(*config.Container)
+	cn := deepcopy.Copy(containerNetwork).(*config.Network)
+	wn := deepcopy.Copy(wanNetwork).(*config.Network)
 
 	cc2.Name = "testcontainer2"
 
 	c := config.New()
-	c.AddResource(&cc)
-	c.AddResource(&cc2)
-	c.AddResource(&cn)
-	c.AddResource(&wn)
+	c.AddResource(cc)
+	c.AddResource(cc2)
+	c.AddResource(cn)
+	c.AddResource(wn)
 
 	mc, mic := setupContainerMocks()
 
-	return &cc, &cn, &wn, mc, mic
+	return cc, cn, wn, mc, mic
 }
 
 func setupContainerMocks() (*clients.MockDocker, *clients.ImageLog) {
@@ -293,6 +297,48 @@ func TestContainerAttachesVolumeMounts(t *testing.T) {
 	assert.Equal(t, cc.Volumes[0].Source, hc.Mounts[0].Source)
 	assert.Equal(t, cc.Volumes[0].Destination, hc.Mounts[0].Target)
 	assert.Equal(t, mount.TypeBind, hc.Mounts[0].Type)
+	assert.Equal(t, mount.PropagationShared, hc.Mounts[0].BindOptions.Propagation)
+	assert.True(t, hc.Mounts[0].BindOptions.NonRecursive)
+}
+
+func TestContainerIgnoresBindOptionsForVolumes(t *testing.T) {
+	cc, _, _, md, mic := createContainerConfig()
+	cc.Volumes[0].Type = "volume"
+
+	err := setupContainer(t, cc, md, mic)
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
+	hc := params[2].(*container.HostConfig)
+
+	assert.Len(t, hc.Mounts, 1)
+	assert.Equal(t, cc.Volumes[0].Source, hc.Mounts[0].Source)
+	assert.Equal(t, cc.Volumes[0].Destination, hc.Mounts[0].Target)
+	assert.Nil(t, hc.Mounts[0].BindOptions)
+}
+
+func TestContainerSetsBindOptionsForVolumes(t *testing.T) {
+	tt := map[string]mount.Propagation{
+		"":         mount.PropagationRPrivate,
+		"shared":   mount.PropagationShared,
+		"slave":    mount.PropagationSlave,
+		"private":  mount.PropagationPrivate,
+		"rslave":   mount.PropagationRSlave,
+		"rprivate": mount.PropagationRPrivate,
+	}
+
+	for k, v := range tt {
+		cc, _, _, md, mic := createContainerConfig()
+		cc.Volumes[0].BindPropagation = k
+
+		err := setupContainer(t, cc, md, mic)
+		assert.NoError(t, err)
+
+		params := getCalls(&md.Mock, "ContainerCreate")[0].Arguments
+		hc := params[2].(*container.HostConfig)
+
+		assert.Equal(t, v, hc.Mounts[0].BindOptions.Propagation)
+	}
 }
 
 func TestContainerCreatesDirectoryForVolume(t *testing.T) {
