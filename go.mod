@@ -31,6 +31,7 @@ require (
 	github.com/mattn/go-colorable v0.1.7 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/mapstructure v1.4.0
+	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/onsi/gomega v1.10.3 // indirect
 	github.com/opencontainers/runc v1.0.0-rc93 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect

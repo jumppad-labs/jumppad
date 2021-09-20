@@ -146,6 +146,20 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 			t = mount.TypeTmpfs
 		}
 
+		bp := mount.PropagationRPrivate
+		switch vc.BindPropagation {
+		case "shared":
+			bp = mount.PropagationShared
+		case "slave":
+			bp = mount.PropagationSlave
+		case "private":
+			bp = mount.PropagationPrivate
+		case "rslave":
+			bp = mount.PropagationRSlave
+		case "rprivate":
+			bp = mount.PropagationRPrivate
+		}
+
 		// if we have a bind type mount then ensure that the local folder exists or
 		// an error will be raised when creating
 		if t == mount.TypeBind {
@@ -161,12 +175,18 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 			}
 		}
 
+		var bindOptions *mount.BindOptions
+		if t == mount.TypeBind {
+			bindOptions = &mount.BindOptions{Propagation: bp, NonRecursive: vc.BindPropagationNonRecursive}
+		}
+
 		// create the mount
 		mounts = append(mounts, mount.Mount{
-			Type:     t,
-			Source:   vc.Source,
-			Target:   vc.Destination,
-			ReadOnly: vc.ReadOnly,
+			Type:        t,
+			Source:      vc.Source,
+			Target:      vc.Destination,
+			ReadOnly:    vc.ReadOnly,
+			BindOptions: bindOptions,
 		})
 	}
 
