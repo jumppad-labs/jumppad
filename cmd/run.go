@@ -197,7 +197,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 		if *noOpen == false {
 
 			browserList := []string{}
-			checkDuration := 60 * time.Second
+			checkDuration := 30 * time.Second
 
 			// check if blueprint is in the state, if so do not open these windows again
 			if !blueprintExists && e.Blueprint() != nil {
