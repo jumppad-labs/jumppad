@@ -367,22 +367,28 @@ func TestRunOpensBrowserWindowForResources(t *testing.T) {
 	// should not be opened
 	d2 := config.NewDocs("test2")
 
+	// should be opened
+	n1 := config.NewNomadCluster("test")
+	n1.OpenInBrowser = true
+	nomadConfig, _ := utils.GetClusterConfig("nomad_cluster.test")
+
 	rm.engine.On("ApplyWithVariables", mock.Anything, mock.Anything, mock.Anything).Return(
-		[]config.Resource{d, i, c, d2, i2, c2},
+		[]config.Resource{d, i, c, d2, i2, c2, n1},
 		nil,
 	)
 
 	err := rf.Execute()
 	assert.NoError(t, err)
 
-	rm.http.AssertNumberOfCalls(t, "HealthCheckHTTP", 5)
-	rm.system.AssertNumberOfCalls(t, "OpenBrowser", 5)
+	rm.http.AssertNumberOfCalls(t, "HealthCheckHTTP", 6)
+	rm.system.AssertNumberOfCalls(t, "OpenBrowser", 6)
 
 	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://test.ingress.shipyard.run:8080/", []int{200}, 30*time.Second)
 	rm.http.AssertCalled(t, "HealthCheckHTTP", "https://test.container.shipyard.run:8080", []int{200}, 30*time.Second)
 	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost", []int{200}, 30*time.Second)
 	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", []int{200}, 30*time.Second)
 	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://test.docs.shipyard.run:80", []int{200}, 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", fmt.Sprintf("http://server.test.nomad-cluster.shipyard.run:%d/", nomadConfig.APIPort), []int{200}, 30*time.Second)
 }
 
 func TestRunDoesNotOpensBrowserWindowWhenCheckError(t *testing.T) {

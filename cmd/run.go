@@ -197,7 +197,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 		if *noOpen == false {
 
 			browserList := []string{}
-			checkDuration := 30 * time.Second
+			checkDuration := 60 * time.Second
 
 			// check if blueprint is in the state, if so do not open these windows again
 			if !blueprintExists && e.Blueprint() != nil {
@@ -238,6 +238,13 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 						if p.Host != "" && p.OpenInBrowser != "" {
 							browserList = append(browserList, buildBrowserPath(r.Info().Name, p.Host, r.Info().Type, p.OpenInBrowser))
 						}
+					}
+				case config.TypeNomadCluster:
+					c := r.(*config.NomadCluster)
+					if c.OpenInBrowser {
+						// get the API port
+						config, _ := utils.GetClusterConfig("nomad_cluster." + c.Name)
+						browserList = append(browserList, buildBrowserPath("server."+r.Info().Name, fmt.Sprintf("%d", config.APIPort), r.Info().Type, "/"))
 					}
 				case config.TypeK8sIngress:
 					c := r.(*config.K8sIngress)
@@ -338,7 +345,7 @@ func buildBrowserPath(n, p string, t config.ResourceType, path string) string {
 		ty = config.TypeIngress
 	}
 
-	return fmt.Sprintf("http://%s.%s.shipyard.run:%s%s", n, ty, p, path)
+	return fmt.Sprintf("http://%s:%s%s", utils.FQDN(n, string(ty)), p, path)
 }
 
 func bluePrintInState() bool {
