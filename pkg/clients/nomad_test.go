@@ -90,6 +90,24 @@ func TestNomadCreateValidateNot200ReturnsError(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestNomadCreateValidateInvalidReturnsError(t *testing.T) {
+	fp, _, mh := setupNomadTests(t)
+
+	removeOn(&mh.Mock, "Do")
+	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
+		&http.Response{
+			StatusCode: http.StatusBadRequest,
+			Body:       ioutil.NopCloser(bytes.NewBufferString("oops")),
+		}, nil)
+
+	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
+	c.SetConfig(fp, "local")
+
+	err := c.Create([]string{"../../examples/nomad/app_config/example.nomad"})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "oops")
+}
+
 func TestNomadCreateSubmitsJob(t *testing.T) {
 	fp, _, mh := setupNomadTests(t)
 
@@ -228,7 +246,7 @@ func TestNomadStopNoStatus200ReturnsError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestNomadJobStatusReturnsStatus(t *testing.T) {
+func TestNomadJobStatusReturnsNoErrorOnRunning(t *testing.T) {
 	fp, _, mh := setupNomadTests(t)
 
 	removeOn(&mh.Mock, "Do")
@@ -247,6 +265,27 @@ func TestNomadJobStatusReturnsStatus(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.True(t, s)
+}
+
+func TestNomadJobStatusReturnsErrorWhenPending(t *testing.T) {
+	fp, _, mh := setupNomadTests(t)
+
+	removeOn(&mh.Mock, "Do")
+	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
+		&http.Response{
+			StatusCode: http.StatusOK,
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte(jobAllocationsPendingResponse))),
+		},
+		nil,
+	)
+
+	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
+	c.SetConfig(fp, "local")
+
+	s, err := c.JobRunning("test")
+	assert.NoError(t, err)
+
+	assert.False(t, s)
 }
 
 func TestNomadHealthCallsAPI(t *testing.T) {
@@ -536,7 +575,7 @@ var jobAllocationsResponse = `
     "TaskGroup": "fake_service",
     "DesiredStatus": "run",
     "DesiredDescription": "",
-    "ClientStatus": "running"
+    "ClientStatus": "complete"
   },
   {
     "ID": "da975cd1-8b04-6bce-9d5c-03e47353768c",
@@ -552,6 +591,41 @@ var jobAllocationsResponse = `
     "DesiredStatus": "run",
     "DesiredDescription": "",
     "ClientStatus": "running"
+  }
+]
+`
+
+var jobAllocationsPendingResponse = `
+[
+  {
+    "ID": "da975cd1-8b04-6bce-9d5c-03e47353768c",
+    "EvalID": "915e3cd4-81c6-dd1e-7880-55562ad938c6",
+    "Name": "example_1.fake_service[0]",
+    "Namespace": "default",
+    "NodeID": "e92cfe74-1ba3-2248-cf89-18760af8c278",
+    "NodeName": "server.dev",
+    "JobID": "example_1",
+    "JobType": "service",
+    "JobVersion": 0,
+    "TaskGroup": "fake_service",
+    "DesiredStatus": "run",
+    "DesiredDescription": "",
+    "ClientStatus": "running"
+  },
+  {
+    "ID": "da975cd1-8b04-6bce-9d5c-03e47353768c",
+    "EvalID": "915e3cd4-81c6-dd1e-7880-55562ad938c6",
+    "Name": "example_1.fake_service[0]",
+    "Namespace": "default",
+    "NodeID": "e92cfe74-1ba3-2248-cf89-18760af8c278",
+    "NodeName": "server.dev",
+    "JobID": "example_1",
+    "JobType": "service",
+    "JobVersion": 0,
+    "TaskGroup": "fake_service",
+    "DesiredStatus": "run",
+    "DesiredDescription": "",
+    "ClientStatus": "pending"
   }
 ]
 `

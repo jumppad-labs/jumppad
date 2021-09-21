@@ -232,18 +232,21 @@ func (n *NomadImpl) ParseJob(file string) ([]byte, error) {
 		return nil, xerrors.Errorf("Unable to validate job: %w", err)
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, xerrors.Errorf("Error validating job, got status code %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusBadRequest && resp.StatusCode != http.StatusOK {
+		return nil, xerrors.Errorf("Error validating job Nomad API returned an internal error")
 	}
 
-	// job is valid submit to the server
 	defer resp.Body.Close()
+
 	jsonJob, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, xerrors.Errorf("Unable to read job from validate response: %w", err)
+		return nil, xerrors.Errorf("Unable to read response from Nomad API: %w", err)
 	}
 
-	// return the job as a map
+	if resp.StatusCode == http.StatusBadRequest {
+		return nil, xerrors.Errorf("Error validating job, job file contains errors: %s", jsonJob)
+	}
+
 	return jsonJob, nil
 }
 
@@ -258,10 +261,24 @@ func (n *NomadImpl) JobRunning(job string) (bool, error) {
 		return false, nil
 	}
 
+	// check the allocations for a running job
+	running := false
 	for _, v := range jobDetail {
-		if v["ClientStatus"].(string) != "running" {
-			return false, nil
+		if v["ClientStatus"].(string) == "running" {
+			running = true
 		}
+	}
+
+	// check a second time as any pending jobs should reset status
+	for _, v := range jobDetail {
+		if v["ClientStatus"].(string) == "pending" {
+			running = false
+		}
+	}
+
+	// job is not running
+	if !running {
+		return false, nil
 	}
 
 	return true, nil

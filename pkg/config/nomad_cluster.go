@@ -12,15 +12,16 @@ type NomadCluster struct {
 
 	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
-	Version      string   `hcl:"version,optional" json:"version,omitempty"`
-	ClientNodes  int      `hcl:"client_nodes,optional" json:"client_nodes,omitempty" mapstructure:"client_nodes"`
-	Nodes        int      `hcl:"nodes,optional" json:"nodes,omitempty"`
-	Environment  []KV     `hcl:"env,block" json:"environment,omitempty" mapstructure:"environment"`
-	Images       []Image  `hcl:"image,block" json:"images,omitempty"`
-	ServerConfig string   `hcl:"server_config,optional" json:"server_config,omitempty" mapstructure:"server_config"`
-	ClientConfig string   `hcl:"client_config,optional" json:"client_config,omitempty" mapstructure:"client_config"`
-	ConsulConfig string   `hcl:"consul_config,optional" json:"consul_config,omitempty" mapstructure:"consul_config"`
-	Volumes      []Volume `hcl:"volume,block" json:"volumes,omitempty"` // volumes to attach to the cluster
+	Version       string   `hcl:"version,optional" json:"version,omitempty"`
+	ClientNodes   int      `hcl:"client_nodes,optional" json:"client_nodes,omitempty" mapstructure:"client_nodes"`
+	Nodes         int      `hcl:"nodes,optional" json:"nodes,omitempty"`
+	Environment   []KV     `hcl:"env,block" json:"environment,omitempty" mapstructure:"environment"`
+	Images        []Image  `hcl:"image,block" json:"images,omitempty"`
+	ServerConfig  string   `hcl:"server_config,optional" json:"server_config,omitempty" mapstructure:"server_config"`
+	ClientConfig  string   `hcl:"client_config,optional" json:"client_config,omitempty" mapstructure:"client_config"`
+	ConsulConfig  string   `hcl:"consul_config,optional" json:"consul_config,omitempty" mapstructure:"consul_config"`
+	Volumes       []Volume `hcl:"volume,block" json:"volumes,omitempty"`                                                    // volumes to attach to the cluster
+	OpenInBrowser bool     `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty" mapstructure:"open_in_browser"` // open the UI in the browser after creation
 }
 
 // NewCluster creates new Cluster config with the correct defaults
