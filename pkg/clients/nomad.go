@@ -232,17 +232,18 @@ func (n *NomadImpl) ParseJob(file string) ([]byte, error) {
 		return nil, xerrors.Errorf("Unable to validate job: %w", err)
 	}
 
+	defer resp.Body.Close()
+
+	jsonJob, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, xerrors.Errorf("Unable to read response from Nomad API: %w", err)
+	}
+
 	if resp.StatusCode != http.StatusOK {
-		return nil, xerrors.Errorf("Error validating job, got status code %d", resp.StatusCode)
+		return nil, xerrors.Errorf("Error validating job: %s", string(jsonJob))
 	}
 
 	// job is valid submit to the server
-	defer resp.Body.Close()
-	jsonJob, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, xerrors.Errorf("Unable to read job from validate response: %w", err)
-	}
-
 	// return the job as a map
 	return jsonJob, nil
 }
