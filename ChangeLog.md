@@ -1,5 +1,10 @@
 # Change Log
 
+## version v0.3.32
+* Fix bug in Nomad job where status was incorrectly reported
+* Improve error messages when Nomad Job validation fails
+* Add support for Docker bind propagation
+
 ## version v0.3.28
 * Add bash completion for `logs` command
 * Format status output to make clearer
