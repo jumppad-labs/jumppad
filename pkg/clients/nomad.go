@@ -232,8 +232,8 @@ func (n *NomadImpl) ParseJob(file string) ([]byte, error) {
 		return nil, xerrors.Errorf("Unable to validate job: %w", err)
 	}
 
-	if resp.StatusCode != http.StatusBadRequest {
-		return nil, xerrors.Errorf("Nomad API returned an internal error")
+	if resp.StatusCode != http.StatusBadRequest && resp.StatusCode != http.StatusOK {
+		return nil, xerrors.Errorf("Error validating job Nomad API returned an internal error")
 	}
 
 	defer resp.Body.Close()
@@ -243,12 +243,10 @@ func (n *NomadImpl) ParseJob(file string) ([]byte, error) {
 		return nil, xerrors.Errorf("Unable to read response from Nomad API: %w", err)
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, xerrors.Errorf("Error validating job: %s", string(jsonJob))
+	if resp.StatusCode == http.StatusBadRequest {
+		return nil, xerrors.Errorf("Error validating job, job file contains errors: %s", jsonJob)
 	}
 
-	// job is valid submit to the server
-	// return the job as a map
 	return jsonJob, nil
 }
 
