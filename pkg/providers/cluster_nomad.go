@@ -17,7 +17,7 @@ import (
 )
 
 const nomadBaseImage = "shipyardrun/nomad"
-const nomadBaseVersion = "1.1.4"
+const nomadBaseVersion = "1.1.5"
 
 const dataDir = `
 data_dir = "/etc/nomad.d/data"
@@ -243,21 +243,6 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 			Destination: "/etc/nomad.d/config.hcl",
 			Type:        "bind",
 		},
-		config.Volume{
-			Source:      "",
-			Destination: "/sys/fs/cgroup",
-			Type:        "tmpfs",
-		},
-		config.Volume{
-			Source:      "",
-			Destination: "/run",
-			Type:        "tmpfs",
-		},
-		config.Volume{
-			Source:      "",
-			Destination: "/run/lock",
-			Type:        "tmpfs",
-		},
 	}
 
 	// Add any user config if set
@@ -356,21 +341,6 @@ func (c *NomadCluster) createClientNode(index int, image, volumeID, configDir, s
 			Source:      clientConfigPath,
 			Destination: "/etc/nomad.d/config.hcl",
 			Type:        "bind",
-		},
-		config.Volume{
-			Source:      "",
-			Destination: "/sys/fs/cgroup",
-			Type:        "tmpfs",
-		},
-		config.Volume{
-			Source:      "",
-			Destination: "/run",
-			Type:        "tmpfs",
-		},
-		config.Volume{
-			Source:      "",
-			Destination: "/run/lock",
-			Type:        "tmpfs",
 		},
 	}
 

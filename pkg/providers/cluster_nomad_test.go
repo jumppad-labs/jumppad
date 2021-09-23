@@ -167,23 +167,13 @@ func TestClusterNomadCreatesAServer(t *testing.T) {
 	assert.Contains(t, params.Volumes[1].Source, "test/server_config.hcl")
 	assert.Equal(t, "/etc/nomad.d/config.hcl", params.Volumes[1].Destination)
 
-	// validate the temp volumes have been added
-	assert.Contains(t, params.Volumes[2].Source, "")
-	assert.Equal(t, "/sys/fs/cgroup", params.Volumes[2].Destination)
-
-	assert.Contains(t, params.Volumes[3].Source, "")
-	assert.Equal(t, "/run", params.Volumes[3].Destination)
-
-	assert.Contains(t, params.Volumes[4].Source, "")
-	assert.Equal(t, "/run/lock", params.Volumes[4].Destination)
-
 	// validate that the consul config is added
-	assert.Equal(t, "./files/consul_config.hcl", params.Volumes[5].Source)
-	assert.Equal(t, "/etc/consul.d/config/user_config.hcl", params.Volumes[5].Destination)
+	assert.Equal(t, "./files/consul_config.hcl", params.Volumes[2].Source)
+	assert.Equal(t, "/etc/consul.d/config/user_config.hcl", params.Volumes[2].Destination)
 
 	// validate that the custom volume has been added
-	assert.Equal(t, "./files", params.Volumes[6].Source)
-	assert.Equal(t, "/files", params.Volumes[6].Destination)
+	assert.Equal(t, "./files", params.Volumes[3].Source)
+	assert.Equal(t, "/files", params.Volumes[3].Destination)
 
 	// validate the API port is set
 	intLocal, _ := strconv.Atoi(params.Ports[0].Local)
@@ -246,23 +236,13 @@ func TestClusterNomadCreatesClientNodesWithCorrectDetails(t *testing.T) {
 	assert.Contains(t, params.Volumes[1].Source, "test/client_config.hcl")
 	assert.Equal(t, "/etc/nomad.d/config.hcl", params.Volumes[1].Destination)
 
-	// validate the temp volumes have been added
-	assert.Contains(t, params.Volumes[2].Source, "")
-	assert.Equal(t, "/sys/fs/cgroup", params.Volumes[2].Destination)
-
-	assert.Contains(t, params.Volumes[3].Source, "")
-	assert.Equal(t, "/run", params.Volumes[3].Destination)
-
-	assert.Contains(t, params.Volumes[4].Source, "")
-	assert.Equal(t, "/run/lock", params.Volumes[4].Destination)
-
 	// validate that the consul config is added
-	assert.Equal(t, "./files/consul_config.hcl", params.Volumes[5].Source)
-	assert.Equal(t, "/etc/consul.d/config/user_config.hcl", params.Volumes[5].Destination)
+	assert.Equal(t, "./files/consul_config.hcl", params.Volumes[2].Source)
+	assert.Equal(t, "/etc/consul.d/config/user_config.hcl", params.Volumes[2].Destination)
 
 	// validate that the custom volume has been added
-	assert.Equal(t, "./files", params.Volumes[6].Source)
-	assert.Equal(t, "/files", params.Volumes[6].Destination)
+	assert.Equal(t, "./files", params.Volumes[3].Source)
+	assert.Equal(t, "/files", params.Volumes[3].Destination)
 }
 
 func TestClusterNomadSetsNodeCountInConfig(t *testing.T) {
