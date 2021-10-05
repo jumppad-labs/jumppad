@@ -73,6 +73,10 @@ func newEnvCmd(e shipyard.Engine) *cobra.Command {
 			// add output variables
 			for _, r := range c.Resources {
 				if r.Info().Type == config.TypeOutput {
+					if r.Info().Disabled {
+						continue
+					}
+
 					val := strings.ReplaceAll(r.(*config.Output).Value, `\`, `\\`)
 					if unset {
 						fmt.Printf("%s%s\n", prefix, r.Info().Name)

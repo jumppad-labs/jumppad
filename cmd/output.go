@@ -29,6 +29,11 @@ var outputCmd = &cobra.Command{
 		// get the output variables
 		for _, r := range c.Resources {
 			if r.Info().Type == config.TypeOutput {
+				// don't output when disabled
+				if r.Info().Disabled {
+					continue
+				}
+
 				out[r.Info().Name] = r.(*config.Output).Value
 
 				if len(args) > 0 && strings.ToLower(args[0]) == strings.ToLower(r.Info().Name) {
