@@ -76,8 +76,14 @@ var envState = `
       "status": "applied",
       "value": "bar",
       "type": "output"
+	},
+	{
+      "name": "bar",
+			"disabled": true,
+      "status": "applied",
+      "value": "bar",
+      "type": "output"
 	}
   ]
 }
 `
-
