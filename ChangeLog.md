@@ -1,5 +1,11 @@
 # Change Log
 
+## version v0.3.35
+* Fix bug with Nomad clusters when using exec or java drivers
+* Update Nomad base version to 1.1.6
+
+## version v0.3.34
+* Fix bug where output variables were not honoring the disabled meta parameter
 ## version v0.3.32
 * Fix bug in Nomad job where status was incorrectly reported
 * Improve error messages when Nomad Job validation fails
