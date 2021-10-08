@@ -407,7 +407,7 @@ func TestNomadEndpointsReturnsTwoEndpoints(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusBadRequest,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(jobAllocationsResponse))),
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte(jobAllocationsResponse2Running))),
 		},
 		nil,
 	).Once()
@@ -439,6 +439,35 @@ func TestNomadEndpointsReturnsTwoEndpoints(t *testing.T) {
 	assert.Equal(t, "10.5.0.3:19090", e[1]["http"])
 }
 
+func TestNomadEndpointsReturnsRunningEndpoints(t *testing.T) {
+	fp, _, mh := setupNomadTests(t)
+
+	removeOn(&mh.Mock, "Do")
+	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
+		&http.Response{
+			StatusCode: http.StatusBadRequest,
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte(jobAllocationsResponse))),
+		},
+		nil,
+	).Once()
+
+	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
+		&http.Response{
+			StatusCode: http.StatusBadRequest,
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte(allocationsResponse1))),
+		},
+		nil,
+	).Once()
+
+	c := NewNomad(mh, 1*time.Millisecond, hclog.NewNullLogger())
+	c.SetConfig(fp, "local")
+
+	e, err := c.Endpoints("example_1", "fake_service", "fake_service")
+	assert.NoError(t, err)
+	assert.Len(t, e, 1)
+
+	assert.Equal(t, "10.5.0.2:28862", e[0]["http"])
+}
 func TestNomadEndpointsReturnsConnectEndpoints(t *testing.T) {
 	fp, _, mh := setupNomadTests(t)
 
@@ -576,6 +605,41 @@ var jobAllocationsResponse = `
     "DesiredStatus": "run",
     "DesiredDescription": "",
     "ClientStatus": "complete"
+  },
+  {
+    "ID": "da975cd1-8b04-6bce-9d5c-03e47353768c",
+    "EvalID": "915e3cd4-81c6-dd1e-7880-55562ad938c6",
+    "Name": "example_1.fake_service[0]",
+    "Namespace": "default",
+    "NodeID": "e92cfe74-1ba3-2248-cf89-18760af8c278",
+    "NodeName": "server.dev",
+    "JobID": "example_1",
+    "JobType": "service",
+    "JobVersion": 0,
+    "TaskGroup": "fake_service",
+    "DesiredStatus": "run",
+    "DesiredDescription": "",
+    "ClientStatus": "running"
+  }
+]
+`
+
+var jobAllocationsResponse2Running = `
+[
+  {
+    "ID": "da975cd1-8b04-6bce-9d5c-03e47353768c",
+    "EvalID": "915e3cd4-81c6-dd1e-7880-55562ad938c6",
+    "Name": "example_1.fake_service[0]",
+    "Namespace": "default",
+    "NodeID": "e92cfe74-1ba3-2248-cf89-18760af8c278",
+    "NodeName": "server.dev",
+    "JobID": "example_1",
+    "JobType": "service",
+    "JobVersion": 0,
+    "TaskGroup": "fake_service",
+    "DesiredStatus": "run",
+    "DesiredDescription": "",
+    "ClientStatus": "running"
   },
   {
     "ID": "da975cd1-8b04-6bce-9d5c-03e47353768c",
@@ -759,6 +823,21 @@ var jobAllocationsConnectResponse = `
     "DesiredStatus": "run",
     "DesiredDescription": "",
     "ClientStatus": "running"
+  },
+  {
+    "ID": "da975cd1-8b04-6bce-9d5c-03e47353768c",
+  	"EvalID": "02ee5334-be8f-fcba-41a0-cbbae8e34fce",
+    "Name": "example_1.fake_service[0]",
+    "Namespace": "default",
+    "NodeID": "e92cfe74-1ba3-2248-cf89-18760af8c278",
+    "NodeName": "server.dev",
+    "JobID": "example_1",
+    "JobType": "service",
+    "JobVersion": 0,
+    "TaskGroup": "fake_service",
+    "DesiredStatus": "run",
+    "DesiredDescription": "",
+    "ClientStatus": "complete"
   }
 ]
 `
