@@ -295,6 +295,11 @@ func (n *NomadImpl) Endpoints(job, group, task string) ([]map[string]string, err
 
 	// get the allocation details for each endpoint
 	for _, j := range jobs {
+		// only find running jobs
+		if j["ClientStatus"].(string) != "running" {
+			continue
+		}
+
 		r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v1/allocation/%s", n.c.APIAddress(utils.Context(n.context)), j["ID"]), nil)
 		if err != nil {
 			return nil, xerrors.Errorf("Unable to create http request: %w", err)

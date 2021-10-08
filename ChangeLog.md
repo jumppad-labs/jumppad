@@ -3,6 +3,7 @@
 ## version v0.3.35
 * Fix bug with Nomad clusters when using exec or java drivers
 * Update Nomad base version to 1.1.6
+* Fix bug with ingress selecting ports for stopped jobs
 
 ## version v0.3.34
 * Fix bug where output variables were not honoring the disabled meta parameter
