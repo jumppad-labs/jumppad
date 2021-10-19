@@ -459,3 +459,25 @@ func GetLocalIPAndHostname() (string, string) {
 
 	return localAddr.IP.String(), GetHostname()
 }
+
+// HTTPProxyAddress returns the default HTTPProxy used by
+// Nomad and Kubernetes clusters unless the environment variable
+// HTTP_PROXY is set when it returns this value
+func HTTPProxyAddress() string {
+	if p := os.Getenv("HTTP_PROXY"); p != "" {
+		return p
+	}
+
+	return shipyardProxyAddress
+}
+
+// HTTPSProxyAddress returns the default HTTPProxy used by
+// Nomad and Kubernetes clusters unless the environment variable
+// HTTPS_PROXY is set when it returns this value
+func HTTPSProxyAddress() string {
+	if p := os.Getenv("HTTPS_PROXY"); p != "" {
+		return p
+	}
+
+	return shipyardProxyAddress
+}
