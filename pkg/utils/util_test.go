@@ -323,3 +323,31 @@ func TestGetLocalIPAndHostnameReturnsCorrectly(t *testing.T) {
 	assert.NotEqual(t, ip, "")
 	assert.NotEqual(t, host, "")
 }
+
+func TestHTTPProxyAddressReturnsDefaultWhenEnvNotSet(t *testing.T) {
+	proxy := HTTPProxyAddress()
+
+	assert.Equal(t, shipyardProxyAddress, proxy)
+}
+
+func TestHTTPSProxyAddressReturnsDefaultWhenEnvNotSet(t *testing.T) {
+	proxy := HTTPSProxyAddress()
+
+	assert.Equal(t, shipyardProxyAddress, proxy)
+}
+
+func TestHTTPProxyAddressReturnsEnvWhenEnvSet(t *testing.T) {
+	httpProxy := "http://myproxy.com"
+	os.Setenv("HTTP_PROXY", httpProxy)
+	proxy := HTTPProxyAddress()
+
+	assert.Equal(t, httpProxy, proxy)
+}
+
+func TestHTTPSProxyAddressReturnsEnvWhenEnvSet(t *testing.T) {
+	httpsProxy := "https://myproxy.com"
+	os.Setenv("HTTPS_PROXY", httpsProxy)
+	proxy := HTTPSProxyAddress()
+
+	assert.Equal(t, httpsProxy, proxy)
+}

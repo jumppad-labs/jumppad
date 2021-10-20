@@ -352,15 +352,15 @@ func TestClusterNomadSetsEnvironmentOnServer(t *testing.T) {
 
 	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
 
-	assert.Equal(t, params.EnvVar["HTTP_PROXY"], utils.ProxyAddress)
-	assert.Equal(t, params.EnvVar["HTTPS_PROXY"], utils.ProxyAddress)
+	assert.Equal(t, params.EnvVar["HTTP_PROXY"], utils.HTTPProxyAddress())
+	assert.Equal(t, params.EnvVar["HTTPS_PROXY"], utils.HTTPSProxyAddress())
 	assert.Equal(t, params.EnvVar["NO_PROXY"], utils.ProxyBypass)
 	assert.Equal(t, params.EnvVar["PROXY_CA"], "CA")
 
 	params = getCalls(&md.Mock, "CreateContainer")[1].Arguments[0].(*config.Container)
 
-	assert.Equal(t, params.EnvVar["HTTP_PROXY"], utils.ProxyAddress)
-	assert.Equal(t, params.EnvVar["HTTPS_PROXY"], utils.ProxyAddress)
+	assert.Equal(t, params.EnvVar["HTTP_PROXY"], utils.HTTPProxyAddress())
+	assert.Equal(t, params.EnvVar["HTTPS_PROXY"], utils.HTTPSProxyAddress())
 	assert.Equal(t, params.EnvVar["NO_PROXY"], utils.ProxyBypass)
 	assert.Equal(t, params.EnvVar["PROXY_CA"], "CA")
 }

@@ -412,8 +412,8 @@ func (c *NomadCluster) appendProxyEnv(cc *config.Container) error {
 			return fmt.Errorf("Unable to read root CA for proxy: %s", err)
 		}
 
-		cc.EnvVar["HTTP_PROXY"] = utils.ProxyAddress
-		cc.EnvVar["HTTPS_PROXY"] = utils.ProxyAddress
+		cc.EnvVar["HTTP_PROXY"] = utils.HTTPProxyAddress()
+		cc.EnvVar["HTTPS_PROXY"] = utils.HTTPSProxyAddress()
 		cc.EnvVar["NO_PROXY"] = utils.ProxyBypass
 		cc.EnvVar["PROXY_CA"] = string(ca)
 	}
