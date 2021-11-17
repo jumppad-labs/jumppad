@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/gernest/front"
@@ -24,6 +25,12 @@ import (
 )
 
 var ctx *hcl.EvalContext
+
+// GetEvalContext gets the context parsed from the configuration
+// this contains all the variables and helper functions
+func GetEvalContext() *hcl.EvalContext {
+	return ctx
+}
 
 type ResourceTypeNotExistError struct {
 	Type string
@@ -213,14 +220,32 @@ func SetVariables(vars map[string]string) {
 	for _, e := range os.Environ() {
 		if strings.HasPrefix(e, "SY_VAR_") {
 			parts := strings.Split(e, "=")
-			setContextVariable(strings.Replace(parts[0], "SY_VAR_", "", -1), parts[1])
+
+			if len(parts) == 2 {
+				key := strings.Replace(parts[0], "SY_VAR_", "", -1)
+				setContextVariable(key, valueFromString(parts[1]))
+			}
 		}
 	}
 
 	// then set vars
 	for k, v := range vars {
-		setContextVariable(k, v)
+		setContextVariable(k, valueFromString(v))
 	}
+}
+
+func valueFromString(v string) cty.Value {
+	// attempt to parse the string value into a known type
+	if val, err := strconv.ParseInt(v, 10, 0); err == nil {
+		return cty.NumberIntVal(val)
+	}
+
+	if val, err := strconv.ParseBool(v); err == nil {
+		return cty.BoolVal(val)
+	}
+
+	// otherwise return a string
+	return cty.StringVal(v)
 }
 
 // ParseVariableFile parses a config file for variables
@@ -996,36 +1021,7 @@ func parseResources(abs string, c *Config, moduleName string, disabled bool, dep
 	return nil
 }
 
-func setContextVariable(key string, value interface{}) {
-	valMap := map[string]cty.Value{}
-
-	// get the existing map
-	if m, ok := ctx.Variables["var"]; ok {
-		valMap = m.AsValueMap()
-	}
-
-	// if the value is string bool convert to a boolean
-	if value == "true" {
-		value = true
-	}
-
-	if value == "false" {
-		value = false
-	}
-
-	switch v := value.(type) {
-	case string:
-		valMap[key] = cty.StringVal(v)
-	case bool:
-		valMap[key] = cty.BoolVal(v)
-	case cty.Value:
-		valMap[key] = v
-	}
-
-	ctx.Variables["var"] = cty.ObjectVal(valMap)
-}
-
-func setContextVariableIfMissing(key string, value interface{}) {
+func setContextVariableIfMissing(key string, value cty.Value) {
 	if m, ok := ctx.Variables["var"]; ok {
 		if _, ok := m.AsValueMap()[key]; ok {
 			return
@@ -1033,6 +1029,19 @@ func setContextVariableIfMissing(key string, value interface{}) {
 	}
 
 	setContextVariable(key, value)
+}
+
+func setContextVariable(key string, value cty.Value) {
+	valMap := map[string]cty.Value{}
+
+	// get the existing map
+	if m, ok := ctx.Variables["var"]; ok {
+		valMap = m.AsValueMap()
+	}
+
+	valMap[key] = value
+
+	ctx.Variables["var"] = cty.ObjectVal(valMap)
 }
 
 func parseYardHCL(file string, c *Config) error {
@@ -1258,11 +1267,34 @@ func buildContext() *hcl.EvalContext {
 		},
 	})
 
+	var LenFunc = function.New(&function.Spec{
+		Params: []function.Parameter{
+			{
+				Name:             "var",
+				Type:             cty.DynamicPseudoType,
+				AllowDynamicType: true,
+			},
+		},
+		Type: function.StaticReturnType(cty.Number),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			fmt.Println(args[0].Type().FriendlyName())
+			if len(args) == 1 && args[0].Type().IsCollectionType() || args[0].Type().IsTupleType() {
+				i := args[0].ElementIterator()
+				if i.Next() {
+					return args[0].Length(), nil
+				}
+			}
+
+			return cty.NumberIntVal(0), nil
+		},
+	})
+
 	ctx := &hcl.EvalContext{
 		Functions: map[string]function.Function{},
 		Variables: map[string]cty.Value{},
 	}
 
+	ctx.Functions["len"] = LenFunc
 	ctx.Functions["env"] = EnvFunc
 	ctx.Functions["k8s_config"] = KubeConfigFunc
 	ctx.Functions["k8s_config_docker"] = KubeConfigDockerFunc

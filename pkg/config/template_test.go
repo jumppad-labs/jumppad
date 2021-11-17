@@ -14,8 +14,7 @@ func TestNewCreatesTemplate(t *testing.T) {
 }
 
 func TestTemplateCreatesCorrectly(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, templateDefault)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, templateDefault)
 
 	cl, err := c.FindResource("template.test")
 	assert.NoError(t, err)
@@ -26,8 +25,7 @@ func TestTemplateCreatesCorrectly(t *testing.T) {
 }
 
 func TestTemplateSetsDisabled(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, templateDisabled)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, templateDisabled)
 
 	cl, err := c.FindResource("template.test")
 	assert.NoError(t, err)

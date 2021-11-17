@@ -14,8 +14,7 @@ func TestNewCreatesDocs(t *testing.T) {
 }
 
 func TestDocsCreatesCorrectly(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, docsDefault)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, docsDefault)
 
 	cl, err := c.FindResource("docs.testing")
 	assert.NoError(t, err)
@@ -26,8 +25,7 @@ func TestDocsCreatesCorrectly(t *testing.T) {
 }
 
 func TestDocsSetsDisabled(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, docsDisabled)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, docsDisabled)
 
 	cl, err := c.FindResource("docs.testing")
 	assert.NoError(t, err)

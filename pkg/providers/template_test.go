@@ -3,7 +3,6 @@ package providers
 import (
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
@@ -12,8 +11,7 @@ import (
 )
 
 func setupTemplate(t *testing.T) (*config.Template, *Template) {
-	temp := t.TempDir()
-	tmpl := createTemplate(filepath.Join(temp, "out.hcl"))
+	tmpl := createTemplate(t)
 
 	return tmpl, NewTemplate(tmpl, hclog.NewNullLogger())
 }
@@ -44,6 +42,15 @@ func TestTemplateProcessesCorrectly(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Contains(t, string(d), `data_dir = "something"`)
+	assert.Contains(t, string(d), `grpc = 8502`)
+	assert.Contains(t, string(d), `grpc = 8500`)
+	assert.Contains(t, string(d), `grpc_other = 2000`)
+	assert.Contains(t, string(d), `grpc_other = 2001`)
+	assert.Contains(t, string(d), `enabled = true`)
+	assert.Contains(t, string(d), `not_enabled = false`)
+	assert.Contains(t, string(d), `bool_var = true`)
+	assert.Contains(t, string(d), `num_var = 13`)
+	assert.Contains(t, string(d), `string_var = "Abc"`)
 }
 
 func TestTemplateWriteSourceWhenNoVars(t *testing.T) {
@@ -90,36 +97,83 @@ func TestTemplateDestroyRemovesDestination(t *testing.T) {
 	assert.NoFileExists(t, tmpl.Destination)
 }
 
-func createTemplate(outPath string) *config.Template {
-	return &config.Template{
-		Source: `
-data_dir = "#{{ .Vars.data_dir }}"
-log_level = "DEBUG"
-node_name = "server"
-
-datacenter = "dc1"
-primary_datacenter = "dc1"
-
-server = true
-
-bootstrap_expect = 1
-ui = true
-
-bind_addr = "{{ GetPrivateInterfaces | attr \"address\" }}"
-client_addr = "0.0.0.0"
-
-ports {
-  grpc = 8502
+func createTemplate(t *testing.T) *config.Template {
+	tmpl := `
+variable "bool_var" {
+	default = true
 }
 
-connect {
-  enabled = true
-}`,
+variable "num_var" {
+	default = 13
+}
 
-		Destination: outPath,
+variable "str_var" {
+	default = "Abc"
+}
 
-		Vars: map[string]string{
-			"data_dir": "something",
-		},
+variable "other_ports" {
+	default = [2000,2001]
+}
+
+template "fetch_consul_resources" {
+  source = <<EOF
+
+	data_dir = "#{{ .Vars.data_dir }}"
+	log_level = "DEBUG"
+	node_name = "server"
+
+	datacenter = "dc1"
+	primary_datacenter = "dc1"
+
+	server = true
+
+	bootstrap_expect = 1
+	ui = true
+	enabled = #{{ .Vars.enabled }}
+	not_enabled = #{{ .Vars.not_enabled }}
+
+	bool_var = #{{ .Vars.bool_var }}
+	num_var = #{{ .Vars.num_var }}
+	string_var = "#{{ .Vars.string_var }}"
+
+	bind_addr = "{{ GetPrivateInterfaces | attr \"address\" }}"
+	client_addr = "0.0.0.0"
+
+	ports {
+		#{{ range .Vars.ports }}
+	  grpc = #{{ . }}
+		#{{ end }}
 	}
+	
+	other_ports {
+		#{{ range .Vars.other_ports }}
+	  grpc_other = #{{ . }}
+		#{{ end }}
+	}
+	EOF
+
+	destination = "./out.txt"
+
+  vars = {
+		other_ports = var.other_ports
+		bool_var = var.bool_var
+		string_var = var.str_var
+		num_var = var.num_var
+		data_dir = "something"
+		enabled = true
+		not_enabled = false
+		ports = [8502, 8500]
+		port = 8342
+		config = {
+			a = 1
+			ports = ["sfsf","sfsf"]
+		}
+  }
+}`
+
+	conf, _ := config.CreateConfigFromStrings(t, tmpl)
+	cr, err := conf.FindResource("template.fetch_consul_resources")
+	assert.NoError(t, err)
+
+	return cr.(*config.Template)
 }

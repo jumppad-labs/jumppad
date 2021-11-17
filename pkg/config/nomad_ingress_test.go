@@ -7,8 +7,7 @@ import (
 )
 
 func TestNomadIngressCreatesCorrectly(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, nomadIngressDefault)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, nomadIngressDefault)
 
 	cl, err := c.FindResource("nomad_ingress.test")
 	assert.NoError(t, err)
@@ -19,8 +18,7 @@ func TestNomadIngressCreatesCorrectly(t *testing.T) {
 }
 
 func TestNomadIngressSetsDisabled(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, nomadIngressDisabled)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, nomadIngressDisabled)
 
 	cl, err := c.FindResource("nomad_ingress.test")
 	assert.NoError(t, err)

@@ -14,8 +14,7 @@ func TestNewCreatesContainerIngress(t *testing.T) {
 }
 
 func TestContainerIngressCreatesCorrectly(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, containerIngressDefault)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, containerIngressDefault)
 
 	co, err := c.FindResource("container_ingress.testing")
 	assert.NoError(t, err)
@@ -26,8 +25,7 @@ func TestContainerIngressCreatesCorrectly(t *testing.T) {
 }
 
 func TestContainerIngressSetsDisabled(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, containerIngressDisabled)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, containerIngressDisabled)
 
 	co, err := c.FindResource("container_ingress.testing")
 	assert.NoError(t, err)

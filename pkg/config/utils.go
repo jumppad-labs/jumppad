@@ -4,7 +4,24 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
+
+// CreateConfigFromStrings is a test helper function that
+// parses the given contents strings as HCL and returns a Shipyard Config
+func CreateConfigFromStrings(t *testing.T, contents ...string) (*Config, string) {
+	dir := CreateTestFiles(t, contents...)
+
+	c := New()
+	err := ParseFolder(dir, c, false, "", false, []string{}, nil, "")
+	assert.NoError(t, err)
+
+	err = ParseReferences(c)
+	assert.NoError(t, err)
+
+	return c, dir
+}
 
 // createsTestFiles creates a temporary directory and
 // stores temp files into it
@@ -13,16 +30,29 @@ import (
 // usage:
 // d, cleanup := createTestFiles(t, `cluster "abc" {}`, `docs "bcdf" {}`)
 // defer cleanup()
-func createTestFiles(t *testing.T, contents ...string) (string, func()) {
+func CreateTestFiles(t *testing.T, contents ...string) string {
 	dir := createTempDirectory(t)
 
 	for _, x := range contents {
-		createTestFile(t, dir, x)
+		createNamedFile(t, dir, "*.hcl", x)
 	}
 
-	return dir, func() {
+	t.Cleanup(func() {
 		removeTestFiles(t, dir)
-	}
+	})
+
+	return dir
+}
+
+// createTestFile creates a hcl file from the given contents
+func CreateTestFile(t *testing.T, contents string) string {
+	dir := createTempDirectory(t)
+
+	t.Cleanup(func() {
+		removeTestFiles(t, dir)
+	})
+
+	return createNamedFile(t, dir, "*.hcl", contents)
 }
 
 // create a temporary directory
@@ -33,11 +63,6 @@ func createTempDirectory(t *testing.T) string {
 	}
 
 	return dir
-}
-
-// creates a temporary file for testing
-func createTestFile(t *testing.T, dir, contents string) string {
-	return createNamedFile(t, dir, "*.hcl", contents)
 }
 
 func createNamedFile(t *testing.T, dir, name, contents string) string {

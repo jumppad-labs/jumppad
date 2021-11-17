@@ -14,8 +14,7 @@ func TestNewCreatesContainer(t *testing.T) {
 }
 
 func TestContainerCreatesCorrectly(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, containerDefault)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, containerDefault)
 
 	co, err := c.FindResource("container.testing")
 	assert.NoError(t, err)
@@ -26,8 +25,7 @@ func TestContainerCreatesCorrectly(t *testing.T) {
 }
 
 func TestContainerSetsDisabled(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, containerDisabled)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, containerDisabled)
 
 	co, err := c.FindResource("container.testing")
 	assert.NoError(t, err)
