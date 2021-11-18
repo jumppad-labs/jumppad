@@ -39,7 +39,7 @@ func (c *ExecRemote) Create() error {
 		// Not using existing target create new container
 		id, err := c.createRemoteExecContainer()
 		if err != nil {
-			return xerrors.Errorf("Unable to create container for remote exec: %w", err)
+			return xerrors.Errorf("Unable to create container for exec_remote.%s: %w", c.config.Name, err)
 		}
 
 		targetID = id
@@ -127,7 +127,13 @@ func (c *ExecRemote) createRemoteExecContainer() (string, error) {
 		return "", err
 	}
 
-	return c.client.CreateContainer(cc)
+	id, err := c.client.CreateContainer(cc)
+	if err != nil {
+		c.log.Error("Error creating container for remote exec", "ref", c.config.Name, "image", c.config.Image, "networks", c.config.Networks, "volumes", c.config.Volumes)
+		return "", err
+	}
+
+	return id, err
 }
 
 // Destroy statisfies the interface requirements but is not used

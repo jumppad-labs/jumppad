@@ -1277,7 +1277,6 @@ func buildContext() *hcl.EvalContext {
 		},
 		Type: function.StaticReturnType(cty.Number),
 		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
-			fmt.Println(args[0].Type().FriendlyName())
 			if len(args) == 1 && args[0].Type().IsCollectionType() || args[0].Type().IsTupleType() {
 				i := args[0].ElementIterator()
 				if i.Next() {

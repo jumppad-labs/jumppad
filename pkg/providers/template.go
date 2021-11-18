@@ -32,7 +32,6 @@ func parseVars(value map[string]cty.Value) map[string]interface{} {
 	vars := map[string]interface{}{}
 
 	for k, v := range value {
-		fmt.Println(k, v.Type().FriendlyName(), v)
 		vars[k] = castVar(v)
 	}
 
