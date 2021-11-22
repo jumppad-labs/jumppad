@@ -1,5 +1,80 @@
 # Change Log
 
+## version v0.3.37
+* Adds capability for complex variable types and variable interpolation in templates. Previously,
+all `vars` in `template` resources were interpreted as strings. This change now allows richer types
+and where possible preserves the original type. For example, you can now define a variable with an array
+of integers and then loop over this array in a template.
+
+```javascript
+variable "bool_var" {
+	default = true
+}
+
+variable "num_var" {
+	default = 13
+}
+
+variable "str_var" {
+	default = "Abc"
+}
+
+variable "other_ports" {
+	default = [2000,2001]
+}
+
+template "fetch_consul_resources" {
+  source = <<EOF
+
+bind_addr = "{{ GetPrivateInterfaces | attr \"address\" }}"
+client_addr = "0.0.0.0"
+data_dir = "#{{ .Vars.data_dir }}"
+datacenter = "dc1"
+
+enabled = #{{ .Vars.enabled }}
+not_enabled = #{{ .Vars.not_enabled }}
+bool_var = #{{ .Vars.bool_var }}
+num_var = #{{ .Vars.num_var }}
+string_var = "#{{ .Vars.string_var }}"
+
+ports {
+	#{{ range .Vars.ports }}
+  grpc = #{{ . }}
+	#{{ end }}
+}
+
+other_ports {
+	#{{ range .Vars.other_ports }}
+  grpc_other = #{{ . }}
+	#{{ end }}
+}
+	EOF
+
+	destination = "./out.txt"
+
+  vars = {
+		other_ports = var.other_ports
+		bool_var = var.bool_var
+		string_var = var.str_var
+		num_var = var.num_var
+		data_dir = "something"
+		enabled = true
+		not_enabled = false
+		ports = [8502, 8500]
+		port = 8342
+		config = {
+			a = 1
+			names = ["foo","bar"]
+		}
+  }
+}
+
+* Adds new interpolation function `len`, this returns the length of an array or map variable.
+
+* Upgrade default Kubernetes version to `v1.22.3`
+* Upgrade default Nomad version to `v1.2.0`
+```
+
 ## version v0.3.35
 * Fix bug with Nomad clusters when using exec or java drivers
 * Update Nomad base version to 1.1.6
@@ -15,7 +90,7 @@
 ## version v0.3.28
 * Add bash completion for `logs` command
 * Format status output to make clearer
-* Add new Nomad verison 1.1.3
+* Add new Nomad version 1.1.3
 * Return error message when resource has no name
 
 ## version v0.3.1
