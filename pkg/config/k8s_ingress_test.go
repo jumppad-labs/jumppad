@@ -14,8 +14,7 @@ func TestNewCreatesK8sIngress(t *testing.T) {
 }
 
 func TestK8sIngressCreatesCorrectly(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, k8sIngressDefault)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, k8sIngressDefault)
 
 	cl, err := c.FindResource("k8s_ingress.testing")
 	assert.NoError(t, err)
@@ -25,8 +24,7 @@ func TestK8sIngressCreatesCorrectly(t *testing.T) {
 	assert.Equal(t, PendingCreation, cl.Info().Status)
 }
 func TestK8sIngressSetsDisabled(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, k8sIngressDisabled)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, k8sIngressDisabled)
 
 	cl, err := c.FindResource("k8s_ingress.testing")
 	assert.NoError(t, err)

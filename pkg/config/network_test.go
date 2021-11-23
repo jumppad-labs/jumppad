@@ -14,8 +14,7 @@ func TestNewCreatesNetwork(t *testing.T) {
 }
 
 func TestNetworkCreatesCorrectly(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, networkDefault)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, networkDefault)
 
 	cl, err := c.FindResource("network.test")
 	assert.NoError(t, err)
@@ -26,8 +25,7 @@ func TestNetworkCreatesCorrectly(t *testing.T) {
 }
 
 func TestNetworkSetsDisabled(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, networkDisabled)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, networkDisabled)
 
 	cl, err := c.FindResource("network.test")
 	assert.NoError(t, err)

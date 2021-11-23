@@ -14,8 +14,7 @@ func TestNewCreatesNomadJob(t *testing.T) {
 }
 
 func TestNomadJobCreatesCorrectly(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, nomadJobDefault)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, nomadJobDefault)
 
 	cl, err := c.FindResource("nomad_job.test")
 	assert.NoError(t, err)
@@ -26,8 +25,7 @@ func TestNomadJobCreatesCorrectly(t *testing.T) {
 }
 
 func TestNomadJobSetsDisabled(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, nomadJobDisabled)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, nomadJobDisabled)
 
 	cl, err := c.FindResource("nomad_job.test")
 	assert.NoError(t, err)

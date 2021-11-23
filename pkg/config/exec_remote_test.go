@@ -15,8 +15,7 @@ func TestNewCreatesExecRemote(t *testing.T) {
 }
 
 func TestExecRemoteCreatesCorrectly(t *testing.T) {
-	c, dir, cleanup := setupTestConfig(t, execRemoteRelative)
-	defer cleanup()
+	c, dir := CreateConfigFromStrings(t, execRemoteRelative)
 
 	ex, err := c.FindResource("exec_remote.setup_vault")
 	assert.NoError(t, err)
@@ -32,8 +31,7 @@ func TestExecRemoteCreatesCorrectly(t *testing.T) {
 }
 
 func TestExecRemoteSetsDisabled(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, execRemoteDisabled)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, execRemoteDisabled)
 
 	ex, err := c.FindResource("exec_remote.setup_vault")
 	assert.NoError(t, err)

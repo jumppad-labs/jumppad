@@ -494,6 +494,7 @@ func TestParseProcessesShipyardFunctions(t *testing.T) {
 	assert.Equal(t, utils.GetDockerHost(), cc.EnvVar["docker_host"])
 	assert.Equal(t, ip, cc.EnvVar["shipyard_ip"])
 	assert.Equal(t, clusterIP, cc.EnvVar["cluster_api"])
+	assert.Equal(t, "2", cc.EnvVar["var_len"])
 }
 
 /*

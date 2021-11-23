@@ -14,8 +14,7 @@ func TestNewCreatesNomadCluster(t *testing.T) {
 }
 
 func TestNomadClusterCreatesCorrectly(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, nomadClusterDefault)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, nomadClusterDefault)
 
 	cl, err := c.FindResource("nomad_cluster.test")
 	assert.NoError(t, err)
@@ -26,8 +25,7 @@ func TestNomadClusterCreatesCorrectly(t *testing.T) {
 }
 
 func TestNomadClusterSetsDisabled(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, nomadClusterDisabled)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, nomadClusterDisabled)
 
 	cl, err := c.FindResource("nomad_cluster.test")
 	assert.NoError(t, err)
