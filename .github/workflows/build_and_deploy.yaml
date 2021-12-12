@@ -20,11 +20,11 @@ jobs:
       - name: Get dependencies
         run: |
           go version
-          go get -v -t ./...
+          CGO_ENABLED=0 go get -v -t ./...
 
       - name: Unit Test
         run: |
-          go test -v -race -coverprofile=coverage.txt -covermode=atomic -short ./...
+          CGO_ENABLED=0 go test -v -race -coverprofile=coverage.txt -covermode=atomic -short ./...
 
       - name: Upload Code Coverage
         uses: codecov/codecov-action@v1
