@@ -11,6 +11,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	volumetypes "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
+	specs "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // Docker defines an interface for a Docker client
@@ -20,6 +21,7 @@ type Docker interface {
 		config *container.Config,
 		hostConfig *container.HostConfig,
 		networkingConfig *network.NetworkingConfig,
+		platform *specs.Platform,
 		containerName string,
 	) (container.ContainerCreateCreatedBody, error)
 	ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)

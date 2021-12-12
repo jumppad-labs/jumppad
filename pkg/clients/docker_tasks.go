@@ -248,6 +248,7 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 		dc,
 		hc,
 		nc,
+		nil,
 		utils.FQDN(c.Name, string(c.Type)),
 	)
 	if err != nil {

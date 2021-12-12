@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/containers/podman/v3/pkg/bindings/containers"
 	"github.com/docker/docker/api/types"
 )
 
@@ -73,6 +74,7 @@ func (b *SystemImpl) OpenBrowser(uri string) error {
 // working correctly
 func (b *SystemImpl) Preflight() (string, error) {
 	dockerPass := true
+	podmanPass := true
 	gitPass := true
 	errors := ""
 	output := ""
@@ -85,6 +87,14 @@ func (b *SystemImpl) Preflight() (string, error) {
 		dockerPass = false
 	} else {
 		output += fmt.Sprintf(" [ %s ] Docker\n", fmt.Sprintf(Green, "  OK   "))
+	}
+
+	if checkPodman() != nil {
+		output += fmt.Sprintf(" [ %s ] Podman\n", fmt.Sprintf(Red, " ERROR "))
+		errors += "* Unable to connect to Podman, ensure Podman is installed and running.\n"
+		podmanPass = false
+	} else {
+		output += fmt.Sprintf(" [ %s ] Podman\n", fmt.Sprintf(Green, "  OK   "))
 	}
 
 	if checkGit() != nil {
@@ -104,7 +114,7 @@ func (b *SystemImpl) Preflight() (string, error) {
 		}
 	}
 
-	if !dockerPass || !gitPass {
+	if (!dockerPass && !podmanPass) || !gitPass {
 		return fmt.Sprintf("%s\n\n%s", output, errors), fmt.Errorf("Errors preflighting system")
 	}
 
@@ -175,6 +185,22 @@ func checkDocker() error {
 
 	_, err = d.ContainerList(context.Background(), types.ContainerListOptions{All: true})
 	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func checkPodman() error {
+	p, err := NewPodman()
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	_, err = containers.List(p, &containers.ListOptions{})
+	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
