@@ -11,6 +11,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
 	volumetypes "github.com/docker/docker/api/types/volume"
+	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -33,6 +34,7 @@ func (m *MockDocker) ContainerCreate(
 	config *container.Config,
 	hostConfig *container.HostConfig,
 	networkingConfig *network.NetworkingConfig,
+	platform *specs.Platform,
 	containerName string,
 ) (container.ContainerCreateCreatedBody, error) {
 
