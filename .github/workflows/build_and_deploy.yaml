@@ -70,8 +70,8 @@ jobs:
 
       - name: Run tests
         run: |
-          go run main.go purge
-          go run main.go test ${{matrix.folder}}
+          CGO_ENABLED=0 go run main.go purge
+          CGO_ENABLED=0 go run main.go test ${{matrix.folder}}
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
