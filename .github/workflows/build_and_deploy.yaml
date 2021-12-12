@@ -67,6 +67,10 @@ jobs:
         uses: actions/setup-go@v1
         with:
           go-version: 1.16.10
+      
+      - name: Install dependencies for Podman
+        run: |
+          sudo apt install -y libbtrfs-dev pkg-config libgpgme-dev libdevmapper-dev 
 
       - name: Run tests
         run: |
@@ -93,6 +97,11 @@ jobs:
         uses: actions/setup-go@v1
         with:
           go-version: 1.16.10
+      
+      - name: Install dependencies for Podman
+        run: |
+          sudo apt install -y libbtrfs-dev pkg-config libgpgme-dev libdevmapper-dev 
+
 
       - name: E2E test for build binary
         run: make test_e2e_cmd
@@ -145,6 +154,10 @@ jobs:
         uses: actions/setup-go@v1
         with:
           go-version: 1.16.10
+      
+      - name: Install dependencies for Podman
+        run: |
+          sudo apt install -y libbtrfs-dev pkg-config libgpgme-dev libdevmapper-dev 
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v1
@@ -290,6 +303,10 @@ jobs:
         uses: actions/setup-go@v1
         with:
           go-version: 1.16.10
+      
+      - name: Install dependencies for Podman
+        run: |
+          sudo apt install -y libbtrfs-dev pkg-config libgpgme-dev libdevmapper-dev 
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
