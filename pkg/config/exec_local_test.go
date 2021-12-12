@@ -14,8 +14,7 @@ func TestNewCreatesExecLocal(t *testing.T) {
 }
 
 func TestExecLocalCreatesCorrectly(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, execLocalRelative)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, execLocalRelative)
 
 	ex, err := c.FindResource("exec_local.setup_vault")
 	assert.NoError(t, err)
@@ -28,8 +27,7 @@ func TestExecLocalCreatesCorrectly(t *testing.T) {
 }
 
 func TestExecLocalSetsDisabled(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, execLocalDisabled)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, execLocalDisabled)
 
 	ex, err := c.FindResource("exec_local.setup_vault")
 	assert.NoError(t, err)

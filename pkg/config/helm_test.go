@@ -14,8 +14,7 @@ func TestNewCreatesHelm(t *testing.T) {
 }
 
 func TestHelmCreatesCorrectly(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, helmDefault)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, helmDefault)
 
 	h, err := c.FindResource("helm.testing")
 	assert.NoError(t, err)
@@ -26,8 +25,7 @@ func TestHelmCreatesCorrectly(t *testing.T) {
 }
 
 func TestHelmSetsDisabled(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, helmDisabled)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, helmDisabled)
 
 	h, err := c.FindResource("helm.testing")
 	assert.NoError(t, err)

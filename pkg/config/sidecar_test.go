@@ -14,8 +14,7 @@ func TestNewCreatesSidecar(t *testing.T) {
 }
 
 func TestSidecarCreatesCorrectly(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, sidecarDefault)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, sidecarDefault)
 
 	cl, err := c.FindResource("sidecar.test")
 	assert.NoError(t, err)
@@ -26,8 +25,7 @@ func TestSidecarCreatesCorrectly(t *testing.T) {
 }
 
 func TestSidecarSetsDisabled(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, sidecarDisabled)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, sidecarDisabled)
 
 	cl, err := c.FindResource("sidecar.test")
 	assert.NoError(t, err)

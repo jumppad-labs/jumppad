@@ -14,8 +14,7 @@ func TestNewCreatesK8sConfig(t *testing.T) {
 }
 
 func TestK8sConfigCreatesCorrectly(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, k8sConfigValid)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, k8sConfigValid)
 
 	cc, err := c.FindResource("k8s_config.test")
 	assert.NoError(t, err)
@@ -29,8 +28,7 @@ func TestK8sConfigCreatesCorrectly(t *testing.T) {
 }
 
 func TestK8sConfigSetsDisabled(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, k8sConfigDisabled)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, k8sConfigDisabled)
 
 	cc, err := c.FindResource("k8s_config.test")
 	assert.NoError(t, err)
@@ -39,8 +37,7 @@ func TestK8sConfigSetsDisabled(t *testing.T) {
 }
 
 func TestMakesPathAbsolute(t *testing.T) {
-	c, base, cleanup := setupTestConfig(t, k8sConfigValid)
-	defer cleanup()
+	c, base := CreateConfigFromStrings(t, k8sConfigValid)
 
 	kc, err := c.FindResource("k8s_config.test")
 	assert.NoError(t, err)

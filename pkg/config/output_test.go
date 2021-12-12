@@ -14,8 +14,7 @@ func TestNewCreatesOutput(t *testing.T) {
 }
 
 func TestOutputCreatesCorrectly(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, outputDefault)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, outputDefault)
 
 	cl, err := c.FindResource("output.test")
 	assert.NoError(t, err)
@@ -26,8 +25,7 @@ func TestOutputCreatesCorrectly(t *testing.T) {
 }
 
 func TestOutputSetsDisabled(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, outputDisabled)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, outputDisabled)
 
 	cl, err := c.FindResource("output.test")
 	assert.NoError(t, err)

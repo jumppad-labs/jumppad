@@ -14,8 +14,7 @@ func TestNewCreatesModule(t *testing.T) {
 }
 
 func TestModuleCreatesCorrectly(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, moduleDefault)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, moduleDefault)
 
 	_, err := c.FindResource("module.testing")
 	assert.Error(t, err) // should not add a resource

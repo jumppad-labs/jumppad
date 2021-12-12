@@ -15,7 +15,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.16.3
+          go-version: 1.16.10
 
       - name: Get dependencies
         run: |
@@ -62,7 +62,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.16.3
+          go-version: 1.16.10
 
       - name: Run tests
         run: |
@@ -88,7 +88,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.16.3
+          go-version: 1.16.10
 
       - name: E2E test for build binary
         run: make test_e2e_cmd
@@ -140,7 +140,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.16.3
+          go-version: 1.16.10
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v1
@@ -285,7 +285,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.16.3
+          go-version: 1.16.10
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -435,23 +435,21 @@ jobs:
     - name: Generate SHA256 checksums
       run: |
         cd dist
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.rpm > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz > checksums.txt
         sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz > checksums.txt
         sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.tar.gz > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.deb > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.rpm > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_windows_armv6.zip > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.deb > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_windows_armv7.zip > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.rpm > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.deb > checksums.txt
         sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.tar.gz > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.deb > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.deb > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.deb > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.deb > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.rpm > checksums.txt
         sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.rpm > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.rpm > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.rpm > checksums.txt
         sha256sum shipyard_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip > checksums.txt
         sha256sum shipyard_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.deb > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip > checksums.txt
 
     - name: Release
       uses: softprops/action-gh-release@v1
@@ -460,23 +458,21 @@ jobs:
         token: ${{ secrets.GH_TOKEN }}
         files: |
           dist/checksums.txt
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.rpm
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz
           dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz
           dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.tar.gz
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.deb
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.rpm
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_windows_armv6.zip
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.deb
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_windows_armv7.zip
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.rpm
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.deb
           dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.tar.gz
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.rpm
           dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.rpm
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.rpm
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.rpm
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.deb
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.deb
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.deb
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.deb
+          dist/shipyard_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip
           dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
           dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.deb
 
   brew:
     name: Release to HomeBrew

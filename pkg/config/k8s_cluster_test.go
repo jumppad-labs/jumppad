@@ -14,8 +14,7 @@ func TestNewCreatesK8sCluster(t *testing.T) {
 }
 
 func TestK8sClusterCreatesCorrectly(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, clusterDefault)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, clusterDefault)
 
 	cl, err := c.FindResource("k8s_cluster.testing")
 	assert.NoError(t, err)
@@ -26,8 +25,7 @@ func TestK8sClusterCreatesCorrectly(t *testing.T) {
 }
 
 func TestK8sClusterSetsDisabled(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, clusterDisabled)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, clusterDisabled)
 
 	cl, err := c.FindResource("k8s_cluster.testing")
 	assert.NoError(t, err)

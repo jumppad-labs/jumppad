@@ -159,7 +159,7 @@ func TestClusterK3PullsImageUsingBase(t *testing.T) {
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "PullImage", config.Image{Name: "shipyardrun/k3s:v1.18.16"}, false)
+	md.AssertCalled(t, "PullImage", config.Image{Name: "shipyardrun/k3s:" + k3sBaseVersion}, false)
 }
 
 func TestClusterK3PullsImageUsingCustom(t *testing.T) {

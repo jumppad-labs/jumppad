@@ -13,8 +13,7 @@ func TestNewCreatesIngress(t *testing.T) {
 	assert.Equal(t, TypeIngress, c.Type)
 }
 func TestIngressCreatesCorrectly(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, ingressDefault)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, ingressDefault)
 
 	cl, err := c.FindResource("ingress.testing")
 	assert.NoError(t, err)
@@ -24,8 +23,7 @@ func TestIngressCreatesCorrectly(t *testing.T) {
 	assert.Equal(t, PendingCreation, cl.Info().Status)
 }
 func TestIngressSetsDisabled(t *testing.T) {
-	c, _, cleanup := setupTestConfig(t, ingressDisabled)
-	defer cleanup()
+	c, _ := CreateConfigFromStrings(t, ingressDisabled)
 
 	cl, err := c.FindResource("ingress.testing")
 	assert.NoError(t, err)
