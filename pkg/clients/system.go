@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/containers/podman/v3/pkg/bindings/containers"
 	"github.com/docker/docker/api/types"
 )
 
@@ -194,13 +193,11 @@ func checkDocker() error {
 func checkPodman() error {
 	p, err := NewPodman()
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 
-	_, err = containers.List(p, &containers.ListOptions{})
+	_, err = p.ContainerList(context.Background(), types.ContainerListOptions{All: true})
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 

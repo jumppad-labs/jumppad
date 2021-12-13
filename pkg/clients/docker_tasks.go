@@ -180,13 +180,25 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 			bindOptions = &mount.BindOptions{Propagation: bp, NonRecursive: vc.BindPropagationNonRecursive}
 		}
 
+		// if mount is a volume and the type is not read only set the options
+		var volumeOptions *mount.VolumeOptions
+		if t == mount.TypeVolume && !vc.ReadOnly {
+			volumeOptions = &mount.VolumeOptions{
+				DriverConfig: &mount.Driver{
+					Name:    "local",
+					Options: map[string]string{"o": "rw"},
+				},
+			}
+		}
+
 		// create the mount
 		mounts = append(mounts, mount.Mount{
-			Type:        t,
-			Source:      vc.Source,
-			Target:      vc.Destination,
-			ReadOnly:    vc.ReadOnly,
-			BindOptions: bindOptions,
+			Type:          t,
+			Source:        vc.Source,
+			Target:        vc.Destination,
+			ReadOnly:      vc.ReadOnly,
+			BindOptions:   bindOptions,
+			VolumeOptions: volumeOptions,
 		})
 	}
 
@@ -259,9 +271,14 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 	// all containers should have custom networks
 	// only add networks if we are not adding the container network
 	if len(c.Networks) > 0 && !hc.NetworkMode.IsContainer() {
-		err := d.c.NetworkDisconnect(context.Background(), "bridge", cont.ID, true)
+		contJSON, err := d.c.ContainerInspect(context.Background(), cont.ID)
 		if err != nil {
-			return "", xerrors.Errorf("Unable to remove container from the default bridge network: %w", err)
+			return "", xerrors.Errorf("Unable to get contianer info: %w", err)
+		}
+
+		// detatch all existing networks
+		for k, _ := range contJSON.NetworkSettings.Networks {
+			d.c.NetworkDisconnect(context.Background(), k, cont.ID, true)
 		}
 
 		for _, n := range c.Networks {
@@ -589,6 +606,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 			Source:      volumeID,
 			Destination: "/cache",
 			Type:        "volume",
+			ReadOnly:    false,
 		},
 	}
 	cc.Command = []string{"tail", "-f", "/dev/null"}
@@ -598,12 +616,24 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 		return nil, xerrors.Errorf("Unable to create dummy container for importing files: %w", err)
 	}
 
-	defer d.RemoveContainer(tmpID, true)
+	//defer d.RemoveContainer(tmpID, true)
+
+	for i := 0; i < 10; i++ {
+		// report the status
+		info, err := d.c.ContainerInspect(context.Background(), tmpID)
+		if err != nil {
+			return nil, err
+		}
+
+		d.l.Debug("Container info", "status", info.State.Status)
+		time.Sleep(1 * time.Second)
+	}
 
 	// create the directory paths ensure unix paths for containers
 	destPath := filepath.ToSlash(filepath.Join("/cache", path))
 	err = d.ExecuteCommand(tmpID, []string{"mkdir", "-p", destPath}, nil, "/", "", "", nil)
 	if err != nil {
+		d.l.Error("Failed to create destination volume", "error", err)
 		return nil, fmt.Errorf("Unable to create destination path %s in volume: %s", destPath, err)
 	}
 
@@ -727,7 +757,6 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 	streamContext, cancelStream := context.WithCancel(context.Background())
 	// if we have a writer stream the logs from the container to the writer
 	if writer != nil {
-
 		ttyOut := streams.NewOut(writer)
 		ttyErr := streams.NewOut(writer)
 
@@ -750,11 +779,11 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 		}
 	}
 
-	err = d.c.ContainerExecStart(context.Background(), execid.ID, types.ExecStartCheck{})
-	if err != nil {
-		cancelStream()
-		return xerrors.Errorf("unable to start exec process: %w", err)
-	}
+	//err = d.c.ContainerExecStart(context.Background(), execid.ID, types.ExecStartCheck{})
+	//if err != nil {
+	//	cancelStream()
+	//	return xerrors.Errorf("unable to start exec process: %w", err)
+	//}
 
 	// loop until the container finishes execution
 	for {
@@ -771,7 +800,7 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 			}
 
 			cancelStream()
-			return xerrors.Errorf("container exec failed with exit code %d", i.ExitCode)
+			return xerrors.Errorf("container exec command: %s failed with exit code %d", command, i.ExitCode)
 		}
 
 		time.Sleep(1 * time.Second)

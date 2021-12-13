@@ -1,17 +1,28 @@
 package clients
 
 import (
-	"context"
+	"fmt"
+	"os/user"
 
-	"github.com/containers/podman/v3/pkg/bindings"
+	"github.com/docker/docker/client"
 )
 
 // NewPodman creates a new Podman client
-func NewPodman() (context.Context, error) {
-	conn, err := bindings.NewConnection(context.Background(), "unix:///run/podman/podman.sock")
+func NewPodman() (Docker, error) {
+	u, err := user.Current()
 	if err != nil {
 		return nil, err
 	}
 
-	return conn, nil
+	cli, err := client.NewClientWithOpts(
+		client.WithHost(fmt.Sprintf(
+			"unix:///var/run/user/%s/podman/podman.sock",
+			u.Uid,
+		)),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return cli, nil
 }
