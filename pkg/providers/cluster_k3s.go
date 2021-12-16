@@ -500,14 +500,6 @@ func (c *K8sCluster) destroyK3s() error {
 	}
 
 	for _, i := range ids {
-		// remove from the networks
-		for _, n := range c.config.Networks {
-			err := c.client.DetachNetwork(n.Name, i)
-			if err != nil {
-				return err
-			}
-		}
-
 		err := c.client.RemoveContainer(i, false)
 		if err != nil {
 			return err

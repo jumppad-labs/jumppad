@@ -153,10 +153,11 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 	// by default the container should NOT be attached to a network
 	nc.EndpointsConfig = make(map[string]*network.EndpointSettings)
 
-	// Create volume mounts
+	// Create mounts
 	mounts := make([]mount.Mount, 0)
-	for _, vc := range c.Volumes {
+	volumes := []string{}
 
+	for _, vc := range c.Volumes {
 		// default mount type to bind
 		t := mount.TypeBind
 
@@ -204,6 +205,18 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 			bindOptions = &mount.BindOptions{Propagation: bp, NonRecursive: vc.BindPropagationNonRecursive}
 		}
 
+		// Volumes in podman are mounted read only by default, we need to add the :z parameter to
+		// ensure that the correct selinux flags are set so that we can write to these volumes
+		if t == mount.TypeVolume {
+			readOnly := ""
+			if vc.ReadOnly {
+				readOnly = ":ro"
+			}
+
+			volumes = append(volumes, fmt.Sprintf("%s:%s:z%s", vc.Source, vc.Destination, readOnly))
+			continue
+		}
+
 		// create the mount
 		mounts = append(mounts, mount.Mount{
 			Type:        t,
@@ -215,6 +228,7 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 	}
 
 	hc.Mounts = mounts
+	hc.Binds = volumes
 
 	// create the ports config
 	ports := createPublishedPorts(c.Ports)
@@ -234,10 +248,8 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 			hc.PortBindings[k] = portRanges.PortBindings[k]
 		}
 	}
-	//dc.ExposedPorts = ports.ExposedPorts
-	//hc.PortBindings = ports.PortBindings
 
-	// is this a privlidged container
+	// is this a priviledged container
 	hc.Privileged = c.Privileged
 
 	// are we attaching the container to a sidecar network?
@@ -279,13 +291,19 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 		return "", err
 	}
 
-	// first remove the container from the bridge network if we are adding custom networks
-	// all containers should have custom networks
-	// only add networks if we are not adding the container network
+	// first remove the container from the default network if we are adding custom networks
 	if len(c.Networks) > 0 && !hc.NetworkMode.IsContainer() {
-		err := d.c.NetworkDisconnect(context.Background(), "bridge", cont.ID, true)
+		info, err := d.c.ContainerInspect(context.Background(), cont.ID)
 		if err != nil {
-			return "", xerrors.Errorf("Unable to remove container from the default bridge network: %w", err)
+			return "", xerrors.Errorf("Unable to remove container from the default network: %w", err)
+		}
+
+		// loop through all attached networks and remove the defaults
+		for k, _ := range info.NetworkSettings.Networks {
+			err := d.c.NetworkDisconnect(context.Background(), k, cont.ID, true)
+			if err != nil {
+				d.l.Warn("Unable to remove container from the network", "name", k, "error", err)
+			}
 		}
 
 		for _, n := range c.Networks {
@@ -765,6 +783,8 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 	defer stream.Close()
 
 	streamContext, cancelStream := context.WithCancel(context.Background())
+	defer cancelStream()
+
 	// if we have a writer stream the logs from the container to the writer
 	if writer != nil {
 
@@ -776,7 +796,6 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 		go func() {
 			defer close(errCh)
 			errCh <- func() error {
-
 				streamer := streams.NewHijackedStreamer(nil, ttyOut, nil, ttyOut, ttyErr, stream, false, "", d.l)
 
 				return streamer.Stream(streamContext)
@@ -785,32 +804,22 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 
 		if err := <-errCh; err != nil {
 			d.l.Error("unable to hijack exec stream: %s", err)
-			cancelStream()
 			return err
 		}
-	}
-
-	err = d.c.ContainerExecStart(context.Background(), execid.ID, types.ExecStartCheck{})
-	if err != nil {
-		cancelStream()
-		return xerrors.Errorf("unable to start exec process: %w", err)
 	}
 
 	// loop until the container finishes execution
 	for {
 		i, err := d.c.ContainerExecInspect(context.Background(), execid.ID)
 		if err != nil {
-			cancelStream()
 			return xerrors.Errorf("unable to determine status of exec process: %w", err)
 		}
 
 		if !i.Running {
 			if i.ExitCode == 0 {
-				cancelStream()
 				return nil
 			}
 
-			cancelStream()
 			return xerrors.Errorf("container exec failed with exit code %d", i.ExitCode)
 		}
 
