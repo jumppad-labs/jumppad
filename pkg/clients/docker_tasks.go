@@ -409,9 +409,8 @@ func (d *DockerTasks) PullImage(image config.Image, force bool) error {
 		d.l.Error("Unable to add image name to cache", "error", err)
 	}
 
-	// write the output to /dev/null
-	// TODO this stuff needs to be logged correctly
-	io.Copy(ioutil.Discard, out)
+	// write the output to the debug log
+	io.Copy(d.l.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}), out)
 
 	return nil
 }
@@ -610,6 +609,44 @@ func (d *DockerTasks) CopyLocalDockerImagesToVolume(images []string, volume stri
 	defer importMutex.Unlock()
 
 	savedImages := []string{}
+
+	// first check that the images are in the local cache
+	for n, i := range images {
+		// first check the short tag like envoy-proxy/envoy:latest
+		args := filters.NewArgs()
+		args.Add("reference", i)
+
+		sum, err := d.c.ImageList(context.Background(), types.ImageListOptions{Filters: args})
+		if err != nil {
+			return nil, xerrors.Errorf("unable to list images in local Docker cache: %w", err)
+		}
+
+		// we have image
+		if len(sum) > 0 {
+			d.l.Debug("Image exists in local cache", "image", i)
+			continue
+		}
+
+		// check the canonical name like docker.io/library/envoy-proxy/envoy:latest as this might be a podman server
+		in := makeImageCanonical(i)
+
+		args = filters.NewArgs()
+		args.Add("reference", in)
+
+		sum, err = d.c.ImageList(context.Background(), types.ImageListOptions{Filters: args})
+		if err != nil {
+			return nil, xerrors.Errorf("unable to list images in local Docker cache: %w", err)
+		}
+
+		if len(sum) > 0 {
+			d.l.Debug("Image exists in local cache", "image", in)
+			// update the image name in the collection to the canonical name
+			images[n] = in
+			continue
+		}
+
+		return nil, fmt.Errorf("unable to find image %s in the local Docker cache, please pull the image before attempting to copy to a volume", i)
+	}
 
 	for _, i := range images {
 		compressedImageName := fmt.Sprintf("%s", base64.StdEncoding.EncodeToString([]byte(i)))
