@@ -28,7 +28,6 @@ import (
 	"github.com/docker/docker/pkg/term"
 	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/go-hclog"
-	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/shipyard-run/shipyard/pkg/clients/streams"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/utils"
@@ -284,7 +283,7 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 		dc,
 		hc,
 		nc,
-		&specs.Platform{},
+		nil,
 		utils.FQDN(c.Name, string(c.Type)),
 	)
 	if err != nil {
