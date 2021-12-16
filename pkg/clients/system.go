@@ -2,7 +2,6 @@ package clients
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -11,8 +10,6 @@ import (
 	"runtime"
 	"strings"
 	"time"
-
-	"github.com/docker/docker/api/types"
 )
 
 const (
@@ -182,23 +179,29 @@ func checkDocker() error {
 		return err
 	}
 
-	_, err = d.ContainerList(context.Background(), types.ContainerListOptions{All: true})
-	if err != nil {
-		return err
+	dt := NewDockerTasks(d, nil, nil, nil)
+
+	// check that the server is a docker engine not podman
+	// if Docker there will be a component called "Engine"
+	if dt.EngineType != EngineTypeDocker {
+		return fmt.Errorf("Platform is not Docker")
 	}
 
 	return nil
 }
 
 func checkPodman() error {
-	p, err := NewPodman()
+	d, err := NewDocker()
 	if err != nil {
 		return err
 	}
 
-	_, err = p.ContainerList(context.Background(), types.ContainerListOptions{All: true})
-	if err != nil {
-		return err
+	dt := NewDockerTasks(d, nil, nil, nil)
+
+	// check that the server is a docker engine not podman
+	// if Docker there will be a component called "Engine"
+	if dt.EngineType != EngineTypePodman {
+		return fmt.Errorf("Platform is not Podman")
 	}
 
 	return nil

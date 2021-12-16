@@ -252,3 +252,13 @@ func (m *MockDocker) ImageBuild(ctx context.Context, buildContext io.Reader, opt
 
 	return types.ImageBuildResponse{}, args.Error(1)
 }
+
+func (m *MockDocker) ServerVersion(ctx context.Context) (types.Version, error) {
+	args := m.Called(ctx)
+
+	if ver, ok := args.Get(0).(types.Version); ok {
+		return ver, args.Error(1)
+	}
+
+	return types.Version{}, args.Error(1)
+}
