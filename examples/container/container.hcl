@@ -1,9 +1,9 @@
 variable "consul_version" {
-  default = "1.8.1"
+  default = "1.10.6"
 }
 
 variable "envoy_version" {
-  default = "1.14.3"
+  default = "1.18.4"
 }
 
 template "consul_config" {
@@ -117,7 +117,7 @@ sidecar "envoy" {
   target = "container.consul"
 
   image   {
-    name = "envoyproxy/envoy-alpine:v${var.envoy_version}"
+    name = "envoyproxy/envoy:v${var.envoy_version}"
   }
 
   command = ["tail", "-f", "/dev/null"]

@@ -1,6 +1,6 @@
 container "consul" {
   image {
-    name = "consul:1.10.1"
+    name = "consul:1.10.6"
   }
 
   command = ["consul", "agent", "-config-file=/config/config.hcl"]
