@@ -22,6 +22,8 @@ func TestCopyFromContainerCopiesFile(t *testing.T) {
 	src := "/output/file.hcl"
 
 	md := &mocks.MockDocker{}
+	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
+
 	mic := &clients.ImageLog{}
 	md.On("CopyFromContainer", mock.Anything, id, src).Return(
 		ioutil.NopCloser(bytes.NewBufferString(fileContent)),
@@ -47,6 +49,8 @@ func TestCopyFromContainerReturnsErrorOnDockerError(t *testing.T) {
 	src := "/output/file.hcl"
 
 	md := &mocks.MockDocker{}
+	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
+
 	mic := &clients.ImageLog{}
 	md.On("CopyFromContainer", mock.Anything, id, src).Return(
 		nil,

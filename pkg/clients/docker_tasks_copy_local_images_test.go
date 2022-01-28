@@ -12,7 +12,6 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
@@ -27,6 +26,7 @@ var testCopyLocalVolume = "images"
 // Create happy path mocks
 func testCreateCopyLocalMocks() *mocks.MockDocker {
 	mk := &mocks.MockDocker{}
+	mk.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 
 	mk.On("ImageSave", mock.Anything, mock.Anything).Return(
 		ioutil.NopCloser(bytes.NewBufferString("test")),
@@ -49,7 +49,8 @@ func testCreateCopyLocalMocks() *mocks.MockDocker {
 
 	mk.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	mk.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+	// always return a local image
+	mk.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return([]types.ImageSummary{types.ImageSummary{}}, nil)
 
 	mk.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).
 		Return(ioutil.NopCloser(strings.NewReader("hello world")), nil)
@@ -178,10 +179,8 @@ func TestCopyLocalCreatesTempContainer(t *testing.T) {
 	assert.Equal(t, "tail", cfg.Cmd[0])
 
 	// test mounts volume
-	assert.Len(t, hc.Mounts, 1)
-	assert.Equal(t, testCopyLocalVolume, hc.Mounts[0].Source)
-	assert.Equal(t, "/cache", hc.Mounts[0].Target)
-	assert.Equal(t, mount.TypeVolume, hc.Mounts[0].Type)
+	assert.Len(t, hc.Binds, 1)
+	assert.Equal(t, "images:/cache:z", hc.Binds[0])
 }
 
 func TestCopyLocalTempContainerFailsReturnError(t *testing.T) {

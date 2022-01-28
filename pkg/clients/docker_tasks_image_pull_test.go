@@ -17,6 +17,7 @@ import (
 
 func setupImagePullMocks() (*mocks.MockDocker, *mocks.ImageLog) {
 	md := &mocks.MockDocker{}
+	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 	md.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 	md.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).Return(
 		ioutil.NopCloser(strings.NewReader("hello world")),

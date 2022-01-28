@@ -1114,8 +1114,8 @@ github.com/seccomp/libseccomp-golang v0.9.1/go.mod h1:GbW5+tmTXfcxTToHLXlScSlAvW
 github.com/sergi/go-diff v1.0.0/go.mod h1:0CfEIISq7TuYL3j771MWULgwwjU+GofnZX9QAmXWZgo=
 github.com/sergi/go-diff v1.1.0 h1:we8PVUC3FE2uYfodKH/nBHMSetSfHDR6scGdBi+erh0=
 github.com/sergi/go-diff v1.1.0/go.mod h1:STckp+ISIX8hZLjrqAeVduY0gWCT9IjLuqbuNXdaHfM=
-github.com/shipyard-run/connector v0.0.18 h1:KXCVcTojUfJ0QP5mHG4VWt2txTgwkNgkISSVMjNczLU=
-github.com/shipyard-run/connector v0.0.18/go.mod h1:hEKWnx/tRxSVoGPUeoSUSPwpos+8ceTQF5/gdIOST/I=
+github.com/shipyard-run/connector v0.1.0 h1:qmSY3StxYCHteIHtCFnjnSVQFOEPAvaKu8klccdqrWI=
+github.com/shipyard-run/connector v0.1.0/go.mod h1:hEKWnx/tRxSVoGPUeoSUSPwpos+8ceTQF5/gdIOST/I=
 github.com/shipyard-run/gohup v0.2.2 h1:yIJhQ7BItGd2cZmWeuxCneTNriIxLGaPtMt1FsW191A=
 github.com/shipyard-run/gohup v0.2.2/go.mod h1:jgPnkGXOn4ca6tCWUHw2FUhhvxiMskROiRIoYMYEYHM=
 github.com/shipyard-run/pty v1.1.12-0.20210531091229-b834701fbcc6 h1:1Q4lxUwRGbZZCQQQftmhRhZ7GlWwQv/ukvj6bbqqhlI=

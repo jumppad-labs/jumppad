@@ -161,8 +161,8 @@ func TestApplyCallsProviderInCorrectOrder(t *testing.T) {
 	// should have called in order, will either be the network or the output variable
 	assert.Contains(t, []string{"docker-cache", "cloud", "KUBECONFIG"}, (*mp)[0].Config().Info().Name)
 	assert.Contains(t, []string{"docker-cache", "cloud", "KUBECONFIG"}, (*mp)[1].Config().Info().Name)
-	assert.Contains(t, []string{"docker-cache", "cloud", "KUBECONFIG"}, (*mp)[2].Config().Info().Name)
 
+	assert.Contains(t, []string{"docker-cache", "KUBECONFIG", "k3s"}, (*mp)[2].Config().Info().Name)
 	assert.Contains(t, []string{"k3s"}, (*mp)[3].Config().Info().Name)
 
 	// due to paralel nature of the DAG, these elements can appear in any order
@@ -289,7 +289,7 @@ func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
 	assert.NoError(t, err)
 
 	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 8)
+	testAssertMethodCalled(t, mp, "Destroy", 9)
 }
 
 func TestDestroyNotCallsProviderDestroyForResourcesDisabled(t *testing.T) {

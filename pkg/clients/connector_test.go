@@ -181,7 +181,12 @@ func testListServicesCallsList(t *testing.T) {
 	}, 2*time.Second, 100*time.Millisecond)
 
 	ts := mocks.NewMockConnectorServer()
-	ts.On("ListService").Return([]*shipyard.Service{&shipyard.Service{Id: "tester"}}, nil)
+	ts.On("ListServices", mock.Anything, mock.Anything).Return(
+		&shipyard.ListResponse{
+			Services: []*shipyard.Service{&shipyard.Service{Id: "tester"}},
+		},
+		nil,
+	)
 
 	_, err := ts.Start(suiteOptions.GrpcBind, suiteCertBundle.RootCertPath, suiteCertBundle.RootKeyPath, suiteCertBundle.LeafCertPath, suiteCertBundle.LeafKeyPath)
 	assert.NoError(t, err)
@@ -195,5 +200,5 @@ func testListServicesCallsList(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, svc, 1)
 
-	ts.AssertCalled(t, "ListServices")
+	ts.AssertCalled(t, "ListServices", mock.Anything, mock.Anything)
 }

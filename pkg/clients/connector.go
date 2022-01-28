@@ -378,7 +378,7 @@ func (c *ConnectorImpl) ListServices() ([]*shipyard.Service, error) {
 		return nil, err
 	}
 
-	lr, err := cl.ListServices(context.Background(), &shipyard.NullMessage{}, nil)
+	lr, err := cl.ListServices(context.Background(), &shipyard.NullMessage{})
 	if err != nil {
 		return nil, err
 	}

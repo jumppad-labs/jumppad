@@ -20,6 +20,7 @@ func testBuildMockSetup() *mocks.MockDocker {
 	writerOutput = append([]byte{1}, writerOutput...)
 
 	mk := &mocks.MockDocker{}
+	mk.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 	mk.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return([]types.ImageSummary{{ID: "abc"}}, nil)
 	mk.On("ImageBuild", mock.Anything, mock.Anything, mock.Anything).Return(
 		types.ImageBuildResponse{
