@@ -42,6 +42,7 @@ func TestConnectorSuite(t *testing.T) {
 	t.Run("Starts Connector correctly", testStartsConnector)
 	t.Run("Calls expose", testExposeServiceCallsExpose)
 	t.Run("Calls remove", testRemoveServiceCallsRemove)
+	t.Run("Calls list", testListServicesCallsList)
 }
 
 func testGenerateCreatesBundle(t *testing.T) {
@@ -170,4 +171,29 @@ func testRemoveServiceCallsRemove(t *testing.T) {
 	assert.NoError(t, err)
 
 	ts.AssertCalled(t, "DestroyService", mock.Anything, r)
+}
+
+func testListServicesCallsList(t *testing.T) {
+	// ensure the socket has been released from the previous test
+	assert.Eventually(t, func() bool {
+		_, err := net.Dial("tcp", suiteOptions.GrpcBind)
+		return err != nil
+	}, 2*time.Second, 100*time.Millisecond)
+
+	ts := mocks.NewMockConnectorServer()
+	ts.On("ListService").Return([]*shipyard.Service{&shipyard.Service{Id: "tester"}}, nil)
+
+	_, err := ts.Start(suiteOptions.GrpcBind, suiteCertBundle.RootCertPath, suiteCertBundle.RootKeyPath, suiteCertBundle.LeafCertPath, suiteCertBundle.LeafKeyPath)
+	assert.NoError(t, err)
+
+	t.Cleanup(func() {
+		ts.Stop()
+	})
+
+	c := NewConnector(suiteOptions)
+	svc, err := c.ListServices()
+	assert.NoError(t, err)
+	assert.Len(t, svc, 1)
+
+	ts.AssertCalled(t, "ListServices")
 }
