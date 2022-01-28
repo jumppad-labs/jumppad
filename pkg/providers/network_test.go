@@ -89,13 +89,15 @@ func TestNetworkCreatesNatWhenNoBridge(t *testing.T) {
 	md, p := setupNetworkTests(c)
 
 	removeOn(&md.Mock, "NetworkList")
+	removeOn(&md.Mock, "NetworkCreate")
 	md.On("NetworkList", mock.Anything, mock.Anything).Return(nil, nil)
+	md.On("NetworkCreate", mock.Anything, mock.Anything, mock.Anything).Once().Return(nil, fmt.Errorf("boom"))
+	md.On("NetworkCreate", mock.Anything, mock.Anything, mock.Anything).Once().Return(nil, nil)
 
 	p.Create()
 
-	md.AssertCalled(t, "NetworkCreate", mock.Anything, mock.Anything, mock.Anything)
-
-	params := md.Calls[1].Arguments
+	md.AssertNumberOfCalls(t, "NetworkCreate", 2)
+	params := md.Calls[2].Arguments
 	nco := params[2].(types.NetworkCreate)
 
 	assert.Equal(t, "nat", nco.Driver)

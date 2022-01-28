@@ -22,15 +22,32 @@ import (
 
 var lock = sync.Mutex{}
 
-func setupTests(returnVals map[string]error) (Engine, *[]*mocks.MockProvider, func()) {
-	return setupTestsBase(returnVals, "")
+func setupTests(t *testing.T, returnVals map[string]error) (Engine, *[]*mocks.MockProvider) {
+	return setupTestsBase(t, returnVals, "")
 }
 
-func setupTestsWithState(returnVals map[string]error, state string) (Engine, *[]*mocks.MockProvider, func()) {
-	return setupTestsBase(returnVals, state)
+func setupTestsWithState(t *testing.T, returnVals map[string]error, state string) (Engine, *[]*mocks.MockProvider) {
+	return setupTestsBase(t, returnVals, state)
 }
 
-func setupState(state string) func() {
+func setupTestsBase(t *testing.T, returnVals map[string]error, state string) (Engine, *[]*mocks.MockProvider) {
+	log.SetOutput(ioutil.Discard)
+
+	p := &[]*mocks.MockProvider{}
+
+	cl := &Clients{}
+	e := &EngineImpl{
+		clients:     cl,
+		log:         hclog.NewNullLogger(),
+		getProvider: generateProviderMock(p, returnVals),
+	}
+
+	setupState(t, state)
+
+	return e, p
+}
+
+func setupState(t *testing.T, state string) {
 	// set the home folder to a tmpFolder for the tests
 	dir, err := ioutils.TempDir("", "")
 	if err != nil {
@@ -54,25 +71,10 @@ func setupState(state string) func() {
 		}
 	}
 
-	return func() {
+	t.Cleanup(func() {
 		os.Setenv(utils.HomeEnvName(), home)
 		os.RemoveAll(dir)
-	}
-}
-
-func setupTestsBase(returnVals map[string]error, state string) (Engine, *[]*mocks.MockProvider, func()) {
-	log.SetOutput(ioutil.Discard)
-
-	p := &[]*mocks.MockProvider{}
-
-	cl := &Clients{}
-	e := &EngineImpl{
-		clients:     cl,
-		log:         hclog.NewNullLogger(),
-		getProvider: generateProviderMock(p, returnVals),
-	}
-
-	return e, p, setupState(state)
+	})
 }
 
 func generateProviderMock(mp *[]*mocks.MockProvider, returnVals map[string]error) getProviderFunc {
@@ -118,8 +120,7 @@ func TestNewCreatesClients(t *testing.T) {
 }
 
 func TestApplyWithSingleFile(t *testing.T) {
-	e, mp, cleanup := setupTests(nil)
-	defer cleanup()
+	e, mp := setupTests(t, nil)
 
 	_, err := e.Apply("../../examples/single_file/container.hcl")
 	assert.NoError(t, err)
@@ -131,8 +132,7 @@ func TestApplyWithSingleFile(t *testing.T) {
 }
 
 func TestApplyAddsImageCache(t *testing.T) {
-	e, _, cleanup := setupTests(nil)
-	defer cleanup()
+	e, _ := setupTests(t, nil)
 
 	_, err := e.Apply("../../examples/single_file/container.hcl")
 	assert.NoError(t, err)
@@ -142,8 +142,7 @@ func TestApplyAddsImageCache(t *testing.T) {
 }
 
 func TestApplyWithSingleFileAndVariables(t *testing.T) {
-	e, mp, cleanup := setupTests(nil)
-	defer cleanup()
+	e, mp := setupTests(t, nil)
 
 	_, err := e.ApplyWithVariables("../../examples/single_file/container.hcl", nil, "../../examples/single_file/default.vars")
 	assert.NoError(t, err)
@@ -154,41 +153,39 @@ func TestApplyWithSingleFileAndVariables(t *testing.T) {
 }
 
 func TestApplyCallsProviderInCorrectOrder(t *testing.T) {
-	e, mp, cleanup := setupTests(nil)
-	defer cleanup()
+	e, mp := setupTests(t, nil)
 
 	_, err := e.Apply("../../examples/single_k3s_cluster")
 	assert.NoError(t, err)
 
-	// should have called in order
-	assert.Equal(t, "cloud", (*mp)[0].Config().Info().Name)
+	// should have called in order, will either be the network or the output variable
+	assert.Contains(t, []string{"docker-cache", "cloud", "KUBECONFIG"}, (*mp)[0].Config().Info().Name)
+	assert.Contains(t, []string{"docker-cache", "cloud", "KUBECONFIG"}, (*mp)[1].Config().Info().Name)
+	assert.Contains(t, []string{"docker-cache", "cloud", "KUBECONFIG"}, (*mp)[2].Config().Info().Name)
 
-	// due to paralel nature of the DAG, these two elements will be first
-	assert.Contains(t, []string{"docker-cache", "k3s", "local_connector"}, (*mp)[1].Config().Info().Name)
+	assert.Contains(t, []string{"k3s"}, (*mp)[3].Config().Info().Name)
 
-	// due to paralel nature of the DAG, these two elements can appear in any order
-	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault", "vault-http", "consul-lan", "k3s"}, (*mp)[2].Config().Info().Name)
-	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault", "vault-http", "consul-lan", "k3s"}, (*mp)[3].Config().Info().Name)
-	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault", "vault-http", "consul-lan", "k3s"}, (*mp)[4].Config().Info().Name)
-	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault", "vault-http", "consul-lan", "k3s"}, (*mp)[5].Config().Info().Name)
-	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault", "vault-http", "consul-lan", "k3s"}, (*mp)[6].Config().Info().Name)
+	// due to paralel nature of the DAG, these elements can appear in any order
+	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "consul-lan", "k3s"}, (*mp)[4].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "consul-lan", "k3s"}, (*mp)[5].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "consul-lan", "k3s"}, (*mp)[6].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "consul-lan", "k3s"}, (*mp)[7].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault", "vault-http", "consul-lan", "k3s"}, (*mp)[8].Config().Info().Name)
 }
 
 func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
-	e, mp, cleanup := setupTests(nil)
-	defer cleanup()
+	e, mp := setupTests(t, nil)
 
 	_, err := e.Apply("../../examples/single_k3s_cluster")
 	assert.NoError(t, err)
 
 	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Create", 8)
+	testAssertMethodCalled(t, mp, "Create", 9)
 	//assert.Len(t, res, 4)
 }
 
 func TestApplyNotCallsProviderDestroyAndCreateForResourcesDisabled(t *testing.T) {
-	e, mp, cleanup := setupTestsWithState(nil, disabledState)
-	defer cleanup()
+	e, mp := setupTestsWithState(t, nil, disabledState)
 
 	_, err := e.Apply("")
 	assert.NoError(t, err)
@@ -207,8 +204,7 @@ func TestApplyNotCallsProviderDestroyAndCreateForResourcesDisabled(t *testing.T)
 }
 
 func TestApplyCallsProviderDestroyAndCreateForResourcesFailed(t *testing.T) {
-	e, mp, cleanup := setupTestsWithState(nil, failedState)
-	defer cleanup()
+	e, mp := setupTestsWithState(t, nil, failedState)
 
 	_, err := e.Apply("")
 	assert.NoError(t, err)
@@ -219,8 +215,7 @@ func TestApplyCallsProviderDestroyAndCreateForResourcesFailed(t *testing.T) {
 }
 
 func TestApplyCallsProviderDestroyForResourcesPendingModification(t *testing.T) {
-	e, mp, cleanup := setupTestsWithState(nil, modificationState)
-	defer cleanup()
+	e, mp := setupTestsWithState(t, nil, modificationState)
 
 	_, err := e.Apply("")
 	assert.NoError(t, err)
@@ -231,8 +226,7 @@ func TestApplyCallsProviderDestroyForResourcesPendingModification(t *testing.T) 
 }
 
 func TestApplyReturnsErrorWhenProviderDestroyForResourcesPendingorFailed(t *testing.T) {
-	e, mp, cleanup := setupTestsWithState(map[string]error{"dc1": fmt.Errorf("boom")}, failedState)
-	defer cleanup()
+	e, mp := setupTestsWithState(t, map[string]error{"dc1": fmt.Errorf("boom")}, failedState)
 
 	_, err := e.Apply("")
 	assert.Error(t, err)
@@ -243,30 +237,17 @@ func TestApplyReturnsErrorWhenProviderDestroyForResourcesPendingorFailed(t *test
 }
 
 func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
-	e, mp, cleanup := setupTests(map[string]error{"cloud": fmt.Errorf("boom")})
-	defer cleanup()
+	e, mp := setupTests(t, map[string]error{"cloud": fmt.Errorf("boom")})
 
 	_, err := e.Apply("../../examples/single_k3s_cluster")
 	assert.Error(t, err)
 
 	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Create", 1)
-}
-
-func TestApplyCallsProviderCreateErrorStopsExecution(t *testing.T) {
-	e, mp, cleanup := setupTests(map[string]error{"cloud": fmt.Errorf("boom")})
-	defer cleanup()
-
-	_, err := e.Apply("../../examples/single_k3s_cluster")
-	assert.Error(t, err)
-
-	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Create", 1)
+	testAssertMethodCalled(t, mp, "Create", 2)
 }
 
 func TestApplySetsStatusForEachResource(t *testing.T) {
-	e, mp, cleanup := setupTestsWithState(nil, mergedState)
-	defer cleanup()
+	e, mp := setupTestsWithState(t, nil, mergedState)
 
 	_, err := e.Apply("")
 	assert.NoError(t, err)
@@ -276,8 +257,7 @@ func TestApplySetsStatusForEachResource(t *testing.T) {
 }
 
 func TestParseConfig(t *testing.T) {
-	e, mp, cleanup := setupTests(nil)
-	defer cleanup()
+	e, mp := setupTests(t, nil)
 
 	err := e.ParseConfig("../../examples/single_file/container.hcl")
 	assert.NoError(t, err)
@@ -290,8 +270,7 @@ func TestParseConfig(t *testing.T) {
 }
 
 func TestParseWithVariables(t *testing.T) {
-	e, mp, cleanup := setupTests(nil)
-	defer cleanup()
+	e, mp := setupTests(t, nil)
 
 	err := e.ParseConfigWithVariables("../../examples/single_file/container.hcl", nil, "../../examples/single_file/default.vars")
 	assert.NoError(t, err)
@@ -304,8 +283,7 @@ func TestParseWithVariables(t *testing.T) {
 }
 
 func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
-	e, mp, cleanup := setupTests(nil)
-	defer cleanup()
+	e, mp := setupTests(t, nil)
 
 	err := e.Destroy("../../examples/single_k3s_cluster", true)
 	assert.NoError(t, err)
@@ -315,8 +293,7 @@ func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
 }
 
 func TestDestroyNotCallsProviderDestroyForResourcesDisabled(t *testing.T) {
-	e, mp, cleanup := setupTestsWithState(nil, disabledState)
-	defer cleanup()
+	e, mp := setupTestsWithState(t, nil, disabledState)
 
 	err := e.Destroy("", true)
 	assert.NoError(t, err)
@@ -334,46 +311,43 @@ func TestDestroyNotCallsProviderDestroyForResourcesDisabled(t *testing.T) {
 }
 
 func TestDestroyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
-	e, mp, cleanup := setupTests(map[string]error{"k3s": fmt.Errorf("boom")})
-	defer cleanup()
+	e, mp := setupTests(t, map[string]error{"k3s": fmt.Errorf("boom")})
 
 	err := e.Destroy("../../examples/single_k3s_cluster", true)
 	assert.Error(t, err)
 
 	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 6)
+	testAssertMethodCalled(t, mp, "Destroy", 7)
 }
 
 func TestDestroyFailSetsStatus(t *testing.T) {
-	e, mp, cleanup := setupTests(map[string]error{"cloud": fmt.Errorf("boom")})
-	defer cleanup()
+	e, mp := setupTests(t, map[string]error{"cloud": fmt.Errorf("boom")})
 
 	err := e.Destroy("../../examples/single_k3s_cluster", true)
 	assert.Error(t, err)
 
 	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 8)
-	assert.Equal(t, config.Failed, (*mp)[7].Config().Info().Status)
+	testAssertMethodCalled(t, mp, "Destroy", 9)
+	assert.Equal(t, config.Failed, (*mp)[8].Config().Info().Status)
 }
 
 func TestDestroyCallsProviderDestroyInCorrectOrder(t *testing.T) {
-	e, mp, cleanup := setupTests(nil)
-	defer cleanup()
+	e, mp := setupTests(t, nil)
 
 	err := e.Destroy("../../examples/single_k3s_cluster", true)
 	assert.NoError(t, err)
 
 	// due to paralel nature of the DAG, these elements can appear in any order
-	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "k3s"}, (*mp)[0].Config().Info().Name)
-	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "k3s"}, (*mp)[1].Config().Info().Name)
-	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "k3s"}, (*mp)[2].Config().Info().Name)
-	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "k3s"}, (*mp)[3].Config().Info().Name)
-	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "k3s"}, (*mp)[4].Config().Info().Name)
-	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "k3s"}, (*mp)[5].Config().Info().Name)
-	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "k3s"}, (*mp)[6].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[0].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[1].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[2].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[3].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[4].Config().Info().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[5].Config().Info().Name)
 
-	// network should be last to be removed
-	assert.Equal(t, "cloud", (*mp)[7].Config().Info().Name)
+	assert.Contains(t, []string{"k3s"}, (*mp)[6].Config().Info().Name)
+	assert.Contains(t, []string{"docker-cache"}, (*mp)[7].Config().Info().Name)
+	assert.Contains(t, []string{"cloud"}, (*mp)[8].Config().Info().Name)
 }
 
 func testAssertMethodCalled(t *testing.T, p *[]*mocks.MockProvider, method string, n int, args ...interface{}) {

@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/shipyard-run/shipyard/cmd"
 )
 
@@ -12,7 +10,4 @@ var date = "0000-00-00"
 
 func main() {
 	cmd.Execute(version, commit, date)
-}
-
-func newFunc() {
 }
