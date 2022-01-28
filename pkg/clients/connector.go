@@ -58,6 +58,9 @@ type Connector interface {
 
 	// RemoveService removes a previously exposed service
 	RemoveService(id string) error
+
+	// ListServices returns a slice of active services
+	ListServices() ([]*shipyard.Service, error)
 }
 
 var defaultArgs = []string{
@@ -361,6 +364,26 @@ func (c *ConnectorImpl) RemoveService(id string) error {
 	}
 
 	return nil
+}
+
+// ListServices lists all active services
+func (c *ConnectorImpl) ListServices() ([]*shipyard.Service, error) {
+	cb, err := c.GetLocalCertBundle(utils.CertsDir(""))
+	if err != nil {
+		return nil, err
+	}
+
+	cl, err := getClient(cb, c.options.GrpcBind)
+	if err != nil {
+		return nil, err
+	}
+
+	lr, err := cl.ListServices(context.Background(), &shipyard.NullMessage{}, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return lr.Services, nil
 }
 
 func getClient(cert *CertBundle, uri string) (shipyard.RemoteConnectionClient, error) {

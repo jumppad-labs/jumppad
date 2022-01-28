@@ -1,5 +1,5 @@
 variable "version" {
-  default = "consul:1.6.1"
+  default = "consul:1.10.6"
 }
 
 network "onprem" {

@@ -17,8 +17,8 @@ Feature: Modules
       | consul-container-http     | container_ingress |
       | consul-container-http-2   | container_ingress |
       | server.k3s                | k8s_cluster       |
-      | vault-http                | k8s_ingress       |
       | consul-http               | k8s_ingress       |
+      | vault-http                | ingress           |
       | docs                      | docs              |
     And a HTTP call to "http://consul.container.shipyard.run:8500/v1/agent/members" should result in status 200
     And a HTTP call to "http://vault-http.ingress.shipyard.run:18200" should result in status 200

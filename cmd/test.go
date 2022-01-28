@@ -313,12 +313,18 @@ func (cr *CucumberRunner) theFollowingResourcesShouldBeRunning(arg1 *godog.Table
 		rType := strings.TrimSpace(r.Cells[1].GetValue())
 		rName := strings.TrimSpace(r.Cells[0].GetValue())
 
-		if rType == "network" {
+		switch rType {
+		case "network":
 			err := cr.thereShouldBe1NetworkCalled(rName)
 			if err != nil {
 				return err
 			}
-		} else {
+		case "ingress":
+			err := cr.thereShouldBe1IngressCalled(rName)
+			if err != nil {
+				return err
+			}
+		default:
 			err := cr.thereShouldBeAResourceRunningCalled(rType, rName)
 			if err != nil {
 				return err
@@ -380,6 +386,21 @@ func (cr *CucumberRunner) thereShouldBe1NetworkCalled(arg1 string) error {
 
 	if len(n) != 1 {
 		return fmt.Errorf("Expected 1 network called %s to be created", arg1)
+	}
+
+	return nil
+}
+
+func (cr *CucumberRunner) thereShouldBe1IngressCalled(arg1 string) error {
+	args := filters.NewArgs()
+	args.Add("name", arg1)
+	n, err := cr.e.GetClients().Connector.ListServices()
+	if err != nil {
+		return err
+	}
+
+	if len(n) != 1 {
+		return fmt.Errorf("Expected 1 ingress called %s to be created", arg1)
 	}
 
 	return nil
