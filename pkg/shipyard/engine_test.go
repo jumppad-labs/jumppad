@@ -163,10 +163,10 @@ func TestApplyCallsProviderInCorrectOrder(t *testing.T) {
 	// should have called in order
 	assert.Equal(t, "cloud", (*mp)[0].Config().Info().Name)
 
-	// due to paralel nature of the DAG, these two elements will be first
-	assert.Contains(t, []string{"docker-cache", "k3s", "local_connector"}, (*mp)[1].Config().Info().Name)
+	// due to parallel nature of the DAG, these two elements will be first
+	assert.Contains(t, []string{"docker-cache", "k3s", "local_connector", "KUBECONFIG"}, (*mp)[1].Config().Info().Name)
 
-	// due to paralel nature of the DAG, these two elements can appear in any order
+	// due to parallel nature of the DAG, these two elements can appear in any order
 	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault", "vault-http", "consul-lan", "k3s"}, (*mp)[2].Config().Info().Name)
 	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault", "vault-http", "consul-lan", "k3s"}, (*mp)[3].Config().Info().Name)
 	assert.Contains(t, []string{"docker-cache", "consul-http", "consul", "vault", "vault-http", "consul-lan", "k3s"}, (*mp)[4].Config().Info().Name)
