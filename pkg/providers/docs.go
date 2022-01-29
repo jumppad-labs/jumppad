@@ -13,7 +13,7 @@ import (
 )
 
 const docsImageName = "shipyardrun/docs"
-const docsVersion = "v0.4.1"
+const docsVersion = "v0.4.2"
 
 const terminalImageName = "shipyardrun/terminal-server"
 const terminalVersion = "v0.2.0"
