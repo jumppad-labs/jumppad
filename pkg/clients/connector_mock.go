@@ -1,6 +1,9 @@
 package clients
 
-import "github.com/stretchr/testify/mock"
+import (
+	"github.com/shipyard-run/connector/protos/shipyard"
+	"github.com/stretchr/testify/mock"
+)
 
 type ConnectorMock struct {
 	mock.Mock
@@ -77,4 +80,13 @@ func (m *ConnectorMock) ExposeService(
 // RemoveService removes a previously exposed service
 func (m *ConnectorMock) RemoveService(id string) error {
 	return m.Called(id).Error(0)
+}
+
+func (m *ConnectorMock) ListServices() ([]*shipyard.Service, error) {
+	args := m.Called()
+	if svc, ok := args.Get(0).([]*shipyard.Service); ok {
+		return svc, args.Error(1)
+	}
+
+	return nil, args.Error(1)
 }

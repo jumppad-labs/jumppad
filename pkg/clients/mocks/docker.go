@@ -11,6 +11,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
 	volumetypes "github.com/docker/docker/api/types/volume"
+	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -33,6 +34,7 @@ func (m *MockDocker) ContainerCreate(
 	config *container.Config,
 	hostConfig *container.HostConfig,
 	networkingConfig *network.NetworkingConfig,
+	platform *specs.Platform,
 	containerName string,
 ) (container.ContainerCreateCreatedBody, error) {
 
@@ -249,4 +251,14 @@ func (m *MockDocker) ImageBuild(ctx context.Context, buildContext io.Reader, opt
 	}
 
 	return types.ImageBuildResponse{}, args.Error(1)
+}
+
+func (m *MockDocker) ServerVersion(ctx context.Context) (types.Version, error) {
+	args := m.Called(ctx)
+
+	if ver, ok := args.Get(0).(types.Version); ok {
+		return ver, args.Error(1)
+	}
+
+	return types.Version{}, args.Error(1)
 }

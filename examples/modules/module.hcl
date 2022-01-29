@@ -1,6 +1,6 @@
 module "k8s" {
   depends_on = ["module.consul"]
-  source     = "github.com/shipyard-run/shipyard//examples/single_k3s_cluster?ref=testing"
+  source     = "../single_k3s_cluster"
 }
 
 module "consul" {

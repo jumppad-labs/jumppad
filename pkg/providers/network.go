@@ -43,12 +43,7 @@ func (n *Network) Create() error {
 	}
 
 	// is the network name and subnet equal to one which already exists
-	bridgeExists := false
 	for _, ne := range nets {
-		if ne.Name == "bridge" {
-			bridgeExists = true
-		}
-
 		if ne.Name == n.config.Name {
 			for _, ci := range ne.IPAM.Config {
 				// check that the returned networks subnet matches the existing networks subnet
@@ -76,11 +71,22 @@ func (n *Network) Create() error {
 	}
 
 	// check the network drivers, if bridge is available use bridge, else use nat
-	driver := "bridge"
-	if !bridgeExists {
-		driver = "nat"
+	err = n.createWithDriver("bridge")
+	if err != nil {
+		// fall back to nat
+		err = n.createWithDriver("nat")
+		if err != nil {
+			return err
+		}
 	}
 
+	// set the state
+	n.config.Status = config.Applied
+
+	return err
+}
+
+func (n *Network) createWithDriver(driver string) error {
 	opts := types.NetworkCreate{
 		CheckDuplicate: true,
 		Driver:         driver,
@@ -95,13 +101,7 @@ func (n *Network) Create() error {
 		Attachable: true,
 	}
 
-	_, err = n.client.NetworkCreate(context.Background(), n.config.Name, opts)
-	if err != nil {
-		return err
-	}
-
-	// set the state
-	n.config.Status = config.Applied
+	_, err := n.client.NetworkCreate(context.Background(), n.config.Name, opts)
 
 	return err
 }

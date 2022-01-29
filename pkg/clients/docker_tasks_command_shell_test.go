@@ -16,6 +16,7 @@ import (
 
 func setupShellMocks() (*DockerTasks, *clients.MockDocker) {
 	md := &clients.MockDocker{}
+	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 	md.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(types.IDResponse{ID: "123"}, nil)
 	md.On("ContainerExecAttach", mock.Anything, "123", mock.Anything).Return(
 		types.HijackedResponse{

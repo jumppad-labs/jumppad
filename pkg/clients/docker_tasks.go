@@ -34,18 +34,41 @@ import (
 	"golang.org/x/xerrors"
 )
 
+const (
+	EngineTypeDocker = "Engine"
+	EngineTypePodman = "Podman Engine"
+)
+
 // DockerTasks is a concrete implementation of ContainerTasks which uses the Docker SDK
 type DockerTasks struct {
-	c     Docker
-	il    ImageLog
-	l     hclog.Logger
-	tg    *TarGz
-	force bool
+	EngineType string
+	c          Docker
+	il         ImageLog
+	l          hclog.Logger
+	tg         *TarGz
+	force      bool
 }
 
 // NewDockerTasks creates a DockerTasks with the given Docker client
 func NewDockerTasks(c Docker, il ImageLog, tg *TarGz, l hclog.Logger) *DockerTasks {
-	return &DockerTasks{c: c, il: il, tg: tg, l: l}
+	// set the engine type
+	ver, err := c.ServerVersion(context.Background())
+	if err != nil {
+		return nil
+	}
+
+	t := ""
+
+	for _, c := range ver.Components {
+		switch c.Name {
+		case EngineTypeDocker:
+			t = EngineTypeDocker
+		case EngineTypePodman:
+			t = EngineTypePodman
+		}
+	}
+
+	return &DockerTasks{EngineType: t, c: c, il: il, tg: tg, l: l}
 }
 
 // SetForcePull sets a global override for the DockerTasks, when set to true
@@ -129,10 +152,11 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 	// by default the container should NOT be attached to a network
 	nc.EndpointsConfig = make(map[string]*network.EndpointSettings)
 
-	// Create volume mounts
+	// Create mounts
 	mounts := make([]mount.Mount, 0)
-	for _, vc := range c.Volumes {
+	volumes := []string{}
 
+	for _, vc := range c.Volumes {
 		// default mount type to bind
 		t := mount.TypeBind
 
@@ -180,6 +204,18 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 			bindOptions = &mount.BindOptions{Propagation: bp, NonRecursive: vc.BindPropagationNonRecursive}
 		}
 
+		// Volumes in podman are mounted read only by default, we need to add the :z parameter to
+		// ensure that the correct selinux flags are set so that we can write to these volumes
+		if t == mount.TypeVolume {
+			readOnly := ""
+			if vc.ReadOnly {
+				readOnly = ":ro"
+			}
+
+			volumes = append(volumes, fmt.Sprintf("%s:%s:z%s", vc.Source, vc.Destination, readOnly))
+			continue
+		}
+
 		// create the mount
 		mounts = append(mounts, mount.Mount{
 			Type:        t,
@@ -191,6 +227,7 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 	}
 
 	hc.Mounts = mounts
+	hc.Binds = volumes
 
 	// create the ports config
 	ports := createPublishedPorts(c.Ports)
@@ -210,10 +247,8 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 			hc.PortBindings[k] = portRanges.PortBindings[k]
 		}
 	}
-	//dc.ExposedPorts = ports.ExposedPorts
-	//hc.PortBindings = ports.PortBindings
 
-	// is this a privlidged container
+	// is this a priviledged container
 	hc.Privileged = c.Privileged
 
 	// are we attaching the container to a sidecar network?
@@ -248,19 +283,26 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 		dc,
 		hc,
 		nc,
+		nil,
 		utils.FQDN(c.Name, string(c.Type)),
 	)
 	if err != nil {
 		return "", err
 	}
 
-	// first remove the container from the bridge network if we are adding custom networks
-	// all containers should have custom networks
-	// only add networks if we are not adding the container network
+	// first remove the container from the default network if we are adding custom networks
 	if len(c.Networks) > 0 && !hc.NetworkMode.IsContainer() {
-		err := d.c.NetworkDisconnect(context.Background(), "bridge", cont.ID, true)
+		info, err := d.c.ContainerInspect(context.Background(), cont.ID)
 		if err != nil {
-			return "", xerrors.Errorf("Unable to remove container from the default bridge network: %w", err)
+			return "", xerrors.Errorf("Unable to remove container from the default network: %w", err)
+		}
+
+		// loop through all attached networks and remove the defaults
+		for k, _ := range info.NetworkSettings.Networks {
+			err := d.c.NetworkDisconnect(context.Background(), k, cont.ID, true)
+			if err != nil {
+				d.l.Warn("Unable to remove container from the network", "name", k, "error", err)
+			}
 		}
 
 		for _, n := range c.Networks {
@@ -310,18 +352,34 @@ func (d *DockerTasks) ContainerInfo(id string) (interface{}, error) {
 func (d *DockerTasks) PullImage(image config.Image, force bool) error {
 	in := makeImageCanonical(image.Name)
 
-	args := filters.NewArgs()
-	args.Add("reference", image.Name)
-
 	// only pull if image is not in current registry so check to see if the image is present
 	// if force then skil this check
 	if !force && !d.force {
+		args := filters.NewArgs()
+		args.Add("reference", image.Name)
+
 		sum, err := d.c.ImageList(context.Background(), types.ImageListOptions{Filters: args})
 		if err != nil {
 			return xerrors.Errorf("unable to list images in local Docker cache: %w", err)
 		}
 
-		// if we have images do not pull
+		// we have images do not pull
+		if len(sum) > 0 {
+			d.l.Debug("Image exists in local cache", "image", image.Name)
+
+			return nil
+		}
+
+		// check the canonical name as this might be a podman docker server
+		args = filters.NewArgs()
+		args.Add("reference", in)
+
+		sum, err = d.c.ImageList(context.Background(), types.ImageListOptions{Filters: args})
+		if err != nil {
+			return xerrors.Errorf("unable to list images in local Docker cache: %w", err)
+		}
+
+		// we have images do not pull
 		if len(sum) > 0 {
 			d.l.Debug("Image exists in local cache", "image", image.Name)
 
@@ -350,9 +408,8 @@ func (d *DockerTasks) PullImage(image config.Image, force bool) error {
 		d.l.Error("Unable to add image name to cache", "error", err)
 	}
 
-	// write the output to /dev/null
-	// TODO this stuff needs to be logged correctly
-	io.Copy(ioutil.Discard, out)
+	// write the output to the debug log
+	io.Copy(d.l.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}), out)
 
 	return nil
 }
@@ -363,7 +420,7 @@ func (d *DockerTasks) FindContainerIDs(containerName string, typeName config.Res
 
 	args := filters.NewArgs()
 	// By default Docker will wildcard searches, use regex to return the absolute
-	args.Add("name", fmt.Sprintf("^/%s$", fullName))
+	args.Add("name", fmt.Sprintf("^%s$", fullName))
 
 	opts := types.ContainerListOptions{Filters: args, All: true}
 
@@ -552,6 +609,44 @@ func (d *DockerTasks) CopyLocalDockerImagesToVolume(images []string, volume stri
 
 	savedImages := []string{}
 
+	// first check that the images are in the local cache
+	for n, i := range images {
+		// first check the short tag like envoy-proxy/envoy:latest
+		args := filters.NewArgs()
+		args.Add("reference", i)
+
+		sum, err := d.c.ImageList(context.Background(), types.ImageListOptions{Filters: args})
+		if err != nil {
+			return nil, xerrors.Errorf("unable to list images in local Docker cache: %w", err)
+		}
+
+		// we have image
+		if len(sum) > 0 {
+			d.l.Debug("Image exists in local cache", "image", i)
+			continue
+		}
+
+		// check the canonical name like docker.io/library/envoy-proxy/envoy:latest as this might be a podman server
+		in := makeImageCanonical(i)
+
+		args = filters.NewArgs()
+		args.Add("reference", in)
+
+		sum, err = d.c.ImageList(context.Background(), types.ImageListOptions{Filters: args})
+		if err != nil {
+			return nil, xerrors.Errorf("unable to list images in local Docker cache: %w", err)
+		}
+
+		if len(sum) > 0 {
+			d.l.Debug("Image exists in local cache", "image", in)
+			// update the image name in the collection to the canonical name
+			images[n] = in
+			continue
+		}
+
+		return nil, fmt.Errorf("unable to find image %s in the local Docker cache, please pull the image before attempting to copy to a volume", i)
+	}
+
 	for _, i := range images {
 		compressedImageName := fmt.Sprintf("%s", base64.StdEncoding.EncodeToString([]byte(i)))
 
@@ -724,6 +819,8 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 	defer stream.Close()
 
 	streamContext, cancelStream := context.WithCancel(context.Background())
+	defer cancelStream()
+
 	// if we have a writer stream the logs from the container to the writer
 	if writer != nil {
 
@@ -735,7 +832,6 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 		go func() {
 			defer close(errCh)
 			errCh <- func() error {
-
 				streamer := streams.NewHijackedStreamer(nil, ttyOut, nil, ttyOut, ttyErr, stream, false, "", d.l)
 
 				return streamer.Stream(streamContext)
@@ -744,32 +840,22 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 
 		if err := <-errCh; err != nil {
 			d.l.Error("unable to hijack exec stream: %s", err)
-			cancelStream()
 			return err
 		}
-	}
-
-	err = d.c.ContainerExecStart(context.Background(), execid.ID, types.ExecStartCheck{})
-	if err != nil {
-		cancelStream()
-		return xerrors.Errorf("unable to start exec process: %w", err)
 	}
 
 	// loop until the container finishes execution
 	for {
 		i, err := d.c.ContainerExecInspect(context.Background(), execid.ID)
 		if err != nil {
-			cancelStream()
 			return xerrors.Errorf("unable to determine status of exec process: %w", err)
 		}
 
 		if !i.Running {
 			if i.ExitCode == 0 {
-				cancelStream()
 				return nil
 			}
 
-			cancelStream()
 			return xerrors.Errorf("container exec failed with exit code %d", i.ExitCode)
 		}
 

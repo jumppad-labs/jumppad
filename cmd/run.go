@@ -183,8 +183,8 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 
 		go func() {
 			for range statusUpdate.C {
-				elapsedTime := time.Now().Sub(startTime).String()
-				logger.Info("Please wait, still creating resources [Elapsed Time: " + elapsedTime + "]")
+				elapsedTime := time.Now().Sub(startTime).Seconds()
+				logger.Info(fmt.Sprintf("Please wait, still creating resources [Elapsed Time: %f]", elapsedTime))
 			}
 		}()
 

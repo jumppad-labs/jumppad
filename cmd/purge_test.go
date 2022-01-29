@@ -38,6 +38,7 @@ func setupPurgeCommand(t *testing.T) (*cobra.Command, *mocks.MockDocker, *mocks.
 	}
 
 	mockDocker := &mocks.MockDocker{}
+	mockDocker.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 	mockDocker.On("ImageRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 	mockDocker.On("VolumeRemove", mock.Anything, mock.Anything, true).Return(nil)
 	mockDocker.On("ImageList", mock.Anything, mock.Anything).Return([]types.ImageSummary{}, nil)

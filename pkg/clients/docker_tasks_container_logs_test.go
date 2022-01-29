@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/docker/docker/api/types"
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/stretchr/testify/assert"
@@ -14,6 +15,7 @@ import (
 
 func TestContainerLogsCalled(t *testing.T) {
 	md := &mocks.MockDocker{}
+	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 	md.On("ContainerLogs", mock.Anything, mock.Anything, mock.Anything).Return(
 		ioutil.NopCloser(bytes.NewBufferString("test")),
 		fmt.Errorf("boom"),

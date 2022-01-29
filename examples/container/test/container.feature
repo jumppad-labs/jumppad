@@ -33,5 +33,5 @@ Scenario: Single Container from Local Blueprint with multiple runs
   Then I expect the exit code to be 0
   Examples:
     | consul            | envoy    |
-    | 1.8.0             | 1.14.3   |
-    | 1.7.3             | 1.14.3   |
+    | 1.11.1            | 1.18.4   |
+    | 1.10.6            | 1.18.4   |
