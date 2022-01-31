@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/docker/docker/api/types"
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/utils"
+	"golang.org/x/xerrors"
 )
 
 const cacheImage = "shipyardrun/docker-registry-proxy:0.6.3"
@@ -36,7 +38,7 @@ func (c *ImageCache) Create() error {
 
 	id := ""
 
-	if ids == nil || len(ids) == 0 {
+	if len(ids) == 0 {
 		var err error
 		id, err = c.createImageCache()
 		if err != nil {
@@ -47,29 +49,8 @@ func (c *ImageCache) Create() error {
 		id = ids[0]
 	}
 
-	// remove all networks first
-	// we should probably do a proper comparison
-	c.detachFromNetworks(id)
-
-	// connect to networks
-	for _, n := range c.config.DependsOn {
-		c.log.Debug("Connecting cache to network", "name", n)
-		target, err := c.config.FindDependentResource(n)
-		if err != nil {
-			// ignore this network
-			c.log.Warn("Unable to atttach cache to network, network does not exist", "name", n)
-			continue
-		}
-
-		err = c.client.AttachNetwork(target.Info().Name, id, nil, "")
-		if err != nil {
-			return fmt.Errorf("Unable to attach cache to network: %s", err)
-		}
-
-		c.config.Networks = append(c.config.Networks, n)
-	}
-
-	return nil
+	// add the cache the custom networks and remove any extra networks
+	return c.configureNetworks(id)
 }
 
 func (c *ImageCache) createImageCache() (string, error) {
@@ -137,25 +118,59 @@ func (c *ImageCache) Destroy() error {
 	return nil
 }
 
-func (c *ImageCache) detachFromNetworks(id string) {
-	for _, n := range c.config.Networks {
+// configureNetworks ensures that the cache is only attached to the required networks
+func (c *ImageCache) configureNetworks(id string) error {
+	// networks added
+	added := []string{}
+
+	for _, n := range c.config.DependsOn {
+		c.log.Debug("Connecting cache to network", "name", n)
 		target, err := c.config.FindDependentResource(n)
 		if err != nil {
-			// ignore this resource
+			// ignore this network
+			c.log.Warn("Unable to atttach cache to network, network does not exist", "name", n)
 			continue
 		}
 
-		if target.Info().Type == config.TypeNetwork {
-			c.log.Debug("Detaching container from network", "ref", c.config.Name, "id", id, "network", n)
+		err = c.client.AttachNetwork(target.Info().Name, id, nil, "")
+		if err != nil {
+			return fmt.Errorf("Unable to attach cache to network: %s", err)
+		}
 
-			err := c.client.DetachNetwork(target.Info().Name, id)
+		c.config.Networks = append(c.config.Networks, n)
+
+		added = append(added, target.Info().Name)
+	}
+
+	// now remove any extra networks such as the defaults
+	info, err := c.client.ContainerInfo(id)
+	if err != nil {
+		return xerrors.Errorf("Unable to remove container from the default network: %w", err)
+	}
+
+	// get all attached networks, we will disconnect these later
+	for k, _ := range info.(types.ContainerJSON).NetworkSettings.Networks {
+		if !contains(added, k) {
+			c.log.Debug("Detaching container from network", "ref", c.config.Name, "id", id, "network", k)
+
+			err := c.client.DetachNetwork(k, id)
 			if err != nil {
-				c.log.Error("Unable to detach network", "ref", c.config.Name, "network", target.Info().Name)
+				c.log.Warn("Unable to detach network", "ref", c.config.Name, "network", k)
 			}
 		}
 	}
 
-	c.config.Networks = []string{}
+	return nil
+}
+
+func contains(strings []string, s string) bool {
+	for _, in := range strings {
+		if in == s {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (c *ImageCache) Lookup() ([]string, error) {

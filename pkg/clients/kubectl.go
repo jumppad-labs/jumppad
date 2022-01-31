@@ -91,7 +91,7 @@ func (k *KubernetesImpl) setConfig() error {
 }
 
 // GetPodLogs returns a io.ReadCloser,err for a given pods' logs
-func (k *KubernetesImpl) GetPodLogs(ctx context.Context, podName, nameSpace string) (io.ReadCloser, error){
+func (k *KubernetesImpl) GetPodLogs(ctx context.Context, podName, nameSpace string) (io.ReadCloser, error) {
 	var plOpts v1.PodLogOptions
 	return k.clientset.CoreV1().Pods(nameSpace).GetLogs(podName, &plOpts).Stream(ctx)
 }
@@ -177,6 +177,9 @@ func (k *KubernetesImpl) HealthCheckPods(selectors []string, timeout time.Durati
 func (k *KubernetesImpl) healthCheckSingle(selector string, timeout time.Duration) error {
 	st := time.Now()
 	for {
+		// backoff
+		time.Sleep(2 * time.Second)
+
 		if time.Now().Sub(st) > timeout {
 			return fmt.Errorf("Timeout waiting for pods %s to start", selector)
 		}
@@ -214,9 +217,6 @@ func (k *KubernetesImpl) healthCheckSingle(selector string, timeout time.Duratio
 		if allRunning {
 			break
 		}
-
-		// backoff
-		time.Sleep(2 * time.Second)
 	}
 
 	return nil

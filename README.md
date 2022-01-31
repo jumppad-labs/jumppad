@@ -37,7 +37,6 @@ The following snippets are examples of things you can build with Shipyard, for m
 ```
 k8s_cluster "k3s" {
   driver  = "k3s" // default
-  version = "v1.0.0"
 
   nodes = 1 // default
 
@@ -160,6 +159,88 @@ container "consul" {
   }
 }
 ```
+
+## Podman support
+
+Podman support is experimental and at present many features such as Kubernetes clusters do not work with rootless podman and require root access.
+
+## Enable the podman socket
+
+Shipyard uses podmans API that is compatible with the Docker Enginer API. To enable this you need to run the podman socket as a group that your user has access to, the following example uses the `docker` group
+
+```
+sudo sed '/^SocketMode=.*/a SocketGroup=docker' -i /lib/systemd/system/podman.socket
+```
+
+Then emable the podman socket service
+
+```
+sudo systemctl daemon-reload
+
+sudo systemctl enable podman.socket
+sudo systemctl enable podman.service
+sudo systemctl start podman.socket
+sudo systemctl start podman.service
+```
+
+For sockets to be writable they also require execute permission on the parent folder
+
+```
+sudo chmod +x /run/podman
+```
+
+Point your DOCKER_HOST environment variable at the socket
+
+```
+export DOCKER_HOST=unix:///run/podman/podman.sock
+```
+
+If you have the Docker CLI install you should be able to contact the podman daemon using the standard Docker commands
+
+````
+docker ps
+```
+
+### Default network
+
+```
+➜ sudo podman network ls
+NETWORK ID    NAME    VERSION  PLUGINS
+2f259bab93aa  podman  0.4.0    bridge,portmap,firewall,tuning
+```
+
+### Registries
+
+Image pull silent ly fails if there are no registries defined in podmans /etc/containers/registries.conf
+
+```
+echo -e "[registries.search]\nregistries = ['docker.io']" | sudo tee /etc/containers/registries.conf
+```
+
+### DNS
+
+Multiple network cause DNS resolution problems
+https://github.com/containers/podman/issues/8399
+
+Enabling name resolution
+
+#### Install dnsmasq
+
+First ensure systemd is not using port 53
+https://www.linuxuprising.com/2020/07/ubuntu-how-to-free-up-port-53-used-by.html
+
+Install dnsmasq
+
+```
+sudo apt install dnsmasq
+```
+
+Configure dnsmasq for external name server resolution or external network connections will not work
+
+Install the podman dns plugin
+
+https://github.com/containers/dnsname/blob/main/README_PODMAN.md
+
 
 ## Contributing
 

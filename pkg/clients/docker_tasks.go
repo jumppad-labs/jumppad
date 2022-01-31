@@ -81,6 +81,10 @@ func (d *DockerTasks) SetForcePull(force bool) {
 func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 	d.l.Debug("Creating Docker Container", "ref", c.Name)
 
+	// ensure the image name is the full canonical image as Podman does not use the
+	// default docker.io registry
+	c.Image.Name = makeImageCanonical(c.Image.Name)
+
 	// create a unique name based on service network [container].[network].shipyard
 	// attach to networks
 	// - networkRef
@@ -292,19 +296,20 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 
 	// first remove the container from the default network if we are adding custom networks
 	if len(c.Networks) > 0 && !hc.NetworkMode.IsContainer() {
+		d.l.Debug("Remove container from default networks", "ref", c.Name)
+
 		info, err := d.c.ContainerInspect(context.Background(), cont.ID)
 		if err != nil {
 			return "", xerrors.Errorf("Unable to remove container from the default network: %w", err)
 		}
 
-		// loop through all attached networks and remove the defaults
+		// get all attached networks, we will disconnect these later
+		nets := []string{}
 		for k, _ := range info.NetworkSettings.Networks {
-			err := d.c.NetworkDisconnect(context.Background(), k, cont.ID, true)
-			if err != nil {
-				d.l.Warn("Unable to remove container from the network", "name", k, "error", err)
-			}
+			nets = append(nets, k)
 		}
 
+		// attach the custom networks
 		for _, n := range c.Networks {
 			net, err := c.FindDependentResource(n.Name)
 			if err != nil {
@@ -326,6 +331,17 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 				}
 
 				return "", xerrors.Errorf("Unable to connect container to network %s: %w", n.Name, err)
+			}
+		}
+
+		// disconnect the default networks
+		// for podman this needs to happen after we have attached to a network or it fails silently
+		for _, n := range nets {
+			d.l.Debug("Disconnectng network", "name", n, "ref", c.Name)
+
+			err := d.c.NetworkDisconnect(context.Background(), n, cont.ID, true)
+			if err != nil {
+				d.l.Warn("Unable to remove container from the network", "name", n, "ref", c.Name, "error", err)
 			}
 		}
 	}
@@ -395,7 +411,7 @@ func (d *DockerTasks) PullImage(image config.Image, force bool) error {
 		ipo.RegistryAuth = createRegistryAuth(image.Username, image.Password)
 	}
 
-	d.l.Debug("Pulling image", "image", image.Name)
+	d.l.Debug("Pulling image", "image", in)
 
 	out, err := d.c.ImagePull(context.Background(), in, ipo)
 	if err != nil {
