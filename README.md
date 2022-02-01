@@ -8,7 +8,7 @@
 
 ![](./shipyard_horizontal.png)
 
-Shipyard is a tool for building modern cloud native development environments. Using the Shipyard configuration language you can create Docker containers, Nomad/Kubernetes clusters and more. Shipyard understands terraform
+Shipyard is a tool for building modern cloud native development environments. Using the Shipyard configuration language you can create OCI containers, Nomad/Kubernetes clusters and more.
 
 ## Community
 Join our community on Discord: [https://discord.gg/ZuEFPJU69D](https://discord.gg/ZuEFPJU69D)
@@ -17,14 +17,11 @@ Join our community on Discord: [https://discord.gg/ZuEFPJU69D](https://discord.g
 ## Is Shipyard like Terraform?
 Kind of but more about local environments rather than infrastructure
 
-Docker Compose is one of our favourite tools but we found it does not manage dependencies particulary well. Compose also works on a really low level of abstraction. Shipyard addresses these missing features.
 ## Why not use Docker Compose?
+Docker Compose is one of our favourite tools but we found it does not manage dependencies particulary well. Compose also works on a really low level of abstraction. Shipyard addresses these missing features.
 
 ## Is Shipyard just for Docker?
-No, Shipyard is designed to work with Docker, Podman, Raw binaries, etc. At present we only have a Driver for Docker containers but others are on our Roadmap.
-
-## I have a huge environment how can Shipyard help?
-Shipyard v0.2.0 will ship with a remote connection capability, it will allow you to connect a Shipyard stack running locally to a remote cluster.
+No, Shipyard is designed to work with Docker, Podman, Raw binaries, etc. At present we only have a Driver for Docker and Podman, but others are on our Roadmap.
 
 ## Can I use Shipyard for anything other than Dev environments?
 Yes, Shipyard can be used to create interactive documentation for your applications and redistributable demo environments to show off your tool or product.

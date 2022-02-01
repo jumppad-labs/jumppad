@@ -68,9 +68,15 @@ jobs:
         with:
           go-version: 1.17
       
-      - name: Install dependencies for Podman
+      - name: Install dependencies for Podman tests
         run: |
-          sudo apt install -y libbtrfs-dev pkg-config libgpgme-dev libdevmapper-dev 
+          sudo apt install -y libbtrfs-dev pkg-config libgpgme-dev libdevmapper-dev podman dnsmasq
+      
+      - name: Setup Podman sock
+        run: |
+          sudo systemctl enable podman.socket
+          sudo systemctl enable podman.service
+          sudo podman info
 
       - name: Run tests
         run: |
