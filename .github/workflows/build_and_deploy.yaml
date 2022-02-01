@@ -72,16 +72,62 @@ jobs:
         run: |
           sudo apt install -y libbtrfs-dev pkg-config libgpgme-dev libdevmapper-dev podman dnsmasq
       
+      - name: Setup DNSMasq default nameserver resolution
+        run: |
+          echo "disable resovld listening on 53"
+          sudo /bin/bash -c 'echo "DNSStubListener=no" >> /etc/systemd/resolved.conf'
+          sudo /bin/bash -c 'echo "DNS=8.8.8.8" >> /etc/systemd/resolved.conf'
+          sudo systemctl restart systemd-resolved.service
+
+          echo "configure dnsmasq"
+          sudo /bin/bash -c 'echo "server=8.8.8.8" >> /etc/dnsmasq.conf'
+          sudo /bin/bash -c 'echo "server=1.1.1.1" >> /etc/dnsmasq.conf'
+          sudo systemctl restart dnsmasq
+
+          sudo /bin/bash -c 'echo "127.0.0.1 ubuntu" >> /etc/hosts'
+          echo ""
+          echo "resolvd:"
+          cat /etc/systemd/resolved.conf
+          echo ""
+          echo "dnsmasq:"
+          cat /etc/dnsmasq.conf
+          echo ""
+          echo "hosts:"
+          cat /etc/hosts
+      
       - name: Setup Podman sock
         run: |
           sudo systemctl enable podman.socket
           sudo systemctl enable podman.service
+          sudo systemctl start podman.service
           sudo podman info
-
-      - name: Run tests
+      
+      - name: Setup Podman DNS plugin
         run: |
-          go run main.go purge
-          go run main.go test ${{matrix.folder}}
+          cd ..
+          git clone https://github.com/containers/dnsname.git
+          cd dnsname
+          make
+          mkdir -p /usr/libexec/cni
+          sudo cp ./bin/dnsname /usr/libexec/cni
+          cd ../shipyard
+      
+      - name: Build a test binary
+        run: |
+          make install_local
+
+      - name: Run tests Docker
+        run: |
+          shipyard check
+          shipyard purge
+          shipyard test ${{matrix.folder}}
+      
+      - name: Run tests Podman
+        run: |
+          export DOCKER_HOST=unix:///run/podman/podman.sock
+          shipyard check
+          shipyard purge
+          shipyard test ${{matrix.folder}}
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
@@ -159,7 +205,11 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
+<<<<<<< HEAD
           go-version: 1.17
+=======
+          go-version: 1.17.6
+>>>>>>> b7a6232 (Update Go version to 1.17)
       
       - name: Install dependencies for Podman
         run: |
