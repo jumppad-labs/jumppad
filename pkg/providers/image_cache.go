@@ -41,7 +41,6 @@ func (c *ImageCache) Create() error {
 
 	// get a list of dependent networks for the resource
 	dependentNetworks := c.findDependentNetworks()
-	c.log.Info("attach to", "netowots", dependentNetworks)
 
 	if len(ids) == 0 {
 		var err error

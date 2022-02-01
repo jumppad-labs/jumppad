@@ -14,6 +14,7 @@ helm "consul-dc1" {
 }
 
 helm "consul-dc2" {
+  depends_on = ["helm.consul-dc1"] # run sequentially for slow ci
   cluster = "k8s_cluster.dc2"
   chart   = "github.com/hashicorp/consul-k8s?ref=${var.consul_helm_version}//charts/consul"
   values  = "./helm/consul-values.yaml"

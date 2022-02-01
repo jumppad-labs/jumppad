@@ -181,6 +181,10 @@ func checkDocker() error {
 
 	dt := NewDockerTasks(d, nil, nil, nil)
 
+	if dt == nil {
+		return fmt.Errorf("unable to determine docker engine, please check that Docker or Podman is installed and the DOCKER_HOST is set")
+	}
+
 	// check that the server is a docker engine not podman
 	// if Docker there will be a component called "Engine"
 	if dt.EngineType != EngineTypeDocker {

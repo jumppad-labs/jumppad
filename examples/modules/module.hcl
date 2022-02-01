@@ -1,10 +1,10 @@
+module "consul" {
+  source = "../container"
+}
+
 module "k8s" {
   depends_on = ["module.consul"]
   source     = "../single_k3s_cluster"
-}
-
-module "consul" {
-  source = "../container"
 }
 
 container_ingress "consul-container-http-2" {

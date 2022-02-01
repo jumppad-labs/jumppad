@@ -37,6 +37,7 @@ import (
 const (
 	EngineTypeDocker = "Engine"
 	EngineTypePodman = "Podman Engine"
+	EngineNotFound   = "Not found"
 )
 
 // DockerTasks is a concrete implementation of ContainerTasks which uses the Docker SDK
@@ -54,10 +55,12 @@ func NewDockerTasks(c Docker, il ImageLog, tg *TarGz, l hclog.Logger) *DockerTas
 	// set the engine type
 	ver, err := c.ServerVersion(context.Background())
 	if err != nil {
+		l.Error("Error checking server version", "error", err)
+
 		return nil
 	}
 
-	t := ""
+	t := EngineNotFound
 
 	for _, c := range ver.Components {
 		switch c.Name {
@@ -1054,6 +1057,10 @@ func createPublishedPorts(ps []config.Port) publishedPorts {
 	}
 
 	for _, p := range ps {
+		if p.Protocol == "" {
+			p.Protocol = "tcp"
+		}
+
 		dp, _ := nat.NewPort(p.Protocol, p.Local)
 		pp.ExposedPorts[dp] = struct{}{}
 
