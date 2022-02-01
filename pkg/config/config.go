@@ -145,6 +145,12 @@ func (c *Config) FindResource(name string) (Resource, error) {
 	typ := parts[0]
 	n := strings.Join(parts[1:], ".")
 
+	// this is an internal error and should not happen unless there is an issue with a provider
+	// there was, hence why we are here
+	if c.Resources == nil {
+		return nil, fmt.Errorf("unable to find resources, reference to parent config does not exist. Ensure that the object has been added to the config: `config.ResourceInfo.AddChild(type)`")
+	}
+
 	for _, r := range c.Resources {
 		if r.Info().Type == ResourceType(typ) && r.Info().Name == n {
 			return r, nil
