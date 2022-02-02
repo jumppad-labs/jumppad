@@ -246,11 +246,15 @@ jobs:
           echo -e "[registries.search]\nregistries = ['docker.io']" | sudo tee /etc/containers/registries.conf
 
       - name: Run tests Podman
-        run: |
-          export DOCKER_HOST=unix:///run/podman/podman.sock
-          shipyard check
-          shipyard purge
-          shipyard test ${{matrix.folder}}
+        uses: nick-invision/retry@v2
+        with:
+          timeout_seconds: 600
+          max_attempts: 3
+          retry_on: error
+          command: |
+            export DOCKER_HOST=unix:///run/podman/podman.sock
+            shipyard check
+            shipyard test ${{matrix.folder}}
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
