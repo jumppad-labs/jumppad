@@ -1,7 +1,12 @@
 # Change Log
 
+## version v0.3.41
+Shipyard now supports Podman through the Podman sock. Rootless and Root containers are both supported however, complex 
+containers that require privileged access such as k8s_clusters and nomad_clusters required Root mode for podman.
+
 ## version v0.3.40
 * Do not attempt to import Docker images to Nomad and Kubernetes clusters when the Name is ""
+
 ## version v0.3.37
 * Adds capability for complex variable types and variable interpolation in templates. Previously,
 all `vars` in `template` resources were interpreted as strings. This change now allows richer types
