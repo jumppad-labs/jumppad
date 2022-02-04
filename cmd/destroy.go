@@ -46,8 +46,8 @@ func newDestroyCmd(cc clients.Connector) *cobra.Command {
 				os.RemoveAll(utils.CertsDir(""))
 			}
 
-			// shutdown ingress
-			if cc.IsRunning() {
+			// shutdown ingress when we destroy all resources
+			if cc.IsRunning() && dst == "" {
 				err = cc.Stop()
 				if err != nil {
 					hclog.Default().Error("Unable to stop ingress", "error", err)

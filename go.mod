@@ -8,6 +8,7 @@ require (
 	github.com/MichaelMure/go-term-markdown v0.1.3
 	github.com/Microsoft/go-winio v0.5.0 // indirect
 	github.com/Microsoft/hcsshim v0.8.22 // indirect
+	github.com/barkimedes/go-deepcopy v0.0.0-20200817023428-a044a1957ca4
 	github.com/creack/pty v1.1.11
 	github.com/cucumber/godog v0.10.0
 	github.com/cucumber/messages-go/v10 v10.0.3

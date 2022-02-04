@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+
 	"github.com/mohae/deepcopy"
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
@@ -299,7 +300,6 @@ func TestClusterNomadImportDockerImagesDoesNothingWhenNameEmpty(t *testing.T) {
 
 func TestClusterNomadImportDockerImagesPullsImages(t *testing.T) {
 	cc, md, mh := setupNomadClusterMocks(t)
-	cc.Images[0].Name = ""
 
 	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
 
