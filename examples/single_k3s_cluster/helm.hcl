@@ -10,6 +10,8 @@ helm "consul" {
 }
 
 helm "vault" {
+  depends_on = ["helm.consul"] # only install one at a time
+
   cluster = "k8s_cluster.k3s"
   chart   = "github.com/hashicorp/vault-helm?ref=v0.18.0"
 

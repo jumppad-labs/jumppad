@@ -39,7 +39,7 @@ func (n *Network) Create() error {
 	// get all the networks
 	nets, err := n.getNetworks("")
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to list existing networks: %s. If you are using podman, ensure that the default 'podman' network exists", err)
 	}
 
 	// is the network name and subnet equal to one which already exists
@@ -71,8 +71,10 @@ func (n *Network) Create() error {
 	}
 
 	// check the network drivers, if bridge is available use bridge, else use nat
+	n.log.Debug("Attempting to create using bridge plugin", "ref", n.config.Name)
 	err = n.createWithDriver("bridge")
 	if err != nil {
+		n.log.Debug("Unable to create using bridge, fall back to use nat plugin", "ref", n.config.Name)
 		// fall back to nat
 		err = n.createWithDriver("nat")
 		if err != nil {

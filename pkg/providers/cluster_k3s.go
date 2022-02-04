@@ -242,7 +242,8 @@ func (c *K8sCluster) createK3s() error {
 		return err
 	}
 
-	err = c.kubeClient.HealthCheckPods([]string{""}, startTimeout)
+	// ensure essential pods have started before announcing the resource is available
+	err = c.kubeClient.HealthCheckPods([]string{"app=local-path-provisioner", "k8s-app=kube-dns"}, startTimeout)
 	if err != nil {
 		// fetch the logs from the container before exit
 		lr, lerr := c.client.ContainerLogs(id, true, true)
@@ -284,7 +285,7 @@ func (c *K8sCluster) waitForStart(id string) error {
 		out, err := c.client.ContainerLogs(id, true, true)
 		if err != nil {
 			out.Close()
-			return fmt.Errorf(" Couldn't get docker logs for %s\n%+v", id, err)
+			return fmt.Errorf("Couldn't get docker logs for %s\n%+v", id, err)
 		}
 
 		// read from the log and check for Kublet running

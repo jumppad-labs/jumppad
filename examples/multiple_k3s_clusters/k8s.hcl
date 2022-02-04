@@ -9,6 +9,7 @@ k8s_cluster "dc1" {
 }
 
 k8s_cluster "dc2" {
+  depends_on = ["k8s_cluster.dc1"] # run sequentially for slow ci
   driver = "k3s" // default
   #version = "v1.18.16"
 
