@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/mohae/deepcopy"
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/utils"
@@ -50,18 +51,18 @@ func setupNomadClusterMocks(t *testing.T) (*config.NomadCluster, *mocks.MockCont
 	ioutil.WriteFile(cafile, []byte("CA"), os.ModePerm)
 
 	// copy the config
-	cc := *clusterNomadConfig
+	cc := deepcopy.Copy(clusterNomadConfig).(*config.NomadCluster)
 	cn := *clusterNetwork
 
 	c := config.New()
-	c.AddResource(&cc)
+	c.AddResource(cc)
 	c.AddResource(&cn)
 
 	t.Cleanup(func() {
 		os.Setenv("HOME", currentHome)
 	})
 
-	return &cc, md, mh
+	return cc, md, mh
 }
 
 func TestClusterNomadErrorsWhenUnableToLookupIDs(t *testing.T) {
@@ -298,6 +299,7 @@ func TestClusterNomadImportDockerImagesDoesNothingWhenNameEmpty(t *testing.T) {
 
 func TestClusterNomadImportDockerImagesPullsImages(t *testing.T) {
 	cc, md, mh := setupNomadClusterMocks(t)
+	cc.Images[0].Name = ""
 
 	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
 
