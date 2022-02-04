@@ -283,6 +283,19 @@ func TestClusterNomadErrorsIfHealthFails(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestClusterNomadImportDockerImagesDoesNothingWhenNameEmpty(t *testing.T) {
+	cc, md, mh := setupNomadClusterMocks(t)
+	cc.Images[0].Name = ""
+
+	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+	md.AssertNumberOfCalls(t, "PullImage", 2)
+	md.AssertNotCalled(t, "PullImage", clusterConfig.Images[0], false)
+	md.AssertCalled(t, "PullImage", clusterConfig.Images[1], false)
+}
+
 func TestClusterNomadImportDockerImagesPullsImages(t *testing.T) {
 	cc, md, mh := setupNomadClusterMocks(t)
 
@@ -290,6 +303,7 @@ func TestClusterNomadImportDockerImagesPullsImages(t *testing.T) {
 
 	err := p.Create()
 	assert.NoError(t, err)
+	md.AssertNumberOfCalls(t, "PullImage", 3)
 	md.AssertCalled(t, "PullImage", clusterConfig.Images[0], false)
 	md.AssertCalled(t, "PullImage", clusterConfig.Images[1], false)
 }

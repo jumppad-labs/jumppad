@@ -464,6 +464,11 @@ func (c *K8sCluster) ImportLocalDockerImages(name string, id string, images []co
 	imgs := []string{}
 
 	for _, i := range images {
+		// do nothing when the image name is empty
+		if i.Name == "" {
+			continue
+		}
+
 		err := c.client.PullImage(i, false)
 		if err != nil {
 			return err

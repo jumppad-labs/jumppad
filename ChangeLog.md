@@ -1,5 +1,7 @@
 # Change Log
 
+## version v0.3.40
+* Do not attempt to import Docker images to Nomad and Kubernetes clusters when the Name is ""
 ## version v0.3.37
 * Adds capability for complex variable types and variable interpolation in templates. Previously,
 all `vars` in `template` resources were interpreted as strings. This change now allows richer types

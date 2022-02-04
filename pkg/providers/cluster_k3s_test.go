@@ -417,6 +417,20 @@ func TestClusterK3sStreamsLogsWhenRunning(t *testing.T) {
 	assert.NoError(t, logReader.Close())
 }
 
+func TestClusterK3sImportDockerImagesDoesNothingWhenEmpty(t *testing.T) {
+	cc, md, mk, mc := setupClusterMocks(t)
+
+	cc.Images[0].Name = ""
+
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+	md.AssertNumberOfCalls(t, "PullImage", 2)
+	md.AssertNotCalled(t, "PullImage", clusterConfig.Images[0], false)
+	md.AssertCalled(t, "PullImage", clusterConfig.Images[1], false)
+}
+
 func TestClusterK3sImportDockerImagesPullsImages(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
 
@@ -424,6 +438,7 @@ func TestClusterK3sImportDockerImagesPullsImages(t *testing.T) {
 
 	err := p.Create()
 	assert.NoError(t, err)
+	md.AssertNumberOfCalls(t, "PullImage", 3)
 	md.AssertCalled(t, "PullImage", clusterConfig.Images[0], false)
 	md.AssertCalled(t, "PullImage", clusterConfig.Images[1], false)
 }
