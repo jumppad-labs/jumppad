@@ -310,8 +310,8 @@ func (cr *CucumberRunner) theFollowingResourcesShouldBeRunning(arg1 *godog.Table
 			return fmt.Errorf("Table rows should have two columns 'name' and 'type'")
 		}
 
-		rType := strings.TrimSpace(r.Cells[1].GetValue())
-		rName := strings.TrimSpace(r.Cells[0].GetValue())
+		rType := strings.TrimSpace(r.Cells[1].Value)
+		rName := strings.TrimSpace(r.Cells[0].Value)
 
 		switch rType {
 		case "network":
@@ -480,7 +480,7 @@ func (cr *CucumberRunner) theFollowingEnvironmentVariablesAreSet(vars *godog.Tab
 		}
 
 		// set the environment variable
-		cr.theEnvironmentVariableKHasAValueV(r.Cells[0].GetValue(), r.Cells[1].GetValue())
+		cr.theEnvironmentVariableKHasAValueV(r.Cells[0].Value, r.Cells[1].Value)
 	}
 
 	return nil
