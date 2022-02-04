@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+
+	"github.com/mohae/deepcopy"
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/utils"
@@ -50,18 +52,18 @@ func setupNomadClusterMocks(t *testing.T) (*config.NomadCluster, *mocks.MockCont
 	ioutil.WriteFile(cafile, []byte("CA"), os.ModePerm)
 
 	// copy the config
-	cc := *clusterNomadConfig
+	cc := deepcopy.Copy(clusterNomadConfig).(*config.NomadCluster)
 	cn := *clusterNetwork
 
 	c := config.New()
-	c.AddResource(&cc)
+	c.AddResource(cc)
 	c.AddResource(&cn)
 
 	t.Cleanup(func() {
 		os.Setenv("HOME", currentHome)
 	})
 
-	return &cc, md, mh
+	return cc, md, mh
 }
 
 func TestClusterNomadErrorsWhenUnableToLookupIDs(t *testing.T) {
@@ -283,6 +285,18 @@ func TestClusterNomadErrorsIfHealthFails(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestClusterNomadImportDockerImagesDoesNothingWhenNameEmpty(t *testing.T) {
+	cc, md, mh := setupNomadClusterMocks(t)
+	cc.Images[0].Name = ""
+	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+	md.AssertNumberOfCalls(t, "PullImage", 2)
+	md.AssertNotCalled(t, "PullImage", cc.Images[0], false)
+	md.AssertCalled(t, "PullImage", cc.Images[1], false)
+}
+
 func TestClusterNomadImportDockerImagesPullsImages(t *testing.T) {
 	cc, md, mh := setupNomadClusterMocks(t)
 
@@ -290,8 +304,9 @@ func TestClusterNomadImportDockerImagesPullsImages(t *testing.T) {
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "PullImage", clusterConfig.Images[0], false)
-	md.AssertCalled(t, "PullImage", clusterConfig.Images[1], false)
+	md.AssertNumberOfCalls(t, "PullImage", 3)
+	md.AssertCalled(t, "PullImage", cc.Images[0], false)
+	md.AssertCalled(t, "PullImage", cc.Images[1], false)
 }
 
 func TestClusterNomadImportDockerCopiesImages(t *testing.T) {

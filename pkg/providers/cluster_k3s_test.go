@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/mohae/deepcopy"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
@@ -81,18 +82,18 @@ func setupClusterMocks(t *testing.T) (
 	).Return(&clients.CertBundle{}, nil)
 
 	// copy the config
-	cc := *clusterConfig
-	cn := *clusterNetwork
+	cc := deepcopy.Copy(clusterConfig).(*config.K8sCluster)
+	cn := deepcopy.Copy(clusterNetwork).(*config.Network)
 
 	c := config.New()
-	c.AddResource(&cc)
-	c.AddResource(&cn)
+	c.AddResource(cc)
+	c.AddResource(cn)
 
 	t.Cleanup(func() {
 		os.Setenv(utils.HomeEnvName(), currentHome)
 	})
 
-	return &cc, md, mk, mc
+	return cc, md, mk, mc
 }
 
 func TestClusterK3ErrorsWhenUnableToLookupIDs(t *testing.T) {
@@ -417,6 +418,20 @@ func TestClusterK3sStreamsLogsWhenRunning(t *testing.T) {
 	assert.NoError(t, logReader.Close())
 }
 
+func TestClusterK3sImportDockerImagesDoesNothingWhenEmpty(t *testing.T) {
+	cc, md, mk, mc := setupClusterMocks(t)
+
+	cc.Images[0].Name = ""
+
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
+
+	err := p.Create()
+	assert.NoError(t, err)
+	md.AssertNumberOfCalls(t, "PullImage", 2)
+	md.AssertNotCalled(t, "PullImage", cc.Images[0], false)
+	md.AssertCalled(t, "PullImage", cc.Images[1], false)
+}
+
 func TestClusterK3sImportDockerImagesPullsImages(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
 
@@ -424,8 +439,9 @@ func TestClusterK3sImportDockerImagesPullsImages(t *testing.T) {
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "PullImage", clusterConfig.Images[0], false)
-	md.AssertCalled(t, "PullImage", clusterConfig.Images[1], false)
+	md.AssertNumberOfCalls(t, "PullImage", 3)
+	md.AssertCalled(t, "PullImage", cc.Images[0], false)
+	md.AssertCalled(t, "PullImage", cc.Images[1], false)
 }
 
 func TestClusterK3sImportDockerCopiesImages(t *testing.T) {

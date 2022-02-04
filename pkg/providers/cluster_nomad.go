@@ -426,6 +426,11 @@ func (c *NomadCluster) ImportLocalDockerImages(name string, id string, images []
 	imgs := []string{}
 
 	for _, i := range images {
+		// ignore when the name is empty
+		if i.Name == "" {
+			continue
+		}
+
 		err := c.client.PullImage(i, false)
 		if err != nil {
 			return err
