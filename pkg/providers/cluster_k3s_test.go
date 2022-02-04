@@ -388,7 +388,7 @@ func TestClusterK3sWaitsForPods(t *testing.T) {
 
 	err := p.Create()
 	assert.NoError(t, err)
-	mk.AssertCalled(t, "HealthCheckPods", []string{""}, startTimeout)
+	mk.AssertCalled(t, "HealthCheckPods", []string{"app=local-path-provisioner", "k8s-app=kube-dns"}, startTimeout)
 }
 
 func TestClusterK3sErrorsWhenWaitsForPodsFail(t *testing.T) {
