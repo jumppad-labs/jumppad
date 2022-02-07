@@ -9,14 +9,22 @@ type Helm struct {
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 
-	Cluster      string            `hcl:"cluster" json:"cluster"`
-	Chart        string            `hcl:"chart" json:"chart"`
+	Cluster string `hcl:"cluster" json:"cluster"`
+
+	// Optional HelmRepository, if specified will try to download the chart from the give repository
+	Repository *HelmRepository `hcl:"repository,block" json:"repository"`
+
+	// name of the chart within the repository or Go Getter reference to download chart from
+	Chart string `hcl:"chart" json:"chart"`
+
+	// name to use when installing the chart, if blank uses resource name
+	ChartName string `hcl:"chart_name,optional" json:"chart_name,omitempty" mapstructure:"chart_name"`
+
+	// semver of the chart to install
+	Version string `hcl:"version,optional" json:"version,omitempty"`
+
 	Values       string            `hcl:"values,optional" json:"values"`
 	ValuesString map[string]string `hcl:"values_string,optional" json:"values_string" mapstructure:"values_string"`
-
-	// ChartName is the name of the chart, if not present
-	// uses the name of the resource block
-	ChartName string `hcl:"chart_name,optional" json:"chart_name,omitempty" mapstructure:"chart_name"`
 
 	// Namespace is the Kubernetes namespace
 	Namespace string `hcl:"namespace,optional" json:"namespace,omitempty"`
@@ -27,7 +35,12 @@ type Helm struct {
 	HealthCheck *HealthCheck `hcl:"health_check,block" json:"health_check,omitempty" mapstructure:"health_check"`
 }
 
-// NewHelm creates a new Helm resource with the correct detaults
+type HelmRepository struct {
+	Name string `hcl:"name" json:"name"`
+	URL  string `hcl:"url" json:"url"`
+}
+
+// NewHelm creates a new Helm resource with the correct defaults
 func NewHelm(name string) *Helm {
 	return &Helm{ResourceInfo: ResourceInfo{Name: name, Type: TypeHelm, Status: PendingCreation}}
 }
