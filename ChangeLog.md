@@ -1,5 +1,31 @@
 # Change Log
 
+## version v0.3.42
+* Add capability to install Helm charts from Helm repositories and local paths
+
+```hcl
+helm "vault" {
+  depends_on = ["helm.consul"] # only install one at a time
+
+  cluster = "k8s_cluster.k3s"
+
+  repository {
+    name = "hashicorp"
+    url  = "https://helm.releases.hashicorp.com"
+  }
+
+  chart   = "hashicorp/vault" # When repository specified this is the name of the chart
+  version = "v0.18.0"         # Version of the chart when repository specified
+
+  values = "./helm/vault-values.yaml"
+
+  health_check {
+    timeout = "240s"
+    pods    = ["app.kubernetes.io/name=vault"]
+  }
+}
+```
+
 ## version v0.3.41
 Shipyard now supports Podman through the Podman sock. Rootless and Root containers are both supported however, complex 
 containers that require privileged access such as k8s_clusters and nomad_clusters required Root mode for podman.
