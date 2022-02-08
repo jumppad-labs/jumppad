@@ -744,7 +744,8 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 		if failCount == 5 {
 			d.l.Error("Timeout waiting for container to start", "ref", tmpID, "error", err)
 			startError = fmt.Errorf("timeout waiting for container to start: %s", startError)
-			break
+
+			return nil, startError
 		}
 
 		time.Sleep(1 * time.Second)
