@@ -710,8 +710,45 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 	if err != nil {
 		return nil, xerrors.Errorf("Unable to create dummy container for importing files: %w", err)
 	}
-
 	defer d.RemoveContainer(tmpID, true)
+
+	// wait for container to start
+	successCount := 0
+	failCount := 0
+	var startError error
+	for {
+		i, err := d.c.ContainerInspect(context.Background(), tmpID)
+		if err != nil {
+			startError = err
+			failCount++
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		if i.State.Running {
+			successCount++
+
+			// wait for 2 positive checks
+			if successCount == 2 {
+				break
+			}
+
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		// state not running increment fail count
+		failCount++
+
+		// failed waiting for start
+		if failCount == 5 {
+			d.l.Error("Timeout waiting for container to start", "ref", tmpID, "error", err)
+			startError = fmt.Errorf("timeout waiting for container to start: %s", startError)
+			break
+		}
+
+		time.Sleep(1 * time.Second)
+	}
 
 	// create the directory paths ensure unix paths for containers
 	destPath := filepath.ToSlash(filepath.Join("/cache", path))
