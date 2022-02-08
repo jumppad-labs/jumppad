@@ -27,6 +27,12 @@ var testCopyLocalVolume = "images"
 func testCreateCopyLocalMocks() *mocks.MockDocker {
 	mk := &mocks.MockDocker{}
 	mk.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
+	mk.On("ContainerInspect", mock.Anything, mock.Anything).Return(
+		types.ContainerJSON{
+			&types.ContainerJSONBase{State: &types.ContainerState{Running: true}},
+			nil, nil, nil,
+		},
+		nil)
 
 	mk.On("ImageSave", mock.Anything, mock.Anything).Return(
 		ioutil.NopCloser(bytes.NewBufferString("test")),
@@ -79,7 +85,7 @@ func testCreateCopyLocalMocks() *mocks.MockDocker {
 	return mk
 }
 
-func TestCopyLocalDoesNothingWhenCached(t *testing.T) {
+func TestCopyToVolumeDoesNothingWhenCached(t *testing.T) {
 	mk := testCreateCopyLocalMocks()
 	mic := &clients.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
@@ -103,7 +109,7 @@ func TestCopyLocalDoesNothingWhenCached(t *testing.T) {
 	mk.AssertNotCalled(t, "ImageSave")
 }
 
-func TestCopyLocalDoesNotChecksVolumeCacheWhenGlobalForce(t *testing.T) {
+func TestCopyToVolumeDoesNotChecksVolumeCacheWhenGlobalForce(t *testing.T) {
 	mk := testCreateCopyLocalMocks()
 	mic := &clients.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
@@ -117,7 +123,7 @@ func TestCopyLocalDoesNotChecksVolumeCacheWhenGlobalForce(t *testing.T) {
 	mk.AssertNumberOfCalls(t, "ContainerExecCreate", 1)
 }
 
-func TestCopyLocalDoesNotChecksVolumeCacheWhenLocalForce(t *testing.T) {
+func TestCopyToVolumeDoesNotChecksVolumeCacheWhenLocalForce(t *testing.T) {
 	mk := testCreateCopyLocalMocks()
 	mic := &clients.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
@@ -131,7 +137,7 @@ func TestCopyLocalDoesNotChecksVolumeCacheWhenLocalForce(t *testing.T) {
 	mk.AssertNumberOfCalls(t, "ContainerExecCreate", 1)
 }
 
-func TestCopyLocalSavesImages(t *testing.T) {
+func TestCopyToVolumeSavesImages(t *testing.T) {
 	mk := testCreateCopyLocalMocks()
 	mic := &clients.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
@@ -143,7 +149,7 @@ func TestCopyLocalSavesImages(t *testing.T) {
 	mk.AssertCalled(t, "ImageSave", mock.Anything, testCopyLocalImages)
 }
 
-func TestCopyLocalSavesImageFailReturnsError(t *testing.T) {
+func TestCopyToVolumeSavesImageFailReturnsError(t *testing.T) {
 	mk := testCreateCopyLocalMocks()
 	removeOn(&mk.Mock, "ImageSave")
 	mk.On("ImageSave", mock.Anything, mock.Anything).Return(
@@ -159,7 +165,7 @@ func TestCopyLocalSavesImageFailReturnsError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestCopyLocalCreatesTempContainer(t *testing.T) {
+func TestCopyToVolumeCreatesTempContainer(t *testing.T) {
 	mk := testCreateCopyLocalMocks()
 	mic := &clients.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
@@ -183,7 +189,41 @@ func TestCopyLocalCreatesTempContainer(t *testing.T) {
 	assert.Equal(t, "images:/cache:z", hc.Binds[0])
 }
 
-func TestCopyLocalTempContainerFailsReturnError(t *testing.T) {
+func TestCopyToVolumeChecksTempContainerStart(t *testing.T) {
+	mk := testCreateCopyLocalMocks()
+	mic := &clients.ImageLog{}
+	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
+	dt := NewDockerTasks(mk, mic, &TarGz{}, hclog.NewNullLogger())
+	dt.SetForcePull(true) // set force pull to avoid execute command block
+
+	_, err := dt.CopyLocalDockerImagesToVolume(testCopyLocalImages, testCopyLocalVolume, false)
+	assert.NoError(t, err)
+
+	mk.AssertNumberOfCalls(t, "ContainerInspect", 2)
+}
+
+func TestCopyToVolumeReturnsErrorOnFailedContainerStart(t *testing.T) {
+	mk := testCreateCopyLocalMocks()
+	mic := &clients.ImageLog{}
+	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
+
+	removeOn(&mk.Mock, "ContainerInspect")
+	mk.On("ContainerInspect", mock.Anything, mock.Anything).Return(
+		types.ContainerJSON{
+			&types.ContainerJSONBase{State: &types.ContainerState{Running: false}},
+			nil, nil, nil,
+		},
+		nil)
+
+	dt := NewDockerTasks(mk, mic, &TarGz{}, hclog.NewNullLogger())
+	dt.SetForcePull(true) // set force pull to avoid execute command block
+
+	_, err := dt.CopyLocalDockerImagesToVolume(testCopyLocalImages, testCopyLocalVolume, false)
+	assert.Error(t, err)
+
+	mk.AssertNumberOfCalls(t, "ContainerInspect", 5)
+}
+func TestCopyToVolumeTempContainerFailsReturnError(t *testing.T) {
 	mk := testCreateCopyLocalMocks()
 	removeOn(&mk.Mock, "ContainerCreate")
 	mk.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -197,7 +237,7 @@ func TestCopyLocalTempContainerFailsReturnError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestCopyLocalPullsImportImage(t *testing.T) {
+func TestCopyToVolumePullsImportImage(t *testing.T) {
 	mk := testCreateCopyLocalMocks()
 	mic := &clients.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
@@ -208,7 +248,7 @@ func TestCopyLocalPullsImportImage(t *testing.T) {
 	assert.NoError(t, err)
 	mk.AssertCalled(t, "ImagePull", mock.Anything, makeImageCanonical("alpine:latest"), mock.Anything)
 }
-func TestCopyLocalCreatesDestinationDirectory(t *testing.T) {
+func TestCopyToVolumeCreatesDestinationDirectory(t *testing.T) {
 	mk := testCreateCopyLocalMocks()
 	mic := &clients.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
@@ -224,7 +264,7 @@ func TestCopyLocalCreatesDestinationDirectory(t *testing.T) {
 	assert.Equal(t, []string{"mkdir", "-p", "/cache/images"}, params.Cmd)
 }
 
-func TestCopyLocalCopiesArchive(t *testing.T) {
+func TestCopyToVolumeCopiesArchive(t *testing.T) {
 	mk := testCreateCopyLocalMocks()
 	mic := &clients.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
@@ -236,7 +276,7 @@ func TestCopyLocalCopiesArchive(t *testing.T) {
 	mk.AssertCalled(t, "CopyToContainer", mock.Anything, mock.Anything, "/cache/images", mock.Anything, mock.Anything)
 }
 
-func TestCopyLocalCopiesArchiveFailReturnsError(t *testing.T) {
+func TestCopyToVolumeCopiesArchiveFailReturnsError(t *testing.T) {
 	mk := testCreateCopyLocalMocks()
 	mic := &clients.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
@@ -250,7 +290,7 @@ func TestCopyLocalCopiesArchiveFailReturnsError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestCopyLocalRemovesTempContainer(t *testing.T) {
+func TestCopyToVolumeRemovesTempContainer(t *testing.T) {
 	mk := testCreateCopyLocalMocks()
 	mic := &clients.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
