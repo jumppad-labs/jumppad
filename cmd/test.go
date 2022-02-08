@@ -21,7 +21,6 @@ import (
 
 	"github.com/cucumber/godog"
 	"github.com/cucumber/godog/colors"
-	"github.com/cucumber/messages-go/v10"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/hashicorp/go-hclog"
@@ -555,7 +554,7 @@ func (cr *CucumberRunner) theResourceInfoShouldExist(path, resource, name string
 	return nil
 }
 
-func (cr *CucumberRunner) whenIRunTheScript(arg1 *messages.PickleStepArgument_PickleDocString) error {
+func (cr *CucumberRunner) whenIRunTheScript(arg1 *godog.DocString) error {
 	// copy the script into a temp file and try to execute it
 	tmpFile, err := ioutil.TempFile(utils.ShipyardTemp(), "*.sh")
 	if err != nil {
@@ -568,7 +567,7 @@ func (cr *CucumberRunner) whenIRunTheScript(arg1 *messages.PickleStepArgument_Pi
 	}()
 
 	// write the script to the temp file
-	lines := strings.Split(arg1.GetContent(), "\n")
+	lines := strings.Split(arg1.Content, "\n")
 
 	w := bufio.NewWriter(tmpFile)
 	for _, l := range lines {
