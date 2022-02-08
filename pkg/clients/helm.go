@@ -13,6 +13,7 @@ import (
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/cli/values"
+	"helm.sh/helm/v3/pkg/downloader"
 	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/kube"
 	"helm.sh/helm/v3/pkg/repo"
@@ -76,7 +77,7 @@ func (h *HelmImpl) Create(kubeConfig, name, namespace string, createNamespace bo
 	s := kube.GetConfig(kubeConfig, "default", namespace)
 	cfg := &action.Configuration{}
 	err := cfg.Init(s, namespace, "", func(format string, v ...interface{}) {
-		h.log.Debug("Helm debug message", "message", fmt.Sprintf(format, v...))
+		h.log.Debug("Helm debug", "name", name, "chart", chart, "message", fmt.Sprintf(format, v...))
 	})
 
 	if err != nil {
@@ -89,6 +90,7 @@ func (h *HelmImpl) Create(kubeConfig, name, namespace string, createNamespace bo
 	client.CreateNamespace = createNamespace
 
 	settings := h.getSettings()
+	settings.Debug = true
 
 	p := getter.All(&settings)
 	vo := values.Options{}
@@ -119,10 +121,32 @@ func (h *HelmImpl) Create(kubeConfig, name, namespace string, createNamespace bo
 		return xerrors.Errorf("Error loading chart: %w", err)
 	}
 
+	if req := chartRequested.Metadata.Dependencies; req != nil {
+		if err := action.CheckDependencies(chartRequested, req); err != nil {
+			if client.DependencyUpdate {
+				man := &downloader.Manager{
+					ChartPath:        cp,
+					Keyring:          client.ChartPathOptions.Keyring,
+					SkipUpdate:       false,
+					Getters:          p,
+					RepositoryConfig: settings.RepositoryConfig,
+					RepositoryCache:  settings.RepositoryCache,
+				}
+				if err := man.Update(); err != nil {
+					return err
+				}
+			} else {
+				return err
+			}
+		}
+	}
+
 	vals, err := vo.MergeValues(p)
 	if err != nil {
 		return xerrors.Errorf("Error merging Helm values: %w", err)
 	}
+
+	h.log.Debug("Using Values", "ref", name, "values", vals)
 
 	h.log.Debug("Validate chart", "ref", name)
 	err = chartRequested.Validate()
