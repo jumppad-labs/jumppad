@@ -694,7 +694,9 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 	}
 
 	// create a dummy container to import to volume
-	cc := config.NewContainer(fmt.Sprintf("%d-import", time.Now().UnixNano()))
+	name := fmt.Sprintf("%d", time.Now().UnixNano())
+	name = name[len(name)-8:]
+	cc := config.NewContainer(fmt.Sprintf("%s-import", name))
 
 	cc.Image = &config.Image{Name: "alpine:latest"}
 	cc.Volumes = []config.Volume{
