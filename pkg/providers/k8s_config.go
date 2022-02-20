@@ -65,7 +65,7 @@ func (c *K8sConfig) Destroy() error {
 
 	err = c.client.Delete(c.config.Paths)
 	if err != nil {
-		c.log.Debug("There was a problem destroying Kuberntes config, logging message but ignoring error", "ref", c.config.Name, "error", err)
+		c.log.Debug("There was a problem destroying Kubernetes config, logging message but ignoring error", "ref", c.config.Name, "error", err)
 	}
 	return nil
 }
