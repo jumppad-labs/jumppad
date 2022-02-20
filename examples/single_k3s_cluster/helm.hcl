@@ -2,13 +2,25 @@ helm "consul" {
   cluster = "k8s_cluster.k3s"
 
   # When no repositroy is specified, either a local path or go getter URL
-  chart = "github.com/hashicorp/consul-k8s?ref=v0.34.1//charts/consul"
+
+  repository {
+    name = "hashicorp"
+    url  = "https://helm.releases.hashicorp.com"
+  }
+
+  chart   = "hashicorp/consul"
+  version = "v0.40.0"
 
   values = "./helm/consul-values.yaml"
 
   health_check {
     timeout = "240s"
-    pods    = ["release=consul"]
+    pods = [
+      "component=connect-injector",
+      "component=client",
+      "component=controller",
+      "component=server",
+    ]
   }
 }
 

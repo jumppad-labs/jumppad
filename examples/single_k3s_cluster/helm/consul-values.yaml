@@ -56,3 +56,6 @@ connectInject:
   # Requires Consul v1.5+ and consul-k8s v0.8.1+
   centralConfig:
     enabled: "true"
+
+controller:
+  enabled: true
