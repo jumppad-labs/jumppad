@@ -666,7 +666,6 @@ jobs:
           desc ""
           homepage "https://shipyard.run/"
           version "${VERSION}"
-          bottle :unneeded
 
           if OS.mac? && Hardware::CPU.intel?
             url "https://github.com/shipyard-run/shipyard/releases/download/v${VERSION}/shipyard_${VERSION}_darwin_x86_64.zip"
