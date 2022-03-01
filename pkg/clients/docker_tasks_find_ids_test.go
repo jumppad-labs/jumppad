@@ -13,6 +13,7 @@ import (
 
 func TestFindContainerIDsReturnsID(t *testing.T) {
 	md := &mocks.MockDocker{}
+	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 	md.On("ContainerList", mock.Anything, mock.Anything).Return(
 		[]types.Container{
 			types.Container{ID: "abc"},
@@ -31,7 +32,7 @@ func TestFindContainerIDsReturnsID(t *testing.T) {
 
 	// ensure that the FQDN was passed as an argument
 	args := getCalls(&md.Mock, "ContainerList")[0].Arguments[1].(types.ContainerListOptions)
-	assert.Equal(t, "^/test.cloud.shipyard.run$", args.Filters.Get("name")[0])
+	assert.Equal(t, "^test.cloud.shipyard.run$", args.Filters.Get("name")[0])
 
 	// ensure that the id has been returned
 	assert.Len(t, ids, 2)
@@ -41,6 +42,7 @@ func TestFindContainerIDsReturnsID(t *testing.T) {
 
 func TestFindContainerIDsReturnsErrorWhenDockerFail(t *testing.T) {
 	md := &mocks.MockDocker{}
+	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
 	dt := NewDockerTasks(md, nil, &TarGz{}, hclog.NewNullLogger())
@@ -51,6 +53,7 @@ func TestFindContainerIDsReturnsErrorWhenDockerFail(t *testing.T) {
 
 func TestFindContainerIDsReturnsNilWhenNoIDs(t *testing.T) {
 	md := &mocks.MockDocker{}
+	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, nil)
 
 	dt := NewDockerTasks(md, nil, &TarGz{}, hclog.NewNullLogger())
@@ -62,6 +65,7 @@ func TestFindContainerIDsReturnsNilWhenNoIDs(t *testing.T) {
 
 func TestFindContainerIDsReturnsNilWhenEmpty(t *testing.T) {
 	md := &mocks.MockDocker{}
+	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 	md.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{}, nil)
 
 	dt := NewDockerTasks(md, nil, &TarGz{}, hclog.NewNullLogger())

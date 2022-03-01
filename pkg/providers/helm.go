@@ -38,8 +38,18 @@ func (h *Helm) Create() error {
 		h.config.Namespace = "default"
 	}
 
+	// is this chart ot be loaded from a repository?
+	if h.config.Repository != nil {
+		h.log.Debug("Updating Helm chart repository", "name", h.config.Repository.Name, "url", h.config.Repository.URL)
+
+		err := h.helmClient.UpsertChartRepository(h.config.Repository.Name, h.config.Repository.URL)
+		if err != nil {
+			return xerrors.Errorf("unable to initialize chart repository: %w", err)
+		}
+	}
+
 	// is the source a helm repo which should be downloaded?
-	if !utils.IsLocalFolder(h.config.Chart) {
+	if !utils.IsLocalFolder(h.config.Chart) && h.config.Repository == nil {
 		h.log.Debug("Fetching remote Helm chart", "ref", h.config.Name, "chart", h.config.Chart)
 
 		helmFolder := utils.GetHelmLocalFolder(h.config.Chart)
@@ -64,7 +74,8 @@ func (h *Helm) Create() error {
 	err = h.helmClient.Create(
 		kcPath, h.config.ChartName,
 		h.config.Namespace, h.config.CreateNamespace,
-		h.config.Chart, h.config.Values, h.config.ValuesString)
+		h.config.Chart, h.config.Version,
+		h.config.Values, h.config.ValuesString)
 
 	if err != nil {
 		return err

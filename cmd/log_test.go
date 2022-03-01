@@ -50,6 +50,7 @@ func setupLog(t *testing.T, logStream int) (*cobra.Command, *mocks.MockDocker, *
 	log := createLogOutput(logStream)
 
 	md := &mocks.MockDocker{}
+	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 
 	md.On("ContainerLogs", mock.Anything, mock.Anything, mock.Anything).Once().Return(
 		io.NopCloser(bytes.NewBuffer(log)),

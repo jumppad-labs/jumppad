@@ -32,7 +32,7 @@
 // k3d create
 cluster "default" {
   driver  = "k3s" // default
-  version = "1.16.0"
+  version = "v1.18.16"
 
   nodes = 3
 

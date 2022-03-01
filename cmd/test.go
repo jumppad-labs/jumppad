@@ -21,7 +21,6 @@ import (
 
 	"github.com/cucumber/godog"
 	"github.com/cucumber/godog/colors"
-	"github.com/cucumber/messages-go/v10"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/hashicorp/go-hclog"
@@ -310,15 +309,21 @@ func (cr *CucumberRunner) theFollowingResourcesShouldBeRunning(arg1 *godog.Table
 			return fmt.Errorf("Table rows should have two columns 'name' and 'type'")
 		}
 
-		rType := strings.TrimSpace(r.Cells[1].GetValue())
-		rName := strings.TrimSpace(r.Cells[0].GetValue())
+		rType := strings.TrimSpace(r.Cells[1].Value)
+		rName := strings.TrimSpace(r.Cells[0].Value)
 
-		if rType == "network" {
+		switch rType {
+		case "network":
 			err := cr.thereShouldBe1NetworkCalled(rName)
 			if err != nil {
 				return err
 			}
-		} else {
+		case "ingress":
+			err := cr.thereShouldBe1IngressCalled(rName)
+			if err != nil {
+				return err
+			}
+		default:
 			err := cr.thereShouldBeAResourceRunningCalled(rType, rName)
 			if err != nil {
 				return err
@@ -380,6 +385,21 @@ func (cr *CucumberRunner) thereShouldBe1NetworkCalled(arg1 string) error {
 
 	if len(n) != 1 {
 		return fmt.Errorf("Expected 1 network called %s to be created", arg1)
+	}
+
+	return nil
+}
+
+func (cr *CucumberRunner) thereShouldBe1IngressCalled(arg1 string) error {
+	args := filters.NewArgs()
+	args.Add("name", arg1)
+	n, err := cr.e.GetClients().Connector.ListServices()
+	if err != nil {
+		return err
+	}
+
+	if len(n) != 1 {
+		return fmt.Errorf("Expected 1 ingress called %s to be created", arg1)
 	}
 
 	return nil
@@ -459,7 +479,7 @@ func (cr *CucumberRunner) theFollowingEnvironmentVariablesAreSet(vars *godog.Tab
 		}
 
 		// set the environment variable
-		cr.theEnvironmentVariableKHasAValueV(r.Cells[0].GetValue(), r.Cells[1].GetValue())
+		cr.theEnvironmentVariableKHasAValueV(r.Cells[0].Value, r.Cells[1].Value)
 	}
 
 	return nil
@@ -534,7 +554,7 @@ func (cr *CucumberRunner) theResourceInfoShouldExist(path, resource, name string
 	return nil
 }
 
-func (cr *CucumberRunner) whenIRunTheScript(arg1 *messages.PickleStepArgument_PickleDocString) error {
+func (cr *CucumberRunner) whenIRunTheScript(arg1 *godog.DocString) error {
 	// copy the script into a temp file and try to execute it
 	tmpFile, err := ioutil.TempFile(utils.ShipyardTemp(), "*.sh")
 	if err != nil {
@@ -547,7 +567,7 @@ func (cr *CucumberRunner) whenIRunTheScript(arg1 *messages.PickleStepArgument_Pi
 	}()
 
 	// write the script to the temp file
-	lines := strings.Split(arg1.GetContent(), "\n")
+	lines := strings.Split(arg1.Content, "\n")
 
 	w := bufio.NewWriter(tmpFile)
 	for _, l := range lines {

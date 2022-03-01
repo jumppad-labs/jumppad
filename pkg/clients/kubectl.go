@@ -91,7 +91,7 @@ func (k *KubernetesImpl) setConfig() error {
 }
 
 // GetPodLogs returns a io.ReadCloser,err for a given pods' logs
-func (k *KubernetesImpl) GetPodLogs(ctx context.Context, podName, nameSpace string) (io.ReadCloser, error){
+func (k *KubernetesImpl) GetPodLogs(ctx context.Context, podName, nameSpace string) (io.ReadCloser, error) {
 	var plOpts v1.PodLogOptions
 	return k.clientset.CoreV1().Pods(nameSpace).GetLogs(podName, &plOpts).Stream(ctx)
 }
@@ -177,6 +177,9 @@ func (k *KubernetesImpl) HealthCheckPods(selectors []string, timeout time.Durati
 func (k *KubernetesImpl) healthCheckSingle(selector string, timeout time.Duration) error {
 	st := time.Now()
 	for {
+		// backoff
+		time.Sleep(2 * time.Second)
+
 		if time.Now().Sub(st) > timeout {
 			return fmt.Errorf("Timeout waiting for pods %s to start", selector)
 		}
@@ -202,21 +205,19 @@ func (k *KubernetesImpl) healthCheckSingle(selector string, timeout time.Duratio
 				break
 			}
 
-			// check the individual status
-			for _, s := range pod.Status.ContainerStatuses {
-				if !s.Ready {
+			for _, s := range pod.Status.Conditions {
+				// Check that the state of the pod is ready
+				if s.Type == v1.PodReady && s.Status != v1.ConditionTrue {
 					allRunning = false
-					k.l.Debug("Pod not ready", "pod", pod.Name, "namespace", pod.Namespace, "container", s.Name)
+					k.l.Debug("Pod not ready", "pod", pod.Name, "namespace", pod.Namespace, "type", s.Type, "value", s.Status)
 				}
 			}
 		}
 
 		if allRunning {
+			k.l.Debug("Pods ready", "selector", selector)
 			break
 		}
-
-		// backoff
-		time.Sleep(2 * time.Second)
 	}
 
 	return nil

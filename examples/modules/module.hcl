@@ -1,10 +1,10 @@
-module "k8s" {
-  depends_on = ["module.consul"]
-  source     = "github.com/shipyard-run/shipyard//examples/single_k3s_cluster?ref=testing"
-}
-
 module "consul" {
   source = "../container"
+}
+
+module "k8s" {
+  depends_on = ["module.consul"]
+  source     = "../single_k3s_cluster"
 }
 
 container_ingress "consul-container-http-2" {

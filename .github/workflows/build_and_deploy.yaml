@@ -15,7 +15,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.16.10
+          go-version: 1.17
 
       - name: Get dependencies
         run: |
@@ -36,46 +36,7 @@ jobs:
         if: always()
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          tile: ${{ github.job_id }}
-
-  functional_test:
-    name: Functional Test
-    runs-on: ubuntu-latest
-    needs: test
-
-    strategy:
-      matrix:
-        folder: [
-          './examples/container',
-          './examples/build',
-          './examples/docs',
-          './examples/modules',
-          './examples/single_k3s_cluster',
-          './examples/multiple_k3s_clusters',
-          './examples/nomad',
-          './examples/local_exec',
-        ]
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Setup Go version
-        uses: actions/setup-go@v1
-        with:
-          go-version: 1.16.10
-
-      - name: Run tests
-        run: |
-          go run main.go purge
-          go run main.go test ${{matrix.folder}}
-
-      - name: Send status to Discord
-        uses: sarisia/actions-status-discord@v1
-        if: always()
-        with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          tile: ${{ github.job_id }}
-          description: "Functional tests for ${{matrix.folder}}"
+          title: ${{ github.job_id }}
 
   e2e_linux:
     name: Linux E2E Tests
@@ -88,7 +49,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.16.10
+          go-version: 1.17.6
 
       - name: E2E test for build binary
         run: make test_e2e_cmd
@@ -123,11 +84,188 @@ jobs:
           tile: ${{ github.job_id }}
           description: "End to end tests for MacOS amd64"
 
+  functional_test_build:
+    name: Build binary for Functional Tests
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Go version
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.17.6
+      
+      - name: Build Shipyard binary
+        run: |
+          make install_local
+      
+      - name: Build Podman DNS plugin
+        run: |
+          cd ..
+          git clone https://github.com/containers/dnsname.git
+          cd dnsname
+          make
+          sudo cp ./bin/dnsname /usr/local/bin
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: test_binary
+          path: |
+            /usr/local/bin/shipyard
+            /usr/local/bin/dnsname
+
+  functional_test_docker:
+    name: Functional Test Docker
+    runs-on: ubuntu-latest
+    needs: functional_test_build
+
+    strategy:
+      max-parallel: 2
+      fail-fast: false
+      matrix:
+        folder: [
+          './examples/container',
+          './examples/build',
+          './examples/docs',
+          './examples/modules',
+          './examples/single_k3s_cluster',
+          './examples/multiple_k3s_clusters',
+          './examples/nomad',
+          './examples/local_exec',
+        ]
+
+    steps:
+      - name: Download-Binaries
+        uses: actions/download-artifact@v2
+        with:
+          name: test_binary
+          path: /usr/local/bin
+      
+      - name: Make binary executable
+        run: |
+          sudo chmod +x /usr/local/bin/shipyard
+
+      - uses: actions/checkout@v2
+
+      - name: Setup Go version
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.17.6
+      
+      - name: Run tests
+        run: |
+          shipyard check
+          shipyard purge
+          shipyard test ${{matrix.folder}}
+
+      - name: Send status to Discord
+        uses: sarisia/actions-status-discord@v1
+        if: always()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          tile: ${{ github.job_id }}
+          description: "Functional tests for docker: ${{matrix.folder}}"
+
+  functional_test_podman:
+    name: Functional Test Podman
+    runs-on: ubuntu-latest
+    needs: functional_test_docker
+
+    strategy:
+      max-parallel: 2
+      fail-fast: false
+      matrix:
+        folder: [
+          './examples/container',
+          './examples/build',
+          './examples/docs',
+          './examples/single_k3s_cluster',
+          './examples/nomad',
+          './examples/local_exec',
+        ]
+
+    steps:
+      - name: Download-Binaries
+        uses: actions/download-artifact@v2
+        with:
+          name: test_binary
+          path: /usr/local/bin
+      
+      - name: Make binary executable
+        run: |
+          sudo chmod +x /usr/local/bin/shipyard
+
+      - uses: actions/checkout@v2
+
+      - name: Setup Go version
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.17
+      
+      - name: Install dependencies for Podman tests
+        run: |
+          sudo apt install -y libbtrfs-dev pkg-config libgpgme-dev libdevmapper-dev podman dnsmasq
+      
+      - name: Setup DNSMasq default nameserver resolution
+        run: |
+          echo "disable resovld listening on 53"
+          sudo /bin/bash -c 'echo "DNSStubListener=no" >> /etc/systemd/resolved.conf'
+          sudo /bin/bash -c 'echo "DNS=8.8.8.8" >> /etc/systemd/resolved.conf'
+          sudo systemctl restart systemd-resolved.service
+
+          echo "configure dnsmasq"
+          sudo /bin/bash -c 'echo "server=8.8.8.8" >> /etc/dnsmasq.conf'
+          sudo /bin/bash -c 'echo "server=1.1.1.1" >> /etc/dnsmasq.conf'
+          sudo systemctl restart dnsmasq
+
+          sudo /bin/bash -c 'echo "127.0.0.1 ubuntu" >> /etc/hosts'
+      
+      - name: Setup Podman sock
+        run: |
+          sudo sed '/^SocketMode=.*/a SocketGroup=docker' -i /lib/systemd/system/podman.socket
+          sudo chmod +x /run/podman
+
+          sudo systemctl enable podman.socket
+          sudo systemctl enable podman.service
+          sudo systemctl start podman.service
+          sudo podman info
+          
+      - name: Setup Podman dnsname plugin
+        run: |
+          mkdir -p /usr/libexec/cni
+          sudo cp /usr/local/bin/dnsname /usr/libexec/cni
+      
+      - name: Setup Podman registries for Docker.io
+        run: |
+          echo -e "[registries.search]\nregistries = ['docker.io']" | sudo tee /etc/containers/registries.conf
+
+      - name: Run tests Podman
+        uses: nick-invision/retry@v2
+        with:
+          timeout_seconds: 600
+          max_attempts: 3
+          retry_on: error
+          command: |
+            export DOCKER_HOST=unix:///run/podman/podman.sock
+            shipyard check
+            shipyard test ${{matrix.folder}}
+
+      - name: Send status to Discord
+        uses: sarisia/actions-status-discord@v1
+        if: always()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          tile: ${{ github.job_id }}
+          description: "Functional tests for ${{matrix.folder}}"
+
   build_dev:
     name: Build Dev Version
     needs:
       - test
-      - functional_test
+      - functional_test_docker
+      - functional_test_podman
       - e2e_mac
       - e2e_linux
     if: ${{ github.ref != 'refs/heads/main' }}
@@ -140,12 +278,16 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.16.10
+          go-version: 1.17
+      
+      - name: Install dependencies for Podman
+        run: |
+          sudo apt install -y libbtrfs-dev pkg-config libgpgme-dev libdevmapper-dev 
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v1
         with:
-          version: v0.172.1
+          version: v1.4.1
           args: release --rm-dist --snapshot
           key: ${{ secrets.GPG_PRIVATE_KEY }}
         env:
@@ -241,7 +383,8 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - test
-      - functional_test
+      - functional_test_docker
+      - functional_test_podman
       - e2e_mac
       - e2e_linux
     if: ${{ github.ref == 'refs/heads/main' }}
@@ -285,7 +428,11 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.16.10
+          go-version: 1.17
+      
+      - name: Install dependencies for Podman
+        run: |
+          sudo apt install -y libbtrfs-dev pkg-config libgpgme-dev libdevmapper-dev 
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -296,7 +443,7 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v1
         with:
-          version: v0.164.0
+          version: v1.4.1
           args: release --rm-dist
           key: ${{ secrets.GPG_PRIVATE_KEY }}
         env:
@@ -424,6 +571,8 @@ jobs:
     needs: 
       - notorize_mac_prod
       - tag
+    environment:
+      name: release
     runs-on: ubuntu-latest
     steps:
     - name: Download-Binaries

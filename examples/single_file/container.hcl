@@ -31,4 +31,15 @@ container "consul" {
     # max memory in MB to consume, default unlimited
     memory = 1024
   }
+
+  volume {
+    source = data("temp")
+    destination = "/test"
+  }
+  
+  volume {
+    source = "images.volume.shipyard.run"
+    destination = "/cache"
+    type = "volume"
+  }
 }

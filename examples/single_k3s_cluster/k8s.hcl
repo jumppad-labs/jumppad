@@ -1,6 +1,5 @@
 k8s_cluster "k3s" {
   driver  = "k3s" // default
-  version = "v1.18.16"
 
   nodes = 1 // default
 
@@ -9,6 +8,10 @@ k8s_cluster "k3s" {
   }
 
   image {
-    name = "shipyardrun/connector:v0.0.10"
+    name = "shipyardrun/connector:v0.1.0"
   }
+}
+
+output "KUBECONFIG" {
+  value = k8s_config("k3s")
 }

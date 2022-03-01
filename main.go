@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/shipyard-run/shipyard/cmd"
 )
 
@@ -9,5 +11,8 @@ var commit = "abc123"
 var date = "0000-00-00"
 
 func main() {
-	cmd.Execute(version, commit, date)
+	err := cmd.Execute(version, commit, date)
+	if err != nil {
+		os.Exit(1)
+	}
 }

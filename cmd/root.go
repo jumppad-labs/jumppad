@@ -3,13 +3,13 @@ package cmd
 import (
 	"fmt"
 	"os"
-	
+
 	"github.com/hashicorp/go-hclog"
 	gvm "github.com/shipyard-run/version-manager"
-	
+
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/shipyard-run/shipyard/pkg/utils"
-	
+
 	"github.com/spf13/cobra"
 )
 
@@ -60,7 +60,7 @@ func init() {
 	rootCmd.AddCommand(uninstallCmd)
 	rootCmd.AddCommand(newPushCmd(engineClients.ContainerTasks, engineClients.Kubernetes, engineClients.HTTP, engineClients.Nomad, logger))
 	rootCmd.AddCommand(newLogCmd(engine, engineClients.Docker, os.Stdout, os.Stderr), completionCmd)
-	
+
 	// add the server commands
 	rootCmd.AddCommand(connectorCmd)
 	connectorCmd.AddCommand(newConnectorRunCommand())
