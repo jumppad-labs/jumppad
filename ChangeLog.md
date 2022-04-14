@@ -1,5 +1,8 @@
 # Change Log
 
+## version v0.3.43
+* Update Helm library to 3.8.2
+
 ## version v0.3.42
 * Add capability to install Helm charts from Helm repositories and local paths
 

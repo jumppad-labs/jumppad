@@ -7,9 +7,11 @@ import (
 	"sync"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/pkg/errors"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"golang.org/x/xerrors"
 	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/cli/values"
@@ -92,20 +94,6 @@ func (h *HelmImpl) Create(kubeConfig, name, namespace string, createNamespace bo
 	settings := h.getSettings()
 	settings.Debug = true
 
-	p := getter.All(&settings)
-	vo := values.Options{}
-	vo.StringValues = []string{}
-
-	// add the string values to the collection
-	for k, v := range valuesString {
-		vo.StringValues = append(vo.StringValues, fmt.Sprintf("%s=%s", k, v))
-	}
-
-	// if we have an overriden values file set it
-	if valuesPath != "" {
-		vo.ValueFiles = []string{valuesPath}
-	}
-
 	h.log.Debug("Creating chart from config", "ref", name, "chart", chart)
 	cpa := client.ChartPathOptions
 	cpa.Version = version
@@ -115,30 +103,18 @@ func (h *HelmImpl) Create(kubeConfig, name, namespace string, createNamespace bo
 		return xerrors.Errorf("Error locating chart: %w", err)
 	}
 
-	h.log.Debug("Loading chart", "ref", name, "path", cp)
-	chartRequested, err := loader.Load(cp)
-	if err != nil {
-		return xerrors.Errorf("Error loading chart: %w", err)
+	p := getter.All(&settings)
+	vo := values.Options{}
+	vo.StringValues = []string{}
+
+	// add the string values to the collection
+	for k, v := range valuesString {
+		vo.StringValues = append(vo.StringValues, fmt.Sprintf("%s=%s", k, v))
 	}
 
-	if req := chartRequested.Metadata.Dependencies; req != nil {
-		if err := action.CheckDependencies(chartRequested, req); err != nil {
-			if client.DependencyUpdate {
-				man := &downloader.Manager{
-					ChartPath:        cp,
-					Keyring:          client.ChartPathOptions.Keyring,
-					SkipUpdate:       false,
-					Getters:          p,
-					RepositoryConfig: settings.RepositoryConfig,
-					RepositoryCache:  settings.RepositoryCache,
-				}
-				if err := man.Update(); err != nil {
-					return err
-				}
-			} else {
-				return err
-			}
-		}
+	// if we have an overridden values file set it
+	if valuesPath != "" {
+		vo.ValueFiles = []string{valuesPath}
 	}
 
 	vals, err := vo.MergeValues(p)
@@ -147,6 +123,42 @@ func (h *HelmImpl) Create(kubeConfig, name, namespace string, createNamespace bo
 	}
 
 	h.log.Debug("Using Values", "ref", name, "values", vals)
+
+	h.log.Debug("Loading chart", "ref", name, "path", cp)
+	chartRequested, err := loader.Load(cp)
+	if err != nil {
+		return xerrors.Errorf("Error loading chart: %w", err)
+	}
+
+	if err := checkIfInstallable(chartRequested); err != nil {
+		return xerrors.Errorf("Chart is not installable: %w", err)
+	}
+
+	if req := chartRequested.Metadata.Dependencies; req != nil {
+		if err := action.CheckDependencies(chartRequested, req); err != nil {
+			if client.DependencyUpdate {
+				man := &downloader.Manager{
+					Out:              h.log.StandardWriter(&hclog.StandardLoggerOptions{}),
+					ChartPath:        cp,
+					Keyring:          client.ChartPathOptions.Keyring,
+					SkipUpdate:       false,
+					Getters:          p,
+					RepositoryConfig: settings.RepositoryConfig,
+					RepositoryCache:  settings.RepositoryCache,
+					Debug:            h.log.IsDebug(),
+				}
+				if err := man.Update(); err != nil {
+					return err
+				}
+
+				if chartRequested, err = loader.Load(cp); err != nil {
+					return xerrors.Errorf("Failed reloading chart after repo update: %w", err)
+				}
+			} else {
+				return err
+			}
+		}
+	}
 
 	h.log.Debug("Validate chart", "ref", name)
 	err = chartRequested.Validate()
@@ -161,6 +173,14 @@ func (h *HelmImpl) Create(kubeConfig, name, namespace string, createNamespace bo
 	}
 
 	return nil
+}
+
+func checkIfInstallable(ch *chart.Chart) error {
+	switch ch.Metadata.Type {
+	case "", "application":
+		return nil
+	}
+	return errors.Errorf("%s charts are not installable", ch.Metadata.Type)
 }
 
 // Destroy removes an installed Helm chart from the system
