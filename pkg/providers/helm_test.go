@@ -50,6 +50,17 @@ func TestHelmCreateCantFindClusterReturnsError(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestHelmCreateSantisesChartName(t *testing.T) {
+	mh, _, _, c, p := setupHelm()
+	hc, _ := c.FindResource("helm.test")
+	hc.(*config.Helm).ChartName = "chart_test"
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	mh.AssertCalled(t, "Create", mock.Anything, "chart-test", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
 func TestHelmCreateGetsHelmRepo(t *testing.T) {
 	mh, _, mg, c, p := setupHelm()
 	hc, _ := c.FindResource("helm.test")
@@ -203,4 +214,15 @@ func TestHelmDestroyWithErrorSwallowsError(t *testing.T) {
 	err := p.Destroy()
 	assert.NoError(t, err)
 	hm.AssertCalled(t, "Destroy", mock.Anything, mock.Anything, "custom")
+}
+
+func TestHelmDestroySantisesChartName(t *testing.T) {
+	mh, _, _, c, p := setupHelm()
+	hc, _ := c.FindResource("helm.test")
+	hc.(*config.Helm).ChartName = "chart_test"
+
+	err := p.Destroy()
+	assert.NoError(t, err)
+
+	mh.AssertCalled(t, "Destroy", mock.Anything, "chart-test", mock.Anything)
 }

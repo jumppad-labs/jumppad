@@ -1,5 +1,8 @@
 # Change Log
 
+## version v0.3.50
+* Sanitize helm chart names replacing non acceptable characters
+
 ## version v0.3.43
 * Update Helm library to 3.8.2
 
