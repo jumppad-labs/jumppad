@@ -155,8 +155,22 @@ func TestHelmCreateCallsCreateWithCustomNamespace(t *testing.T) {
 	)
 }
 
+func TestHelmCreateCallCreateFailRetries(t *testing.T) {
+	hm, _, _, _, p := setupHelm()
+	p.config.Retry = 2
+
+	removeOn(&hm.Mock, "Create")
+	hm.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, true, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Once().Return(fmt.Errorf("boom"))
+	hm.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, true, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Once().Return(nil)
+
+	err := p.Create()
+	assert.NoError(t, err)
+	hm.AssertNumberOfCalls(t, "Create", 2)
+}
+
 func TestHelmCreateCallCreateFailReturnsError(t *testing.T) {
 	hm, _, _, _, p := setupHelm()
+
 	removeOn(&hm.Mock, "Create")
 	hm.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, true, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
