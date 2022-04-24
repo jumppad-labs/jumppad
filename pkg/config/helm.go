@@ -33,7 +33,7 @@ type Helm struct {
 	CreateNamespace bool `hcl:"create_namespace,optional" json:"create_namespace,omitempty" mapstructure:"create_namespace"`
 
 	// Skip the install of any CRDs
-	SkipCRDs bool `hcl:"skip_crds,optional" json:"skip_crds,omitempty"`
+	SkipCRDs bool `hcl:"skip_crds,optional" json:"skip_crds,omitempty" mapstructure:"skip_crds"`
 
 	HealthCheck *HealthCheck `hcl:"health_check,block" json:"health_check,omitempty" mapstructure:"health_check"`
 }
