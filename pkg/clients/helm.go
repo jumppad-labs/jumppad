@@ -32,7 +32,7 @@ func init() {
 // Helm defines an interface for a client which can manage Helm charts
 type Helm interface {
 	// CreateFromRepository creates a Helm install from a repository
-	Create(kubeConfig, name, namespace string, createNamespace bool, chart, version, valuesPath string, valuesString map[string]string) error
+	Create(kubeConfig, name, namespace string, createNamespace bool, skipCRDs bool, chart, version, valuesPath string, valuesString map[string]string) error
 
 	// Destroy the given chart
 	Destroy(kubeConfig, name, namespace string) error
@@ -74,7 +74,7 @@ func NewHelm(l hclog.Logger) Helm {
 	return &HelmImpl{l, helmRepoConfig, helmCachePath, helmDataPath, helmConfigPath}
 }
 
-func (h *HelmImpl) Create(kubeConfig, name, namespace string, createNamespace bool, chart, version, valuesPath string, valuesString map[string]string) error {
+func (h *HelmImpl) Create(kubeConfig, name, namespace string, createNamespace bool, skipCRDs bool, chart, version, valuesPath string, valuesString map[string]string) error {
 	// set the kubeclient for Helm
 	s := kube.GetConfig(kubeConfig, "default", namespace)
 	cfg := &action.Configuration{}
@@ -90,6 +90,7 @@ func (h *HelmImpl) Create(kubeConfig, name, namespace string, createNamespace bo
 	client.ReleaseName = name
 	client.Namespace = namespace
 	client.CreateNamespace = createNamespace
+	client.SkipCRDs = skipCRDs
 
 	settings := h.getSettings()
 	settings.Debug = true
@@ -135,6 +136,8 @@ func (h *HelmImpl) Create(kubeConfig, name, namespace string, createNamespace bo
 	}
 
 	if req := chartRequested.Metadata.Dependencies; req != nil {
+		h.log.Debug("Checking chart dependencies", "deps", req)
+
 		if err := action.CheckDependencies(chartRequested, req); err != nil {
 			if client.DependencyUpdate {
 				man := &downloader.Manager{

@@ -78,6 +78,7 @@ func (h *Helm) Create() error {
 	err = h.helmClient.Create(
 		kcPath, h.config.ChartName,
 		h.config.Namespace, h.config.CreateNamespace,
+		h.config.SkipCRDs,
 		h.config.Chart, h.config.Version,
 		h.config.Values, h.config.ValuesString)
 
