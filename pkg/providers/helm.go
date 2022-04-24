@@ -71,9 +71,14 @@ func (h *Helm) Create() error {
 		return xerrors.Errorf("unable to create Kubernetes client: %w", err)
 	}
 
+	// sanitise the chart name
+	newName, _ := utils.ReplaceNonURIChars(h.config.ChartName)
+	h.config.ChartName = newName
+
 	err = h.helmClient.Create(
 		kcPath, h.config.ChartName,
 		h.config.Namespace, h.config.CreateNamespace,
+		h.config.SkipCRDs,
 		h.config.Chart, h.config.Version,
 		h.config.Values, h.config.ValuesString)
 
@@ -109,6 +114,10 @@ func (h *Helm) Destroy() error {
 	if h.config.Namespace == "" {
 		h.config.Namespace = "default"
 	}
+
+	// sanitise the chart name
+	newName, _ := utils.ReplaceNonURIChars(h.config.ChartName)
+	h.config.ChartName = newName
 
 	// get the target cluster
 	h.helmClient.Destroy(kcPath, h.config.ChartName, h.config.Namespace)

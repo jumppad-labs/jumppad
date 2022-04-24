@@ -8,8 +8,8 @@ type MockHelm struct {
 	mock.Mock
 }
 
-func (h *MockHelm) Create(kubeConfig, name, namespace string, createNamespace bool, chart, version, valuesPath string, valueString map[string]string) error {
-	args := h.Called(kubeConfig, name, namespace, createNamespace, chart, version, valuesPath, valueString)
+func (h *MockHelm) Create(kubeConfig, name, namespace string, createNamespace bool, skipCRDs bool, chart, version, valuesPath string, valueString map[string]string) error {
+	args := h.Called(kubeConfig, name, namespace, createNamespace, skipCRDs, chart, version, valuesPath, valueString)
 
 	return args.Error(0)
 }

@@ -17,7 +17,7 @@ import (
 
 func setupHelm() (*mocks.MockHelm, *clients.MockKubernetes, *mocks.Getter, *config.Config, *Helm) {
 	mh := &mocks.MockHelm{}
-	mh.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	mh.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mh.On("Destroy", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mh.On("UpsertChartRepository", mock.Anything, mock.Anything).Return(nil)
 
@@ -32,6 +32,7 @@ func setupHelm() (*mocks.MockHelm, *clients.MockKubernetes, *mocks.Getter, *conf
 	ch := config.NewHelm("test")
 	ch.ChartName = "test"
 	ch.Cluster = "k8s_cluster.tester"
+	ch.SkipCRDs = true
 
 	c := config.New()
 	c.AddResource(cl)
@@ -50,6 +51,17 @@ func TestHelmCreateCantFindClusterReturnsError(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestHelmCreateSantisesChartName(t *testing.T) {
+	mh, _, _, c, p := setupHelm()
+	hc, _ := c.FindResource("helm.test")
+	hc.(*config.Helm).ChartName = "chart_test"
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	mh.AssertCalled(t, "Create", mock.Anything, "chart-test", mock.Anything, mock.Anything, true, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
 func TestHelmCreateGetsHelmRepo(t *testing.T) {
 	mh, _, mg, c, p := setupHelm()
 	hc, _ := c.FindResource("helm.test")
@@ -63,7 +75,7 @@ func TestHelmCreateGetsHelmRepo(t *testing.T) {
 
 	mg.AssertNotCalled(t, "Get", mock.Anything, mock.Anything)
 	mh.AssertCalled(t, "UpsertChartRepository", "hashicorp", "http://something.com")
-	mh.AssertCalled(t, "Create", mock.Anything, "test", mock.Anything, mock.Anything, "hashicorp/vault", "v1.0.0", mock.Anything, mock.Anything)
+	mh.AssertCalled(t, "Create", mock.Anything, "test", mock.Anything, mock.Anything, true, "hashicorp/vault", "v1.0.0", mock.Anything, mock.Anything)
 }
 
 func TestHelmCreateGetsRemoteRepo(t *testing.T) {
@@ -77,7 +89,7 @@ func TestHelmCreateGetsRemoteRepo(t *testing.T) {
 	assert.NoError(t, err)
 
 	mg.AssertCalled(t, "Get", mock.Anything, helmFolder)
-	mh.AssertCalled(t, "Create", mock.Anything, "test", mock.Anything, mock.Anything, helmFolder, "", mock.Anything, mock.Anything)
+	mh.AssertCalled(t, "Create", mock.Anything, "test", mock.Anything, mock.Anything, true, helmFolder, "", mock.Anything, mock.Anything)
 }
 
 func TestHelmCreateSetsConfig(t *testing.T) {
@@ -113,6 +125,7 @@ func TestHelmCreateCallsCreateWithDefaultNamespace(t *testing.T) {
 		p.config.Name,
 		"default",
 		false,
+		true,
 		p.config.Chart,
 		"",
 		p.config.Values,
@@ -134,6 +147,7 @@ func TestHelmCreateCallsCreateWithCustomNamespace(t *testing.T) {
 		p.config.Name,
 		"custom",
 		p.config.CreateNamespace,
+		true,
 		p.config.Chart,
 		"",
 		p.config.Values,
@@ -144,7 +158,7 @@ func TestHelmCreateCallsCreateWithCustomNamespace(t *testing.T) {
 func TestHelmCreateCallCreateFailReturnsError(t *testing.T) {
 	hm, _, _, _, p := setupHelm()
 	removeOn(&hm.Mock, "Create")
-	hm.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
+	hm.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, true, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -203,4 +217,15 @@ func TestHelmDestroyWithErrorSwallowsError(t *testing.T) {
 	err := p.Destroy()
 	assert.NoError(t, err)
 	hm.AssertCalled(t, "Destroy", mock.Anything, mock.Anything, "custom")
+}
+
+func TestHelmDestroySantisesChartName(t *testing.T) {
+	mh, _, _, c, p := setupHelm()
+	hc, _ := c.FindResource("helm.test")
+	hc.(*config.Helm).ChartName = "chart_test"
+
+	err := p.Destroy()
+	assert.NoError(t, err)
+
+	mh.AssertCalled(t, "Destroy", mock.Anything, "chart-test", mock.Anything)
 }
