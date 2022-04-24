@@ -75,15 +75,27 @@ func (h *Helm) Create() error {
 	newName, _ := utils.ReplaceNonURIChars(h.config.ChartName)
 	h.config.ChartName = newName
 
-	err = h.helmClient.Create(
-		kcPath, h.config.ChartName,
-		h.config.Namespace, h.config.CreateNamespace,
-		h.config.SkipCRDs,
-		h.config.Chart, h.config.Version,
-		h.config.Values, h.config.ValuesString)
+	failCount := 0
 
-	if err != nil {
-		return err
+	for {
+		err = h.helmClient.Create(
+			kcPath, h.config.ChartName,
+			h.config.Namespace, h.config.CreateNamespace,
+			h.config.SkipCRDs,
+			h.config.Chart, h.config.Version,
+			h.config.Values, h.config.ValuesString)
+
+		if err == nil {
+			break
+
+		}
+		failCount++
+
+		if failCount >= h.config.Retry {
+			return err
+		} else {
+			h.log.Debug("Chart apply failed, retrying", "error", err)
+		}
 	}
 
 	// we can now health check the install
