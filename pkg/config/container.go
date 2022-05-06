@@ -82,6 +82,7 @@ type KV struct {
 type Build struct {
 	File    string `hcl:"file,optional" json:"file,omitempty"` // Location of build file inside build context defaults to ./Dockerfile
 	Context string `hcl:"context" json:"context"`              // Path to build context
+	Tag     string `hcl:"tag,optional" json:"tag,omitempty"`   // Image tag, defaults to latest
 }
 
 // Validate the config

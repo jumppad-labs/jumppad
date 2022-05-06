@@ -97,6 +97,15 @@ func TestPullImageWithValidCredentials(t *testing.T) {
 	assert.Equal(t, `{"Username": "nicjackson", "Password": "S3cur1t11"}`, string(d))
 }
 
+func TestPullImageNothingWhenLocalImage(t *testing.T) {
+	cc, md, mic := createImagePullConfig()
+	cc.Name = "shipyard.run/localcache/mine:latest"
+	setupImagePull(t, cc, md, mic, false)
+
+	md.AssertNotCalled(t, "ImagePull", mock.Anything, mock.Anything, mock.Anything)
+	mic.AssertNotCalled(t, "Log", mock.Anything, mock.Anything)
+}
+
 // validate the registry auth is in the correct format
 func TestPullImageNothingWhenCached(t *testing.T) {
 	cc, md, mic := createImagePullConfig()
