@@ -36,7 +36,7 @@ func TestBuildListsImagesAndErrorWhenError(t *testing.T) {
 	md.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("Boom"))
 
 	cc := config.NewContainer("test")
-	cc.Build = &config.Build{Context: "./context"}
+	cc.Build = &config.Build{Context: "./context", Tag: "latest"}
 
 	dt := NewDockerTasks(md, nil, &TarGz{}, hclog.NewNullLogger())
 
@@ -47,7 +47,7 @@ func TestBuildListsImagesAndErrorWhenError(t *testing.T) {
 func TestBuildListsImagesAndDoesNotBuildWhenExists(t *testing.T) {
 	md := testBuildMockSetup()
 	cc := config.NewContainer("test")
-	cc.Build = &config.Build{Context: "./context"}
+	cc.Build = &config.Build{Context: "./context", Tag: "latest"}
 
 	dt := NewDockerTasks(md, nil, &TarGz{}, hclog.NewNullLogger())
 
@@ -63,7 +63,7 @@ func TestBuildListsImagesAndBuildsWhenNotExists(t *testing.T) {
 	md.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 
 	cc := config.NewContainer("test")
-	cc.Build = &config.Build{Context: "./context"}
+	cc.Build = &config.Build{Context: "./context", Tag: "latest"}
 
 	dt := NewDockerTasks(md, nil, &TarGz{}, hclog.NewNullLogger())
 
@@ -82,7 +82,7 @@ func TestBuildListsImagesAndBuildsWhenNotExistsCustomDockerfile(t *testing.T) {
 	md.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 
 	cc := config.NewContainer("test")
-	cc.Build = &config.Build{Context: "./context", File: "./Dockerfile-test"}
+	cc.Build = &config.Build{Context: "./context", File: "./Dockerfile-test", Tag: "latest"}
 
 	dt := NewDockerTasks(md, nil, &TarGz{}, hclog.NewNullLogger())
 

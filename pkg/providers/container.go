@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"fmt"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -52,7 +53,17 @@ func (c *Container) Create() error {
 func (c *Container) internalCreate() error {
 	// do we need to build an image
 	if c.config.Build != nil {
-		c.log.Debug("Building image", "context", c.config.Build.Context, "dockerfile", c.config.Build.File)
+
+		if c.config.Build.Tag == "" {
+			c.config.Build.Tag = "latest"
+		}
+
+		c.log.Debug(
+			"Building image",
+			"context", c.config.Build.Context,
+			"dockerfile", c.config.Build.File,
+			"image", fmt.Sprintf("shipyard.run/localcache/%s:%s", c.config.Name, c.config.Build.Tag),
+		)
 
 		name, err := c.client.BuildContainer(c.config, false)
 		if err != nil {
