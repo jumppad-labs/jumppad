@@ -1253,6 +1253,8 @@ github.com/seccomp/libseccomp-golang v0.9.2-0.20210429002308-3879420cc921/go.mod
 github.com/sergi/go-diff v1.0.0/go.mod h1:0CfEIISq7TuYL3j771MWULgwwjU+GofnZX9QAmXWZgo=
 github.com/sergi/go-diff v1.1.0 h1:we8PVUC3FE2uYfodKH/nBHMSetSfHDR6scGdBi+erh0=
 github.com/sergi/go-diff v1.1.0/go.mod h1:STckp+ISIX8hZLjrqAeVduY0gWCT9IjLuqbuNXdaHfM=
+github.com/sethvargo/go-retry v0.2.3 h1:oYlgvIvsju3jNbottWABtbnoLC+GDtLdBHxKWxQm/iU=
+github.com/sethvargo/go-retry v0.2.3/go.mod h1:1afjQuvh7s4gflMObvjLPaWgluLLyhA1wmVZ6KLpICw=
 github.com/shipyard-run/connector v0.1.0 h1:qmSY3StxYCHteIHtCFnjnSVQFOEPAvaKu8klccdqrWI=
 github.com/shipyard-run/connector v0.1.0/go.mod h1:hEKWnx/tRxSVoGPUeoSUSPwpos+8ceTQF5/gdIOST/I=
 github.com/shipyard-run/gohup v0.2.2 h1:yIJhQ7BItGd2cZmWeuxCneTNriIxLGaPtMt1FsW191A=

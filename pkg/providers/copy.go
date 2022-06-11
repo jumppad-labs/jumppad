@@ -69,11 +69,15 @@ func (c *Copy) Destroy() error {
 	c.log.Info("Destroy Copy", "ref", c.config.Name)
 
 	for _, f := range c.config.CopiedFiles {
-		fn := strings.Replace(f, c.config.Source, c.config.Destination, 1)
-		c.log.Debug("Remove file", "ref", c.config.Name, "file", fn)
-		err := os.Remove(fn)
-		if err != nil {
-			c.log.Debug("Unable to remove file", "ref", c.config.Name, "file", fn)
+		fn := strings.Replace(f, c.config.Source, c.config.Destination, -1)
+		c.log.Debug("Remove file", "ref", c.config.Name, "file", fn, "source", c.config.Source, "destination", c.config.Destination)
+
+		// double check that the replacement has worked, we do not want to remove the original
+		if fn != f {
+			err := os.RemoveAll(fn)
+			if err != nil {
+				c.log.Debug("Unable to remove file", "ref", c.config.Name, "file", fn)
+			}
 		}
 	}
 

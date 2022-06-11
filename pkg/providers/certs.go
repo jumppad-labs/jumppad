@@ -1,11 +1,14 @@
 package providers
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/sethvargo/go-retry"
 	"github.com/shipyard-run/connector/crypto"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"golang.org/x/xerrors"
@@ -78,35 +81,41 @@ func (c *CertificateCA) Lookup() ([]string, error) {
 func (c *CertificateLeaf) Create() error {
 	c.log.Info("Creating Leaf Certificate", "ref", c.config.Name)
 
-	// load the root key
-	ca := &crypto.X509{}
-	err := ca.ReadFile(c.config.CACert)
-	if err != nil {
-		return xerrors.Errorf("Unable to read root certificate %s: %w", c.config.CACert, err)
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
-	rk := crypto.NewKeyPair()
-	err = rk.Private.ReadFile(c.config.CAKey)
-	if err != nil {
-		return xerrors.Errorf("Unable to read root key %s: %w", c.config.CAKey, err)
-	}
+	return retry.Constant(ctx, 1*time.Second, func(ctx context.Context) error {
+		ca := &crypto.X509{}
+		err := ca.ReadFile(c.config.CACert)
+		if err != nil {
+			return retry.RetryableError(xerrors.Errorf("Unable to read root certificate %s: %w", c.config.CACert, err))
+		}
 
-	k, err := crypto.GenerateKeyPair()
-	if err != nil {
-		return err
-	}
+		rk := crypto.NewKeyPair()
+		err = rk.Private.ReadFile(c.config.CAKey)
+		if err != nil {
+			return retry.RetryableError(xerrors.Errorf("Unable to read root key %s: %w", c.config.CAKey, err))
+		}
 
-	err = k.Private.WriteFile(path.Join(c.config.Output, fmt.Sprintf("%s.key", c.config.Name)))
-	if err != nil {
-		return err
-	}
+		k, err := crypto.GenerateKeyPair()
+		if err != nil {
+			return err
+		}
 
-	lc, err := crypto.GenerateLeaf(c.config.IPAddresses, c.config.DNSNames, ca, rk.Private, k.Private)
-	if err != nil {
-		return err
-	}
+		// Save the key
+		err = k.Private.WriteFile(path.Join(c.config.Output, fmt.Sprintf("%s.key", c.config.Name)))
+		if err != nil {
+			return err
+		}
 
-	return lc.WriteFile(path.Join(c.config.Output, fmt.Sprintf("%s.cert", c.config.Name)))
+		lc, err := crypto.GenerateLeaf(c.config.IPAddresses, c.config.DNSNames, ca, rk.Private, k.Private)
+		if err != nil {
+			return err
+		}
+
+		// Save the certificate
+		return lc.WriteFile(path.Join(c.config.Output, fmt.Sprintf("%s.cert", c.config.Name)))
+	}) // Load the root key
 }
 
 func (c *CertificateLeaf) Destroy() error {
@@ -114,12 +123,12 @@ func (c *CertificateLeaf) Destroy() error {
 
 	err := os.Remove(path.Join(c.config.Output, fmt.Sprintf("%s.key", c.config.Name)))
 	if err != nil {
-		c.log.Info("Unable to remove key", "ref", c.config.Name, "error", err)
+		c.log.Debug("Unable to remove key", "ref", c.config.Name, "error", err)
 	}
 
 	err = os.Remove(path.Join(c.config.Output, fmt.Sprintf("%s.cert", c.config.Name)))
 	if err != nil {
-		c.log.Info("Unable to remove cert", "ref", c.config.Name, "error", err)
+		c.log.Debug("Unable to remove cert", "ref", c.config.Name, "error", err)
 	}
 
 	return nil

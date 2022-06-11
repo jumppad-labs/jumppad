@@ -803,6 +803,8 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 				return err
 			}
 
+			i.CACert = ensureAbsolute(i.CACert, file)
+			i.CAKey = ensureAbsolute(i.CAKey, file)
 			i.Output = ensureAbsolute(i.Output, file)
 
 			setDisabled(i, disabled)
@@ -822,6 +824,9 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			i := NewCopy(name)
 			i.Info().Module = moduleName
 			i.Info().DependsOn = dependsOn
+
+			i.Source = ensureAbsolute(i.Source, file)
+			i.Destination = ensureAbsolute(i.Destination, file)
 
 			err := decodeBody(file, b, i)
 			if err != nil {
@@ -1461,17 +1466,19 @@ func ensureAbsolute(path, file string) string {
 	// if the file starts with a / and we are on windows
 	// we should treat this as absolute
 	if runtime.GOOS == "windows" && strings.HasPrefix(path, "/") {
-		return path
+		return filepath.Clean(path)
 	}
 
 	if filepath.IsAbs(path) {
-		return path
+		return filepath.Clean(path)
 	}
 
 	// path is relative so make absolute using the current file path as base
 	file, _ = filepath.Abs(file)
 	baseDir := filepath.Dir(file)
-	return filepath.Join(baseDir, path)
+	fp := filepath.Join(baseDir, path)
+
+	return filepath.Clean(fp)
 }
 
 func getFiles(source, dest string) error {
