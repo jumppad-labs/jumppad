@@ -1,5 +1,41 @@
 # Change Log
 
+## version v0.4.0
+* Add new resource to enable copying resources
+
+```hcl
+copy "testing" {
+	source = "/"
+	destination = "/path"
+
+	permissions = "0700"
+}
+```
+
+* Add new resource to enable generation of certificates
+
+```hcl
+certificate_ca "testing" {
+	output = "/"
+}
+
+certificate_leaf "testing" {
+	ip_addresses = ["a","b"]
+	dns_names = ["1","2"]
+
+	ca_cert = "./file"
+	ca_key = "./file"
+
+	output = "/"
+}
+```
+
+* Add new function to allow the creation of data directories with specific permissions
+
+```hcl
+data_with_permissions("name","0777")
+```
+
 ## version v0.3.50
 * Sanitize helm chart names replacing non acceptable characters
 

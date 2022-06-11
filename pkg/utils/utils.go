@@ -296,10 +296,13 @@ func GetReleasesFolder() string {
 }
 
 // GetDataFolder creates the data directory used by the application
-func GetDataFolder(p string) string {
+func GetDataFolder(p string, perms os.FileMode) string {
 	data := filepath.Join(ShipyardHome(), "data", p)
+
 	// create the folder if it does not exist
-	os.MkdirAll(data, os.ModePerm)
+	os.MkdirAll(data, perms)
+	os.Chmod(data, perms)
+
 	return data
 }
 

@@ -489,7 +489,7 @@ func TestParseProcessesShipyardFunctions(t *testing.T) {
 	assert.Equal(t, os.Getenv("HOME"), cc.EnvVar["home"])
 	assert.Equal(t, utils.ShipyardHome(), cc.EnvVar["shipyard"])
 	assert.Contains(t, cc.EnvVar["file"], "version=\"consul:1.8.1\"")
-	assert.Equal(t, utils.GetDataFolder("mine"), cc.EnvVar["data"])
+	assert.Equal(t, utils.GetDataFolder("mine", os.ModePerm), cc.EnvVar["data"])
 	assert.Equal(t, utils.GetDockerIP(), cc.EnvVar["docker_ip"])
 	assert.Equal(t, utils.GetDockerHost(), cc.EnvVar["docker_host"])
 	assert.Equal(t, ip, cc.EnvVar["shipyard_ip"])

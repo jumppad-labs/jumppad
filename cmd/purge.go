@@ -99,7 +99,7 @@ func newPurgeCmdFunc(dt clients.Docker, il clients.ImageLog, l hclog.Logger) fun
 			bHasError = true
 		}
 
-		dcp := utils.GetDataFolder("")
+		dcp := utils.GetDataFolder("", os.ModePerm)
 		l.Info("Removing data folders", "path", dcp)
 		err = os.RemoveAll(dcp)
 		if err != nil {
