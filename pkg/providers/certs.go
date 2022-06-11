@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/connector/crypto"
 	"github.com/shipyard-run/shipyard/pkg/config"
+	"golang.org/x/xerrors"
 )
 
 type CertificateCA struct {
@@ -81,13 +82,13 @@ func (c *CertificateLeaf) Create() error {
 	ca := &crypto.X509{}
 	err := ca.ReadFile(c.config.CACert)
 	if err != nil {
-		return fmt.Errorf("Unable to read root certificate: %s", c.config.CACert)
+		return xerrors.Errorf("Unable to read root certificate %s: %w", c.config.CACert, err)
 	}
 
 	rk := crypto.NewKeyPair()
 	err = rk.Private.ReadFile(c.config.CAKey)
 	if err != nil {
-		return fmt.Errorf("Unable to read root certificate: %s", c.config.CAKey)
+		return xerrors.Errorf("Unable to read root key %s: %w", c.config.CAKey, err)
 	}
 
 	k, err := crypto.GenerateKeyPair()
@@ -113,12 +114,12 @@ func (c *CertificateLeaf) Destroy() error {
 
 	err := os.Remove(path.Join(c.config.Output, fmt.Sprintf("%s.key", c.config.Name)))
 	if err != nil {
-		return err
+		c.log.Info("Unable to remove key", "ref", c.config.Name, "error", err)
 	}
 
 	err = os.Remove(path.Join(c.config.Output, fmt.Sprintf("%s.cert", c.config.Name)))
 	if err != nil {
-		return err
+		c.log.Info("Unable to remove cert", "ref", c.config.Name, "error", err)
 	}
 
 	return nil

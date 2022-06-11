@@ -26,8 +26,8 @@ type CertificateLeaf struct {
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 
-	CAKey  string `hcl:"ca_key" json:"ca_key"`   // Path to the primary key for the root CA
-	CACert string `hcl:"ca_cert" json:"ca_cert"` // Path to the root CA
+	CAKey  string `hcl:"ca_key" json:"ca_key" mapstructure:"ca_key"`    // Path to the primary key for the root CA
+	CACert string `hcl:"ca_cert" json:"ca_cert" mapstructure:"ca_cert"` // Path to the root CA
 
 	IPAddresses []string `hcl:"ip_addresses,optional" json:"ip_addresses,omitempty" mapstructure:"ip_addresses"` // ip addresses to add to the cert
 	DNSNames    []string `hcl:"dns_names,optional" json:"dns_names,omitempty" mapstructure:"dns_names"`          // DNS names to add to the cert

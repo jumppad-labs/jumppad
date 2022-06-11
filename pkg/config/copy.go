@@ -10,9 +10,9 @@ type Copy struct {
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 
-	Source      string `hcl:"source" json:"source"`           // Source file, folder or glob
-	Destination string `hcl:"destination" json:"destination"` // Destination to write file or files to
-	Permissions string `hcl:"permissions" json:"permissions"` // Permissions 0777 to set for written file
+	Source      string `hcl:"source" json:"source"`                              // Source file, folder or glob
+	Destination string `hcl:"destination" json:"destination"`                    // Destination to write file or files to
+	Permissions string `hcl:"permissions,optional" json:"permissions,omitempty"` // Permissions 0777 to set for written file
 
 	CopiedFiles []string `json:"copied_files" mapstructure:"copied_files" state:"true"`
 }
