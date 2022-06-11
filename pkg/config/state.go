@@ -127,6 +127,12 @@ func (c *Config) UnmarshalJSON(b []byte) error {
 			out = &Sidecar{}
 		case TypeTemplate:
 			out = &Template{}
+		case TypeCertificateCA:
+			out = &CertificateCA{}
+		case TypeCertificateLeaf:
+			out = &CertificateLeaf{}
+		case TypeCopy:
+			out = &Copy{}
 		case TypeVariable:
 			out = &Variable{}
 		default:

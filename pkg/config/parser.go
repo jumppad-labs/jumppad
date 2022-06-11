@@ -768,6 +768,87 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 				)
 			}
 
+		case string(TypeCertificateCA):
+			i := NewCertificateCA(name)
+			i.Info().Module = moduleName
+			i.Info().DependsOn = dependsOn
+
+			err := decodeBody(file, b, i)
+			if err != nil {
+				return err
+			}
+
+			i.Output = ensureAbsolute(i.Output, file)
+
+			setDisabled(i, disabled)
+
+			err = c.AddResource(i)
+			if err != nil {
+				return fmt.Errorf(
+					"Unable to add resource %s.%s in file %s: %s",
+					b.Type,
+					b.Labels[0],
+					file,
+					err,
+				)
+			}
+
+		case string(TypeCertificateLeaf):
+			i := NewCertificateLeaf(name)
+			i.Info().Module = moduleName
+			i.Info().DependsOn = dependsOn
+
+			err := decodeBody(file, b, i)
+			if err != nil {
+				return err
+			}
+
+			i.CACert = ensureAbsolute(i.CACert, file)
+			i.CAKey = ensureAbsolute(i.CAKey, file)
+			i.Output = ensureAbsolute(i.Output, file)
+
+			setDisabled(i, disabled)
+
+			err = c.AddResource(i)
+			if err != nil {
+				return fmt.Errorf(
+					"Unable to add resource %s.%s in file %s: %s",
+					b.Type,
+					b.Labels[0],
+					file,
+					err,
+				)
+			}
+
+		case string(TypeCopy):
+			i := NewCopy(name)
+			i.Info().Module = moduleName
+			i.Info().DependsOn = dependsOn
+
+			i.Source = ensureAbsolute(i.Source, file)
+			i.Destination = ensureAbsolute(i.Destination, file)
+
+			err := decodeBody(file, b, i)
+			if err != nil {
+				return err
+			}
+
+			i.Source = ensureAbsolute(i.Source, file)
+			i.Destination = ensureAbsolute(i.Destination, file)
+
+			setDisabled(i, disabled)
+
+			err = c.AddResource(i)
+			if err != nil {
+				return fmt.Errorf(
+					"Unable to add resource %s.%s in file %s: %s",
+					b.Type,
+					b.Labels[0],
+					file,
+					err,
+				)
+			}
+
 		case string(TypeModule):
 			moduleName := name
 			m := NewModule(moduleName)
@@ -1224,7 +1305,7 @@ func buildContext() *hcl.EvalContext {
 		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
 			// get the current file path from the context
 			path := ctx.Variables["path"].AsString()
-			// conver the file path to an absolute
+			// convert the file path to an absolute
 			fp := ensureAbsolute(args[0].AsString(), path)
 
 			// read the contents of the file
@@ -1234,6 +1315,36 @@ func buildContext() *hcl.EvalContext {
 			}
 
 			return cty.StringVal(string(d)), nil
+		},
+	})
+
+	var DataFuncWithPerms = function.New(&function.Spec{
+		Params: []function.Parameter{
+			{
+				Name:             "path",
+				Type:             cty.String,
+				AllowDynamicType: true,
+			},
+			{
+				Name:             "permissions",
+				Type:             cty.String,
+				AllowDynamicType: true,
+				AllowNull:        true,
+			},
+		},
+		Type: function.StaticReturnType(cty.String),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			perms := os.ModePerm
+			if len(args) == 2 {
+				output, err := strconv.ParseInt(args[1].AsString(), 8, 64)
+				if err != nil {
+					return cty.StringVal(""), fmt.Errorf("Invalid file permission")
+				}
+
+				perms = os.FileMode(output)
+			}
+
+			return cty.StringVal(utils.GetDataFolder(args[0].AsString(), perms)), nil
 		},
 	})
 
@@ -1247,7 +1358,8 @@ func buildContext() *hcl.EvalContext {
 		},
 		Type: function.StaticReturnType(cty.String),
 		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
-			return cty.StringVal(utils.GetDataFolder(args[0].AsString())), nil
+			perms := os.FileMode(0775)
+			return cty.StringVal(utils.GetDataFolder(args[0].AsString(), perms)), nil
 		},
 	})
 
@@ -1301,6 +1413,7 @@ func buildContext() *hcl.EvalContext {
 	ctx.Functions["shipyard"] = ShipyardFunc
 	ctx.Functions["file"] = FileFunc
 	ctx.Functions["data"] = DataFunc
+	ctx.Functions["data_with_permissions"] = DataFuncWithPerms
 	ctx.Functions["docker_ip"] = DockerIPFunc
 	ctx.Functions["docker_host"] = DockerHostFunc
 	ctx.Functions["shipyard_ip"] = ShipyardIPFunc
@@ -1353,17 +1466,19 @@ func ensureAbsolute(path, file string) string {
 	// if the file starts with a / and we are on windows
 	// we should treat this as absolute
 	if runtime.GOOS == "windows" && strings.HasPrefix(path, "/") {
-		return path
+		return filepath.Clean(path)
 	}
 
 	if filepath.IsAbs(path) {
-		return path
+		return filepath.Clean(path)
 	}
 
 	// path is relative so make absolute using the current file path as base
 	file, _ = filepath.Abs(file)
 	baseDir := filepath.Dir(file)
-	return filepath.Join(baseDir, path)
+	fp := filepath.Join(baseDir, path)
+
+	return filepath.Clean(fp)
 }
 
 func getFiles(source, dest string) error {

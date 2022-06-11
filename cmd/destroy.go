@@ -40,7 +40,7 @@ func newDestroyCmd(cc clients.Connector) *cobra.Command {
 
 			if dst == "" {
 				// clean up the data folder
-				os.RemoveAll(utils.GetDataFolder(""))
+				os.RemoveAll(utils.GetDataFolder("", os.ModePerm))
 
 				// remove the certs
 				os.RemoveAll(utils.CertsDir(""))

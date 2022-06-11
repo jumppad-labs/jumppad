@@ -1,0 +1,89 @@
+package providers
+
+import (
+	"os"
+	"strconv"
+	"strings"
+
+	"github.com/hashicorp/go-hclog"
+	cp "github.com/otiai10/copy"
+	"github.com/shipyard-run/shipyard/pkg/config"
+	"golang.org/x/xerrors"
+)
+
+type Copy struct {
+	log    hclog.Logger
+	config *config.Copy
+}
+
+func NewCopy(co *config.Copy, l hclog.Logger) *Copy {
+	return &Copy{l, co}
+}
+
+func (c *Copy) Create() error {
+	c.log.Info("Creating Copy", "ref", c.config.Name, "source", c.config.Source, "destination", c.config.Destination, "perms", c.config.Permissions)
+
+	// Check source exists
+	_, err := os.Stat(c.config.Source)
+	if err != nil {
+		c.log.Debug("Error discovering source directory", "ref", c.config.Name, "source", c.config.Source, "error", err)
+		return xerrors.Errorf("unable to find source directory for copy resource, ref=%s: %w", c.config.Name, err)
+	}
+
+	//
+	opts := cp.Options{}
+	opts.Sync = true
+
+	// keep track of
+	files := []string{}
+	opts.Skip = func(file string) (bool, error) {
+		c.log.Debug("Copy file", "ref", c.config.Name, "file", file)
+
+		files = append(files, file)
+		return false, nil
+	}
+
+	if c.config.Permissions != "" {
+		perms, err := strconv.ParseInt(c.config.Permissions, 8, 64)
+		if err != nil {
+			c.log.Debug("Invalid destination permissions", "ref", c.config.Name, "permissions", c.config.Permissions, "error", err)
+			return xerrors.Errorf("Invalid destination permissions for copy resource, ref=%s %s: %w", c.config.Name, c.config.Permissions, err)
+		}
+
+		opts.AddPermission = os.FileMode(perms)
+	}
+
+	err = cp.Copy(c.config.Source, c.config.Destination, opts)
+	if err != nil {
+		c.log.Debug("Error copying source directory", "ref", c.config.Name, "source", c.config.Source, "error", err)
+
+		return xerrors.Errorf("unable to copy files, ref=%s: %w", c.config.Name, err)
+	}
+
+	c.config.CopiedFiles = files
+
+	return nil
+}
+
+func (c *Copy) Destroy() error {
+	c.log.Info("Destroy Copy", "ref", c.config.Name)
+
+	for _, f := range c.config.CopiedFiles {
+		fn := strings.Replace(f, c.config.Source, c.config.Destination, -1)
+		c.log.Debug("Remove file", "ref", c.config.Name, "file", fn, "source", c.config.Source, "destination", c.config.Destination)
+
+		// double check that the replacement has worked, we do not want to remove the original
+		if fn != f {
+			err := os.RemoveAll(fn)
+			if err != nil {
+				c.log.Debug("Unable to remove file", "ref", c.config.Name, "file", fn)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (c *Copy) Lookup() ([]string, error) {
+	return nil, nil
+}

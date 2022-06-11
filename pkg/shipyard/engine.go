@@ -477,6 +477,12 @@ func generateProviderImpl(c config.Resource, cc *Clients) providers.Provider {
 		return providers.NewNull(c.Info(), cc.Logger)
 	case config.TypeTemplate:
 		return providers.NewTemplate(c.(*config.Template), cc.Logger)
+	case config.TypeCertificateCA:
+		return providers.NewCertificateCA(c.(*config.CertificateCA), cc.Logger)
+	case config.TypeCertificateLeaf:
+		return providers.NewCertificateLeaf(c.(*config.CertificateLeaf), cc.Logger)
+	case config.TypeCopy:
+		return providers.NewCopy(c.(*config.Copy), cc.Logger)
 	}
 
 	return nil

@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -244,11 +245,13 @@ func TestShipyardDataReturnsPath(t *testing.T) {
 		os.RemoveAll(tmp)
 	})
 
-	d := GetDataFolder("test")
+	d := GetDataFolder("test", 0775)
 
 	assert.Equal(t, filepath.Join(tmp, ".shipyard", "/data", "/test"), d)
 
 	s, err := os.Stat(d)
+	fmt.Println(d, s)
+
 	assert.NoError(t, err)
 	assert.True(t, s.IsDir())
 }
