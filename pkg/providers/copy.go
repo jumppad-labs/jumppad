@@ -30,7 +30,15 @@ func (c *Copy) Create() error {
 		return xerrors.Errorf("unable to find source directory for copy resource, ref=%s: %w", c.config.Name, err)
 	}
 
-	//
+	// Check the dest exists, if so grab the existing perms
+	// so we can set them back after copy
+	// copy changes the permissions of the destination for some reason
+	originalPerms := os.FileMode(0)
+	d, err := os.Stat(c.config.Destination)
+	if err == nil && d.IsDir() {
+		originalPerms = d.Mode()
+	}
+
 	opts := cp.Options{}
 	opts.Sync = true
 
@@ -43,16 +51,6 @@ func (c *Copy) Create() error {
 		return false, nil
 	}
 
-	if c.config.Permissions != "" {
-		perms, err := strconv.ParseInt(c.config.Permissions, 8, 64)
-		if err != nil {
-			c.log.Debug("Invalid destination permissions", "ref", c.config.Name, "permissions", c.config.Permissions, "error", err)
-			return xerrors.Errorf("Invalid destination permissions for copy resource, ref=%s %s: %w", c.config.Name, c.config.Permissions, err)
-		}
-
-		opts.AddPermission = os.FileMode(perms)
-	}
-
 	err = cp.Copy(c.config.Source, c.config.Destination, opts)
 	if err != nil {
 		c.log.Debug("Error copying source directory", "ref", c.config.Name, "source", c.config.Source, "error", err)
@@ -61,6 +59,27 @@ func (c *Copy) Create() error {
 	}
 
 	c.config.CopiedFiles = files
+
+	// set the permissions
+	if c.config.Permissions != "" {
+		perms, err := strconv.ParseInt(c.config.Permissions, 8, 64)
+		if err != nil {
+			c.log.Debug("Invalid destination permissions", "ref", c.config.Name, "permissions", c.config.Permissions, "error", err)
+			return xerrors.Errorf("Invalid destination permissions for copy resource, ref=%s %s: %w", c.config.Name, c.config.Permissions, err)
+		}
+
+		for _, f := range c.config.CopiedFiles {
+			fn := strings.Replace(f, c.config.Source, c.config.Destination, -1)
+			c.log.Debug("Setting permissions for file", "ref", c.config.Name, "file", fn, "permissions", c.config.Permissions)
+
+			os.Chmod(fn, os.FileMode(perms))
+		}
+	}
+
+	if originalPerms != os.FileMode(0) {
+		c.log.Debug("Restore original permissions", "ref", c.config.Name, "perms", originalPerms.String())
+		os.Chmod(c.config.Destination, originalPerms)
+	}
 
 	return nil
 }
