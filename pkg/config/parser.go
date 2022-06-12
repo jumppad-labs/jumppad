@@ -1335,15 +1335,12 @@ func buildContext() *hcl.EvalContext {
 		Type: function.StaticReturnType(cty.String),
 		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
 			perms := os.ModePerm
-			if len(args) == 2 {
-				output, err := strconv.ParseInt(args[1].AsString(), 8, 64)
-				if err != nil {
-					return cty.StringVal(""), fmt.Errorf("Invalid file permission")
-				}
-
-				perms = os.FileMode(output)
+			output, err := strconv.ParseInt(args[1].AsString(), 8, 64)
+			if err != nil {
+				return cty.StringVal(""), fmt.Errorf("Invalid file permission")
 			}
 
+			perms = os.FileMode(output)
 			return cty.StringVal(utils.GetDataFolder(args[0].AsString(), perms)), nil
 		},
 	})
