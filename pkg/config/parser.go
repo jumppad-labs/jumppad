@@ -1014,6 +1014,18 @@ func ParseReferences(c *Config) error {
 		case TypeNomadJob:
 			c := r.(*NomadJob)
 			c.DependsOn = append(c.DependsOn, c.Cluster)
+
+		case TypeCertificateCA:
+			c := r.(*CertificateCA)
+			c.DependsOn = append(c.DependsOn, c.Depends...)
+
+		case TypeCertificateLeaf:
+			c := r.(*CertificateLeaf)
+			c.DependsOn = append(c.DependsOn, c.Depends...)
+
+		case TypeCopy:
+			c := r.(*Copy)
+			c.DependsOn = append(c.DependsOn, c.Depends...)
 		}
 	}
 
