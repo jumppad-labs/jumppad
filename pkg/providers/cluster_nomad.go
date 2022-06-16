@@ -71,7 +71,26 @@ func (c *NomadCluster) Destroy() error {
 
 // Lookup the a clusters current state
 func (c *NomadCluster) Lookup() ([]string, error) {
-	return c.client.FindContainerIDs(fmt.Sprintf("server.%s", c.config.Name), c.config.Type)
+	ids := []string{}
+
+	id, err := c.client.FindContainerIDs(fmt.Sprintf("server.%s", c.config.Name), c.config.Type)
+	if err != nil {
+		return nil, err
+	}
+
+	ids = append(ids, id...)
+
+	// find the clients
+	for i := 0; i < c.config.ClientNodes; i++ {
+		id, err := c.client.FindContainerIDs(fmt.Sprintf("%d.client.%s", i+1, c.config.Name), c.config.Type)
+		if err != nil {
+			return nil, err
+		}
+
+		ids = append(ids, id...)
+	}
+
+	return ids, nil
 }
 
 func (c *NomadCluster) createNomad() error {
