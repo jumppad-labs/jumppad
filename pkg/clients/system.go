@@ -6,10 +6,13 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/go-hclog"
 )
 
 const (
@@ -179,7 +182,14 @@ func checkDocker() error {
 		return err
 	}
 
-	dt := NewDockerTasks(d, nil, nil, nil)
+	opts := &hclog.LoggerOptions{Color: hclog.AutoColor}
+
+	// set the log level
+	if lev := os.Getenv("LOG_LEVEL"); lev != "" {
+		opts.Level = hclog.LevelFromString(lev)
+	}
+
+	dt := NewDockerTasks(d, nil, nil, hclog.New(opts))
 
 	if dt == nil {
 		return fmt.Errorf("unable to determine docker engine, please check that Docker or Podman is installed and the DOCKER_HOST is set")
