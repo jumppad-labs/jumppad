@@ -182,21 +182,14 @@ func checkDocker() error {
 		return err
 	}
 
-	opts := &hclog.LoggerOptions{Color: hclog.AutoColor}
-
-	// set the log level
-	if lev := os.Getenv("LOG_LEVEL"); lev != "" {
-		opts.Level = hclog.LevelFromString(lev)
-	}
-
-	dt := NewDockerTasks(d, nil, nil, hclog.New(opts))
+	dt := NewDockerTasks(d, nil, nil, createLogger())
 
 	if dt == nil {
 		return fmt.Errorf("unable to determine docker engine, please check that Docker or Podman is installed and the DOCKER_HOST is set")
 	}
 
 	// check that the server is a docker engine not podman
-	// if Docker there will be a component called "Engine"
+	// if Docker there will be a component cEngine"
 	if dt.EngineType != EngineTypeDocker {
 		return fmt.Errorf("Platform is not Docker")
 	}
@@ -210,7 +203,11 @@ func checkPodman() error {
 		return err
 	}
 
-	dt := NewDockerTasks(d, nil, nil, nil)
+	dt := NewDockerTasks(d, nil, nil, createLogger())
+
+	if dt == nil {
+		return fmt.Errorf("unable to determine docker engine, please check that Docker or Podman is installed and the DOCKER_HOST is set")
+	}
 
 	// check that the server is a docker engine not podman
 	// if Docker there will be a component called "Engine"
@@ -219,6 +216,18 @@ func checkPodman() error {
 	}
 
 	return nil
+}
+
+func createLogger() hclog.Logger {
+
+	opts := &hclog.LoggerOptions{Color: hclog.AutoColor}
+
+	// set the log level
+	if lev := os.Getenv("LOG_LEVEL"); lev != "" {
+		opts.Level = hclog.LevelFromString(lev)
+	}
+
+	return hclog.New(opts)
 }
 
 func checkGit() error {
