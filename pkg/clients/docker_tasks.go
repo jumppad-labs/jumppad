@@ -127,6 +127,9 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 	hc := &container.HostConfig{}
 	nc := &network.NetworkingConfig{}
 
+	// add any dns servers
+	hc.DNS = c.DNS
+
 	if c.MaxRestartCount > 0 {
 		hc.RestartPolicy = container.RestartPolicy{Name: "on-failure", MaximumRetryCount: c.MaxRestartCount}
 	}
