@@ -3,8 +3,10 @@ package providers
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/hashicorp/go-hclog"
@@ -96,6 +98,11 @@ func (c *Template) Create() error {
 	vars := parseVars(m)
 
 	tmpl := template.New("template").Delims("#{{", "}}")
+	tmpl.Funcs(template.FuncMap{
+		"file":  templateFuncFile,
+		"quote": templateFuncQuote,
+		"trim":  templateFuncTrim,
+	})
 
 	t, err := tmpl.Parse(c.config.Source)
 	if err != nil {
@@ -150,4 +157,24 @@ func (c *Template) Destroy() error {
 // Lookup statisfies the interface method but is not implemented by Template
 func (c *Template) Lookup() ([]string, error) {
 	return []string{}, nil
+}
+
+// wraps the given strig in quotes and returns
+func templateFuncQuote(in string) string {
+	return fmt.Sprintf(`"%s"`, in)
+}
+
+// trims whitespace from the given string
+func templateFuncTrim(in string) string {
+	return strings.TrimSpace(in)
+}
+
+// template function that reads a file an returns the string contents
+func templateFuncFile(path string) string {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err.Error()
+	}
+
+	return string(data)
 }
