@@ -23,7 +23,7 @@ func setupGenerateCerts(t *testing.T, dir string) {
 	k, err := crypto.GenerateKeyPair()
 	assert.NoError(t, err)
 
-	ca, err := crypto.GenerateCA(k.Private)
+	ca, err := crypto.GenerateCA("CA", k.Private)
 	assert.NoError(t, err)
 
 	err = k.Private.WriteFile(filepath.Join(dir, "root.key"))
@@ -36,6 +36,7 @@ func setupGenerateCerts(t *testing.T, dir string) {
 	assert.NoError(t, err)
 
 	lc, err := crypto.GenerateLeaf(
+		"Leaf",
 		[]string{"127.0.0.1"},
 		[]string{"localhost"},
 		ca,
