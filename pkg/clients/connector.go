@@ -175,7 +175,7 @@ func (c *ConnectorImpl) GenerateLocalCertBundle(out string) (*CertBundle, error)
 		return nil, err
 	}
 
-	ca, err := crypto.GenerateCA(rk.Private)
+	ca, err := crypto.GenerateCA("Connector CA", rk.Private)
 	if err != nil {
 		return nil, err
 	}
@@ -282,6 +282,7 @@ func (c *ConnectorImpl) GenerateLeafCert(
 	hosts = append(hosts, host...)
 
 	lc, err := crypto.GenerateLeaf(
+		"Connector Leaf",
 		ips,
 		hosts,
 		ca,

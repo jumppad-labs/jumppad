@@ -25,7 +25,7 @@ require (
 	github.com/otiai10/copy v1.7.1-0.20220609052628-85751447072d
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-retry v0.2.3
-	github.com/shipyard-run/connector v0.1.0
+	github.com/shipyard-run/connector v0.1.1
 	github.com/shipyard-run/gohup v0.2.2
 	github.com/shipyard-run/version-manager v0.0.5
 	github.com/spf13/cobra v1.3.0

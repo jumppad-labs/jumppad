@@ -40,7 +40,7 @@ func (c *CertificateCA) Create() error {
 		return err
 	}
 
-	ca, err := crypto.GenerateCA(k.Private)
+	ca, err := crypto.GenerateCA(c.config.Name, k.Private)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func (c *CertificateLeaf) Create() error {
 			return err
 		}
 
-		lc, err := crypto.GenerateLeaf(c.config.IPAddresses, c.config.DNSNames, ca, rk.Private, k.Private)
+		lc, err := crypto.GenerateLeaf(c.config.Name, c.config.IPAddresses, c.config.DNSNames, ca, rk.Private, k.Private)
 		if err != nil {
 			return err
 		}
