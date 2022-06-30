@@ -20,6 +20,7 @@ type windowSize struct {
 }
 
 func (a *API) terminalWebsocket(c *websocket.Conn) {
+
 	workdir := c.Query("workdir", "/")
 	user := c.Query("user", "root")
 	target := c.Query("target", "local")
@@ -57,6 +58,12 @@ func (a *API) terminalWebsocket(c *websocket.Conn) {
 	}()
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				a.log.Info("Websocket crashed", "error", r)
+			}
+		}()
+
 		for {
 			buf := make([]byte, 1024)
 			read, err := tty.Read(buf)

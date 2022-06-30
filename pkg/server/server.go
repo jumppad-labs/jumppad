@@ -42,11 +42,17 @@ func (s *API) Start() {
 
 	s.app.Get("/terminal", websocket.New(s.terminalWebsocket))
 
-	// Start the server but do not block
-	go s.app.Listen(s.bindAddr)
+	// Start the server
+	err := s.app.Listen(s.bindAddr)
+	if err != nil {
+		s.log.Error("Listen exit with", "error", err)
+	}
+
+	s.log.Info("Listen exit")
 }
 
 // Stop the API server
 func (s *API) Stop() {
+	s.log.Info("Shutdown API server")
 	s.app.Shutdown()
 }
