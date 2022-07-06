@@ -133,17 +133,33 @@ func (c *Config) FindModuleResources(name string) ([]Resource, error) {
 }
 
 // FindResource returns the resource for the given name
-// name is defined with the convention [type].[name]
+// name is defined with the convention [module].[type].[name]
 // if a resource can not be found resource will be null and an
 // error will be returned
 //
 // e.g. to find a cluster named k3s
 // r, err := c.FindResource("cluster.k3s")
+//
+// simple.consul.container.consul
 func (c *Config) FindResource(name string) (Resource, error) {
 	parts := strings.Split(name, ".")
+
+	typeLoc := 0
+	// find the type
+	for i, p := range parts {
+		if isRegisteredType(ResourceType(p)) {
+			typeLoc = i
+		}
+	}
+
+	module := ""
+	if typeLoc > 0 {
+		module = strings.Join(parts[:typeLoc], ".")
+	}
+
 	// the name could contain . so join after the first
-	typ := parts[0]
-	n := strings.Join(parts[1:], ".")
+	typ := parts[typeLoc]
+	n := strings.Join(parts[typeLoc+1:], ".")
 
 	// this is an internal error and should not happen unless there is an issue with a provider
 	// there was, hence why we are here
@@ -152,7 +168,7 @@ func (c *Config) FindResource(name string) (Resource, error) {
 	}
 
 	for _, r := range c.Resources {
-		if r.Info().Type == ResourceType(typ) && r.Info().Name == n {
+		if r.Info().Type == ResourceType(typ) && r.Info().Name == n && r.Info().Module == module {
 			return r, nil
 		}
 	}
@@ -176,7 +192,12 @@ func (c *Config) FindResourcesByType(t string) []Resource {
 // AddResource adds a given resource to the resource list
 // if the resource already exists an error will be returned
 func (c *Config) AddResource(r Resource) error {
-	rf, err := c.FindResource(fmt.Sprintf("%s.%s", r.Info().Type, r.Info().Name))
+	rn := fmt.Sprintf("%s.%s", r.Info().Name, r.Info().Type)
+	if r.Info().Module != "" {
+		rn = fmt.Sprintf("%s.%s", r.Info().Module, rn)
+	}
+
+	rf, err := c.FindResource(rn)
 	if err == nil && rf != nil {
 		return ResourceExistsError{r.Info().Name}
 	}

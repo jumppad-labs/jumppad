@@ -11,6 +11,8 @@ type Module struct {
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 
 	Source string `hcl:"source" json:"source"`
+
+	Variables interface{} `hcl:"variables,optional" json:"variables,omitempty"`
 }
 
 // NewModule creates a new Module config resource

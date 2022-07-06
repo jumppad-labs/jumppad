@@ -96,11 +96,6 @@ func (c *Template) Create() error {
 		return err
 	}
 
-	// convert the HCL types into Go map[string]interface that can be used by go template
-	val, _ := c.config.Vars.(*hcl.Attribute).Expr.Value(config.GetEvalContext())
-	m := val.AsValueMap()
-	vars := parseVars(m)
-
 	tmpl := template.New("template").Delims("#{{", "}}")
 	tmpl.Funcs(template.FuncMap{
 		"file":  templateFuncFile,
@@ -114,7 +109,7 @@ func (c *Template) Create() error {
 	}
 
 	bs := bytes.NewBufferString("")
-	err = t.Execute(bs, struct{ Vars map[string]interface{} }{Vars: vars})
+	err = t.Execute(bs, struct{ Vars map[string]interface{} }{Vars: c.InternalVars})
 	if err != nil {
 		return fmt.Errorf("Error processing template: %s", err)
 	}
