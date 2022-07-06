@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/hcl2/hcl"
 	"github.com/hashicorp/hcl2/hcl/hclsyntax"
 	"github.com/hashicorp/hcl2/hclparse"
-	"github.com/kr/pretty"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/function"
@@ -592,9 +591,6 @@ func parseHCLFile(ctx *hcl.EvalContext, file string, c *Config, moduleName strin
 			if err != nil {
 				return err
 			}
-
-			pretty.Println(ctx.Variables)
-			pretty.Println(co)
 
 			// process volumes
 			for i, v := range co.Volumes {
