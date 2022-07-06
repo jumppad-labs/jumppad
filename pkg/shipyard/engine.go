@@ -411,9 +411,6 @@ func (e *EngineImpl) readConfig(path string, variables map[string]string, variab
 				return nil, err
 			}
 		}
-
-		// if we are loading from files create the deps
-		config.ParseReferences(cc)
 	}
 
 	// merge the state and items to be created or deleted

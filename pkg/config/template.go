@@ -9,9 +9,10 @@ type Template struct {
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 
-	Source      string      `hcl:"source" json:"source"`                // Source template to be processed as string
-	Destination string      `hcl:"destination" json:"destination"`      // Desintation filename to write
-	Vars        interface{} `hcl:"vars,optional" json:"vars,omitempty"` // Variables to be processed in the template
+	Source       string                 `hcl:"source" json:"source"`                // Source template to be processed as string
+	Destination  string                 `hcl:"destination" json:"destination"`      // Desintation filename to write
+	Vars         interface{}            `hcl:"vars,optional" json:"vars,omitempty"` // Variables to be processed in the template
+	InternalVars map[string]interface{} // stores a converted go type version of the hcl.Value types
 }
 
 // NewTemplate creates a Template resource with the default values

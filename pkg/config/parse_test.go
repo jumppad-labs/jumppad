@@ -241,7 +241,7 @@ func TestVariablesSetFromDefaultModule(t *testing.T) {
 	assert.NoError(t, err)
 
 	// check variable has been interpolated
-	r, err := c.FindResource("container.consul")
+	r, err := c.FindResource("consul.container.consul")
 	assert.NoError(t, err)
 
 	con := r.(*Container)
@@ -265,7 +265,7 @@ func TestOverridesVariablesSetFromDefaultModuleWithEnv(t *testing.T) {
 	assert.NoError(t, err)
 
 	// check variable has been interpolated
-	r, err := c.FindResource("container.consul")
+	r, err := c.FindResource("consul.container.consul")
 	assert.NoError(t, err)
 
 	con := r.(*Container)
@@ -283,7 +283,7 @@ func TestDoesNotLoadsVariablesFilesFromInsideModules(t *testing.T) {
 	assert.NoError(t, err)
 
 	// check variable has been interpolated
-	r, err := c.FindResource("container.consul")
+	r, err := c.FindResource("consul.container.consul")
 	assert.NoError(t, err)
 
 	validEnv := false
@@ -299,6 +299,25 @@ func TestDoesNotLoadsVariablesFilesFromInsideModules(t *testing.T) {
 	assert.True(t, validEnv)
 }
 
+func TestVariablesSetFromModuleStanza(t *testing.T) {
+	absoluteFolderPath, err := filepath.Abs("../../examples/modules")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c := New()
+	err = ParseFolder(absoluteFolderPath, c, false, "", false, []string{}, nil, "")
+	assert.NoError(t, err)
+
+	// check variable has been interpolated
+	r, err := c.FindResource("sub_module.consul.container.consul")
+	assert.NoError(t, err)
+
+	con := r.(*Container)
+
+	assert.Equal(t, "consul:from-mod", con.Image.Name)
+}
+
 func TestParseModuleCreatesResources(t *testing.T) {
 	absoluteFolderPath, err := filepath.Abs("../../examples/modules")
 	if err != nil {
@@ -309,16 +328,16 @@ func TestParseModuleCreatesResources(t *testing.T) {
 	err = ParseFolder(absoluteFolderPath, c, false, "", false, []string{}, nil, "")
 	assert.NoError(t, err)
 
-	// count the resources, should create 19
-	assert.Len(t, c.Resources, 19)
+	// count the resources, should create 21
+	assert.Len(t, c.Resources, 21)
 
 	// check depends on is set
-	r, err := c.FindResource("k8s_cluster.k3s")
+	r, err := c.FindResource("k8s.k8s_cluster.k3s")
 	assert.NoError(t, err)
 	assert.Contains(t, r.Info().DependsOn, "module.consul")
 
 	// check the module is set on resources loaded as a module
-	r, err = c.FindResource("container.consul")
+	r, err = c.FindResource("consul.container.consul")
 	assert.NoError(t, err)
 	assert.Equal(t, "consul", r.Info().Module)
 }
@@ -371,9 +390,6 @@ func TestParseAddsCacheDependencyToK8sResources(t *testing.T) {
 	err = ParseFolder(absoluteFolderPath, c, false, "", false, []string{}, nil, "")
 	assert.NoError(t, err)
 
-	err = ParseReferences(c)
-	assert.NoError(t, err)
-
 	// check variable has been interpolated
 	r, err := c.FindResource("k8s_cluster.k3s")
 	assert.NoError(t, err)
@@ -390,9 +406,6 @@ func TestParseAddsCacheDependencyToNomadResources(t *testing.T) {
 	c := New()
 
 	err = ParseFolder(absoluteFolderPath, c, false, "", false, []string{}, nil, "")
-	assert.NoError(t, err)
-
-	err = ParseReferences(c)
 	assert.NoError(t, err)
 
 	// check variable has been interpolated

@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/hcl2/hcl"
 	"github.com/shipyard-run/shipyard/pkg/config"
-	"github.com/zclconf/go-cty/cty"
 )
 
 // Template provider allows parsing and output of file based templates
@@ -24,48 +23,6 @@ type Template struct {
 // NewTemplate creates a new Local Exec provider
 func NewTemplate(c *config.Template, l hclog.Logger) *Template {
 	return &Template{c, l}
-}
-
-// parseVarse converts a map[string]cty.Value into map[string]interface
-// where the interface are generic go types like string, number, bool, slice, map
-//
-// TODO move this into the parser class and add more robust testing
-func parseVars(value map[string]cty.Value) map[string]interface{} {
-	vars := map[string]interface{}{}
-
-	for k, v := range value {
-		vars[k] = castVar(v)
-	}
-
-	return vars
-}
-
-func castVar(v cty.Value) interface{} {
-	if v.Type() == cty.String {
-		return v.AsString()
-	} else if v.Type() == cty.Bool {
-		return v.True()
-	} else if v.Type() == cty.Number {
-		return v.AsBigFloat()
-	} else if v.Type().IsObjectType() || v.Type().IsMapType() {
-		return parseVars(v.AsValueMap())
-	} else if v.Type().IsTupleType() || v.Type().IsListType() {
-		i := v.ElementIterator()
-		vars := []interface{}{}
-		for {
-			if !i.Next() {
-				// cant iterate
-				break
-			}
-
-			_, value := i.Element()
-			vars = append(vars, castVar(value))
-		}
-
-		return vars
-	}
-
-	return nil
 }
 
 // Create a new template
@@ -92,11 +49,6 @@ func (c *Template) Create() error {
 		return err
 	}
 
-	// convert the HCL types into Go map[string]interface that can be used by go template
-	val, _ := c.config.Vars.(*hcl.Attribute).Expr.Value(config.GetEvalContext())
-	m := val.AsValueMap()
-	vars := parseVars(m)
-
 	tmpl := template.New("template").Delims("#{{", "}}")
 	tmpl.Funcs(template.FuncMap{
 		"file":  templateFuncFile,
@@ -110,7 +62,7 @@ func (c *Template) Create() error {
 	}
 
 	bs := bytes.NewBufferString("")
-	err = t.Execute(bs, struct{ Vars map[string]interface{} }{Vars: vars})
+	err = t.Execute(bs, struct{ Vars map[string]interface{} }{Vars: c.InternalVars})
 	if err != nil {
 		return fmt.Errorf("Error processing template: %s", err)
 	}

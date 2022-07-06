@@ -18,19 +18,14 @@ import (
 	"github.com/hashicorp/hcl2/hcl"
 	"github.com/hashicorp/hcl2/hcl/hclsyntax"
 	"github.com/hashicorp/hcl2/hclparse"
+	"github.com/kr/pretty"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/function"
 	"golang.org/x/xerrors"
 )
 
-var ctx *hcl.EvalContext
-
-// GetEvalContext gets the context parsed from the configuration
-// this contains all the variables and helper functions
-func GetEvalContext() *hcl.EvalContext {
-	return ctx
-}
+var rootContext *hcl.EvalContext
 
 type ResourceTypeNotExistError struct {
 	Type string
@@ -42,8 +37,14 @@ func (r ResourceTypeNotExistError) Error() string {
 }
 
 func ParseSingleFile(file string, c *Config, variables map[string]string, variablesFile string) error {
-	ctx = buildContext()
-	return parseFile(file, c, variables, variablesFile)
+	rootContext = buildContext(file)
+
+	err := parseFile(rootContext, file, c, variables, variablesFile)
+	if err != nil {
+		return err
+	}
+
+	return parseReferences(c)
 }
 
 // ParseFolder for Resource, Blueprint, and Variable files
@@ -63,8 +64,10 @@ func ParseFolder(
 	variables map[string]string,
 	variablesFile string) error {
 
-	ctx = buildContext()
-	return parseFolder(
+	rootContext = buildContext(folder)
+
+	err := parseFolder(
+		rootContext,
 		folder,
 		c,
 		onlyResources,
@@ -74,23 +77,42 @@ func ParseFolder(
 		variables,
 		variablesFile,
 	)
+
+	if err != nil {
+		return err
+	}
+
+	return parseReferences(c)
+
 }
 
-func parseFile(file string, c *Config, variables map[string]string, variablesFile string) error {
-	SetVariables(variables)
+// ParseYardFile parses a blueprint configuration file
+func ParseYardFile(file string, c *Config) error {
+	return parseYardMarkdown(file, c)
+}
+
+// parseFile loads variables and resources from the given file
+func parseFile(
+	ctx *hcl.EvalContext,
+	file string,
+	c *Config,
+	variables map[string]string,
+	variablesFile string) error {
+
+	setVariables(ctx, variables)
 	if variablesFile != "" {
-		err := LoadValuesFile(variablesFile)
+		err := loadVariablesFromFile(ctx, variablesFile)
 		if err != nil {
 			return err
 		}
 	}
 
-	err := parseVariableFile(file, c)
+	err := parseVariableFile(ctx, file, c)
 	if err != nil {
 		return err
 	}
 
-	err = parseHCLFile(file, c, "", false, []string{})
+	err = parseHCLFile(ctx, file, c, "", false, []string{})
 	if err != nil {
 		return err
 	}
@@ -99,8 +121,9 @@ func parseFile(file string, c *Config, variables map[string]string, variablesFil
 }
 
 func parseFolder(
-	folder string,
-	c *Config,
+	ctx *hcl.EvalContext,
+	folderPath string,
+	config *Config,
 	onlyResources bool,
 	moduleName string,
 	disabled bool,
@@ -108,17 +131,25 @@ func parseFolder(
 	variables map[string]string,
 	variablesFile string) error {
 
-	abs, _ := filepath.Abs(folder)
+	absolutePath, _ := filepath.Abs(folderPath)
+
+	if ctx == nil {
+		panic("Context nil")
+	}
+
+	if ctx.Functions == nil {
+		panic("Context Functions nil")
+	}
 
 	// load the variables from the root of the blueprint
 	if !onlyResources {
-		variableFiles, err := filepath.Glob(path.Join(abs, "*.vars"))
+		variableFiles, err := filepath.Glob(path.Join(absolutePath, "*.vars"))
 		if err != nil {
 			return err
 		}
 
 		for _, f := range variableFiles {
-			err := LoadValuesFile(f)
+			err := loadVariablesFromFile(ctx, f)
 			if err != nil {
 				return err
 			}
@@ -126,32 +157,22 @@ func parseFolder(
 
 		// load variables from any custom files set on the command line
 		if variablesFile != "" {
-			err := LoadValuesFile(variablesFile)
+			err := loadVariablesFromFile(ctx, variablesFile)
 			if err != nil {
 				return err
 			}
 		}
 
 		// setup any variables which are passed as environment variables or in the collection
-		SetVariables(variables)
+		setVariables(ctx, variables)
 
-		// pick up the blueprint file
-		yardFilesHCL, err := filepath.Glob(path.Join(abs, "*.yard"))
+		yardFilesMD, err := filepath.Glob(path.Join(absolutePath, "README.md"))
 		if err != nil {
 			return err
 		}
 
-		yardFilesMD, err := filepath.Glob(path.Join(abs, "README.md"))
-		if err != nil {
-			return err
-		}
-
-		yardFiles := []string{}
-		yardFiles = append(yardFiles, yardFilesHCL...)
-		yardFiles = append(yardFiles, yardFilesMD...)
-
-		if len(yardFiles) > 0 {
-			err := parseYardFile(yardFiles[0], c)
+		if len(yardFilesMD) > 0 {
+			err := parseYardMarkdown(yardFilesMD[0], config)
 			if err != nil {
 				return err
 			}
@@ -160,19 +181,19 @@ func parseFolder(
 
 	// We need to do a two pass parsing, first we check if there are any
 	// default variables which should be added to the collection
-	err := parseVariables(abs, c)
+	err := parseVariables(ctx, absolutePath, config)
 	if err != nil {
 		return err
 	}
 
 	// Parse Resource files from the current folder
-	err = parseResources(abs, c, moduleName, disabled, dependsOn)
+	err = parseResources(ctx, absolutePath, config, moduleName, disabled, dependsOn)
 	if err != nil {
 		return err
 	}
 
 	// Finally parse the outputs
-	err = parseOutputs(abs, disabled, c)
+	err = parseOutputs(ctx, absolutePath, disabled, config)
 	if err != nil {
 		return err
 	}
@@ -180,17 +201,8 @@ func parseFolder(
 	return nil
 }
 
-// ParseYardFile parses a blueprint configuration file
-func parseYardFile(file string, c *Config) error {
-	if filepath.Ext(file) == ".yard" {
-		return parseYardHCL(file, c)
-	}
-
-	return parseYardMarkdown(file, c)
-}
-
-// LoadValuesFile loads variable values from a file
-func LoadValuesFile(path string) error {
+// loadVariablesFromFile loads variable values from a file
+func loadVariablesFromFile(ctx *hcl.EvalContext, path string) error {
 	parser := hclparse.NewParser()
 
 	f, diag := parser.ParseHCLFile(path)
@@ -198,24 +210,19 @@ func LoadValuesFile(path string) error {
 		return errors.New(diag.Error())
 	}
 
-	// add the file functions to the context with a reference to the
-	// current file
-	ctx.Functions["file_path"] = getFilePathFunc(path)
-	ctx.Functions["file_dir"] = getFileDirFunc(path)
-
 	attrs, _ := f.Body.JustAttributes()
 	for name, attr := range attrs {
 		val, _ := attr.Expr.Value(ctx)
 
-		setContextVariable(name, val)
+		setContextVariable(ctx, name, val)
 	}
 
 	return nil
 }
 
-// SetVariables allow variables to be set from a collection or environment variables
+// setVariables allow variables to be set from a collection or environment variables
 // Precedence should be file, env, vars
-func SetVariables(vars map[string]string) {
+func setVariables(ctx *hcl.EvalContext, vars map[string]string) {
 	// first any vars defined as environment variables
 	for _, e := range os.Environ() {
 		if strings.HasPrefix(e, "SY_VAR_") {
@@ -223,14 +230,14 @@ func SetVariables(vars map[string]string) {
 
 			if len(parts) == 2 {
 				key := strings.Replace(parts[0], "SY_VAR_", "", -1)
-				setContextVariable(key, valueFromString(parts[1]))
+				setContextVariable(ctx, key, valueFromString(parts[1]))
 			}
 		}
 	}
 
 	// then set vars
 	for k, v := range vars {
-		setContextVariable(k, valueFromString(v))
+		setContextVariable(ctx, k, valueFromString(v))
 	}
 }
 
@@ -249,10 +256,8 @@ func valueFromString(v string) cty.Value {
 }
 
 // ParseVariableFile parses a config file for variables
-func parseVariableFile(file string, c *Config) error {
+func parseVariableFile(ctx *hcl.EvalContext, file string, c *Config) error {
 	parser := hclparse.NewParser()
-	ctx.Functions["file_path"] = getFilePathFunc(file)
-	ctx.Functions["file_dir"] = getFileDirFunc(file)
 
 	f, diag := parser.ParseHCLFile(file)
 	if diag.HasErrors() {
@@ -269,13 +274,13 @@ func parseVariableFile(file string, c *Config) error {
 		case string(TypeVariable):
 			v := NewVariable(b.Labels[0])
 
-			err := decodeBody(file, b, v)
+			err := decodeBody(ctx, file, b, v)
 			if err != nil {
 				return err
 			}
 
 			val, _ := v.Default.(*hcl.Attribute).Expr.Value(ctx)
-			setContextVariableIfMissing(v.Name, val)
+			setContextVariableIfMissing(ctx, v.Name, val)
 		}
 	}
 
@@ -283,10 +288,8 @@ func parseVariableFile(file string, c *Config) error {
 }
 
 // parseHCLFile parses a config file and adds it to the config
-func parseHCLFile(file string, c *Config, moduleName string, disabled bool, dependsOn []string) error {
+func parseHCLFile(ctx *hcl.EvalContext, file string, c *Config, moduleName string, disabled bool, dependsOn []string) error {
 	parser := hclparse.NewParser()
-	ctx.Functions["file_path"] = getFilePathFunc(file)
-	ctx.Functions["file_dir"] = getFileDirFunc(file)
 
 	f, diag := parser.ParseHCLFile(file)
 	if diag.HasErrors() {
@@ -322,7 +325,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			cl.Info().Module = moduleName
 			cl.Info().DependsOn = dependsOn
 
-			err := decodeBody(file, b, cl)
+			err := decodeBody(ctx, file, b, cl)
 			if err != nil {
 				return err
 			}
@@ -351,7 +354,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			h.Info().Module = moduleName
 			h.Info().DependsOn = dependsOn
 
-			err := decodeBody(file, b, h)
+			err := decodeBody(ctx, file, b, h)
 			if err != nil {
 				return err
 			}
@@ -379,7 +382,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			h.Info().Module = moduleName
 			h.Info().DependsOn = dependsOn
 
-			err := decodeBody(file, b, h)
+			err := decodeBody(ctx, file, b, h)
 			if err != nil {
 				return err
 			}
@@ -417,7 +420,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			i.Info().Module = moduleName
 			i.Info().DependsOn = dependsOn
 
-			err := decodeBody(file, b, i)
+			err := decodeBody(ctx, file, b, i)
 			if err != nil {
 				return err
 			}
@@ -440,7 +443,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			cl.Info().Module = moduleName
 			cl.Info().DependsOn = dependsOn
 
-			err := decodeBody(file, b, cl)
+			err := decodeBody(ctx, file, b, cl)
 			if err != nil {
 				return err
 			}
@@ -481,7 +484,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			h.Info().Module = moduleName
 			h.Info().DependsOn = dependsOn
 
-			err := decodeBody(file, b, h)
+			err := decodeBody(ctx, file, b, h)
 			if err != nil {
 				return err
 			}
@@ -509,7 +512,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			i.Info().Module = moduleName
 			i.Info().DependsOn = dependsOn
 
-			err := decodeBody(file, b, i)
+			err := decodeBody(ctx, file, b, i)
 			if err != nil {
 				return err
 			}
@@ -532,7 +535,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			n.Info().Module = moduleName
 			n.Info().DependsOn = dependsOn
 
-			err := decodeBody(file, b, n)
+			err := decodeBody(ctx, file, b, n)
 			if err != nil {
 				return err
 			}
@@ -562,7 +565,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			i.Info().Module = moduleName
 			i.Info().DependsOn = dependsOn
 
-			err := decodeBody(file, b, i)
+			err := decodeBody(ctx, file, b, i)
 			if err != nil {
 				return err
 			}
@@ -585,10 +588,13 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			co.Info().Module = moduleName
 			co.Info().DependsOn = dependsOn
 
-			err := decodeBody(file, b, co)
+			err := decodeBody(ctx, file, b, co)
 			if err != nil {
 				return err
 			}
+
+			pretty.Println(ctx.Variables)
+			pretty.Println(co)
 
 			// process volumes
 			for i, v := range co.Volumes {
@@ -621,7 +627,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			i.Info().Module = moduleName
 			i.Info().DependsOn = dependsOn
 
-			err := decodeBody(file, b, i)
+			err := decodeBody(ctx, file, b, i)
 			if err != nil {
 				return err
 			}
@@ -644,7 +650,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			s.Info().Module = moduleName
 			s.Info().DependsOn = dependsOn
 
-			err := decodeBody(file, b, s)
+			err := decodeBody(ctx, file, b, s)
 			if err != nil {
 				return err
 			}
@@ -671,7 +677,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			do.Info().Module = moduleName
 			do.Info().DependsOn = dependsOn
 
-			err := decodeBody(file, b, do)
+			err := decodeBody(ctx, file, b, do)
 			if err != nil {
 				return err
 			}
@@ -696,7 +702,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			h.Info().Module = moduleName
 			h.Info().DependsOn = dependsOn
 
-			err := decodeBody(file, b, h)
+			err := decodeBody(ctx, file, b, h)
 			if err != nil {
 				return err
 			}
@@ -719,7 +725,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			h.Info().Module = moduleName
 			h.Info().DependsOn = dependsOn
 
-			err := decodeBody(file, b, h)
+			err := decodeBody(ctx, file, b, h)
 			if err != nil {
 				return err
 			}
@@ -748,7 +754,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			i.Info().Module = moduleName
 			i.Info().DependsOn = dependsOn
 
-			err := decodeBody(file, b, i)
+			err := decodeBody(ctx, file, b, i)
 			if err != nil {
 				return err
 			}
@@ -756,6 +762,14 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			i.Destination = ensureAbsolute(i.Destination, file)
 
 			setDisabled(i, disabled)
+
+			// Convert he HCL variables to a Go map to be used with
+			// the template
+			if att, ok := i.Vars.(*hcl.Attribute); ok {
+				val, _ := att.Expr.Value(ctx)
+				mapVars := val.AsValueMap()
+				i.InternalVars = ParseVars(mapVars)
+			}
 
 			err = c.AddResource(i)
 			if err != nil {
@@ -773,7 +787,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			i.Info().Module = moduleName
 			i.Info().DependsOn = dependsOn
 
-			err := decodeBody(file, b, i)
+			err := decodeBody(ctx, file, b, i)
 			if err != nil {
 				return err
 			}
@@ -798,7 +812,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			i.Info().Module = moduleName
 			i.Info().DependsOn = dependsOn
 
-			err := decodeBody(file, b, i)
+			err := decodeBody(ctx, file, b, i)
 			if err != nil {
 				return err
 			}
@@ -828,7 +842,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			i.Source = ensureAbsolute(i.Source, file)
 			i.Destination = ensureAbsolute(i.Destination, file)
 
-			err := decodeBody(file, b, i)
+			err := decodeBody(ctx, file, b, i)
 			if err != nil {
 				return err
 			}
@@ -850,11 +864,10 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			}
 
 		case string(TypeModule):
-			moduleName := name
-			m := NewModule(moduleName)
+			m := NewModule(name)
 			m.Info().Module = moduleName
 
-			err := decodeBody(file, b, m)
+			err := decodeBody(ctx, file, b, m)
 			if err != nil {
 				return err
 			}
@@ -878,19 +891,31 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			// if the module is disabled ensure
 			setDisabled(m, disabled)
 
+			// modules can be heriditory, we need to keep track of module lineage
+			moduleBreadcrumb := name
+			if moduleName != "" {
+				moduleBreadcrumb = fmt.Sprintf("%s.%s", moduleName, name)
+			}
+
+			copyCtx := copyContext(m.Source, ctx)
+
+			// process the variables into a context
+			var mapVars map[string]cty.Value
+			if att, ok := m.Variables.(*hcl.Attribute); ok {
+				val, _ := att.Expr.Value(ctx)
+				mapVars = val.AsValueMap()
+
+				for k, v := range mapVars {
+					setContextVariable(copyCtx, k, v)
+				}
+			}
+
 			// recursively parse references for the module
 			// ensure we do load the values which might be in module folders
-			err = parseFolder(m.Source, c, true, moduleName, m.Disabled, m.Depends, nil, "")
+			err = parseFolder(copyCtx, m.Source, c, true, moduleBreadcrumb, m.Disabled, m.Depends, nil, "")
 			if err != nil {
 				return err
 			}
-
-			// modules will reset the context file path as they recurse
-			// into other folders. They should have a separate context but
-			// for now just reset the file path to ensure any other resources
-			// parsed after the module have the correct path
-			ctx.Functions["file_path"] = getFilePathFunc(file)
-			ctx.Functions["file_dir"] = getFileDirFunc(file)
 
 		default:
 			return ResourceTypeNotExistError{string(b.Type), file}
@@ -900,8 +925,8 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 	return nil
 }
 
-// ParseReferences links the object references in config elements
-func ParseReferences(c *Config) error {
+// parseReferences links the object references in config elements
+func parseReferences(c *Config) error {
 	for _, r := range c.Resources {
 		switch r.Info().Type {
 		case TypeContainer:
@@ -1032,14 +1057,14 @@ func ParseReferences(c *Config) error {
 	return nil
 }
 
-func parseVariables(abs string, c *Config) error {
+func parseVariables(ctx *hcl.EvalContext, abs string, c *Config) error {
 	files, err := filepath.Glob(path.Join(abs, "*.hcl"))
 	if err != nil {
 		return err
 	}
 
 	for _, f := range files {
-		err := parseVariableFile(f, c)
+		err := parseVariableFile(ctx, f, c)
 		if err != nil {
 			return err
 		}
@@ -1048,14 +1073,14 @@ func parseVariables(abs string, c *Config) error {
 	return nil
 }
 
-func parseOutputs(abs string, disabled bool, c *Config) error {
+func parseOutputs(ctx *hcl.EvalContext, abs string, disabled bool, c *Config) error {
 	files, err := filepath.Glob(path.Join(abs, "*.hcl"))
 	if err != nil {
 		return err
 	}
 
 	for _, f := range files {
-		err := parseOutputFile(f, disabled, c)
+		err := parseOutputFile(ctx, f, disabled, c)
 		if err != nil {
 			return err
 		}
@@ -1064,10 +1089,8 @@ func parseOutputs(abs string, disabled bool, c *Config) error {
 	return nil
 }
 
-func parseOutputFile(file string, disabled bool, c *Config) error {
+func parseOutputFile(ctx *hcl.EvalContext, file string, disabled bool, c *Config) error {
 	parser := hclparse.NewParser()
-	ctx.Functions["file_path"] = getFilePathFunc(file)
-	ctx.Functions["file_dir"] = getFileDirFunc(file)
 
 	f, diag := parser.ParseHCLFile(file)
 	if diag.HasErrors() {
@@ -1084,7 +1107,7 @@ func parseOutputFile(file string, disabled bool, c *Config) error {
 		case string(TypeOutput):
 			v := NewOutput(b.Labels[0])
 
-			err := decodeBody(file, b, v)
+			err := decodeBody(ctx, file, b, v)
 			if err != nil {
 				return err
 			}
@@ -1098,14 +1121,14 @@ func parseOutputFile(file string, disabled bool, c *Config) error {
 	return nil
 }
 
-func parseResources(abs string, c *Config, moduleName string, disabled bool, dependsOn []string) error {
+func parseResources(ctx *hcl.EvalContext, abs string, c *Config, moduleName string, disabled bool, dependsOn []string) error {
 	files, err := filepath.Glob(path.Join(abs, "*.hcl"))
 	if err != nil {
 		return err
 	}
 
 	for _, f := range files {
-		err := parseHCLFile(f, c, moduleName, disabled, dependsOn)
+		err := parseHCLFile(ctx, f, c, moduleName, disabled, dependsOn)
 		if err != nil {
 			return err
 		}
@@ -1114,17 +1137,17 @@ func parseResources(abs string, c *Config, moduleName string, disabled bool, dep
 	return nil
 }
 
-func setContextVariableIfMissing(key string, value cty.Value) {
+func setContextVariableIfMissing(ctx *hcl.EvalContext, key string, value cty.Value) {
 	if m, ok := ctx.Variables["var"]; ok {
 		if _, ok := m.AsValueMap()[key]; ok {
 			return
 		}
 	}
 
-	setContextVariable(key, value)
+	setContextVariable(ctx, key, value)
 }
 
-func setContextVariable(key string, value cty.Value) {
+func setContextVariable(ctx *hcl.EvalContext, key string, value cty.Value) {
 	valMap := map[string]cty.Value{}
 
 	// get the existing map
@@ -1137,7 +1160,7 @@ func setContextVariable(key string, value cty.Value) {
 	ctx.Variables["var"] = cty.ObjectVal(valMap)
 }
 
-func parseYardHCL(file string, c *Config) error {
+func parseYardHCL(ctx *hcl.EvalContext, file string, c *Config) error {
 	parser := hclparse.NewParser()
 
 	f, diag := parser.ParseHCLFile(file)
@@ -1224,7 +1247,8 @@ func parseYardMarkdown(file string, c *Config) error {
 	return nil
 }
 
-func buildContext() *hcl.EvalContext {
+func buildContext(filePath string) *hcl.EvalContext {
+
 	var EnvFunc = function.New(&function.Spec{
 		Params: []function.Parameter{
 			{
@@ -1315,10 +1339,8 @@ func buildContext() *hcl.EvalContext {
 		},
 		Type: function.StaticReturnType(cty.String),
 		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
-			// get the current file path from the context
-			path := ctx.Variables["path"].AsString()
 			// convert the file path to an absolute
-			fp := ensureAbsolute(args[0].AsString(), path)
+			fp := ensureAbsolute(args[0].AsString(), filePath)
 
 			// read the contents of the file
 			d, err := ioutil.ReadFile(fp)
@@ -1367,7 +1389,7 @@ func buildContext() *hcl.EvalContext {
 		},
 		Type: function.StaticReturnType(cty.String),
 		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
-			perms := os.FileMode(0775)
+			perms := os.FileMode(0666)
 			return cty.StringVal(utils.GetDataFolder(args[0].AsString(), perms)), nil
 		},
 	})
@@ -1409,6 +1431,15 @@ func buildContext() *hcl.EvalContext {
 		},
 	})
 
+	var DirFunc = function.New(&function.Spec{
+		Type: function.StaticReturnType(cty.String),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			s, err := filepath.Abs(filePath)
+
+			return cty.StringVal(filepath.Dir(s)), err
+		},
+	})
+
 	ctx := &hcl.EvalContext{
 		Functions: map[string]function.Function{},
 		Variables: map[string]cty.Value{},
@@ -1427,39 +1458,19 @@ func buildContext() *hcl.EvalContext {
 	ctx.Functions["docker_host"] = DockerHostFunc
 	ctx.Functions["shipyard_ip"] = ShipyardIPFunc
 	ctx.Functions["cluster_api"] = ClusterAPIFunc
-
-	// the functions file_path and file_dir are added dynamically when processing a file
-	// this is because the need a reference to the current file
+	ctx.Functions["file_dir"] = DirFunc
 
 	return ctx
 }
 
-func getFilePathFunc(path string) function.Function {
-	return function.New(&function.Spec{
-		Type: function.StaticReturnType(cty.String),
-		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
-			s, err := filepath.Abs(path)
-			return cty.StringVal(s), err
-		},
-	})
+func copyContext(path string, ctx *hcl.EvalContext) *hcl.EvalContext {
+	newCtx := buildContext(path)
+	newCtx.Variables = ctx.Variables
+
+	return newCtx
 }
 
-func getFileDirFunc(path string) function.Function {
-	return function.New(&function.Spec{
-		Type: function.StaticReturnType(cty.String),
-		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
-			s, err := filepath.Abs(path)
-
-			return cty.StringVal(filepath.Dir(s)), err
-		},
-	})
-}
-
-func decodeBody(path string, b *hclsyntax.Block, p interface{}) error {
-	// add the current file path to the context.
-	// this allows any functions which require absolute paths to be able to
-	// build them from relative paths.
-	ctx.Variables["path"] = cty.StringVal(path)
+func decodeBody(ctx *hcl.EvalContext, path string, b *hclsyntax.Block, p interface{}) error {
 
 	diag := gohcl.DecodeBody(b.Body, ctx, p)
 	if diag.HasErrors() {
@@ -1484,7 +1495,14 @@ func ensureAbsolute(path, file string) string {
 
 	// path is relative so make absolute using the current file path as base
 	file, _ = filepath.Abs(file)
-	baseDir := filepath.Dir(file)
+
+	baseDir := file
+	// check if the basepath is a file return its directory
+	s, _ := os.Stat(file)
+	if !s.IsDir() {
+		baseDir = filepath.Dir(file)
+	}
+
 	fp := filepath.Join(baseDir, path)
 
 	return filepath.Clean(fp)

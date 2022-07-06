@@ -2,6 +2,10 @@ module "consul" {
   source = "../container"
 }
 
+module "sub_module" {
+  source = "./sub_module"
+}
+
 module "k8s" {
   depends_on = ["module.consul"]
   source     = "../single_k3s_cluster"
