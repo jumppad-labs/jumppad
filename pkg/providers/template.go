@@ -109,7 +109,7 @@ func (c *Template) Create() error {
 	}
 
 	bs := bytes.NewBufferString("")
-	err = t.Execute(bs, struct{ Vars map[string]interface{} }{Vars: c.InternalVars})
+	err = t.Execute(bs, struct{ Vars map[string]interface{} }{Vars: c.config.InternalVars})
 	if err != nil {
 		return fmt.Errorf("Error processing template: %s", err)
 	}
