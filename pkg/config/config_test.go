@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"testing"
 
 	assert "github.com/stretchr/testify/require"
@@ -76,9 +77,10 @@ func TestFindResourceFindsClusterInModule(t *testing.T) {
 func TestFindResourceReturnsNotFoundError(t *testing.T) {
 	c := testSetupConfig(t)
 
-	cl, err := c.FindResource("cluster.notexist")
+	cl, err := c.FindResource("container.notexist")
 	assert.Error(t, err)
-	assert.IsType(t, err, ResourceNotFoundError{})
+	fmt.Println(err)
+	assert.IsType(t, ResourceNotFoundError{}, err)
 	assert.Nil(t, cl)
 }
 
@@ -124,7 +126,7 @@ func TestRemoveResourceRemoves(t *testing.T) {
 
 	err := c.RemoveResource(c.Resources[0])
 	assert.NoError(t, err)
-	assert.Len(t, c.Resources, 2)
+	assert.Len(t, c.Resources, 3)
 }
 
 func TestRemoveResourceNotFoundReturnsError(t *testing.T) {
@@ -132,7 +134,7 @@ func TestRemoveResourceNotFoundReturnsError(t *testing.T) {
 
 	err := c.RemoveResource(nil)
 	assert.Error(t, err)
-	assert.Len(t, c.Resources, 3)
+	assert.Len(t, c.Resources, 4)
 }
 
 func TestDoYaLikeDAGGeneratesAGraph(t *testing.T) {
@@ -142,7 +144,7 @@ func TestDoYaLikeDAGGeneratesAGraph(t *testing.T) {
 	assert.NoError(t, err)
 
 	// check that all resources are added and dependencies created
-	assert.Len(t, d.Edges(), 3)
+	assert.Len(t, d.Edges(), 4)
 }
 
 func TestDoYaLikeDAGAddsDependencies(t *testing.T) {

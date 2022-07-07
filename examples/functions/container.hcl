@@ -23,7 +23,6 @@ container "consul" {
   }
 
   env_var = {
-    file_path         = file_path()
     file_dir          = file_dir()
     env               = env("HOME")
     k8s_config        = k8s_config("dc1")

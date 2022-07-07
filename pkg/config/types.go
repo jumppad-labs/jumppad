@@ -11,6 +11,7 @@ var RegisteredTypes = []ResourceType{
 	TypeExecRemote,
 	TypeHelm,
 	TypeIngress,
+	TypeImageCache,
 	TypeK8sCluster,
 	TypeK8sConfig,
 	TypeK8sIngress,
