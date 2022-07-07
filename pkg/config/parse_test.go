@@ -40,19 +40,6 @@ func TestRunParsesBlueprintInMarkdownFormat(t *testing.T) {
 	assert.Contains(t, c.Blueprint.HealthCheckTimeout, "30s")
 }
 
-func TestRunParsesBlueprintInHCLFormat(t *testing.T) {
-	absoluteFolderPath, err := filepath.Abs("../../examples/single_k3s_cluster")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	c := New()
-	err = ParseFolder(absoluteFolderPath, c, false, "", false, []string{}, nil, "")
-	assert.NoError(t, err)
-
-	assert.NotNil(t, c.Blueprint)
-}
-
 func TestLoadsVariablesFiles(t *testing.T) {
 	absoluteFolderPath, err := filepath.Abs("../../examples/container")
 	assert.NoError(t, err)
@@ -445,16 +432,16 @@ func TestParseProcessesDisabledOnModuleSettingChildDisabled(t *testing.T) {
 	err = ParseFolder(absoluteFolderPath, c, false, "", false, []string{}, nil, "")
 	assert.NoError(t, err)
 
-	// count the resources, should create 10
-	assert.Len(t, c.Resources, 19)
+	// count the resources, should create 21
+	assert.Len(t, c.Resources, 21)
 
 	// check depends on is set
-	r, err := c.FindResource("container.consul_disabled")
+	r, err := c.FindResource("consul.container.consul_disabled")
 	assert.NoError(t, err)
 	assert.Equal(t, true, r.Info().Disabled)
 
 	//
-	r, err = c.FindResource("exec_local.run")
+	r, err = c.FindResource("k8s_exec.exec_local.run")
 	assert.NoError(t, err)
 	assert.Equal(t, true, r.Info().Disabled)
 }
@@ -496,7 +483,6 @@ func TestParseProcessesShipyardFunctions(t *testing.T) {
 	cc := r.(*Container)
 
 	assert.Equal(t, absoluteFolderPath, cc.EnvVar["file_dir"])
-	assert.Equal(t, absoluteFilePath, cc.EnvVar["file_path"])
 	assert.Equal(t, os.Getenv("HOME"), cc.EnvVar["env"])
 	assert.Equal(t, kubeConfigFile, cc.EnvVar["k8s_config"])
 	assert.Equal(t, kubeConfigDockerFile, cc.EnvVar["k8s_config_docker"])

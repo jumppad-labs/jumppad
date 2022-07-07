@@ -144,12 +144,16 @@ func (c *Config) FindModuleResources(name string) ([]Resource, error) {
 func (c *Config) FindResource(name string) (Resource, error) {
 	parts := strings.Split(name, ".")
 
-	typeLoc := 0
+	typeLoc := -1
 	// find the type
 	for i, p := range parts {
 		if isRegisteredType(ResourceType(p)) {
 			typeLoc = i
 		}
+	}
+
+	if typeLoc == -1 {
+		return nil, fmt.Errorf("unable to find resource %s, invalid type", name)
 	}
 
 	module := ""
@@ -168,7 +172,9 @@ func (c *Config) FindResource(name string) (Resource, error) {
 	}
 
 	for _, r := range c.Resources {
-		if r.Info().Type == ResourceType(typ) && r.Info().Name == n && r.Info().Module == module {
+		if r.Info().Module == module &&
+			r.Info().Type == ResourceType(typ) &&
+			r.Info().Name == n {
 			return r, nil
 		}
 	}
@@ -194,7 +200,7 @@ func (c *Config) FindResourcesByType(t string) []Resource {
 func (c *Config) AddResource(r Resource) error {
 	rn := fmt.Sprintf("%s.%s", r.Info().Name, r.Info().Type)
 	if r.Info().Module != "" {
-		rn = fmt.Sprintf("%s.%s", r.Info().Module, rn)
+		rn = fmt.Sprintf("%s.%s.%s", r.Info().Module, r.Info().Type, r.Info().Name)
 	}
 
 	rf, err := c.FindResource(rn)
