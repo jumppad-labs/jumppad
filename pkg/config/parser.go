@@ -1388,7 +1388,7 @@ func buildContext(filePath string) *hcl.EvalContext {
 		},
 		Type: function.StaticReturnType(cty.String),
 		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
-			perms := os.FileMode(0666)
+			perms := os.FileMode(os.ModePerm)
 			return cty.StringVal(utils.GetDataFolder(args[0].AsString(), perms)), nil
 		},
 	})
