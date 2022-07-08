@@ -1441,6 +1441,9 @@ func buildContext(filePath string) *hcl.EvalContext {
 		Variables: map[string]cty.Value{},
 	}
 
+	valMap := map[string]cty.Value{}
+	ctx.Variables["resources"] = cty.ObjectVal(valMap)
+
 	ctx.Functions["len"] = LenFunc
 	ctx.Functions["env"] = EnvFunc
 	ctx.Functions["k8s_config"] = KubeConfigFunc
