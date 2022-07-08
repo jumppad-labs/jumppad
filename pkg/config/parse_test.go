@@ -64,6 +64,15 @@ func TestLoadsVariablesFiles(t *testing.T) {
 	assert.True(t, validEnv)
 }
 
+func TestResourceReferenceCreatesDependency(t *testing.T) {
+	absoluteFolderPath, err := filepath.Abs("../../examples/single_file")
+	assert.NoError(t, err)
+
+	c := New()
+	err = ParseFolder(absoluteFolderPath, c, false, "", false, []string{}, nil, "")
+	assert.NoError(t, err)
+}
+
 func TestLoadsVariablesFromOptionalFile(t *testing.T) {
 	absoluteFolderPath, err := filepath.Abs("../../examples/container")
 	assert.NoError(t, err)

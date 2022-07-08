@@ -43,43 +43,41 @@ EOF
 container "consul_disabled" {
   disabled = true
 
-  image   {
+  image {
     name = "consul:${var.consul_version}"
   }
 }
 
 container "consul" {
-  depends_on = ["template.consul_config"]
-
-  image   {
+  image {
     name = "consul:${var.consul_version}"
   }
 
   command = ["consul", "agent", "-config-file=/config/consul.hcl"]
 
   volume {
-    source      = "./consul_config"
+    source      = "./consul_config/consul.hcl"
     destination = "/config"
   }
 
   network {
-    name = "network.onprem"
+    name       = "network.onprem"
     ip_address = "10.6.0.200" // optional
-    aliases = ["myalias"]
+    aliases    = ["myalias"]
   }
 
   env {
-    key = "something"
+    key   = "something"
     value = var.something
   }
-  
+
   env {
-    key = "foo"
+    key   = "foo"
     value = env("BAH")
   }
-  
+
   env {
-    key = "file"
+    key   = "file"
     value = file("./conf.txt")
   }
 
@@ -87,7 +85,7 @@ container "consul" {
     # Max CPU to consume, 1000 is one core, default unlimited
     cpu = 2000
     # Pin container to specified CPU cores, default all cores
-    cpu_pin = [0,1]
+    cpu_pin = [0, 1]
     # max memory in MB to consume, default unlimited
     memory = 1024
   }
@@ -98,17 +96,17 @@ container "consul" {
   }
 
   env {
-    key ="abc"
+    key   = "abc"
     value = "123"
   }
-  
+
   env {
-    key ="SHIPYARD_FOLDER"
+    key   = "SHIPYARD_FOLDER"
     value = shipyard()
   }
-  
+
   env {
-    key ="HOME_FOLDER"
+    key   = "HOME_FOLDER"
     value = home()
   }
 }
@@ -116,12 +114,12 @@ container "consul" {
 sidecar "envoy" {
   target = "container.consul"
 
-  image   {
+  image {
     name = "envoyproxy/envoy:v${var.envoy_version}"
   }
 
   command = ["tail", "-f", "/dev/null"]
-  
+
   volume {
     source      = "./consul_config"
     destination = "/config"

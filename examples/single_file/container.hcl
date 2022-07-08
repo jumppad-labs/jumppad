@@ -6,18 +6,41 @@ network "onprem" {
   subnet = "10.6.0.0/16"
 }
 
+template "consul_config" {
+
+  source = <<EOF
+data_dir = "#{{ .Vars.data_dir }}"
+log_level = "DEBUG"
+
+datacenter = "dc1"
+primary_datacenter = "dc1"
+
+server = true
+
+bootstrap_expect = 1
+ui = true
+
+EOF
+
+  destination = "${data("single")}/consul.hcl"
+
+  vars = {
+    data_dir = "/tmp"
+  }
+}
+
 container "consul" {
-  image   {
+  image {
     name = var.version
   }
 
   command = ["consul", "agent", "-dev", "-client", "0.0.0.0"]
 
-  network   {
-    name = "network.onprem"
+  network {
+    name       = "network.onprem"
     ip_address = "10.6.0.200"
   }
-  
+
   port_range {
     range       = "8500-8502"
     enable_host = true
@@ -33,13 +56,21 @@ container "consul" {
   }
 
   volume {
-    source = data("temp")
+    source      = data("temp")
     destination = "/test"
   }
-  
+
   volume {
-    source = "images.volume.shipyard.run"
+    source      = resources.template.consul_config.destination
+    destination = "/config/config.hcl"
+  }
+
+  volume {
+    source      = "images.volume.shipyard.run"
     destination = "/cache"
-    type = "volume"
+    type        = "volume"
   }
 }
+
+
+source = resources.template.consul_config.destination
