@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/hcl2/hcl"
 	"github.com/hashicorp/hcl2/hcl/hclsyntax"
 	"github.com/hashicorp/hcl2/hclparse"
+	"github.com/kr/pretty"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/function"
@@ -1468,12 +1469,36 @@ func copyContext(path string, ctx *hcl.EvalContext) *hcl.EvalContext {
 
 func decodeBody(ctx *hcl.EvalContext, path string, b *hclsyntax.Block, p interface{}) error {
 
+	recurseBlock(b, ctx)
+
 	diag := gohcl.DecodeBody(b.Body, ctx, p)
 	if diag.HasErrors() {
 		return errors.New(diag.Error())
 	}
 
 	return nil
+}
+
+func recurseBlock(b *hclsyntax.Block, ctx *hcl.EvalContext) {
+	for _, a := range b.Body.Attributes {
+		// look for scope traversal expressions
+		switch a.Expr.(type) {
+		case *hclsyntax.ScopeTraversalExpr:
+			ste := a.Expr.(*hclsyntax.ScopeTraversalExpr)
+			for i, t := range ste.Traversal {
+				if i == 0 {
+					pretty.Println(t.(hcl.TraverseRoot).Name)
+				} else {
+					pretty.Println(t.(hcl.TraverseAttr).Name)
+				}
+			}
+		}
+
+	}
+
+	for _, b := range b.Body.Blocks {
+		recurseBlock(b, ctx)
+	}
 }
 
 // ensureAbsolute ensure that the given path is either absolute or
