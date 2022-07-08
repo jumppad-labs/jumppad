@@ -56,8 +56,8 @@ container "consul" {
   command = ["consul", "agent", "-config-file=/config/consul.hcl"]
 
   volume {
-    source      = "./consul_config/consul.hcl"
-    destination = "/config"
+    source      = resources.template.consul_config.destination
+    destination = "/config/config.hcl"
   }
 
   network {
