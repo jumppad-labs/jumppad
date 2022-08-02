@@ -1,23 +1,25 @@
 package providers
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/config"
-	"github.com/stretchr/testify/assert"
+	assert "github.com/stretchr/testify/require"
 )
 
-func setupTemplate(t *testing.T) (*config.Template, *Template) {
-	tmpl := createTemplate(t)
+func setupTemplate(t *testing.T, filename string) (*config.Template, *Template) {
+	tmpl := createTemplate(t, filename)
 
 	return tmpl, NewTemplate(tmpl, hclog.NewNullLogger())
 }
 
 func TestTemplateReturnsErrorWhenEmpty(t *testing.T) {
-	tmpl, provider := setupTemplate(t)
+	tmpl, provider := setupTemplate(t, "")
 	tmpl.Source = ""
 
 	err := provider.Create()
@@ -25,7 +27,7 @@ func TestTemplateReturnsErrorWhenEmpty(t *testing.T) {
 }
 
 func TestTemplateReturnsErrorWhenCantParse(t *testing.T) {
-	tmpl, provider := setupTemplate(t)
+	tmpl, provider := setupTemplate(t, "")
 	tmpl.Source = "template #{{ .Something"
 
 	err := provider.Create()
@@ -33,7 +35,11 @@ func TestTemplateReturnsErrorWhenCantParse(t *testing.T) {
 }
 
 func TestTemplateProcessesCorrectly(t *testing.T) {
-	tmpl, provider := setupTemplate(t)
+	dir := t.TempDir()
+	filename := path.Join(dir, "temp.txt")
+	ioutil.WriteFile(filename, []byte("mycontent"), os.ModePerm)
+
+	tmpl, provider := setupTemplate(t, filename)
 
 	err := provider.Create()
 	assert.NoError(t, err)
@@ -51,10 +57,16 @@ func TestTemplateProcessesCorrectly(t *testing.T) {
 	assert.Contains(t, string(d), `bool_var = true`)
 	assert.Contains(t, string(d), `num_var = 13`)
 	assert.Contains(t, string(d), `string_var = "Abc"`)
+
+	// check template functions
+
+	assert.Contains(t, string(d), `file_content = "mycontent"`)
+	assert.Contains(t, string(d), `quote_string = "Abc"`)
+	assert.Contains(t, string(d), `trim_spaces = "with spaces"`)
 }
 
 func TestTemplateWriteSourceWhenNoVars(t *testing.T) {
-	tmpl, provider := setupTemplate(t)
+	tmpl, provider := setupTemplate(t, "")
 	provider.config.Vars = nil
 
 	err := provider.Create()
@@ -67,7 +79,7 @@ func TestTemplateWriteSourceWhenNoVars(t *testing.T) {
 }
 
 func TestTemplateOverwritesExistingFile(t *testing.T) {
-	tmpl, provider := setupTemplate(t)
+	tmpl, provider := setupTemplate(t, "")
 
 	f, err := os.Create(tmpl.Destination)
 	assert.NoError(t, err)
@@ -84,7 +96,7 @@ func TestTemplateOverwritesExistingFile(t *testing.T) {
 }
 
 func TestTemplateDestroyRemovesDestination(t *testing.T) {
-	tmpl, provider := setupTemplate(t)
+	tmpl, provider := setupTemplate(t, "")
 
 	f, err := os.Create(tmpl.Destination)
 	assert.NoError(t, err)
@@ -97,8 +109,8 @@ func TestTemplateDestroyRemovesDestination(t *testing.T) {
 	assert.NoFileExists(t, tmpl.Destination)
 }
 
-func createTemplate(t *testing.T) *config.Template {
-	tmpl := `
+func createTemplate(t *testing.T, file string) *config.Template {
+	tmpl := fmt.Sprintf(`
 variable "bool_var" {
 	default = true
 }
@@ -109,6 +121,10 @@ variable "num_var" {
 
 variable "str_var" {
 	default = "Abc"
+}
+
+variable "str_var_whitespace" {
+	default = " with spaces "
 }
 
 variable "other_ports" {
@@ -150,6 +166,13 @@ template "fetch_consul_resources" {
 	  grpc_other = #{{ . }}
 		#{{ end }}
 	}
+
+	functions {
+		file_content = "#{{ file "%s" }}"
+		quote_string = #{{ .Vars.string_var | quote }}
+		trim_spaces = "#{{ .Vars.string_var_whitespace | trim }}"
+	}
+
 	EOF
 
 	destination = "./out.txt"
@@ -168,8 +191,9 @@ template "fetch_consul_resources" {
 			a = 1
 			ports = ["sfsf","sfsf"]
 		}
+		string_var_whitespace = var.str_var_whitespace
   }
-}`
+}`, file)
 
 	conf, _ := config.CreateConfigFromStrings(t, tmpl)
 	cr, err := conf.FindResource("template.fetch_consul_resources")
