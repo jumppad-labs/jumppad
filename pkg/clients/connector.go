@@ -116,20 +116,22 @@ func (c *ConnectorImpl) Start(cb *CertBundle) error {
 		ll = "info"
 	}
 
+	args := []string{
+		"connector",
+		"run",
+		"--grpc-bind", c.options.GrpcBind,
+		"--http-bind", c.options.HTTPBind,
+		"--api-bind", c.options.APIBind,
+		"--root-cert-path", cb.RootCertPath,
+		"--server-cert-path", cb.LeafCertPath,
+		"--server-key-path", cb.LeafKeyPath,
+		"--log-level", ll,
+	}
+
 	lp := &gohup.LocalProcess{}
 	o := gohup.Options{
-		Path: c.options.BinaryPath,
-		Args: []string{
-			"connector",
-			"run",
-			"--grpc-bind", c.options.GrpcBind,
-			"--http-bind", c.options.HTTPBind,
-			"--api-bind", c.options.APIBind,
-			"--root-cert-path", cb.RootCertPath,
-			"--server-cert-path", cb.LeafCertPath,
-			"--server-key-path", cb.LeafKeyPath,
-			"--log-level", ll,
-		},
+		Path:    c.options.BinaryPath,
+		Args:    args,
 		Logfile: filepath.Join(c.options.LogDirectory, "connector.log"),
 		Pidfile: c.options.PidFile,
 	}

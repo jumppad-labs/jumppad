@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"os/signal"
@@ -119,7 +118,7 @@ func newConnectorRunCommand() *cobra.Command {
 			// we should look at merging the connector server and the API server
 			l.Info("Starting API server", "bind_addr", apiBindAddr)
 			api := server.New(apiBindAddr, l.Named("api_server"))
-			api.Start()
+			go api.Start()
 
 			c := make(chan os.Signal, 1)
 			signal.Notify(c, os.Interrupt)
@@ -127,7 +126,7 @@ func newConnectorRunCommand() *cobra.Command {
 
 			// Block until a signal is received.
 			sig := <-c
-			log.Println("Got signal:", sig)
+			l.Info("Got signal", "signal", sig)
 
 			s.Shutdown()
 
