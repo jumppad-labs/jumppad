@@ -33,7 +33,7 @@ connect {
 }
 EOF
 
-  destination = "./consul_config/consul.hcl"
+  destination = "${data("config")}/consul.hcl"
 
   vars = {
     data_dir = "/tmp"
@@ -121,7 +121,7 @@ sidecar "envoy" {
   command = ["tail", "-f", "/dev/null"]
 
   volume {
-    source      = "./consul_config"
+    source      = data("config")
     destination = "/config"
   }
 }
