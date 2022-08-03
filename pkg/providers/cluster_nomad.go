@@ -250,6 +250,9 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 	cc.Networks = c.config.Networks
 	cc.Privileged = true // nomad must run Privileged as Docker needs to manipulate ip tables and stuff
 
+	// Add Consul DNS
+	//cc.DNS = []string{"127.0.0.1"}
+
 	// set the volume mount for the images and the config
 	cc.Volumes = []config.Volume{
 		config.Volume{
@@ -348,6 +351,8 @@ func (c *NomadCluster) createClientNode(index int, image, volumeID, configDir, s
 	cc.Image = &config.Image{Name: image}
 	cc.Networks = c.config.Networks
 	cc.Privileged = true // nomad must run Privileged as Docker needs to manipulate ip tables and stuff
+
+	//cc.DNS = []string{"127.0.0.1"}
 
 	// set the volume mount for the images and the config
 	cc.Volumes = []config.Volume{

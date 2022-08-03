@@ -113,6 +113,15 @@ func (a *API) terminalWebsocket(c *websocket.Conn) {
 			}
 
 			a.log.Debug("Resizing terminal")
+			pty.Setsize(
+				tty,
+				&pty.Winsize{
+					Cols: resizeMessage.Cols,
+					Rows: resizeMessage.Rows,
+					X:    resizeMessage.X,
+					Y:    resizeMessage.Y,
+				})
+
 			// #nosec G103
 			//_, _, errno := syscall.Syscall(
 			//	syscall.SYS_IOCTL,

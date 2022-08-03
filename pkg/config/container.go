@@ -21,6 +21,7 @@ type Container struct {
 	Volumes     []Volume          `hcl:"volume,block" json:"volumes,omitempty"`                                    // volumes to attach to the container
 	Ports       []Port            `hcl:"port,block" json:"ports,omitempty"`                                        // ports to expose
 	PortRanges  []PortRange       `hcl:"port_range,block" json:"port_ranges,omitempty" mapstructure:"port_ranges"` // range of ports to expose
+	DNS         []string          `hcl:"dns,optional" json:"dns,omitempty"`                                        // Add custom DNS servers to the container
 
 	Privileged bool `hcl:"privileged,optional" json:"privileged,omitempty"` // run the container in privileged mode?
 
