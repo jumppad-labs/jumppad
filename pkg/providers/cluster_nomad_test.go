@@ -355,7 +355,7 @@ func TestClusterNomadImportDockerExecFailReturnsError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestClusterNomadSetsEnvironmentOnServer(t *testing.T) {
+func TestClusterNomadSetsEnvironmentOnServerAndClient(t *testing.T) {
 	cc, md, mh := setupNomadClusterMocks(t)
 	cc.Version = ""
 	cc.ClientNodes = 1
