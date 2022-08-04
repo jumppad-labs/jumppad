@@ -56,6 +56,8 @@ func (c *ExecRemote) Create() error {
 			fallthrough
 		case config.TypeNomadCluster:
 			fallthrough
+		case config.TypeSidecar:
+			fallthrough
 		case config.TypeContainer:
 			ids, err := c.client.FindContainerIDs(target.Info().Name, target.Info().Type)
 
