@@ -15,7 +15,7 @@ Join our community on Discord: [https://discord.gg/ZuEFPJU69D](https://discord.g
 
 ## Questions
 ## Is Shipyard like Terraform?
-Kind of but more about local environments rather than infrastructure
+Kind of, but more about local environments rather than infrastructure
 
 ## Why not use Docker Compose?
 Docker Compose is one of our favourite tools but we found it does not manage dependencies particulary well. Compose also works on a really low level of abstraction. Shipyard addresses these missing features.
@@ -163,7 +163,7 @@ Podman support is experimental and at present many features such as Kubernetes c
 
 ## Enable the podman socket
 
-Shipyard uses podmans API that is compatible with the Docker Enginer API. To enable this you need to run the podman socket as a group that your user has access to, the following example uses the `docker` group
+Shipyard uses podman's API, which is compatible with the Docker Enginer API. To enable this, you need to run the podman socket as a group that your user has access to. The following example uses the `docker` group:
 
 ```
 sudo sed '/^SocketMode=.*/a SocketGroup=docker' -i /lib/systemd/system/podman.socket
@@ -192,9 +192,9 @@ Point your DOCKER_HOST environment variable at the socket
 export DOCKER_HOST=unix:///run/podman/podman.sock
 ```
 
-If you have the Docker CLI install you should be able to contact the podman daemon using the standard Docker commands
+If you have the Docker CLI installed you should be able to contact the podman daemon using the standard Docker commands
 
-````
+```
 docker ps
 ```
 
@@ -208,7 +208,7 @@ NETWORK ID    NAME    VERSION  PLUGINS
 
 ### Registries
 
-Image pull silent ly fails if there are no registries defined in podmans /etc/containers/registries.conf
+Image pull silently fails if there are no registries defined in podmans /etc/containers/registries.conf
 
 ```
 echo -e "[registries.search]\nregistries = ['docker.io']" | sudo tee /etc/containers/registries.conf
@@ -247,7 +247,7 @@ Once an issue exists, you can modify the code and raise a PR against this repo. 
 
 ## Testing:
 
-The project has two types of test, pure code Unit tests and, Functional tests which apply real blueprints to a locally running Docker engine and test output.
+The project has two types of tests, pure code Unit tests and Functional tests, which apply real blueprints to a locally-running Docker engine and test output.
 
 ### Unit tests:
 
