@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -61,17 +62,7 @@ func (c *CertificateCA) Create() error {
 func (c *CertificateCA) Destroy() error {
 	c.log.Info("Destroy CA Certificate", "ref", c.config.Name)
 
-	err := os.Remove(path.Join(c.config.Output, fmt.Sprintf("%s.key", c.config.Name)))
-	if err != nil {
-		return err
-	}
-
-	err = os.Remove(path.Join(c.config.Output, fmt.Sprintf("%s.cert", c.config.Name)))
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return destroy(c.config.Name, c.config.Output, c.log)
 }
 
 func (c *CertificateCA) Lookup() ([]string, error) {
@@ -121,19 +112,25 @@ func (c *CertificateLeaf) Create() error {
 func (c *CertificateLeaf) Destroy() error {
 	c.log.Info("Destroy Leaf Certificate", "ref", c.config.Name)
 
-	err := os.Remove(path.Join(c.config.Output, fmt.Sprintf("%s.key", c.config.Name)))
-	if err != nil {
-		c.log.Debug("Unable to remove key", "ref", c.config.Name, "error", err)
-	}
-
-	err = os.Remove(path.Join(c.config.Output, fmt.Sprintf("%s.cert", c.config.Name)))
-	if err != nil {
-		c.log.Debug("Unable to remove cert", "ref", c.config.Name, "error", err)
-	}
-
-	return nil
+	return destroy(c.config.Name, c.config.Output, c.log)
 }
 
 func (c *CertificateLeaf) Lookup() ([]string, error) {
 	return nil, nil
+}
+
+func destroy(name, output string, log hclog.Logger) error {
+	kp, _ := filepath.Abs(path.Join(output, fmt.Sprintf("%s.key", name)))
+	err := os.Remove(kp)
+	if err != nil {
+		log.Debug("Unable to remove key", "ref", name, "error", err)
+	}
+
+	cp, _ := filepath.Abs(path.Join(output, fmt.Sprintf("%s.cert", name)))
+	err = os.Remove(cp)
+	if err != nil {
+		log.Debug("Unable to remove cert", "ref", name, "error", err)
+	}
+
+	return nil
 }
