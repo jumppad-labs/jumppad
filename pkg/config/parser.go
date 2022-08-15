@@ -1091,7 +1091,10 @@ func parseOutputFile(file string, disabled bool, c *Config) error {
 
 			setDisabled(v, disabled)
 
-			c.AddResource(v)
+			// if disabled do not add to the resources list
+			if !v.Info().Disabled {
+				c.AddResource(v)
+			}
 		}
 	}
 

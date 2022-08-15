@@ -27,10 +27,10 @@ func TestOutputCreatesCorrectly(t *testing.T) {
 func TestOutputSetsDisabled(t *testing.T) {
 	c, _ := CreateConfigFromStrings(t, outputDisabled)
 
-	cl, err := c.FindResource("output.test")
-	assert.NoError(t, err)
+	_, err := c.FindResource("output.test")
+	assert.Error(t, err)
 
-	assert.Equal(t, Disabled, cl.Info().Status)
+	assert.Contains(t, err.Error(), "unable to find resources")
 }
 
 const outputDefault = `
