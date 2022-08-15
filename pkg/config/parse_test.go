@@ -470,6 +470,7 @@ func TestParseProcessesShipyardFunctions(t *testing.T) {
 	ip, _ := utils.GetLocalIPAndHostname()
 	clusterConf, _ := utils.GetClusterConfig("nomad_cluster.dc1")
 	clusterIP := clusterConf.APIAddress(utils.LocalContext)
+	clusterPort := fmt.Sprintf("%d", clusterConf.RemoteAPIPort)
 
 	c := New()
 	err = ParseSingleFile(absoluteFilePath, c, map[string]string{}, absoluteVarsPath)
@@ -494,6 +495,7 @@ func TestParseProcessesShipyardFunctions(t *testing.T) {
 	assert.Equal(t, utils.GetDockerHost(), cc.EnvVar["docker_host"])
 	assert.Equal(t, ip, cc.EnvVar["shipyard_ip"])
 	assert.Equal(t, clusterIP, cc.EnvVar["cluster_api"])
+	assert.Equal(t, clusterPort, cc.EnvVar["cluster_port"])
 	assert.Equal(t, "2", cc.EnvVar["var_len"])
 }
 

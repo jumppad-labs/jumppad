@@ -36,6 +36,7 @@ container "consul" {
     docker_host       = docker_host()
     shipyard_ip       = shipyard_ip()
     cluster_api       = cluster_api("nomad_cluster.dc1")
+    cluster_port      = cluster_port("nomad_cluster.dc1")
     var_len           = len(var.test_var)
   }
 }

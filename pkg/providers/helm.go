@@ -77,25 +77,49 @@ func (h *Helm) Create() error {
 
 	failCount := 0
 
-	for {
-		err = h.helmClient.Create(
-			kcPath, h.config.ChartName,
-			h.config.Namespace, h.config.CreateNamespace,
-			h.config.SkipCRDs,
-			h.config.Chart, h.config.Version,
-			h.config.Values, h.config.ValuesString)
-
-		if err == nil {
-			break
-
+	to := time.Duration(300 * time.Second)
+	if h.config.Timeout != "" {
+		to, err = time.ParseDuration(h.config.Timeout)
+		if err != nil {
+			return xerrors.Errorf("unable to parse timeout duration: %w", err)
 		}
-		failCount++
+	}
 
-		if failCount >= h.config.Retry {
-			return err
-		} else {
-			h.log.Debug("Chart apply failed, retrying", "error", err)
+	timeout := time.After(to)
+	errChan := make(chan error, 0)
+	doneChan := make(chan struct{}, 0)
+
+	go func() {
+		for {
+			err = h.helmClient.Create(
+				kcPath, h.config.ChartName,
+				h.config.Namespace, h.config.CreateNamespace,
+				h.config.SkipCRDs,
+				h.config.Chart, h.config.Version,
+				h.config.Values, h.config.ValuesString)
+
+			if err == nil {
+				doneChan <- struct{}{}
+				break
+			}
+
+			failCount++
+
+			if failCount >= h.config.Retry {
+				errChan <- err
+			} else {
+				h.log.Debug("Chart apply failed, retrying", "error", err)
+			}
 		}
+	}()
+
+	select {
+	case <-timeout:
+		return xerrors.Errorf("timeout waiting for helm chart to complete")
+	case <-errChan:
+		return err
+	case <-doneChan:
+		h.log.Debug("Helm chart applied", "ref", h.config.Name)
 	}
 
 	// we can now health check the install

@@ -16,7 +16,7 @@ type Container struct {
 	Build       *Build            `hcl:"build,block" json:"build"`                                                 // Enables containers to be built on the fly
 	Entrypoint  []string          `hcl:"entrypoint,optional" json:"entrypoint,omitempty"`                          // entrypoint to use when starting the container
 	Command     []string          `hcl:"command,optional" json:"command,omitempty"`                                // command to use when starting the container
-	Environment []KV              `hcl:"env,block" json:"environment,omitempty"`                                   // environment variables to set when starting the container, // Depricated field
+	Environment []KV              `hcl:"env,block" json:"env,omitempty" mapstructure:"env"`                        // environment variables to set when starting the container, // Depricated field
 	EnvVar      map[string]string `hcl:"env_var,optional" json:"env_var,omitempty" mapstructure:"env_var"`         // environment variables to set when starting the container
 	Volumes     []Volume          `hcl:"volume,block" json:"volumes,omitempty"`                                    // volumes to attach to the container
 	Ports       []Port            `hcl:"port,block" json:"ports,omitempty"`                                        // ports to expose

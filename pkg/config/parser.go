@@ -1388,6 +1388,22 @@ func buildContext() *hcl.EvalContext {
 		},
 	})
 
+	var ClusterPortFunc = function.New(&function.Spec{
+		Params: []function.Parameter{
+			{
+				Name:             "name",
+				Type:             cty.String,
+				AllowDynamicType: true,
+			},
+		},
+		Type: function.StaticReturnType(cty.Number),
+		Impl: func(args []cty.Value, retType cty.Type) (cty.Value, error) {
+			conf, _ := utils.GetClusterConfig(args[0].AsString())
+
+			return cty.NumberIntVal(int64(conf.RemoteAPIPort)), nil
+		},
+	})
+
 	var LenFunc = function.New(&function.Spec{
 		Params: []function.Parameter{
 			{
@@ -1427,6 +1443,7 @@ func buildContext() *hcl.EvalContext {
 	ctx.Functions["docker_host"] = DockerHostFunc
 	ctx.Functions["shipyard_ip"] = ShipyardIPFunc
 	ctx.Functions["cluster_api"] = ClusterAPIFunc
+	ctx.Functions["cluster_port"] = ClusterPortFunc
 
 	// the functions file_path and file_dir are added dynamically when processing a file
 	// this is because the need a reference to the current file
