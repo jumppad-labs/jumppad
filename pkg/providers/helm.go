@@ -116,8 +116,8 @@ func (h *Helm) Create() error {
 	select {
 	case <-timeout:
 		return xerrors.Errorf("timeout waiting for helm chart to complete")
-	case <-errChan:
-		return err
+	case createErr := <-errChan:
+		return createErr
 	case <-doneChan:
 		h.log.Debug("Helm chart applied", "ref", h.config.Name)
 	}

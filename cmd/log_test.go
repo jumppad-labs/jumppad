@@ -243,7 +243,7 @@ var logState = `
         "agent",
         "-config-file=/config/consul.hcl"
       ],
-      "environment": [
+      "env": [
         {
           "key": "something",
           "value": "blah blah"

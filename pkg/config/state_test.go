@@ -378,7 +378,7 @@ var complexState = `
         "network.onprem",
         "template.consul_config"
       ],
-      "environment": [
+      "env": [
         {
           "key": "something",
           "value": "this is a module"
