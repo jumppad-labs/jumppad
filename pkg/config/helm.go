@@ -38,6 +38,9 @@ type Helm struct {
 	// Retry the install n number of times
 	Retry int `hcl:"retry,optional" json:"retry,omitempty" mapstructure:"retry"`
 
+	// Timeout specifices the maximum time a chart can run, default 300s
+	Timeout string `hcl:"timeout,optional" json:"timeout"`
+
 	HealthCheck *HealthCheck `hcl:"health_check,block" json:"health_check,omitempty" mapstructure:"health_check"`
 }
 
