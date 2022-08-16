@@ -41,6 +41,10 @@ func parseVars(value map[string]cty.Value) map[string]interface{} {
 }
 
 func castVar(v cty.Value) interface{} {
+	if v.IsNull() {
+		return nil
+	}
+
 	if v.Type() == cty.String {
 		return v.AsString()
 	} else if v.Type() == cty.Bool {
