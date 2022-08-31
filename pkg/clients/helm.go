@@ -61,8 +61,11 @@ func NewHelm(l hclog.Logger) Helm {
 	os.MkdirAll(helmCachePath, os.ModePerm)
 	os.MkdirAll(helmDataPath, os.ModePerm)
 
-	//	create the config file
-	os.Create(helmRepoConfig)
+	//	create the repo config if it does not exist
+	_, err := os.Stat(helmRepoConfig)
+	if err != nil {
+		os.Create(helmRepoConfig)
+	}
 
 	os.Setenv("HELM_CACHE_HOME", helmCachePath)
 	os.Setenv("HELM_CONFIG_HOME", helmConfigPath)

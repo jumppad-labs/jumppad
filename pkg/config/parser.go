@@ -863,7 +863,7 @@ func parseHCLFile(file string, c *Config, moduleName string, disabled bool, depe
 			if !utils.IsLocalFolder(ensureAbsolute(m.Source, file)) {
 				// get the details
 				dst := utils.GetBlueprintLocalFolder(m.Source)
-				err := getFiles(m.Source, dst)
+				err := getModuleFiles(m.Source, dst)
 				if err != nil {
 					return err
 				}
@@ -1510,13 +1510,18 @@ func ensureAbsolute(path, file string) string {
 	return filepath.Clean(fp)
 }
 
-func getFiles(source, dest string) error {
+func getModuleFiles(source, dest string) error {
+	// check to see if a folder exists at the destination and exit if exists
+	_, err := os.Stat(dest)
+	if err == nil {
+		return nil
+	}
+
 	pwd, err := os.Getwd()
 	if err != nil {
 		return err
 	}
 
-	// if the argument is a url fetch it first
 	c := &getter.Client{
 		Ctx:     context.Background(),
 		Src:     source,
