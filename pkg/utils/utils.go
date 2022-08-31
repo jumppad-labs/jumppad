@@ -450,6 +450,7 @@ func GetLocalIPAddresses() []string {
 
 // GetLocalIPAndHostname returns the IP Address of the machine
 // running shipyard and the hostname for that machine
+// this function only works with a valid internet connection
 func GetLocalIPAndHostname() (string, string) {
 
 	conn, err := net.Dial("udp", "8.8.8.8:80")
