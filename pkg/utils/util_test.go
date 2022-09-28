@@ -323,8 +323,8 @@ func TestDockerHostWithDefaultReturnsCorrectValue(t *testing.T) {
 func TestGetLocalIPAndHostnameReturnsCorrectly(t *testing.T) {
 	ip, host := GetLocalIPAndHostname()
 
-	assert.NotEqual(t, ip, "")
-	assert.NotEqual(t, host, "")
+	assert.NotEqual(t, ip, "127.0.0.1")
+	assert.NotEqual(t, host, "localhost")
 }
 
 func TestHTTPProxyAddressReturnsDefaultWhenEnvNotSet(t *testing.T) {
