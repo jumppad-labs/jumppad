@@ -449,18 +449,21 @@ func GetLocalIPAddresses() []string {
 }
 
 // GetLocalIPAndHostname returns the IP Address of the machine
-// running shipyard and the hostname for that machine
 func GetLocalIPAndHostname() (string, string) {
-
-	conn, err := net.Dial("udp", "8.8.8.8:80")
+	netInterfaceAddresses, err := net.InterfaceAddrs()
 	if err != nil {
-		fmt.Println(err)
+		return "", ""
 	}
 
-	defer conn.Close()
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	for _, netInterfaceAddress := range netInterfaceAddresses {
+		networkIP, ok := netInterfaceAddress.(*net.IPNet)
+		if ok && !networkIP.IP.IsLoopback() && networkIP.IP.To4() != nil {
+			ip := networkIP.IP.String()
+			return ip, GetHostname()
+		}
+	}
 
-	return localAddr.IP.String(), GetHostname()
+	return "127.0.0.1", "localhost"
 }
 
 // HTTPProxyAddress returns the default HTTPProxy used by
