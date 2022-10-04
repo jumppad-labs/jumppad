@@ -585,20 +585,20 @@ jobs:
       run: |
         cd dist
         sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.tar.gz > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.tar.gz > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.deb > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.deb > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.deb > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.deb > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.rpm > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.rpm > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.rpm > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.rpm > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip > checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz >> checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.tar.gz >> checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.tar.gz >> checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.deb >> checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.deb >> checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.deb >> checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.deb >> checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.rpm >> checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.rpm >> checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.rpm >> checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.rpm >> checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip >> checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip >> checksums.txt
+        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip >> checksums.txt
 
     - name: Release
       uses: softprops/action-gh-release@v1
