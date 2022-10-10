@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/stretchr/testify/mock"
@@ -15,7 +16,7 @@ import (
 func TestContainerCreatesSuccessfully(t *testing.T) {
 	cc := config.NewContainer("tests")
 	cc.Image = &config.Image{}
-	md := &mocks.MockContainerTasks{}
+	md := &clients.MockContainerTasks{}
 	hc := &mocks.MockHTTP{}
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
@@ -32,7 +33,7 @@ func TestContainerCreatesSuccessfully(t *testing.T) {
 }
 
 func TestContainerSidecarCreatesContainerSuccessfully(t *testing.T) {
-	md := &mocks.MockContainerTasks{}
+	md := &clients.MockContainerTasks{}
 	hc := &mocks.MockHTTP{}
 
 	cc := config.NewSidecar("test")
@@ -81,7 +82,7 @@ func TestContainerRunsHTTPChecks(t *testing.T) {
 		HTTP:    "http://localhost:8500",
 	}
 
-	md := &mocks.MockContainerTasks{}
+	md := &clients.MockContainerTasks{}
 	hc := &mocks.MockHTTP{}
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
@@ -105,7 +106,7 @@ func TestContainerRunsHTTPChecksWithCustomStatusCodes(t *testing.T) {
 		HTTPSuccessCodes: []int{200, 429},
 	}
 
-	md := &mocks.MockContainerTasks{}
+	md := &clients.MockContainerTasks{}
 	hc := &mocks.MockHTTP{}
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
@@ -123,7 +124,7 @@ func TestContainerRunsHTTPChecksWithCustomStatusCodes(t *testing.T) {
 func TestContainerDoesNOTCreateWhenPullImageFail(t *testing.T) {
 	cc := config.NewContainer("tests")
 	cc.Image = &config.Image{}
-	md := &mocks.MockContainerTasks{}
+	md := &clients.MockContainerTasks{}
 	hc := &mocks.MockHTTP{}
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
@@ -141,7 +142,7 @@ func TestContainerDoesNOTCreateWhenPullImageFail(t *testing.T) {
 func TestContainerDestroysCorrectlyWhenContainerExists(t *testing.T) {
 	cc := config.NewContainer("tests")
 	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}}
-	md := &mocks.MockContainerTasks{}
+	md := &clients.MockContainerTasks{}
 	hc := &mocks.MockHTTP{}
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
@@ -156,7 +157,7 @@ func TestContainerDestroysCorrectlyWhenContainerExists(t *testing.T) {
 func TestContainerDoesNotDestroysWhenNotExists(t *testing.T) {
 	cc := config.NewContainer("tests")
 	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}}
-	md := &mocks.MockContainerTasks{}
+	md := &clients.MockContainerTasks{}
 	hc := &mocks.MockHTTP{}
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
@@ -170,7 +171,7 @@ func TestContainerDoesNotDestroysWhenNotExists(t *testing.T) {
 func TestContainerDoesNotDestroysWhenLookupError(t *testing.T) {
 	cc := config.NewContainer("tests")
 	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}}
-	md := &mocks.MockContainerTasks{}
+	md := &clients.MockContainerTasks{}
 	hc := &mocks.MockHTTP{}
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
@@ -184,7 +185,7 @@ func TestContainerDoesNotDestroysWhenLookupError(t *testing.T) {
 func TestContainerLooksupIDs(t *testing.T) {
 	cc := config.NewContainer("tests")
 	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}}
-	md := &mocks.MockContainerTasks{}
+	md := &clients.MockContainerTasks{}
 	hc := &mocks.MockHTTP{}
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
@@ -199,7 +200,7 @@ func TestContainerBuildsContainer(t *testing.T) {
 	cc := config.NewContainer("tests")
 	cc.Build = &config.Build{Context: "./", File: "./"}
 
-	md := &mocks.MockContainerTasks{}
+	md := &clients.MockContainerTasks{}
 	md.On("BuildContainer", mock.Anything, mock.Anything).Return("testimage", nil)
 	md.On("CreateContainer", cc).Once().Return("", nil)
 

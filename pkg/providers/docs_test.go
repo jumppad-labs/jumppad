@@ -7,20 +7,20 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
+	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-func setupDocs(t *testing.T) (*Docs, *mocks.MockContainerTasks) {
+func setupDocs(t *testing.T) (*Docs, *clients.MockContainerTasks) {
 	cc := config.NewDocs("tests")
 	cc.IndexTitle = "test"
 	cc.IndexPages = []string{"abc", "123"}
 	cc.Path = "./docs"
 
-	md := &mocks.MockContainerTasks{}
+	md := &clients.MockContainerTasks{}
 
 	md.On("PullImage", mock.Anything, false).Return(nil)
 	md.On("CreateContainer", mock.Anything).Return("", nil)

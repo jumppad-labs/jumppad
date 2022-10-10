@@ -20,6 +20,9 @@ func TestContainerLogsCalled(t *testing.T) {
 		ioutil.NopCloser(bytes.NewBufferString("test")),
 		fmt.Errorf("boom"),
 	)
+
+  md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+
 	mic := &mocks.ImageLog{}
 
 	dt := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())

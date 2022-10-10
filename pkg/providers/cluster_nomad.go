@@ -17,7 +17,7 @@ import (
 )
 
 const nomadBaseImage = "shipyardrun/nomad"
-const nomadBaseVersion = "1.3.1"
+const nomadBaseVersion = "1.4.0"
 
 const dataDir = `
 data_dir = "/var/lib/nomad"

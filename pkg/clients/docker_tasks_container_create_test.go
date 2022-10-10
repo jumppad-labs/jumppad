@@ -117,6 +117,8 @@ func setupContainerMocks() (*clients.MockDocker, *clients.ImageLog) {
 	md.On("VolumeList", mock.Anything, mock.Anything).Return(nil, nil)
 	md.On("VolumeCreate", mock.Anything, mock.Anything).Return(types.Volume{Name: "test_volume"}, nil)
 	md.On("VolumeRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+  
+  md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 
 	mic := &clients.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)

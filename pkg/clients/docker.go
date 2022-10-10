@@ -24,6 +24,7 @@ type Docker interface {
 		platform *specs.Platform,
 		containerName string,
 	) (container.ContainerCreateCreatedBody, error)
+
 	ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
 	ContainerStart(context.Context, string, types.ContainerStartOptions) error
 	ContainerStop(ctx context.Context, containerID string, timeout *time.Duration) error
@@ -56,6 +57,7 @@ type Docker interface {
 	ImageBuild(ctx context.Context, buildContext io.Reader, options types.ImageBuildOptions) (types.ImageBuildResponse, error)
 
 	ServerVersion(ctx context.Context) (types.Version, error)
+  Info(ctx context.Context) (types.Info, error)
 }
 
 // NewDocker creates a new Docker client

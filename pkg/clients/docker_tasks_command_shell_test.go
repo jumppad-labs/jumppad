@@ -27,6 +27,8 @@ func setupShellMocks() (*DockerTasks, *clients.MockDocker) {
 		}, nil)
 	md.On("ContainerExecInspect", mock.Anything, mock.Anything).Return(types.ContainerExecInspect{ExitCode: 0}, nil)
 
+  md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+
 	mic := &clients.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
 

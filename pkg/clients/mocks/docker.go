@@ -262,3 +262,13 @@ func (m *MockDocker) ServerVersion(ctx context.Context) (types.Version, error) {
 
 	return types.Version{}, args.Error(1)
 }
+
+func (m *MockDocker) Info(ctx context.Context) (types.Info, error) {
+  args := m.Called(ctx)
+
+  if info,ok := args.Get(0).(types.Info); ok {
+    return info, args.Error(1)
+  }
+
+  return types.Info{}, args.Error(1)
+}

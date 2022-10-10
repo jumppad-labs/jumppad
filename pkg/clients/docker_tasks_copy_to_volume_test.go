@@ -27,6 +27,7 @@ var testCopyLocalVolume = "images"
 func testCreateCopyLocalMocks() *mocks.MockDocker {
 	mk := &mocks.MockDocker{}
 	mk.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
+  mk.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 	mk.On("ContainerInspect", mock.Anything, mock.Anything).Return(
 		types.ContainerJSON{
 			&types.ContainerJSONBase{State: &types.ContainerState{Running: true}},

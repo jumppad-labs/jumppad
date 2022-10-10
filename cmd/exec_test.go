@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/docker/docker/pkg/ioutils"
-	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
+	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
@@ -44,8 +44,8 @@ func setupState(state string) func() {
 	}
 }
 
-func setupExec(state string) (*cobra.Command, *mocks.MockContainerTasks, func()) {
-	mt := &mocks.MockContainerTasks{}
+func setupExec(state string) (*cobra.Command, *clients.MockContainerTasks, func()) {
+	mt := &clients.MockContainerTasks{}
 	mt.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
 	mt.On("CreateShell", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mt.On("CreateContainer", mock.Anything).Return("123", nil)

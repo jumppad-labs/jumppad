@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/mohae/deepcopy"
 	"github.com/shipyard-run/shipyard/pkg/clients"
-	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/stretchr/testify/mock"
@@ -23,9 +22,9 @@ import (
 
 // setupClusterMocks sets up a happy path for mocks
 func setupClusterMocks(t *testing.T) (
-	*config.K8sCluster, *mocks.MockContainerTasks, *clients.MockKubernetes, *clients.ConnectorMock) {
+	*config.K8sCluster, *clients.MockContainerTasks, *clients.MockKubernetes, *clients.ConnectorMock) {
 
-	md := &mocks.MockContainerTasks{}
+	md := &clients.MockContainerTasks{}
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{}, nil)
 	md.On("PullImage", mock.Anything, mock.Anything).Return(nil)
 	md.On("CreateVolume", mock.Anything, mock.Anything).Return("123", nil)
@@ -40,6 +39,8 @@ func setupClusterMocks(t *testing.T) (
 	md.On("RemoveContainer", mock.Anything, mock.Anything).Return(nil)
 	md.On("RemoveVolume", mock.Anything).Return(nil)
 	md.On("DetachNetwork", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+  md.On("EngineInfo").Return(&clients.EngineInfo{StorageDriver: "overlay2"})
 
 	// set the home folder to a temp folder
 	tmpDir := t.TempDir()
@@ -97,7 +98,7 @@ func setupClusterMocks(t *testing.T) (
 }
 
 func TestClusterK3ErrorsWhenUnableToLookupIDs(t *testing.T) {
-	md := &mocks.MockContainerTasks{}
+	md := &clients.MockContainerTasks{}
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
 	mk := &clients.MockKubernetes{}
@@ -142,7 +143,7 @@ func TestClusterK3DoesNotSetProxyEnvironmentWithWrongVersion(t *testing.T) {
 }
 
 func TestClusterK3ErrorsWhenClusterExists(t *testing.T) {
-	md := &mocks.MockContainerTasks{}
+	md := &clients.MockContainerTasks{}
 	md.On("FindContainerIDs", "server."+clusterConfig.Name, mock.Anything).Return([]string{"abc"}, nil)
 
 	mk := &clients.MockKubernetes{}
@@ -239,8 +240,9 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 	// validate the command
 	assert.Equal(t, "server", params.Command[0])
 	assert.Contains(t, params.Command[1], params.Ports[0].Local)
-	assert.Contains(t, params.Command[2], "--kube-proxy-arg=")
-	assert.Contains(t, params.Command[3], "traefik")
+	assert.Contains(t, params.Command[2], "--kube-proxy-arg=conntrack-max-per-core=0")
+	assert.Contains(t, params.Command[3], "--no-deploy=traefik")
+	assert.Contains(t, params.Command[4], "--snapshotter=overlayfs")
 }
 
 func TestClusterK3CreatesAServerWithAdditionalPorts(t *testing.T) {

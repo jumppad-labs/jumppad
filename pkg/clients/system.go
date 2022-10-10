@@ -190,7 +190,7 @@ func checkDocker() error {
 
 	// check that the server is a docker engine not podman
 	// if Docker there will be a component cEngine"
-	if dt.EngineType != EngineTypeDocker {
+	if dt.EngineInfo().EngineType != EngineTypeDocker {
 		return fmt.Errorf("Platform is not Docker")
 	}
 
@@ -211,7 +211,7 @@ func checkPodman() error {
 
 	// check that the server is a docker engine not podman
 	// if Docker there will be a component called "Engine"
-	if dt.EngineType != EngineTypePodman {
+	if dt.EngineInfo().EngineType != EngineTypePodman {
 		return fmt.Errorf("Platform is not Podman")
 	}
 
