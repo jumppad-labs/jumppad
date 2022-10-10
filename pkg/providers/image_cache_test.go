@@ -7,6 +7,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/hashicorp/go-hclog"
+	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/utils"
@@ -14,12 +15,12 @@ import (
 	assert "github.com/stretchr/testify/require"
 )
 
-func setupImageCacheTests(t *testing.T) (*config.ImageCache, *mocks.MockContainerTasks, *mocks.MockHTTP) {
+func setupImageCacheTests(t *testing.T) (*config.ImageCache, *clients.MockContainerTasks, *mocks.MockHTTP) {
 	c := config.New()
 	cc := config.NewImageCache("tests")
 	c.AddResource(cc)
 
-	md := &mocks.MockContainerTasks{}
+	md := &clients.MockContainerTasks{}
 	hc := &mocks.MockHTTP{}
 
 	md.On("CreateContainer", mock.Anything).Once().Return("abc", nil)

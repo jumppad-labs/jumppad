@@ -5,15 +5,15 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
+	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-func testIngressCreateMocks() (*mocks.MockContainerTasks, *config.Config) {
-	md := &mocks.MockContainerTasks{}
+func testIngressCreateMocks() (*clients.MockContainerTasks, *config.Config) {
+	md := &clients.MockContainerTasks{}
 	md.On("PullImage", mock.Anything, mock.Anything).Return(nil)
 	md.On("CreateContainer", mock.Anything).Return("ingress", nil)
 	md.On("RemoveContainer", mock.Anything, true).Return(nil)
@@ -51,7 +51,7 @@ func testIngressCreateMocks() (*mocks.MockContainerTasks, *config.Config) {
 }
 
 func TestIngressK8sErrorsWhenUnableToLookupIDs(t *testing.T) {
-	md := &mocks.MockContainerTasks{}
+	md := &clients.MockContainerTasks{}
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
 	p := NewK8sIngress(&testK8sIngressConfig, md, hclog.NewNullLogger())
@@ -61,7 +61,7 @@ func TestIngressK8sErrorsWhenUnableToLookupIDs(t *testing.T) {
 }
 
 func TestIngressK8sErrorsWhenClusterExists(t *testing.T) {
-	md := &mocks.MockContainerTasks{}
+	md := &clients.MockContainerTasks{}
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
 
 	p := NewK8sIngress(&testK8sIngressConfig, md, hclog.NewNullLogger())

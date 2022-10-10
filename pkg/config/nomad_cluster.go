@@ -22,6 +22,9 @@ type NomadCluster struct {
 	ConsulConfig  string   `hcl:"consul_config,optional" json:"consul_config,omitempty" mapstructure:"consul_config"`
 	Volumes       []Volume `hcl:"volume,block" json:"volumes,omitempty"`                                                    // volumes to attach to the cluster
 	OpenInBrowser bool     `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty" mapstructure:"open_in_browser"` // open the UI in the browser after creation
+
+	ServerIPAddress string   `hcl:"server_ip_address,optional" json:"server_ip_address,omitempty" mapstructure:"server_ip_address"`
+	ClientIPAddress []string `hcl:"client_ip_address,optional" json:"client_ip_address,omitempty" mapstructure:"client_ip_address"`
 }
 
 // NewCluster creates new Cluster config with the correct defaults

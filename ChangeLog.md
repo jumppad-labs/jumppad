@@ -1,5 +1,9 @@
 # Change Log
 
+## version v0.4.13
+* Update Nomad version to 1.4.0
+* Add capability to run K3s clusters when the Docker engine is not using overlay or overlay2
+
 ## version v0.4.0
 * Add new resource to enable copying resources
 

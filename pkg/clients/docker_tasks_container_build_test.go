@@ -27,6 +27,7 @@ func testBuildMockSetup() *mocks.MockDocker {
 			Body: ioutil.NopCloser(strings.NewReader("")),
 		}, nil)
 
+  mk.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 	return mk
 }
 

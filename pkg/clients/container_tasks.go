@@ -76,4 +76,16 @@ type ContainerTasks interface {
 
 	// CreateShell in the running container and attach
 	CreateShell(id string, command []string, stdin io.ReadCloser, stdout io.Writer, stderr io.Writer) error
+
+  // Returns basic information related to the Docker Engine
+  EngineInfo() *EngineInfo
 }
+
+type EngineInfo struct {
+  // StorageDriver used by the engine, overlay, devicemapper, etc
+  StorageDriver string
+
+  // EngineType, docker, podman, not found
+  EngineType string
+}
+

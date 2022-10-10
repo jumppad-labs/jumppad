@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 
 	"github.com/mohae/deepcopy"
+	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/shipyard-run/shipyard/pkg/utils"
@@ -21,9 +22,9 @@ import (
 )
 
 // setupClusterMocks sets up a happy path for mocks
-func setupNomadClusterMocks(t *testing.T) (*config.NomadCluster, *mocks.MockContainerTasks, *mocks.MockNomad) {
+func setupNomadClusterMocks(t *testing.T) (*config.NomadCluster, *clients.MockContainerTasks, *mocks.MockNomad) {
 
-	md := &mocks.MockContainerTasks{}
+	md := &clients.MockContainerTasks{}
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{}, nil)
 	md.On("PullImage", mock.Anything, mock.Anything).Return(nil)
 	md.On("CreateVolume", mock.Anything, mock.Anything).Return("123", nil)
@@ -67,7 +68,7 @@ func setupNomadClusterMocks(t *testing.T) (*config.NomadCluster, *mocks.MockCont
 }
 
 func TestClusterNomadErrorsWhenUnableToLookupIDs(t *testing.T) {
-	md := &mocks.MockContainerTasks{}
+	md := &clients.MockContainerTasks{}
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
 	p := NewNomadCluster(clusterNomadConfig, md, nil, hclog.NewNullLogger())
@@ -77,7 +78,7 @@ func TestClusterNomadErrorsWhenUnableToLookupIDs(t *testing.T) {
 }
 
 func TestClusterNomadErrorsWhenClusterExists(t *testing.T) {
-	md := &mocks.MockContainerTasks{}
+	md := &clients.MockContainerTasks{}
 	md.On("FindContainerIDs", "server."+clusterNomadConfig.Name, mock.Anything).Return([]string{"abc"}, nil)
 
 	p := NewNomadCluster(clusterNomadConfig, md, nil, hclog.NewNullLogger())

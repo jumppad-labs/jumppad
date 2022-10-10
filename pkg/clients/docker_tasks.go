@@ -35,14 +35,28 @@ import (
 )
 
 const (
-	EngineTypeDocker = "Engine"
-	EngineTypePodman = "Podman Engine"
-	EngineNotFound   = "Not found"
+	EngineTypeDocker = "docker"
+	EngineTypePodman = "podman"
+	EngineNotFound   = "not found"
 )
+
+const (
+  StorageDriverOverlay2 = "overlay2"
+  StorageDriverFuse = "fuse-overlayfs"
+  StorageDriverBTRFS = "btrfs"
+  StorageDriverZFS = "zfs"
+  StorageDriverVFS = "vfs"
+  StorageDriverAUFS = "aufs"
+  StorageDriverDeviceMapper = "devicemapper"
+  StorageDriverOverlay = "overlay"
+)
+
+
 
 // DockerTasks is a concrete implementation of ContainerTasks which uses the Docker SDK
 type DockerTasks struct {
-	EngineType string
+	engineType string
+  storageDriver string
 	c          Docker
 	il         ImageLog
 	l          hclog.Logger
@@ -52,7 +66,8 @@ type DockerTasks struct {
 
 // NewDockerTasks creates a DockerTasks with the given Docker client
 func NewDockerTasks(c Docker, il ImageLog, tg *TarGz, l hclog.Logger) *DockerTasks {
-	// set the engine type
+
+	// Set the engine type, Docker, Podman
 	ver, err := c.ServerVersion(context.Background())
 	if err != nil {
 		l.Error("Error checking server version", "error", err)
@@ -64,14 +79,26 @@ func NewDockerTasks(c Docker, il ImageLog, tg *TarGz, l hclog.Logger) *DockerTas
 
 	for _, c := range ver.Components {
 		switch c.Name {
-		case EngineTypeDocker:
+		case "Engine":
 			t = EngineTypeDocker
-		case EngineTypePodman:
+		case "Podman Engine":
 			t = EngineTypePodman
 		}
 	}
+ 
+  // Determine the storage driver
+  info,err := c.Info(context.Background())
+  if err != nil {
+		l.Error("Error checking server storage driver", "error", err)
 
-	return &DockerTasks{EngineType: t, c: c, il: il, tg: tg, l: l}
+		return nil
+  }
+
+  return &DockerTasks{engineType: t, storageDriver:info.Driver ,c: c, il: il, tg: tg, l: l}
+}
+
+func (d *DockerTasks) EngineInfo() *EngineInfo {
+  return &EngineInfo{StorageDriver: d.storageDriver, EngineType: d.engineType}
 }
 
 // SetForcePull sets a global override for the DockerTasks, when set to true

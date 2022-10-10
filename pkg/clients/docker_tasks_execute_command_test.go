@@ -22,6 +22,7 @@ func testExecCommandMockSetup() (*mocks.MockDocker, *mocks.ImageLog) {
 
 	mk := &mocks.MockDocker{}
 	mk.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
+  mk.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 	mk.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(types.IDResponse{ID: "abc"}, nil)
 	mk.On("ContainerExecAttach", mock.Anything, mock.Anything, mock.Anything).Return(
 		types.HijackedResponse{

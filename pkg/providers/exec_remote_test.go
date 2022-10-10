@@ -5,14 +5,14 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
+	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-func testRemoteExecSetupMocks() (*config.ExecRemote, *config.Network, *mocks.MockContainerTasks) {
-	md := &mocks.MockContainerTasks{}
+func testRemoteExecSetupMocks() (*config.ExecRemote, *config.Network, *clients.MockContainerTasks) {
+	md := &clients.MockContainerTasks{}
 	md.On("CreateContainer", mock.Anything).Return("1234", nil)
 	md.On("PullImage", mock.Anything, mock.Anything).Return(nil)
 	md.On("FindContainerIDs", mock.Anything).Return([]string{"1234"}, nil)

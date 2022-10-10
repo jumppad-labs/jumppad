@@ -166,6 +166,14 @@ func (c *K8sCluster) createK3s() error {
 	// set the API server port to a random number
 	clusterConfig, _ := utils.GetClusterConfig(string(config.TypeK8sCluster) + "." + c.config.Name)
 
+  // determine the snapshotter, if a storage driver other than overlay is used then
+  // snapshotter must be set to native or the container will not start
+  snapShotter := "native"
+
+  if c.client.EngineInfo().StorageDriver == clients.StorageDriverOverlay || c.client.EngineInfo().StorageDriver == clients.StorageDriverOverlay2 {
+    snapShotter = "overlayfs"
+  }
+
 	// Set the default startup args
 	// Also set netfilter settings to fix behaviour introduced in Linux Kernel 5.12
 	// https://k3d.io/faq/faq/#solved-nodes-fail-to-start-or-get-stuck-in-notready-state-with-log-nf_conntrack_max-permission-denied
@@ -174,6 +182,7 @@ func (c *K8sCluster) createK3s() error {
 		fmt.Sprintf("--https-listen-port=%d", clusterConfig.APIPort),
 		"--kube-proxy-arg=conntrack-max-per-core=0",
 		"--no-deploy=traefik",
+    fmt.Sprintf("--snapshotter=%s", snapShotter),
 	}
 
 	// expose the API server and Connector ports

@@ -1,4 +1,4 @@
-package mocks
+package clients
 
 import (
 	"io"
@@ -136,4 +136,14 @@ func (d *MockContainerTasks) CreateShell(id string, command []string, stdin io.R
 	args := d.Called(id, command, stdin, stdout, stderr)
 
 	return args.Error(0)
+}
+
+func (d*MockContainerTasks) EngineInfo() *EngineInfo {
+  args := d.Called()
+
+  if ei,ok := args.Get(0).(*EngineInfo); ok {
+    return ei
+  }
+
+  return nil
 }

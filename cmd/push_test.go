@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func setupPush(state string) (*cobra.Command, *mocks.MockContainerTasks, func()) {
-	mt := &mocks.MockContainerTasks{}
+func setupPush(state string) (*cobra.Command, *clients.MockContainerTasks, func()) {
+	mt := &clients.MockContainerTasks{}
 	mt.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
 	mt.On("PullImage", mock.Anything, false).Return(nil)
 	mt.On("CopyLocalDockerImagesToVolume", mock.Anything, mock.Anything, mock.Anything).Return([]string{"/images/file.tar"}, nil)

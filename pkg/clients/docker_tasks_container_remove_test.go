@@ -14,6 +14,7 @@ import (
 func TestContainerRemoveCallsRemoveGently(t *testing.T) {
 	md := &mocks.MockDocker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
+  md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 
 	mic := &clients.ImageLog{}
 	dt := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())
@@ -30,6 +31,7 @@ func TestContainerRemoveCallsRemoveGently(t *testing.T) {
 func TestContainerRemoveCallsRemoveGentlyOnStopFailForces(t *testing.T) {
 	md := &mocks.MockDocker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
+  md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 
 	mic := &clients.ImageLog{}
 	dt := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())
@@ -46,6 +48,7 @@ func TestContainerRemoveCallsRemoveGentlyOnStopFailForces(t *testing.T) {
 func TestContainerRemoveCallsRemoveGentlyOnRemoveFailForces(t *testing.T) {
 	md := &mocks.MockDocker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
+  md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 
 	mic := &clients.ImageLog{}
 	dt := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())
@@ -63,6 +66,7 @@ func TestContainerRemoveCallsRemoveGentlyOnRemoveFailForces(t *testing.T) {
 func TestContainerRemoveFailsCallsRemoveForcefully(t *testing.T) {
 	md := &mocks.MockDocker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
+  md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 
 	mic := &clients.ImageLog{}
 	dt := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())

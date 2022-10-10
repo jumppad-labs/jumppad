@@ -23,6 +23,7 @@ func TestCopyFromContainerCopiesFile(t *testing.T) {
 
 	md := &mocks.MockDocker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
+  md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 
 	mic := &clients.ImageLog{}
 	md.On("CopyFromContainer", mock.Anything, id, src).Return(
@@ -50,6 +51,7 @@ func TestCopyFromContainerReturnsErrorOnDockerError(t *testing.T) {
 
 	md := &mocks.MockDocker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
+  md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 
 	mic := &clients.ImageLog{}
 	md.On("CopyFromContainer", mock.Anything, id, src).Return(
