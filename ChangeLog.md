@@ -2,6 +2,7 @@
 
 ## version v0.4.13
 * Update Nomad version to 1.4.0
+* Update K3s to v1.23.12
 * Add capability to run K3s clusters when the Docker engine is not using overlay or overlay2
 
 ## version v0.4.0
