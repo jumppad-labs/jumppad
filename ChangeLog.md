@@ -1,5 +1,8 @@
 # Change Log
 
+## version v0.4.14
+* Fix bug in latest Kubernetes release where DNS san for certificate did not contain the fully qualified name of the server
+
 ## version v0.4.13
 * Update Nomad version to 1.4.0
 * Update K3s to v1.23.12

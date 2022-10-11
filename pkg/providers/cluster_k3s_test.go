@@ -243,6 +243,7 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 	assert.Contains(t, params.Command[2], "--kube-proxy-arg=conntrack-max-per-core=0")
 	assert.Contains(t, params.Command[3], "--no-deploy=traefik")
 	assert.Contains(t, params.Command[4], "--snapshotter=overlayfs")
+	assert.Contains(t, params.Command[5], "--tls-san=server.test.k8s-cluster.shipyard.run")
 }
 
 func TestClusterK3CreatesAServerWithAdditionalPorts(t *testing.T) {

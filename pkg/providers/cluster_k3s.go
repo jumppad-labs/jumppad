@@ -177,12 +177,14 @@ func (c *K8sCluster) createK3s() error {
 	// Set the default startup args
 	// Also set netfilter settings to fix behaviour introduced in Linux Kernel 5.12
 	// https://k3d.io/faq/faq/#solved-nodes-fail-to-start-or-get-stuck-in-notready-state-with-log-nf_conntrack_max-permission-denied
+  FQDN := fmt.Sprintf("server.%s", utils.FQDN(c.config.Name, string(c.config.Type)))
 	args := []string{
 		"server",
 		fmt.Sprintf("--https-listen-port=%d", clusterConfig.APIPort),
 		"--kube-proxy-arg=conntrack-max-per-core=0",
 		"--no-deploy=traefik",
     fmt.Sprintf("--snapshotter=%s", snapShotter),
+    fmt.Sprintf("--tls-san=%s", FQDN),
 	}
 
 	// expose the API server and Connector ports
