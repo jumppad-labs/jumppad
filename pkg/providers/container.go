@@ -6,38 +6,37 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"golang.org/x/xerrors"
 )
 
 // Container is a provider for creating and destroying Docker containers
 type Container struct {
-	config     *config.Container
+	config     *resources.Container
 	client     clients.ContainerTasks
 	httpClient clients.HTTP
 	log        hclog.Logger
 }
 
 // NewContainer creates a new container with the given config and Docker client
-func NewContainer(co *config.Container, cl clients.ContainerTasks, hc clients.HTTP, l hclog.Logger) *Container {
+func NewContainer(co *resources.Container, cl clients.ContainerTasks, hc clients.HTTP, l hclog.Logger) *Container {
 	return &Container{co, cl, hc, l}
 }
 
-func NewContainerSidecar(cs *config.Sidecar, cl clients.ContainerTasks, hc clients.HTTP, l hclog.Logger) *Container {
-	co := config.NewContainer(cs.Name)
+func NewContainerSidecar(cs *resources.Sidecar, cl clients.ContainerTasks, hc clients.HTTP, l hclog.Logger) *Container {
+	co := &resources.Container{}
+	co.ResourceMetadata = cs.ResourceMetadata
+
 	co.Depends = cs.Depends
-	co.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: cs.Target}}
+	co.Networks = []resources.NetworkAttachment{resources.NetworkAttachment{ID: cs.Target}}
 	co.Volumes = cs.Volumes
 	co.Command = cs.Command
 	co.Entrypoint = cs.Entrypoint
-	co.Environment = cs.Environment
-	co.EnvVar = cs.EnvVar
+	co.Env = cs.Env
 	co.HealthCheck = cs.HealthCheck
 	co.Image = &cs.Image
 	co.Privileged = cs.Privileged
 	co.Resources = cs.Resources
-	co.Type = cs.Type
-	co.Config = cs.Config
 	co.MaxRestartCount = cs.MaxRestartCount
 
 	return &Container{co, cl, hc, l}
@@ -71,7 +70,7 @@ func (c *Container) internalCreate() error {
 		}
 
 		// set the image to be loaded and continue with the container creation
-		c.config.Image = &config.Image{Name: name}
+		c.config.Image = &resources.Image{Name: name}
 	} else {
 		// pull any images needed for this container
 		err := c.client.PullImage(*c.config.Image, false)

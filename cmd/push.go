@@ -2,11 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"strings"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/shipyard-run/hclconfig"
 	"github.com/shipyard-run/shipyard/pkg/clients"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"github.com/shipyard-run/shipyard/pkg/providers"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
@@ -44,22 +46,27 @@ func newPushCmd(ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTT
 			}
 
 			// find the cluster in the state
-			sc := config.New()
-			err := sc.FromJSON(utils.StatePath())
+			p := hclconfig.NewParser(hclconfig.DefaultOptions())
+			d, err := ioutil.ReadFile(utils.StatePath())
 			if err != nil {
-				return xerrors.Errorf("No resources are running, start a stack with 'shipyard run [blueprint]'")
+				return fmt.Errorf("Unable to read state file")
 			}
 
-			p, err := sc.FindResource(cluster)
+			cfg, err := p.UnmarshalJSON(d)
+			if err != nil {
+				return fmt.Errorf("Unable to unmarshal state file")
+			}
+
+			r, err := cfg.FindResource(cluster)
 			if err != nil {
 				return xerrors.Errorf("Cluster %s is not running", cluster)
 			}
 
-			switch p.Info().Type {
-			case config.TypeK8sCluster:
-				return pushK8sCluster(image, p.(*config.K8sCluster), ct, kc, ht, l, true)
-			case config.TypeNomadCluster:
-				return pushNomadCluster(image, p.(*config.NomadCluster), ct, nc, l, true)
+			switch r.Metadata().Type {
+			case resources.TypeK8sCluster:
+				return pushK8sCluster(image, r.(*resources.K8sCluster), ct, kc, ht, l, true)
+			case resources.TypeNomadCluster:
+				return pushNomadCluster(image, r.(*resources.NomadCluster), ct, nc, l, true)
 			}
 
 			return nil
@@ -71,7 +78,7 @@ func newPushCmd(ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTT
 	return pushCmd
 }
 
-func pushK8sCluster(image string, c *config.K8sCluster, ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTTP, log hclog.Logger, force bool) error {
+func pushK8sCluster(image string, c *resources.K8sCluster, ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTTP, log hclog.Logger, force bool) error {
 	cl := providers.NewK8sCluster(c, ct, kc, ht, nil, log)
 
 	// get the id of the cluster
@@ -82,7 +89,7 @@ func pushK8sCluster(image string, c *config.K8sCluster, ct clients.ContainerTask
 
 	for _, id := range ids {
 		log.Info("Pushing to container", "id", id, "image", image)
-		err = cl.ImportLocalDockerImages(utils.ImageVolumeName, id, []config.Image{config.Image{Name: strings.Trim(image, " ")}}, force)
+		err = cl.ImportLocalDockerImages(utils.ImageVolumeName, id, []resources.Image{resources.Image{Name: strings.Trim(image, " ")}}, force)
 		if err != nil {
 			return xerrors.Errorf("Error pushing image: %w ", err)
 		}
@@ -91,7 +98,7 @@ func pushK8sCluster(image string, c *config.K8sCluster, ct clients.ContainerTask
 	return nil
 }
 
-func pushNomadCluster(image string, c *config.NomadCluster, ct clients.ContainerTasks, ht clients.Nomad, log hclog.Logger, force bool) error {
+func pushNomadCluster(image string, c *resources.NomadCluster, ct clients.ContainerTasks, ht clients.Nomad, log hclog.Logger, force bool) error {
 	cl := providers.NewNomadCluster(c, ct, ht, log)
 
 	// get the id of the cluster
@@ -102,7 +109,7 @@ func pushNomadCluster(image string, c *config.NomadCluster, ct clients.Container
 
 	for _, id := range ids {
 		log.Info("Pushing to container", "id", id, "image", image)
-		err = cl.ImportLocalDockerImages(utils.ImageVolumeName, id, []config.Image{config.Image{Name: strings.Trim(image, " ")}}, force)
+		err = cl.ImportLocalDockerImages(utils.ImageVolumeName, id, []resources.Image{resources.Image{Name: strings.Trim(image, " ")}}, force)
 		if err != nil {
 			return xerrors.Errorf("Error pushing image: %w ", err)
 		}

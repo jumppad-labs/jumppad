@@ -2,12 +2,15 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"time"
 
 	"github.com/docker/docker/pkg/term"
+	"github.com/shipyard-run/hclconfig"
+	"github.com/shipyard-run/hclconfig/types"
 	"github.com/shipyard-run/shipyard/pkg/clients"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
@@ -38,22 +41,27 @@ func newExecCmd(dt clients.ContainerTasks) *cobra.Command {
 			parameters, command := parseParameters(args)
 
 			// find a list of resources in the current stack
-			sc := config.New()
-			err := sc.FromJSON(utils.StatePath())
+			p := hclconfig.NewParser(hclconfig.DefaultOptions())
+			d, err := ioutil.ReadFile(utils.StatePath())
 			if err != nil {
-				return fmt.Errorf("No resources are running, start a stack with 'shipyard run [blueprint]'")
+				return fmt.Errorf("Unable to read state file")
+			}
+
+			cfg, err := p.UnmarshalJSON(d)
+			if err != nil {
+				return fmt.Errorf("Unable to unmarshal state file")
 			}
 
 			// get the resource
-			r, err := sc.FindResource(parameters[0])
+			r, err := cfg.FindResource(parameters[0])
 			if err != nil {
 				return xerrors.Errorf("Unable to find resource %s: %w", parameters[0], err)
 			}
 
-			switch r.Info().Type {
-			case config.TypeContainer:
+			switch r.Metadata().Type {
+			case resources.TypeContainer:
 				return createContainerShell(r, dt, command)
-			case config.TypeK8sCluster:
+			case resources.TypeK8sCluster:
 				pod := ""
 				container := ""
 
@@ -72,7 +80,7 @@ func newExecCmd(dt clients.ContainerTasks) *cobra.Command {
 				}
 
 				return createK8sShell(r, dt, pod, container, command)
-			case config.TypeNomadCluster:
+			case resources.TypeNomadCluster:
 			default:
 				return fmt.Errorf("Unknown resource type")
 			}
@@ -99,15 +107,15 @@ func parseParameters(args []string) ([]string, []string) {
 	return args[0:commandIndex], args[commandIndex+1:]
 }
 
-func createContainerShell(r config.Resource, dt clients.ContainerTasks, command []string) error {
+func createContainerShell(r types.Resource, dt clients.ContainerTasks, command []string) error {
 	if len(command) == 0 {
 		command = []string{"sh"}
 	}
 
 	// find the container id
-	ids, err := dt.FindContainerIDs(r.Info().Name, config.TypeContainer)
+	ids, err := dt.FindContainerIDs(r.Metadata().Name, resources.TypeContainer)
 	if err != nil || len(ids) == 0 {
-		return fmt.Errorf("Unable to find container %s", r.Info().Name)
+		return fmt.Errorf("Unable to find container %s", r.Metadata().Name)
 	}
 
 	in, stdout, _ := term.StdStreams()
@@ -119,8 +127,8 @@ func createContainerShell(r config.Resource, dt clients.ContainerTasks, command 
 	return nil
 }
 
-func createK8sShell(r config.Resource, dt clients.ContainerTasks, pod, container string, command []string) error {
-	clusterName := r.Info().Name
+func createK8sShell(r types.Resource, dt clients.ContainerTasks, pod, container string, command []string) error {
+	clusterName := r.Metadata().Name
 
 	exec := []string{"kubectl", "exec", "-ti", pod}
 
@@ -133,43 +141,41 @@ func createK8sShell(r config.Resource, dt clients.ContainerTasks, pod, container
 	}
 
 	// start a tools container
-	i := config.Image{Name: "shipyardrun/ingress:latest"}
+	i := resources.Image{Name: "shipyardrun/ingress:latest"}
 	err := dt.PullImage(i, false)
 	if err != nil {
 		return xerrors.Errorf("Could pull ingress image. Error: %w", err)
 	}
 
 	// create the new container for the exec and add it to the config
-	c := config.NewContainer(fmt.Sprintf("exec-%d", time.Now().Nanosecond()))
-	r.AddChild(c)
+	name := fmt.Sprintf("exec-%d", time.Now().Nanosecond())
+	c := &resources.Container{}
+	c.Name = name
 
 	c.Image = &i
 	c.Entrypoint = []string{} // overide the entrypoint
 	c.Command = []string{"tail", "-f", "/dev/null"}
 
-	c.Networks = r.(*config.K8sCluster).Networks
+	c.Networks = r.(*resources.K8sCluster).Networks
 
 	wd, err := os.Getwd()
 	if err != nil {
 		return xerrors.Errorf("Could not get working directory. Error: %w", err)
 	}
 
-	c.Volumes = []config.Volume{
-		config.Volume{
+	c.Volumes = []resources.Volume{
+		resources.Volume{
 			Source:      wd,
 			Destination: "/files",
 		},
-		config.Volume{
+		resources.Volume{
 			Source:      utils.ShipyardHome(),
 			Destination: "/root/.shipyard",
 		},
 	}
 
-	c.Environment = []config.KV{
-		config.KV{
-			Key:   "KUBECONFIG",
-			Value: fmt.Sprintf("/root/.shipyard/config/%s/kubeconfig-docker.yaml", clusterName),
-		},
+	c.Env = map[string]string{
+		"KUBECONFIG": fmt.Sprintf("/root/.shipyard/config/%s/kubeconfig-docker.yaml", clusterName),
 	}
 
 	tools, err := dt.CreateContainer(c)

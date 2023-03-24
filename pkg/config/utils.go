@@ -5,21 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/zclconf/go-cty/cty"
 )
-
-// CreateConfigFromStrings is a test helper function that
-// parses the given contents strings as HCL and returns a Shipyard Config
-func CreateConfigFromStrings(t *testing.T, contents ...string) (*Config, string) {
-	dir := CreateTestFiles(t, contents...)
-
-	c := New()
-	err := ParseFolder(dir, c, false, "", false, []string{}, nil, "")
-	assert.NoError(t, err)
-
-	return c, dir
-}
 
 // ParseVars converts a map[string]cty.Value into map[string]interface
 // where the interface are generic go types like string, number, bool, slice, map

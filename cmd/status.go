@@ -2,10 +2,14 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	"github.com/hokaccha/go-prettyjson"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/hclconfig"
+	"github.com/shipyard-run/hclconfig/types"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
+	"github.com/shipyard-run/shipyard/pkg/shipyard/constants"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
 )
@@ -37,15 +41,21 @@ var statusCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		// load the stack
-		c := config.New()
-		err := c.FromJSON(utils.StatePath())
+		p := hclconfig.NewParser(hclconfig.DefaultOptions())
+		d, err := ioutil.ReadFile(utils.StatePath())
 		if err != nil {
-			fmt.Println("Unable to load state", err)
+			fmt.Printf("Unable to read state file")
+			os.Exit(1)
+		}
+
+		cfg, err := p.UnmarshalJSON(d)
+		if err != nil {
+			fmt.Printf("Unable to unmarshal state file")
 			os.Exit(1)
 		}
 
 		if jsonFlag {
-			s, err := prettyjson.Marshal(c)
+			s, err := prettyjson.Marshal(cfg)
 			if err != nil {
 				fmt.Println("Unable to load state", err)
 				os.Exit(1)
@@ -61,62 +71,62 @@ var statusCmd = &cobra.Command{
 			pendingCount := 0
 
 			// sort the resources
-			resources := map[config.ResourceType][]config.Resource{}
+			resourceMap := map[string][]types.Resource{}
 
-			for _, r := range c.Resources {
-				if resources[r.Info().Type] == nil {
-					resources[r.Info().Type] = []config.Resource{}
+			for _, r := range cfg.Resources {
+				if resourceMap[r.Metadata().Type] == nil {
+					resourceMap[r.Metadata().Type] = []types.Resource{}
 				}
 
-				resources[r.Info().Type] = append(resources[r.Info().Type], r)
+				resourceMap[r.Metadata().Type] = append(resourceMap[r.Metadata().Type], r)
 			}
 
-			for _, ress := range resources {
+			for _, ress := range resourceMap {
 				for _, r := range ress {
-					if resourceType != "" && string(r.Info().Type) != resourceType {
+					if resourceType != "" && string(r.Metadata().Type) != resourceType {
 						continue
 					}
 
 					status := fmt.Sprintf(White, "[ PENDING ]  ")
-					switch r.Info().Status {
-					case config.Applied:
+					switch r.Metadata().Properties[constants.PropertyStatus] {
+					case constants.StatusCreated:
 						status = fmt.Sprintf(Green, "[ CREATED ]  ")
 						createdCount++
-					case config.Failed:
+					case constants.StatusFailed:
 						status = fmt.Sprintf(Red, "[ FAILED ]   ")
 						failedCount++
-					case config.Disabled:
+					case constants.StatusDisabled:
 						status = fmt.Sprintf(Teal, "[ DISABLED ] ")
 						failedCount++
 					default:
 						pendingCount++
 					}
 
-					res := fmt.Sprintf("%s.%s", r.Info().Type, r.Info().Name)
-					fqdn := utils.FQDN(r.Info().Name, string(r.Info().Type))
+					res := fmt.Sprintf("%s.%s", r.Metadata().Type, r.Metadata().Name)
+					fqdn := utils.FQDN(r.Metadata().Name, string(r.Metadata().Type))
 
-					switch r.Info().Type {
-					case config.TypeNomadCluster:
-						fmt.Printf("%-13s %-30s %s\n", status, res, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Info().Name, string(r.Info().Type))))
+					switch r.Metadata().Type {
+					case resources.TypeNomadCluster:
+						fmt.Printf("%-13s %-30s %s\n", status, res, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, string(r.Metadata().Type))))
 
 						// add the client nodes
-						nomad := r.(*config.NomadCluster)
+						nomad := r.(*resources.NomadCluster)
 						for n := 0; n < nomad.ClientNodes; n++ {
-							fmt.Printf("%-13s %-30s %s\n", "", "", fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Info().Name, string(r.Info().Type))))
+							fmt.Printf("%-13s %-30s %s\n", "", "", fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Metadata().Name, string(r.Metadata().Type))))
 						}
-					case config.TypeK8sCluster:
-						fmt.Printf("%-13s %-30s %s\n", status, res, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Info().Name, string(r.Info().Type))))
-					case config.TypeContainer:
+					case resources.TypeK8sCluster:
+						fmt.Printf("%-13s %-30s %s\n", status, res, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, string(r.Metadata().Type))))
+					case resources.TypeContainer:
 						fallthrough
-					case config.TypeSidecar:
+					case resources.TypeSidecar:
 						fallthrough
-					case config.TypeK8sIngress:
+					case resources.TypeK8sIngress:
 						fallthrough
-					case config.TypeNomadIngress:
+					case resources.TypeNomadIngress:
 						fallthrough
-					case config.TypeContainerIngress:
+					case resources.TypeContainerIngress:
 						fallthrough
-					case config.TypeImageCache:
+					case resources.TypeImageCache:
 						fmt.Printf("%-13s %-30s %s\n", status, res, fqdn)
 					default:
 						fmt.Printf("%-13s %-30s %s\n", status, res, "")

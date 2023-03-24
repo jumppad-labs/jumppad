@@ -16,7 +16,7 @@ import (
 	gvm "github.com/shipyard-run/version-manager"
 
 	"github.com/shipyard-run/shipyard/pkg/clients"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
@@ -212,56 +212,56 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 			}
 
 			for _, r := range res {
-				switch r.Info().Type {
-				case config.TypeContainer:
-					c := r.(*config.Container)
+				switch r.Metadata().Type {
+				case resources.TypeContainer:
+					c := r.(*resources.Container)
 					for _, p := range c.Ports {
 						if p.Host != "" && p.OpenInBrowser != "" {
-							browserList = append(browserList, buildBrowserPath(r.Info().Name, p.Host, r.Info().Type, p.OpenInBrowser))
+							browserList = append(browserList, buildBrowserPath(r.Metadata().Name, p.Host, r.Metadata().Type, p.OpenInBrowser))
 						}
 					}
-				case config.TypeIngress:
-					c := r.(*config.Ingress)
-					if c.Source.Driver == config.IngressSourceLocal && c.Source.Config.OpenInBrowser != "" && c.Source.Config.Port != "" {
-						browserList = append(browserList, buildBrowserPath(r.Info().Name, c.Source.Config.Port, r.Info().Type, c.Source.Config.OpenInBrowser))
+				case resources.TypeIngress:
+					c := r.(*resources.Ingress)
+					if c.Source.Driver == resources.IngressSourceLocal && c.Source.Config.OpenInBrowser != "" && c.Source.Config.Port != "" {
+						browserList = append(browserList, buildBrowserPath(r.Metadata().Name, c.Source.Config.Port, r.Metadata().Type, c.Source.Config.OpenInBrowser))
 					}
-				case config.TypeContainerIngress:
-					c := r.(*config.ContainerIngress)
+				case resources.TypeContainerIngress:
+					c := r.(*resources.ContainerIngress)
 					for _, p := range c.Ports {
 						if p.Host != "" && p.OpenInBrowser != "" {
-							browserList = append(browserList, buildBrowserPath(r.Info().Name, p.Host, r.Info().Type, p.OpenInBrowser))
+							browserList = append(browserList, buildBrowserPath(r.Metadata().Name, p.Host, r.Metadata().Type, p.OpenInBrowser))
 						}
 					}
-				case config.TypeNomadIngress:
-					c := r.(*config.NomadIngress)
+				case resources.TypeNomadIngress:
+					c := r.(*resources.NomadIngress)
 					for _, p := range c.Ports {
 						if p.Host != "" && p.OpenInBrowser != "" {
-							browserList = append(browserList, buildBrowserPath(r.Info().Name, p.Host, r.Info().Type, p.OpenInBrowser))
+							browserList = append(browserList, buildBrowserPath(r.Metadata().Name, p.Host, r.Metadata().Type, p.OpenInBrowser))
 						}
 					}
-				case config.TypeNomadCluster:
-					c := r.(*config.NomadCluster)
+				case resources.TypeNomadCluster:
+					c := r.(*resources.NomadCluster)
 					if c.OpenInBrowser {
 						// get the API port
 						config, _ := utils.GetClusterConfig("nomad_cluster." + c.Name)
-						browserList = append(browserList, buildBrowserPath("server."+r.Info().Name, fmt.Sprintf("%d", config.APIPort), r.Info().Type, "/"))
+						browserList = append(browserList, buildBrowserPath("server."+r.Metadata().Name, fmt.Sprintf("%d", config.APIPort), r.Metadata().Type, "/"))
 					}
-				case config.TypeK8sIngress:
-					c := r.(*config.K8sIngress)
+				case resources.TypeK8sIngress:
+					c := r.(*resources.K8sIngress)
 					for _, p := range c.Ports {
 						if p.Host != "" && p.OpenInBrowser != "" {
-							browserList = append(browserList, buildBrowserPath(r.Info().Name, p.Host, r.Info().Type, p.OpenInBrowser))
+							browserList = append(browserList, buildBrowserPath(r.Metadata().Name, p.Host, r.Metadata().Type, p.OpenInBrowser))
 						}
 					}
-				case config.TypeDocs:
-					c := r.(*config.Docs)
+				case resources.TypeDocs:
+					c := r.(*resources.Docs)
 					if c.OpenInBrowser {
 						port := strconv.Itoa(c.Port)
 						if port == "0" {
 							port = "80"
 						}
 
-						browserList = append(browserList, buildBrowserPath(r.Info().Name, port, r.Info().Type, ""))
+						browserList = append(browserList, buildBrowserPath(r.Metadata().Name, port, r.Metadata().Type, ""))
 					}
 				}
 			}
@@ -330,7 +330,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 	}
 }
 
-func buildBrowserPath(n, p string, t config.ResourceType, path string) string {
+func buildBrowserPath(n, p string, resourceType string, path string) string {
 	// if the path starts with http or https then override the default behaviour
 	if strings.HasPrefix(path, "https://") || strings.HasPrefix(path, "http://") {
 		// validate this is a good URL
@@ -340,9 +340,9 @@ func buildBrowserPath(n, p string, t config.ResourceType, path string) string {
 		}
 	}
 
-	ty := t
-	if t == config.TypeNomadIngress || t == config.TypeContainerIngress || t == config.TypeK8sIngress {
-		ty = config.TypeIngress
+	ty := resourceType
+	if resourceType == resources.TypeNomadIngress || resourceType == resources.TypeContainerIngress || resourceType == resources.TypeK8sIngress {
+		ty = resources.TypeIngress
 	}
 
 	return fmt.Sprintf("http://%s:%s%s", utils.FQDN(n, string(ty)), p, path)
@@ -350,10 +350,11 @@ func buildBrowserPath(n, p string, t config.ResourceType, path string) string {
 
 func bluePrintInState() bool {
 	//load the state
-	sc := config.New()
-	sc.FromJSON(utils.StatePath())
+	//sc := config.New()
+	//sc.FromJSON(utils.StatePath())
 
-	return sc.Blueprint != nil
+	//return sc.Blueprint != nil
+	return false
 }
 
 func runWithOtherVersion(

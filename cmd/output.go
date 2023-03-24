@@ -2,11 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 
 	"github.com/hokaccha/go-prettyjson"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/hclconfig"
+	"github.com/shipyard-run/hclconfig/types"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
 )
@@ -18,26 +20,32 @@ var outputCmd = &cobra.Command{
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		// load the stack
-		c := config.New()
-		err := c.FromJSON(utils.StatePath())
+		p := hclconfig.NewParser(hclconfig.DefaultOptions())
+		d, err := ioutil.ReadFile(utils.StatePath())
 		if err != nil {
-			fmt.Println("Unable to load state", err)
+			fmt.Println("Unable to read state file")
+			os.Exit(1)
+		}
+
+		cfg, err := p.UnmarshalJSON(d)
+		if err != nil {
+			fmt.Println("Unable to unmarshal state file")
 			os.Exit(1)
 		}
 
 		out := map[string]string{}
 		// get the output variables
-		for _, r := range c.Resources {
-			if r.Info().Type == config.TypeOutput {
+		for _, r := range cfg.Resources {
+			if r.Metadata().Type == types.TypeOutput {
 				// don't output when disabled
-				if r.Info().Disabled {
+				if r.Metadata().Disabled {
 					continue
 				}
 
-				out[r.Info().Name] = r.(*config.Output).Value
+				out[r.Metadata().Name] = r.(*types.Output).Value
 
-				if len(args) > 0 && strings.ToLower(args[0]) == strings.ToLower(r.Info().Name) {
-					cmd.Println(r.(*config.Output).Value)
+				if len(args) > 0 && strings.ToLower(args[0]) == strings.ToLower(r.Metadata().Name) {
+					cmd.Println(r.(*types.Output).Value)
 					return
 				}
 			}

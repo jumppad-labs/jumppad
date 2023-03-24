@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -16,8 +17,9 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/spf13/cobra"
 
+	"github.com/shipyard-run/hclconfig"
 	"github.com/shipyard-run/shipyard/pkg/clients"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 )
@@ -124,55 +126,49 @@ func newLogCmdFunc(dc clients.Docker, stdout, stderr io.Writer) func(cmd *cobra.
 // otherwise fmt.println() gets lost
 func getLoggable() ([]string, error) {
 	// get the list of resources that can be logged
-	c := config.New()
-	err := c.FromJSON(utils.StatePath())
+	p := hclconfig.NewParser(hclconfig.DefaultOptions())
+	d, err := ioutil.ReadFile(utils.StatePath())
 	if err != nil {
-		return nil, fmt.Errorf("unable to load state file, check you have running resources: %s", err)
+		return nil, fmt.Errorf("Unable to read state file")
+	}
+
+	cfg, err := p.UnmarshalJSON(d)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to unmarshal state file")
 	}
 
 	// if an argument is provided, only tail logs for that resource
 	// first validate that the resource exists
-	resources := c.Resources
 
 	loggable := []string{}
-	for _, r := range resources {
-		switch r.Info().Type {
-		case config.TypeContainer:
-			if !r.Info().Disabled {
-				loggable = append(loggable, utils.FQDN(r.Info().Name, string(r.Info().Type)))
-			}
-		case config.TypeK8sCluster:
-			if !r.Info().Disabled {
-				loggable = append(loggable, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Info().Name, string(r.Info().Type))))
-			}
-		case config.TypeNomadCluster:
-			if !r.Info().Disabled {
-				loggable = append(loggable, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Info().Name, string(r.Info().Type))))
+	for _, r := range cfg.Resources {
+		if r.Metadata().Disabled {
+			continue
+		}
 
-				// add the client nodes
-				nomad := r.(*config.NomadCluster)
-				for n := 0; n < nomad.ClientNodes; n++ {
-					loggable = append(loggable, fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Info().Name, string(r.Info().Type))))
-				}
+		switch r.Metadata().Type {
+		case resources.TypeContainer:
+			loggable = append(loggable, utils.FQDN(r.Metadata().Name, string(r.Metadata().Type)))
+		case resources.TypeK8sCluster:
+			loggable = append(loggable, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, string(r.Metadata().Type))))
+		case resources.TypeNomadCluster:
+			loggable = append(loggable, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, string(r.Metadata().Type))))
+
+			// add the client nodes
+			nomad := r.(*resources.NomadCluster)
+			for n := 0; n < nomad.ClientNodes; n++ {
+				loggable = append(loggable, fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Metadata().Name, string(r.Metadata().Type))))
 			}
-		case config.TypeSidecar:
-			if !r.Info().Disabled {
-				loggable = append(loggable, utils.FQDN(r.Info().Name, string(r.Info().Type)))
-			}
-		case config.TypeK8sIngress:
-			if !r.Info().Disabled {
-				loggable = append(loggable, utils.FQDN(r.Info().Name, string(r.Info().Type)))
-			}
-		case config.TypeNomadIngress:
-			if !r.Info().Disabled {
-				loggable = append(loggable, utils.FQDN(r.Info().Name, string(r.Info().Type)))
-			}
-		case config.TypeContainerIngress:
-			if !r.Info().Disabled {
-				loggable = append(loggable, utils.FQDN(r.Info().Name, string(r.Info().Type)))
-			}
-		case config.TypeImageCache:
-			loggable = append(loggable, utils.FQDN(r.Info().Name, string(r.Info().Type)))
+		case resources.TypeSidecar:
+			loggable = append(loggable, utils.FQDN(r.Metadata().Name, string(r.Metadata().Type)))
+		case resources.TypeK8sIngress:
+			loggable = append(loggable, utils.FQDN(r.Metadata().Name, string(r.Metadata().Type)))
+		case resources.TypeNomadIngress:
+			loggable = append(loggable, utils.FQDN(r.Metadata().Name, string(r.Metadata().Type)))
+		case resources.TypeContainerIngress:
+			loggable = append(loggable, utils.FQDN(r.Metadata().Name, string(r.Metadata().Type)))
+		case resources.TypeImageCache:
+			loggable = append(loggable, utils.FQDN(r.Metadata().Name, string(r.Metadata().Type)))
 		}
 	}
 	return loggable, nil

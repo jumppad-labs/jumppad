@@ -8,7 +8,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"golang.org/x/xerrors"
 )
@@ -16,14 +16,14 @@ import (
 const cacheImage = "shipyardrun/docker-registry-proxy:0.6.3"
 
 type ImageCache struct {
-	config     *config.ImageCache
+	config     *resources.ImageCache
 	client     clients.ContainerTasks
 	httpClient clients.HTTP
 	log        hclog.Logger
 }
 
 // NewContainer creates a new container with the given config and Docker client
-func NewImageCache(co *config.ImageCache, cl clients.ContainerTasks, hc clients.HTTP, l hclog.Logger) *ImageCache {
+func NewImageCache(co *resources.ImageCache, cl clients.ContainerTasks, hc clients.HTTP, l hclog.Logger) *ImageCache {
 
 	return &ImageCache{co, cl, hc, l}
 }
@@ -79,25 +79,26 @@ func (c *ImageCache) createImageCache(networks []string) (string, error) {
 	}
 
 	// pull the container image
-	err = c.client.PullImage(config.Image{Name: cacheImage}, false)
+	err = c.client.PullImage(resources.Image{Name: cacheImage}, false)
 	if err != nil {
 		return "", err
 	}
 
 	// create the container
-	cc := config.NewContainer(c.config.Name)
+	cc := &resources.Container{}
+	cc.Name = c.config.Name
 	cc.Type = c.config.Type
-	cc.Image = &config.Image{Name: cacheImage}
+	cc.Image = &resources.Image{Name: cacheImage}
 
-	cc.Volumes = []config.Volume{
-		config.Volume{
+	cc.Volumes = []resources.Volume{
+		resources.Volume{
 			Source:      utils.FQDNVolumeName("images"),
 			Destination: "/cache",
 			Type:        "volume",
 		},
 	}
 
-	cc.EnvVar = map[string]string{
+	cc.Env = map[string]string{
 		"CA_KEY_FILE":           "/cache/ca/root.key",
 		"CA_CRT_FILE":           "/cache/ca/root.cert",
 		"DOCKER_MIRROR_CACHE":   "/cache/docker",
@@ -107,8 +108,8 @@ func (c *ImageCache) createImageCache(networks []string) (string, error) {
 	}
 
 	// expose the docker proxy port on a random port num
-	cc.Ports = []config.Port{
-		config.Port{
+	cc.Ports = []resources.Port{
+		resources.Port{
 			Local:    "3128",
 			Host:     fmt.Sprintf("%d", rand.Intn(3000)+31000),
 			Protocol: "tcp",
@@ -116,12 +117,12 @@ func (c *ImageCache) createImageCache(networks []string) (string, error) {
 	}
 
 	// add the networks
-	cc.Networks = []config.NetworkAttachment{}
+	cc.Networks = []resources.NetworkAttachment{}
 	for _, n := range networks {
-		cc.Networks = append(cc.Networks, config.NetworkAttachment{Name: fmt.Sprintf("%s.%s", config.TypeNetwork, n)})
+		cc.Networks = append(cc.Networks, resources.NetworkAttachment{ID: n})
 	}
 
-	c.config.ResourceInfo.AddChild(cc)
+	cc.ParentConfig = c.config.ParentConfig
 
 	return c.client.CreateContainer(cc)
 }
@@ -148,15 +149,15 @@ func (c *ImageCache) findDependentNetworks() []string {
 
 	for _, n := range c.config.DependsOn {
 		c.log.Debug("Connecting cache to network", "name", n)
-		target, err := c.config.FindDependentResource(n)
+		target, err := c.config.ParentConfig.FindResource(n)
 		if err != nil {
 			// ignore this network
 			c.log.Warn("Unable to atttach cache to network, network does not exist", "name", n)
 			continue
 		}
 
-		if target.Info().Type == config.TypeNetwork {
-			nets = append(nets, target.Info().Name)
+		if target.Metadata().Type == resources.TypeNetwork {
+			nets = append(nets, target.Metadata().Name)
 		}
 	}
 

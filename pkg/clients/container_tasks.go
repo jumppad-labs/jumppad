@@ -3,7 +3,7 @@ package clients
 import (
 	"io"
 
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 )
 
 // ContainerTasks is a task oriented client which abstracts
@@ -19,7 +19,7 @@ type ContainerTasks interface {
 	// CreateContainer creates a new container for the given configuration
 	// if successful CreateContainer returns the ID of the created container and a nil error
 	// if not successful CreateContainer returns a blank string for the id and an error message
-	CreateContainer(*config.Container) (id string, err error)
+	CreateContainer(*resources.Container) (id string, err error)
 	// Container Info returns an annonymous interface corresponding to the container info
 	// returns error when unable to read info such as when the container does not exist.
 	ContainerInfo(id string) (interface{}, error)
@@ -29,7 +29,7 @@ type ContainerTasks interface {
 	// If a cahced image already exists Build will noop
 	// When force is specificed BuildContainer will rebuild the container regardless of cached images
 	// Returns the canonical name of the built image and an error
-	BuildContainer(config *config.Container, force bool) (string, error)
+	BuildContainer(config *resources.Container, force bool) (string, error)
 	// CreateVolume creates a new volume with the given name.
 	// If successful the id of the newly created volume is returned
 	CreateVolume(name string) (id string, err error)
@@ -41,9 +41,9 @@ type ContainerTasks interface {
 	// authenticate with the registry before pulling the image.
 	// If the force parameter is set then PullImage will pull regardless of the image already
 	// being cached locally.
-	PullImage(image config.Image, force bool) error
+	PullImage(image resources.Image, force bool) error
 	// FindContainerIDs returns the Container IDs for the given identifier
-	FindContainerIDs(name string, typeName config.ResourceType) ([]string, error)
+	FindContainerIDs(name string, typeName string) ([]string, error)
 	// ContainerLogs attaches to the container and streams the logs to the returned
 	// io.ReadCloser.
 	// Returns an error if the container is not running
@@ -72,20 +72,19 @@ type ContainerTasks interface {
 	// DetatchNetwork disconnects a container from the network
 	DetachNetwork(network, containerid string) error
 	// ListNetworks lists the networks a container is attached to
-	ListNetworks(id string) []config.NetworkAttachment
+	ListNetworks(id string) []resources.NetworkAttachment
 
 	// CreateShell in the running container and attach
 	CreateShell(id string, command []string, stdin io.ReadCloser, stdout io.Writer, stderr io.Writer) error
 
-  // Returns basic information related to the Docker Engine
-  EngineInfo() *EngineInfo
+	// Returns basic information related to the Docker Engine
+	EngineInfo() *EngineInfo
 }
 
 type EngineInfo struct {
-  // StorageDriver used by the engine, overlay, devicemapper, etc
-  StorageDriver string
+	// StorageDriver used by the engine, overlay, devicemapper, etc
+	StorageDriver string
 
-  // EngineType, docker, podman, not found
-  EngineType string
+	// EngineType, docker, podman, not found
+	EngineType string
 }
-

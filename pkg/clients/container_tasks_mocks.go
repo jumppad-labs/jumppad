@@ -3,7 +3,7 @@ package clients
 import (
 	"io"
 
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -15,7 +15,7 @@ func (m *MockContainerTasks) SetForcePull(f bool) {
 	m.Called(f)
 }
 
-func (m *MockContainerTasks) CreateContainer(c *config.Container) (id string, err error) {
+func (m *MockContainerTasks) CreateContainer(c *resources.Container) (id string, err error) {
 	args := m.Called(c)
 
 	return args.String(0), args.Error(1)
@@ -33,7 +33,7 @@ func (m *MockContainerTasks) RemoveContainer(id string, force bool) error {
 	return args.Error(0)
 }
 
-func (m *MockContainerTasks) BuildContainer(config *config.Container, force bool) (string, error) {
+func (m *MockContainerTasks) BuildContainer(config *resources.Container, force bool) (string, error) {
 	args := m.Called(config, force)
 	return args.String(0), args.Error(1)
 }
@@ -50,13 +50,13 @@ func (m *MockContainerTasks) RemoveVolume(name string) error {
 	return args.Error(0)
 }
 
-func (m *MockContainerTasks) PullImage(i config.Image, f bool) error {
+func (m *MockContainerTasks) PullImage(i resources.Image, f bool) error {
 	args := m.Called(i, f)
 
 	return args.Error(0)
 }
 
-func (m *MockContainerTasks) FindContainerIDs(name string, typeName config.ResourceType) ([]string, error) {
+func (m *MockContainerTasks) FindContainerIDs(name string, typeName string) ([]string, error) {
 	args := m.Called(name, typeName)
 
 	if sa, ok := args.Get(0).([]string); ok {
@@ -126,10 +126,10 @@ func (d *MockContainerTasks) AttachNetwork(network, containerid string, aliases 
 	return args.Error(0)
 }
 
-func (d *MockContainerTasks) ListNetworks(id string) []config.NetworkAttachment {
+func (d *MockContainerTasks) ListNetworks(id string) []resources.NetworkAttachment {
 	args := d.Called(id)
 
-	return args.Get(0).([]config.NetworkAttachment)
+	return args.Get(0).([]resources.NetworkAttachment)
 }
 
 func (d *MockContainerTasks) CreateShell(id string, command []string, stdin io.ReadCloser, stdout io.Writer, stderr io.Writer) error {
@@ -138,12 +138,12 @@ func (d *MockContainerTasks) CreateShell(id string, command []string, stdin io.R
 	return args.Error(0)
 }
 
-func (d*MockContainerTasks) EngineInfo() *EngineInfo {
-  args := d.Called()
+func (d *MockContainerTasks) EngineInfo() *EngineInfo {
+	args := d.Called()
 
-  if ei,ok := args.Get(0).(*EngineInfo); ok {
-    return ei
-  }
+	if ei, ok := args.Get(0).(*EngineInfo); ok {
+		return ei
+	}
 
-  return nil
+	return nil
 }

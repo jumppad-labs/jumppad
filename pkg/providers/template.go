@@ -11,18 +11,18 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/hcl2/hcl"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"github.com/zclconf/go-cty/cty"
 )
 
 // Template provider allows parsing and output of file based templates
 type Template struct {
-	config *config.Template
+	config *resources.Template
 	log    hclog.Logger
 }
 
 // NewTemplate creates a new Local Exec provider
-func NewTemplate(c *config.Template, l hclog.Logger) *Template {
+func NewTemplate(c *resources.Template, l hclog.Logger) *Template {
 	return &Template{c, l}
 }
 

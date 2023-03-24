@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	"time"
@@ -10,8 +11,9 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/hashicorp/go-hclog"
+	"github.com/shipyard-run/hclconfig"
 	"github.com/shipyard-run/shipyard/pkg/clients"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
 )
@@ -61,33 +63,38 @@ var resumeCmd = &cobra.Command{
 		}
 
 		// get the health checks from the config and test
-		con := config.New()
-		err = con.FromJSON(utils.StatePath())
+		p := hclconfig.NewParser(hclconfig.DefaultOptions())
+		d, err := ioutil.ReadFile(utils.StatePath())
 		if err != nil {
-			l.Error("Unable to load state", "error", err)
+			l.Error("Unable to read state file")
 			os.Exit(1)
 		}
 
-		for _, res := range con.Resources {
-			switch res.Info().Type {
-			case config.TypeHelm:
-				co := res.(*config.Helm)
+		cfg, err := p.UnmarshalJSON(d)
+		if err != nil {
+			l.Error("Unable to unmarshal state file")
+		}
+
+		for _, res := range cfg.Resources {
+			switch res.Metadata().Type {
+			case resources.TypeHelm:
+				co := res.(*resources.Helm)
 				hc := co.HealthCheck
 
 				if hc != nil && len(hc.Pods) != 0 {
-					l.Debug("Health check pods in Helm chart", "chart", co.Info().Name)
+					l.Debug("Health check pods in Helm chart", "chart", co.Metadata().Name)
 					err := healthCheckHelm(co)
 					if err != nil {
 						l.Error("Unable to check health of helm chart", "error", err)
 						os.Exit(1)
 					}
 				}
-			case config.TypeK8sConfig:
-				co := res.(*config.K8sConfig)
+			case resources.TypeK8sConfig:
+				co := res.(*resources.K8sConfig)
 				hc := co.HealthCheck
 
 				if hc != nil && len(hc.Pods) != 0 {
-					l.Debug("Health check pods in Kubernetes config", "chart", co.Info().Name)
+					l.Debug("Health check pods in Kubernetes config", "chart", co.Metadata().Name)
 					err := healthCheckK8sConfig(co)
 					if err != nil {
 						l.Error("Unable to check health of k8s_config chart", "error", err)
@@ -156,14 +163,14 @@ func getContainers(c clients.Docker, status string) ([]types.Container, error) {
 
 // TODO: HealthChecks should really be moved to a central universal functional call
 // copy pasta for now
-func healthCheckHelm(h *config.Helm) error {
+func healthCheckHelm(h *resources.Helm) error {
 	kc := clients.NewKubernetes(500*time.Second, hclog.Default())
-	cl, err := h.FindDependentResource(h.Cluster)
+	cl, err := h.Metadata().ParentConfig.FindResource(h.Cluster)
 	if err != nil {
 		return nil
 	}
 
-	_, conf, _ := utils.CreateKubeConfigPath(cl.Info().Name)
+	_, conf, _ := utils.CreateKubeConfigPath(cl.Metadata().Name)
 	kc, err = kc.SetConfig(conf)
 	if err != nil {
 		return nil
@@ -177,14 +184,14 @@ func healthCheckHelm(h *config.Helm) error {
 	return nil
 }
 
-func healthCheckK8sConfig(h *config.K8sConfig) error {
+func healthCheckK8sConfig(h *resources.K8sConfig) error {
 	kc := clients.NewKubernetes(500*time.Second, hclog.Default())
-	cl, err := h.FindDependentResource(h.Cluster)
+	cl, err := h.Metadata().ParentConfig.FindResource(h.Cluster)
 	if err != nil {
 		return nil
 	}
 
-	_, conf, _ := utils.CreateKubeConfigPath(cl.Info().Name)
+	_, conf, _ := utils.CreateKubeConfigPath(cl.Metadata().Name)
 	kc, err = kc.SetConfig(conf)
 	if err != nil {
 		return nil

@@ -1,59 +1,59 @@
-ingress "consul-http" {
+resource "ingress" "consul-http" {
   source {
     driver = "local"
-    
+
     config {
       port = 18500
     }
   }
-  
+
   destination {
     driver = "k8s"
-    
+
     config {
-      cluster = "k8s_cluster.k3s"
+      cluster = resource.k8s_cluster.k3s.id
       address = "consul-consul-server.default.svc"
-      port = 8500
+      port    = 8500
     }
   }
 }
 
-ingress "consul-lan" {
+resource "ingress" "consul-lan" {
   source {
     driver = "local"
-    
+
     config {
       port = 8300
     }
   }
-  
+
   destination {
     driver = "k8s"
-    
+
     config {
-      cluster = "k8s_cluster.k3s"
+      cluster = resource.k8s_cluster.k3s.id
       address = "consul-consul-server.default.svc"
-      port = 8300
+      port    = 8300
     }
   }
 }
 
-ingress "vault-http" {
+resource "ingress" "vault-http" {
   source {
     driver = "local"
-    
+
     config {
       port = 18200
     }
   }
-  
+
   destination {
     driver = "k8s"
-    
+
     config {
-      cluster = "k8s_cluster.k3s"
+      cluster = resource.k8s_cluster.k3s.id
       address = "vault.default.svc"
-      port = 8200
+      port    = 8200
     }
   }
 }

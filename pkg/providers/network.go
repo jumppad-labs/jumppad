@@ -10,19 +10,19 @@ import (
 	"github.com/docker/docker/api/types/network"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"golang.org/x/xerrors"
 )
 
 // Network is a provider for creating docker networks
 type Network struct {
-	config *config.Network
+	config *resources.Network
 	client clients.Docker
 	log    hclog.Logger
 }
 
 // NewNetwork creates a new network with the given config and Docker client
-func NewNetwork(co *config.Network, cl clients.Docker, l hclog.Logger) *Network {
+func NewNetwork(co *resources.Network, cl clients.Docker, l hclog.Logger) *Network {
 	return &Network{co, cl, l}
 }
 
@@ -81,9 +81,6 @@ func (n *Network) Create() error {
 			return err
 		}
 	}
-
-	// set the state
-	n.config.Status = config.Applied
 
 	return err
 }

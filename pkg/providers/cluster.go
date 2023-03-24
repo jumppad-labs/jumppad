@@ -5,6 +5,6 @@ import (
 )
 
 var (
-	ErrorClusterDriverNotImplemented = errors.New("driver not implemented")
-	ErrorClusterExists               = errors.New("cluster exists")
+	ErrClusterDriverNotImplemented = errors.New("driver not implemented")
+	ErrClusterExists               = errors.New("cluster exists")
 )

@@ -29,7 +29,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients/streams"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"golang.org/x/xerrors"
 )
@@ -41,27 +41,25 @@ const (
 )
 
 const (
-  StorageDriverOverlay2 = "overlay2"
-  StorageDriverFuse = "fuse-overlayfs"
-  StorageDriverBTRFS = "btrfs"
-  StorageDriverZFS = "zfs"
-  StorageDriverVFS = "vfs"
-  StorageDriverAUFS = "aufs"
-  StorageDriverDeviceMapper = "devicemapper"
-  StorageDriverOverlay = "overlay"
+	StorageDriverOverlay2     = "overlay2"
+	StorageDriverFuse         = "fuse-overlayfs"
+	StorageDriverBTRFS        = "btrfs"
+	StorageDriverZFS          = "zfs"
+	StorageDriverVFS          = "vfs"
+	StorageDriverAUFS         = "aufs"
+	StorageDriverDeviceMapper = "devicemapper"
+	StorageDriverOverlay      = "overlay"
 )
-
-
 
 // DockerTasks is a concrete implementation of ContainerTasks which uses the Docker SDK
 type DockerTasks struct {
-	engineType string
-  storageDriver string
-	c          Docker
-	il         ImageLog
-	l          hclog.Logger
-	tg         *TarGz
-	force      bool
+	engineType    string
+	storageDriver string
+	c             Docker
+	il            ImageLog
+	l             hclog.Logger
+	tg            *TarGz
+	force         bool
 }
 
 // NewDockerTasks creates a DockerTasks with the given Docker client
@@ -85,20 +83,20 @@ func NewDockerTasks(c Docker, il ImageLog, tg *TarGz, l hclog.Logger) *DockerTas
 			t = EngineTypePodman
 		}
 	}
- 
-  // Determine the storage driver
-  info,err := c.Info(context.Background())
-  if err != nil {
+
+	// Determine the storage driver
+	info, err := c.Info(context.Background())
+	if err != nil {
 		l.Error("Error checking server storage driver", "error", err)
 
 		return nil
-  }
+	}
 
-  return &DockerTasks{engineType: t, storageDriver:info.Driver ,c: c, il: il, tg: tg, l: l}
+	return &DockerTasks{engineType: t, storageDriver: info.Driver, c: c, il: il, tg: tg, l: l}
 }
 
 func (d *DockerTasks) EngineInfo() *EngineInfo {
-  return &EngineInfo{StorageDriver: d.storageDriver, EngineType: d.engineType}
+	return &EngineInfo{StorageDriver: d.storageDriver, EngineType: d.engineType}
 }
 
 // SetForcePull sets a global override for the DockerTasks, when set to true
@@ -108,7 +106,7 @@ func (d *DockerTasks) SetForcePull(force bool) {
 }
 
 // CreateContainer creates a new Docker container for the given configuation
-func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
+func (d *DockerTasks) CreateContainer(c *resources.Container) (string, error) {
 	d.l.Debug("Creating Docker Container", "ref", c.Name)
 
 	// ensure the image name is the full canonical image as Podman does not use the
@@ -122,12 +120,7 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 
 	// convert the environment vars to a list of [key]=[value]
 	env := make([]string, 0)
-	for _, kv := range c.Environment {
-		env = append(env, fmt.Sprintf("%s=%s", kv.Key, kv.Value))
-	}
-
-	// convert the new environment map to a list of [key]=[value]
-	for k, v := range c.EnvVar {
+	for k, v := range c.Env {
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
 
@@ -290,14 +283,14 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 
 	// are we attaching the container to a sidecar network?
 	for _, n := range c.Networks {
-		net, err := c.FindDependentResource(n.Name)
+		net, err := c.ParentConfig.FindResource(n.ID)
 		if err != nil {
 			return "", xerrors.Errorf("Network not found: %w", err)
 		}
 
-		if net.Info().Type == config.TypeContainer {
+		if net.Metadata().Type == resources.TypeContainer {
 			// find the id of the container
-			ids, err := d.FindContainerIDs(net.Info().Name, net.Info().Type)
+			ids, err := d.FindContainerIDs(net.Metadata().Name, net.Metadata().Type)
 			if err != nil {
 				return "", xerrors.Errorf("Unable to attach to container network, ID for container not found: %w", err)
 			}
@@ -306,7 +299,7 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 				return "", xerrors.Errorf("Unable to attach to container network, ID for container not found")
 			}
 
-			d.l.Debug("Attaching container as sidecar", "ref", c.Name, "container", n.Name)
+			d.l.Debug("Attaching as sidecar", "ref", c.Metadata().Name, "container", n.ID)
 
 			// set the container network
 			hc.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", ids[0]))
@@ -344,26 +337,26 @@ func (d *DockerTasks) CreateContainer(c *config.Container) (string, error) {
 
 		// attach the custom networks
 		for _, n := range c.Networks {
-			net, err := c.FindDependentResource(n.Name)
+			net, err := c.ParentConfig.FindResource(n.ID)
 			if err != nil {
 				errRemove := d.RemoveContainer(cont.ID, false)
 				if errRemove != nil {
-					return "", xerrors.Errorf("Unable to connect container to network %s, unable to roll back container: %w", n.Name, err)
+					return "", xerrors.Errorf("Unable to connect container to network %s, unable to roll back container: %w", n.ID, err)
 				}
 
 				return "", xerrors.Errorf("Network not found: %w", err)
 			}
 
-			err = d.AttachNetwork(net.Info().Name, cont.ID, n.Aliases, n.IPAddress)
+			err = d.AttachNetwork(net.Metadata().Name, cont.ID, n.Aliases, n.IPAddress)
 
 			if err != nil {
 				// if we fail to connect to the network roll back the container
 				errRemove := d.RemoveContainer(cont.ID, false)
 				if errRemove != nil {
-					return "", xerrors.Errorf("Unable to connect container to network %s, unable to roll back container: %w", n.Name, err)
+					return "", xerrors.Errorf("Unable to connect container to network %s, unable to roll back container: %w", n.ID, err)
 				}
 
-				return "", xerrors.Errorf("Unable to connect container to network %s: %w", n.Name, err)
+				return "", xerrors.Errorf("Unable to connect container to network %s: %w", n.ID, err)
 			}
 		}
 
@@ -398,7 +391,7 @@ func (d *DockerTasks) ContainerInfo(id string) (interface{}, error) {
 }
 
 // PullImage pulls a Docker image from a remote repo
-func (d *DockerTasks) PullImage(image config.Image, force bool) error {
+func (d *DockerTasks) PullImage(image resources.Image, force bool) error {
 	// if image is local not try to pull shipyard.run/localcache
 	if strings.HasPrefix(image.Name, "shipyard.run/localcache") {
 		return nil
@@ -469,7 +462,7 @@ func (d *DockerTasks) PullImage(image config.Image, force bool) error {
 }
 
 // FindContainerIDs returns the Container IDs for the given identifier
-func (d *DockerTasks) FindContainerIDs(containerName string, typeName config.ResourceType) ([]string, error) {
+func (d *DockerTasks) FindContainerIDs(containerName string, typeName string) ([]string, error) {
 	fullName := utils.FQDN(containerName, string(typeName))
 
 	args := filters.NewArgs()
@@ -518,7 +511,7 @@ func (d *DockerTasks) RemoveContainer(id string, force bool) error {
 	return d.c.ContainerRemove(context.Background(), id, types.ContainerRemoveOptions{Force: true, RemoveVolumes: true})
 }
 
-func (d *DockerTasks) BuildContainer(config *config.Container, force bool) (string, error) {
+func (d *DockerTasks) BuildContainer(config *resources.Container, force bool) (string, error) {
 	imageName := fmt.Sprintf("shipyard.run/localcache/%s:%s", config.Name, config.Build.Tag)
 	imageName = makeImageCanonical(imageName)
 
@@ -723,7 +716,7 @@ func (d *DockerTasks) CopyLocalDockerImagesToVolume(images []string, volume stri
 // returns the names of the stored files
 func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, path string, force bool) ([]string, error) {
 	// make sure we have the alpine image needed to copy
-	err := d.PullImage(config.Image{Name: "alpine:latest"}, false)
+	err := d.PullImage(resources.Image{Name: "alpine:latest"}, false)
 	if err != nil {
 		return nil, xerrors.Errorf("Unable pull alpine:latest for importing images: %w", err)
 	}
@@ -731,11 +724,12 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 	// create a dummy container to import to volume
 	name := fmt.Sprintf("%d", time.Now().UnixNano())
 	name = name[len(name)-8:]
-	cc := config.NewContainer(fmt.Sprintf("%s-import", name))
+	cc := &resources.Container{}
+	cc.ResourceMetadata.Name = fmt.Sprintf("%s-import", name)
 
-	cc.Image = &config.Image{Name: "alpine:latest"}
-	cc.Volumes = []config.Volume{
-		config.Volume{
+	cc.Image = &resources.Image{Name: "alpine:latest"}
+	cc.Volumes = []resources.Volume{
+		resources.Volume{
 			Source:      volumeID,
 			Destination: "/cache",
 			Type:        "volume",
@@ -1100,7 +1094,7 @@ func (d *DockerTasks) AttachNetwork(net, containerid string, aliases []string, i
 }
 
 // ListNetworks lists the networks a container is attached to
-func (d *DockerTasks) ListNetworks(id string) []config.NetworkAttachment {
+func (d *DockerTasks) ListNetworks(id string) []resources.NetworkAttachment {
 	return nil
 }
 
@@ -1125,7 +1119,7 @@ type publishedPorts struct {
 }
 
 // createPublishedPorts converts a list of config.Port to Docker publishedPorts type
-func createPublishedPorts(ps []config.Port) publishedPorts {
+func createPublishedPorts(ps []resources.Port) publishedPorts {
 	pp := publishedPorts{
 		ExposedPorts: make(map[nat.Port]struct{}, 0),
 		PortBindings: make(map[nat.Port][]nat.PortBinding, 0),
@@ -1152,7 +1146,7 @@ func createPublishedPorts(ps []config.Port) publishedPorts {
 	return pp
 }
 
-func createPublishedPortRanges(ps []config.PortRange) (publishedPorts, error) {
+func createPublishedPortRanges(ps []resources.PortRange) (publishedPorts, error) {
 	pp := publishedPorts{
 		ExposedPorts: make(map[nat.Port]struct{}, 0),
 		PortBindings: make(map[nat.Port][]nat.PortBinding, 0),

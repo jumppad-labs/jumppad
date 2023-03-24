@@ -5,22 +5,22 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/hclconfig/types"
 )
 
 // Null is a noop provider
 type Null struct {
-	config *config.ResourceInfo
+	config types.Resource
 	log    hclog.Logger
 }
 
 // NewNull creates a null noop provider
-func NewNull(c *config.ResourceInfo, l hclog.Logger) *Null {
+func NewNull(c types.Resource, l hclog.Logger) *Null {
 	return &Null{c, l}
 }
 
 func (n *Null) Create() error {
-	n.log.Info(fmt.Sprintf("Creating %s", strings.Title(string(n.config.Type))), "ref", n.config.Name)
+	n.log.Info(fmt.Sprintf("Creating %s", strings.Title(string(n.config.Metadata().Type))), "ref", n.config.Metadata().Name)
 	return nil
 }
 

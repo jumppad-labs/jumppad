@@ -1,10 +1,10 @@
-k8s_cluster "k3s" {
-  driver  = "k3s" // default
+resource "k8s_cluster" "k3s" {
+  driver = "k3s" // default
 
   nodes = 1 // default
 
   network {
-    name = "network.cloud"
+    id = resource.network.cloud.id
   }
 
   image {
@@ -13,5 +13,5 @@ k8s_cluster "k3s" {
 }
 
 output "KUBECONFIG" {
-  value = k8s_config("k3s")
+  value = resource.k8s_cluster.k3s.k8s_config
 }

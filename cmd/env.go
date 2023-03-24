@@ -2,11 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"runtime"
 	"strings"
 
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/hclconfig"
+	"github.com/shipyard-run/hclconfig/types"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
@@ -41,10 +43,18 @@ func newEnvCmd(e shipyard.Engine) *cobra.Command {
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			c := config.New()
-			err := c.FromJSON(utils.StatePath())
+			o := hclconfig.DefaultOptions()
+			p := hclconfig.NewParser(o)
+
+			d, err := ioutil.ReadFile(utils.StatePath())
 			if err != nil {
 				fmt.Println("Unable to load state", err)
+				os.Exit(1)
+			}
+
+			c, err := p.UnmarshalJSON(d)
+			if err != nil {
+				fmt.Println("Unable to unmarshal state", err)
 				os.Exit(1)
 			}
 
@@ -59,29 +69,18 @@ func newEnvCmd(e shipyard.Engine) *cobra.Command {
 				}
 			}
 
-			if c.Blueprint != nil && len(c.Blueprint.Environment) > 0 {
-				for _, env := range c.Blueprint.Environment {
-					env.Value = strings.ReplaceAll(env.Value, `\`, `\\`)
-					if unset {
-						fmt.Printf("%s%s\n", prefix, env.Key)
-					} else {
-						fmt.Printf("%s%s=\"%s\"\n", prefix, env.Key, env.Value)
-					}
-				}
-			}
-
 			// add output variables
 			for _, r := range c.Resources {
-				if r.Info().Type == config.TypeOutput {
-					if r.Info().Disabled {
+				if r.Metadata().Type == types.TypeOutput {
+					if r.Metadata().Disabled {
 						continue
 					}
 
-					val := strings.ReplaceAll(r.(*config.Output).Value, `\`, `\\`)
+					val := strings.ReplaceAll(r.(*types.Output).Value, `\`, `\\`)
 					if unset {
-						fmt.Printf("%s%s\n", prefix, r.Info().Name)
+						fmt.Printf("%s%s\n", prefix, r.Metadata().Name)
 					} else {
-						fmt.Printf("%s%s=\"%s\"\n", prefix, r.Info().Name, val)
+						fmt.Printf("%s%s=\"%s\"\n", prefix, r.Metadata().Name, val)
 					}
 				}
 			}

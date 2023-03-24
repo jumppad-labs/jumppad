@@ -1,5 +1,5 @@
-helm "consul" {
-  cluster = "k8s_cluster.k3s"
+resource "helm" "consul" {
+  cluster = resource.k8s_cluster.k3s.id
 
   # When no repositroy is specified, either a local path or go getter URL
 
@@ -24,14 +24,12 @@ helm "consul" {
   }
 }
 
-helm "vault" {
-  depends_on = ["helm.consul"] # only install one at a time
-
-  cluster = "k8s_cluster.k3s"
+resource "helm" "vault" {
+  cluster = resource.k8s_cluster.k3s.id
 
   repository {
-    name = "hashicorp"
-    url  = "https://helm.releases.hashicorp.com"
+    name = resource.helm.consul.repository.name // this also forces a dependency to be created
+    url  = resource.helm.consul.repository.url  // vault will always be applied after consul
   }
 
   chart   = "hashicorp/vault" # When repository specified this is the name of the chart

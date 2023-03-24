@@ -2,25 +2,24 @@ variable "version" {
   default = "consul:1.6.1"
 }
 
-network "onprem" {
+resource "network" "onprem" {
   subnet = "10.6.0.0/16"
 }
 
-template "consul_config" {
+resource "template" "consul_config" {
 
-  source = <<EOF
-data_dir = "#{{ .Vars.data_dir }}"
-log_level = "DEBUG"
+  source = <<-EOF
+    data_dir = "#{{ .Vars.data_dir }}"
+    log_level = "DEBUG"
 
-datacenter = "dc1"
-primary_datacenter = "dc1"
+    datacenter = "dc1"
+    primary_datacenter = "dc1"
 
-server = true
+    server = true
 
-bootstrap_expect = 1
-ui = true
-
-EOF
+    bootstrap_expect = 1
+    ui = true
+  EOF
 
   destination = "${data("single")}/consul.hcl"
 
@@ -29,15 +28,15 @@ EOF
   }
 }
 
-container "consul" {
+resource "container" "consul" {
   image {
-    name = var.version
+    name = variable.version
   }
 
   command = ["consul", "agent", "-dev", "-client", "0.0.0.0"]
 
   network {
-    name       = "network.onprem"
+    id         = resource.network.onprem.id
     ip_address = "10.6.0.200"
   }
 
@@ -61,7 +60,7 @@ container "consul" {
   }
 
   volume {
-    source      = resources.template.consul_config.destination
+    source      = resource.template.consul_config.destination
     destination = "/config/config.hcl"
   }
 
@@ -71,6 +70,3 @@ container "consul" {
     type        = "volume"
   }
 }
-
-
-source = resources.template.consul_config.destination

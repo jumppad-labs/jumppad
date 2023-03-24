@@ -10,8 +10,9 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/hashicorp/go-hclog"
+	"github.com/shipyard-run/hclconfig/types"
 	"github.com/shipyard-run/shipyard/pkg/clients"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"golang.org/x/xerrors"
 )
@@ -48,14 +49,14 @@ plugin "raw_exec" {
 
 // NomadCluster defines a provider which can create Kubernetes clusters
 type NomadCluster struct {
-	config      *config.NomadCluster
+	config      *resources.NomadCluster
 	client      clients.ContainerTasks
 	nomadClient clients.Nomad
 	log         hclog.Logger
 }
 
 // NewNomadCluster creates a new Nomad cluster provider
-func NewNomadCluster(c *config.NomadCluster, cc clients.ContainerTasks, hc clients.Nomad, l hclog.Logger) *NomadCluster {
+func NewNomadCluster(c *resources.NomadCluster, cc clients.ContainerTasks, hc clients.Nomad, l hclog.Logger) *NomadCluster {
 	return &NomadCluster{c, cc, hc, l}
 }
 
@@ -111,7 +112,7 @@ func (c *NomadCluster) createNomad() error {
 	// check the server does not already exist
 	ids, err := c.client.FindContainerIDs(fmt.Sprintf("server.%s", c.config.Name), c.config.Type)
 	if len(ids) > 0 {
-		return ErrorClusterExists
+		return ErrClusterExists
 	}
 
 	if err != nil {
@@ -127,7 +128,7 @@ func (c *NomadCluster) createNomad() error {
 	image := fmt.Sprintf("%s:%s", nomadBaseImage, c.config.Version)
 
 	// pull the container image
-	err = c.client.PullImage(config.Image{Name: image}, false)
+	err = c.client.PullImage(resources.Image{Name: image}, false)
 	if err != nil {
 		return err
 	}
@@ -167,7 +168,7 @@ func (c *NomadCluster) createNomad() error {
 			cMutex.Unlock()
 
 			clWait.Done()
-		}(i+1, image, volID, configPath, utils.FQDN(fmt.Sprintf("server.%s", c.config.Name), string(config.TypeNomadCluster)))
+		}(i+1, image, volID, configPath, utils.FQDN(fmt.Sprintf("server.%s", c.config.Name), string(resources.TypeNomadCluster)))
 	}
 
 	clWait.Wait()
@@ -223,7 +224,7 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 		nodeCount = c.config.ClientNodes
 	}
 
-	conf, configDir := utils.GetClusterConfig(string(config.TypeNomadCluster) + "." + c.config.Name)
+	conf, configDir := utils.GetClusterConfig(resources.TypeNomadCluster + "." + c.config.Name)
 
 	// add the nodecount to the config and save
 	conf.NodeCount = nodeCount
@@ -243,10 +244,15 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 
 	// create the server
 	// since the server is just a container create the container config and provider
-	cc := config.NewContainer(fmt.Sprintf("server.%s", c.config.Name))
-	c.config.ResourceInfo.AddChild(cc)
+	name := fmt.Sprintf("server.%s", c.config.Name)
 
-	cc.Image = &config.Image{Name: image}
+	cc := &resources.Container{
+		ResourceMetadata: types.ResourceMetadata{Name: name},
+	}
+
+	cc.ParentConfig = cc.ParentConfig
+
+	cc.Image = &resources.Image{Name: image}
 	cc.Networks = c.config.Networks
 	cc.Privileged = true // nomad must run Privileged as Docker needs to manipulate ip tables and stuff
 
@@ -254,13 +260,13 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 	//cc.DNS = []string{"127.0.0.1"}
 
 	// set the volume mount for the images and the config
-	cc.Volumes = []config.Volume{
-		config.Volume{
+	cc.Volumes = []resources.Volume{
+		resources.Volume{
 			Source:      volumeID,
 			Destination: "/cache",
 			Type:        "volume",
 		},
-		config.Volume{
+		resources.Volume{
 			Source:      serverConfigPath,
 			Destination: "/etc/nomad.d/config.hcl",
 			Type:        "bind",
@@ -269,7 +275,7 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 
 	// Add any user config if set
 	if c.config.ServerConfig != "" {
-		vol := config.Volume{
+		vol := resources.Volume{
 			Source:      c.config.ServerConfig,
 			Destination: "/etc/nomad.d/server_user_config.hcl",
 			Type:        "bind",
@@ -280,7 +286,7 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 
 	// Add any user config if set
 	if c.config.ClientConfig != "" {
-		vol := config.Volume{
+		vol := resources.Volume{
 			Source:      c.config.ClientConfig,
 			Destination: "/etc/nomad.d/client_user_config.hcl",
 			Type:        "bind",
@@ -291,7 +297,7 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 
 	// Add the custom consul config if set
 	if c.config.ConsulConfig != "" {
-		vol := config.Volume{
+		vol := resources.Volume{
 			Source:      c.config.ConsulConfig,
 			Destination: "/etc/consul.d/config/user_config.hcl",
 			Type:        "bind",
@@ -305,23 +311,23 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 		cc.Volumes = append(cc.Volumes, v)
 	}
 
-	cc.Environment = c.config.Environment
+	cc.Env = c.config.Env
 
 	// expose the API server port
-	cc.Ports = []config.Port{
-		config.Port{
+	cc.Ports = []resources.Port{
+		resources.Port{
 			Local:    "4646",
 			Host:     fmt.Sprintf("%d", conf.APIPort),
 			Protocol: "tcp",
 		},
-		config.Port{
+		resources.Port{
 			Local:    "19090",
 			Host:     fmt.Sprintf("%d", conf.ConnectorPort),
 			Protocol: "tcp",
 		},
 	}
 
-	cc.EnvVar = map[string]string{}
+	cc.Env = map[string]string{}
 	err := c.appendProxyEnv(cc)
 	if err != nil {
 		return "", utils.ClusterConfig{}, "", err
@@ -345,23 +351,29 @@ func (c *NomadCluster) createClientNode(index int, image, volumeID, configDir, s
 
 	// create the server
 	// since the server is just a container create the container config and provider
-	cc := config.NewContainer(fmt.Sprintf("%d.client.%s", index, c.config.Name))
-	c.config.ResourceInfo.AddChild(cc)
+	name := fmt.Sprintf("%d.client.%s", index, c.config.Name)
+	cc := &resources.Container{
+		ResourceMetadata: types.ResourceMetadata{
+			Name: name,
+		},
+	}
 
-	cc.Image = &config.Image{Name: image}
+	cc.ParentConfig = c.config.ParentConfig
+
+	cc.Image = &resources.Image{Name: image}
 	cc.Networks = c.config.Networks
 	cc.Privileged = true // nomad must run Privileged as Docker needs to manipulate ip tables and stuff
 
 	//cc.DNS = []string{"127.0.0.1"}
 
 	// set the volume mount for the images and the config
-	cc.Volumes = []config.Volume{
-		config.Volume{
+	cc.Volumes = []resources.Volume{
+		resources.Volume{
 			Source:      volumeID,
 			Destination: "/cache",
 			Type:        "volume",
 		},
-		config.Volume{
+		resources.Volume{
 			Source:      clientConfigPath,
 			Destination: "/etc/nomad.d/config.hcl",
 			Type:        "bind",
@@ -370,7 +382,7 @@ func (c *NomadCluster) createClientNode(index int, image, volumeID, configDir, s
 
 	// Add any user config if set
 	if c.config.ClientConfig != "" {
-		vol := config.Volume{
+		vol := resources.Volume{
 			Source:      c.config.ClientConfig,
 			Destination: "/etc/nomad.d/user_config.hcl",
 			Type:        "bind",
@@ -381,7 +393,7 @@ func (c *NomadCluster) createClientNode(index int, image, volumeID, configDir, s
 
 	// Add the custom consul config if set
 	if c.config.ConsulConfig != "" {
-		vol := config.Volume{
+		vol := resources.Volume{
 			Source:      c.config.ConsulConfig,
 			Destination: "/etc/consul.d/config/user_config.hcl",
 			Type:        "bind",
@@ -395,9 +407,9 @@ func (c *NomadCluster) createClientNode(index int, image, volumeID, configDir, s
 		cc.Volumes = append(cc.Volumes, v)
 	}
 
-	cc.Environment = c.config.Environment
+	cc.Env = c.config.Env
 
-	cc.EnvVar = map[string]string{}
+	cc.Env = map[string]string{}
 	err := c.appendProxyEnv(cc)
 	if err != nil {
 		return "", err
@@ -406,7 +418,7 @@ func (c *NomadCluster) createClientNode(index int, image, volumeID, configDir, s
 	return c.client.CreateContainer(cc)
 }
 
-func (c *NomadCluster) appendProxyEnv(cc *config.Container) error {
+func (c *NomadCluster) appendProxyEnv(cc *resources.Container) error {
 
 	// only add the variables for the cache when the nomad version is >= v0.11.8 or
 	// is using the dev version
@@ -436,17 +448,17 @@ func (c *NomadCluster) appendProxyEnv(cc *config.Container) error {
 			return fmt.Errorf("Unable to read root CA for proxy: %s", err)
 		}
 
-		cc.EnvVar["HTTP_PROXY"] = utils.HTTPProxyAddress()
-		cc.EnvVar["HTTPS_PROXY"] = utils.HTTPSProxyAddress()
-		cc.EnvVar["NO_PROXY"] = utils.ProxyBypass
-		cc.EnvVar["PROXY_CA"] = string(ca)
+		cc.Env["HTTP_PROXY"] = utils.HTTPProxyAddress()
+		cc.Env["HTTPS_PROXY"] = utils.HTTPSProxyAddress()
+		cc.Env["NO_PROXY"] = utils.ProxyBypass
+		cc.Env["PROXY_CA"] = string(ca)
 	}
 
 	return nil
 }
 
 // ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
-func (c *NomadCluster) ImportLocalDockerImages(name string, id string, images []config.Image, force bool) error {
+func (c *NomadCluster) ImportLocalDockerImages(name string, id string, images []resources.Image, force bool) error {
 	imgs := []string{}
 
 	for _, i := range images {
@@ -516,10 +528,10 @@ func (c *NomadCluster) destroyNode(id string) error {
 	for _, i := range ids {
 		// remove from the networks
 		for _, n := range c.config.Networks {
-			c.log.Debug("Detaching container from network", "ref", c.config.Name, "id", i, "network", n.Name)
-			err := c.client.DetachNetwork(n.Name, i)
+			c.log.Debug("Detaching container from network", "ref", c.config.Name, "id", i, "network", n.ID)
+			err := c.client.DetachNetwork(n.ID, i)
 			if err != nil {
-				c.log.Error("Unable to detach network", "ref", c.config.Name, "network", n.Name, "error", err)
+				c.log.Error("Unable to detach network", "ref", c.config.Name, "network", n.ID, "error", err)
 			}
 		}
 

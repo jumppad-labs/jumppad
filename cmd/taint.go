@@ -2,9 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/hclconfig"
+	"github.com/shipyard-run/shipyard/pkg/shipyard/constants"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
 )
@@ -23,25 +25,33 @@ var taintCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		c := config.New()
-		err := c.FromJSON(utils.StatePath())
+		p := hclconfig.NewParser(hclconfig.DefaultOptions())
+		d, err := ioutil.ReadFile(utils.StatePath())
 		if err != nil {
-			fmt.Println("Unable to load state", err)
+			fmt.Printf("Unable to read state file")
 			os.Exit(1)
 		}
 
-		r, err := c.FindResource(args[0])
+		cfg, err := p.UnmarshalJSON(d)
+		if err != nil {
+			fmt.Printf("Unable to unmarshal state file")
+			os.Exit(1)
+		}
+
+		r, err := cfg.FindResource(args[0])
 		if err != nil || r == nil {
 			fmt.Println("Unable to locate resource in the state", args[0])
 			os.Exit(1)
 		}
 
-		r.Info().Status = config.PendingModification
+		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusTainted
 
-		err = c.ToJSON(utils.StatePath())
+		d, err = cfg.ToJSON()
 		if err != nil {
 			fmt.Println("Unable to save state", err)
 			os.Exit(1)
 		}
+
+		ioutil.WriteFile(utils.StatePath(), d, os.ModePerm)
 	},
 }
