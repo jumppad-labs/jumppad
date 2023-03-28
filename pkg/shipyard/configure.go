@@ -33,6 +33,7 @@ func setupHCLConfig(callback hclconfig.ProcessCallback, variables map[string]str
 	p.RegisterType(resources.TypeNomadIngress, &resources.NomadIngress{})
 	p.RegisterType(resources.TypeSidecar, &resources.Sidecar{})
 	p.RegisterType(resources.TypeTemplate, &resources.Template{})
+	p.RegisterType(resources.TypeImageCache, &resources.ImageCache{})
 
 	// Register the custom functions
 	p.RegisterFunction("docker_ip", customHCLFuncDockerIP)

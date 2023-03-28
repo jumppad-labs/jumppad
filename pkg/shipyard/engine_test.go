@@ -12,6 +12,7 @@ import (
 
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/hashicorp/go-hclog"
+	"github.com/shipyard-run/hclconfig"
 	"github.com/shipyard-run/hclconfig/types"
 	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"github.com/shipyard-run/shipyard/pkg/providers"
@@ -107,6 +108,13 @@ func getTestFiles(tests string) string {
 	return filepath.Join(path, "/examples", tests)
 }
 
+func testLoadState(t *testing.T) *hclconfig.Config {
+	c, err := loadState()
+	require.NoError(t, err)
+
+	return c
+}
+
 func TestNewCreatesClients(t *testing.T) {
 	e, err := New(hclog.NewNullLogger())
 	assert.NoError(t, err)
@@ -178,22 +186,170 @@ func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
 	e, mp := setupTests(t, nil)
 
 	_, err := e.Apply("../../examples/single_k3s_cluster")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	// should have call create for each provider
+	// should have call create for each resource in the config
+	// and once for ImageCache that is manually added
 	testAssertMethodCalled(t, mp, "Create", 9)
-	//assert.Len(t, res, 4)
+
+	// the state should also contain 9 resources
+	sf := loadState(t)
+	require.Equal(t, 9, sf.ResourceCount())
 }
 
-func TestApplyNotCallsProviderDestroyAndCreateForResourcesDisabled(t *testing.T) {
-	e, mp := setupTestsWithState(t, nil, disabledState)
+func TestApplyDoesNotCallsProviderCreateWhenInState(t *testing.T) {
+	e, mp := setupTests(t, nil)
 
-	_, err := e.Apply("")
+	_, err := e.Apply("../../examples/single_k3s_cluster")
+	require.NoError(t, err)
+
+	// should have call create for each resource in the config
+	// and once for ImageCache that is manually added
+	testAssertMethodCalled(t, mp, "Create", 9)
+
+	// the state should also contain 9 resources
+	sf := loadState(t)
+	require.Equal(t, 9, sf.ResourceCount())
+}
+
+func TestApplyNotCallsProviderCreateForDisabledResources(t *testing.T) {
+	e, mp := setupTests(t, nil)
+
+	// contains 2 resources one is disabled
+	_, err := e.Apply("../../examples/disabled")
 	assert.NoError(t, err)
 
 	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 0)
 	testAssertMethodCalled(t, mp, "Create", 2) // ImageCache is always created
+
+	// disabled resources should still be added to the state
+	sf := loadState(t)
+
+	// should contain 2 from the config plus the image cache
+	require.Equal(t, 3, sf.ResourceCount())
+
+	// the status should be set to disabled
+	r, err := sf.FindResource("resource.container.consul_disabled")
+	require.NoError(t, err)
+	require.Equal(t, constants.StatusDisabled, r.Metadata().Properties[constants.PropertyStatus])
+}
+
+func TestApplyShouldNotAddDuplicateDisabledResources(t *testing.T) {
+	e, mp := setupTestsWithState(t, nil, disabledState)
+
+	// contains 2 resources one is disabled
+	_, err := e.Apply("../../examples/disabled")
+	assert.NoError(t, err)
+
+	// should have call create for each provider
+	testAssertMethodCalled(t, mp, "Create", 2) // ImageCache is always created
+
+	// disabled resources should still be added to the state
+	sf := loadState(t)
+
+	// should contain 2 from the config plus the image cache
+	// should not duplicate the disabled container as this already exists in the
+	// state
+	require.Equal(t, 4, sf.ResourceCount())
+
+	// the status should be set to disabled
+	r, err := sf.FindResource("resource.container.consul_disabled")
+	require.NoError(t, err)
+	require.Equal(t, constants.StatusDisabled, r.Metadata().Properties[constants.PropertyStatus])
+}
+
+func TestApplySetsCreatedStatusForEachResource(t *testing.T) {
+	e, mp := setupTests(t, nil)
+
+	_, err := e.Apply("../../examples/single_file/container.hcl")
+	assert.NoError(t, err)
+
+	assert.Equal(t, 4, e.(*EngineImpl).config.ResourceCount())
+
+	// should only call create and destroy for the cache as this is pending update
+	testAssertMethodCalled(t, mp, "Create", 4) // ImageCache is always created
+
+	sf := loadState(t)
+
+	r, err := sf.FindResource("resource.container.consul")
+	require.NoError(t, err)
+	require.Equal(t, constants.StatusCreated, r.Metadata().Properties[constants.PropertyStatus])
+
+	r, err = sf.FindResource("resource.network.onprem")
+	require.NoError(t, err)
+	require.Equal(t, constants.StatusCreated, r.Metadata().Properties[constants.PropertyStatus])
+
+	r, err = sf.FindResource("resource.template.consul_config")
+	require.NoError(t, err)
+	require.Equal(t, constants.StatusCreated, r.Metadata().Properties[constants.PropertyStatus])
+}
+
+func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
+	e, mp := setupTests(t, map[string]error{"onprem": fmt.Errorf("boom")})
+
+	_, err := e.Apply("../../examples/single_file/container.hcl")
+	assert.Error(t, err)
+
+	// should have call create for each provider
+	// there are two top level config items, template and network
+	// one will fail
+	testAssertMethodCalled(t, mp, "Create", 2)
+
+	sf := loadState(t)
+
+	// should set failed status for network
+	r, err := sf.FindResource("resource.network.onprem")
+	require.NoError(t, err)
+	require.Equal(t, constants.StatusFailed, r.Metadata().Properties[constants.PropertyStatus])
+
+	// should set created status for template
+	r, err = sf.FindResource("resource.template.consul_config")
+	require.NoError(t, err)
+	require.Equal(t, constants.StatusCreated, r.Metadata().Properties[constants.PropertyStatus])
+}
+
+func TestApplyCallsProviderDestroyAndCreateForFailedResources(t *testing.T) {
+	e, mp := setupTestsWithState(t, nil, failedState)
+
+	_, err := e.Apply("../../examples/single_file/container.hcl")
+	assert.NoError(t, err)
+
+	// should have call create for each provider
+	testAssertMethodCalled(t, mp, "Destroy", 1)
+	testAssertMethodCalled(t, mp, "Create", 4) // ImageCache is always created
+}
+
+func TestApplyCallsProviderDestroyForTaintedResources(t *testing.T) {
+	e, mp := setupTestsWithState(t, nil, taintedState)
+
+	_, err := e.Apply("../../examples/single_file/container.hcl")
+	assert.NoError(t, err)
+
+	// should have call create for each provider
+	testAssertMethodCalled(t, mp, "Destroy", 1)
+	testAssertMethodCalled(t, mp, "Create", 4) // ImageCache is always created
+}
+
+func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
+	e, mp := setupTestsWithState(t, nil, existingState)
+
+	err := e.Destroy()
+	assert.NoError(t, err)
+
+	// should have call create for each provider
+	// and once for the image cache
+	testAssertMethodCalled(t, mp, "Destroy", 4)
+}
+
+func TestDestroyNotCallsProviderDestroyForResourcesDisabled(t *testing.T) {
+	e, mp := setupTestsWithState(t, nil, disabledState)
+
+	err := e.Destroy()
+	assert.NoError(t, err)
+
+	// should have call create for each provider
+	testAssertMethodCalled(t, mp, "Destroy", 2)
+	testAssertMethodCalled(t, mp, "Create", 0) // ImageCache is always created
 
 	// check state of disabled remains disabled
 	d, err := os.ReadFile(utils.StatePath())
@@ -203,62 +359,48 @@ func TestApplyNotCallsProviderDestroyAndCreateForResourcesDisabled(t *testing.T)
 	c, err := parser.UnmarshalJSON(d)
 	require.NoError(t, err)
 
-	r, err := c.FindResource("container.dc1")
-	assert.NoError(t, err)
-	assert.True(t, r.Metadata().Disabled)
+	_, err = c.FindResource("container.dc1")
+	assert.Error(t, err) // resource should not exist
 }
 
-func TestApplyCallsProviderDestroyAndCreateForResourcesFailed(t *testing.T) {
-	e, mp := setupTestsWithState(t, nil, failedState)
+func TestDestroyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
+	e, mp := setupTests(t, map[string]error{"k3s": fmt.Errorf("boom")})
 
-	_, err := e.Apply("")
-	assert.NoError(t, err)
-
-	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 1)
-	testAssertMethodCalled(t, mp, "Create", 2) // ImageCache is always created
-}
-
-func TestApplyCallsProviderDestroyForResourcesPendingModification(t *testing.T) {
-	e, mp := setupTestsWithState(t, nil, modificationState)
-
-	_, err := e.Apply("")
-	assert.NoError(t, err)
-
-	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 1)
-	testAssertMethodCalled(t, mp, "Create", 2) // ImageCache is always created
-}
-
-func TestApplyReturnsErrorWhenProviderDestroyForResourcesPendingorFailed(t *testing.T) {
-	e, mp := setupTestsWithState(t, map[string]error{"dc1": fmt.Errorf("boom")}, failedState)
-
-	_, err := e.Apply("")
+	err := e.Destroy()
 	assert.Error(t, err)
 
 	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 1)
-	testAssertMethodCalled(t, mp, "Create", 1) // ImageCache is always created
+	testAssertMethodCalled(t, mp, "Destroy", 7)
 }
 
-func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
+func TestDestroyFailSetsStatus(t *testing.T) {
 	e, mp := setupTests(t, map[string]error{"cloud": fmt.Errorf("boom")})
 
-	_, err := e.Apply("../../examples/single_k3s_cluster")
+	err := e.Destroy()
 	assert.Error(t, err)
 
 	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Create", 2)
+	testAssertMethodCalled(t, mp, "Destroy", 9)
+	assert.Equal(t, constants.StatusFailed, (*mp)[8].Config().Metadata().Properties[constants.PropertyStatus])
 }
 
-func TestApplySetsStatusForEachResource(t *testing.T) {
-	e, mp := setupTestsWithState(t, nil, mergedState)
+func TestDestroyCallsProviderDestroyInCorrectOrder(t *testing.T) {
+	e, mp := setupTests(t, nil)
 
-	_, err := e.Apply("")
+	err := e.Destroy()
 	assert.NoError(t, err)
 
-	// should only call create and destroy for the cache as this is pending update
-	testAssertMethodCalled(t, mp, "Create", 1) // ImageCache is always created
+	// due to paralel nature of the DAG, these elements can appear in any order
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[0].Config().Metadata().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[1].Config().Metadata().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[2].Config().Metadata().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[3].Config().Metadata().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[4].Config().Metadata().Name)
+	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[5].Config().Metadata().Name)
+
+	assert.Contains(t, []string{"k3s"}, (*mp)[6].Config().Metadata().Name)
+	assert.Contains(t, []string{"docker-cache"}, (*mp)[7].Config().Metadata().Name)
+	assert.Contains(t, []string{"cloud"}, (*mp)[8].Config().Metadata().Name)
 }
 
 func TestParseConfig(t *testing.T) {
@@ -287,78 +429,6 @@ func TestParseWithVariables(t *testing.T) {
 	testAssertMethodCalled(t, mp, "Destroy", 0)
 }
 
-func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
-	e, mp := setupTests(t, nil)
-
-	err := e.Destroy("../../examples/single_k3s_cluster", true)
-	assert.NoError(t, err)
-
-	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 9)
-}
-
-func TestDestroyNotCallsProviderDestroyForResourcesDisabled(t *testing.T) {
-	e, mp := setupTestsWithState(t, nil, disabledState)
-
-	err := e.Destroy("", true)
-	assert.NoError(t, err)
-
-	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 2)
-	testAssertMethodCalled(t, mp, "Create", 0) // ImageCache is always created
-
-	// check state of disabled remains disabled
-	d, err := os.ReadFile(utils.StatePath())
-	require.NoError(t, err)
-
-	parser := setupHCLConfig(nil, nil, nil)
-	c, err := parser.UnmarshalJSON(d)
-	require.NoError(t, err)
-
-	_, err = c.FindResource("container.dc1")
-	assert.Error(t, err) // resource should not exist
-}
-
-func TestDestroyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
-	e, mp := setupTests(t, map[string]error{"k3s": fmt.Errorf("boom")})
-
-	err := e.Destroy("../../examples/single_k3s_cluster", true)
-	assert.Error(t, err)
-
-	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 7)
-}
-
-func TestDestroyFailSetsStatus(t *testing.T) {
-	e, mp := setupTests(t, map[string]error{"cloud": fmt.Errorf("boom")})
-
-	err := e.Destroy("../../examples/single_k3s_cluster", true)
-	assert.Error(t, err)
-
-	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 9)
-	assert.Equal(t, constants.StatusFailed, (*mp)[8].Config().Metadata().Properties[constants.PropertyStatus])
-}
-
-func TestDestroyCallsProviderDestroyInCorrectOrder(t *testing.T) {
-	e, mp := setupTests(t, nil)
-
-	err := e.Destroy("../../examples/single_k3s_cluster", true)
-	assert.NoError(t, err)
-
-	// due to paralel nature of the DAG, these elements can appear in any order
-	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[0].Config().Metadata().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[1].Config().Metadata().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[2].Config().Metadata().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[3].Config().Metadata().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[4].Config().Metadata().Name)
-	assert.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[5].Config().Metadata().Name)
-
-	assert.Contains(t, []string{"k3s"}, (*mp)[6].Config().Metadata().Name)
-	assert.Contains(t, []string{"docker-cache"}, (*mp)[7].Config().Metadata().Name)
-	assert.Contains(t, []string{"cloud"}, (*mp)[8].Config().Metadata().Name)
-}
-
 func testAssertMethodCalled(t *testing.T, p *[]*mocks.MockProvider, method string, n int, args ...interface{}) {
 	callCount := 0
 
@@ -378,11 +448,12 @@ func testAssertMethodCalled(t *testing.T, p *[]*mocks.MockProvider, method strin
 
 var failedState = `
 {
-  "blueprint": null,
   "resources": [
 	{
-      "name": "dc1",
-      "status": "failed",
+      "name": "onprem",
+ 	    "properties": {
+				"status": "failed"
+			},
       "subnet": "10.15.0.0/16",
       "type": "network"
 	}
@@ -390,13 +461,14 @@ var failedState = `
 }
 `
 
-var modificationState = `
+var taintedState = `
 {
-  "blueprint": null,
   "resources": [
 	{
-      "name": "dc1",
-      "status": "pending_modification",
+      "name": "onprem",
+ 	    "properties": {
+				"status": "tainted"
+			},
       "subnet": "10.15.0.0/16",
       "type": "network"
 	}
@@ -404,15 +476,24 @@ var modificationState = `
 }
 `
 
-var mergedState = `
+var existingState = `
 {
-  "blueprint": null,
   "resources": [
 	{
-      "name": "dc1",
-      "status": "pending_update",
+      "name": "cloud",
+      "status": "created",
       "subnet": "10.15.0.0/16",
       "type": "network"
+	},
+	{
+      "name": "mycontainer",
+      "status": "created",
+      "type": "container"
+	},
+	{
+      "name": "mytemplate",
+      "status": "created",
+      "type": "template"
 	}
   ]
 }
@@ -422,17 +503,22 @@ var disabledState = `
 {
   "blueprint": null,
   "resources": [
-	{
-      "name": "dc1",
-      "status": "pending_creation",
-      "subnet": "10.15.0.0/16",
-      "type": "network"
-	},
-	{
-      "name": "dc1",
-      "status": "disabled",
-      "type": "container"
-	}
+		{
+ 	     "name": "dc1_enabled",
+ 	     "properties": {
+					"status": "created"
+				},
+ 	     "subnet": "10.15.0.0/16",
+ 	     "type": "network"
+		},
+		{
+			 "disabled": true,
+ 	     "name": "consul_disabled",
+ 	     "properties": {
+					"status": "disabled"
+				},
+ 	     "type": "container"
+		}
   ]
 }
 `

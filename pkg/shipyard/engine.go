@@ -5,6 +5,7 @@ import (
 	// "fmt"
 
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -40,6 +41,8 @@ type Clients struct {
 }
 
 // Engine defines an interface for the Shipyard engine
+//
+//go:generate mockery --name Engine --filename engine.go
 type Engine interface {
 	GetClients() *Clients
 	Apply(string) ([]types.Resource, error)
@@ -50,7 +53,7 @@ type Engine interface {
 	ApplyWithVariables(path string, variables map[string]string, variablesFile string) ([]types.Resource, error)
 	ParseConfig(string) error
 	ParseConfigWithVariables(string, map[string]string, string) error
-	Destroy(string, bool) error
+	Destroy() error
 	ResourceCount() int
 	ResourceCountForType(string) int
 	Blueprint() *resources.Blueprint
@@ -157,7 +160,7 @@ func (e *EngineImpl) ParseConfig(path string) error {
 // not apply or destroy the resources.
 // This function can be used to check the validity of a configuration without making changes
 func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]string, variablesFile string) error {
-	err := e.readAndProcessConfig(path, vars, variablesFile, e.createCallback)
+	err := e.readAndProcessConfig(path, vars, variablesFile, nil)
 	if err != nil {
 		return err
 	}
@@ -188,219 +191,46 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 		}
 	}
 
-	err = e.readAndProcessConfig(path, vars, variablesFile, e.createCallback)
+	processErr := e.readAndProcessConfig(path, vars, variablesFile, e.createCallback)
+
+	return e.config.Resources, processErr
+}
+
+// Destroy the resources defined by the state
+func (e *EngineImpl) Destroy() error {
+	e.log.Info("Destroying resources")
+
+	// load the state
+	stateConfig, err := e.loadState()
 	if err != nil {
-		return nil, err
+		e.log.Debug("State file does not exist")
 	}
 
-	//createdResource := []types.Resource{}
+	// run through the graph and call the destroy callback
+	err = stateConfig.Process(e.destroyCallback, true)
+	if err != nil {
+		// save the state
+		e.saveState()
 
-	//// walk the dag and apply the config
-	//w := dag.Walker{}
-	//w.Callback = func(v dag.Vertex) (diags tfdiags.Diagnostics) {
-	//	r, ok := v.(types.Resource)
-
-	//	// not a resource quit
-	//	if !ok {
-	//		return nil
-	//	}
-
-	//	// get the provider to create the resource
-	//	p := e.getProvider(r, e.clients)
-
-	//	if p == nil {
-	//		r.Metadata().Status = config.Failed
-	//		return diags.Append(fmt.Errorf("Unable to create provider for resource Name: %s, Type: %s", r.Info().Name, r.Info().Type))
-	//	}
-
-	//	switch r.Info().Status {
-	//	// Normal case for PendingUpdate is do nothing
-	//	// PendingModification causes a resource to be
-	//	// destroyed before created
-	//	case config.PendingModification:
-	//		fallthrough
-
-	//		// Always attempt to destroy and re-create failed resources
-	//	case config.Failed:
-	//		err = p.Destroy()
-	//		if err != nil {
-	//			r.Info().Status = config.Failed
-	//			return diags.Append(err)
-	//		}
-
-	//		fallthrough // failed resources should always attempt recreation
-
-	//	// Create new resources
-	//	case config.PendingCreation:
-	//		createErr := p.Create()
-	//		if createErr != nil {
-	//			r.Info().Status = config.Failed
-	//			return diags.Append(createErr)
-	//		}
-
-	//	case config.PendingUpdate:
-	//		// do nothing for pending updates
-
-	//	case config.Disabled:
-	//		// do nothing for disabled updates
-	//	}
-
-	//	// set the status only if not disabled
-	//	if r.Info().Status != config.Disabled {
-	//		r.Info().Status = config.Applied
-	//	}
-
-	//	appendResources(&createdResource, r)
-
-	//	return nil
-	//}
-
-	//w.Update(d)
-	//tf := w.Wait()
-	//if tf.Err() != nil {
-	//	err = tf.Err()
-	//}
-
-	//if len(e.config.Resources) > 0 {
-	//	// save the state regardless of error
-	//	jerr := e.config.ToJSON(utils.StatePath())
-	//	if jerr != nil {
-	//		return createdResource, jerr
-	//	}
-
-	//	return createdResource, err
-	//}
-
-	return nil, nil
-}
-
-// createCallback is used by hclconfig when attempting to create resources
-func (e *EngineImpl) createCallback(r types.Resource) error {
-	fqdn := types.FQDNFromResource(r)
-	e.log.Info("Created resource", "fqdn", fqdn.String())
-
-	p := e.getProvider(r, e.clients)
-
-	if p == nil {
-		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
-		return fmt.Errorf("unable to create provider for resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
+		// return the process error
+		return fmt.Errorf("error trying to call Destroy on provider: %s", err)
 	}
 
-	switch r.Metadata().Properties[constants.PropertyStatus] {
-	// Normal case for PendingUpdate is do nothing
-	// PendingModification causes a resource to be
-	// destroyed before created
-	case constants.StatusTainted:
-		fallthrough
-
-		// Always attempt to destroy and re-create failed resources
-	case constants.StatusFailed:
+	// if there is only 1 resource which is the image cache, delete
+	// the state, remove the image cache
+	if len(e.config.Resources) == 1 {
+		cache := e.config.Resources[0].(*resources.ImageCache)
+		p := e.getProvider(cache, e.GetClients())
 		err := p.Destroy()
+
 		if err != nil {
-			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
-			return err
+			return fmt.Errorf("unable to remove the cache: %s", err)
 		}
 
-		fallthrough // failed resources should always attempt recreation
-
-	case constants.StatusDisabled:
-		// do nothing for disabled updates
-		return nil
-
-	default:
-		createErr := p.Create()
-		if createErr != nil {
-			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
-			return createErr
-		}
+		// remove the state
+		return os.Remove(utils.StatePath())
 	}
 
-	// set the status only if not disabled
-	r.Metadata().Properties[constants.PropertyStatus] = constants.StatusCreated
-
-	return nil
-}
-
-// Destroy the resources defined by the config
-func (e *EngineImpl) Destroy(path string, allResources bool) error {
-	//	d, err := e.readConfig(path, nil, "")
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	// make sure we destroy everything
-	//	if allResources {
-	//		for _, i := range e.config.Resources {
-	//			if i.Info().Status != config.Disabled {
-	//				i.Info().Status = config.PendingUpdate
-	//			}
-	//		}
-	//	}
-	//
-	//	// walk the dag and apply the config
-	//	w := dag.Walker{}
-	//	w.Reverse = true
-	//	w.Callback = func(v dag.Vertex) (diags tfdiags.Diagnostics) {
-	//		// check if the resource needs to be created and if so create
-	//		if r, ok := v.(config.Resource); ok {
-	//			switch r.Info().Status {
-	//			case config.PendingUpdate:
-	//				// do nothing for disabled resources
-	//				if r.Info().Status == config.Disabled {
-	//					r.Info().Status = config.Destroyed
-	//					return nil
-	//				}
-	//
-	//				// get the provider to create the resource
-	//				p := e.getProvider(r, e.clients)
-	//				if p == nil {
-	//					r.Info().Status = config.Failed
-	//					return diags.Append(fmt.Errorf("Unable to create provider for resource Name: %s, Type: %s", r.Info().Name, r.Info().Type))
-	//				}
-	//
-	//				// execute
-	//				destroyErr := p.Destroy()
-	//				if destroyErr != nil {
-	//					r.Info().Status = config.Failed
-	//					return diags.Append(destroyErr)
-	//				}
-	//
-	//				fallthrough
-	//			case config.Disabled:
-	//				// set the status
-	//				r.Info().Status = config.Destroyed
-	//			}
-	//		}
-	//
-	//		return nil
-	//	}
-	//
-	//	w.Update(d)
-	//	tf := w.Wait()
-	//	if tf.Err() != nil {
-	//		err = tf.Err()
-	//	}
-	//
-	//	// remove any destroyed nodes from the state
-	//	cn := config.New()
-	//	for _, i := range e.config.Resources {
-	//		if i.Info().Status != config.Destroyed {
-	//			cn.AddResource(i)
-	//		}
-	//	}
-	//
-	//	// save the state regardless of error
-	//	if len(cn.Resources) > 0 {
-	//		err = cn.ToJSON(utils.StatePath())
-	//		if err != nil {
-	//			return err
-	//		}
-	//	} else {
-	//		// if no resources in the state delete
-	//		os.RemoveAll(utils.StatePath())
-	//	}
-
-	//return tf.Err()
 	return nil
 }
 
@@ -421,7 +251,6 @@ func (e *EngineImpl) ResourceCountForType(t string) int {
 
 func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]string, variablesFile string, callback hclconfig.ProcessCallback) error {
 	stateConfig := hclconfig.NewConfig()
-	pathConfig := hclconfig.NewConfig()
 	cache := &resources.ImageCache{
 		ResourceMetadata: types.ResourceMetadata{
 			Name: "default",
@@ -429,25 +258,11 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 		},
 	}
 
-	// load the existing state if a state file exists
-	if _, err := os.Stat(utils.StatePath()); err == nil {
-		d, err := os.ReadFile(utils.StatePath())
-		if err != nil {
-			return fmt.Errorf("unable to read state file: %s", err)
-		}
-
-		// create a new parser and unmarshal the state from json
-		hclParser := setupHCLConfig(nil, nil, nil)
-		stateConfig, err = hclParser.UnmarshalJSON(d)
-		if err != nil {
-			return fmt.Errorf("unable to parsing state file: %s", err)
-		}
-	} else {
-		e.log.Debug("State file does not exist")
-	}
+	// load the state
+	e.loadState()
 
 	// check to see we have an image cache
-	caches, err := pathConfig.FindResourcesByType(resources.TypeImageCache)
+	caches, err := stateConfig.FindResourcesByType(resources.TypeImageCache)
 	if err == nil && len(caches) == 1 {
 		// add a default resource for the docker caching proxy
 		cache = caches[0].(*resources.ImageCache)
@@ -456,37 +271,48 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 		stateConfig.AppendResource(cache)
 	}
 
+	var parseError error
+	var parsedConfig *hclconfig.Config
+
 	if path != "" {
 		variablesFiles := []string{}
 		if variablesFile != "" {
 			variablesFiles = append(variablesFiles, variablesFile)
 		}
 
-		var err error
 		hclParser := setupHCLConfig(callback, variables, variablesFiles)
 
 		if utils.IsHCLFile(path) {
 			// ParseFile processes the HCL, builds a graph of resources then calls
 			// the callback for each resource in order
-			pathConfig, err = hclParser.ParseFile(path)
-			if err != nil {
-				return err
+			//
+			// We are not using the returned config as the resources are added to the
+			// state on the callback
+			//
+			// If the callback returns an error we need to save the state and exit
+			parsedConfig, parseError = hclParser.ParseFile(path)
+			if parseError != nil {
+				return fmt.Errorf("error parsing file %s, error: %s", path, parseError)
 			}
 		} else {
 			// ParseFolder processes the HCL, builds a graph of resources then calls
 			// the callback for each resource in order
-			pathConfig, err = hclParser.ParseDirectory(path)
-			if err != nil {
-				return err
+			//
+			// We are not using the returned config as the resources are added to the
+			// state on the callback
+			//
+			// If the callback returns an error we need to save the state and exit
+			parsedConfig, parseError = hclParser.ParseDirectory(path)
+			if parseError != nil {
+				return fmt.Errorf("error parsing directory %s, error: %s", path, parseError)
 			}
 		}
-	}
 
-	// if there is state merge the state and items to be created or deleted
-	if stateConfig != nil {
-		stateConfig.AppendResourcesFromConfig(pathConfig)
-	} else {
-		stateConfig = pathConfig
+		// process is not called for disabled resources, add manually
+		err = e.appendDisabledResources(parsedConfig)
+		if err != nil {
+			return fmt.Errorf("error parsing directory %s, error: %s", path, parseError)
+		}
 	}
 
 	// we now need to find all the networks defined in the config and
@@ -499,10 +325,147 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 
 	// again we need to execute the provider for the cache to update any new networks
 	p := e.getProvider(cache, e.GetClients())
-	p.Create()
+	err = p.Create()
 
-	// set the config
-	e.config = stateConfig
+	// save the state regardless of error
+	stateErr := e.saveState()
+	if stateErr != nil {
+		return stateErr
+	}
+
+	return err
+}
+
+// appends disabled resources in the given config to the engines config
+func (e *EngineImpl) appendDisabledResources(c *hclconfig.Config) error {
+	for _, r := range c.Resources {
+		if r.Metadata().Disabled {
+			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusDisabled
+
+			// if the resource already exists remove it
+			er, err := e.config.FindResource(types.FQDNFromResource(r).String())
+			if err == nil {
+				e.config.RemoveResource(er)
+			}
+
+			// add the resource to the state
+			err = e.config.AppendResource(r)
+			if err != nil {
+				return fmt.Errorf("unable to add disabled resource: %s", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (e *EngineImpl) createCallback(r types.Resource) error {
+	p := e.getProvider(r, e.clients)
+
+	if p == nil {
+		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
+		return fmt.Errorf("unable to create provider for resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
+	}
+
+	// we need to check if a resource exists in the state
+	// if so the status should take precedence as all new
+	// resources will have an empty state
+	sr, err := e.config.FindResource(r.Metadata().ID)
+	if err == nil {
+		r.Metadata().Properties[constants.PropertyStatus] = sr.Metadata().Properties[constants.PropertyStatus]
+
+		// remove the resource, we will add the new version to the state
+		e.config.RemoveResource(r)
+	}
+
+	var providerError error
+	switch r.Metadata().Properties[constants.PropertyStatus] {
+	// Normal case for PendingUpdate is do nothing
+	// PendingModification causes a resource to be
+	// destroyed before created
+	case constants.StatusTainted:
+		fallthrough
+
+	// Always attempt to destroy and re-create failed resources
+	case constants.StatusFailed:
+		providerError = p.Destroy()
+		if providerError != nil {
+			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
+		}
+
+		fallthrough // failed resources should always attempt recreation
+
+	default:
+		providerError = p.Create()
+		if providerError != nil {
+			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
+		} else {
+			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusCreated
+		}
+	}
+
+	// add the resource to the state
+	e.config.AppendResource(r)
+
+	return providerError
+}
+
+func (e *EngineImpl) destroyCallback(r types.Resource) error {
+	fqdn := types.FQDNFromResource(r)
+
+	// do nothing for disabled resources
+	if r.Metadata().Disabled {
+		e.log.Info("Skipping disabled resource", "fqdn", fqdn.String())
+		return nil
+	}
+
+	p := e.getProvider(r, e.clients)
+
+	if p == nil {
+		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
+		return fmt.Errorf("unable to create provider for resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
+	}
+
+	err := p.Destroy()
+
+	// remove from the state
+	e.config.RemoveResource(r)
+	return err
+}
+
+func (e *EngineImpl) loadState() (*hclconfig.Config, error) {
+	d, err := ioutil.ReadFile(utils.StatePath())
+	if err != nil {
+		return &hclconfig.Config{}, fmt.Errorf("unable to read state file: %s", err)
+	}
+
+	p := setupHCLConfig(nil, nil, nil)
+	c, err := p.UnmarshalJSON(d)
+	if err != nil {
+		return &hclconfig.Config{}, fmt.Errorf("unable to unmarshal state file: %s", err)
+	}
+
+	e.config = c
+
+	return c, nil
+}
+
+func (e *EngineImpl) saveState() error {
+	// save the state regardless of error
+	d, err := e.config.ToJSON()
+	if err != nil {
+		return fmt.Errorf("unable to serialize config to JSON: %s", err)
+	}
+
+	err = os.MkdirAll(utils.StateDir(), os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("unable to create directory for state file '%s', error: %s", utils.StateDir(), err)
+	}
+
+	err = ioutil.WriteFile(utils.StatePath(), d, os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("unable to write state file '%s', error: %s", utils.StatePath(), err)
+	}
 
 	return nil
 }
