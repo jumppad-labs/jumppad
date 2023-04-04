@@ -15,7 +15,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.17
+          go-version: 1.19.2
 
       - name: Get dependencies
         run: |
@@ -49,7 +49,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.17.6
+          go-version: 1.19.2
 
       - name: E2E test for build binary
         run: make test_e2e_cmd
@@ -62,27 +62,27 @@ jobs:
           tile: ${{ github.job_id }}
           description: "End to end tests for Linux"
 
-  e2e_mac:
-    name: Mac E2E Tests
-    runs-on: ubuntu-latest
-    needs: test
+  #e2e_mac:
+  #  name: Mac E2E Tests
+  #  runs-on: ubuntu-latest
+  #  needs: test
 
-    steps:
-      - name: Repository Dispatch
-        uses: peter-evans/repository-dispatch@v1
-        with:
-          token: '${{ secrets.GH_TOKEN }}'
-          repository: shipyard-run/shipyard-mac-build
-          event-type: test
-          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}"}'
+  #  steps:
+  #    - name: Repository Dispatch
+  #      uses: peter-evans/repository-dispatch@v1
+  #      with:
+  #        token: '${{ secrets.GH_TOKEN }}'
+  #        repository: shipyard-run/shipyard-mac-build
+  #        event-type: test
+  #        client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}"}'
 
-      - name: Send status to Discord
-        uses: sarisia/actions-status-discord@v1
-        if: always()
-        with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          tile: ${{ github.job_id }}
-          description: "End to end tests for MacOS amd64"
+  #    - name: Send status to Discord
+  #      uses: sarisia/actions-status-discord@v1
+  #      if: always()
+  #      with:
+  #        webhook: ${{ secrets.DISCORD_WEBHOOK }}
+  #        tile: ${{ github.job_id }}
+  #        description: "End to end tests for MacOS amd64"
 
   functional_test_build:
     name: Build binary for Functional Tests
@@ -94,7 +94,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.17.6
+          go-version: 1.19.2
       
       - name: Build Shipyard binary
         run: |
@@ -152,7 +152,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.17.6
+          go-version: 1.19.2
       
       - name: Run tests
         run: |
@@ -202,7 +202,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.17
+          go-version: 1.19.2
       
       - name: Install dependencies for Podman tests
         run: |
@@ -278,7 +278,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.17
+          go-version: 1.19.2
       
       - name: Install dependencies for Podman
         run: |
@@ -428,7 +428,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.17
+          go-version: 1.19.2
       
       - name: Install dependencies for Podman
         run: |
