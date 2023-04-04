@@ -222,6 +222,15 @@ jobs:
 
           sudo /bin/bash -c 'echo "127.0.0.1 ubuntu" >> /etc/hosts'
       
+      - name: Setup Podman dnsname plugin
+        run: |
+          sudo mkdir -p /usr/libexec/cni
+          sudo cp /usr/local/bin/dnsname /usr/libexec/cni
+      
+      - name: Setup Podman registries for Docker.io
+        run: |
+          echo -e "[registries.search]\nregistries = ['docker.io']" | sudo tee /etc/containers/registries.conf
+      
       - name: Setup Podman sock
         run: |
           sudo sed '/^SocketMode=.*/a SocketGroup=docker' -i /lib/systemd/system/podman.socket
@@ -231,15 +240,8 @@ jobs:
           sudo systemctl enable podman.service
           sudo systemctl start podman.service
           sudo podman info
-          
-      - name: Setup Podman dnsname plugin
-        run: |
-          sudo mkdir -p /usr/libexec/cni
-          sudo cp /usr/local/bin/dnsname /usr/libexec/cni
-      
-      - name: Setup Podman registries for Docker.io
-        run: |
-          echo -e "[registries.search]\nregistries = ['docker.io']" | sudo tee /etc/containers/registries.conf
+
+          ls -lasR /run/podman
 
       - name: Run tests Podman
         uses: nick-invision/retry@v2
