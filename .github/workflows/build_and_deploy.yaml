@@ -241,8 +241,7 @@ jobs:
           sudo systemctl enable podman.service
           sudo systemctl start podman.service
           sudo podman info
-
-          ls -lasR /run/podman
+          sudo podman network create podmantest
 
       - name: Run tests Podman
         uses: nick-invision/retry@v2
@@ -254,6 +253,8 @@ jobs:
             export DOCKER_HOST=unix:///run/podman/podman.sock
             shipyard check
             shipyard test ${{matrix.folder}}
+            docker network create test
+            docker network ls
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
