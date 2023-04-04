@@ -234,7 +234,7 @@ jobs:
       - name: Setup Podman sock
         run: |
           sudo sed '/^SocketMode=.*/a SocketGroup=docker' -i /lib/systemd/system/podman.socket
-          sudo chmod +x /run/podman
+          sudo chmod 777 /run/podman
 
           sudo systemctl enable podman.socket
           sudo systemctl enable podman.service
