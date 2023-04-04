@@ -24,7 +24,7 @@ test_functional:
 	go run main.go test ./examples/single_k3s_cluster
 
 test_e2e_cmd: install_local
-	shipyard run --no-browser github.com/shipyard-run/blueprints//modules/kubernetes-consul/example
+	shipyard run --no-browser github.com/shipyard-run/blueprints/vault-k8s
 	shipyard destroy
 
 test_docker:

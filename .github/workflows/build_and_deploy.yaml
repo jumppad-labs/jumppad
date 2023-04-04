@@ -234,7 +234,7 @@ jobs:
           
       - name: Setup Podman dnsname plugin
         run: |
-          mkdir -p /usr/libexec/cni
+          sudo mkdir -p /usr/libexec/cni
           sudo cp /usr/local/bin/dnsname /usr/libexec/cni
       
       - name: Setup Podman registries for Docker.io
