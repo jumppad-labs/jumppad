@@ -211,7 +211,7 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 	// validate the basic details for the server container
 	assert.Contains(t, params.Name, "server")
 	assert.Contains(t, params.Image.Name, "shipyardrun")
-	assert.Equal(t, clusterNetwork.Name, params.Networks[0].Name)
+	assert.Equal(t, "network."+clusterNetwork.Name, params.Networks[0].Name)
 	assert.True(t, params.Privileged)
 
 	// validate that the volume is correctly set
