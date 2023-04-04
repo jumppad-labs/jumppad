@@ -18,36 +18,20 @@ func newDestroyCmd(cc clients.Connector) *cobra.Command {
 	in the file will be destroyed`,
 		Example: `yard destroy`,
 		Run: func(cmd *cobra.Command, args []string) {
-			dst := ""
-			if len(args) > 0 {
-				dst = args[0]
-			}
-
-			// When destroying a stack all the config
-			// which is created with apply is copied
-			// to the state folder
-			var err error
-			if dst == "" {
-				err = engine.Destroy(dst, true)
-			} else {
-				err = engine.Destroy(dst, false)
-			}
-
+			err := engine.Destroy()
 			if err != nil {
 				hclog.Default().Error("Unable to destroy stack", "error", err)
 				return
 			}
 
-			if dst == "" {
-				// clean up the data folder
-				os.RemoveAll(utils.GetDataFolder("", os.ModePerm))
+			// clean up the data folder
+			os.RemoveAll(utils.GetDataFolder("", os.ModePerm))
 
-				// remove the certs
-				os.RemoveAll(utils.CertsDir(""))
-			}
+			// remove the certs
+			os.RemoveAll(utils.CertsDir(""))
 
 			// shutdown ingress when we destroy all resources
-			if cc.IsRunning() && dst == "" {
+			if cc.IsRunning() {
 				err = cc.Stop()
 				if err != nil {
 					hclog.Default().Error("Unable to stop ingress", "error", err)

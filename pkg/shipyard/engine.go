@@ -201,13 +201,13 @@ func (e *EngineImpl) Destroy() error {
 	e.log.Info("Destroying resources")
 
 	// load the state
-	stateConfig, err := e.loadState()
+	err := e.loadState()
 	if err != nil {
 		e.log.Debug("State file does not exist")
 	}
 
 	// run through the graph and call the destroy callback
-	err = stateConfig.Process(e.destroyCallback, true)
+	err = e.config.Process(e.destroyCallback, true)
 	if err != nil {
 		// save the state
 		e.saveState()
@@ -250,7 +250,6 @@ func (e *EngineImpl) ResourceCountForType(t string) int {
 }
 
 func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]string, variablesFile string, callback hclconfig.ProcessCallback) error {
-	stateConfig := hclconfig.NewConfig()
 	cache := &resources.ImageCache{
 		ResourceMetadata: types.ResourceMetadata{
 			Name: "default",
@@ -262,13 +261,13 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 	e.loadState()
 
 	// check to see we have an image cache
-	caches, err := stateConfig.FindResourcesByType(resources.TypeImageCache)
+	caches, err := e.config.FindResourcesByType(resources.TypeImageCache)
 	if err == nil && len(caches) == 1 {
 		// add a default resource for the docker caching proxy
 		cache = caches[0].(*resources.ImageCache)
 	} else {
 		// add the newly created cache to the state as one does not exist
-		stateConfig.AppendResource(cache)
+		e.config.AppendResource(cache)
 	}
 
 	var parseError error
@@ -318,7 +317,7 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 	// we now need to find all the networks defined in the config and
 	// add them to the image cache's dependencies
 	cache.DependsOn = []string{}
-	networks, _ := stateConfig.FindResourcesByType(resources.TypeNetwork)
+	networks, _ := e.config.FindResourcesByType(resources.TypeNetwork)
 	for _, n := range networks {
 		cache.DependsOn = append(cache.DependsOn, n.Metadata().ID)
 	}
@@ -433,21 +432,23 @@ func (e *EngineImpl) destroyCallback(r types.Resource) error {
 	return err
 }
 
-func (e *EngineImpl) loadState() (*hclconfig.Config, error) {
+func (e *EngineImpl) loadState() error {
 	d, err := ioutil.ReadFile(utils.StatePath())
 	if err != nil {
-		return &hclconfig.Config{}, fmt.Errorf("unable to read state file: %s", err)
+		e.config = &hclconfig.Config{}
+		return fmt.Errorf("unable to read state file: %s", err)
 	}
 
 	p := setupHCLConfig(nil, nil, nil)
 	c, err := p.UnmarshalJSON(d)
 	if err != nil {
-		return &hclconfig.Config{}, fmt.Errorf("unable to unmarshal state file: %s", err)
+		e.config = &hclconfig.Config{}
+		return fmt.Errorf("unable to unmarshal state file: %s", err)
 	}
 
 	e.config = c
 
-	return c, nil
+	return nil
 }
 
 func (e *EngineImpl) saveState() error {
