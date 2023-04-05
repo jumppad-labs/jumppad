@@ -175,11 +175,18 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 			fmt.Println(output.String())
 
 			// also fetch some info on the docker state
+
+			commandOutput = bytes.NewBufferString("")
 			fmt.Println("Docker Networks---------")
 			cr.executeCommand("docker network ls")
+			fmt.Println(commandOutput.String())
+			fmt.Println("")
 
+			commandOutput = bytes.NewBufferString("")
 			fmt.Println("Docker Processes---------")
 			cr.executeCommand("docker ps -a")
+			fmt.Println(commandOutput.String())
+			fmt.Println("")
 		}
 
 		// unset environment vars
