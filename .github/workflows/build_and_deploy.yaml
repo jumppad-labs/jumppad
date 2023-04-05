@@ -240,8 +240,15 @@ jobs:
           sudo systemctl enable podman.socket
           sudo systemctl enable podman.service
           sudo systemctl start podman.service
+
           sudo podman info
+
           sudo podman network create podmantest
+          sudo podman network ls
+            
+          export DOCKER_HOST=unix:///run/podman/podman.sock
+          docker network create dockertest
+          docker network ls
 
       - name: Run tests Podman
         uses: nick-invision/retry@v2
@@ -250,11 +257,10 @@ jobs:
           max_attempts: 3
           retry_on: error
           command: |
+
             export DOCKER_HOST=unix:///run/podman/podman.sock
             shipyard check
             shipyard test ${{matrix.folder}}
-            docker network create test
-            docker network ls
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1

@@ -170,8 +170,16 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 	ctx.AfterScenario(func(gs *godog.Scenario, err error) {
 		// only destroy when the dont-destroy flag is false
 
+		// if there is an error dump it to the logs
 		if err != nil {
 			fmt.Println(output.String())
+
+			// also fetch some info on the docker state
+			fmt.Println("Docker Networks---------")
+			cr.executeCommand("docker network ls")
+
+			fmt.Println("Docker Processes---------")
+			cr.executeCommand("docker ps -a")
 		}
 
 		// unset environment vars
@@ -518,7 +526,7 @@ func (cr *CucumberRunner) theShipyardVariableKHasAValueV(key, value string) erro
 	return nil
 }
 
-//ctx.Step(`^the info "([^"]*)" for the running "([^"]*)" running called "([^"]*)" should equal "([^"]*)"$`, cr.theContainerInfoShouldContainer)
+// ctx.Step(`^the info "([^"]*)" for the running "([^"]*)" running called "([^"]*)" should equal "([^"]*)"$`, cr.theContainerInfoShouldContainer)
 func (cr *CucumberRunner) theResourceInfoShouldContain(path, resource, name, value string) error {
 	s, err := cr.getJSONPath(path, resource, name)
 	if err != nil {
