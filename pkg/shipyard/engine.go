@@ -51,8 +51,8 @@ type Engine interface {
 	// configuration. Optionally the user can provide a map of variables which the configuration
 	// uses and / or a file containing variables.
 	ApplyWithVariables(path string, variables map[string]string, variablesFile string) ([]types.Resource, error)
-	ParseConfig(string) error
-	ParseConfigWithVariables(string, map[string]string, string) error
+	ParseConfig(string) ([]types.Resource, error)
+	ParseConfigWithVariables(string, map[string]string, string) ([]types.Resource, error)
 	Destroy() error
 	ResourceCount() int
 	ResourceCountForType(string) int
@@ -152,20 +152,36 @@ func (e *EngineImpl) Blueprint() *resources.Blueprint {
 // ParseConfig parses the given Shipyard files and creating the resource types but does
 // not apply or destroy the resources.
 // This function can be used to check the validity of a configuration without making changes
-func (e *EngineImpl) ParseConfig(path string) error {
+func (e *EngineImpl) ParseConfig(path string) ([]types.Resource, error) {
 	return e.ParseConfigWithVariables(path, nil, "")
 }
 
 // ParseConfigWithVariables parses the given Shipyard files and creating the resource types but does
 // not apply or destroy the resources.
 // This function can be used to check the validity of a configuration without making changes
-func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]string, variablesFile string) error {
-	err := e.readAndProcessConfig(path, vars, variablesFile, nil)
+func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]string, variablesFile string) ([]types.Resource, error) {
+	// abs paths
+	var err error
+	path, err = filepath.Abs(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	e.log.Info("Creating resources from configuration", "path", path)
+
+	if variablesFile != "" {
+		variablesFile, err = filepath.Abs(variablesFile)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	err = e.readAndProcessConfig(path, vars, variablesFile, func(r types.Resource) error {
+		e.config.AppendResource(r)
+		return nil
+	})
+
+	return e.config.Resources, err
 }
 
 // Apply the configuration and create or destroy the resources
@@ -193,6 +209,42 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 
 	processErr := e.readAndProcessConfig(path, vars, variablesFile, e.createCallback)
 
+	// we now need to find all the networks defined in the config and
+	// add them to the image cache's dependencies
+	// this will also ensure that the image cache is destroyed last
+	cache := &resources.ImageCache{
+		ResourceMetadata: types.ResourceMetadata{
+			Name: "default",
+			Type: resources.TypeImageCache,
+		},
+	}
+
+	// check to see we have an image cache
+	caches, err := e.config.FindResourcesByType(resources.TypeImageCache)
+	if err == nil && len(caches) == 1 {
+		// add a default resource for the docker caching proxy
+		cache = caches[0].(*resources.ImageCache)
+	} else {
+		// add the newly created cache to the state as one does not exist
+		e.config.AppendResource(cache)
+	}
+
+	cache.DependsOn = []string{}
+	networks, _ := e.config.FindResourcesByType(resources.TypeNetwork)
+	for _, n := range networks {
+		cache.DependsOn = append(cache.DependsOn, n.Metadata().ID)
+	}
+
+	// again we need to execute the provider for the cache to update any new networks
+	p := e.getProvider(cache, e.GetClients())
+	err = p.Create()
+
+	// save the state regardless of error
+	stateErr := e.saveState()
+	if stateErr != nil {
+		e.log.Info("Unable to save state", "error", stateErr)
+	}
+
 	return e.config.Resources, processErr
 }
 
@@ -207,31 +259,25 @@ func (e *EngineImpl) Destroy() error {
 	}
 
 	// run through the graph and call the destroy callback
+	// disabled resources are not included in this callback
+	// image cache which is manually added by Apply process
+	// should have the correct dependency graph to be
+	// destroyed last
 	err = e.config.Process(e.destroyCallback, true)
 	if err != nil {
 		// save the state
-		e.saveState()
+		stateErr := e.saveState()
+		if stateErr != nil {
+			// if we can not save the state, log
+			e.log.Info("Unable to save state", "error", stateErr)
+		}
 
 		// return the process error
 		return fmt.Errorf("error trying to call Destroy on provider: %s", err)
 	}
 
-	// if there is only 1 resource which is the image cache, delete
-	// the state, remove the image cache
-	if len(e.config.Resources) == 1 {
-		cache := e.config.Resources[0].(*resources.ImageCache)
-		p := e.getProvider(cache, e.GetClients())
-		err := p.Destroy()
-
-		if err != nil {
-			return fmt.Errorf("unable to remove the cache: %s", err)
-		}
-
-		// remove the state
-		return os.Remove(utils.StatePath())
-	}
-
-	return nil
+	// remove the state
+	return os.Remove(utils.StatePath())
 }
 
 // ResourceCount defines the number of resources in a plan
@@ -250,25 +296,9 @@ func (e *EngineImpl) ResourceCountForType(t string) int {
 }
 
 func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]string, variablesFile string, callback hclconfig.ProcessCallback) error {
-	cache := &resources.ImageCache{
-		ResourceMetadata: types.ResourceMetadata{
-			Name: "default",
-			Type: resources.TypeImageCache,
-		},
-	}
 
 	// load the state
 	e.loadState()
-
-	// check to see we have an image cache
-	caches, err := e.config.FindResourcesByType(resources.TypeImageCache)
-	if err == nil && len(caches) == 1 {
-		// add a default resource for the docker caching proxy
-		cache = caches[0].(*resources.ImageCache)
-	} else {
-		// add the newly created cache to the state as one does not exist
-		e.config.AppendResource(cache)
-	}
 
 	var parseError error
 	var parsedConfig *hclconfig.Config
@@ -291,7 +321,7 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 			// If the callback returns an error we need to save the state and exit
 			parsedConfig, parseError = hclParser.ParseFile(path)
 			if parseError != nil {
-				return fmt.Errorf("error parsing file %s, error: %s", path, parseError)
+				parseError = fmt.Errorf("error parsing file %s, error: %s", path, parseError)
 			}
 		} else {
 			// ParseFolder processes the HCL, builds a graph of resources then calls
@@ -303,36 +333,18 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 			// If the callback returns an error we need to save the state and exit
 			parsedConfig, parseError = hclParser.ParseDirectory(path)
 			if parseError != nil {
-				return fmt.Errorf("error parsing directory %s, error: %s", path, parseError)
+				parseError = fmt.Errorf("error parsing directory %s, error: %s", path, parseError)
 			}
 		}
 
 		// process is not called for disabled resources, add manually
-		err = e.appendDisabledResources(parsedConfig)
+		err := e.appendDisabledResources(parsedConfig)
 		if err != nil {
 			return fmt.Errorf("error parsing directory %s, error: %s", path, parseError)
 		}
 	}
 
-	// we now need to find all the networks defined in the config and
-	// add them to the image cache's dependencies
-	cache.DependsOn = []string{}
-	networks, _ := e.config.FindResourcesByType(resources.TypeNetwork)
-	for _, n := range networks {
-		cache.DependsOn = append(cache.DependsOn, n.Metadata().ID)
-	}
-
-	// again we need to execute the provider for the cache to update any new networks
-	p := e.getProvider(cache, e.GetClients())
-	err = p.Create()
-
-	// save the state regardless of error
-	stateErr := e.saveState()
-	if stateErr != nil {
-		return stateErr
-	}
-
-	return err
+	return parseError
 }
 
 // appends disabled resources in the given config to the engines config
@@ -415,6 +427,8 @@ func (e *EngineImpl) destroyCallback(r types.Resource) error {
 	// do nothing for disabled resources
 	if r.Metadata().Disabled {
 		e.log.Info("Skipping disabled resource", "fqdn", fqdn.String())
+
+		e.config.RemoveResource(r)
 		return nil
 	}
 
@@ -426,23 +440,28 @@ func (e *EngineImpl) destroyCallback(r types.Resource) error {
 	}
 
 	err := p.Destroy()
+	if err != nil {
+		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
+		return fmt.Errorf("unable to destroy resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
+	}
 
-	// remove from the state
+	// remove from the state only if not errored
 	e.config.RemoveResource(r)
-	return err
+
+	return nil
 }
 
 func (e *EngineImpl) loadState() error {
 	d, err := ioutil.ReadFile(utils.StatePath())
 	if err != nil {
-		e.config = &hclconfig.Config{}
+		e.config = hclconfig.NewConfig()
 		return fmt.Errorf("unable to read state file: %s", err)
 	}
 
 	p := setupHCLConfig(nil, nil, nil)
 	c, err := p.UnmarshalJSON(d)
 	if err != nil {
-		e.config = &hclconfig.Config{}
+		e.config = hclconfig.NewConfig()
 		return fmt.Errorf("unable to unmarshal state file: %s", err)
 	}
 

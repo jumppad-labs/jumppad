@@ -83,7 +83,7 @@ func setupState(t *testing.T, state string) {
 
 func generateProviderMock(mp *[]*mocks.MockProvider, returnVals map[string]error) getProviderFunc {
 	return func(c types.Resource, cc *Clients) providers.Provider {
-		fmt.Println("create provider for", c.Metadata().Name)
+		fmt.Println("create provider for", c.Metadata().Name, "error", returnVals[c.Metadata().Name])
 
 		lock.Lock()
 		defer lock.Unlock()
@@ -136,10 +136,12 @@ func TestApplyWithSingleFile(t *testing.T) {
 	e, mp := setupTests(t, nil)
 
 	_, err := e.Apply("../../examples/single_file/container.hcl")
-	assert.NoError(t, err)
+	require.NoError(t, err)
+
+	require.Len(t, e.config.Resources, 4)
 
 	// Because of the DAG both network and template are top level resources
-	assert.ElementsMatch(t,
+	require.ElementsMatch(t,
 		[]string{
 			"onprem",
 			"consul_config",
@@ -150,7 +152,7 @@ func TestApplyWithSingleFile(t *testing.T) {
 		},
 	)
 
-	assert.Equal(t, "consul", (*mp)[2].Config().Metadata().Name)
+	require.Equal(t, "consul", (*mp)[2].Config().Metadata().Name)
 }
 
 func TestApplyAddsImageCache(t *testing.T) {
@@ -217,7 +219,7 @@ func TestApplyNotCallsProviderCreateForDisabledResources(t *testing.T) {
 
 	// contains 2 resources one is disabled
 	_, err := e.Apply("../../examples/disabled")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Create", 2) // ImageCache is always created
@@ -239,7 +241,7 @@ func TestApplyShouldNotAddDuplicateDisabledResources(t *testing.T) {
 
 	// contains 2 resources one is disabled
 	_, err := e.Apply("../../examples/disabled")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Create", 2) // ImageCache is always created
@@ -262,9 +264,9 @@ func TestApplySetsCreatedStatusForEachResource(t *testing.T) {
 	e, mp := setupTests(t, nil)
 
 	_, err := e.Apply("../../examples/single_file/container.hcl")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.Equal(t, 4, e.config.ResourceCount())
+	require.Equal(t, 4, e.config.ResourceCount())
 
 	// should only call create and destroy for the cache as this is pending update
 	testAssertMethodCalled(t, mp, "Create", 4) // ImageCache is always created
@@ -288,12 +290,13 @@ func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 	e, mp := setupTests(t, map[string]error{"onprem": fmt.Errorf("boom")})
 
 	_, err := e.Apply("../../examples/single_file/container.hcl")
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	// should have call create for each provider
 	// there are two top level config items, template and network
-	// one will fail
-	testAssertMethodCalled(t, mp, "Create", 2)
+	// network will fail
+	// ImageCache should always be created
+	testAssertMethodCalled(t, mp, "Create", 3)
 
 	sf := testLoadState(t, e)
 
@@ -306,13 +309,17 @@ func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 	r, err = sf.FindResource("resource.template.consul_config")
 	require.NoError(t, err)
 	require.Equal(t, constants.StatusCreated, r.Metadata().Properties[constants.PropertyStatus])
+
+	// container should not be in the state
+	_, err = sf.FindResource("resource.container.consul")
+	require.Error(t, err)
 }
 
 func TestApplyCallsProviderDestroyAndCreateForFailedResources(t *testing.T) {
 	e, mp := setupTestsWithState(t, nil, failedState)
 
 	_, err := e.Apply("../../examples/single_file/container.hcl")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1)
@@ -323,7 +330,7 @@ func TestApplyCallsProviderDestroyForTaintedResources(t *testing.T) {
 	e, mp := setupTestsWithState(t, nil, taintedState)
 
 	_, err := e.Apply("../../examples/single_file/container.hcl")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1)
@@ -334,82 +341,60 @@ func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
 	e, mp := setupTestsWithState(t, nil, existingState)
 
 	err := e.Destroy()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// should have call create for each provider
 	// and once for the image cache
 	testAssertMethodCalled(t, mp, "Destroy", 4)
+
+	// state should be removed
+	require.NoFileExists(t, utils.StatePath())
 }
 
 func TestDestroyNotCallsProviderDestroyForResourcesDisabled(t *testing.T) {
 	e, mp := setupTestsWithState(t, nil, disabledState)
 
 	err := e.Destroy()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 2)
 	testAssertMethodCalled(t, mp, "Create", 0) // ImageCache is always created
 
-	// check state of disabled remains disabled
-	d, err := os.ReadFile(utils.StatePath())
-	require.NoError(t, err)
-
-	parser := setupHCLConfig(nil, nil, nil)
-	c, err := parser.UnmarshalJSON(d)
-	require.NoError(t, err)
-
-	_, err = c.FindResource("container.dc1")
-	assert.Error(t, err) // resource should not exist
+	// state should be removed
+	require.NoFileExists(t, utils.StatePath())
 }
 
 func TestDestroyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
-	e, mp := setupTests(t, map[string]error{"k3s": fmt.Errorf("boom")})
+	e, mp := setupTestsWithState(t, map[string]error{"mycontainer": fmt.Errorf("boom")}, complexState)
 
 	err := e.Destroy()
 	require.Error(t, err)
 
-	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 7)
+	// should have call destroy for each provider
+	testAssertMethodCalled(t, mp, "Destroy", 2)
+
+	// state should not be removed
+	require.FileExists(t, utils.StatePath())
 }
 
 func TestDestroyFailSetsStatus(t *testing.T) {
-	e, mp := setupTests(t, map[string]error{"cloud": fmt.Errorf("boom")})
+	e, _ := setupTestsWithState(t, map[string]error{"mycontainer": fmt.Errorf("boom")}, complexState)
 
 	err := e.Destroy()
 	require.Error(t, err)
 
-	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 9)
-	require.Equal(t, constants.StatusFailed, (*mp)[8].Config().Metadata().Properties[constants.PropertyStatus])
-}
-
-func TestDestroyCallsProviderDestroyInCorrectOrder(t *testing.T) {
-	e, mp := setupTests(t, nil)
-
-	err := e.Destroy()
-	assert.NoError(t, err)
-
-	// due to paralel nature of the DAG, these elements can appear in any order
-	require.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[0].Config().Metadata().Name)
-	require.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[1].Config().Metadata().Name)
-	require.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[2].Config().Metadata().Name)
-	require.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[3].Config().Metadata().Name)
-	require.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[4].Config().Metadata().Name)
-	require.Contains(t, []string{"consul-http", "consul", "vault-http", "vault", "connector", "consul-lan", "KUBECONFIG"}, (*mp)[5].Config().Metadata().Name)
-
-	require.Contains(t, []string{"k3s"}, (*mp)[6].Config().Metadata().Name)
-	require.Contains(t, []string{"docker-cache"}, (*mp)[7].Config().Metadata().Name)
-	require.Contains(t, []string{"cloud"}, (*mp)[8].Config().Metadata().Name)
+	r, _ := e.config.FindResource("resource.container.mycontainer")
+	require.Equal(t, constants.StatusFailed, r.Metadata().Properties[constants.PropertyStatus])
 }
 
 func TestParseConfig(t *testing.T) {
 	e, mp := setupTests(t, nil)
 
-	err := e.ParseConfig("../../examples/single_file/container.hcl")
+	r, err := e.ParseConfig("../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
-	require.Equal(t, 3, e.config.ResourceCount())
+	require.Len(t, r, 3)
 
 	// should not have crated any providers
 	testAssertMethodCalled(t, mp, "Create", 0)
@@ -419,14 +404,18 @@ func TestParseConfig(t *testing.T) {
 func TestParseWithVariables(t *testing.T) {
 	e, mp := setupTests(t, nil)
 
-	err := e.ParseConfigWithVariables("../../examples/single_file/container.hcl", nil, "../../examples/single_file/default.vars")
+	r, err := e.ParseConfigWithVariables("../../examples/single_file/container.hcl", nil, "../../examples/single_file/default.vars")
 	require.NoError(t, err)
 
-	require.Equal(t, 3, e.config.ResourceCount())
+	require.Len(t, r, 3)
 
 	// should not have crated any providers
 	testAssertMethodCalled(t, mp, "Create", 0)
 	testAssertMethodCalled(t, mp, "Destroy", 0)
+
+	c, err := e.config.FindResource("resource.container.consul")
+	require.NoError(t, err)
+	require.Equal(t, "consul:1.8.1", c.(*resources.Container).Image.Name)
 }
 
 func testAssertMethodCalled(t *testing.T, p *[]*mocks.MockProvider, method string, n int, args ...interface{}) {
@@ -481,19 +470,70 @@ var existingState = `
   "resources": [
 	{
       "name": "cloud",
-      "status": "created",
+      "properties": {
+				"status": "created"
+			},
       "subnet": "10.15.0.0/16",
       "type": "network"
 	},
 	{
+      "name": "image-cache",
+      "properties": {
+				"status": "created"
+			},
+      "type": "image_cache"
+	},
+	{
       "name": "mycontainer",
-      "status": "created",
+      "properties": {
+				"status": "created"
+			},
       "type": "container"
 	},
 	{
       "name": "mytemplate",
-      "status": "created",
+      "properties": {
+				"status": "created"
+			},
       "type": "template"
+	}
+  ]
+}
+`
+
+var complexState = `
+{
+  "resources": [
+	{
+      "name": "cloud",
+      "subnet": "10.15.0.0/16",
+      "properties": {
+				"status": "created"
+			},
+      "type": "network"
+	},
+	{
+      "name": "image-cache",
+      "type": "image_cache",
+      "properties": {
+				"status": "created"
+			},
+			"depends_on": ["resource.network.cloud"]
+	},
+	{
+      "name": "mytemplate",
+      "properties": {
+				"status": "created"
+			},
+      "type": "template"
+	},
+	{
+      "name": "mycontainer",
+      "type": "container",
+      "properties": {
+				"status": "created"
+			},
+			"depends_on": ["resource.network.cloud", "resource.template.mytemplate"]
 	}
   ]
 }
@@ -503,22 +543,27 @@ var disabledState = `
 {
   "blueprint": null,
   "resources": [
-		{
- 	     "name": "dc1_enabled",
- 	     "properties": {
-					"status": "created"
-				},
- 	     "subnet": "10.15.0.0/16",
- 	     "type": "network"
-		},
-		{
-			 "disabled": true,
- 	     "name": "consul_disabled",
- 	     "properties": {
-					"status": "disabled"
-				},
- 	     "type": "container"
-		}
+	{
+      "name": "image-cache",
+      "status": "created",
+      "type": "image_cache"
+	},
+	{
+      "name": "dc1_enabled",
+      "properties": {
+				"status": "created"
+			},
+      "subnet": "10.15.0.0/16",
+      "type": "network"
+	},
+	{
+		 "disabled": true,
+      "name": "consul_disabled",
+      "properties": {
+				"status": "disabled"
+			},
+      "type": "container"
+	}
   ]
 }
 `

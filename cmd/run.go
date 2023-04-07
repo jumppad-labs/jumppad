@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -99,11 +97,6 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 			variablesFile = &vf
 		}
 
-		// are we running with a different shipyard version, if so check it is installed
-		if *runVersion != "" {
-			return runWithOtherVersion(*runVersion, *autoApprove, args, *force, *noOpen, cmd, vm, bc, *variables, *variablesFile)
-		}
-
 		// create the certificates for the connector
 		if cb, err := cc.GetLocalCertBundle(utils.CertsDir("")); err != nil || cb == nil {
 			// generate certs
@@ -156,7 +149,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 		}
 
 		// Parse the config to check it is valid
-		err = e.ParseConfigWithVariables(dst, vars, *variablesFile)
+		_, err = e.ParseConfigWithVariables(dst, vars, *variablesFile)
 		if err != nil {
 			return fmt.Errorf("Unable to read config: %s", err)
 		}
@@ -165,16 +158,6 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 		blueprintExists := false
 		if bluePrintInState() {
 			blueprintExists = true
-		}
-
-		// check that the current shipyard version can process this blueprint
-		if e.Blueprint() != nil && e.Blueprint().ShipyardVersion != "" {
-			valid, err := vm.InRange(version, e.Blueprint().ShipyardVersion)
-
-			if !valid || err != nil {
-				// we neeed to go in to the check loop
-				return runWithOtherVersion(e.Blueprint().ShipyardVersion, *autoApprove, args, *force, *noOpen, cmd, vm, bc, *variables, *variablesFile)
-			}
 		}
 
 		// update status every 30s to let people know we are still running
@@ -355,105 +338,4 @@ func bluePrintInState() bool {
 
 	//return sc.Blueprint != nil
 	return false
-}
-
-func runWithOtherVersion(
-	version string,
-	autoApprove bool,
-	args []string,
-	forceUpdate bool,
-	noBrowser bool,
-	cmd *cobra.Command,
-	vm gvm.Versions,
-	sys clients.System,
-	variables []string,
-	variablesFile string) error {
-
-	var exePath string
-
-	r, err := vm.ListInstalledVersions(version)
-	if err != nil {
-		return err
-	}
-
-	// find a version suitable
-	tag, url, err := vm.GetLatestReleaseURL(version)
-	if err != nil {
-		return err
-	}
-
-	if len(r) != 1 {
-
-		// only prompt if not auto approve
-		if !autoApprove {
-			resp := sys.PromptInput(cmd.InOrStdin(), cmd.OutOrStdout(), fmt.Sprintf("Would you like to install version: %s [y/n]: ", tag))
-			if resp != "y" {
-				return nil
-			}
-		}
-
-		exePath, err = vm.DownloadRelease(tag, url)
-		if err != nil {
-			return err
-		}
-	} else {
-		exePath = r[tag]
-	}
-
-	// execute shipyard using a sub process
-	cmd.Println("Running blueprint with version:", tag)
-
-	//if there is no path use the current folder
-	if len(args[0]) == 0 || args[0] == "" {
-		p, _ := os.Getwd()
-		args[0] = p
-	} else if strings.HasPrefix(args[0], ".") {
-		// if we have a relative path we need to convert to an absolute path
-		p, _ := filepath.Abs(args[0])
-		args[0] = p
-	}
-
-	commandString := []string{
-		"run",
-	}
-
-	if forceUpdate {
-		commandString = append(commandString, "--force-update")
-	}
-
-	if noBrowser {
-		commandString = append(commandString, "--no-browser")
-	}
-
-	// Variables as a command line is only available in Shipyard v0.0.38 and later
-	if ok, _ := vm.InRange(version, ">= v0.0.38"); ok {
-		for _, v := range variables {
-			commandString = append(commandString, "--var")
-			commandString = append(commandString, v)
-		}
-	}
-
-	if ok, _ := vm.InRange(version, ">= 0.1.6"); ok {
-		if variablesFile != "" {
-			commandString = append(commandString, "--vars-file="+variablesFile)
-		}
-	}
-
-	commandString = append(commandString, args[0])
-
-	execCmd := exec.Command(exePath, commandString...)
-	execCmd.Stderr = cmd.ErrOrStderr()
-	execCmd.Stdout = cmd.ErrOrStderr()
-
-	err = execCmd.Start()
-	if err != nil {
-		return err
-	}
-
-	err = execCmd.Wait()
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
