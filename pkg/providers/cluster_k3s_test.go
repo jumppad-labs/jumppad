@@ -40,7 +40,7 @@ func setupClusterMocks(t *testing.T) (
 	md.On("RemoveVolume", mock.Anything).Return(nil)
 	md.On("DetachNetwork", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-  md.On("EngineInfo").Return(&clients.EngineInfo{StorageDriver: "overlay2"})
+	md.On("EngineInfo").Return(&clients.EngineInfo{StorageDriver: "overlay2"})
 
 	// set the home folder to a temp folder
 	tmpDir := t.TempDir()
@@ -118,12 +118,13 @@ func TestClusterK3SetsEnvironment(t *testing.T) {
 	assert.NoError(t, err)
 
 	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	proxyByPass := utils.ProxyBypass + ",10.0.0.0/24"
 
 	assert.Equal(t, params.EnvVar["K3S_KUBECONFIG_OUTPUT"], "/output/kubeconfig.yaml")
 	assert.Equal(t, params.EnvVar["K3S_CLUSTER_SECRET"], "mysupersecret")
 	assert.Equal(t, params.EnvVar["HTTP_PROXY"], utils.HTTPProxyAddress())
 	assert.Equal(t, params.EnvVar["HTTPS_PROXY"], utils.HTTPSProxyAddress())
-	assert.Equal(t, params.EnvVar["NO_PROXY"], utils.ProxyBypass)
+	assert.Equal(t, params.EnvVar["NO_PROXY"], proxyByPass)
 
 	assert.Equal(t, params.EnvVar["PROXY_CA"], "CA")
 }
@@ -210,7 +211,7 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 	// validate the basic details for the server container
 	assert.Contains(t, params.Name, "server")
 	assert.Contains(t, params.Image.Name, "shipyardrun")
-	assert.Equal(t, clusterNetwork.Name, params.Networks[0].Name)
+	assert.Equal(t, "network."+clusterNetwork.Name, params.Networks[0].Name)
 	assert.True(t, params.Privileged)
 
 	// validate that the volume is correctly set
@@ -632,7 +633,10 @@ func TestLookupReturnsIDs(t *testing.T) {
 	assert.Equal(t, []string{"found"}, ids)
 }
 
-var clusterNetwork = config.NewNetwork("cloud")
+var clusterNetwork = &config.Network{
+	ResourceInfo: config.ResourceInfo{Name: "cloud", Type: config.TypeNetwork},
+	Subnet:       "10.0.0.0/24",
+}
 
 var clusterConfig = &config.K8sCluster{
 	ResourceInfo: config.ResourceInfo{Name: "test", Type: config.TypeK8sCluster},
@@ -642,7 +646,7 @@ var clusterConfig = &config.K8sCluster{
 		config.Image{Name: "consul:1.6.1"},
 		config.Image{Name: "vault:1.6.1"},
 	},
-	Networks: []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}},
+	Networks: []config.NetworkAttachment{config.NetworkAttachment{Name: "network.cloud"}},
 }
 
 var kubeconfig = `

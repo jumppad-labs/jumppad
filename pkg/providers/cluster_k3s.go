@@ -110,7 +110,7 @@ func (c *K8sCluster) createK3s() error {
 
 	cc.Image = &config.Image{Name: image}
 	cc.Networks = c.config.Networks
-	cc.Privileged = true // k3s must run Privlidged
+	cc.Privileged = true // k3s must run Privileged
 
 	// set the volume mount for the images
 	cc.Volumes = []config.Volume{
@@ -152,9 +152,24 @@ func (c *K8sCluster) createK3s() error {
 			return fmt.Errorf("Unable to read root CA for proxy: %s", err)
 		}
 
+		// add the netmask from the network
+
+		networkSubmasks :=
+			[]string{}
+		for _, n := range c.config.Networks {
+			net, err := c.config.FindDependentResource(n.Name)
+			if err != nil {
+				return fmt.Errorf("Network not found: %w", err)
+			}
+
+			networkSubmasks = append(networkSubmasks, net.(*config.Network).Subnet)
+		}
+
+		proxyBypass := utils.ProxyBypass + "," + strings.Join(networkSubmasks, ",")
+
 		cc.EnvVar["HTTP_PROXY"] = utils.HTTPProxyAddress()
 		cc.EnvVar["HTTPS_PROXY"] = utils.HTTPSProxyAddress()
-		cc.EnvVar["NO_PROXY"] = utils.ProxyBypass
+		cc.EnvVar["NO_PROXY"] = proxyBypass
 		cc.EnvVar["PROXY_CA"] = string(ca)
 	}
 
@@ -166,25 +181,25 @@ func (c *K8sCluster) createK3s() error {
 	// set the API server port to a random number
 	clusterConfig, _ := utils.GetClusterConfig(string(config.TypeK8sCluster) + "." + c.config.Name)
 
-  // determine the snapshotter, if a storage driver other than overlay is used then
-  // snapshotter must be set to native or the container will not start
-  snapShotter := "native"
+	// determine the snapshotter, if a storage driver other than overlay is used then
+	// snapshotter must be set to native or the container will not start
+	snapShotter := "native"
 
-  if c.client.EngineInfo().StorageDriver == clients.StorageDriverOverlay || c.client.EngineInfo().StorageDriver == clients.StorageDriverOverlay2 {
-    snapShotter = "overlayfs"
-  }
+	if c.client.EngineInfo().StorageDriver == clients.StorageDriverOverlay || c.client.EngineInfo().StorageDriver == clients.StorageDriverOverlay2 {
+		snapShotter = "overlayfs"
+	}
 
 	// Set the default startup args
 	// Also set netfilter settings to fix behaviour introduced in Linux Kernel 5.12
 	// https://k3d.io/faq/faq/#solved-nodes-fail-to-start-or-get-stuck-in-notready-state-with-log-nf_conntrack_max-permission-denied
-  FQDN := fmt.Sprintf("server.%s", utils.FQDN(c.config.Name, string(c.config.Type)))
+	FQDN := fmt.Sprintf("server.%s", utils.FQDN(c.config.Name, string(c.config.Type)))
 	args := []string{
 		"server",
 		fmt.Sprintf("--https-listen-port=%d", clusterConfig.APIPort),
 		"--kube-proxy-arg=conntrack-max-per-core=0",
 		"--no-deploy=traefik",
-    fmt.Sprintf("--snapshotter=%s", snapShotter),
-    fmt.Sprintf("--tls-san=%s", FQDN),
+		fmt.Sprintf("--snapshotter=%s", snapShotter),
+		fmt.Sprintf("--tls-san=%s", FQDN),
 	}
 
 	// expose the API server and Connector ports

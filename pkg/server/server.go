@@ -41,6 +41,7 @@ func (s *API) Start() {
 	})
 
 	s.app.Get("/terminal", websocket.New(s.terminalWebsocket))
+	s.app.Post("/exec", s.handleExec)
 
 	// Start the server
 	err := s.app.Listen(s.bindAddr)
