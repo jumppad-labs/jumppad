@@ -208,7 +208,9 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-replace github.com/creack/pty => github.com/donorp/pty v1.1.12-0.20211004111936-294eccab62ed
+replace github.com/creack/pty => github.com/photostorm/pty v1.1.18
+
+// replace github.com/creack/pty => github.com/donorp/pty v1.1.12-0.20211004111936-294eccab62ed
 
 //replace golang.org/x/sys/windows => golang.org/x/sys/windows v0.0.0-20191005200804-aed5e5c7ecf12
 
