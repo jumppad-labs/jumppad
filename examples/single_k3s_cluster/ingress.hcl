@@ -57,3 +57,7 @@ resource "ingress" "vault-http" {
     }
   }
 }
+
+output "CONSUL_HTTP_ADDR" {
+  value = resource.ingress.consul-lan.address
+}

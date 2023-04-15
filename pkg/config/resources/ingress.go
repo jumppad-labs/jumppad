@@ -15,13 +15,14 @@ const (
 type Ingress struct {
 	types.ResourceMetadata `hcl:",remain"`
 
-	// Id stores the ID of the created connector service
-	Id string `json:"id" state:"true"`
-
-	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
-
 	Destination Traffic `hcl:"destination,block" json:"destination"`
 	Source      Traffic `hcl:"source,block" json:"source"`
+
+	// --- Output Params ----
+
+	//Id stores the ID of the created connector service
+	IngressID string `hcl:"ingress_id,optional" json:"ingress_id,omitempty"`
+	Address   string `hcl:"address,optional" json:"address,omitempty"`
 }
 
 // Traffic defines either a source or a destination block for ingress traffic
@@ -39,4 +40,21 @@ type TrafficConfig struct {
 	Address       string `hcl:"address,optional" json:"address,omitempty"`
 	Port          string `hcl:"port" json:"port"`
 	OpenInBrowser string `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"`
+}
+
+func (i *Ingress) Process() error {
+	// do we have an existing resource in the state?
+	// if so we need to set any computed resources for dependents
+	c, err := LoadState()
+	if err == nil {
+		// try and find the resource in the state
+		r, _ := c.FindResource(i.ID)
+		if r != nil {
+			kstate := r.(*Ingress)
+			i.IngressID = kstate.IngressID
+			i.Address = kstate.Address
+		}
+	}
+
+	return nil
 }

@@ -189,7 +189,7 @@ func (c *K8sCluster) createK3s() error {
 
 	// create the server address
 	FQDN := fmt.Sprintf("server.%s", utils.FQDN(c.config.Name, c.config.Module, c.config.Type))
-	c.config.Address = FQDN
+	c.config.Address = utils.GetDockerIP()
 
 	// Set the default startup args
 	// Also set netfilter settings to fix behaviour introduced in Linux Kernel 5.12

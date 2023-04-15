@@ -45,13 +45,13 @@ func (c *Ingress) Create() error {
 
 // Destroy satisfies the interface method but is not implemented by LocalExec
 func (c *Ingress) Destroy() error {
-	c.log.Info("Destroy Ingress", "ref", c.config.Name, "id", c.config.Id)
+	c.log.Info("Destroy Ingress", "ref", c.config.ID, "id", c.config.IngressID)
 
-	err := c.connector.RemoveService(c.config.Id)
+	err := c.connector.RemoveService(c.config.IngressID)
 	if err != nil {
 		// fail silently as this should not stop us from destroying the
 		// other resources
-		c.log.Warn("Unable to remove local ingress", "ref", c.config.Name, "id", c.config.Id, "error", err)
+		c.log.Warn("Unable to remove local ingress", "ref", c.config.Name, "id", c.config.IngressID, "error", err)
 	}
 
 	return nil
@@ -59,11 +59,13 @@ func (c *Ingress) Destroy() error {
 
 // Lookup satisfies the interface method but is not implemented by LocalExec
 func (c *Ingress) Lookup() ([]string, error) {
-	c.log.Debug("Lookup Ingress", "ref", c.config.Name, "id", c.config.Id)
+	c.log.Debug("Lookup Ingress", "ref", c.config.ID, "id", c.config.IngressID)
 
 	return []string{}, nil
 }
 
+// exposeLocal creates a service on the remote cluster that directs back to a local
+// service
 func (c *Ingress) exposeLocal() error {
 	// get the target
 	r, err := c.config.ParentConfig.FindResource(c.config.Source.Config.Cluster)
@@ -73,7 +75,7 @@ func (c *Ingress) exposeLocal() error {
 
 	// validate the name
 	if c.config.Name == "connector" {
-		return fmt.Errorf("Service name 'connector' is a reserved name")
+		return fmt.Errorf("service name 'connector' is a reserved name")
 	}
 
 	// validate the remote port, can not be 60000 or 60001 as these
@@ -84,12 +86,12 @@ func (c *Ingress) exposeLocal() error {
 	}
 
 	if remotePort == 60000 || remotePort == 60001 {
-		return fmt.Errorf("Unable to expose local service using remote port %d,"+
+		return fmt.Errorf("unable to expose local service using remote port %d,"+
 			"ports 60000 and 60001 are reserved for internal use", remotePort)
 	}
 
 	if c.config.Destination.Config.Address == "" {
-		return xerrors.Errorf("The address config stanza field must be specified when type 'local'")
+		return xerrors.Errorf("the address config stanza field must be specified when type 'local'")
 	}
 
 	destAddr := fmt.Sprintf("%s:%s", c.config.Destination.Config.Address, c.config.Destination.Config.Port)
@@ -97,7 +99,7 @@ func (c *Ingress) exposeLocal() error {
 	// sanitize the name to make it uri format
 	serviceName, err := utils.ReplaceNonURIChars(c.config.Name)
 	if err != nil {
-		return xerrors.Errorf("Unable to replace non URI characters in service name %s :%w", c.config.Name, err)
+		return xerrors.Errorf("unable to replace non URI characters in service name %s :%w", c.config.Name, err)
 	}
 
 	// send the request
@@ -121,12 +123,14 @@ func (c *Ingress) exposeLocal() error {
 		return xerrors.Errorf("unable to expose local service to remote cluster :%w", err)
 	}
 
-	c.log.Debug("Successfully exposed service", "id", id)
-	c.config.Id = id
+	c.log.Debug("Successfully exposed service", "id", id, "addr", destAddr)
+	c.config.IngressID = id
+	c.config.Address = destAddr
 
 	return nil
 }
 
+// exposeK8sRemote exposes a remote kubernetes service to the local machine
 func (c *Ingress) exposeK8sRemote() error {
 	// get the target
 	res, err := c.config.ParentConfig.FindResource(c.config.Destination.Config.Cluster)
@@ -178,8 +182,13 @@ func (c *Ingress) exposeK8sRemote() error {
 		return xerrors.Errorf("unable to expose remote cluster service to local machine :%w", err)
 	}
 
-	c.log.Debug("Successfully exposed service", "id", id)
-	c.config.Id = id
+	local, _ := utils.GetLocalIPAndHostname()
+	addr := fmt.Sprintf("%s:%d", local, localPort)
+
+	c.log.Debug("Successfully exposed service", "id", id, "addr", addr)
+
+	c.config.IngressID = id
+	c.config.Address = addr
 
 	return nil
 }
