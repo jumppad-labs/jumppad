@@ -1,0 +1,62 @@
+package resources
+
+import (
+	"os"
+
+	"github.com/shipyard-run/hclconfig"
+	"github.com/shipyard-run/shipyard/pkg/utils"
+)
+
+// setupHCLConfig configures the HCLConfig package and registers the custom types
+func SetupHCLConfig(callback hclconfig.ProcessCallback, variables map[string]string, variablesFiles []string) *hclconfig.Parser {
+	cfg := hclconfig.DefaultOptions()
+	cfg.ParseCallback = callback
+	cfg.Variables = variables
+	cfg.VariablesFiles = variablesFiles
+
+	p := hclconfig.NewParser(cfg)
+
+	// Register the types
+	p.RegisterType(TypeCertificateCA, &CertificateCA{})
+	p.RegisterType(TypeCertificateLeaf, &CertificateLeaf{})
+	p.RegisterType(TypeContainerIngress, &ContainerIngress{})
+	p.RegisterType(TypeContainer, &Container{})
+	p.RegisterType(TypeDocs, &Docs{})
+	p.RegisterType(TypeHelm, &Helm{})
+	p.RegisterType(TypeIngress, &Ingress{})
+	p.RegisterType(TypeK8sCluster, &K8sCluster{})
+	p.RegisterType(TypeK8sConfig, &K8sConfig{})
+	p.RegisterType(TypeNetwork, &Network{})
+	p.RegisterType(TypeNomadCluster, &NomadCluster{})
+	p.RegisterType(TypeNomadIngress, &NomadIngress{})
+	p.RegisterType(TypeSidecar, &Sidecar{})
+	p.RegisterType(TypeTemplate, &Template{})
+	p.RegisterType(TypeImageCache, &ImageCache{})
+
+	// Register the custom functions
+	p.RegisterFunction("docker_ip", customHCLFuncDockerIP)
+	p.RegisterFunction("docker_host", customHCLFuncDockerHost)
+	p.RegisterFunction("data", customHCLFuncDataFolder)
+	p.RegisterFunction("data_with_permissions", customHCLFuncDataFolderWithPermissions)
+
+	return p
+}
+
+// returns the docker host ip address
+func customHCLFuncDockerIP() (string, error) {
+	return utils.GetDockerIP(), nil
+}
+
+func customHCLFuncDockerHost() (string, error) {
+	return utils.GetDockerHost(), nil
+}
+
+func customHCLFuncDataFolderWithPermissions(name string, permissions int) (string, error) {
+	perms := os.FileMode(permissions)
+	return utils.GetDataFolder(name, perms), nil
+}
+
+func customHCLFuncDataFolder(name string) (string, error) {
+	perms := os.FileMode(0775)
+	return utils.GetDataFolder(name, perms), nil
+}

@@ -113,9 +113,9 @@ func createContainerShell(r types.Resource, dt clients.ContainerTasks, command [
 	}
 
 	// find the container id
-	ids, err := dt.FindContainerIDs(r.Metadata().Name, resources.TypeContainer)
+	ids, err := dt.FindContainerIDs(utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type))
 	if err != nil || len(ids) == 0 {
-		return fmt.Errorf("Unable to find container %s", r.Metadata().Name)
+		return fmt.Errorf("Unable to find container %s", r.Metadata().ID)
 	}
 
 	in, stdout, _ := term.StdStreams()

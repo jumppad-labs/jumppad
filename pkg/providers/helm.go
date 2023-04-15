@@ -5,13 +5,13 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"golang.org/x/xerrors"
 )
 
 type Helm struct {
-	config       *config.Helm
+	config       *resources.Helm
 	kubeClient   clients.Kubernetes
 	helmClient   clients.Helm
 	getterClient clients.Getter
@@ -19,13 +19,13 @@ type Helm struct {
 }
 
 // NewHelm creates a new Helm provider
-func NewHelm(c *config.Helm, kc clients.Kubernetes, hc clients.Helm, g clients.Getter, l hclog.Logger) *Helm {
+func NewHelm(c *resources.Helm, kc clients.Kubernetes, hc clients.Helm, g clients.Getter, l hclog.Logger) *Helm {
 	return &Helm{c, kc, hc, g, l}
 }
 
 // Create implements the provider Create method
 func (h *Helm) Create() error {
-	h.log.Info("Creating Helm chart", "ref", h.config.Name)
+	h.log.Info("Creating Helm chart", "ref", h.config.ID)
 
 	// get the target cluster
 	kcPath, err := h.getKubeConfigPath()
@@ -64,16 +64,15 @@ func (h *Helm) Create() error {
 	}
 
 	// set the KubeConfig for the kubernetes client
-	// this is used by the healthchecks
-	h.log.Debug("Using Kubernetes config", "ref", h.config.Name, "path", kcPath)
+	// this is used by the health checks
+	h.log.Debug("Using Kubernetes config", "ref", h.config.ID, "path", kcPath)
 	h.kubeClient, err = h.kubeClient.SetConfig(kcPath)
 	if err != nil {
 		return xerrors.Errorf("unable to create Kubernetes client: %w", err)
 	}
 
-	// sanitise the chart name
-	newName, _ := utils.ReplaceNonURIChars(h.config.ChartName)
-	h.config.ChartName = newName
+	// sanitize the chart name
+	newName, _ := utils.ReplaceNonURIChars(h.config.Name)
 
 	failCount := 0
 
@@ -86,17 +85,21 @@ func (h *Helm) Create() error {
 	}
 
 	timeout := time.After(to)
-	errChan := make(chan error, 0)
-	doneChan := make(chan struct{}, 0)
+	errChan := make(chan error)
+	doneChan := make(chan struct{})
 
 	go func() {
 		for {
 			err = h.helmClient.Create(
-				kcPath, h.config.ChartName,
-				h.config.Namespace, h.config.CreateNamespace,
+				kcPath,
+				newName,
+				h.config.Namespace,
+				h.config.CreateNamespace,
 				h.config.SkipCRDs,
-				h.config.Chart, h.config.Version,
-				h.config.Values, h.config.ValuesString)
+				h.config.Chart,
+				h.config.Version,
+				h.config.Values,
+				h.config.ValuesString)
 
 			if err == nil {
 				doneChan <- struct{}{}
@@ -109,6 +112,7 @@ func (h *Helm) Create() error {
 				errChan <- err
 			} else {
 				h.log.Debug("Chart apply failed, retrying", "error", err)
+				time.Sleep(5 * time.Second)
 			}
 		}
 	}()
@@ -126,12 +130,12 @@ func (h *Helm) Create() error {
 	if h.config.HealthCheck != nil && len(h.config.HealthCheck.Pods) > 0 {
 		to, err := time.ParseDuration(h.config.HealthCheck.Timeout)
 		if err != nil {
-			return xerrors.Errorf("unable to parse healthcheck duration: %w", err)
+			return xerrors.Errorf("unable to parse health check duration: %w", err)
 		}
 
 		err = h.kubeClient.HealthCheckPods(h.config.HealthCheck.Pods, to)
 		if err != nil {
-			return xerrors.Errorf("healthcheck failed after helm chart setup: %w", err)
+			return xerrors.Errorf("health check failed after helm chart setup: %w", err)
 		}
 	}
 
@@ -151,12 +155,11 @@ func (h *Helm) Destroy() error {
 		h.config.Namespace = "default"
 	}
 
-	// sanitise the chart name
-	newName, _ := utils.ReplaceNonURIChars(h.config.ChartName)
-	h.config.ChartName = newName
+	// sanitize the chart name
+	newName, _ := utils.ReplaceNonURIChars(h.config.Name)
 
 	// get the target cluster
-	h.helmClient.Destroy(kcPath, h.config.ChartName, h.config.Namespace)
+	h.helmClient.Destroy(kcPath, newName, h.config.Namespace)
 
 	if err != nil {
 		h.log.Debug("There was a problem destroying Helm chart, logging message but ignoring error", "ref", h.config.Name, "error", err)
@@ -171,11 +174,10 @@ func (h *Helm) Lookup() ([]string, error) {
 }
 
 func (h *Helm) getKubeConfigPath() (string, error) {
-	target, err := h.config.FindDependentResource(h.config.Cluster)
+	target, err := h.config.ParentConfig.FindResource(h.config.Cluster)
 	if err != nil {
 		return "", xerrors.Errorf("Unable to find cluster: %w", err)
 	}
 
-	_, destPath, _ := utils.CreateKubeConfigPath(target.Info().Name)
-	return destPath, nil
+	return target.(*resources.K8sCluster).KubeConfig, nil
 }

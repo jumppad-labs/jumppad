@@ -32,7 +32,7 @@ func (c *ImageCache) Create() error {
 	c.log.Info("Creating ImageCache", "ref", c.config.Name)
 
 	// check the cache does not already exist
-	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.Type)
+	ids, err := c.Lookup()
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func (c *ImageCache) createImageCache(networks []string) (string, error) {
 func (c *ImageCache) Destroy() error {
 	c.log.Info("Destroy ImageCache", "ref", c.config.Name)
 
-	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.Type)
+	ids, err := c.Lookup()
 	if err != nil {
 		return err
 	}
@@ -152,7 +152,7 @@ func (c *ImageCache) findDependentNetworks() []string {
 		target, err := c.config.ParentConfig.FindResource(n)
 		if err != nil {
 			// ignore this network
-			c.log.Warn("Unable to atttach cache to network, network does not exist", "name", n)
+			c.log.Warn("Unable to attach cache to network, network does not exist", "name", n, "error", err)
 			continue
 		}
 
@@ -223,6 +223,5 @@ func contains(strings []string, s string) bool {
 }
 
 func (c *ImageCache) Lookup() ([]string, error) {
-	c.log.Info("Creating ImageCache", "ref", c.config.Name)
-	return nil, nil
+	return c.client.FindContainerIDs(utils.FQDN(c.config.Name, c.config.Module, c.config.Type))
 }

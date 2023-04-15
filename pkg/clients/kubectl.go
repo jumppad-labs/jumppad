@@ -57,8 +57,11 @@ func (k *KubernetesImpl) SetConfig(kubeconfig string) (Kubernetes, error) {
 		}
 
 		if time.Now().Sub(st) > kc.timeout {
-			return nil, xerrors.Errorf("Error waiting for kubeclient: %w", err)
+			return nil, xerrors.Errorf("error waiting for kubernetes client, config: %s error: %w", kubeconfig, err)
 		}
+
+		// backoff
+		time.Sleep(5 * time.Second)
 	}
 
 	return kc, nil

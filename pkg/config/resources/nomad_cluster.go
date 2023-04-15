@@ -10,8 +10,6 @@ type NomadCluster struct {
 	// embedded type holding name, etc
 	types.ResourceMetadata `hcl:",remain"`
 
-	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
-
 	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
 	Version       string            `hcl:"version,optional" json:"version,omitempty"`
@@ -25,8 +23,11 @@ type NomadCluster struct {
 	Volumes       []Volume          `hcl:"volume,block" json:"volumes,omitempty"`                     // volumes to attach to the cluster
 	OpenInBrowser bool              `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"` // open the UI in the browser after creation
 
-	ServerIPAddress string   `hcl:"server_ip_address,optional" json:"server_ip_address,omitempty"`
-	ClientIPAddress []string `hcl:"client_ip_address,optional" json:"client_ip_address,omitempty"`
+	APIPort       int      `hcl:"api_port,optional" json:"api_port,omitempty"`
+	ConnectorPort int      `hcl:"connector_port,optional" json:"connector_port,omitempty"`
+	Address       string   `hcl:"server_address,optional" json:"server_address,omitempty"`
+	ClientAddress []string `hcl:"client_address,optional" json:"client_address,omitempty"`
+	ConfigDir     string   `hcl:"config_dir,optional" json:"config_dir,omitempty"`
 }
 
 func (n *NomadCluster) Process() error {

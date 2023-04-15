@@ -5,7 +5,6 @@ import (
 	// "fmt"
 
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -24,27 +23,12 @@ import (
 )
 
 // Clients contains clients which are responsible for creating and destroying resources
-type Clients struct {
-	Docker         clients.Docker
-	ContainerTasks clients.ContainerTasks
-	Kubernetes     clients.Kubernetes
-	Helm           clients.Helm
-	HTTP           clients.HTTP
-	Nomad          clients.Nomad
-	Command        clients.Command
-	Logger         hclog.Logger
-	Getter         clients.Getter
-	Browser        clients.System
-	ImageLog       clients.ImageLog
-	Connector      clients.Connector
-	TarGz          *clients.TarGz
-}
 
 // Engine defines an interface for the Shipyard engine
 //
 //go:generate mockery --name Engine --filename engine.go
 type Engine interface {
-	GetClients() *Clients
+	GetClients() *clients.Clients
 	Apply(string) ([]types.Resource, error)
 
 	// ApplyWithVariables applies a configuration file or directory containing
@@ -61,7 +45,7 @@ type Engine interface {
 
 // EngineImpl is responsible for creating and destroying resources
 type EngineImpl struct {
-	clients     *Clients
+	clients     *clients.Clients
 	config      *hclconfig.Config
 	log         hclog.Logger
 	getProvider getProviderFunc
@@ -70,10 +54,10 @@ type EngineImpl struct {
 
 // defines a function which is used for generating providers
 // enables the replacement in tests to inject mocks
-type getProviderFunc func(c types.Resource, cl *Clients) providers.Provider
+type getProviderFunc func(c types.Resource, cl *clients.Clients) providers.Provider
 
 // GenerateClients creates the various clients for creating and destroying resources
-func GenerateClients(l hclog.Logger) (*Clients, error) {
+func GenerateClients(l hclog.Logger) (*clients.Clients, error) {
 	dc, err := clients.NewDocker()
 	if err != nil {
 		return nil, err
@@ -102,7 +86,7 @@ func GenerateClients(l hclog.Logger) (*Clients, error) {
 	co := clients.DefaultConnectorOptions()
 	cc := clients.NewConnector(co)
 
-	return &Clients{
+	return &clients.Clients{
 		ContainerTasks: ct,
 		Docker:         dc,
 		Kubernetes:     kc,
@@ -141,7 +125,7 @@ func New(l hclog.Logger) (Engine, error) {
 }
 
 // GetClients returns the clients from the engine
-func (e *EngineImpl) GetClients() *Clients {
+func (e *EngineImpl) GetClients() *clients.Clients {
 	return e.clients
 }
 
@@ -167,7 +151,7 @@ func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]strin
 		return nil, err
 	}
 
-	e.log.Info("Creating resources from configuration", "path", path)
+	e.log.Info("Parsing configuration", "path", path)
 
 	if variablesFile != "" {
 		variablesFile, err = filepath.Abs(variablesFile)
@@ -175,6 +159,14 @@ func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]strin
 			return nil, err
 		}
 	}
+
+	// load the state
+	c, err := resources.LoadState()
+	if err != nil {
+		e.log.Warn("unable to load state", "error", err)
+	}
+
+	e.config = c
 
 	err = e.readAndProcessConfig(path, vars, variablesFile, func(r types.Resource) error {
 		e.config.AppendResource(r)
@@ -207,40 +199,53 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 		}
 	}
 
+	// load the state
+	c, err := resources.LoadState()
+	if err != nil {
+		e.log.Warn("unable to load state", "error", err)
+	}
+	e.config = c
+
+	// check to see we already have an image cache
+	_, err = e.config.FindResourcesByType(resources.TypeImageCache)
+	if err != nil {
+		cache := &resources.ImageCache{
+			ResourceMetadata: types.ResourceMetadata{
+				Name:       "default",
+				Type:       resources.TypeImageCache,
+				ID:         "resource.image_cache.default",
+				Properties: map[string]interface{}{},
+			},
+		}
+
+		e.log.Debug("Creating new Image Cache", "id", cache.ID)
+
+		p := e.getProvider(cache, e.clients)
+		if p == nil {
+			// this should never happen
+			panic(err)
+		}
+
+		// create the cache
+		err := p.Create()
+		if err != nil {
+			return nil, fmt.Errorf("unable to create image cache: %s", err)
+		}
+
+		cache.Properties[constants.PropertyStatus] = constants.StatusCreated
+
+		// add the new cache to the config
+		e.config.AppendResource(cache)
+
+		// save the state
+		resources.SaveState(e.config)
+	}
+
+	// finally we can process and create resources
 	processErr := e.readAndProcessConfig(path, vars, variablesFile, e.createCallback)
 
-	// we now need to find all the networks defined in the config and
-	// add them to the image cache's dependencies
-	// this will also ensure that the image cache is destroyed last
-	cache := &resources.ImageCache{
-		ResourceMetadata: types.ResourceMetadata{
-			Name: "default",
-			Type: resources.TypeImageCache,
-		},
-	}
-
-	// check to see we have an image cache
-	caches, err := e.config.FindResourcesByType(resources.TypeImageCache)
-	if err == nil && len(caches) == 1 {
-		// add a default resource for the docker caching proxy
-		cache = caches[0].(*resources.ImageCache)
-	} else {
-		// add the newly created cache to the state as one does not exist
-		e.config.AppendResource(cache)
-	}
-
-	cache.DependsOn = []string{}
-	networks, _ := e.config.FindResourcesByType(resources.TypeNetwork)
-	for _, n := range networks {
-		cache.DependsOn = append(cache.DependsOn, n.Metadata().ID)
-	}
-
-	// again we need to execute the provider for the cache to update any new networks
-	p := e.getProvider(cache, e.GetClients())
-	err = p.Create()
-
 	// save the state regardless of error
-	stateErr := e.saveState()
+	stateErr := resources.SaveState(e.config)
 	if stateErr != nil {
 		e.log.Info("Unable to save state", "error", stateErr)
 	}
@@ -248,15 +253,29 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 	return e.config.Resources, processErr
 }
 
+// checks if a string exists in an array if not it appends and returns a new
+// copy
+func appendIfNotContains(existing []string, s string) []string {
+	for _, v := range existing {
+		if v == s {
+			return existing
+		}
+	}
+
+	return append(existing, s)
+}
+
 // Destroy the resources defined by the state
 func (e *EngineImpl) Destroy() error {
 	e.log.Info("Destroying resources")
 
 	// load the state
-	err := e.loadState()
+	c, err := resources.LoadState()
 	if err != nil {
 		e.log.Debug("State file does not exist")
 	}
+
+	e.config = c
 
 	// run through the graph and call the destroy callback
 	// disabled resources are not included in this callback
@@ -266,7 +285,7 @@ func (e *EngineImpl) Destroy() error {
 	err = e.config.Process(e.destroyCallback, true)
 	if err != nil {
 		// save the state
-		stateErr := e.saveState()
+		stateErr := resources.SaveState(e.config)
 		if stateErr != nil {
 			// if we can not save the state, log
 			e.log.Info("Unable to save state", "error", stateErr)
@@ -297,9 +316,6 @@ func (e *EngineImpl) ResourceCountForType(t string) int {
 
 func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]string, variablesFile string, callback hclconfig.ProcessCallback) error {
 
-	// load the state
-	e.loadState()
-
 	var parseError error
 	var parsedConfig *hclconfig.Config
 
@@ -309,7 +325,7 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 			variablesFiles = append(variablesFiles, variablesFile)
 		}
 
-		hclParser := setupHCLConfig(callback, variables, variablesFiles)
+		hclParser := resources.SetupHCLConfig(callback, variables, variablesFiles)
 
 		if utils.IsHCLFile(path) {
 			// ParseFile processes the HCL, builds a graph of resources then calls
@@ -378,15 +394,25 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 		return fmt.Errorf("unable to create provider for resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
 	}
 
-	// we need to check if a resource exists in the state
-	// if so the status should take precedence as all new
-	// resources will have an empty state
-	sr, err := e.config.FindResource(r.Metadata().ID)
-	if err == nil {
-		r.Metadata().Properties[constants.PropertyStatus] = sr.Metadata().Properties[constants.PropertyStatus]
-
-		// remove the resource, we will add the new version to the state
+	if r.Metadata().Type == types.TypeOutput {
+		// throw away any existing outputs and allow them to be re-created
 		e.config.RemoveResource(r)
+	} else {
+		// we need to check if a resource exists in the state, if so the status
+		// should take precedence as all new resources will have an empty state
+		sr, err := e.config.FindResource(r.Metadata().ID)
+		if err == nil {
+			// if the state is created do nothing
+			if sr.Metadata().Properties[constants.PropertyStatus] == constants.StatusCreated {
+				return nil
+			}
+
+			// set the current status to the state status
+			r.Metadata().Properties[constants.PropertyStatus] = sr.Metadata().Properties[constants.PropertyStatus]
+
+			// remove the resource, we will add the new version to the state
+			e.config.RemoveResource(r)
+		}
 	}
 
 	var providerError error
@@ -407,16 +433,32 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 		fallthrough // failed resources should always attempt recreation
 
 	default:
+		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusCreated
 		providerError = p.Create()
 		if providerError != nil {
 			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
-		} else {
-			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusCreated
 		}
 	}
 
 	// add the resource to the state
 	e.config.AppendResource(r)
+
+	// did we just create a network, if so we need to attach the image cache
+	// to the network and set the dependency
+	if r.Metadata().Type == resources.TypeNetwork && r.Metadata().Properties[constants.PropertyStatus] == constants.StatusCreated {
+		// get the image cache
+		ic, err := e.config.FindResource("resource.image_cache.default")
+		if err == nil {
+			e.log.Debug("Attaching image cache to network", "network", ic.Metadata().ID)
+			ic.Metadata().DependsOn = appendIfNotContains(ic.Metadata().DependsOn, r.Metadata().ID)
+
+			// reload the networks
+			np := e.getProvider(ic, e.clients)
+			np.Create()
+		} else {
+			e.log.Error("Unable to find Image Cache", "error", err)
+		}
+	}
 
 	return providerError
 }
@@ -442,50 +484,11 @@ func (e *EngineImpl) destroyCallback(r types.Resource) error {
 	err := p.Destroy()
 	if err != nil {
 		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
-		return fmt.Errorf("unable to destroy resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
+		return fmt.Errorf("unable to destroy resource Name: %s, Type: %s, Error: %s", r.Metadata().Name, r.Metadata().Type, err)
 	}
 
 	// remove from the state only if not errored
 	e.config.RemoveResource(r)
-
-	return nil
-}
-
-func (e *EngineImpl) loadState() error {
-	d, err := ioutil.ReadFile(utils.StatePath())
-	if err != nil {
-		e.config = hclconfig.NewConfig()
-		return fmt.Errorf("unable to read state file: %s", err)
-	}
-
-	p := setupHCLConfig(nil, nil, nil)
-	c, err := p.UnmarshalJSON(d)
-	if err != nil {
-		e.config = hclconfig.NewConfig()
-		return fmt.Errorf("unable to unmarshal state file: %s", err)
-	}
-
-	e.config = c
-
-	return nil
-}
-
-func (e *EngineImpl) saveState() error {
-	// save the state regardless of error
-	d, err := e.config.ToJSON()
-	if err != nil {
-		return fmt.Errorf("unable to serialize config to JSON: %s", err)
-	}
-
-	err = os.MkdirAll(utils.StateDir(), os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("unable to create directory for state file '%s', error: %s", utils.StateDir(), err)
-	}
-
-	err = ioutil.WriteFile(utils.StatePath(), d, os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("unable to write state file '%s', error: %s", utils.StatePath(), err)
-	}
 
 	return nil
 }

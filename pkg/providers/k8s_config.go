@@ -5,19 +5,19 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"golang.org/x/xerrors"
 )
 
 type K8sConfig struct {
-	config *config.K8sConfig
+	config *resources.K8sConfig
 	client clients.Kubernetes
 	log    hclog.Logger
 }
 
 // NewK8sConfig creates a provider which can create and destroy kubernetes configuration
-func NewK8sConfig(c *config.K8sConfig, kc clients.Kubernetes, l hclog.Logger) *K8sConfig {
+func NewK8sConfig(c *resources.K8sConfig, kc clients.Kubernetes, l hclog.Logger) *K8sConfig {
 	return &K8sConfig{c, kc, l}
 }
 
@@ -48,9 +48,6 @@ func (c *K8sConfig) Create() error {
 		}
 	}
 
-	// set the status
-	c.config.Status = config.Applied
-
 	return nil
 }
 
@@ -76,12 +73,12 @@ func (c *K8sConfig) Lookup() ([]string, error) {
 }
 
 func (c *K8sConfig) setup() error {
-	cluster, err := c.config.FindDependentResource(c.config.Cluster)
+	cluster, err := c.config.ParentConfig.FindResource(c.config.Cluster)
 	if err != nil {
 		return xerrors.Errorf("Unable to find associated cluster: %w", cluster)
 	}
 
-	_, destPath, _ := utils.CreateKubeConfigPath(cluster.Info().Name)
+	_, destPath, _ := utils.CreateKubeConfigPath(cluster.Metadata().Name)
 	c.client, err = c.client.SetConfig(destPath)
 	if err != nil {
 		return xerrors.Errorf("unable to create Kubernetes client: %w", err)

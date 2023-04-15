@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	gvm "github.com/shipyard-run/version-manager"
 
+	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 
@@ -23,7 +24,7 @@ var rootCmd = &cobra.Command{
 
 var engine shipyard.Engine
 var logger hclog.Logger
-var engineClients *shipyard.Clients
+var engineClients *clients.Clients
 
 var version string // set by build process
 var date string    // set by build process

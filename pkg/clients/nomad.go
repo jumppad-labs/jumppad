@@ -9,14 +9,13 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/shipyard-run/shipyard/pkg/utils"
 	"golang.org/x/xerrors"
 )
 
 // Nomad defines an interface for a Nomad client
 type Nomad interface {
 	// SetConfig for the client, path is a valid Nomad JSON config file
-	SetConfig(utils.ClusterConfig, string) error
+	SetConfig(address string, port, nodes int) error
 	// Create jobs in the provided files
 	Create(files []string) error
 	// Stop jobs in the provided files
@@ -35,11 +34,12 @@ type Nomad interface {
 
 // NomadImpl is an implementation of the Nomad interface
 type NomadImpl struct {
-	httpClient HTTP
-	l          hclog.Logger
-	c          *utils.ClusterConfig
-	backoff    time.Duration
-	context    string
+	httpClient  HTTP
+	l           hclog.Logger
+	backoff     time.Duration
+	address     string
+	port        int
+	clientNodes int
 }
 
 // NewNomad creates a new Nomad client
@@ -57,29 +57,26 @@ type createRequest struct {
 }
 
 // SetConfig loads the Nomad config from a file
-func (n *NomadImpl) SetConfig(nomadconfig utils.ClusterConfig, context string) error {
-	n.c = &nomadconfig
-	n.context = context
+func (n *NomadImpl) SetConfig(address string, port, nodes int) error {
+	n.address = address
+	n.port = port
+	n.clientNodes = nodes
 
 	return nil
 }
 
 // HealthCheckAPI executes a HTTP heathcheck for a Nomad cluster
 func (n *NomadImpl) HealthCheckAPI(timeout time.Duration) error {
-	// get the address and the nodecount from the config
-	address := n.c.APIAddress(utils.Context(n.context))
-	nodeCount := n.c.NodeCount
-
-	n.l.Debug("Performing Nomad health check", "address", address)
+	n.l.Debug("Performing Nomad health check", "address", n.address)
 	st := time.Now()
 	for {
 		if time.Now().Sub(st) > timeout {
-			n.l.Error("Timeout wating for Nomad healthcheck", "address", address)
+			n.l.Error("Timeout wating for Nomad healthcheck", "address", n.address)
 
-			return fmt.Errorf("Timeout waiting for Nomad healthcheck %s", address)
+			return fmt.Errorf("Timeout waiting for Nomad healthcheck %s", n.address)
 		}
 
-		rq, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v1/nodes", address), nil)
+		rq, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s:%d/v1/nodes", n.address, n.port), nil)
 		if err != nil {
 			return err
 		}
@@ -133,12 +130,12 @@ func (n *NomadImpl) HealthCheckAPI(timeout time.Duration) error {
 				}
 			}
 
-			if readyCount == nodeCount {
-				n.l.Debug("Nomad check complete", "address", address)
+			if readyCount == n.clientNodes {
+				n.l.Debug("Nomad check complete", "address", n.address)
 				return nil
 			}
 
-			n.l.Debug("Nodes not ready", "ready", readyCount, "nodes", nodeCount)
+			n.l.Debug("Nodes not ready", "ready", readyCount, "nodes", n.clientNodes)
 		}
 
 		// backoff
@@ -158,7 +155,7 @@ func (n *NomadImpl) Create(files []string) error {
 		// submit the job top the API
 		cr := fmt.Sprintf(`{"Job": %s}`, string(jsonJob))
 
-		r, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/v1/jobs", n.c.APIAddress(utils.Context(n.context))), bytes.NewReader([]byte(cr)))
+		r, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s:%d/v1/jobs", n.address, n.port), bytes.NewReader([]byte(cr)))
 		if err != nil {
 			return xerrors.Errorf("Unable to create http request: %w", err)
 		}
@@ -188,7 +185,7 @@ func (n *NomadImpl) Stop(files []string) error {
 		}
 
 		// stop the job
-		r, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/v1/job/%s", n.c.APIAddress(utils.Context(n.context)), id), nil)
+		r, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s:%d/v1/job/%s", n.address, n.port, id), nil)
 		if err != nil {
 			return xerrors.Errorf("Unable to create http request: %w", err)
 		}
@@ -222,7 +219,7 @@ func (n *NomadImpl) ParseJob(file string) ([]byte, error) {
 	jobData, _ := json.Marshal(rd)
 
 	// validate the config with the Nomad API
-	r, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/v1/jobs/parse", n.c.APIAddress(utils.Context(n.context))), bytes.NewReader(jobData))
+	r, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s:%d/v1/jobs/parse", n.address, n.port), bytes.NewReader(jobData))
 	if err != nil {
 		return nil, xerrors.Errorf("Unable to create http request: %w", err)
 	}
@@ -300,7 +297,7 @@ func (n *NomadImpl) Endpoints(job, group, task string) ([]map[string]string, err
 			continue
 		}
 
-		r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v1/allocation/%s", n.c.APIAddress(utils.Context(n.context)), j["ID"]), nil)
+		r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s:%d/v1/allocation/%s", n.address, n.port, j["ID"]), nil)
 		if err != nil {
 			return nil, xerrors.Errorf("Unable to create http request: %w", err)
 		}
@@ -319,7 +316,7 @@ func (n *NomadImpl) Endpoints(job, group, task string) ([]map[string]string, err
 		allocDetail := allocation{}
 		err = json.NewDecoder(resp.Body).Decode(&allocDetail)
 		if err != nil {
-			return nil, fmt.Errorf("Error getting endpoints from server: %s: err: %s", n.c.APIAddress(utils.Context(n.context)), err)
+			return nil, fmt.Errorf("Error getting endpoints from server: %s: err: %s", n.address, err)
 		}
 
 		ports := []string{}
@@ -380,7 +377,7 @@ func (n *NomadImpl) Endpoints(job, group, task string) ([]map[string]string, err
 
 func (n *NomadImpl) getJobAllocations(job string) ([]map[string]interface{}, error) {
 	// get the allocations for the job
-	r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v1/job/%s/allocations", n.c.APIAddress(utils.Context(n.context)), job), nil)
+	r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s:%d/v1/job/%s/allocations", n.address, n.port, job), nil)
 	if err != nil {
 		return nil, xerrors.Errorf("Unable to create http request: %w", err)
 	}
@@ -399,7 +396,7 @@ func (n *NomadImpl) getJobAllocations(job string) ([]map[string]interface{}, err
 	jobDetail := make([]map[string]interface{}, 0)
 	err = json.NewDecoder(resp.Body).Decode(&jobDetail)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to query jobs in Nomad server: %s: %s", n.c.APIAddress(utils.Context(n.context)), err)
+		return nil, fmt.Errorf("Unable to query jobs in Nomad server: %s: %s", n.address, err)
 	}
 
 	return jobDetail, err

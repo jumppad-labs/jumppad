@@ -43,7 +43,7 @@ type ContainerTasks interface {
 	// being cached locally.
 	PullImage(image resources.Image, force bool) error
 	// FindContainerIDs returns the Container IDs for the given identifier
-	FindContainerIDs(name string, typeName string) ([]string, error)
+	FindContainerIDs(fqdn string) ([]string, error)
 	// ContainerLogs attaches to the container and streams the logs to the returned
 	// io.ReadCloser.
 	// Returns an error if the container is not running

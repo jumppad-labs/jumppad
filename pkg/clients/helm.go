@@ -78,7 +78,7 @@ func NewHelm(l hclog.Logger) Helm {
 }
 
 func (h *HelmImpl) Create(kubeConfig, name, namespace string, createNamespace bool, skipCRDs bool, chart, version, valuesPath string, valuesString map[string]string) error {
-	// set the kubeclient for Helm
+	// set the kube client for Helm
 	s := kube.GetConfig(kubeConfig, "default", namespace)
 	cfg := &action.Configuration{}
 	err := cfg.Init(s, namespace, "", func(format string, v ...interface{}) {
@@ -98,7 +98,7 @@ func (h *HelmImpl) Create(kubeConfig, name, namespace string, createNamespace bo
 	settings := h.getSettings()
 	settings.Debug = true
 
-	h.log.Debug("Creating chart from config", "ref", name, "chart", chart)
+	h.log.Debug("Creating chart from config", "release_name", name, "chart", chart)
 	cpa := client.ChartPathOptions
 	cpa.Version = version
 

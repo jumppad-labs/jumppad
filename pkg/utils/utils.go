@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"net"
 	"net/url"
 	"os"
@@ -51,8 +50,11 @@ func ReplaceNonURIChars(s string) (string, error) {
 }
 
 // FQDN generates the full qualified name for a container
-func FQDN(name, typeName string) string {
+func FQDN(name, module, typeName string) string {
 	fqdn := fmt.Sprintf("%s.%s.shipyard.run", name, typeName)
+	if module != "" {
+		fqdn = fmt.Sprintf("%s.%s.%s.shipyard.run", name, module, typeName)
+	}
 
 	// ensure that the name is valid for URI schema
 	cleanName, err := ReplaceNonURIChars(fqdn)
@@ -88,61 +90,6 @@ func CreateKubeConfigPath(name string) (dir, filePath string, dockerPath string)
 	}
 
 	return
-}
-
-// GetClusterConfig creates the file path for the Cluster config
-// which stores details such as the API server location
-func GetClusterConfig(name string) (ClusterConfig, string) {
-	// check if the file exists return if so
-
-	// split the name
-	parts := strings.Split(name, ".")
-	if len(parts) < 2 {
-		return ClusterConfig{}, ""
-	}
-
-	if parts[0] != "nomad_cluster" && parts[0] != "k8s_cluster" {
-		return ClusterConfig{}, ""
-	}
-
-	dir := filepath.Join(ShipyardHome(), "/config/", parts[1])
-	filePath := filepath.Join(dir, "/config.json")
-
-	if _, err := os.Stat(filePath); err == nil {
-		cc := ClusterConfig{}
-		cc.Load(filePath)
-
-		return cc, dir
-	}
-
-	// create the folders
-	err := os.MkdirAll(dir, 0755)
-	if err != nil {
-		panic(err)
-	}
-
-	//// create the config file
-	//// set the API server port to a random number 64000 - 65000
-	apiPort := rand.Intn(MaxRandomPort-MinRandomPort) + MinRandomPort
-	connectorPort := rand.Intn(MaxRandomPort-MinRandomPort) + MinRandomPort
-
-	remoteAPIPort := 4646
-	if parts[0] == "k8s_cluster" {
-		remoteAPIPort = apiPort
-	}
-
-	// generate the config file
-	config := ClusterConfig{
-		LocalAddress:  GetDockerIP(),
-		RemoteAddress: FQDN(fmt.Sprintf("server.%s", parts[1]), parts[0]),
-		ConnectorPort: connectorPort,
-		APIPort:       apiPort,
-		RemoteAPIPort: remoteAPIPort,
-	}
-
-	config.Save(filePath)
-
-	return config, dir
 }
 
 // HomeFolder returns the users homefolder this will be $HOME on windows and mac and
@@ -330,7 +277,9 @@ func GetDockerIP() string {
 		}
 	}
 
-	return "127.0.0.1"
+	sp, _ := GetLocalIPAndHostname()
+
+	return sp
 }
 
 // GetConnectorPIDFile returns the connector PID file used by the connector

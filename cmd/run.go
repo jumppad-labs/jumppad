@@ -114,11 +114,11 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 				return fmt.Errorf("Unable to get certificates to secure ingress: %s", err)
 			}
 
-			l.Debug("Starting Ingress")
+			l.Debug("Starting API server")
 
 			err = cc.Start(cb)
 			if err != nil {
-				return fmt.Errorf("Unable to start ingress: %s", err)
+				return fmt.Errorf("Unable to start API server: %s", err)
 			}
 		}
 
@@ -166,7 +166,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 
 		go func() {
 			for range statusUpdate.C {
-				elapsedTime := time.Now().Sub(startTime).Seconds()
+				elapsedTime := time.Since(startTime).Seconds()
 				logger.Info(fmt.Sprintf("Please wait, still creating resources [Elapsed Time: %f]", elapsedTime))
 			}
 		}()
@@ -226,8 +226,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 					c := r.(*resources.NomadCluster)
 					if c.OpenInBrowser {
 						// get the API port
-						config, _ := utils.GetClusterConfig("nomad_cluster." + c.Name)
-						browserList = append(browserList, buildBrowserPath("server."+r.Metadata().Name, fmt.Sprintf("%d", config.APIPort), r.Metadata().Type, "/"))
+						browserList = append(browserList, buildBrowserPath("server."+r.Metadata().Name, fmt.Sprintf("%d", c.APIPort), r.Metadata().Type, "/"))
 					}
 				case resources.TypeK8sIngress:
 					c := r.(*resources.K8sIngress)
@@ -328,7 +327,7 @@ func buildBrowserPath(n, p string, resourceType string, path string) string {
 		ty = resources.TypeIngress
 	}
 
-	return fmt.Sprintf("http://%s:%s%s", utils.FQDN(n, string(ty)), p, path)
+	return fmt.Sprintf("http://%s:%s.%s", utils.FQDN(n, "", ty), p, path)
 }
 
 func bluePrintInState() bool {

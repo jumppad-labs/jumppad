@@ -290,7 +290,7 @@ func (d *DockerTasks) CreateContainer(c *resources.Container) (string, error) {
 
 		if net.Metadata().Type == resources.TypeContainer {
 			// find the id of the container
-			ids, err := d.FindContainerIDs(net.Metadata().Name, net.Metadata().Type)
+			ids, err := d.FindContainerIDs(utils.FQDN(net.Metadata().Name, net.Metadata().Module, net.Metadata().Type))
 			if err != nil {
 				return "", xerrors.Errorf("Unable to attach to container network, ID for container not found: %w", err)
 			}
@@ -314,7 +314,7 @@ func (d *DockerTasks) CreateContainer(c *resources.Container) (string, error) {
 		hc,
 		nc,
 		nil,
-		utils.FQDN(c.Name, string(c.Type)),
+		utils.FQDN(c.Name, c.Module, c.Type),
 	)
 	if err != nil {
 		return "", err
@@ -462,12 +462,10 @@ func (d *DockerTasks) PullImage(image resources.Image, force bool) error {
 }
 
 // FindContainerIDs returns the Container IDs for the given identifier
-func (d *DockerTasks) FindContainerIDs(containerName string, typeName string) ([]string, error) {
-	fullName := utils.FQDN(containerName, string(typeName))
-
+func (d *DockerTasks) FindContainerIDs(fqdn string) ([]string, error) {
 	args := filters.NewArgs()
 	// By default Docker will wildcard searches, use regex to return the absolute
-	args.Add("name", fmt.Sprintf("^%s$", fullName))
+	args.Add("name", fmt.Sprintf("^%s$", fqdn))
 
 	opts := types.ContainerListOptions{Filters: args, All: true}
 
@@ -807,7 +805,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 			}
 		}
 
-		err = d.CopyFileToContainer(utils.FQDN(cc.Name, string(cc.Type)), f, destPath)
+		err = d.CopyFileToContainer(utils.FQDN(cc.Name, "", cc.Type), f, destPath)
 		if err != nil {
 			return nil, fmt.Errorf("Unable to copy file %s to container: %s", f, err)
 		}

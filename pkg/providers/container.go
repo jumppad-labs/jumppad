@@ -7,6 +7,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config/resources"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 	"golang.org/x/xerrors"
 )
 
@@ -114,7 +115,7 @@ func (c *Container) Destroy() error {
 }
 
 func (c *Container) internalDestroy() error {
-	ids, err := c.client.FindContainerIDs(c.config.Name, c.config.Type)
+	ids, err := c.Lookup()
 	if err != nil {
 		return err
 	}
@@ -134,5 +135,5 @@ func (c *Container) internalDestroy() error {
 
 // Lookup the ID based on the config
 func (c *Container) Lookup() ([]string, error) {
-	return c.client.FindContainerIDs(c.config.Name, c.config.Type)
+	return c.client.FindContainerIDs(utils.FQDN(c.config.Name, c.config.Module, c.config.Type))
 }

@@ -3,6 +3,7 @@ package providers
 import (
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
@@ -74,7 +75,7 @@ func (c *NomadCluster) Destroy() error {
 func (c *NomadCluster) Lookup() ([]string, error) {
 	ids := []string{}
 
-	id, err := c.client.FindContainerIDs(fmt.Sprintf("server.%s", c.config.Name), c.config.Type)
+	id, err := c.client.FindContainerIDs(utils.FQDN(fmt.Sprintf("server.%s", c.config.Name), c.config.Module, c.config.Type))
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +84,7 @@ func (c *NomadCluster) Lookup() ([]string, error) {
 
 	// find the clients
 	for i := 0; i < c.config.ClientNodes; i++ {
-		id, err := c.client.FindContainerIDs(fmt.Sprintf("%d.client.%s", i+1, c.config.Name), c.config.Type)
+		id, err := c.client.FindContainerIDs(utils.FQDN(fmt.Sprintf("%d.client.%s", i+1, c.config.Name), c.config.Module, c.config.Type))
 		if err != nil {
 			return nil, err
 		}
@@ -99,7 +100,7 @@ func (c *NomadCluster) createNomad() error {
 
 	// check the client nodes do not already exist
 	for i := 0; i < c.config.ClientNodes; i++ {
-		ids, err := c.client.FindContainerIDs(fmt.Sprintf("%d.client.%s", i+1, c.config.Name), c.config.Type)
+		ids, err := c.client.FindContainerIDs(utils.FQDN(fmt.Sprintf("%d.client.%s", i+1, c.config.Name), c.config.Module, c.config.Type))
 		if len(ids) > 0 {
 			return fmt.Errorf("Client already exists")
 		}
@@ -110,7 +111,7 @@ func (c *NomadCluster) createNomad() error {
 	}
 
 	// check the server does not already exist
-	ids, err := c.client.FindContainerIDs(fmt.Sprintf("server.%s", c.config.Name), c.config.Type)
+	ids, err := c.client.FindContainerIDs(utils.FQDN(fmt.Sprintf("server.%s", c.config.Name), c.config.Module, c.config.Type))
 	if len(ids) > 0 {
 		return ErrClusterExists
 	}
@@ -144,7 +145,12 @@ func (c *NomadCluster) createNomad() error {
 		isClient = false
 	}
 
-	serverID, clusterConfig, configPath, err := c.createServerNode(image, volID, isClient)
+	// set the API server port to a random number
+	c.config.APIPort = rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
+	c.config.ConnectorPort = rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
+	c.config.ConfigDir = path.Join(utils.ShipyardHome(), c.config.Name, "config")
+
+	serverID, err := c.createServerNode(image, volID, isClient)
 	if err != nil {
 		return err
 	}
@@ -157,8 +163,8 @@ func (c *NomadCluster) createNomad() error {
 	var clientError error
 	for i := 0; i < c.config.ClientNodes; i++ {
 		// create client node asynchronously
-		go func(i int, image, volID, configPath, name string) {
-			clientID, err := c.createClientNode(i, image, volID, configPath, name)
+		go func(i int, image, volID, name string) {
+			clientID, err := c.createClientNode(i, image, volID, name)
 			if err != nil {
 				clientError = err
 			}
@@ -168,7 +174,7 @@ func (c *NomadCluster) createNomad() error {
 			cMutex.Unlock()
 
 			clWait.Done()
-		}(i+1, image, volID, configPath, utils.FQDN(fmt.Sprintf("server.%s", c.config.Name), string(resources.TypeNomadCluster)))
+		}(i+1, image, volID, utils.FQDN(fmt.Sprintf("server.%s", c.config.Name), c.config.Module, resources.TypeNomadCluster))
 	}
 
 	clWait.Wait()
@@ -177,7 +183,7 @@ func (c *NomadCluster) createNomad() error {
 	}
 
 	// ensure all client nodes are up
-	c.nomadClient.SetConfig(clusterConfig, string(utils.LocalContext))
+	c.nomadClient.SetConfig(c.config.Address, c.config.APIPort, c.config.Nodes+1)
 	err = c.nomadClient.HealthCheckAPI(startTimeout)
 	if err != nil {
 		return err
@@ -217,18 +223,7 @@ func (c *NomadCluster) createNomad() error {
 	return nil
 }
 
-func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (string, utils.ClusterConfig, string, error) {
-	// if the node count is 0 we are creating a combo client server
-	nodeCount := 1
-	if c.config.ClientNodes > 0 {
-		nodeCount = c.config.ClientNodes
-	}
-
-	conf, configDir := utils.GetClusterConfig(resources.TypeNomadCluster + "." + c.config.Name)
-
-	// add the nodecount to the config and save
-	conf.NodeCount = nodeCount
-	conf.Save(filepath.Join(configDir, "config.json"))
+func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (string, error) {
 
 	// generate the server config
 	sc := dataDir + "\n" + serverConfig
@@ -239,7 +234,7 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 	}
 
 	// write the nomad config to a file
-	serverConfigPath := path.Join(configDir, "server_config.hcl")
+	serverConfigPath := path.Join(c.config.ConfigDir, "server_config.hcl")
 	ioutil.WriteFile(serverConfigPath, []byte(sc), os.ModePerm)
 
 	// create the server
@@ -317,12 +312,12 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 	cc.Ports = []resources.Port{
 		resources.Port{
 			Local:    "4646",
-			Host:     fmt.Sprintf("%d", conf.APIPort),
+			Host:     fmt.Sprintf("%d", c.config.APIPort),
 			Protocol: "tcp",
 		},
 		resources.Port{
 			Local:    "19090",
-			Host:     fmt.Sprintf("%d", conf.ConnectorPort),
+			Host:     fmt.Sprintf("%d", c.config.ConnectorPort),
 			Protocol: "tcp",
 		},
 	}
@@ -330,23 +325,23 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 	cc.Env = map[string]string{}
 	err := c.appendProxyEnv(cc)
 	if err != nil {
-		return "", utils.ClusterConfig{}, "", err
+		return "", err
 	}
 
 	id, err := c.client.CreateContainer(cc)
 	if err != nil {
-		return "", utils.ClusterConfig{}, "", err
+		return "", err
 	}
 
-	return id, conf, configDir, nil
+	return id, nil
 }
 
-func (c *NomadCluster) createClientNode(index int, image, volumeID, configDir, serverID string) (string, error) {
+func (c *NomadCluster) createClientNode(index int, image, volumeID, serverID string) (string, error) {
 	// generate the client config
 	sc := dataDir + "\n" + fmt.Sprintf(clientConfig, serverID)
 
 	// write the default config to a file
-	clientConfigPath := path.Join(configDir, "client_config.hcl")
+	clientConfigPath := path.Join(c.config.ConfigDir, "client_config.hcl")
 	ioutil.WriteFile(clientConfigPath, []byte(sc), os.ModePerm)
 
 	// create the server
@@ -512,15 +507,14 @@ func (c *NomadCluster) destroyNomad() error {
 	}
 
 	// remove the config
-	_, path := utils.GetClusterConfig(string(c.config.Type) + "." + c.config.Name)
-	os.RemoveAll(path)
+	os.RemoveAll(c.config.ConfigDir)
 
 	return nil
 }
 
 func (c *NomadCluster) destroyNode(id string) error {
 	// FindContainerIDs works on absolute addresses, we need to append the server
-	ids, err := c.client.FindContainerIDs(id, c.config.Type)
+	ids, err := c.Lookup()
 	if err != nil {
 		return err
 	}

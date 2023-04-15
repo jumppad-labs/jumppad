@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
@@ -28,6 +29,8 @@ const k3sBaseImage = "shipyardrun/k3s"
 const k3sBaseVersion = "v1.23.12"
 
 var startTimeout = (300 * time.Second)
+
+//var startTimeout = (60 * time.Second)
 
 // K8sCluster defines a provider which can create Kubernetes clusters
 type K8sCluster struct {
@@ -66,7 +69,7 @@ func (c *K8sCluster) Destroy() error {
 
 // Lookup the a clusters current state
 func (c *K8sCluster) Lookup() ([]string, error) {
-	return c.client.FindContainerIDs(fmt.Sprintf("server.%s", c.config.Name), c.config.Type)
+	return c.client.FindContainerIDs(utils.FQDN(fmt.Sprintf("server.%s", c.config.Name), c.config.Module, c.config.Type))
 }
 
 func (c *K8sCluster) createK3s() error {
@@ -76,7 +79,7 @@ func (c *K8sCluster) createK3s() error {
 	c.log.Info("Creating Cluster", "ref", c.config.Name)
 
 	// check the cluster does not already exist
-	ids, err := c.client.FindContainerIDs(fmt.Sprintf("server.%s", c.config.Name), c.config.Type)
+	ids, err := c.Lookup()
 	if err != nil {
 		return err
 	}
@@ -108,7 +111,11 @@ func (c *K8sCluster) createK3s() error {
 	// since the server is just a container create the container config and provider
 	name := fmt.Sprintf("server.%s", c.config.Name)
 	cc := &resources.Container{
-		ResourceMetadata: types.ResourceMetadata{Name: name},
+		ResourceMetadata: types.ResourceMetadata{
+			Name:   name,
+			Type:   c.config.Type,
+			Module: c.config.Module,
+		},
 	}
 
 	cc.ParentConfig = c.config.Metadata().ParentConfig
@@ -147,14 +154,14 @@ func (c *K8sCluster) createK3s() error {
 
 	v, err := semver.NewVersion(c.config.Version)
 	if err != nil {
-		return fmt.Errorf("Kubernetes version is not valid semantic version: %s", err)
+		return fmt.Errorf("kubernetes version is not valid semantic version: %s", err)
 	}
 
 	if sv.Check(v) {
 		// load the CA from a file
 		ca, err := ioutil.ReadFile(filepath.Join(utils.CertsDir(""), "/root.cert"))
 		if err != nil {
-			return fmt.Errorf("Unable to read root CA for proxy: %s", err)
+			return fmt.Errorf("unable to read root CA for proxy: %s", err)
 		}
 
 		cc.Env["HTTP_PROXY"] = utils.HTTPProxyAddress()
@@ -169,7 +176,8 @@ func (c *K8sCluster) createK3s() error {
 	}
 
 	// set the API server port to a random number
-	clusterConfig, _ := utils.GetClusterConfig(string(resources.TypeK8sCluster) + "." + c.config.Name)
+	c.config.APIPort = rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
+	c.config.ConnectorPort = rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
 
 	// determine the snapshotter, if a storage driver other than overlay is used then
 	// snapshotter must be set to native or the container will not start
@@ -179,13 +187,16 @@ func (c *K8sCluster) createK3s() error {
 		snapShotter = "overlayfs"
 	}
 
+	// create the server address
+	FQDN := fmt.Sprintf("server.%s", utils.FQDN(c.config.Name, c.config.Module, c.config.Type))
+	c.config.Address = FQDN
+
 	// Set the default startup args
 	// Also set netfilter settings to fix behaviour introduced in Linux Kernel 5.12
 	// https://k3d.io/faq/faq/#solved-nodes-fail-to-start-or-get-stuck-in-notready-state-with-log-nf_conntrack_max-permission-denied
-	FQDN := fmt.Sprintf("server.%s", utils.FQDN(c.config.Name, string(c.config.Type)))
 	args := []string{
 		"server",
-		fmt.Sprintf("--https-listen-port=%d", clusterConfig.APIPort),
+		fmt.Sprintf("--https-listen-port=%d", c.config.APIPort),
 		"--kube-proxy-arg=conntrack-max-per-core=0",
 		"--no-deploy=traefik",
 		fmt.Sprintf("--snapshotter=%s", snapShotter),
@@ -195,18 +206,18 @@ func (c *K8sCluster) createK3s() error {
 	// expose the API server and Connector ports
 	cc.Ports = []resources.Port{
 		resources.Port{
-			Local:    fmt.Sprintf("%d", clusterConfig.APIPort),
-			Host:     fmt.Sprintf("%d", clusterConfig.APIPort),
+			Local:    fmt.Sprintf("%d", c.config.APIPort),
+			Host:     fmt.Sprintf("%d", c.config.APIPort),
 			Protocol: "tcp",
 		},
 		resources.Port{
-			Local:    fmt.Sprintf("%d", clusterConfig.ConnectorPort),
-			Host:     fmt.Sprintf("%d", clusterConfig.ConnectorPort),
+			Local:    fmt.Sprintf("%d", c.config.ConnectorPort),
+			Host:     fmt.Sprintf("%d", c.config.ConnectorPort),
 			Protocol: "tcp",
 		},
 		resources.Port{
-			Local:    fmt.Sprintf("%d", clusterConfig.ConnectorPort+1),
-			Host:     fmt.Sprintf("%d", clusterConfig.ConnectorPort+1),
+			Local:    fmt.Sprintf("%d", c.config.ConnectorPort+1),
+			Host:     fmt.Sprintf("%d", c.config.ConnectorPort+1),
 			Protocol: "tcp",
 		},
 	}
@@ -241,13 +252,7 @@ func (c *K8sCluster) createK3s() error {
 		return xerrors.Errorf("Error creating Local Kubernetes config: %w", err)
 	}
 
-	// create the Docker container version of the Kubeconfig
-	// the default KubeConfig has the server location https://localhost:port
-	// to use this config inside a docker container we need to use the FQDN for the server
-	err = c.createDockerKubeConfig(kc)
-	if err != nil {
-		return xerrors.Errorf("Error creating Docker Kubernetes config: %w", err)
-	}
+	c.config.KubeConfig = config
 
 	// wait for all the default pods like core DNS to start running
 	// before progressing
@@ -284,7 +289,7 @@ func (c *K8sCluster) createK3s() error {
 
 	// start the connectorService
 	c.log.Debug("Deploying connector")
-	return c.deployConnector(clusterConfig.ConnectorPort, clusterConfig.ConnectorPort+1)
+	return c.deployConnector(c.config.ConnectorPort, c.config.ConnectorPort+1)
 }
 
 func (c *K8sCluster) waitForStart(id string) error {
@@ -347,16 +352,6 @@ func (c *K8sCluster) createLocalKubeConfig(kubeconfig string) (string, error) {
 	}
 
 	return kubePath, nil
-}
-
-func (c *K8sCluster) createDockerKubeConfig(kubeconfig string) error {
-	_, _, dockerPath := utils.CreateKubeConfigPath(c.config.Name)
-
-	return c.changeServerAddressInK8sConfig(
-		fmt.Sprintf("https://server.%s", utils.FQDN(c.config.Name, string(c.config.Type))),
-		kubeconfig,
-		dockerPath,
-	)
 }
 
 func (c *K8sCluster) changeServerAddressInK8sConfig(addr, origFile, newFile string) error {
@@ -516,7 +511,7 @@ func (c *K8sCluster) ImportLocalDockerImages(name string, id string, images []re
 func (c *K8sCluster) destroyK3s() error {
 	c.log.Info("Destroy Cluster", "ref", c.config.Name)
 
-	ids, err := c.client.FindContainerIDs(fmt.Sprintf("server.%s", c.config.Name), c.config.Type)
+	ids, err := c.Lookup()
 	if err != nil {
 		return err
 	}
@@ -528,8 +523,8 @@ func (c *K8sCluster) destroyK3s() error {
 		}
 	}
 
-	_, path := utils.GetClusterConfig(string(c.config.Type) + "." + c.config.Name)
-	os.RemoveAll(path)
+	_, kubePath, _ := utils.CreateKubeConfigPath(c.config.Name)
+	os.RemoveAll(kubePath)
 
 	return nil
 }

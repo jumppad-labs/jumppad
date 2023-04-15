@@ -148,27 +148,27 @@ func getLoggable() ([]string, error) {
 
 		switch r.Metadata().Type {
 		case resources.TypeContainer:
-			loggable = append(loggable, utils.FQDN(r.Metadata().Name, string(r.Metadata().Type)))
+			loggable = append(loggable, utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type))
 		case resources.TypeK8sCluster:
-			loggable = append(loggable, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, string(r.Metadata().Type))))
+			loggable = append(loggable, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type)))
 		case resources.TypeNomadCluster:
-			loggable = append(loggable, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, string(r.Metadata().Type))))
+			loggable = append(loggable, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type)))
 
 			// add the client nodes
 			nomad := r.(*resources.NomadCluster)
 			for n := 0; n < nomad.ClientNodes; n++ {
-				loggable = append(loggable, fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Metadata().Name, string(r.Metadata().Type))))
+				loggable = append(loggable, fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type)))
 			}
 		case resources.TypeSidecar:
-			loggable = append(loggable, utils.FQDN(r.Metadata().Name, string(r.Metadata().Type)))
+			fallthrough
 		case resources.TypeK8sIngress:
-			loggable = append(loggable, utils.FQDN(r.Metadata().Name, string(r.Metadata().Type)))
+			fallthrough
 		case resources.TypeNomadIngress:
-			loggable = append(loggable, utils.FQDN(r.Metadata().Name, string(r.Metadata().Type)))
+			fallthrough
 		case resources.TypeContainerIngress:
-			loggable = append(loggable, utils.FQDN(r.Metadata().Name, string(r.Metadata().Type)))
+			fallthrough
 		case resources.TypeImageCache:
-			loggable = append(loggable, utils.FQDN(r.Metadata().Name, string(r.Metadata().Type)))
+			loggable = append(loggable, utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type))
 		}
 	}
 	return loggable, nil

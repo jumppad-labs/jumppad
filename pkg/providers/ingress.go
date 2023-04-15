@@ -6,14 +6,14 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"golang.org/x/xerrors"
 )
 
 // Ingress defines a provider for handling connection ingress for a cluster
 type Ingress struct {
-	config    *config.Ingress
+	config    *resources.Ingress
 	client    clients.ContainerTasks
 	connector clients.Connector
 	log       hclog.Logger
@@ -21,7 +21,7 @@ type Ingress struct {
 
 // NewIngress creates a new ingress provider
 func NewIngress(
-	c *config.Ingress,
+	c *resources.Ingress,
 	cc clients.ContainerTasks,
 	co clients.Connector,
 	l hclog.Logger) *Ingress {
@@ -66,7 +66,7 @@ func (c *Ingress) Lookup() ([]string, error) {
 
 func (c *Ingress) exposeLocal() error {
 	// get the target
-	_, err := c.config.FindDependentResource(c.config.Source.Config.Cluster)
+	r, err := c.config.ParentConfig.FindResource(c.config.Source.Config.Cluster)
 	if err != nil {
 		return err
 	}
@@ -88,9 +88,6 @@ func (c *Ingress) exposeLocal() error {
 			"ports 60000 and 60001 are reserved for internal use", remotePort)
 	}
 
-	// get the address of the remote connector from the target
-	clusterConfig, _ := utils.GetClusterConfig(c.config.Source.Config.Cluster)
-
 	if c.config.Destination.Config.Address == "" {
 		return xerrors.Errorf("The address config stanza field must be specified when type 'local'")
 	}
@@ -100,7 +97,7 @@ func (c *Ingress) exposeLocal() error {
 	// sanitize the name to make it uri format
 	serviceName, err := utils.ReplaceNonURIChars(c.config.Name)
 	if err != nil {
-		return xerrors.Errorf("Unable to repace non URI characters in service name %s :%w", c.config.Name, err)
+		return xerrors.Errorf("Unable to replace non URI characters in service name %s :%w", c.config.Name, err)
 	}
 
 	// send the request
@@ -108,20 +105,20 @@ func (c *Ingress) exposeLocal() error {
 		"Calling connector to expose local service",
 		"name", serviceName,
 		"remote_port", remotePort,
-		"connector_addr", clusterConfig.ConnectorAddress(utils.LocalContext),
+		"connector_addr", c.config,
 		"local_addr", destAddr,
 	)
 
 	id, err := c.connector.ExposeService(
 		serviceName,
 		remotePort,
-		clusterConfig.ConnectorAddress(utils.LocalContext),
+		fmt.Sprintf("%s:%d", r.(*resources.K8sCluster).Address, r.(*resources.K8sCluster).ConnectorPort),
 		destAddr,
 		"local",
 	)
 
 	if err != nil {
-		return xerrors.Errorf("Unable to expose local service to remote cluster :%w", err)
+		return xerrors.Errorf("unable to expose local service to remote cluster :%w", err)
 	}
 
 	c.log.Debug("Successfully exposed service", "id", id)
@@ -132,16 +129,13 @@ func (c *Ingress) exposeLocal() error {
 
 func (c *Ingress) exposeK8sRemote() error {
 	// get the target
-	res, err := c.config.FindDependentResource(c.config.Destination.Config.Cluster)
+	res, err := c.config.ParentConfig.FindResource(c.config.Destination.Config.Cluster)
 	if err != nil {
 		return err
 	}
 
-	// get the address of the remote connector from the target
-	clusterConfig, _ := utils.GetClusterConfig(string(res.Info().Type) + "." + res.Info().Name)
-
 	if c.config.Destination.Config.Address == "" {
-		return xerrors.Errorf("Config parameter 'address' is required for desinations of type 'k8s'")
+		return xerrors.Errorf("config parameter 'address' is required for destinations of type 'k8s'")
 	}
 
 	destAddr := fmt.Sprintf("%s:%s", c.config.Destination.Config.Address, c.config.Destination.Config.Port)
@@ -152,34 +146,36 @@ func (c *Ingress) exposeK8sRemote() error {
 	}
 
 	if localPort == 30001 || localPort == 30002 {
-		return fmt.Errorf("Unable to expose local service using remote port %d,"+
+		return fmt.Errorf("unable to expose local service using remote port %d,"+
 			"ports 30001 and 30002 are reserved for internal use", localPort)
 	}
 
 	// sanitize the name to make it uri format
 	serviceName, err := utils.ReplaceNonURIChars(c.config.Name)
 	if err != nil {
-		return xerrors.Errorf("Unable to repace non URI characters in service name %s :%w", c.config.Name, err)
+		return xerrors.Errorf("unable to replace non URI characters in service name %s :%w", c.config.Name, err)
 	}
+
+	connectorAddress := fmt.Sprintf("%s:%d", res.(*resources.K8sCluster).Address, res.(*resources.K8sCluster).ConnectorPort)
 
 	// send the request
 	c.log.Debug(
 		"Calling connector to expose remote service",
 		"name", serviceName,
 		"local_port", localPort,
-		"connector_addr", clusterConfig.ConnectorAddress(utils.LocalContext),
+		"connector_addr", connectorAddress,
 		"local_addr", destAddr,
 	)
 
 	id, err := c.connector.ExposeService(
 		serviceName,
 		localPort,
-		clusterConfig.ConnectorAddress(utils.LocalContext),
+		connectorAddress,
 		destAddr,
 		"remote")
 
 	if err != nil {
-		return xerrors.Errorf("Unable to remote cluster service to local machine :%w", err)
+		return xerrors.Errorf("unable to expose remote cluster service to local machine :%w", err)
 	}
 
 	c.log.Debug("Successfully exposed service", "id", id)

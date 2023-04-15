@@ -102,20 +102,17 @@ var statusCmd = &cobra.Command{
 						pendingCount++
 					}
 
-					res := fmt.Sprintf("%s.%s", r.Metadata().Type, r.Metadata().Name)
-					fqdn := utils.FQDN(r.Metadata().Name, string(r.Metadata().Type))
-
 					switch r.Metadata().Type {
 					case resources.TypeNomadCluster:
-						fmt.Printf("%-13s %-30s %s\n", status, res, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, string(r.Metadata().Type))))
+						fmt.Printf("%-13s %-30s %s\n", status, r.Metadata().ID, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, "", string(r.Metadata().Type))))
 
 						// add the client nodes
 						nomad := r.(*resources.NomadCluster)
 						for n := 0; n < nomad.ClientNodes; n++ {
-							fmt.Printf("%-13s %-30s %s\n", "", "", fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Metadata().Name, string(r.Metadata().Type))))
+							fmt.Printf("%-13s %-30s %s\n", "", "", fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Metadata().Name, "", r.Metadata().Type)))
 						}
 					case resources.TypeK8sCluster:
-						fmt.Printf("%-13s %-30s %s\n", status, res, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, string(r.Metadata().Type))))
+						fmt.Printf("%-13s %-30s %s\n", status, r.Metadata().ID, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, "", r.Metadata().Type)))
 					case resources.TypeContainer:
 						fallthrough
 					case resources.TypeSidecar:
@@ -127,9 +124,9 @@ var statusCmd = &cobra.Command{
 					case resources.TypeContainerIngress:
 						fallthrough
 					case resources.TypeImageCache:
-						fmt.Printf("%-13s %-30s %s\n", status, res, fqdn)
+						fmt.Printf("%-13s %-30s %s\n", status, r.Metadata().ID)
 					default:
-						fmt.Printf("%-13s %-30s %s\n", status, res, "")
+						fmt.Printf("%-13s %-30s %s\n", status, r.Metadata().ID)
 					}
 				}
 			}

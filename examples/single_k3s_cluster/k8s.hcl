@@ -13,5 +13,5 @@ resource "k8s_cluster" "k3s" {
 }
 
 output "KUBECONFIG" {
-  value = resource.k8s_cluster.k3s.k8s_config
+  value = resource.k8s_cluster.k3s.kubeconfig
 }

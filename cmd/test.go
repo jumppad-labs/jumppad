@@ -335,7 +335,7 @@ func (cr *CucumberRunner) theFollowingResourcesShouldBeRunning(arg1 *godog.Table
 }
 
 func (cr *CucumberRunner) thereShouldBeAResourceRunningCalled(resource string, name string) error {
-	fqdn := utils.FQDN(name, resource)
+	fqdn := utils.FQDN(name, "", resource)
 
 	// ensure that the container starts and stays running,
 	// we use checkcount to test multiple times before passing
@@ -518,7 +518,7 @@ func (cr *CucumberRunner) theShipyardVariableKHasAValueV(key, value string) erro
 	return nil
 }
 
-//ctx.Step(`^the info "([^"]*)" for the running "([^"]*)" running called "([^"]*)" should equal "([^"]*)"$`, cr.theContainerInfoShouldContainer)
+// ctx.Step(`^the info "([^"]*)" for the running "([^"]*)" running called "([^"]*)" should equal "([^"]*)"$`, cr.theContainerInfoShouldContainer)
 func (cr *CucumberRunner) theResourceInfoShouldContain(path, resource, name, value string) error {
 	s, err := cr.getJSONPath(path, resource, name)
 	if err != nil {
@@ -694,7 +694,7 @@ func (cr *CucumberRunner) executeCommand(cmd string) error {
 }
 
 func (cr *CucumberRunner) getJSONPath(path, resource, name string) (string, error) {
-	fqdn := utils.FQDN(name, resource)
+	fqdn := utils.FQDN(name, "", resource)
 	ci, err := cr.e.GetClients().Docker.ContainerInspect(context.Background(), fqdn)
 	if err != nil {
 		return "", err
