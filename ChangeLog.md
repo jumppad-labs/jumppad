@@ -1,5 +1,11 @@
 # Change Log
 
+## version v0.5.1
+* Fix bug in Kubernetes where the proxy was incorrectly handling logs requests
+* Update Kubernetes default to v1.26.3, support versions v1.24 and above
+* Update Docs container to 0.6.3
+* Add notice to 'run' command announcing Shipyard rename to JumpPad
+
 ## version v0.4.14
 * Fix bug in latest Kubernetes release where DNS san for certificate did not contain the fully qualified name of the server
 

@@ -13,7 +13,7 @@ import (
 )
 
 const docsImageName = "shipyardrun/docs"
-const docsVersion = "v0.5.1"
+const docsVersion = "v0.6.3"
 
 // Docs defines a provider for creating documentation containers
 type Docs struct {
