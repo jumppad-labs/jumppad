@@ -24,7 +24,7 @@ import (
 // https://github.com/rancher/k3d/blob/master/cli/commands.go
 
 const k3sBaseImage = "shipyardrun/k3s"
-const k3sBaseVersion = "v1.23.12"
+const k3sBaseVersion = "v1.26.3"
 
 var startTimeout = (300 * time.Second)
 
@@ -131,7 +131,6 @@ func (c *K8sCluster) createK3s() error {
 
 	// set the environment variables for the K3S_KUBECONFIG_OUTPUT and K3S_CLUSTER_SECRET
 	cc.EnvVar["K3S_KUBECONFIG_OUTPUT"] = "/output/kubeconfig.yaml"
-	cc.EnvVar["K3S_CLUSTER_SECRET"] = "mysupersecret"
 
 	// only add the variables for the cache when the kubernetes version is >= v1.18.16
 	sv, err := semver.NewConstraint(">= v1.18.16")
@@ -189,6 +188,25 @@ func (c *K8sCluster) createK3s() error {
 		snapShotter = "overlayfs"
 	}
 
+	// only add the variables for the cache when the kubernetes version is >= v1.18.16
+	sv, err = semver.NewConstraint(">= v1.25.0")
+	if err != nil {
+		// Handle constraint not being parsable.
+		return err
+	}
+
+	diableArgs := "--no-deploy=traefik"
+	clusterToken := ""
+
+	if sv.Check(v) {
+		diableArgs = "--disable=traefik"
+		clusterToken = "--token=mysupersecret"
+	} else {
+		// add the cluster secret as an env this is deprecated in v1.25 and
+		// replaced with --token
+		cc.EnvVar["K3S_CLUSTER_SECRET"] = "mysupersecret"
+	}
+
 	// Set the default startup args
 	// Also set netfilter settings to fix behaviour introduced in Linux Kernel 5.12
 	// https://k3d.io/faq/faq/#solved-nodes-fail-to-start-or-get-stuck-in-notready-state-with-log-nf_conntrack_max-permission-denied
@@ -197,9 +215,10 @@ func (c *K8sCluster) createK3s() error {
 		"server",
 		fmt.Sprintf("--https-listen-port=%d", clusterConfig.APIPort),
 		"--kube-proxy-arg=conntrack-max-per-core=0",
-		"--no-deploy=traefik",
+		diableArgs,
 		fmt.Sprintf("--snapshotter=%s", snapShotter),
 		fmt.Sprintf("--tls-san=%s", FQDN),
+		clusterToken,
 	}
 
 	// expose the API server and Connector ports

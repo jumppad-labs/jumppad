@@ -326,6 +326,17 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 			}
 		}
 
+		cmd.Println("")
+		cmd.Println("Shipyard will soon be renamed to JumpPad!")
+		cmd.Println("")
+		cmd.Println("As Shipyard gets ready to move to version 1.0, we are adding a whole")
+		cmd.Println("set of new features, which unavoidably will involve breaking changes.")
+		cmd.Println("")
+		cmd.Println("With version 1.0 shipyard configuration will be able to reference")
+		cmd.Println("other resource parameters as you currently can with variables.")
+		cmd.Println("Not only does this add automatic dependency management, but, it")
+		cmd.Println("enables you to write better and more feature rich reusable modules.")
+
 		return nil
 	}
 }

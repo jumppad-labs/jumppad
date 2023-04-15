@@ -121,7 +121,6 @@ func TestClusterK3SetsEnvironment(t *testing.T) {
 	proxyByPass := utils.ProxyBypass + ",10.0.0.0/24"
 
 	assert.Equal(t, params.EnvVar["K3S_KUBECONFIG_OUTPUT"], "/output/kubeconfig.yaml")
-	assert.Equal(t, params.EnvVar["K3S_CLUSTER_SECRET"], "mysupersecret")
 	assert.Equal(t, params.EnvVar["HTTP_PROXY"], utils.HTTPProxyAddress())
 	assert.Equal(t, params.EnvVar["HTTPS_PROXY"], utils.HTTPSProxyAddress())
 	assert.Equal(t, params.EnvVar["NO_PROXY"], proxyByPass)
@@ -238,6 +237,19 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 	assert.GreaterOrEqual(t, hostPort2, 30000)
 	assert.Equal(t, "tcp", params.Ports[2].Protocol)
 
+}
+
+func TestClusterK3RunsCommandsWhenK3sVersion24AndBelow(t *testing.T) {
+	cc, md, mk, mc := setupClusterMocks(t)
+
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
+	p.config.Version = "v1.24.0"
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+
 	// validate the command
 	assert.Equal(t, "server", params.Command[0])
 	assert.Contains(t, params.Command[1], params.Ports[0].Local)
@@ -245,6 +257,33 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 	assert.Contains(t, params.Command[3], "--no-deploy=traefik")
 	assert.Contains(t, params.Command[4], "--snapshotter=overlayfs")
 	assert.Contains(t, params.Command[5], "--tls-san=server.test.k8s-cluster.shipyard.run")
+
+	// should also have an environment variable for the secrets
+	assert.Equal(t, params.EnvVar["K3S_CLUSTER_SECRET"], "mysupersecret")
+}
+
+func TestClusterK3RunsCommandsWhenK3sVersion25AndAbove(t *testing.T) {
+	cc, md, mk, mc := setupClusterMocks(t)
+
+	p := NewK8sCluster(cc, md, mk, nil, mc, hclog.NewNullLogger())
+	p.config.Version = "v1.25.0"
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+
+	// validate the command
+	assert.Equal(t, "server", params.Command[0])
+	assert.Contains(t, params.Command[1], params.Ports[0].Local)
+	assert.Contains(t, params.Command[2], "--kube-proxy-arg=conntrack-max-per-core=0")
+	assert.Contains(t, params.Command[3], "--disable=traefik")
+	assert.Contains(t, params.Command[4], "--snapshotter=overlayfs")
+	assert.Contains(t, params.Command[5], "--tls-san=server.test.k8s-cluster.shipyard.run")
+	assert.Contains(t, params.Command[6], "--token=mysupersecret")
+
+	// should not set environment variable for the secrets
+	assert.Equal(t, params.EnvVar["K3S_CLUSTER_SECRET"], "")
 }
 
 func TestClusterK3CreatesAServerWithAdditionalPorts(t *testing.T) {
