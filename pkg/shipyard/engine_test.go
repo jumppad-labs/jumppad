@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/hclconfig"
 	"github.com/shipyard-run/hclconfig/types"
+	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"github.com/shipyard-run/shipyard/pkg/providers"
 	"github.com/shipyard-run/shipyard/pkg/providers/mocks"
@@ -39,7 +40,7 @@ func setupTestsBase(t *testing.T, returnVals map[string]error, state string) (*E
 
 	p := &[]*mocks.MockProvider{}
 
-	cl := &Clients{}
+	cl := &clients.Clients{}
 	e := &EngineImpl{
 		clients:     cl,
 		log:         hclog.NewNullLogger(),
@@ -82,9 +83,7 @@ func setupState(t *testing.T, state string) {
 }
 
 func generateProviderMock(mp *[]*mocks.MockProvider, returnVals map[string]error) getProviderFunc {
-	return func(c types.Resource, cc *Clients) providers.Provider {
-		fmt.Println("create provider for", c.Metadata().Name, "error", returnVals[c.Metadata().Name])
-
+	return func(c types.Resource, cc *clients.Clients) providers.Provider {
 		lock.Lock()
 		defer lock.Unlock()
 
@@ -109,10 +108,10 @@ func getTestFiles(tests string) string {
 }
 
 func testLoadState(t *testing.T, e *EngineImpl) *hclconfig.Config {
-	err := e.loadState()
+	c, err := resources.LoadState()
 	require.NoError(t, err)
 
-	return e.config
+	return c
 }
 
 func TestNewCreatesClients(t *testing.T) {
@@ -138,21 +137,26 @@ func TestApplyWithSingleFile(t *testing.T) {
 	_, err := e.Apply("../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
-	require.Len(t, e.config.Resources, 4)
+	require.Len(t, e.config.Resources, 5)
 
 	// Because of the DAG both network and template are top level resources
 	require.ElementsMatch(t,
 		[]string{
+			"default",
 			"onprem",
+			"default",
 			"consul_config",
 		},
 		[]string{
 			(*mp)[0].Config().Metadata().Name,
 			(*mp)[1].Config().Metadata().Name,
+			(*mp)[2].Config().Metadata().Name,
+			(*mp)[3].Config().Metadata().Name,
 		},
 	)
 
-	require.Equal(t, "consul", (*mp)[2].Config().Metadata().Name)
+	require.Equal(t, "consul", (*mp)[4].Config().Metadata().Name)
+	require.Equal(t, "consul_addr", (*mp)[5].Config().Metadata().Name)
 }
 
 func TestApplyAddsImageCache(t *testing.T) {
@@ -170,18 +174,17 @@ func TestApplyWithSingleFileAndVariables(t *testing.T) {
 
 	_, err := e.ApplyWithVariables("../../examples/single_file/container.hcl", nil, "../../examples/single_file/default.vars")
 	require.NoError(t, err)
-
-	// network should have been created with the name 'onprem'
-	// template should also be created,
-	// and also the image cache, all of these are top level items
-	require.Contains(t, []string{"onprem", "consul_config"}, (*mp)[0].Config().Metadata().Name)
-	require.Contains(t, []string{"onprem", "consul_config"}, (*mp)[1].Config().Metadata().Name)
+	require.Len(t, e.config.Resources, 5)
 
 	// then the container should be created
-	require.Equal(t, "consul", (*mp)[2].Config().Metadata().Name)
+	require.Equal(t, "consul", (*mp)[4].Config().Metadata().Name)
 
 	// finally the provider for the image cache should be updated
-	require.Equal(t, "default", (*mp)[3].Config().Metadata().Name)
+	require.Equal(t, "consul_addr", (*mp)[5].Config().Metadata().Name)
+
+	// check the variable has overridden the image
+	cont := (*mp)[4].Config().(*resources.Container)
+	require.Equal(t, "consul:1.8.1", cont.Image.Name)
 }
 
 func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
@@ -191,27 +194,28 @@ func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
 	require.NoError(t, err)
 
 	// should have call create for each resource in the config
-	// and once for ImageCache that is manually added
-	testAssertMethodCalled(t, mp, "Create", 9)
+	// and twice for ImageCache that is manually added.
+	// the provider for image cache is called once for the initial creation
+	// and once for each network
+	testAssertMethodCalled(t, mp, "Create", 11)
 
-	// the state should also contain 9 resources
+	// the state should also contain 10 resources
 	sf := testLoadState(t, e)
-	require.Equal(t, 9, sf.ResourceCount())
+	require.Equal(t, 10, sf.ResourceCount())
 }
 
 func TestApplyDoesNotCallsProviderCreateWhenInState(t *testing.T) {
-	e, mp := setupTests(t, nil)
+	e, mp := setupTestsWithState(t, nil, existingState)
 
-	_, err := e.Apply("../../examples/single_k3s_cluster")
+	_, err := e.Apply("../../examples/single_file")
 	require.NoError(t, err)
 
-	// should have call create for each resource in the config
-	// and once for ImageCache that is manually added
-	testAssertMethodCalled(t, mp, "Create", 9)
+	// should only be called for resources that are not in the state
+	testAssertMethodCalled(t, mp, "Create", 4)
 
-	// the state should also contain 9 resources
+	// the state should also contain 7 resources
 	sf := testLoadState(t, e)
-	require.Equal(t, 9, sf.ResourceCount())
+	require.Equal(t, 7, sf.ResourceCount())
 }
 
 func TestApplyNotCallsProviderCreateForDisabledResources(t *testing.T) {
@@ -244,7 +248,7 @@ func TestApplyShouldNotAddDuplicateDisabledResources(t *testing.T) {
 	require.NoError(t, err)
 
 	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Create", 2) // ImageCache is always created
+	testAssertMethodCalled(t, mp, "Create", 1) // ImageCache is always created
 
 	// disabled resources should still be added to the state
 	sf := testLoadState(t, e)
@@ -266,10 +270,10 @@ func TestApplySetsCreatedStatusForEachResource(t *testing.T) {
 	_, err := e.Apply("../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
-	require.Equal(t, 4, e.config.ResourceCount())
+	require.Equal(t, 5, e.config.ResourceCount())
 
 	// should only call create and destroy for the cache as this is pending update
-	testAssertMethodCalled(t, mp, "Create", 4) // ImageCache is always created
+	testAssertMethodCalled(t, mp, "Create", 6) // ImageCache is always created
 
 	sf := testLoadState(t, e)
 
@@ -323,7 +327,7 @@ func TestApplyCallsProviderDestroyAndCreateForFailedResources(t *testing.T) {
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1)
-	testAssertMethodCalled(t, mp, "Create", 4) // ImageCache is always created
+	testAssertMethodCalled(t, mp, "Create", 6) // ImageCache is always created
 }
 
 func TestApplyCallsProviderDestroyForTaintedResources(t *testing.T) {
@@ -334,7 +338,7 @@ func TestApplyCallsProviderDestroyForTaintedResources(t *testing.T) {
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1)
-	testAssertMethodCalled(t, mp, "Create", 4) // ImageCache is always created
+	testAssertMethodCalled(t, mp, "Create", 6) // ImageCache is always created
 }
 
 func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
@@ -394,7 +398,7 @@ func TestParseConfig(t *testing.T) {
 	r, err := e.ParseConfig("../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
-	require.Len(t, r, 3)
+	require.Len(t, r, 4)
 
 	// should not have crated any providers
 	testAssertMethodCalled(t, mp, "Create", 0)
@@ -407,7 +411,7 @@ func TestParseWithVariables(t *testing.T) {
 	r, err := e.ParseConfigWithVariables("../../examples/single_file/container.hcl", nil, "../../examples/single_file/default.vars")
 	require.NoError(t, err)
 
-	require.Len(t, r, 3)
+	require.Len(t, r, 4)
 
 	// should not have crated any providers
 	testAssertMethodCalled(t, mp, "Create", 0)
@@ -477,21 +481,21 @@ var existingState = `
       "type": "network"
 	},
 	{
-      "name": "image-cache",
+      "name": "default",
       "properties": {
 				"status": "created"
 			},
       "type": "image_cache"
 	},
 	{
-      "name": "mycontainer",
+      "name": "container",
       "properties": {
 				"status": "created"
 			},
       "type": "container"
 	},
 	{
-      "name": "mytemplate",
+      "name": "consul_config",
       "properties": {
 				"status": "created"
 			},
@@ -513,7 +517,7 @@ var complexState = `
       "type": "network"
 	},
 	{
-      "name": "image-cache",
+      "name": "default",
       "type": "image_cache",
       "properties": {
 				"status": "created"
@@ -544,7 +548,7 @@ var disabledState = `
   "blueprint": null,
   "resources": [
 	{
-      "name": "image-cache",
+      "name": "default",
       "status": "created",
       "type": "image_cache"
 	},
