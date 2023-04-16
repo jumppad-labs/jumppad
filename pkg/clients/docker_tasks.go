@@ -1093,7 +1093,30 @@ func (d *DockerTasks) AttachNetwork(net, containerid string, aliases []string, i
 
 // ListNetworks lists the networks a container is attached to
 func (d *DockerTasks) ListNetworks(id string) []resources.NetworkAttachment {
-	return nil
+	nets, _ := d.c.NetworkList(context.Background(), types.NetworkListOptions{})
+
+	attachments := []resources.NetworkAttachment{}
+	for _, n := range nets {
+		// get the network destails
+		n, err := d.c.NetworkInspect(context.Background(), n.ID, types.NetworkInspectOptions{})
+
+		if err == nil {
+			// loop the network and find an address
+			for k, c := range n.Containers {
+				if k == id {
+					att := resources.NetworkAttachment{}
+
+					att.ID = n.Labels["id"]
+					att.Name = n.Name
+					att.AssignedAddress = c.IPv4Address
+
+					attachments = append(attachments, att)
+				}
+			}
+		}
+	}
+
+	return attachments
 }
 
 // DetachNetwork detaches a container from a network

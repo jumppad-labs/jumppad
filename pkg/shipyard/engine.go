@@ -163,7 +163,7 @@ func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]strin
 	// load the state
 	c, err := resources.LoadState()
 	if err != nil {
-		e.log.Warn("unable to load state", "error", err)
+		e.log.Debug("unable to load state", "error", err)
 	}
 
 	e.config = c
@@ -202,7 +202,7 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 	// load the state
 	c, err := resources.LoadState()
 	if err != nil {
-		e.log.Warn("unable to load state", "error", err)
+		e.log.Debug("unable to load state", "error", err)
 	}
 	e.config = c
 
@@ -365,6 +365,10 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 
 // appends disabled resources in the given config to the engines config
 func (e *EngineImpl) appendDisabledResources(c *hclconfig.Config) error {
+	if c == nil {
+		return nil
+	}
+
 	for _, r := range c.Resources {
 		if r.Metadata().Disabled {
 			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusDisabled
@@ -394,14 +398,14 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 		return fmt.Errorf("unable to create provider for resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
 	}
 
-	if r.Metadata().Type == types.TypeOutput {
-		// throw away any existing outputs and allow them to be re-created
-		e.config.RemoveResource(r)
-	} else {
-		// we need to check if a resource exists in the state, if so the status
-		// should take precedence as all new resources will have an empty state
-		sr, err := e.config.FindResource(r.Metadata().ID)
-		if err == nil {
+	// we need to check if a resource exists in the state, if so the status
+	// should take precedence as all new resources will have an empty state
+	sr, err := e.config.FindResource(r.Metadata().ID)
+	if err == nil {
+		// always taint output types so they are recreated
+		if sr.Metadata().Type == types.TypeOutput {
+			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusTainted
+		} else {
 			// if the state is created do nothing
 			if sr.Metadata().Properties[constants.PropertyStatus] == constants.StatusCreated {
 				return nil

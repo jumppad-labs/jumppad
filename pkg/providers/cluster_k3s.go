@@ -76,7 +76,7 @@ func (c *K8sCluster) createK3s() error {
 	// create a named log
 	c.log = c.log.Named(c.config.Name)
 
-	c.log.Info("Creating Cluster", "ref", c.config.Name)
+	c.log.Info("Creating Cluster", "ref", c.config.ID)
 
 	// check the cluster does not already exist
 	ids, err := c.Lookup()
@@ -238,10 +238,24 @@ func (c *K8sCluster) createK3s() error {
 		return err
 	}
 
+	// get the assigned ip addresses for the container
+	// and set that to the config
+	dc := c.client.ListNetworks(id)
+	for _, n := range dc {
+		c.log.Info("network", "net", n)
+		for i, net := range c.config.Networks {
+			if net.ID == n.ID {
+				// set the assigned address and name
+				c.config.Networks[i].AssignedAddress = n.AssignedAddress
+				c.config.Networks[i].Name = n.Name
+			}
+		}
+	}
+
 	// get the Kubernetes config file and drop it in a temp folder
 	kc, err := c.copyKubeConfig(id)
 	if err != nil {
-		return xerrors.Errorf("Error copying Kubernetes config: %w", err)
+		return xerrors.Errorf("unable to copy Kubernetes config: %w", err)
 	}
 
 	// replace the server location in the kubeconfig file
@@ -249,7 +263,7 @@ func (c *K8sCluster) createK3s() error {
 	// we need to do this as Shipyard might be using a remote Docker engine
 	config, err := c.createLocalKubeConfig(kc)
 	if err != nil {
-		return xerrors.Errorf("Error creating Local Kubernetes config: %w", err)
+		return xerrors.Errorf("unable to create local Kubernetes config: %w", err)
 	}
 
 	c.config.KubeConfig = config
@@ -269,13 +283,13 @@ func (c *K8sCluster) createK3s() error {
 		// fetch the logs from the container before exit
 		lr, lerr := c.client.ContainerLogs(id, true, true)
 		if lerr != nil {
-			c.log.Error("Unable to get logs from container", "error", lerr)
+			c.log.Error("unable to get logs from container", "error", lerr)
 		}
 
 		// copy the logs to the output
 		io.Copy(c.log.StandardWriter(&hclog.StandardLoggerOptions{}), lr)
 
-		return xerrors.Errorf("Error while waiting for Kubernetes default pods: %w", err)
+		return xerrors.Errorf("timeout waiting for Kubernetes default pods: %w", err)
 	}
 
 	// import the images to the servers container d instance
@@ -283,7 +297,7 @@ func (c *K8sCluster) createK3s() error {
 	if c.config.Images != nil && len(c.config.Images) > 0 {
 		err := c.ImportLocalDockerImages(utils.ImageVolumeName, id, c.config.Images, false)
 		if err != nil {
-			return xerrors.Errorf("Error importing Docker images: %w", err)
+			return xerrors.Errorf("unable to importing Docker images: %w", err)
 		}
 	}
 
@@ -299,14 +313,14 @@ func (c *K8sCluster) waitForStart(id string) error {
 		// not running after timeout exceeded? Rollback and delete everything.
 		if startTimeout != 0 && time.Now().After(start.Add(startTimeout)) {
 			//deleteCluster()
-			return errors.New("Cluster creation exceeded specified timeout")
+			return errors.New("cluster creation exceeded specified timeout")
 		}
 
 		// scan container logs for a line that tells us that the required services are up and running
 		out, err := c.client.ContainerLogs(id, true, true)
 		if err != nil {
 			out.Close()
-			return fmt.Errorf("Couldn't get docker logs for %s\n%+v", id, err)
+			return fmt.Errorf("unable to get docker logs for %s\n%+v", id, err)
 		}
 
 		// read from the log and check for Kublet running
@@ -364,7 +378,7 @@ func (c *K8sCluster) changeServerAddressInK8sConfig(addr, origFile, newFile stri
 
 	readBytes, err := ioutil.ReadAll(f)
 	if err != nil {
-		return fmt.Errorf("Couldn't read kubeconfig, %v", err)
+		return fmt.Errorf("unable to read kubeconfig, %v", err)
 	}
 
 	// manipulate the file
@@ -377,7 +391,7 @@ func (c *K8sCluster) changeServerAddressInK8sConfig(addr, origFile, newFile stri
 
 	kubeconfigfile, err := os.Create(newFile)
 	if err != nil {
-		return fmt.Errorf("Couldn't create kubeconfig file %s\n%+v", newFile, err)
+		return fmt.Errorf("could not create kubeconfig file %s\n%+v", newFile, err)
 	}
 
 	defer kubeconfigfile.Close()
@@ -392,7 +406,7 @@ func (c *K8sCluster) deployConnector(grpcPort, httpPort int) error {
 	// generate the certificates for the service
 	cb, err := c.connector.GetLocalCertBundle(utils.CertsDir(""))
 	if err != nil {
-		return fmt.Errorf("Unable to fetch root certificates for ingress: %s", err)
+		return fmt.Errorf("unable to fetch root certificates for ingress: %s", err)
 	}
 
 	// generate the leaf certificates ensuring that we add
@@ -409,13 +423,13 @@ func (c *K8sCluster) deployConnector(grpcPort, httpPort int) error {
 	)
 
 	if err != nil {
-		return fmt.Errorf("Unable to generate leaf certificates for ingress: %s", err)
+		return fmt.Errorf("unable to generate leaf certificates for ingress: %s", err)
 	}
 
 	// create a temp directory to write config to
 	dir, err := ioutil.TempDir("", "")
 	if err != nil {
-		return fmt.Errorf("Unable to create temporary directory: %s", err)
+		return fmt.Errorf("unable to create temporary directory: %s", err)
 	}
 
 	defer os.RemoveAll(dir)
@@ -426,21 +440,21 @@ func (c *K8sCluster) deployConnector(grpcPort, httpPort int) error {
 	c.log.Debug("Writing namespace config", "file", files[0])
 	err = writeConnectorNamespace(files[0])
 	if err != nil {
-		return fmt.Errorf("Unable to create namespace for connector: %s", err)
+		return fmt.Errorf("unable to create namespace for connector: %s", err)
 	}
 
 	files = append(files, path.Join(dir, "secret.yaml"))
 	c.log.Debug("Writing secret config", "file", files[1])
 	writeConnectorK8sSecret(files[1], lf.RootCertPath, lf.LeafKeyPath, lf.LeafCertPath)
 	if err != nil {
-		return fmt.Errorf("Unable to create secret for connector: %s", err)
+		return fmt.Errorf("unable to create secret for connector: %s", err)
 	}
 
 	files = append(files, path.Join(dir, "rbac.yaml"))
 	c.log.Debug("Writing RBAC config", "file", files[2])
 	writeConnectorRBAC(files[2])
 	if err != nil {
-		return fmt.Errorf("Unable to create RBAC for connector: %s", err)
+		return fmt.Errorf("unable to create RBAC for connector: %s", err)
 	}
 
 	// get the log level from the environment variable
@@ -453,19 +467,19 @@ func (c *K8sCluster) deployConnector(grpcPort, httpPort int) error {
 	c.log.Debug("Writing deployment config", "file", files[3])
 	writeConnectorDeployment(files[3], grpcPort, httpPort, ll)
 	if err != nil {
-		return fmt.Errorf("Unable to create deployment for connector: %s", err)
+		return fmt.Errorf("unable to create deployment for connector: %s", err)
 	}
 
 	// deploy the application config
 	err = c.kubeClient.Apply(files, true)
 	if err != nil {
-		return fmt.Errorf("Unable to apply configuration: %s", err)
+		return fmt.Errorf("unable to apply configuration: %s", err)
 	}
 
 	// wait for it to start
 	c.kubeClient.HealthCheckPods([]string{"app=connector"}, 60*time.Second)
 	if err != nil {
-		return fmt.Errorf("Error waiting for connector to start: %s", err)
+		return fmt.Errorf("timeout waiting for connector to start: %s", err)
 	}
 
 	return nil

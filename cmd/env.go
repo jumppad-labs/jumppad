@@ -2,15 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"runtime"
 	"strings"
 
-	"github.com/shipyard-run/hclconfig"
 	"github.com/shipyard-run/hclconfig/types"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
-	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -43,18 +41,10 @@ func newEnvCmd(e shipyard.Engine) *cobra.Command {
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			o := hclconfig.DefaultOptions()
-			p := hclconfig.NewParser(o)
-
-			d, err := ioutil.ReadFile(utils.StatePath())
+			// load the stack
+			c, err := resources.LoadState()
 			if err != nil {
-				fmt.Println("Unable to load state", err)
-				os.Exit(1)
-			}
-
-			c, err := p.UnmarshalJSON(d)
-			if err != nil {
-				fmt.Println("Unable to unmarshal state", err)
+				cmd.Println("Error: Unable to load state, ", err)
 				os.Exit(1)
 			}
 
@@ -73,6 +63,10 @@ func newEnvCmd(e shipyard.Engine) *cobra.Command {
 			for _, r := range c.Resources {
 				if r.Metadata().Type == types.TypeOutput {
 					if r.Metadata().Disabled {
+						continue
+					}
+
+					if r.Metadata().Module != "" {
 						continue
 					}
 

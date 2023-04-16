@@ -41,6 +41,8 @@ type Docker interface {
 	CopyFromContainer(ctx context.Context, containerID, srcPath string) (io.ReadCloser, types.ContainerPathStat, error)
 
 	NetworkList(ctx context.Context, options types.NetworkListOptions) ([]types.NetworkResource, error)
+	NetworkInspect(ctx context.Context, networkID string, options types.NetworkInspectOptions) (types.NetworkResource, error)
+
 	NetworkCreate(ctx context.Context, name string, options types.NetworkCreate) (types.NetworkCreateResponse, error)
 	NetworkRemove(ctx context.Context, networkID string) error
 	NetworkConnect(ctx context.Context, networkID, containerID string, config *network.EndpointSettings) error
@@ -57,7 +59,7 @@ type Docker interface {
 	ImageBuild(ctx context.Context, buildContext io.Reader, options types.ImageBuildOptions) (types.ImageBuildResponse, error)
 
 	ServerVersion(ctx context.Context) (types.Version, error)
-  Info(ctx context.Context) (types.Info, error)
+	Info(ctx context.Context) (types.Info, error)
 }
 
 // NewDocker creates a new Docker client

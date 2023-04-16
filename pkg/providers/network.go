@@ -28,7 +28,7 @@ func NewNetwork(co *resources.Network, cl clients.Docker, l hclog.Logger) *Netwo
 
 // Create implements the provider interface method for creating new networks
 func (n *Network) Create() error {
-	n.log.Info("Creating Network", "ref", n.config.Name)
+	n.log.Info("Creating Network", "ref", n.config.ID)
 
 	// validate the subnet
 	_, cidr, err := net.ParseCIDR(n.config.Subnet)
@@ -48,7 +48,7 @@ func (n *Network) Create() error {
 			for _, ci := range ne.IPAM.Config {
 				// check that the returned networks subnet matches the existing networks subnet
 				if ci.Subnet != n.config.Subnet {
-					n.log.Debug("Network already exists, skip creation", "ref", n.config.Name)
+					n.log.Debug("Network already exists, skip creation", "ref", n.config.ID)
 					return nil
 				}
 			}
@@ -96,6 +96,10 @@ func (n *Network) createWithDriver(driver string) error {
 					Subnet: n.config.Subnet,
 				},
 			},
+		},
+		Labels: map[string]string{
+			"created_by": "shipyard",
+			"id":         n.config.ID,
 		},
 		Attachable: true,
 	}

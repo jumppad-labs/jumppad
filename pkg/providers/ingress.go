@@ -30,7 +30,7 @@ func NewIngress(
 }
 
 func (c *Ingress) Create() error {
-	c.log.Info("Create Ingress", "ref", c.config.Name)
+	c.log.Info("Create Ingress", "ref", c.config.ID)
 
 	if c.config.Destination.Driver == "local" {
 		return c.exposeLocal()

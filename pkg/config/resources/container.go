@@ -36,6 +36,9 @@ type Container struct {
 
 	// User block for mapping the user id and group id inside the container
 	RunAs *User `hcl:"run_as,block" json:"run_as,omitempty"`
+
+	// Output parameters
+	FQDN string `hcl:"fqdn,optional" json:"fqdn,omitempty"`
 }
 
 type User struct {
@@ -49,6 +52,15 @@ type NetworkAttachment struct {
 	ID        string   `hcl:"id" json:"id"`
 	IPAddress string   `hcl:"ip_address,optional" json:"ip_address,omitempty"`
 	Aliases   []string `hcl:"aliases,optional" json:"aliases,omitempty"` // Network aliases for the resource
+
+	// output
+
+	// Name will equal the name of the network as created by shipyard
+	Name string `hcl:"name,optional" json:"name,omitempty"`
+
+	// AssignedAddress will equal if IPAddress is set, else it will be the value automatically
+	// assigned from the network
+	AssignedAddress string `hcl:"assigned_address,optional" json:"assigned_address,omitempty"`
 }
 
 // Resources allows the setting of resource constraints for the Container
@@ -89,6 +101,29 @@ func (c *Container) Process() error {
 	if c.Build != nil {
 		c.Build.File = ensureAbsolute(c.Build.File, c.File)
 		c.Build.Context = ensureAbsolute(c.Build.Context, c.File)
+	}
+
+	// do we have an existing resource in the state?
+	// if so we need to set any computed resources for dependents
+	cfg, err := LoadState()
+	if err == nil {
+		// try and find the resource in the state
+		r, _ := cfg.FindResource(c.ID)
+		if r != nil {
+			kstate := r.(*Container)
+			c.FQDN = kstate.FQDN
+
+			// add the network addresses
+			for _, a := range kstate.Networks {
+				for i, m := range c.Networks {
+					if m.ID == a.ID {
+						c.Networks[i].AssignedAddress = a.AssignedAddress
+						c.Networks[i].Name = a.Name
+						break
+					}
+				}
+			}
+		}
 	}
 
 	return nil

@@ -49,6 +49,17 @@ func (k *K8sCluster) Process() error {
 			k.Address = kstate.Address
 			k.APIPort = kstate.APIPort
 			k.ConnectorPort = kstate.ConnectorPort
+
+			// add the network addresses
+			for _, a := range kstate.Networks {
+				for i, m := range k.Networks {
+					if m.ID == a.ID {
+						k.Networks[i].AssignedAddress = a.AssignedAddress
+						k.Networks[i].Name = a.Name
+						break
+					}
+				}
+			}
 		}
 	}
 

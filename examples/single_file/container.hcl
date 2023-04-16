@@ -70,3 +70,7 @@ resource "container" "consul" {
     type        = "volume"
   }
 }
+
+output "consul_addr" {
+  value = resource.container.consul.network[0].assigned_address
+}

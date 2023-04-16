@@ -1,15 +1,12 @@
 package cmd
 
 import (
-	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
 	"github.com/hokaccha/go-prettyjson"
-	"github.com/shipyard-run/hclconfig"
 	"github.com/shipyard-run/hclconfig/types"
-	"github.com/shipyard-run/shipyard/pkg/utils"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"github.com/spf13/cobra"
 )
 
@@ -20,16 +17,9 @@ var outputCmd = &cobra.Command{
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		// load the stack
-		p := hclconfig.NewParser(hclconfig.DefaultOptions())
-		d, err := ioutil.ReadFile(utils.StatePath())
+		cfg, err := resources.LoadState()
 		if err != nil {
-			fmt.Println("Unable to read state file")
-			os.Exit(1)
-		}
-
-		cfg, err := p.UnmarshalJSON(d)
-		if err != nil {
-			fmt.Println("Unable to unmarshal state file")
+			cmd.Println("Error: Unable to load state, ", err)
 			os.Exit(1)
 		}
 
@@ -39,6 +29,10 @@ var outputCmd = &cobra.Command{
 			if r.Metadata().Type == types.TypeOutput {
 				// don't output when disabled
 				if r.Metadata().Disabled {
+					continue
+				}
+
+				if r.Metadata().Module != "" {
 					continue
 				}
 

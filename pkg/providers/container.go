@@ -62,7 +62,7 @@ func (c *Container) internalCreate() error {
 			"Building image",
 			"context", c.config.Build.Context,
 			"dockerfile", c.config.Build.File,
-			"image", fmt.Sprintf("shipyard.run/localcache/%s:%s", c.config.Name, c.config.Build.Tag),
+			"image", fmt.Sprintf("shipyard.run/localcache/%s:%s", c.config.ID, c.config.Build.Tag),
 		)
 
 		name, err := c.client.BuildContainer(c.config, false)
@@ -76,16 +76,33 @@ func (c *Container) internalCreate() error {
 		// pull any images needed for this container
 		err := c.client.PullImage(*c.config.Image, false)
 		if err != nil {
-			c.log.Error("Error pulling container image", "ref", c.config.Name, "image", c.config.Image.Name)
+			c.log.Error("Error pulling container image", "ref", c.config.ID, "image", c.config.Image.Name)
 
 			return err
 		}
 	}
 
-	_, err := c.client.CreateContainer(c.config)
+	id, err := c.client.CreateContainer(c.config)
+	if err != nil {
+		c.log.Error("Unable to create container", "ref", c.config.ID, "error", err)
+		return err
+	}
+
+	// get the assigned ip addresses for the container
+	dc := c.client.ListNetworks(id)
+	for _, n := range dc {
+		c.log.Info("network", "net", n)
+		for i, net := range c.config.Networks {
+			if net.ID == n.ID {
+				// set the assigned address and name
+				c.config.Networks[i].AssignedAddress = n.AssignedAddress
+				c.config.Networks[i].Name = n.Name
+			}
+		}
+	}
 
 	if c.config.HealthCheck == nil {
-		return err
+		return nil
 	}
 
 	// check the health of the container

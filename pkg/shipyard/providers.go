@@ -42,6 +42,8 @@ func generateProviderImpl(c types.Resource, cc *clients.Clients) providers.Provi
 		return providers.NewNetwork(c.(*resources.Network), cc.Docker, cc.Logger)
 	case types.TypeOutput:
 		return providers.NewNull(c.Metadata(), cc.Logger)
+	case types.TypeModule:
+		return providers.NewNull(c.Metadata(), cc.Logger)
 	case resources.TypeTemplate:
 		return providers.NewTemplate(c.(*resources.Template), cc.Logger)
 		//case config.TypeCertificateCA:
