@@ -6,16 +6,20 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/shipyard-run/hclconfig/types"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"github.com/stretchr/testify/mock"
 	assert "github.com/stretchr/testify/require"
 )
 
 func TestContainerCreatesSuccessfully(t *testing.T) {
-	cc := config.NewContainer("tests")
-	cc.Image = &config.Image{}
+	cc := &resources.Container{ResourceMetadata: types.ResourceMetadata{
+		Name: "tests",
+	}}
+
+	cc.Image = &resources.Image{}
 	md := &clients.MockContainerTasks{}
 	hc := &mocks.MockHTTP{}
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
@@ -36,17 +40,19 @@ func TestContainerSidecarCreatesContainerSuccessfully(t *testing.T) {
 	md := &clients.MockContainerTasks{}
 	hc := &mocks.MockHTTP{}
 
-	cc := config.NewSidecar("test")
-	cc.Depends = []string{"network.test"}
-	cc.Image = config.Image{Name: "abc"}
-	cc.Volumes = []config.Volume{config.Volume{}}
+	cc := &resources.Container{ResourceMetadata: types.ResourceMetadata{
+		Name: "tests",
+	}}
+
+	cc.Depends = []string{"resource.network.test"}
+	cc.Image = &resources.Image{Name: "abc"}
+	cc.Volumes = []resources.Volume{resources.Volume{}}
 	cc.Command = []string{"hello"}
 	cc.Entrypoint = []string{"hello"}
-	cc.EnvVar = map[string]string{"hello": "world"}
-	cc.HealthCheck = &config.HealthCheck{}
+	cc.Env = map[string]string{"hello": "world"}
+	cc.HealthCheck = &resources.HealthCheck{}
 	cc.Privileged = true
-	cc.Resources = &config.Resources{}
-	cc.Config = &config.Config{}
+	cc.Resources = &resources.Resources{}
 	cc.MaxRestartCount = 10
 
 	md.On("PullImage", cc.Image, false).Once().Return(nil)
@@ -56,28 +62,28 @@ func TestContainerSidecarCreatesContainerSuccessfully(t *testing.T) {
 	err := c.Create()
 	assert.NoError(t, err)
 
-	ac := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	ac := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*resources.Container)
 
 	assert.Equal(t, cc.Name, ac.Name)
 	assert.Equal(t, cc.Depends, ac.Depends)
 	assert.Equal(t, cc.Volumes, ac.Volumes)
 	assert.Equal(t, cc.Command, ac.Command)
 	assert.Equal(t, cc.Entrypoint, ac.Entrypoint)
-	assert.Equal(t, cc.Environment, ac.Environment)
-	assert.Equal(t, cc.EnvVar, ac.EnvVar)
+	assert.Equal(t, cc.Env, ac.Env)
 	assert.Equal(t, cc.HealthCheck, ac.HealthCheck)
 	assert.Equal(t, cc.Image.Name, ac.Image.Name)
 	assert.Equal(t, cc.Privileged, ac.Privileged)
 	assert.Equal(t, cc.Resources, ac.Resources)
 	assert.Equal(t, cc.Type, ac.Type)
-	assert.Equal(t, cc.Config, ac.Config)
 	assert.Equal(t, cc.MaxRestartCount, ac.MaxRestartCount)
 }
 
 func TestContainerRunsHTTPChecks(t *testing.T) {
-	cc := config.NewContainer("tests")
-	cc.Image = &config.Image{}
-	cc.HealthCheck = &config.HealthCheck{
+	cc := &resources.Container{ResourceMetadata: types.ResourceMetadata{
+		Name: "tests",
+	}}
+	cc.Image = &resources.Image{}
+	cc.HealthCheck = &resources.HealthCheck{
 		Timeout: "30s",
 		HTTP:    "http://localhost:8500",
 	}
@@ -98,9 +104,11 @@ func TestContainerRunsHTTPChecks(t *testing.T) {
 }
 
 func TestContainerRunsHTTPChecksWithCustomStatusCodes(t *testing.T) {
-	cc := config.NewContainer("tests")
-	cc.Image = &config.Image{}
-	cc.HealthCheck = &config.HealthCheck{
+	cc := &resources.Container{ResourceMetadata: types.ResourceMetadata{
+		Name: "tests",
+	}}
+	cc.Image = &resources.Image{}
+	cc.HealthCheck = &resources.HealthCheck{
 		Timeout:          "30s",
 		HTTP:             "http://localhost:8500",
 		HTTPSuccessCodes: []int{200, 429},
@@ -122,8 +130,10 @@ func TestContainerRunsHTTPChecksWithCustomStatusCodes(t *testing.T) {
 }
 
 func TestContainerDoesNOTCreateWhenPullImageFail(t *testing.T) {
-	cc := config.NewContainer("tests")
-	cc.Image = &config.Image{}
+	cc := &resources.Container{ResourceMetadata: types.ResourceMetadata{
+		Name: "tests",
+	}}
+	cc.Image = &resources.Image{}
 	md := &clients.MockContainerTasks{}
 	hc := &mocks.MockHTTP{}
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
@@ -140,8 +150,10 @@ func TestContainerDoesNOTCreateWhenPullImageFail(t *testing.T) {
 }
 
 func TestContainerDestroysCorrectlyWhenContainerExists(t *testing.T) {
-	cc := config.NewContainer("tests")
-	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}}
+	cc := &resources.Container{ResourceMetadata: types.ResourceMetadata{
+		Name: "tests",
+	}}
+	cc.Networks = []resources.NetworkAttachment{resources.NetworkAttachment{Name: "cloud"}}
 	md := &clients.MockContainerTasks{}
 	hc := &mocks.MockHTTP{}
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
@@ -155,8 +167,10 @@ func TestContainerDestroysCorrectlyWhenContainerExists(t *testing.T) {
 }
 
 func TestContainerDoesNotDestroysWhenNotExists(t *testing.T) {
-	cc := config.NewContainer("tests")
-	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}}
+	cc := &resources.Container{ResourceMetadata: types.ResourceMetadata{
+		Name: "tests",
+	}}
+	cc.Networks = []resources.NetworkAttachment{resources.NetworkAttachment{Name: "cloud"}}
 	md := &clients.MockContainerTasks{}
 	hc := &mocks.MockHTTP{}
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
@@ -169,8 +183,10 @@ func TestContainerDoesNotDestroysWhenNotExists(t *testing.T) {
 }
 
 func TestContainerDoesNotDestroysWhenLookupError(t *testing.T) {
-	cc := config.NewContainer("tests")
-	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}}
+	cc := &resources.Container{ResourceMetadata: types.ResourceMetadata{
+		Name: "tests",
+	}}
+	cc.Networks = []resources.NetworkAttachment{resources.NetworkAttachment{Name: "cloud"}}
 	md := &clients.MockContainerTasks{}
 	hc := &mocks.MockHTTP{}
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
@@ -183,8 +199,10 @@ func TestContainerDoesNotDestroysWhenLookupError(t *testing.T) {
 }
 
 func TestContainerLooksupIDs(t *testing.T) {
-	cc := config.NewContainer("tests")
-	cc.Networks = []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}}
+	cc := &resources.Container{ResourceMetadata: types.ResourceMetadata{
+		Name: "tests",
+	}}
+	cc.Networks = []resources.NetworkAttachment{resources.NetworkAttachment{Name: "cloud"}}
 	md := &clients.MockContainerTasks{}
 	hc := &mocks.MockHTTP{}
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
@@ -197,8 +215,10 @@ func TestContainerLooksupIDs(t *testing.T) {
 }
 
 func TestContainerBuildsContainer(t *testing.T) {
-	cc := config.NewContainer("tests")
-	cc.Build = &config.Build{Context: "./", File: "./"}
+	cc := &resources.Container{ResourceMetadata: types.ResourceMetadata{
+		Name: "tests",
+	}}
+	cc.Build = &resources.Build{Context: "./", File: "./"}
 
 	md := &clients.MockContainerTasks{}
 	md.On("BuildContainer", mock.Anything, mock.Anything).Return("testimage", nil)
@@ -210,6 +230,6 @@ func TestContainerBuildsContainer(t *testing.T) {
 	err := c.Create()
 	assert.NoError(t, err)
 
-	conf := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	conf := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*resources.Container)
 	assert.Equal(t, "testimage", conf.Image.Name)
 }

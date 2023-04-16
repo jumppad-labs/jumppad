@@ -26,9 +26,9 @@ type Sidecar struct {
 	Resources *Resources `hcl:"resources,block" json:"resources,omitempty"` // resource constraints for the container
 
 	// health checks for the container
-	HealthCheck *HealthCheck `hcl:"health_check,block" json:"health_check,omitempty" mapstructure:"health_check"`
+	HealthCheck *HealthCheck `hcl:"health_check,block" json:"health_check,omitempty"`
 
-	MaxRestartCount int `hcl:"max_restart_count,optional" json:"max_restart_count,omitempty" mapstructure:"max_restart_count"`
+	MaxRestartCount int `hcl:"max_restart_count,optional" json:"max_restart_count,omitempty"`
 }
 
 func (c *Sidecar) Process() error {

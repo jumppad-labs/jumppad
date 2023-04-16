@@ -1,6 +1,8 @@
 package resources
 
-import "github.com/shipyard-run/hclconfig/types"
+import (
+	"github.com/shipyard-run/hclconfig/types"
+)
 
 // TypeContainer is the resource string for a Container resource
 const TypeContainer string = "container"

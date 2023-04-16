@@ -56,8 +56,8 @@ func (m *MockContainerTasks) PullImage(i resources.Image, f bool) error {
 	return args.Error(0)
 }
 
-func (m *MockContainerTasks) FindContainerIDs(name string, typeName string) ([]string, error) {
-	args := m.Called(name, typeName)
+func (m *MockContainerTasks) FindContainerIDs(fqdn string) ([]string, error) {
+	args := m.Called(fqdn)
 
 	if sa, ok := args.Get(0).([]string); ok {
 		return sa, args.Error(1)
