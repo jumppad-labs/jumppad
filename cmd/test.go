@@ -24,7 +24,9 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/hashicorp/go-hclog"
+	hcltypes "github.com/shipyard-run/hclconfig/types"
 	"github.com/shipyard-run/shipyard/pkg/clients"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
@@ -194,20 +196,18 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 	})
 
 	ctx.Step(`^I have a running blueprint$`, cr.iRunApply)
-	ctx.Step(`^I have a running blueprint using version "([^"]*)"$`, cr.iRunApplyWithVersion)
 	ctx.Step(`^I have a running blueprint at path "([^"]*)"$`, cr.iRunApplyAtPath)
-	ctx.Step(`^I have a running blueprint at path "([^"]*)" using version "([^"]*)"$`, cr.iRunApplyAtPathWithVersion)
 	ctx.Step(`^the following environment variables are set$`, cr.theFollowingEnvironmentVariablesAreSet)
 	ctx.Step(`^the environment variable "([^"]*)" has a value "([^"]*)"$`, cr.theEnvironmentVariableKHasAValueV)
 	ctx.Step(`^the following shipyard variables are set$`, cr.theFollowingShipyardVariablesAreSet)
 	ctx.Step(`^the shipyard variable "([^"]*)" has a value "([^"]*)"$`, cr.theShipyardVariableKHasAValueV)
-	ctx.Step(`^there should be a "([^"]*)" running called "([^"]*)"$`, cr.thereShouldBeAResourceRunningCalled)
+	ctx.Step(`^there should be a resource running called "([^"]*)"$`, cr.thereShouldBeAResourceRunningCalled)
 	ctx.Step(`^the following resources should be running$`, cr.theFollowingResourcesShouldBeRunning)
 	ctx.Step(`^a HTTP call to "([^"]*)" should result in status (\d+)$`, cr.aCallToShouldResultInStatus)
 	ctx.Step(`^the response body should contain "([^"]*)"$`, cr.theResponseBodyShouldContain)
-	ctx.Step(`^the info "([^"]*)" for the running "([^"]*)" called "([^"]*)" should equal "([^"]*)"$`, cr.theResourceInfoShouldEqual)
-	ctx.Step(`^the info "([^"]*)" for the running "([^"]*)" called "([^"]*)" should contain "([^"]*)"$`, cr.theResourceInfoShouldContain)
-	ctx.Step(`^the info "([^"]*)" for the running "([^"]*)" called "([^"]*)" should exist`, cr.theResourceInfoShouldExist)
+	ctx.Step(`^the info "([^"]*)" for the running container "([^"]*)" should equal "([^"]*)"$`, cr.theResourceInfoShouldEqual)
+	ctx.Step(`^the info "([^"]*)" for the running container "([^"]*)" should contain "([^"]*)"$`, cr.theResourceInfoShouldContain)
+	ctx.Step(`^the info "([^"]*)" for the running container "([^"]*)" should exist`, cr.theResourceInfoShouldExist)
 	ctx.Step(`^I run the command "([^"]*)"$`, cr.whenIRunTheCommand)
 	ctx.Step(`^I run the script$`, cr.whenIRunTheScript)
 	ctx.Step(`^I expect the exit code to be (\d+)$`, cr.iExpectTheExitCodeToBe)
@@ -298,33 +298,30 @@ func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
 func (cr *CucumberRunner) theFollowingResourcesShouldBeRunning(arg1 *godog.Table) error {
 	for i, r := range arg1.Rows {
 		if i == 0 {
-			if r.Cells[0].Value != "name" || r.Cells[1].Value != "type" {
-				return fmt.Errorf("Tables should be formatted with a header row containing the columns 'name' and 'type'")
+			if len(r.Cells) != 1 || r.Cells[0].Value != "name" {
+				return fmt.Errorf("tables should be formatted with a header row containing the columns 'name'")
 			}
 
 			continue
 		}
 
-		if len(r.Cells) != 2 {
-			return fmt.Errorf("Table rows should have two columns 'name' and 'type'")
-		}
-
-		rType := strings.TrimSpace(r.Cells[1].Value)
 		rName := strings.TrimSpace(r.Cells[0].Value)
 
-		switch rType {
-		case "network":
-			err := cr.thereShouldBe1NetworkCalled(rName)
+		fqdn, err := hcltypes.ParseFQDN(rName)
+		if err != nil {
+			return fmt.Errorf("invalid resource: %s, error: %s", rName, err)
+		}
+
+		if fqdn.Type == resources.TypeNetwork {
+			err := cr.thereShouldBe1NetworkCalled(fqdn.Resource)
 			if err != nil {
 				return err
 			}
-		case "ingress":
-			err := cr.thereShouldBe1IngressCalled(rName)
-			if err != nil {
-				return err
-			}
-		default:
-			err := cr.thereShouldBeAResourceRunningCalled(rType, rName)
+		} else {
+			// convert the resource fqdn into a domain name
+			id := utils.FQDN(fqdn.Resource, fqdn.Module, fqdn.Type)
+
+			err := cr.thereShouldBeAResourceRunningCalled(id)
 			if err != nil {
 				return err
 			}
@@ -334,9 +331,7 @@ func (cr *CucumberRunner) theFollowingResourcesShouldBeRunning(arg1 *godog.Table
 	return nil
 }
 
-func (cr *CucumberRunner) thereShouldBeAResourceRunningCalled(resource string, name string) error {
-	fqdn := utils.FQDN(name, "", resource)
-
+func (cr *CucumberRunner) thereShouldBeAResourceRunningCalled(id string) error {
 	// ensure that the container starts and stays running,
 	// we use checkcount to test multiple times before passing
 	checkCount := 0
@@ -344,7 +339,7 @@ func (cr *CucumberRunner) thereShouldBeAResourceRunningCalled(resource string, n
 	// we need to check this a number of times to make sure it is not just a slow starting container
 	for i := 0; i < 100; i++ {
 		args := filters.NewArgs()
-		args.Add("name", fqdn)
+		args.Add("name", id)
 		opts := types.ContainerListOptions{Filters: args, All: true}
 
 		cl, err := cr.e.GetClients().Docker.ContainerList(context.Background(), opts)
@@ -371,7 +366,7 @@ func (cr *CucumberRunner) thereShouldBeAResourceRunningCalled(resource string, n
 		time.Sleep(2 * time.Second)
 	}
 
-	return fmt.Errorf("Expected %d %s %s", 1, resource, name)
+	return fmt.Errorf("expected %d %s", 1, id)
 }
 
 func (cr *CucumberRunner) thereShouldBe1NetworkCalled(arg1 string) error {
@@ -385,21 +380,6 @@ func (cr *CucumberRunner) thereShouldBe1NetworkCalled(arg1 string) error {
 
 	if len(n) != 1 {
 		return fmt.Errorf("Expected 1 network called %s to be created", arg1)
-	}
-
-	return nil
-}
-
-func (cr *CucumberRunner) thereShouldBe1IngressCalled(arg1 string) error {
-	args := filters.NewArgs()
-	args.Add("name", arg1)
-	n, err := cr.e.GetClients().Connector.ListServices()
-	if err != nil {
-		return err
-	}
-
-	if len(n) != 1 {
-		return fmt.Errorf("Expected 1 ingress called %s to be created", arg1)
 	}
 
 	return nil
@@ -519,8 +499,8 @@ func (cr *CucumberRunner) theShipyardVariableKHasAValueV(key, value string) erro
 }
 
 // ctx.Step(`^the info "([^"]*)" for the running "([^"]*)" running called "([^"]*)" should equal "([^"]*)"$`, cr.theContainerInfoShouldContainer)
-func (cr *CucumberRunner) theResourceInfoShouldContain(path, resource, name, value string) error {
-	s, err := cr.getJSONPath(path, resource, name)
+func (cr *CucumberRunner) theResourceInfoShouldContain(path, resource, value string) error {
+	s, err := cr.getJSONPath(path, resource)
 	if err != nil {
 		return err
 	}
@@ -532,8 +512,8 @@ func (cr *CucumberRunner) theResourceInfoShouldContain(path, resource, name, val
 	return nil
 }
 
-func (cr *CucumberRunner) theResourceInfoShouldEqual(path, resource, name, value string) error {
-	s, err := cr.getJSONPath(path, resource, name)
+func (cr *CucumberRunner) theResourceInfoShouldEqual(path, resource, value string) error {
+	s, err := cr.getJSONPath(path, resource)
 	if err != nil {
 		return err
 	}
@@ -545,8 +525,8 @@ func (cr *CucumberRunner) theResourceInfoShouldEqual(path, resource, name, value
 	return nil
 }
 
-func (cr *CucumberRunner) theResourceInfoShouldExist(path, resource, name string) error {
-	_, err := cr.getJSONPath(path, resource, name)
+func (cr *CucumberRunner) theResourceInfoShouldExist(path, resource string) error {
+	_, err := cr.getJSONPath(path, resource)
 	if err != nil {
 		return err
 	}
@@ -693,9 +673,14 @@ func (cr *CucumberRunner) executeCommand(cmd string) error {
 	return nil
 }
 
-func (cr *CucumberRunner) getJSONPath(path, resource, name string) (string, error) {
-	fqdn := utils.FQDN(name, "", resource)
-	ci, err := cr.e.GetClients().Docker.ContainerInspect(context.Background(), fqdn)
+func (cr *CucumberRunner) getJSONPath(path, resource string) (string, error) {
+	fqdn, err := hcltypes.ParseFQDN(resource)
+	if err != nil {
+		return "", fmt.Errorf("invalid resource name: %s", err)
+	}
+
+	id := utils.FQDN(fqdn.Resource, fqdn.Module, fqdn.Type)
+	ci, err := cr.e.GetClients().Docker.ContainerInspect(context.Background(), id)
 	if err != nil {
 		return "", err
 	}

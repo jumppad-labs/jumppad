@@ -161,12 +161,6 @@ func getLoggable() ([]string, error) {
 			}
 		case resources.TypeSidecar:
 			fallthrough
-		case resources.TypeK8sIngress:
-			fallthrough
-		case resources.TypeNomadIngress:
-			fallthrough
-		case resources.TypeContainerIngress:
-			fallthrough
 		case resources.TypeImageCache:
 			loggable = append(loggable, utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type))
 		}

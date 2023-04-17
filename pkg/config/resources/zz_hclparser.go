@@ -19,7 +19,6 @@ func SetupHCLConfig(callback hclconfig.ProcessCallback, variables map[string]str
 	// Register the types
 	p.RegisterType(TypeCertificateCA, &CertificateCA{})
 	p.RegisterType(TypeCertificateLeaf, &CertificateLeaf{})
-	p.RegisterType(TypeContainerIngress, &ContainerIngress{})
 	p.RegisterType(TypeContainer, &Container{})
 	p.RegisterType(TypeCopy, &Copy{})
 	p.RegisterType(TypeDocs, &Docs{})

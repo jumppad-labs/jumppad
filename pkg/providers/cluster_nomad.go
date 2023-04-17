@@ -102,11 +102,11 @@ func (c *NomadCluster) createNomad() error {
 	for i := 0; i < c.config.ClientNodes; i++ {
 		ids, err := c.client.FindContainerIDs(utils.FQDN(fmt.Sprintf("%d.client.%s", i+1, c.config.Name), c.config.Module, c.config.Type))
 		if len(ids) > 0 {
-			return fmt.Errorf("Client already exists")
+			return fmt.Errorf("client already exists")
 		}
 
 		if err != nil {
-			return xerrors.Errorf("Unable to lookup cluster id: %w", err)
+			return xerrors.Errorf("unable to lookup cluster id: %w", err)
 		}
 	}
 
@@ -117,7 +117,7 @@ func (c *NomadCluster) createNomad() error {
 	}
 
 	if err != nil {
-		return xerrors.Errorf("Unable to lookup cluster id: %w", err)
+		return xerrors.Errorf("unable to lookup cluster id: %w", err)
 	}
 
 	// if the version is not set use the default version
@@ -183,7 +183,7 @@ func (c *NomadCluster) createNomad() error {
 	}
 
 	// ensure all client nodes are up
-	c.nomadClient.SetConfig(c.config.Address, c.config.APIPort, c.config.Nodes+1)
+	c.nomadClient.SetConfig(c.config.ServerAddress, c.config.APIPort, c.config.Nodes+1)
 	err = c.nomadClient.HealthCheckAPI(startTimeout)
 	if err != nil {
 		return err

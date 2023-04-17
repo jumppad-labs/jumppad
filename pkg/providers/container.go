@@ -45,7 +45,7 @@ func NewContainerSidecar(cs *resources.Sidecar, cl clients.ContainerTasks, hc cl
 
 // Create implements provider method and creates a Docker container with the given config
 func (c *Container) Create() error {
-	c.log.Info("Creating Container", "ref", c.config.Name)
+	c.log.Info("Creating Container", "ref", c.config.ID)
 
 	return c.internalCreate()
 }

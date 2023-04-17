@@ -117,16 +117,10 @@ var statusCmd = &cobra.Command{
 						fallthrough
 					case resources.TypeSidecar:
 						fallthrough
-					case resources.TypeK8sIngress:
-						fallthrough
-					case resources.TypeNomadIngress:
-						fallthrough
-					case resources.TypeContainerIngress:
-						fallthrough
 					case resources.TypeImageCache:
-						fmt.Printf("%-13s %-30s %s\n", status, r.Metadata().ID)
+						fmt.Printf("%-13s %-30s %s\n", status, r.Metadata().ID, "")
 					default:
-						fmt.Printf("%-13s %-30s %s\n", status, r.Metadata().ID)
+						fmt.Printf("%-13s %-30s %s\n", status, r.Metadata().ID, "")
 					}
 				}
 			}
