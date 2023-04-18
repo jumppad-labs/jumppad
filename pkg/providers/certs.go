@@ -11,25 +11,25 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/sethvargo/go-retry"
 	"github.com/shipyard-run/connector/crypto"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"golang.org/x/xerrors"
 )
 
 type CertificateCA struct {
-	config *config.CertificateCA
+	config *resources.CertificateCA
 	log    hclog.Logger
 }
 
 type CertificateLeaf struct {
-	config *config.CertificateLeaf
+	config *resources.CertificateLeaf
 	log    hclog.Logger
 }
 
-func NewCertificateCA(co *config.CertificateCA, l hclog.Logger) *CertificateCA {
+func NewCertificateCA(co *resources.CertificateCA, l hclog.Logger) *CertificateCA {
 	return &CertificateCA{co, l}
 }
 
-func NewCertificateLeaf(co *config.CertificateLeaf, l hclog.Logger) *CertificateLeaf {
+func NewCertificateLeaf(co *resources.CertificateLeaf, l hclog.Logger) *CertificateLeaf {
 	return &CertificateLeaf{co, l}
 }
 

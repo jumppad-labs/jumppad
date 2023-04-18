@@ -7,10 +7,11 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"github.com/stretchr/testify/require"
 )
 
-func setupCACert(t *testing.T) (*config.CertificateCA, *CertificateCA) {
+func setupCACert(t *testing.T) (*resources.CertificateCA, *CertificateCA) {
 	dir := t.TempDir()
 
 	cc := config.NewCertificateCA("test")

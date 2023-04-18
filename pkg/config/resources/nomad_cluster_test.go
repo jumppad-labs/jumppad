@@ -48,8 +48,9 @@ func TestNomadClusterSetsOutputsFromState(t *testing.T) {
       "type": "nomad_cluster",
 			"api_port": 123,
 			"connector_port": 124,
-			"server_address": "127.0.0.1",
-			"client_address": ["127.0.0.2","127.0.0.3"],
+			"external_ip": "127.0.0.1",
+			"server_fqdn": "server.something.something",
+			"client_fqdn": ["1.client.something.something","2.client.something.something"],
 			"config_dir": "abc/123"
 	}
 	]
@@ -63,8 +64,9 @@ func TestNomadClusterSetsOutputsFromState(t *testing.T) {
 
 	c.Process()
 
-	require.Equal(t, "127.0.0.1", c.ServerAddress)
-	require.Equal(t, []string{"127.0.0.2", "127.0.0.3"}, c.ClientAddress)
+	require.Equal(t, "127.0.0.1", c.ExternalIP)
+	require.Equal(t, "server.something.something", c.ServerFQDN)
+	require.Equal(t, []string{"1.client.something.something", "2.client.something.something"}, c.ClientFQDN)
 	require.Equal(t, 123, c.APIPort)
 	require.Equal(t, 124, c.ConnectorPort)
 	require.Equal(t, "abc/123", c.ConfigDir)
