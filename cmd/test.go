@@ -320,6 +320,10 @@ func getLookupAddress(resourceName string) (string, string, int, error) {
 		return cl.ServerFQDN, res.Metadata().Type, cl.ClientNodes + 1, nil
 	case resources.TypeContainer:
 		return res.(*resources.Container).FQDN, res.Metadata().Type, 1, nil
+	case resources.TypeSidecar:
+		return res.(*resources.Sidecar).FQDN, res.Metadata().Type, 1, nil
+	case resources.TypeDocs:
+		return res.(*resources.Docs).FQDN, res.Metadata().Type, 1, nil
 	default:
 		return "", "", 0, fmt.Errorf("resource type %s is not supported", res.Metadata().Type)
 	}

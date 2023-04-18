@@ -22,3 +22,31 @@ func TestDocsProcessSetsAbsolute(t *testing.T) {
 
 	require.Equal(t, wd, h.Path)
 }
+
+func TestDocsLoadsValuesFromState(t *testing.T) {
+	setupState(t, `
+{
+  "blueprint": null,
+  "resources": [
+	{
+			"id": "resource.docs.test",
+      "name": "test",
+      "status": "created",
+      "type": "docs",
+			"fqdn": "fqdn.mine"
+	}
+	]
+}`)
+
+	docs := &Docs{
+		ResourceMetadata: types.ResourceMetadata{
+			File: "./",
+			ID:   "resource.docs.test",
+		},
+	}
+
+	err := docs.Process()
+	require.NoError(t, err)
+
+	require.Equal(t, "fqdn.mine", docs.FQDN)
+}

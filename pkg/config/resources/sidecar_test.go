@@ -26,3 +26,31 @@ func TestSidecarProcessSetsAbsolute(t *testing.T) {
 
 	require.Equal(t, wd, c.Volumes[0].Source)
 }
+
+func TestSidecarLoadsValuesFromState(t *testing.T) {
+	setupState(t, `
+{
+  "blueprint": null,
+  "resources": [
+	{
+			"id": "resource.sidecar.test",
+      "name": "test",
+      "status": "created",
+      "type": "sidecar",
+			"fqdn": "fqdn.mine"
+	}
+	]
+}`)
+
+	docs := &Sidecar{
+		ResourceMetadata: types.ResourceMetadata{
+			File: "./",
+			ID:   "resource.sidecar.test",
+		},
+	}
+
+	err := docs.Process()
+	require.NoError(t, err)
+
+	require.Equal(t, "fqdn.mine", docs.FQDN)
+}

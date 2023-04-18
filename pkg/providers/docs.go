@@ -125,6 +125,10 @@ func (i *Docs) createDocsContainer() error {
 		"TERMINAL_SERVER_PORT": "30003",
 	}
 
+	// set the FQDN
+	fqdn := utils.FQDN(i.config.Name, i.config.Module, i.config.Type)
+	i.config.FQDN = fqdn
+
 	_, err = i.client.CreateContainer(cc)
 	return err
 }
@@ -134,7 +138,7 @@ func (i *Docs) Destroy() error {
 	i.log.Info("Destroy Documentation", "ref", i.config.Name)
 
 	// remove the docs
-	ids, err := i.client.FindContainerIDs(i.config.ID)
+	ids, err := i.client.FindContainerIDs(i.config.FQDN)
 	if err != nil {
 		return err
 	}

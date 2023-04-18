@@ -10,8 +10,6 @@ type Sidecar struct {
 	// embedded type holding name, etc
 	types.ResourceMetadata `hcl:",remain"`
 
-	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
-
 	Target string `hcl:"target" json:"target"`
 
 	Image      Image             `hcl:"image,block" json:"image"`                        // image to use for the container
@@ -29,6 +27,12 @@ type Sidecar struct {
 	HealthCheck *HealthCheck `hcl:"health_check,block" json:"health_check,omitempty"`
 
 	MaxRestartCount int `hcl:"max_restart_count,optional" json:"max_restart_count,omitempty"`
+
+	// Output parameters
+
+	// FQDN is the fully qualified domain name for the container, this can be used
+	// to access the container from other sources
+	FQDN string `hcl:"fqdn,optional" json:"fqdn,omitempty"`
 }
 
 func (c *Sidecar) Process() error {
@@ -38,6 +42,18 @@ func (c *Sidecar) Process() error {
 		if v.Type == "" || v.Type == "bind" {
 			c.Volumes[i].Source = ensureAbsolute(v.Source, c.File)
 			c.Volumes[i].Destination = ensureAbsolute(v.Destination, c.File)
+		}
+	}
+
+	// do we have an existing resource in the state?
+	// if so we need to set any computed resources for dependents
+	cfg, err := LoadState()
+	if err == nil {
+		// try and find the resource in the state
+		r, _ := cfg.FindResource(c.ID)
+		if r != nil {
+			kstate := r.(*Sidecar)
+			c.FQDN = kstate.FQDN
 		}
 	}
 

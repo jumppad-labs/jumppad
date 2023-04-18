@@ -6,32 +6,32 @@ variable "envoy_version" {
   default = "1.18.4"
 }
 
-template "consul_config" {
+resource "template" "consul_config" {
 
-  source = <<EOF
-data_dir = "#{{ .Vars.data_dir }}"
-log_level = "DEBUG"
-
-datacenter = "dc1"
-primary_datacenter = "dc1"
-
-server = true
-
-bootstrap_expect = 1
-ui = true
-
-bind_addr = "0.0.0.0"
-client_addr = "0.0.0.0"
-advertise_addr = "10.6.0.200"
-
-ports {
-  grpc = 8502
-}
-
-connect {
-  enabled = true
-}
-EOF
+  source = <<-EOF
+  data_dir = "#{{ .Vars.data_dir }}"
+  log_level = "DEBUG"
+  
+  datacenter = "dc1"
+  primary_datacenter = "dc1"
+  
+  server = true
+  
+  bootstrap_expect = 1
+  ui = true
+  
+  bind_addr = "0.0.0.0"
+  client_addr = "0.0.0.0"
+  advertise_addr = "10.6.0.200"
+  
+  ports {
+    grpc = 8502
+  }
+  
+  connect {
+    enabled = true
+  }
+  EOF
 
   destination = "${data("config")}/consul.hcl"
 
@@ -40,49 +40,49 @@ EOF
   }
 }
 
-container "consul_disabled" {
+resource "container" "consul_disabled" {
   disabled = true
 
   image {
-    name = "consul:${var.consul_version}"
+    name = "consul:${variable.consul_version}"
   }
 }
 
-container "consul" {
+resource "container" "consul" {
   image {
-    name = "consul:${var.consul_version}"
+    name = "consul:${variable.consul_version}"
   }
 
-  command = ["consul", "agent", "-config-file=/config/consul.hcl"]
+  command = ["consul", "agent", "-config-file", "/config/config.hcl"]
 
   volume {
     source      = "./"
     destination = "/files"
   }
-  
+
   volume {
-    source      = resources.template.consul_config.destination
+    source      = resource.template.consul_config.destination
     destination = "/config/config.hcl"
   }
 
   network {
-    name       = "network.onprem"
+    id         = resource.network.onprem.id
     ip_address = "10.6.0.200" // optional
     aliases    = ["myalias"]
   }
 
   env = {
-    something = var.something
-    foo = env("BAH")
-    file = file("./conf.txt")
-    abc = "123"
+    something       = variable.something
+    foo             = env("BAH")
+    file            = file("./conf.txt")
+    abc             = "123"
     SHIPYARD_FOLDER = shipyard()
-    HOME_FOLDER = home()
+    HOME_FOLDER     = home()
   }
 
   resources {
     # Max CPU to consume, 1000 is one core, default unlimited
-    cpu = resources.template.consul_config.destination
+    cpu = 200
     # Pin container to specified CPU cores, default all cores
     cpu_pin = [0, 1]
     # max memory in MB to consume, default unlimited
@@ -96,11 +96,11 @@ container "consul" {
 
 }
 
-sidecar "envoy" {
-  target = "container.consul"
+resource "sidecar" "envoy" {
+  target = resource.container.consul.id
 
   image {
-    name = "envoyproxy/envoy:v${var.envoy_version}"
+    name = "envoyproxy/envoy:v${variable.envoy_version}"
   }
 
   command = ["tail", "-f", "/dev/null"]

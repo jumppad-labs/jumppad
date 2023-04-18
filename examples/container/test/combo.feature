@@ -12,9 +12,8 @@ Scenario: Test multiple blueprints
   And I have a running blueprint at path "../docs"
   And I have a running blueprint
   Then the following resources should be running
-    | name                      | type      |
-    | onprem                    | network   |
-    | docs                      | docs      |
-    | consul                    | container |
-    | envoy                     | sidecar   |
-    | consul-container-http     | container_ingress   |
+    | name                                  |
+    | resource.network.onprem               |
+    | resource.docs.docs                    |
+    | resource.container.consul             |
+    | resource.sidecar.envoy                |

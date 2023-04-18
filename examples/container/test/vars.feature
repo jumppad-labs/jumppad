@@ -12,10 +12,9 @@ Scenario: Single Container with Shipyard Variables
     | something      | set by test           |
   And I have a running blueprint
   Then the following resources should be running
-    | name                      | type      |
-    | onprem                    | network   |
-    | consul                    | container |
-    | envoy                     | sidecar   |
-    | consul-container-http     | container_ingress   |
-  And the info "{.Config.Env}" for the running "container" called "consul" should contain "something=set by test"
-  And the info "{.Config.Env}" for the running "container" called "consul" should contain "foo=bah"
+    | name                                       |
+    | resource.network.onprem                    |
+    | resource.container.consul                  |
+    | resource.sidecar.envoy                     |
+  And the info "{.Config.Env}" for the running container "resource.container.consul" should contain "something=set by test"
+  And the info "{.Config.Env}" for the running container "resource.container.consul" should contain "foo=bah"

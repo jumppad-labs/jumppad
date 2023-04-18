@@ -1,3 +1,3 @@
 output "consul_http_addr" {
-  value = "http://consul.container.shipyard.run:8500"
+  value = "http://${resource.container.consul.fqdn}:8500"
 }

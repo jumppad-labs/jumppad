@@ -2,7 +2,6 @@ package resources
 
 import (
 	"os"
-	"path"
 	"testing"
 
 	"github.com/shipyard-run/hclconfig/types"
@@ -22,15 +21,13 @@ func TestContainerProcessSetsAbsolute(t *testing.T) {
 			},
 		},
 		Build: &Build{
-			File:    "./Dockerfile",
-			Context: "./",
+			DockerFile: "./Dockerfile",
+			Context:    "./",
 		},
 	}
 
 	c.Process()
 
 	require.Equal(t, wd, c.Volumes[0].Source)
-
-	require.Equal(t, path.Join(wd, "Dockerfile"), c.Build.File)
 	require.Equal(t, wd, c.Build.Context)
 }

@@ -14,6 +14,7 @@ import (
 // Container is a provider for creating and destroying Docker containers
 type Container struct {
 	config     *resources.Container
+	sidecar    *resources.Sidecar
 	client     clients.ContainerTasks
 	httpClient clients.HTTP
 	log        hclog.Logger
@@ -21,14 +22,13 @@ type Container struct {
 
 // NewContainer creates a new container with the given config and Docker client
 func NewContainer(co *resources.Container, cl clients.ContainerTasks, hc clients.HTTP, l hclog.Logger) *Container {
-	return &Container{co, cl, hc, l}
+	return &Container{config: co, client: cl, httpClient: hc, log: l}
 }
 
 func NewContainerSidecar(cs *resources.Sidecar, cl clients.ContainerTasks, hc clients.HTTP, l hclog.Logger) *Container {
 	co := &resources.Container{}
 	co.ResourceMetadata = cs.ResourceMetadata
 
-	co.Depends = cs.Depends
 	co.Networks = []resources.NetworkAttachment{resources.NetworkAttachment{ID: cs.Target}}
 	co.Volumes = cs.Volumes
 	co.Command = cs.Command
@@ -39,15 +39,26 @@ func NewContainerSidecar(cs *resources.Sidecar, cl clients.ContainerTasks, hc cl
 	co.Privileged = cs.Privileged
 	co.Resources = cs.Resources
 	co.MaxRestartCount = cs.MaxRestartCount
+	co.FQDN = cs.FQDN
 
-	return &Container{co, cl, hc, l}
+	return &Container{config: co, client: cl, httpClient: hc, log: l, sidecar: cs}
 }
 
 // Create implements provider method and creates a Docker container with the given config
 func (c *Container) Create() error {
 	c.log.Info("Creating Container", "ref", c.config.ID)
 
-	return c.internalCreate()
+	err := c.internalCreate()
+	if err != nil {
+		return err
+	}
+
+	// we need to set the fqdn on the original object
+	if c.sidecar != nil {
+		c.sidecar.FQDN = c.config.FQDN
+	}
+
+	return nil
 }
 
 func (c *Container) internalCreate() error {
@@ -130,7 +141,7 @@ func (c *Container) internalCreate() error {
 
 // Destroy stops and removes the container
 func (c *Container) Destroy() error {
-	c.log.Info("Destroy Container", "ref", c.config.Name)
+	c.log.Info("Destroy Container", "ref", c.config.ID)
 
 	return c.internalDestroy()
 }
@@ -156,5 +167,5 @@ func (c *Container) internalDestroy() error {
 
 // Lookup the ID based on the config
 func (c *Container) Lookup() ([]string, error) {
-	return c.client.FindContainerIDs(utils.FQDN(c.config.Name, c.config.Module, c.config.Type))
+	return c.client.FindContainerIDs(c.config.FQDN)
 }
