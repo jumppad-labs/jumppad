@@ -1,22 +1,22 @@
-container "build" {
-  build   {
-    file = "./Dockerfile"
-    context = "./src"
+resource "container" "build" {
+  build {
+    dockerfile = "Dockerfile"
+    context    = "./src"
   }
 
   command = ["/bin/app"]
 
   port {
-    local = 9090
+    local  = 9090
     remote = 9090
-    host = 9090
+    host   = 9090
   }
 
   network {
-    name = "network.onprem"
+    id = resource.network.onprem.id
   }
 }
 
-network "onprem" {
+resource "network" "onprem" {
   subnet = "10.6.0.0/16"
 }

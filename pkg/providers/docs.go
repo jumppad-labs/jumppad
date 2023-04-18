@@ -6,24 +6,25 @@ import (
 	"io/ioutil"
 
 	hclog "github.com/hashicorp/go-hclog"
+	"github.com/shipyard-run/hclconfig/types"
 	"github.com/shipyard-run/shipyard/pkg/clients"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 	"golang.org/x/xerrors"
 )
 
 const docsImageName = "shipyardrun/docs"
-const docsVersion = "v0.5.1"
+const docsVersion = "v0.6.2"
 
 // Docs defines a provider for creating documentation containers
 type Docs struct {
-	config *config.Docs
+	config *resources.Docs
 	client clients.ContainerTasks
 	log    hclog.Logger
 }
 
 // NewDocs creates a new Docs provider
-func NewDocs(c *config.Docs, cc clients.ContainerTasks, l hclog.Logger) *Docs {
+func NewDocs(c *resources.Docs, cc clients.ContainerTasks, l hclog.Logger) *Docs {
 	return &Docs{c, cc, l}
 }
 
@@ -42,20 +43,23 @@ func (i *Docs) Create() error {
 		return err
 	}
 
-	// set the state
-	i.config.Status = config.Applied
-
 	return nil
 }
 
 func (i *Docs) createDocsContainer() error {
 	// create the container config
-	cc := config.NewContainer(i.config.Name)
-	i.config.ResourceInfo.AddChild(cc)
+	cc := &resources.Container{
+		ResourceMetadata: types.ResourceMetadata{
+			Name:   i.config.Name,
+			Type:   i.config.Type,
+			Module: i.config.Module,
+		},
+	}
+	cc.ParentConfig = i.config.Metadata().ParentConfig
 
 	cc.Networks = i.config.Networks
 
-	cc.Image = &config.Image{Name: fmt.Sprintf("%s:%s", docsImageName, docsVersion)}
+	cc.Image = &resources.Image{Name: fmt.Sprintf("%s:%s", docsImageName, docsVersion)}
 
 	// if image is set override defaults
 	if i.config.Image != nil {
@@ -68,12 +72,12 @@ func (i *Docs) createDocsContainer() error {
 		return err
 	}
 
-	cc.Volumes = []config.Volume{}
+	cc.Volumes = []resources.Volume{}
 
 	if i.config.Path != "" {
 		cc.Volumes = append(
 			cc.Volumes,
-			config.Volume{
+			resources.Volume{
 				Source:      i.config.Path,
 				Destination: "/shipyard/docs",
 			},
@@ -90,7 +94,7 @@ func (i *Docs) createDocsContainer() error {
 
 		cc.Volumes = append(
 			cc.Volumes,
-			config.Volume{
+			resources.Volume{
 				Source:      indexPath,
 				Destination: "/shipyard/sidebars.js",
 			},
@@ -98,15 +102,15 @@ func (i *Docs) createDocsContainer() error {
 	}
 
 	// add the ports
-	cc.Ports = []config.Port{
+	cc.Ports = []resources.Port{
 		// set the doumentation port
-		config.Port{
+		resources.Port{
 			Local:  "80",
 			Remote: "80",
 			Host:   fmt.Sprintf("%d", i.config.Port),
 		},
 		// set the livereload port
-		config.Port{
+		resources.Port{
 			Local:  "37950",
 			Remote: "37950",
 			Host:   fmt.Sprintf("%d", i.config.LiveReloadPort),
@@ -116,7 +120,7 @@ func (i *Docs) createDocsContainer() error {
 	// add the environment variables for the
 	// ip and port of the terminal server
 	localIP, _ := utils.GetLocalIPAndHostname()
-	cc.EnvVar = map[string]string{
+	cc.Env = map[string]string{
 		"TERMINAL_SERVER_IP":   localIP,
 		"TERMINAL_SERVER_PORT": "30003",
 	}
@@ -130,7 +134,7 @@ func (i *Docs) Destroy() error {
 	i.log.Info("Destroy Documentation", "ref", i.config.Name)
 
 	// remove the docs
-	ids, err := i.client.FindContainerIDs(i.config.Name, i.config.Type)
+	ids, err := i.client.FindContainerIDs(i.config.ID)
 	if err != nil {
 		return err
 	}

@@ -8,7 +8,7 @@ Feature: Kubernetes Cluster
     Then the following resources should be running
       | name                                    |
       | resource.network.cloud                  |
-      | resource.k8s_cluster.k3s               |
+      | resource.k8s_cluster.k3s                |
     And a HTTP call to "http://localhost:18500/v1/agent/members" should result in status 200
     And a HTTP call to "http://localhost:18200" should result in status 200
     And a TCP connection to "localhost:8300" should open

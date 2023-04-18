@@ -88,9 +88,9 @@ type Volume struct {
 // Build allows you to define the conditions for building a container
 // on run from a Dockerfile
 type Build struct {
-	File    string `hcl:"file,optional" json:"file,omitempty"` // Location of build file inside build context defaults to ./Dockerfile
-	Context string `hcl:"context" json:"context"`              // Path to build context
-	Tag     string `hcl:"tag,optional" json:"tag,omitempty"`   // Image tag, defaults to latest
+	DockerFile string `hcl:"dockerfile,optional" json:"dockerfile,omitempty"` // Location of build file inside build context defaults to ./Dockerfile
+	Context    string `hcl:"context" json:"context"`                          // Path to build context
+	Tag        string `hcl:"tag,optional" json:"tag,omitempty"`               // Image tag, defaults to latest
 }
 
 func (c *Container) Process() error {
@@ -104,7 +104,6 @@ func (c *Container) Process() error {
 
 	// make sure build paths are absolute
 	if c.Build != nil {
-		c.Build.File = ensureAbsolute(c.Build.File, c.File)
 		c.Build.Context = ensureAbsolute(c.Build.Context, c.File)
 	}
 

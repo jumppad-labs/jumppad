@@ -46,15 +46,21 @@ func (c *CertificateCA) Create() error {
 		return err
 	}
 
-	err = k.Private.WriteFile(path.Join(c.config.Output, fmt.Sprintf("%s.key", c.config.Name)))
+	keyFile := path.Join(c.config.Output, fmt.Sprintf("%s.key", c.config.Name))
+	err = k.Private.WriteFile(keyFile)
 	if err != nil {
 		return err
 	}
 
-	err = ca.WriteFile(path.Join(c.config.Output, fmt.Sprintf("%s.cert", c.config.Name)))
+	certFile := path.Join(c.config.Output, fmt.Sprintf("%s.cert", c.config.Name))
+	err = ca.WriteFile(certFile)
 	if err != nil {
 		return err
 	}
+
+	// set the outputs
+	c.config.CertPath = certFile
+	c.config.KeyPath = keyFile
 
 	return nil
 }
@@ -75,7 +81,10 @@ func (c *CertificateLeaf) Create() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	return retry.Constant(ctx, 1*time.Second, func(ctx context.Context) error {
+	keyFile := path.Join(c.config.Output, fmt.Sprintf("%s.key", c.config.Name))
+	certFile := path.Join(c.config.Output, fmt.Sprintf("%s.cert", c.config.Name))
+
+	err := retry.Constant(ctx, 1*time.Second, func(ctx context.Context) error {
 		ca := &crypto.X509{}
 		err := ca.ReadFile(c.config.CACert)
 		if err != nil {
@@ -94,7 +103,7 @@ func (c *CertificateLeaf) Create() error {
 		}
 
 		// Save the key
-		err = k.Private.WriteFile(path.Join(c.config.Output, fmt.Sprintf("%s.key", c.config.Name)))
+		err = k.Private.WriteFile(keyFile)
 		if err != nil {
 			return err
 		}
@@ -105,8 +114,14 @@ func (c *CertificateLeaf) Create() error {
 		}
 
 		// Save the certificate
-		return lc.WriteFile(path.Join(c.config.Output, fmt.Sprintf("%s.cert", c.config.Name)))
-	}) // Load the root key
+		return lc.WriteFile(certFile)
+	})
+
+	// set the outputs
+	c.config.CertPath = certFile
+	c.config.KeyPath = keyFile
+
+	return err
 }
 
 func (c *CertificateLeaf) Destroy() error {

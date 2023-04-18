@@ -5,21 +5,20 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
-	"github.com/shipyard-run/shipyard/pkg/config"
-	"github.com/shipyard-run/shipyard/pkg/utils"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"golang.org/x/xerrors"
 )
 
 // NomadJob is a provider which enabled the creation and destruction
 // of Nomad jobs
 type NomadJob struct {
-	config *config.NomadJob
+	config *resources.NomadJob
 	client clients.Nomad
 	log    hclog.Logger
 }
 
 // NewNomadJob creates a provider which can create and destroy Nomad jobs
-func NewNomadJob(c *config.NomadJob, hc clients.Nomad, l hclog.Logger) *NomadJob {
+func NewNomadJob(c *resources.NomadJob, hc clients.Nomad, l hclog.Logger) *NomadJob {
 	return &NomadJob{c, hc, l}
 }
 
@@ -28,14 +27,15 @@ func (n *NomadJob) Create() error {
 	n.log.Info("Create Nomad Job", "ref", n.config.Name, "files", n.config.Paths)
 
 	// find the cluster
-	cc, err := n.config.ResourceInfo.FindDependentResource(n.config.Cluster)
+	cc, err := n.config.ParentConfig.FindResource(n.config.Cluster)
 	if err != nil {
 		return err
 	}
 
+	nomadCluster := cc.(*resources.NomadCluster)
+
 	// load the config
-	clusterConfig, _ := utils.GetClusterConfig(string(cc.Info().Type) + "." + cc.Info().Name)
-	n.client.SetConfig(clusterConfig, string(utils.LocalContext))
+	n.client.SetConfig(nomadCluster.ExternalIP, nomadCluster.APIPort, nomadCluster.ClientNodes)
 
 	err = n.client.Create(n.config.Paths)
 	if err != nil {
@@ -77,15 +77,15 @@ func (n *NomadJob) Create() error {
 func (n *NomadJob) Destroy() error {
 	n.log.Info("Destroy Nomad Job", "ref", n.config.Name)
 
-	// find the cluster
-	_, err := n.config.ResourceInfo.FindDependentResource(n.config.Cluster)
+	cc, err := n.config.ParentConfig.FindResource(n.config.Cluster)
 	if err != nil {
 		return err
 	}
 
+	nomadCluster := cc.(*resources.NomadCluster)
+
 	// load the config
-	clusterConfig, _ := utils.GetClusterConfig(n.config.Cluster)
-	n.client.SetConfig(clusterConfig, string(utils.LocalContext))
+	n.client.SetConfig(nomadCluster.ExternalIP, nomadCluster.APIPort, nomadCluster.ClientNodes)
 
 	err = n.client.Stop(n.config.Paths)
 	if err != nil {

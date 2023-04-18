@@ -1,22 +1,23 @@
 package providers
 
 import (
+	"io/fs"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/hashicorp/go-hclog"
 	cp "github.com/otiai10/copy"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"golang.org/x/xerrors"
 )
 
 type Copy struct {
 	log    hclog.Logger
-	config *config.Copy
+	config *resources.Copy
 }
 
-func NewCopy(co *config.Copy, l hclog.Logger) *Copy {
+func NewCopy(co *resources.Copy, l hclog.Logger) *Copy {
 	return &Copy{l, co}
 }
 
@@ -44,10 +45,10 @@ func (c *Copy) Create() error {
 
 	// keep track of
 	files := []string{}
-	opts.Skip = func(file string) (bool, error) {
-		c.log.Debug("Copy file", "ref", c.config.Name, "file", file)
+	opts.Skip = func(srcinfo fs.FileInfo, src, dest string) (bool, error) {
+		c.log.Debug("Copy file", "ref", c.config.Name, "file", src)
 
-		files = append(files, file)
+		files = append(files, src)
 		return false, nil
 	}
 

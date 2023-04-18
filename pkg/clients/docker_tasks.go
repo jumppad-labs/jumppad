@@ -532,13 +532,13 @@ func (d *DockerTasks) BuildContainer(config *resources.Container, force bool) (s
 	}
 
 	// if the Dockerfile is not set, set to default
-	if config.Build.File == "" {
-		config.Build.File = "./Dockerfile"
+	if config.Build.DockerFile == "" {
+		config.Build.DockerFile = "./Dockerfile"
 	}
 
 	// tar the build context folder and send to the server
 	buildOpts := types.ImageBuildOptions{
-		Dockerfile: config.Build.File,
+		Dockerfile: config.Build.DockerFile,
 		Tags:       []string{imageName},
 	}
 

@@ -7,34 +7,31 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/shipyard/pkg/clients"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"github.com/shipyard-run/shipyard/pkg/utils"
 )
 
 // ExecLocal provider allows the execution of arbitrary commands
 // on the local machine
-type ExecLocal struct {
-	config *config.ExecLocal
+type LocalExec struct {
+	config *resources.LocalExec
 	client clients.Command
 	log    hclog.Logger
 }
 
 // NewExecLocal creates a new Local Exec provider
-func NewExecLocal(c *config.ExecLocal, ex clients.Command, l hclog.Logger) *ExecLocal {
-	return &ExecLocal{c, ex, l}
+func NewLocalExec(c *resources.LocalExec, ex clients.Command, l hclog.Logger) *LocalExec {
+	return &LocalExec{c, ex, l}
 }
 
 // Create a new exec
-func (c *ExecLocal) Create() error {
-	c.log.Info("Locally executing script", "ref", c.config.Name, "script", c.config.Command, "args", c.config.Arguments)
+func (c *LocalExec) Create() error {
+	c.log.Info("Locally executing script", "ref", c.config.Name, "command", c.config.Command)
 
 	// build the environment variables
 	envs := []string{}
-	for _, e := range c.config.Environment {
-		envs = append(envs, fmt.Sprintf("%s=%s", e.Key, e.Value))
-	}
 
-	for k, v := range c.config.EnvVar {
+	for k, v := range c.config.Env {
 		envs = append(envs, fmt.Sprintf("%s=%s", k, v))
 	}
 
@@ -47,18 +44,18 @@ func (c *ExecLocal) Create() error {
 	if c.config.Timeout != "" {
 		d, err = time.ParseDuration(c.config.Timeout)
 		if err != nil {
-			return fmt.Errorf("Unable to parse Duration for timeout: %s", err)
+			return fmt.Errorf("unable to parse Duration for timeout: %s", err)
 		}
 
 		if c.config.Daemon {
-			c.log.Warn("Timeout will be ignored when exec is running in daemon mode")
+			c.log.Warn("timeout will be ignored when exec is running in daemon mode")
 		}
 	}
 
 	// create the config
 	cc := clients.CommandConfig{
-		Command:          c.config.Command,
-		Args:             c.config.Arguments,
+		Command:          c.config.Command[0],
+		Args:             c.config.Command[1:],
 		Env:              envs,
 		WorkingDirectory: c.config.WorkingDirectory,
 		RunInBackground:  c.config.Daemon,
@@ -66,11 +63,12 @@ func (c *ExecLocal) Create() error {
 		Timeout:          d,
 	}
 
-	// set the env vars
 	p, err := c.client.Execute(cc)
+
+	// set the output
 	c.config.Pid = p
 
-	c.log.Debug("Started process", "ref", c.config.Name, "pid", c.config.Pid)
+	c.log.Debug("Started process", "ref", c.config.ID, "pid", c.config.Pid)
 
 	if err != nil {
 		return err
@@ -80,7 +78,7 @@ func (c *ExecLocal) Create() error {
 }
 
 // Destroy statisfies the interface method but is not implemented by LocalExec
-func (c *ExecLocal) Destroy() error {
+func (c *LocalExec) Destroy() error {
 	if c.config.Daemon {
 		// attempt to destroy the process
 		c.log.Info("Stopping locally executing script", "ref", c.config.Name, "pid", c.config.Pid)
@@ -100,6 +98,6 @@ func (c *ExecLocal) Destroy() error {
 }
 
 // Lookup statisfies the interface method but is not implemented by LocalExec
-func (c *ExecLocal) Lookup() ([]string, error) {
+func (c *LocalExec) Lookup() ([]string, error) {
 	return []string{}, nil
 }
