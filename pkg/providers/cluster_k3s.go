@@ -189,7 +189,7 @@ func (c *K8sCluster) createK3s() error {
 
 	// create the server address
 	FQDN := fmt.Sprintf("server.%s", utils.FQDN(c.config.Name, c.config.Module, c.config.Type))
-	c.config.Address = utils.GetDockerIP()
+	c.config.FQDN = FQDN
 
 	// Set the default startup args
 	// Also set netfilter settings to fix behaviour introduced in Linux Kernel 5.12
@@ -251,6 +251,9 @@ func (c *K8sCluster) createK3s() error {
 			}
 		}
 	}
+
+	// set the external IP
+	c.config.ExternalIP = utils.GetDockerIP()
 
 	// get the Kubernetes config file and drop it in a temp folder
 	kc, err := c.copyKubeConfig(id)

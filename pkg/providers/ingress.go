@@ -114,7 +114,7 @@ func (c *Ingress) exposeLocal() error {
 	id, err := c.connector.ExposeService(
 		serviceName,
 		remotePort,
-		fmt.Sprintf("%s:%d", r.(*resources.K8sCluster).Address, r.(*resources.K8sCluster).ConnectorPort),
+		fmt.Sprintf("%s:%d", r.(*resources.K8sCluster).ExternalIP, r.(*resources.K8sCluster).ConnectorPort),
 		destAddr,
 		"local",
 	)
@@ -160,7 +160,7 @@ func (c *Ingress) exposeK8sRemote() error {
 		return xerrors.Errorf("unable to replace non URI characters in service name %s :%w", c.config.Name, err)
 	}
 
-	connectorAddress := fmt.Sprintf("%s:%d", res.(*resources.K8sCluster).Address, res.(*resources.K8sCluster).ConnectorPort)
+	connectorAddress := fmt.Sprintf("%s:%d", res.(*resources.K8sCluster).ExternalIP, res.(*resources.K8sCluster).ConnectorPort)
 
 	// send the request
 	c.log.Debug(

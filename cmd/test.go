@@ -295,6 +295,34 @@ func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
 	return err
 }
 
+// Helper function that gets the name of the resource in Docker based on
+// the type.
+// Returns the docker container id for the main container and in the instance
+// of clusters the number of nodes
+func getLookupAddress(resourceName string) (string, string, int, error) {
+	c, err := resources.LoadState()
+	if err != nil {
+		return "", "", 0, fmt.Errorf("unable to load state")
+	}
+
+	res, err := c.FindResource(resourceName)
+	if err != nil {
+		return "", "", 0, fmt.Errorf("unable to find resource %s %s", resourceName, err)
+	}
+
+	switch res.Metadata().Type {
+	case resources.TypeNetwork:
+		return res.Metadata().Name, res.Metadata().Type, 1, nil
+	case resources.TypeK8sCluster:
+		return res.(*resources.K8sCluster).FQDN, res.Metadata().Type, 1, nil
+	case resources.TypeNomadCluster:
+		cl := res.(*resources.NomadCluster)
+		return cl.ServerFQDN, res.Metadata().Type, cl.ClientNodes + 1, nil
+	default:
+		return "", "", 0, fmt.Errorf("resource type %s is not supported", res.Metadata().Type)
+	}
+}
+
 func (cr *CucumberRunner) theFollowingResourcesShouldBeRunning(arg1 *godog.Table) error {
 	for i, r := range arg1.Rows {
 		if i == 0 {
@@ -306,22 +334,22 @@ func (cr *CucumberRunner) theFollowingResourcesShouldBeRunning(arg1 *godog.Table
 		}
 
 		rName := strings.TrimSpace(r.Cells[0].Value)
-
-		fqdn, err := hcltypes.ParseFQDN(rName)
+		addr, typ, _, err := getLookupAddress(rName)
 		if err != nil {
-			return fmt.Errorf("invalid resource: %s, error: %s", rName, err)
+			return fmt.Errorf("unable to find resource: %s", err)
 		}
 
-		if fqdn.Type == resources.TypeNetwork {
-			err := cr.thereShouldBe1NetworkCalled(fqdn.Resource)
+		// we need some logic here to determine how best to check the running
+		// resources, for example, nomad clusters may have multiple nodes
+		// kubernetes clusters the name is prefixed with server
+
+		if typ == resources.TypeNetwork {
+			err := cr.thereShouldBe1NetworkCalled(addr)
 			if err != nil {
 				return err
 			}
 		} else {
-			// convert the resource fqdn into a domain name
-			id := utils.FQDN(fqdn.Resource, fqdn.Module, fqdn.Type)
-
-			err := cr.thereShouldBeAResourceRunningCalled(id)
+			err := cr.thereShouldBeAResourceRunningCalled(addr)
 			if err != nil {
 				return err
 			}

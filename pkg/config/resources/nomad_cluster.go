@@ -17,7 +17,6 @@ type NomadCluster struct {
 
 	Version       string            `hcl:"version,optional" json:"version,omitempty"`
 	ClientNodes   int               `hcl:"client_nodes,optional" json:"client_nodes,omitempty"`
-	Nodes         int               `hcl:"nodes,optional" json:"nodes,omitempty"`
 	Env           map[string]string `hcl:"env,block" json:"env,omitempty"`
 	Images        []Image           `hcl:"image,block" json:"images,omitempty"`
 	ServerConfig  string            `hcl:"server_config,optional" json:"server_config,omitempty"`
@@ -27,11 +26,25 @@ type NomadCluster struct {
 	OpenInBrowser bool              `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"` // open the UI in the browser after creation
 
 	// Output Parameters
-	APIPort       int      `hcl:"api_port,optional" json:"api_port,omitempty"`
-	ConnectorPort int      `hcl:"connector_port,optional" json:"connector_port,omitempty"`
-	ServerAddress string   `hcl:"server_address,optional" json:"server_address,omitempty"`
-	ClientAddress []string `hcl:"client_address,optional" json:"client_address,omitempty"`
-	ConfigDir     string   `hcl:"config_dir,optional" json:"config_dir,omitempty"`
+
+	// The APIPort the server is running on
+	APIPort int `hcl:"api_port,optional" json:"api_port,omitempty"`
+
+	// The Port where the connector is running
+	ConnectorPort int `hcl:"connector_port,optional" json:"connector_port,omitempty"`
+
+	// The directory where the server and client config is written to
+	ConfigDir string `hcl:"config_dir,optional" json:"config_dir,omitempty"`
+
+	// The fully qualified docker address for the server
+	ServerFQDN string `hcl:"server_fqdn,optional" json:"server_fqdn,omitempty"`
+
+	// The fully qualified docker address for the client nodes
+	ClientFQDN []string `hcl:"client_fqdn,optional" json:"client_fqdn,omitempty"`
+
+	// ExternalIP is the ip address of the cluster, this generally resolves
+	// to the docker ip
+	ExternalIP string `hcl:"external_ip,optional" json:"external_ip,omitempty"`
 }
 
 func (n *NomadCluster) Process() error {
@@ -61,9 +74,10 @@ func (n *NomadCluster) Process() error {
 		r, _ := c.FindResource(n.ID)
 		if r != nil {
 			kstate := r.(*NomadCluster)
+			n.ExternalIP = kstate.ExternalIP
 			n.ConfigDir = kstate.ConfigDir
-			n.ServerAddress = kstate.ServerAddress
-			n.ClientAddress = kstate.ClientAddress
+			n.ServerFQDN = kstate.ServerFQDN
+			n.ClientFQDN = kstate.ClientFQDN
 			n.APIPort = kstate.APIPort
 			n.ConnectorPort = kstate.ConnectorPort
 		}

@@ -88,6 +88,10 @@ func (c *Container) internalCreate() error {
 		return err
 	}
 
+	// set the fqdn
+	fqdn := utils.FQDN(c.config.Name, c.config.Module, c.config.Type)
+	c.config.FQDN = fqdn
+
 	// get the assigned ip addresses for the container
 	dc := c.client.ListNetworks(id)
 	for _, n := range dc {

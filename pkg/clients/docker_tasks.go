@@ -363,7 +363,7 @@ func (d *DockerTasks) CreateContainer(c *resources.Container) (string, error) {
 		// disconnect the default networks
 		// for podman this needs to happen after we have attached to a network or it fails silently
 		for _, n := range nets {
-			d.l.Debug("Disconnectng network", "name", n, "ref", c.Name)
+			d.l.Debug("Disconnecting network", "name", n, "ref", c.Name)
 
 			err := d.c.NetworkDisconnect(context.Background(), n, cont.ID, true)
 			if err != nil {

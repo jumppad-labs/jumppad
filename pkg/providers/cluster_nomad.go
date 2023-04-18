@@ -149,14 +149,17 @@ func (c *NomadCluster) createNomad() error {
 	c.config.APIPort = rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
 	c.config.ConnectorPort = rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
 	c.config.ConfigDir = path.Join(utils.ShipyardHome(), c.config.Name, "config")
+	c.config.ExternalIP = utils.GetDockerIP()
 
 	serverID, err := c.createServerNode(image, volID, isClient)
 	if err != nil {
 		return err
 	}
 
+	c.config.ServerFQDN = serverID
+
 	cMutex := sync.Mutex{}
-	cls := []string{}
+	clientIDs := []string{}
 	clWait := sync.WaitGroup{}
 	clWait.Add(c.config.ClientNodes)
 
@@ -170,11 +173,11 @@ func (c *NomadCluster) createNomad() error {
 			}
 
 			cMutex.Lock()
-			cls = append(cls, clientID)
+			clientIDs = append(clientIDs, clientID)
 			cMutex.Unlock()
 
 			clWait.Done()
-		}(i+1, image, volID, utils.FQDN(fmt.Sprintf("server.%s", c.config.Name), c.config.Module, resources.TypeNomadCluster))
+		}(i+1, image, volID, c.config.ServerFQDN)
 	}
 
 	clWait.Wait()
@@ -182,8 +185,11 @@ func (c *NomadCluster) createNomad() error {
 		return xerrors.Errorf("Unable to create client nodes: %w", clientError)
 	}
 
+	// set the client ids
+	c.config.ClientFQDN = clientIDs
+
 	// ensure all client nodes are up
-	c.nomadClient.SetConfig(c.config.ServerAddress, c.config.APIPort, c.config.Nodes+1)
+	c.nomadClient.SetConfig(c.config.ExternalIP, c.config.APIPort, c.config.ClientNodes+1)
 	err = c.nomadClient.HealthCheckAPI(startTimeout)
 	if err != nil {
 		return err
@@ -202,7 +208,7 @@ func (c *NomadCluster) createNomad() error {
 		clWait := sync.WaitGroup{}
 		clWait.Add(c.config.ClientNodes)
 		var importErr error
-		for _, id := range cls {
+		for _, id := range c.config.ClientFQDN {
 			go func(id string) {
 				err := c.ImportLocalDockerImages("images", id, c.config.Images, false)
 				clWait.Done()

@@ -40,6 +40,9 @@ type Container struct {
 	RunAs *User `hcl:"run_as,block" json:"run_as,omitempty"`
 
 	// Output parameters
+
+	// FQDN is the fully qualified domain name for the container, this can be used
+	// to access the container from other sources
 	FQDN string `hcl:"fqdn,optional" json:"fqdn,omitempty"`
 }
 

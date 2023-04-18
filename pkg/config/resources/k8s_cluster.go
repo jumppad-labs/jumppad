@@ -26,10 +26,23 @@ type K8sCluster struct {
 	Env map[string]string `hcl:"env_var,optional" json:"env_var,omitempty"` // environment variables to set when starting the container
 
 	// output parameters
-	KubeConfig    string `hcl:"kubeconfig,optional" json:"kubeconfig,omitempty"`
-	Address       string `hcl:"address,optional" json:"address,omitempty"`
-	APIPort       int    `hcl:"api_port,optional" json:"api_port,omitempty"`
-	ConnectorPort int    `hcl:"connector_port,optional" json:"connector_port,omitempty"`
+
+	// Path to the Kubernetes config
+	KubeConfig string `hcl:"kubeconfig,optional" json:"kubeconfig,omitempty"`
+
+	// Port the API server is running on
+	APIPort int `hcl:"api_port,optional" json:"api_port,omitempty"`
+
+	// Port the connector is running on
+	ConnectorPort int `hcl:"connector_port,optional" json:"connector_port,omitempty"`
+
+	// Fully qualified domain name for the container, this address can be
+	// used to reference the container within docker and from other containers
+	FQDN string `hcl:"fqdn,optional" json:"fqdn,omitempty"`
+
+	// ExternalIP is the ip address of the cluster, this generally resolves
+	// to the docker ip
+	ExternalIP string `hcl:"external_ip,optional" json:"external_ip,omitempty"`
 }
 
 func (k *K8sCluster) Process() error {
@@ -46,9 +59,10 @@ func (k *K8sCluster) Process() error {
 		if r != nil {
 			kstate := r.(*K8sCluster)
 			k.KubeConfig = kstate.KubeConfig
-			k.Address = kstate.Address
+			k.FQDN = kstate.FQDN
 			k.APIPort = kstate.APIPort
 			k.ConnectorPort = kstate.ConnectorPort
+			k.ExternalIP = kstate.ExternalIP
 
 			// add the network addresses
 			for _, a := range kstate.Networks {
