@@ -174,7 +174,7 @@ func createK8sShell(r types.Resource, dt clients.ContainerTasks, pod, container 
 		},
 	}
 
-	c.Env = map[string]string{
+	c.Environment = map[string]string{
 		"KUBECONFIG": fmt.Sprintf("/root/.shipyard/config/%s/kubeconfig-docker.yaml", clusterName),
 	}
 

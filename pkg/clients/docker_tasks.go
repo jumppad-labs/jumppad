@@ -120,7 +120,7 @@ func (d *DockerTasks) CreateContainer(c *resources.Container) (string, error) {
 
 	// convert the environment vars to a list of [key]=[value]
 	env := make([]string, 0)
-	for k, v := range c.Env {
+	for k, v := range c.Environment {
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
 

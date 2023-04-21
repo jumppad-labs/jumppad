@@ -34,10 +34,10 @@ func generateProviderImpl(c types.Resource, cc *clients.Clients) providers.Provi
 		return providers.NewK8sConfig(c.(*resources.K8sConfig), cc.Kubernetes, cc.Logger)
 	case resources.TypeLocalExec:
 		return providers.NewLocalExec(c.(*resources.LocalExec), cc.Command, cc.Logger)
-	//case config.TypeNomadCluster:
-	//	return providers.NewNomadCluster(c.(*config.NomadCluster), cc.ContainerTasks, cc.Nomad, cc.Logger)
-	//case config.TypeNomadJob:
-	//	return providers.NewNomadJob(c.(*config.NomadJob), cc.Nomad, cc.Logger)
+	case resources.TypeNomadCluster:
+		return providers.NewNomadCluster(c.(*resources.NomadCluster), cc.ContainerTasks, cc.Nomad, cc.Logger)
+	case resources.TypeNomadJob:
+		return providers.NewNomadJob(c.(*resources.NomadJob), cc.Nomad, cc.Logger)
 	case resources.TypeNetwork:
 		return providers.NewNetwork(c.(*resources.Network), cc.Docker, cc.Logger)
 	case types.TypeOutput:

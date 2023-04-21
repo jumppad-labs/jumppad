@@ -18,7 +18,7 @@ resource "template" "nomad_config" {
 resource "nomad_cluster" "dev" {
   client_nodes = variable.client_nodes
 
-  client_config = "${data("nomad-config")}/user_config.hcl"
+  client_config = resource.template.nomad_config.id
 
   network {
     id = resource.network.cloud.id

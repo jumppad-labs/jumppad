@@ -312,7 +312,7 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 		cc.Volumes = append(cc.Volumes, v)
 	}
 
-	cc.Env = c.config.Env
+	cc.Environment = c.config.Environment
 
 	// expose the API server port
 	cc.Ports = []resources.Port{
@@ -328,7 +328,7 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 		},
 	}
 
-	cc.Env = map[string]string{}
+	cc.Environment = map[string]string{}
 	err := c.appendProxyEnv(cc)
 	if err != nil {
 		return "", err
@@ -408,9 +408,9 @@ func (c *NomadCluster) createClientNode(index int, image, volumeID, serverID str
 		cc.Volumes = append(cc.Volumes, v)
 	}
 
-	cc.Env = c.config.Env
+	cc.Environment = c.config.Environment
 
-	cc.Env = map[string]string{}
+	cc.Environment = map[string]string{}
 	err := c.appendProxyEnv(cc)
 	if err != nil {
 		return "", err
@@ -449,10 +449,10 @@ func (c *NomadCluster) appendProxyEnv(cc *resources.Container) error {
 			return fmt.Errorf("Unable to read root CA for proxy: %s", err)
 		}
 
-		cc.Env["HTTP_PROXY"] = utils.HTTPProxyAddress()
-		cc.Env["HTTPS_PROXY"] = utils.HTTPSProxyAddress()
-		cc.Env["NO_PROXY"] = utils.ProxyBypass
-		cc.Env["PROXY_CA"] = string(ca)
+		cc.Environment["HTTP_PROXY"] = utils.HTTPProxyAddress()
+		cc.Environment["HTTPS_PROXY"] = utils.HTTPSProxyAddress()
+		cc.Environment["NO_PROXY"] = utils.ProxyBypass
+		cc.Environment["PROXY_CA"] = string(ca)
 	}
 
 	return nil

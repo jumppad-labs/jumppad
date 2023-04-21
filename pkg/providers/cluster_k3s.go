@@ -139,11 +139,11 @@ func (c *K8sCluster) createK3s() error {
 	}
 
 	// Add any custom environment variables
-	cc.Env = map[string]string{}
+	cc.Environment = map[string]string{}
 
 	// set the environment variables for the K3S_KUBECONFIG_OUTPUT and K3S_CLUSTER_SECRET
-	cc.Env["K3S_KUBECONFIG_OUTPUT"] = "/output/kubeconfig.yaml"
-	cc.Env["K3S_CLUSTER_SECRET"] = "mysupersecret"
+	cc.Environment["K3S_KUBECONFIG_OUTPUT"] = "/output/kubeconfig.yaml"
+	cc.Environment["K3S_CLUSTER_SECRET"] = "mysupersecret"
 
 	// only add the variables for the cache when the kubernetes version is >= v1.18.16
 	sv, err := semver.NewConstraint(">= v1.18.16")
@@ -164,15 +164,15 @@ func (c *K8sCluster) createK3s() error {
 			return fmt.Errorf("unable to read root CA for proxy: %s", err)
 		}
 
-		cc.Env["HTTP_PROXY"] = utils.HTTPProxyAddress()
-		cc.Env["HTTPS_PROXY"] = utils.HTTPSProxyAddress()
-		cc.Env["NO_PROXY"] = utils.ProxyBypass
-		cc.Env["PROXY_CA"] = string(ca)
+		cc.Environment["HTTP_PROXY"] = utils.HTTPProxyAddress()
+		cc.Environment["HTTPS_PROXY"] = utils.HTTPSProxyAddress()
+		cc.Environment["NO_PROXY"] = utils.ProxyBypass
+		cc.Environment["PROXY_CA"] = string(ca)
 	}
 
 	// add any custom environment variables
-	for k, v := range c.config.Env {
-		cc.Env[k] = v
+	for k, v := range c.config.Environment {
+		cc.Environment[k] = v
 	}
 
 	// set the API server port to a random number

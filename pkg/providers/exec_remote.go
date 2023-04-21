@@ -80,7 +80,7 @@ func (c *RemoteExec) Create() error {
 	// build the environment variables
 	envs := []string{}
 
-	for k, v := range c.config.Env {
+	for k, v := range c.config.Environment {
 		envs = append(envs, fmt.Sprintf("%s=%s", k, v))
 	}
 

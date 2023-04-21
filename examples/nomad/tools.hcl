@@ -12,10 +12,10 @@ resource "container" "tools" {
   }
 
   network {
-    name = resource.network.cloud.id
+    id = resource.network.cloud.id
   }
 
   environment = {
-    "NOMAD_ADDR" : "http://server.dev.nomad-cluster.shipyard.run:4646"
+    "NOMAD_ADDR" = "http://${resource.nomad_cluster.dev.server_fqdn}:${resource.nomad_cluster.dev.api_port}"
   }
 }

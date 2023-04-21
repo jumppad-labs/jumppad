@@ -98,7 +98,7 @@ func (c *ImageCache) createImageCache(networks []string) (string, error) {
 		},
 	}
 
-	cc.Env = map[string]string{
+	cc.Environment = map[string]string{
 		"CA_KEY_FILE":           "/cache/ca/root.key",
 		"CA_CRT_FILE":           "/cache/ca/root.cert",
 		"DOCKER_MIRROR_CACHE":   "/cache/docker",

@@ -33,7 +33,7 @@ func NewContainerSidecar(cs *resources.Sidecar, cl clients.ContainerTasks, hc cl
 	co.Volumes = cs.Volumes
 	co.Command = cs.Command
 	co.Entrypoint = cs.Entrypoint
-	co.Env = cs.Env
+	co.Environment = cs.Environment
 	co.HealthCheck = cs.HealthCheck
 	co.Image = &cs.Image
 	co.Privileged = cs.Privileged

@@ -120,7 +120,7 @@ func (i *Docs) createDocsContainer() error {
 	// add the environment variables for the
 	// ip and port of the terminal server
 	localIP, _ := utils.GetLocalIPAndHostname()
-	cc.Env = map[string]string{
+	cc.Environment = map[string]string{
 		"TERMINAL_SERVER_IP":   localIP,
 		"TERMINAL_SERVER_PORT": "30003",
 	}

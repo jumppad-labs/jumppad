@@ -17,7 +17,7 @@ type RemoteExec struct {
 
 	// Either Script or Command must be specified
 	//Script    string   `hcl:"script,optional" json:"script,omitempty"` // Path to a script to execute
-	Command          []string `hcl:"cmd,optional" json:"cmd,omitempty"`                             // Command to execute
+	Command          []string `hcl:"command,optional" json:"command,omitempty"`                     // Command to execute
 	WorkingDirectory string   `hcl:"working_directory,optional" json:"working_directory,omitempty"` // Working directory to execute commands
 
 	Volumes     []Volume          `hcl:"volume,block" json:"volumes,omitempty"`             // Volumes to mount to container
