@@ -1,7 +1,6 @@
-exec_remote "nomad_jobs" {
-    depends_on =["nomad_cluster.dev"]
+resource "remote_exec" "nomad_jobs" {
+  depends_on = ["resource.nomad_cluster.dev"]
 
-    target = "container.tools"
-    cmd = "nomad"
-    args = ["run", "/files/example.nomad"]
+  target  = resource.container.tools.id
+  command = ["nomad", "run", "/files/example.nomad"]
 }

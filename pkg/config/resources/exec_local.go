@@ -14,7 +14,7 @@ type LocalExec struct {
 	WorkingDirectory string            `hcl:"working_directory,optional" json:"working_directory,omitempty"` // Working directory to execute commands
 	Daemon           bool              `hcl:"daemon,optional" json:"daemon,omitempty"`                       // Should the process run as a daemon
 	Timeout          string            `hcl:"timeout,optional" json:"timeout,omitempty"`                     // Set the timeout for the command
-	Env              map[string]string `hcl:"env,optional" json:"env,omitempty"`                             // environment variables to set
+	Environment      map[string]string `hcl:"environment,optional" json:"environment,omitempty"`             // environment variables to set
 
 	// output
 

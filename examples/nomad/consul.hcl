@@ -1,4 +1,4 @@
-container "consul" {
+resource "container" "consul" {
   image {
     name = "consul:1.10.6"
   }
@@ -11,6 +11,6 @@ container "consul" {
   }
 
   network {
-    name = "network.cloud"
+    id = resource.network.cloud.id
   }
 }

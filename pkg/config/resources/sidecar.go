@@ -12,11 +12,11 @@ type Sidecar struct {
 
 	Target string `hcl:"target" json:"target"`
 
-	Image      Image             `hcl:"image,block" json:"image"`                        // image to use for the container
-	Entrypoint []string          `hcl:"entrypoint,optional" json:"entrypoint,omitempty"` // entrypoint to use when starting the container
-	Command    []string          `hcl:"command,optional" json:"command,omitempty"`       // command to use when starting the container
-	Env        map[string]string `hcl:"env,optional" json:"env,omitempty"`               // environment variables to set when starting the container
-	Volumes    []Volume          `hcl:"volume,block" json:"volumes,omitempty"`           // volumes to attach to the container
+	Image       Image             `hcl:"image,block" json:"image"`                          // image to use for the container
+	Entrypoint  []string          `hcl:"entrypoint,optional" json:"entrypoint,omitempty"`   // entrypoint to use when starting the container
+	Command     []string          `hcl:"command,optional" json:"command,omitempty"`         // command to use when starting the container
+	Environment map[string]string `hcl:"environment,optional" json:"environment,omitempty"` // environment variables to set when starting the container
+	Volumes     []Volume          `hcl:"volume,block" json:"volumes,omitempty"`             // volumes to attach to the container
 
 	Privileged bool `hcl:"privileged,optional" json:"privileged,omitempty"` // run the container in privileged mode?
 

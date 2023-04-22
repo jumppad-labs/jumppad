@@ -20,8 +20,8 @@ type RemoteExec struct {
 	Command          []string `hcl:"cmd,optional" json:"cmd,omitempty"`                             // Command to execute
 	WorkingDirectory string   `hcl:"working_directory,optional" json:"working_directory,omitempty"` // Working directory to execute commands
 
-	Volumes []Volume          `hcl:"volume,block" json:"volumes,omitempty"` // Volumes to mount to container
-	Env     map[string]string `hcl:"env,optional" json:"env_var,omitempty"` // environment variables to set when starting the container
+	Volumes     []Volume          `hcl:"volume,block" json:"volumes,omitempty"`             // Volumes to mount to container
+	Environment map[string]string `hcl:"environment,optional" json:"environment,omitempty"` // environment variables to set when starting the container
 
 	// User block for mapping the user id and group id inside the container
 	RunAs *User `hcl:"run_as,block" json:"run_as,omitempty"`

@@ -1,4 +1,4 @@
-template "nomad_config" {
+resource "template" "nomad_config" {
 
   source = <<-EOS
   plugin "docker" {
@@ -15,13 +15,13 @@ template "nomad_config" {
   destination = "${data("nomad-config")}/user_config.hcl"
 }
 
-nomad_cluster "dev" {
-  client_nodes = "${var.client_nodes}"
+resource "nomad_cluster" "dev" {
+  client_nodes = variable.client_nodes
 
   client_config = "${data("nomad-config")}/user_config.hcl"
 
   network {
-    name = "network.cloud"
+    id = resource.network.cloud.id
   }
 
   image {
@@ -36,10 +36,11 @@ nomad_cluster "dev" {
   }
 }
 
-nomad_job "consul" {
-  cluster = "nomad_cluster.dev"
+resource "nomad_job" "consul" {
+  cluster = resource.nomad_cluster.dev.id
 
   paths = ["./app_config/example2.nomad"]
+
   health_check {
     timeout    = "60s"
     nomad_jobs = ["example_2"]

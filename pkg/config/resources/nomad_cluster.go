@@ -17,7 +17,7 @@ type NomadCluster struct {
 
 	Version       string            `hcl:"version,optional" json:"version,omitempty"`
 	ClientNodes   int               `hcl:"client_nodes,optional" json:"client_nodes,omitempty"`
-	Env           map[string]string `hcl:"env,block" json:"env,omitempty"`
+	Environment   map[string]string `hcl:"environment,block" json:"env,omitempty"`
 	Images        []Image           `hcl:"image,block" json:"images,omitempty"`
 	ServerConfig  string            `hcl:"server_config,optional" json:"server_config,omitempty"`
 	ClientConfig  string            `hcl:"client_config,optional" json:"client_config,omitempty"`
