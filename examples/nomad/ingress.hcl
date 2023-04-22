@@ -1,47 +1,65 @@
-container_ingress "consul-http" {
-  target  = "container.consul"
+// consul http to localhost:8500 on kubernetes
+resource "ingress" "consul-http-kubernetes" {
+  port = 18500 
 
-  port {
-    local  = 8500
-    remote = 8500
-    host   = 18500
+  target {
+    id = resource.k8s_cluster.k3s.id
+    port = 8500
+    
+    service = "consul-server"
+    namespace = "default"
   }
-
-  network  {
-    name = "network.cloud"
-  }
+  
+  // available for remote connector
+  public = true
 }
 
-nomad_ingress "fake-service-1" {
-  cluster  = "nomad_cluster.dev"
-  job = "example_1"
-  group = "fake_service"
-  task = "fake_service"
+// consul http to localhost:8500 on nomad
+resource "ingress" "consul-http-kubernetes" {
+  port = 18501
 
-  port {
-    local  = 19090
-    remote = "http"
-    host   = 19090
+  target {
+    id = resource.nomad_cluster.dev.id
+    named_port = "http"
+    
+    job = "consul"
+    group = "consul"
+    task = "consul"
   }
-
-  network  {
-    name = "network.cloud"
-  }
+  
+  // not available for remote connector
+  public = false
 }
 
-nomad_ingress "fake-service-2" {
-  cluster  = "nomad_cluster.dev"
-  job = "example_2"
-  group = "fake_service"
-  task = "fake_service"
+// consul http to localhost:8500 on docker
+resource "ingress" "consul-http-docker" {
+  port = 18502
 
-  port {
-    local  = 19090
-    remote = "http"
-    host   = 19091
+  target {
+    id = resource.container.consul.id
+    port = 8500
   }
 
-  network  {
-    name = "network.cloud"
+  // not available for remote connector
+  public = false
+}
+
+// consul http on local machine on the network cloud
+resource "egress" "local-app" {
+  address = "localhost"
+  port = 8500
+
+  virtual_service {
+    network_id = resource.network.cloud.id
+    port = 8500
   }
+  
+  // available for remote connector
+  public = true
+}
+
+// exposes public ports from a remote blueprint to the 
+// local application
+resource "remote" "remote_consul"
+  token = "dfdfdfdfd343434cdfdf"
 }
