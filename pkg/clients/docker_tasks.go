@@ -724,6 +724,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 	name = name[len(name)-8:]
 	cc := &resources.Container{}
 	cc.ResourceMetadata.Name = fmt.Sprintf("%s-import", name)
+	cc.ResourceMetadata.Type = "import"
 
 	cc.Image = &resources.Image{Name: "alpine:latest"}
 	cc.Volumes = []resources.Volume{

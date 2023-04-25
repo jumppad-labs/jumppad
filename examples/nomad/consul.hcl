@@ -13,4 +13,10 @@ resource "container" "consul" {
   network {
     id = resource.network.cloud.id
   }
+
+  port {
+    local  = 8500
+    remote = 8500
+    host   = 18500
+  }
 }

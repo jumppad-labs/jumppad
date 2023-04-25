@@ -7,6 +7,7 @@ import (
 	"github.com/shipyard-run/hclconfig/types"
 	"github.com/shipyard-run/shipyard/pkg/clients"
 	"github.com/shipyard-run/shipyard/pkg/config/resources"
+	"github.com/shipyard-run/shipyard/pkg/utils"
 	"golang.org/x/xerrors"
 )
 
@@ -40,7 +41,7 @@ func (c *RemoteExec) Create() error {
 		// Not using existing target create new container
 		id, err := c.createRemoteExecContainer()
 		if err != nil {
-			return xerrors.Errorf("Unable to create container for exec_remote.%s: %w", c.config.Name, err)
+			return xerrors.Errorf("unable to create container for exec_remote.%s: %w", c.config.Name, err)
 		}
 
 		targetID = id
@@ -49,7 +50,7 @@ func (c *RemoteExec) Create() error {
 		target, err := c.config.ParentConfig.FindResource(c.config.Target)
 		if err != nil {
 			// this should never happen
-			return xerrors.Errorf("Unable to find target: %w", err)
+			return xerrors.Errorf("unable to find target %s: %w", c.config.Target, err)
 		}
 
 		switch target.Metadata().Type {
@@ -60,14 +61,15 @@ func (c *RemoteExec) Create() error {
 		case resources.TypeSidecar:
 			fallthrough
 		case resources.TypeContainer:
-			ids, err := c.client.FindContainerIDs(target.Metadata().ID)
+			fqdn := utils.FQDN(target.Metadata().Name, target.Metadata().Module, target.Metadata().Type)
+			ids, err := c.client.FindContainerIDs(fqdn)
 
 			if err != nil {
-				return xerrors.Errorf("Unable to find remote exec target: %w", err)
+				return xerrors.Errorf("unable to find remote exec target: %w", err)
 			}
 
 			if len(ids) != 1 {
-				return xerrors.Errorf("Unable to find remote exec target")
+				return xerrors.Errorf("unable to find remote exec target %s", fqdn)
 			}
 
 			targetID = ids[0]

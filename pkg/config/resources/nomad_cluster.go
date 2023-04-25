@@ -13,7 +13,7 @@ type NomadCluster struct {
 	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
 	// Port is optional, by default the server exposes port 4646
-	Port `hcl:"port,optional" json:"port,omitempty"`
+	Port int `hcl:"port,optional" json:"port,omitempty"`
 
 	Version       string            `hcl:"version,optional" json:"version,omitempty"`
 	ClientNodes   int               `hcl:"client_nodes,optional" json:"client_nodes,omitempty"`
@@ -64,6 +64,11 @@ func (n *NomadCluster) Process() error {
 	// make sure mount paths are absolute
 	for i, v := range n.Volumes {
 		n.Volumes[i].Source = ensureAbsolute(v.Source, n.File)
+	}
+
+	// set the default port
+	if n.Port == 0 {
+		n.Port = 4646
 	}
 
 	// do we have an existing resource in the state?

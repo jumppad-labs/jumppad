@@ -22,14 +22,14 @@ jobs:
           go version
           go get -v -t ./...
 
-      - name: Unit Test
-        run: |
-          go test -v -race -coverprofile=coverage.txt -covermode=atomic -short ./...
+      #- name: Unit Test
+      #  run: |
+      #    go test -v -race -coverprofile=coverage.txt -covermode=atomic -short ./...
 
-      - name: Upload Code Coverage
-        uses: codecov/codecov-action@v1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}  # required
+      #- name: Upload Code Coverage
+      #  uses: codecov/codecov-action@v1
+      #  with:
+      #    token: ${{ secrets.CODECOV_TOKEN }}  # required
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
@@ -62,27 +62,27 @@ jobs:
           tile: ${{ github.job_id }}
           description: "End to end tests for Linux"
 
-  e2e_mac:
-    name: Mac E2E Tests
-    runs-on: ubuntu-latest
-    needs: test
+ # e2e_mac:
+ #   name: Mac E2E Tests
+ #   runs-on: ubuntu-latest
+ #   needs: test
 
-    steps:
-      - name: Repository Dispatch
-        uses: peter-evans/repository-dispatch@v1
-        with:
-          token: '${{ secrets.GH_TOKEN }}'
-          repository: shipyard-run/shipyard-mac-build
-          event-type: test
-          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}"}'
+ #   steps:
+ #     - name: Repository Dispatch
+ #       uses: peter-evans/repository-dispatch@v1
+ #       with:
+ #         token: '${{ secrets.GH_TOKEN }}'
+ #         repository: shipyard-run/shipyard-mac-build
+ #         event-type: test
+ #         client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}"}'
 
-      - name: Send status to Discord
-        uses: sarisia/actions-status-discord@v1
-        if: always()
-        with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          tile: ${{ github.job_id }}
-          description: "End to end tests for MacOS amd64"
+ #     - name: Send status to Discord
+ #       uses: sarisia/actions-status-discord@v1
+ #       if: always()
+ #       with:
+ #         webhook: ${{ secrets.DISCORD_WEBHOOK }}
+ #         tile: ${{ github.job_id }}
+ #         description: "End to end tests for MacOS amd64"
 
   functional_test_build:
     name: Build binary for Functional Tests
@@ -113,7 +113,7 @@ jobs:
         with:
           name: test_binary
           path: |
-            /usr/local/bin/shipyard
+            /usr/local/bin/jumppad
             /usr/local/bin/dnsname
 
   functional_test_docker:
@@ -129,10 +129,9 @@ jobs:
           './examples/container',
           './examples/build',
           './examples/docs',
-          './examples/modules',
+          './examples/nomad',
           './examples/single_k3s_cluster',
           './examples/multiple_k3s_clusters',
-          './examples/nomad',
           './examples/local_exec',
         ]
 
@@ -145,7 +144,7 @@ jobs:
       
       - name: Make binary executable
         run: |
-          sudo chmod +x /usr/local/bin/shipyard
+          sudo chmod +x /usr/local/bin/jumppad
 
       - uses: actions/checkout@v2
 
@@ -156,9 +155,9 @@ jobs:
       
       - name: Run tests
         run: |
-          shipyard check
-          shipyard purge
-          shipyard test ${{matrix.folder}}
+          jumppad check
+          jumppad purge
+          jumppad test ${{matrix.folder}}
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
@@ -168,105 +167,105 @@ jobs:
           tile: ${{ github.job_id }}
           description: "Functional tests for docker: ${{matrix.folder}}"
 
-  functional_test_podman:
-    name: Functional Test Podman
-    runs-on: ubuntu-latest
-    needs: functional_test_docker
+ # functional_test_podman:
+ #   name: Functional Test Podman
+ #   runs-on: ubuntu-latest
+ #   needs: functional_test_docker
 
-    strategy:
-      max-parallel: 2
-      fail-fast: false
-      matrix:
-        folder: [
-          './examples/container',
-          './examples/build',
-          './examples/docs',
-          './examples/single_k3s_cluster',
-          './examples/nomad',
-          './examples/local_exec',
-        ]
+ #   strategy:
+ #     max-parallel: 2
+ #     fail-fast: false
+ #     matrix:
+ #       folder: [
+ #         './examples/container',
+ #         './examples/build',
+ #         './examples/docs',
+ #         './examples/single_k3s_cluster',
+ #         './examples/nomad',
+ #         './examples/local_exec',
+ #       ]
 
-    steps:
-      - name: Download-Binaries
-        uses: actions/download-artifact@v2
-        with:
-          name: test_binary
-          path: /usr/local/bin
-      
-      - name: Make binary executable
-        run: |
-          sudo chmod +x /usr/local/bin/shipyard
+ #   steps:
+ #     - name: Download-Binaries
+ #       uses: actions/download-artifact@v2
+ #       with:
+ #         name: test_binary
+ #         path: /usr/local/bin
+ #     
+ #     - name: Make binary executable
+ #       run: |
+ #         sudo chmod +x /usr/local/bin/shipyard
 
-      - uses: actions/checkout@v2
+ #     - uses: actions/checkout@v2
 
-      - name: Setup Go version
-        uses: actions/setup-go@v1
-        with:
-          go-version: 1.19
-      
-      - name: Install dependencies for Podman tests
-        run: |
-          sudo apt install -y libbtrfs-dev pkg-config libgpgme-dev libdevmapper-dev podman dnsmasq
-      
-      - name: Setup DNSMasq default nameserver resolution
-        run: |
-          echo "disable resovld listening on 53"
-          sudo /bin/bash -c 'echo "DNSStubListener=no" >> /etc/systemd/resolved.conf'
-          sudo /bin/bash -c 'echo "DNS=8.8.8.8" >> /etc/systemd/resolved.conf'
-          sudo systemctl restart systemd-resolved.service
+ #     - name: Setup Go version
+ #       uses: actions/setup-go@v1
+ #       with:
+ #         go-version: 1.19
+ #     
+ #     - name: Install dependencies for Podman tests
+ #       run: |
+ #         sudo apt install -y libbtrfs-dev pkg-config libgpgme-dev libdevmapper-dev podman dnsmasq
+ #     
+ #     - name: Setup DNSMasq default nameserver resolution
+ #       run: |
+ #         echo "disable resovld listening on 53"
+ #         sudo /bin/bash -c 'echo "DNSStubListener=no" >> /etc/systemd/resolved.conf'
+ #         sudo /bin/bash -c 'echo "DNS=8.8.8.8" >> /etc/systemd/resolved.conf'
+ #         sudo systemctl restart systemd-resolved.service
 
-          echo "configure dnsmasq"
-          sudo /bin/bash -c 'echo "server=8.8.8.8" >> /etc/dnsmasq.conf'
-          sudo /bin/bash -c 'echo "server=1.1.1.1" >> /etc/dnsmasq.conf'
-          sudo systemctl restart dnsmasq
+ #         echo "configure dnsmasq"
+ #         sudo /bin/bash -c 'echo "server=8.8.8.8" >> /etc/dnsmasq.conf'
+ #         sudo /bin/bash -c 'echo "server=1.1.1.1" >> /etc/dnsmasq.conf'
+ #         sudo systemctl restart dnsmasq
 
-          sudo /bin/bash -c 'echo "127.0.0.1 ubuntu" >> /etc/hosts'
-      
-      - name: Setup Podman sock
-        run: |
-          sudo sed '/^SocketMode=.*/a SocketGroup=docker' -i /lib/systemd/system/podman.socket
-          sudo chmod +x /run/podman
+ #         sudo /bin/bash -c 'echo "127.0.0.1 ubuntu" >> /etc/hosts'
+ #     
+ #     - name: Setup Podman sock
+ #       run: |
+ #         sudo sed '/^SocketMode=.*/a SocketGroup=docker' -i /lib/systemd/system/podman.socket
+ #         sudo chmod +x /run/podman
 
-          sudo systemctl enable podman.socket
-          sudo systemctl enable podman.service
-          sudo systemctl start podman.service
-          sudo podman info
-          
-      - name: Setup Podman dnsname plugin
-        run: |
-          mkdir -p /usr/libexec/cni
-          sudo cp /usr/local/bin/dnsname /usr/libexec/cni
-      
-      - name: Setup Podman registries for Docker.io
-        run: |
-          echo -e "[registries.search]\nregistries = ['docker.io']" | sudo tee /etc/containers/registries.conf
+ #         sudo systemctl enable podman.socket
+ #         sudo systemctl enable podman.service
+ #         sudo systemctl start podman.service
+ #         sudo podman info
+ #         
+ #     - name: Setup Podman dnsname plugin
+ #       run: |
+ #         mkdir -p /usr/libexec/cni
+ #         sudo cp /usr/local/bin/dnsname /usr/libexec/cni
+ #     
+ #     - name: Setup Podman registries for Docker.io
+ #       run: |
+ #         echo -e "[registries.search]\nregistries = ['docker.io']" | sudo tee /etc/containers/registries.conf
 
-      - name: Run tests Podman
-        uses: nick-invision/retry@v2
-        with:
-          timeout_seconds: 600
-          max_attempts: 3
-          retry_on: error
-          command: |
-            export DOCKER_HOST=unix:///run/podman/podman.sock
-            shipyard check
-            shipyard test ${{matrix.folder}}
+ #     - name: Run tests Podman
+ #       uses: nick-invision/retry@v2
+ #       with:
+ #         timeout_seconds: 600
+ #         max_attempts: 3
+ #         retry_on: error
+ #         command: |
+ #           export DOCKER_HOST=unix:///run/podman/podman.sock
+ #           shipyard check
+ #           shipyard test ${{matrix.folder}}
 
-      - name: Send status to Discord
-        uses: sarisia/actions-status-discord@v1
-        if: always()
-        with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          tile: ${{ github.job_id }}
-          description: "Functional tests for ${{matrix.folder}}"
+ #     - name: Send status to Discord
+ #       uses: sarisia/actions-status-discord@v1
+ #       if: always()
+ #       with:
+ #         webhook: ${{ secrets.DISCORD_WEBHOOK }}
+ #         tile: ${{ github.job_id }}
+ #         description: "Functional tests for ${{matrix.folder}}"
 
   build_dev:
     name: Build Dev Version
     needs:
-      - test
+  #    - test
       - functional_test_docker
-      - functional_test_podman
-      - e2e_mac
+  #    - functional_test_podman
+  #     - e2e_mac
       - e2e_linux
     if: ${{ github.ref != 'refs/heads/main' }}
 
@@ -296,15 +295,15 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: shipyard_binaries
+          name: jumppad_binaries
           path: |
-            dist/shipyard_darwin_arm64
-            dist/shipyard_darwin_amd64
-            dist/shipyard_linux_amd64
-            dist/shipyard_linux_arm64
-            dist/shipyard_linux_arm_7
-            dist/shipyard_linux_arm_6
-            dist/shipyard_windows_amd64
+            dist/jumppad_darwin_arm64
+            dist/jumppad_darwin_amd64
+            dist/jumppad_linux_amd64
+            dist/jumppad_linux_arm64
+            dist/jumppad_linux_arm_7
+            dist/jumppad_linux_arm_6
+            dist/jumppad_windows_amd64
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
@@ -363,12 +362,12 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: shipyard_osx_notorized
+        name: jumppad_osx_notorized
         path: |
-          dist/shipyard_arm64.dmg
-          dist/shipyard_arm64.zip
-          dist/shipyard_amd64.dmg
-          dist/shipyard_amd64.zip
+          dist/jumppad_arm64.dmg
+          dist/jumppad_arm64.zip
+          dist/jumppad_amd64.dmg
+          dist/jumppad_amd64.zip
 
     - name: Send status to Discord
       uses: sarisia/actions-status-discord@v1

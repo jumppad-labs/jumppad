@@ -24,7 +24,7 @@ require (
 	github.com/sethvargo/go-retry v0.2.4
 	github.com/shipyard-run/connector v0.1.1
 	github.com/shipyard-run/gohup v0.2.2
-	github.com/shipyard-run/hclconfig v0.0.0-20221213101449-dd7cec20879f
+	github.com/shipyard-run/hclconfig v0.3.0
 	github.com/shipyard-run/version-manager v0.0.5
 	github.com/spf13/cobra v1.3.0
 	github.com/stretchr/testify v1.8.1
@@ -211,10 +211,8 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-replace github.com/creack/pty => github.com/donorp/pty v1.1.12-0.20211004111936-294eccab62ed
+replace github.com/creack/pty => github.com/photostorm/pty v1.1.18
 
-replace github.com/shipyard-run/hclconfig => ../hclconfig/
-
-//replace golang.org/x/sys/windows => golang.org/x/sys/windows v0.0.0-20191005200804-aed5e5c7ecf12
+//replace github.com/shipyard-run/hclconfig => ../hclconfig/
 
 //replace github.com/shipyard-run/connector => ../connector

@@ -71,7 +71,7 @@ resource "container" "consul" {
     aliases    = ["myalias"]
   }
 
-  env = {
+  environment = {
     something       = variable.something
     foo             = env("BAH")
     file            = file("./conf.txt")

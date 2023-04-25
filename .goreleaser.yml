@@ -1,6 +1,6 @@
 # This is an example goreleaser.yaml file with some sane defaults.
 # Make sure to check the documentation at http://goreleaser.com
-project_name: shipyard
+project_name: jumppad
 before:
   hooks:
     # You may remove this if you don't use go modules.
@@ -12,7 +12,7 @@ builds:
   - GO111MODULE=on
   - GPG_TTY=$(tty)
 
-  binary: shipyard
+  binary: jumppad
 
   ldflags:
     - -s -w -X main.version={{.Version}} -X main.date={{.CommitDate}} -X main.commit={{.Commit}}
@@ -41,9 +41,9 @@ builds:
 
 nfpms:
   -
-    package_name: shipyard
-    vendor: Shipyard Inc
-    homepage: https://shipyard.run
+    package_name: jumppad
+    vendor: Jumppad Inc
+    homepage: https://jumpad.dev
     maintainer: Nic Jackson and Erik Veld <mail@shipyard.run>
     license: Mozilla Public License, version 2.0
     formats:
@@ -52,7 +52,7 @@ nfpms:
 
 snapcrafts:
   -
-    name: shipyard
+    name: jumppad
 
 archives:
 - replacements:

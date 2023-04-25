@@ -145,8 +145,9 @@ func (c *NomadCluster) createNomad() error {
 		isClient = false
 	}
 
+	c.config.APIPort = c.config.Port
+
 	// set the API server port to a random number
-	c.config.APIPort = rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
 	c.config.ConnectorPort = rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
 	c.config.ConfigDir = path.Join(utils.ShipyardHome(), c.config.Name, "config")
 	c.config.ExternalIP = utils.GetDockerIP()
@@ -156,9 +157,11 @@ func (c *NomadCluster) createNomad() error {
 		return err
 	}
 
-	c.config.ServerFQDN = serverID
+	name := fmt.Sprintf("server.%s", c.config.Name)
+	c.config.ServerFQDN = utils.FQDN(name, c.config.Module, c.config.Type)
 
 	cMutex := sync.Mutex{}
+	clientFQDN := []string{}
 	clientIDs := []string{}
 	clWait := sync.WaitGroup{}
 	clWait.Add(c.config.ClientNodes)
@@ -173,7 +176,10 @@ func (c *NomadCluster) createNomad() error {
 			}
 
 			cMutex.Lock()
+
 			clientIDs = append(clientIDs, clientID)
+			clientName := fmt.Sprintf("%d.client.%s", i, c.config.Name)
+			clientFQDN = append(clientFQDN, utils.FQDN(clientName, c.config.Module, c.config.Type))
 			cMutex.Unlock()
 
 			clWait.Done()
@@ -186,10 +192,19 @@ func (c *NomadCluster) createNomad() error {
 	}
 
 	// set the client ids
-	c.config.ClientFQDN = clientIDs
+	c.config.ClientFQDN = clientFQDN
+
+	// if client nodes is 0 then the server acts as both client and server
+	// in this instance set the health check to 1 node
+	clientNodes := 1
+
+	// otherwise use the number of specified client nodes
+	if c.config.ClientNodes > 0 {
+		clientNodes = c.config.ClientNodes
+	}
 
 	// ensure all client nodes are up
-	c.nomadClient.SetConfig(c.config.ExternalIP, c.config.APIPort, c.config.ClientNodes+1)
+	c.nomadClient.SetConfig(fmt.Sprintf("http://%s", c.config.ExternalIP), c.config.APIPort, clientNodes)
 	err = c.nomadClient.HealthCheckAPI(startTimeout)
 	if err != nil {
 		return err
@@ -208,7 +223,7 @@ func (c *NomadCluster) createNomad() error {
 		clWait := sync.WaitGroup{}
 		clWait.Add(c.config.ClientNodes)
 		var importErr error
-		for _, id := range c.config.ClientFQDN {
+		for _, id := range clientIDs {
 			go func(id string) {
 				err := c.ImportLocalDockerImages("images", id, c.config.Images, false)
 				clWait.Done()
@@ -240,6 +255,7 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 	}
 
 	// write the nomad config to a file
+	os.MkdirAll(c.config.ConfigDir, os.ModePerm)
 	serverConfigPath := path.Join(c.config.ConfigDir, "server_config.hcl")
 	ioutil.WriteFile(serverConfigPath, []byte(sc), os.ModePerm)
 
@@ -248,10 +264,14 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 	name := fmt.Sprintf("server.%s", c.config.Name)
 
 	cc := &resources.Container{
-		ResourceMetadata: types.ResourceMetadata{Name: name},
+		ResourceMetadata: types.ResourceMetadata{
+			Name:   name,
+			Module: c.config.Module,
+			Type:   c.config.Type,
+		},
 	}
 
-	cc.ParentConfig = cc.ParentConfig
+	cc.ParentConfig = c.config.ParentConfig
 
 	cc.Image = &resources.Image{Name: image}
 	cc.Networks = c.config.Networks
@@ -355,7 +375,9 @@ func (c *NomadCluster) createClientNode(index int, image, volumeID, serverID str
 	name := fmt.Sprintf("%d.client.%s", index, c.config.Name)
 	cc := &resources.Container{
 		ResourceMetadata: types.ResourceMetadata{
-			Name: name,
+			Name:   name,
+			Module: c.config.Module,
+			Type:   c.config.Type,
 		},
 	}
 
@@ -525,13 +547,25 @@ func (c *NomadCluster) destroyNode(id string) error {
 		return err
 	}
 
+	// fetch the networks
+	nets := []types.Resource{}
+	for _, n := range c.config.Networks {
+		r, err := c.config.ParentConfig.FindResource(n.ID)
+		if err != nil {
+			c.log.Warn("Unable to find network", "id", n.ID, "error", err)
+			continue
+		}
+
+		nets = append(nets, r)
+	}
+
 	for _, i := range ids {
 		// remove from the networks
-		for _, n := range c.config.Networks {
-			c.log.Debug("Detaching container from network", "ref", c.config.Name, "id", i, "network", n.ID)
-			err := c.client.DetachNetwork(n.ID, i)
+		for _, n := range nets {
+			c.log.Debug("Detaching container from network", "ref", c.config.ID, "id", i, "network", n.Metadata().Name)
+			err := c.client.DetachNetwork(n.Metadata().Name, i)
 			if err != nil {
-				c.log.Error("Unable to detach network", "ref", c.config.Name, "network", n.ID, "error", err)
+				c.log.Error("Unable to detach network", "ref", c.config.ID, "network", n.Metadata().Name, "error", err)
 			}
 		}
 

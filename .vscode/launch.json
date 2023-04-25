@@ -16,7 +16,7 @@
       },
       "args": [
         "run",
-        "/home/nicj/go/src/github.com/hashicorp/service-based-networking/consul-vms/users-1"
+        "./examples/nomad",
       ]
     },    {
       "name": "Debug - Destroy",

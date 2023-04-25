@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -35,7 +36,7 @@ func (n *NomadJob) Create() error {
 	nomadCluster := cc.(*resources.NomadCluster)
 
 	// load the config
-	n.client.SetConfig(nomadCluster.ExternalIP, nomadCluster.APIPort, nomadCluster.ClientNodes)
+	n.client.SetConfig(fmt.Sprintf("http://%s", nomadCluster.ExternalIP), nomadCluster.APIPort, nomadCluster.ClientNodes)
 
 	err = n.client.Create(n.config.Paths)
 	if err != nil {
@@ -85,7 +86,7 @@ func (n *NomadJob) Destroy() error {
 	nomadCluster := cc.(*resources.NomadCluster)
 
 	// load the config
-	n.client.SetConfig(nomadCluster.ExternalIP, nomadCluster.APIPort, nomadCluster.ClientNodes)
+	n.client.SetConfig(fmt.Sprintf("http://%s", nomadCluster.ExternalIP), nomadCluster.APIPort, nomadCluster.ClientNodes)
 
 	err = n.client.Stop(n.config.Paths)
 	if err != nil {

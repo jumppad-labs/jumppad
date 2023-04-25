@@ -1,6 +1,6 @@
 resource "container" "tools" {
   image {
-    name = "shipyardrun/tools:latest"
+    name = "shipyardrun/hashicorp-tools:v0.7.0"
   }
 
   command = ["tail", "-f", "/dev/null"]

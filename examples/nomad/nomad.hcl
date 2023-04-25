@@ -18,7 +18,8 @@ resource "template" "nomad_config" {
 resource "nomad_cluster" "dev" {
   client_nodes = variable.client_nodes
 
-  client_config = resource.template.nomad_config.id
+  client_config = resource.template.nomad_config.destination
+  consul_config = "./consul_config/agent.hcl"
 
   network {
     id = resource.network.cloud.id
@@ -27,8 +28,6 @@ resource "nomad_cluster" "dev" {
   image {
     name = "consul:1.10.1"
   }
-
-  consul_config = "./consul_config/agent.hcl"
 
   volume {
     source      = "/tmp"
