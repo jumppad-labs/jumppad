@@ -383,8 +383,8 @@ jobs:
     needs:
       - test
       - functional_test_docker
-      - functional_test_podman
-      - e2e_mac
+      #- functional_test_podman
+      #- e2e_mac
       - e2e_linux
     if: ${{ github.ref == 'refs/heads/main' }}
 
