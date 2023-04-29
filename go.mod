@@ -24,7 +24,7 @@ require (
 	github.com/sethvargo/go-retry v0.2.4
 	github.com/shipyard-run/connector v0.1.1
 	github.com/shipyard-run/gohup v0.2.2
-	github.com/shipyard-run/hclconfig v0.3.0
+	github.com/shipyard-run/hclconfig v0.3.1
 	github.com/shipyard-run/version-manager v0.0.5
 	github.com/spf13/cobra v1.3.0
 	github.com/stretchr/testify v1.8.1

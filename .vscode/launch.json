@@ -16,7 +16,7 @@
       },
       "args": [
         "run",
-        "./examples/nomad",
+        "./examples/local_exec",
       ]
     },    {
       "name": "Debug - Destroy",

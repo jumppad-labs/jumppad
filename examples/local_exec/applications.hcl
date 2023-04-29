@@ -1,15 +1,11 @@
-resource "exec_local" "install" {
-  cmd = "${file_dir()}/fetch.sh"
+resource "local_exec" "install" {
+  command = ["${dir()}/fetch.sh"]
 }
 
-resource "exec_local" "run" {
-  depends_on = ["resource.exec_local.install"]
+resource "local_exec" "run" {
+  depends_on = ["resource.local_exec.install"]
 
-  cmd = "/tmp/consul"
-  args = [
-    "agent",
-    "-dev",
-  ]
+  command = ["/tmp/consul", "agent", "-dev"]
 
   daemon = true
 } 

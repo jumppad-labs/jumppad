@@ -1,6 +1,6 @@
 {
-    "source" : ["./dist/shipyard_darwin_arm64/shipyard"],
-    "bundle_id" : "run.shipyard.shipyard",
+    "source" : ["./dist/jumppad_darwin_arm64/jumppad"],
+    "bundle_id" : "dev.jumppad.jumppad",
     "apple_id": {
         "password":  "@env:AC_PASSWORD"
     },
@@ -8,10 +8,10 @@
         "application_identity" : "905981E813C49FB938D0628A509372B33FEE3EC4"
     },
     "dmg" :{
-        "output_path":  "./dist/shipyard_arm64.dmg",
-        "volume_name":  "shipyard"
+        "output_path":  "./dist/jumppad_arm64.dmg",
+        "volume_name":  "jumppad"
     },
     "zip" :{
-        "output_path" : "./dist/shipyard_arm64.zip"
+        "output_path" : "./dist/jumppad_arm64.zip"
     }
 }
