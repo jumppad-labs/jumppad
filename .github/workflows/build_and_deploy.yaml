@@ -453,7 +453,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: jumpppad_binaries
+          name: jumppad_binaries
           path: |
             dist/jumppad_darwin_arm64
             dist/jumppad_darwin_amd64
@@ -546,8 +546,8 @@ jobs:
       with:
         name: jumppad_archives
         path: |
-          dist/jumpppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
-          dist/jumpppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
+          dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
+          dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
 
     - name: Send status to Discord
       uses: sarisia/actions-status-discord@v1
