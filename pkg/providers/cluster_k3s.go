@@ -26,7 +26,7 @@ import (
 // https://github.com/rancher/k3d/blob/master/cli/commands.go
 
 const k3sBaseImage = "shipyardrun/k3s"
-const k3sBaseVersion = "v1.23.12"
+const k3sBaseVersion = "v1.26.3"
 
 var startTimeout = (300 * time.Second)
 
@@ -108,7 +108,6 @@ func (c *K8sCluster) createK3s() error {
 	}
 
 	// create the server
-	// since the server is just a container create the container config and provider
 	name := fmt.Sprintf("server.%s", c.config.Name)
 	cc := &resources.Container{
 		ResourceMetadata: types.ResourceMetadata{
@@ -164,9 +163,23 @@ func (c *K8sCluster) createK3s() error {
 			return fmt.Errorf("unable to read root CA for proxy: %s", err)
 		}
 
+		// add the netmask from the network to the proxy bypass
+		networkSubmasks :=
+			[]string{}
+		for _, n := range c.config.Networks {
+			net, err := c.config.ParentConfig.FindResource(n.ID)
+			if err != nil {
+				return fmt.Errorf("Network not found: %w", err)
+			}
+
+			networkSubmasks = append(networkSubmasks, net.(*resources.Network).Subnet)
+		}
+
+		proxyBypass := utils.ProxyBypass + "," + strings.Join(networkSubmasks, ",")
+
 		cc.Environment["HTTP_PROXY"] = utils.HTTPProxyAddress()
 		cc.Environment["HTTPS_PROXY"] = utils.HTTPSProxyAddress()
-		cc.Environment["NO_PROXY"] = utils.ProxyBypass
+		cc.Environment["NO_PROXY"] = proxyBypass
 		cc.Environment["PROXY_CA"] = string(ca)
 	}
 
@@ -187,6 +200,25 @@ func (c *K8sCluster) createK3s() error {
 		snapShotter = "overlayfs"
 	}
 
+	// only add the variables for the cache when the kubernetes version is >= v1.18.16
+	sv, err = semver.NewConstraint(">= v1.25.0")
+	if err != nil {
+		// Handle constraint not being parsable.
+		return err
+	}
+
+	disableArgs := "--no-deploy=traefik"
+	clusterToken := ""
+
+	if sv.Check(v) {
+		disableArgs = "--disable=traefik"
+		clusterToken = "--token=mysupersecret"
+	} else {
+		// add the cluster secret as an env this is deprecated in v1.25 and
+		// replaced with --token
+		cc.Environment["K3S_CLUSTER_SECRET"] = "mysupersecret"
+	}
+
 	// create the server address
 	FQDN := fmt.Sprintf("server.%s", utils.FQDN(c.config.Name, c.config.Module, c.config.Type))
 	c.config.FQDN = FQDN
@@ -198,9 +230,10 @@ func (c *K8sCluster) createK3s() error {
 		"server",
 		fmt.Sprintf("--https-listen-port=%d", c.config.APIPort),
 		"--kube-proxy-arg=conntrack-max-per-core=0",
-		"--no-deploy=traefik",
+		disableArgs,
 		fmt.Sprintf("--snapshotter=%s", snapShotter),
 		fmt.Sprintf("--tls-san=%s", FQDN),
+		clusterToken,
 	}
 
 	// expose the API server and Connector ports
@@ -640,7 +673,7 @@ spec:
       containers:
       - name: connector
         imagePullPolicy: IfNotPresent
-        image: shipyardrun/connector:v0.1.0
+        image: ghcr.io/jumppad-labs/connector:v0.2.1
         ports:
           - name: grpc
             containerPort: 60000

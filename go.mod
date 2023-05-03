@@ -17,12 +17,12 @@ require (
 	github.com/hashicorp/go-hclog v1.1.0
 	github.com/hashicorp/hcl2 v0.0.0-20191002203319-fb75b3253c80
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
+	github.com/jumppad-labs/connector v0.2.1
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/opencontainers/image-spec v1.0.2
 	github.com/otiai10/copy v1.10.0
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-retry v0.2.4
-	github.com/jumppad-labs/connector v0.1.1
 	github.com/shipyard-run/gohup v0.2.2
 	github.com/shipyard-run/hclconfig v0.3.1
 	github.com/shipyard-run/version-manager v0.0.5

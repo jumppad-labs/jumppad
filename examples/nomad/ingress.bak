@@ -5,9 +5,11 @@ resource "ingress" "consul-http-kubernetes" {
   target {
     id = resource.k8s_cluster.k3s.id
     port = 8500
-    
-    service = "consul-server"
-    namespace = "default"
+
+    config = { 
+      service = "consul-server"
+      namespace = "default"
+    }
   }
   
   // available for remote connector
@@ -22,9 +24,11 @@ resource "ingress" "consul-http-kubernetes" {
     id = resource.nomad_cluster.dev.id
     named_port = "http"
     
-    job = "consul"
-    group = "consul"
-    task = "consul"
+    config = { 
+      job = "consul"
+      group = "consul"
+      task = "consul"
+    }
   }
   
   // not available for remote connector

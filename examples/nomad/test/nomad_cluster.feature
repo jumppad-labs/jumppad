@@ -12,9 +12,9 @@ Feature: Nomad Cluster
       | resource.network.cloud     |
       | resource.nomad_cluster.dev |
       | resource.container.consul                   |
-    And a HTTP call to "http://consul-http.ingress.shipyard.run:18500/v1/status/leader" should result in status 200
-    #And a HTTP call to "http://fake-service.ingress.shipyard.run:19090" should result in status 200
-    #And a HTTP call to "http://fake-service.ingress.shipyard.run:19091" should result in status 200
+    And a HTTP call to "http://localhost:18500/v1/status/leader" should result in status 200
+    And a HTTP call to "http://localhost:19090" should result in status 200
+    And a HTTP call to "http://localhost:19091" should result in status 200
 
   @multi-node
   Scenario: Nomad Multi-Node Cluster
@@ -27,6 +27,6 @@ Feature: Nomad Cluster
       | resource.network.cloud                      |
       | resource.nomad_cluster.dev                  |
       | resource.container.consul                   |
-    And a HTTP call to "http://consul-http.ingress.shipyard.run:18500/v1/status/leader" should result in status 200
-    #And a HTTP call to "http://fake-service.ingress.shipyard.run:19090" should result in status 200
-    #And a HTTP call to "http://fake-service.ingress.shipyard.run:19091" should result in status 200
+    And a HTTP call to "http://localhost:18500/v1/status/leader" should result in status 200
+    And a HTTP call to "http://localhost:19090" should result in status 200
+    And a HTTP call to "http://localhost:19091" should result in status 200

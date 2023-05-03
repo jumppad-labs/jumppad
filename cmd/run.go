@@ -204,10 +204,10 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 						}
 					}
 				case resources.TypeIngress:
-					c := r.(*resources.Ingress)
-					if c.Source.Driver == resources.IngressSourceLocal && c.Source.Config.OpenInBrowser != "" && c.Source.Config.Port != "" {
-						browserList = append(browserList, buildBrowserPath(r.Metadata().Name, c.Source.Config.Port, r.Metadata().Type, c.Source.Config.OpenInBrowser))
-					}
+					//c := r.(*resources.Ingress)
+					//if c.Source.Driver == resources.IngressSourceLocal && c.Source.Config.OpenInBrowser != "" && c.Source.Config.Port != "" {
+					//	browserList = append(browserList, buildBrowserPath(r.Metadata().Name, c.Source.Config.Port, r.Metadata().Type, c.Source.Config.OpenInBrowser))
+					//}
 				case resources.TypeNomadCluster:
 					c := r.(*resources.NomadCluster)
 					if c.OpenInBrowser {

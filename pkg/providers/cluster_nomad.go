@@ -1,13 +1,16 @@
 package providers
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/Masterminds/semver"
 	"github.com/hashicorp/go-hclog"
@@ -21,50 +24,18 @@ import (
 const nomadBaseImage = "shipyardrun/nomad"
 const nomadBaseVersion = "1.4.0"
 
-const dataDir = `
-data_dir = "/var/lib/nomad"
-`
-
-const serverConfig = `
-server {
-  enabled = true
-  bootstrap_expect = 1
-}
-
-client {
-	enabled = true
-	cpu_total_compute = 1000
-	node_class = "server"
-}
-`
-
-const clientConfig = `
-client {
-	enabled = true
-
-	server_join {
-		retry_join = ["%s"]
-	}
-}
-
-plugin "raw_exec" {
-  config {
-		enabled = true
-  }
-}
-`
-
 // NomadCluster defines a provider which can create Kubernetes clusters
 type NomadCluster struct {
 	config      *resources.NomadCluster
 	client      clients.ContainerTasks
 	nomadClient clients.Nomad
+	connector   clients.Connector
 	log         hclog.Logger
 }
 
 // NewNomadCluster creates a new Nomad cluster provider
-func NewNomadCluster(c *resources.NomadCluster, cc clients.ContainerTasks, hc clients.Nomad, l hclog.Logger) *NomadCluster {
-	return &NomadCluster{c, cc, hc, l}
+func NewNomadCluster(c *resources.NomadCluster, cc clients.ContainerTasks, hc clients.Nomad, con clients.Connector, l hclog.Logger) *NomadCluster {
+	return &NomadCluster{c, cc, hc, con, l}
 }
 
 // Create implements interface method to create a cluster of the specified type
@@ -150,8 +121,6 @@ func (c *NomadCluster) createNomad() error {
 	if c.config.ClientNodes > 0 {
 		isClient = false
 	}
-
-	c.config.APIPort = c.config.Port
 
 	// set the API server port to a random number
 	c.config.ConnectorPort = rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
@@ -247,18 +216,25 @@ func (c *NomadCluster) createNomad() error {
 		}
 	}
 
+	err = c.deployConnector()
+	if err != nil {
+		return fmt.Errorf("unable to deploy Connector: %s", err)
+	}
+
 	return nil
 }
 
 func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (string, error) {
 
-	// generate the server config
-	sc := dataDir + "\n" + serverConfig
-
-	// if the server also functions as a client
-	if isClient {
-		sc = sc + "\n" + fmt.Sprintf(clientConfig, "localhost")
+	// set the resources for CPU, if not a client set the resources low
+	// so that we can only deploy the connector to the server
+	cpu := ""
+	if !isClient {
+		cpu = "cpu_total_compute = 500"
 	}
+
+	// generate the server config
+	sc := dataDir + "\n" + fmt.Sprintf(serverConfig, cpu)
 
 	// write the nomad config to a file
 	os.MkdirAll(c.config.ConfigDir, os.ModePerm)
@@ -348,11 +324,19 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 			Protocol: "tcp",
 		},
 		resources.Port{
-			Local:    "19090",
+			Local:    fmt.Sprintf("%d", c.config.ConnectorPort),
 			Host:     fmt.Sprintf("%d", c.config.ConnectorPort),
 			Protocol: "tcp",
 		},
+		resources.Port{
+			Local:    fmt.Sprintf("%d", c.config.ConnectorPort+1),
+			Host:     fmt.Sprintf("%d", c.config.ConnectorPort+1),
+			Protocol: "tcp",
+		},
 	}
+
+	cc.Ports = append(cc.Ports, c.config.Ports...)
+	cc.PortRanges = append(cc.PortRanges, c.config.PortRanges...)
 
 	cc.Environment = map[string]string{}
 	err := c.appendProxyEnv(cc)
@@ -448,7 +432,6 @@ func (c *NomadCluster) createClientNode(index int, image, volumeID, serverID str
 }
 
 func (c *NomadCluster) appendProxyEnv(cc *resources.Container) error {
-
 	// only add the variables for the cache when the nomad version is >= v0.11.8 or
 	// is using the dev version
 	usesCache := false
@@ -477,13 +460,118 @@ func (c *NomadCluster) appendProxyEnv(cc *resources.Container) error {
 			return fmt.Errorf("Unable to read root CA for proxy: %s", err)
 		}
 
+		// add the netmask from the network to the proxy bypass
+		networkSubmasks :=
+			[]string{}
+		for _, n := range c.config.Networks {
+			net, err := c.config.ParentConfig.FindResource(n.ID)
+			if err != nil {
+				return fmt.Errorf("Network not found: %w", err)
+			}
+
+			networkSubmasks = append(networkSubmasks, net.(*resources.Network).Subnet)
+		}
+
+		proxyBypass := utils.ProxyBypass + "," + strings.Join(networkSubmasks, ",")
+
 		cc.Environment["HTTP_PROXY"] = utils.HTTPProxyAddress()
 		cc.Environment["HTTPS_PROXY"] = utils.HTTPSProxyAddress()
-		cc.Environment["NO_PROXY"] = utils.ProxyBypass
+		cc.Environment["NO_PROXY"] = proxyBypass
 		cc.Environment["PROXY_CA"] = string(ca)
 	}
 
 	return nil
+}
+
+func (c *NomadCluster) deployConnector() error {
+	c.log.Debug("Deploying connector", "ref", c.config.ID)
+
+	// generate the certificates
+	// generate the certificates for the service
+	cb, err := c.connector.GetLocalCertBundle(utils.CertsDir(""))
+	if err != nil {
+		return fmt.Errorf("unable to fetch root certificates for ingress: %s", err)
+	}
+
+	// generate the leaf certificates ensuring that we add
+	// the ip address for the docker hosts as this might not be local
+	lf, err := c.connector.GenerateLeafCert(
+		cb.RootKeyPath,
+		cb.RootCertPath,
+		[]string{
+			"connector",
+			fmt.Sprintf("%s:%d", utils.GetDockerIP(), c.config.ConnectorPort),
+		},
+		[]string{utils.GetDockerIP()},
+		utils.CertsDir(c.config.ID),
+	)
+
+	// load the certs into a string so that they can be embedded into the config
+	ca, _ := ioutil.ReadFile(lf.RootCertPath)
+	cert, _ := ioutil.ReadFile(lf.LeafCertPath)
+	key, _ := ioutil.ReadFile(lf.LeafKeyPath)
+
+	if err != nil {
+		return fmt.Errorf("unable to generate leaf certificates for ingress: %s", err)
+	}
+
+	// create a temp directory to write config to
+	dir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return fmt.Errorf("unable to create temporary directory: %s", err)
+	}
+
+	defer os.RemoveAll(dir)
+
+	ll := os.Getenv("LOG_LEVEL")
+	if ll == "" {
+		ll = "info"
+	}
+
+	config := fmt.Sprintf(
+		nomadConnectorDeployment,
+		c.config.ConnectorPort,
+		c.config.ConnectorPort+1,
+		string(cert),
+		string(key),
+		string(ca),
+		ll,
+	)
+
+	connectorDeployment := filepath.Join(dir, "connector.nomad")
+	ioutil.WriteFile(connectorDeployment, []byte(config), os.ModePerm)
+
+	// deploy the file
+	err = c.nomadClient.Create([]string{connectorDeployment})
+	if err != nil {
+		return fmt.Errorf("unable to run Connector deployment: %s", err)
+	}
+
+	// wait until healthy
+	timeout, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	var ok bool
+	var lastError error
+
+	for {
+		if timeout.Err() != nil {
+			break
+		}
+
+		ok, lastError = c.nomadClient.JobRunning("connector")
+		if err != nil {
+			lastError = fmt.Errorf("unable to check Connector deployment health: %s", err)
+			continue
+		}
+
+		if ok {
+			break
+		}
+
+		lastError = fmt.Errorf("Connector not healthy")
+	}
+
+	return lastError
 }
 
 // ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
@@ -583,3 +671,163 @@ func (c *NomadCluster) destroyNode(id string) error {
 
 	return nil
 }
+
+var nomadConnectorDeployment = `
+job "connector" {
+  datacenters = ["dc1"]
+  type        = "service"
+
+
+  update {
+    max_parallel      = 1
+    min_healthy_time  = "10s"
+    healthy_deadline  = "3m"
+    progress_deadline = "10m"
+    auto_revert       = false
+    canary            = 0
+  }
+
+  migrate {
+    max_parallel     = 1
+    health_check     = "checks"
+    min_healthy_time = "10s"
+    healthy_deadline = "5m"
+  }
+
+  group "connector" {
+    count = 1
+
+    network {
+      port "grpc" {
+        to     = 60000
+        static = %d
+      }
+
+      port "http" {
+        to     = 60001
+        static = %d
+      }
+    }
+
+    restart {
+      # The number of attempts to run the job within the specified interval.
+      attempts = 2
+      interval = "30m"
+      delay    = "15s"
+      mode     = "fail"
+    }
+
+    ephemeral_disk {
+      size = 30
+    }
+
+    task "connector" {
+  		constraint {
+  		  attribute = "${meta.node_type}"
+				operator  = "=" 
+  		  value     = "server"
+  		}
+
+      template {
+        data = <<-EOH
+%s
+        EOH
+
+        destination = "local/certs/server.cert"
+      }
+      
+      template {
+        data = <<-EOH
+%s
+        EOH
+
+        destination = "local/certs/server.key"
+      }
+      
+      template {
+        data = <<-EOH
+%s
+        EOH
+
+        destination = "local/certs/ca.cert"
+      }
+
+      # The "driver" parameter specifies the task driver that should be used to
+      # run the task.
+      driver = "docker"
+
+      logs {
+        max_files     = 2
+        max_file_size = 10
+      }
+
+      env {
+        NOMAD_ADDR = "http://${NOMAD_IP_http}:4646"
+      }
+
+      config {
+        image = "ghcr.io/jumppad-labs/connector:v0.2.1"
+
+        ports   = ["http", "grpc"]
+        command = "/connector"
+        args = [
+          "run",
+		      "--grpc-bind=:60000",
+		      "--http-bind=:60001",
+          "--log-level=%s",
+          "--root-cert-path=local/certs/ca.cert",
+          "--server-cert-path=local/certs/server.cert",
+          "--server-key-path=local/certs/server.key",
+          "--integration=nomad",
+        ]
+      }
+
+      resources {
+				# Use a single CPU to exhaust placement on the server node
+        cpu    = 500
+      }
+    }
+  }
+}
+`
+
+const dataDir = `
+data_dir = "/var/lib/nomad"
+`
+
+const serverConfig = `
+server {
+  enabled = true
+  bootstrap_expect = 1
+}
+
+client {
+	enabled = true
+	meta {
+		node_type = "server"
+	}
+	%s
+}
+
+plugin "raw_exec" {
+  config {
+		enabled = true
+  }
+}
+`
+
+const clientConfig = `
+client {
+	enabled = true
+
+	server_join {
+		retry_join = ["%s"]
+	}
+}
+
+plugin "raw_exec" {
+  config {
+		enabled = true
+  }
+}
+`

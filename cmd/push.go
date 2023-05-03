@@ -99,7 +99,7 @@ func pushK8sCluster(image string, c *resources.K8sCluster, ct clients.ContainerT
 }
 
 func pushNomadCluster(image string, c *resources.NomadCluster, ct clients.ContainerTasks, ht clients.Nomad, log hclog.Logger, force bool) error {
-	cl := providers.NewNomadCluster(c, ct, ht, log)
+	cl := providers.NewNomadCluster(c, ct, ht, nil, log)
 
 	// get the id of the cluster
 	ids, err := cl.Lookup()

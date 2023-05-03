@@ -436,3 +436,40 @@ func HTTPSProxyAddress() string {
 
 	return shipyardProxyAddress
 }
+
+// get all ipaddresses in a subnet
+func SubnetIPs(subnet string) ([]string, error) {
+	_, ipnet, _ := net.ParseCIDR(subnet)
+
+	var ipList []string
+	ip := ipnet.IP
+	for ; ipnet.Contains(ip); ip = incIP(ip) {
+		ipList = append(ipList, ip.String())
+	}
+
+	return ipList, nil
+}
+
+func incIP(ip net.IP) net.IP {
+	// allocate a new IP
+	newIp := make(net.IP, len(ip))
+	copy(newIp, ip)
+
+	byteIp := []byte(newIp)
+	l := len(byteIp)
+	var i int
+	for k, _ := range byteIp {
+		// start with the rightmost index first
+		// increment it
+		// if the index is < 256, then no overflow happened and we increment and break
+		// else, continue to the next field in the byte
+		i = l - 1 - k
+		if byteIp[i] < 0xff {
+			byteIp[i]++
+			break
+		} else {
+			byteIp[i] = 0
+		}
+	}
+	return net.IP(byteIp)
+}

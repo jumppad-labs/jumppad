@@ -453,36 +453,36 @@ jobs:
         with:
           name: shipyard_binaries
           path: |
-            dist/shipyard_darwin_arm64
-            dist/shipyard_darwin_amd64
-            dist/shipyard_linux_amd64
-            dist/shipyard_linux_arm64
-            dist/shipyard_linux_arm_7
-            dist/shipyard_linux_arm_6
-            dist/shipyard_windows_amd64
+            dist/jumppad_darwin_arm64
+            dist/jumppad_darwin_amd64
+            dist/jumppad_linux_amd64
+            dist/jumppad_linux_arm64
+            dist/jumppad_linux_arm_7
+            dist/jumppad_linux_arm_6
+            dist/jumppad_windows_amd64
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: shipyard_archives
+          name: jumppad_archives
           path: |
-            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.rpm
-            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz
-            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.tar.gz
-            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.deb
-            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.rpm
-            dist/shipyard_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip
-            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz
-            dist/shipyard_${{ needs.tag.outputs.new_version }}_windows_armv6.zip
-            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.deb
-            dist/shipyard_${{ needs.tag.outputs.new_version }}_windows_armv7.zip
-            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.rpm
-            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.deb
-            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.tar.gz
-            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.rpm
-            dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
-            dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
-            dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.deb
+            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.rpm
+            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz
+            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv7.tar.gz
+            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv6.deb
+            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv7.rpm
+            dist/jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip
+            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz
+            dist/jumppad_${{ needs.tag.outputs.new_version }}_windows_armv6.zip
+            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv7.deb
+            dist/jumppad_${{ needs.tag.outputs.new_version }}_windows_armv7.zip
+            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv6.rpm
+            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.deb
+            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv6.tar.gz
+            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.rpm
+            dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
+            dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
+            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.deb
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
@@ -544,10 +544,10 @@ jobs:
     - name: Rename files
       run: |
         ls -las ./dist
-        rm -f ./dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
-        rm -f ./dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
-        mv ./dist/shipyard_arm64.zip ./dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
-        mv ./dist/shipyard_amd64.zip ./dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
+        rm -f ./dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
+        rm -f ./dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
+        mv ./dist/jumppad_arm64.zip ./dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
+        mv ./dist/jumppad_amd64.zip ./dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
       
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
@@ -583,21 +583,21 @@ jobs:
     - name: Generate SHA256 checksums
       run: |
         cd dist
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz > checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz >> checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.tar.gz >> checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.tar.gz >> checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.deb >> checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.deb >> checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.deb >> checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.deb >> checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.rpm >> checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.rpm >> checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.rpm >> checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.rpm >> checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip >> checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip >> checksums.txt
-        sha256sum shipyard_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip >> checksums.txt
+        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz > checksums.txt
+        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz >> checksums.txt
+        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_armv7.tar.gz >> checksums.txt
+        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_armv6.tar.gz >> checksums.txt
+        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.deb >> checksums.txt
+        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.deb >> checksums.txt
+        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_armv7.deb >> checksums.txt
+        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_armv6.deb >> checksums.txt
+        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.rpm >> checksums.txt
+        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.rpm >> checksums.txt
+        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_armv7.rpm >> checksums.txt
+        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_armv6.rpm >> checksums.txt
+        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip >> checksums.txt
+        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip >> checksums.txt
+        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip >> checksums.txt
 
     - name: Release
       uses: softprops/action-gh-release@v1
@@ -606,21 +606,21 @@ jobs:
         token: ${{ secrets.GH_TOKEN }}
         files: |
           dist/checksums.txt
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.tar.gz
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.tar.gz
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.rpm
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.rpm
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.rpm
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.rpm
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_amd64.deb
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.deb
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.deb
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv6.deb
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
+          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz
+          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz
+          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv7.tar.gz
+          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv6.tar.gz
+          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.rpm
+          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.rpm
+          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv7.rpm
+          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv6.rpm
+          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.deb
+          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.deb
+          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv7.deb
+          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv6.deb
+          dist/jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip
+          dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
+          dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
 
   brew:
     name: Release to HomeBrew
@@ -638,32 +638,32 @@ jobs:
 
     - name: Configure Git
       run: |
-        git config user.email "mail@shipyard.run"
-        git config user.name "Shipyard Bot"
+        git config user.email "hello@jumppad.dev"
+        git config user.name "JumpPad Bot"
         git pull origin main
 
     - name: Download-Binaries
       uses: actions/download-artifact@v2
       with:
-        name: shipyard_archives
+        name: jumppad_archives
         path: dist/
     
     - name: Generate HomeBrew config
       run: |
         export VERSION=${{ needs.tag.outputs.new_version }}
-        export DARWIN_ARM64_SHA=$(sha256sum  ./dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip | cut -d " " -f 1)
-        export DARWIN_x86_SHA=$(sha256sum  ./dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip | cut -d " " -f 1)
-        export LINUX_ARM64_SHA=$(sha256sum  ./dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz | cut -d " " -f 1)
-        export LINUX_ARM7_SHA=$(sha256sum  ./dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_armv7.tar.gz | cut -d " " -f 1)
-        export LINUX_x86_SHA=$(sha256sum  ./dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz | cut -d " " -f 1)
+        export DARWIN_ARM64_SHA=$(sha256sum  ./dist/jumppad${{ needs.tag.outputs.new_version }}_darwin_arm64.zip | cut -d " " -f 1)
+        export DARWIN_x86_SHA=$(sha256sum  ./dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip | cut -d " " -f 1)
+        export LINUX_ARM64_SHA=$(sha256sum  ./dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz | cut -d " " -f 1)
+        export LINUX_ARM7_SHA=$(sha256sum  ./dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv7.tar.gz | cut -d " " -f 1)
+        export LINUX_x86_SHA=$(sha256sum  ./dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz | cut -d " " -f 1)
 
-        cat <<- EOF > ./shipyard.rb
+        cat <<- EOF > ./jumppad.rb
         # typed: false
         # frozen_string_literal: true
 
-        class Shipyard < Formula
+        class Jumppad < Formula
           desc ""
-          homepage "https://shipyard.run/"
+          homepage "https://jumppad.dev/"
           version "${VERSION}"
 
           if OS.mac? && Hardware::CPU.intel?
@@ -688,12 +688,12 @@ jobs:
           end
 
           def install
-            bin.install "shipyard"
+            bin.install "jumppad"
           end
         end
         EOF
 
-        cat ./shipyard.rb
+        cat ./jumppad.rb
         rm -rf ./dist
       
     - name: Push update
@@ -763,7 +763,7 @@ jobs:
 
     - name: Upload release
       run: |
-        curl -F package=@shipyard_${{ needs.tag.outputs.new_version }}_linux_${{ matrix.arch }} https://${{ secrets.FURY_TOKEN }}@push.fury.io/shipyard-run/
+        curl -F package=@jumppad_${{ needs.tag.outputs.new_version }}_linux_${{ matrix.arch }} https://${{ secrets.FURY_TOKEN }}@push.fury.io/shipyard-run/
 
     - name: Send status to Discord
       uses: sarisia/actions-status-discord@v1
@@ -773,40 +773,40 @@ jobs:
         webhook: ${{ secrets.DISCORD_WEBHOOK }}
         description: "Push new version ${{ needs.tag.outputs.new_version }} to Apt"
 
-  update_website:
-    name: Update Shipyard website with latest version
-    needs:
-      - github_release
-      - tag
-    runs-on: ubuntu-latest
+  #update_website:
+  #  name: Update Shipyard website with latest version
+  #  needs:
+  #    - github_release
+  #    - tag
+  #  runs-on: ubuntu-latest
 
-    steps:
-      -
-        name: Checkout
-        uses: actions/checkout@v2
-        with:
-          repository: 'jumppad-labs/jumppad-website'
-          token: '${{ secrets.GH_TOKEN }}'
+  #  steps:
+  #    -
+  #      name: Checkout
+  #      uses: actions/checkout@v2
+  #      with:
+  #        repository: 'jumppad-labs/jumppad-website'
+  #        token: '${{ secrets.GH_TOKEN }}'
 
-      - name: Configure Git
-        run: |
-          git config user.email "mail@shipyard.run"
-          git config user.name "Shipyard Bot"
+  #    - name: Configure Git
+  #      run: |
+  #        git config user.email "mail@shipyard.run"
+  #        git config user.name "Shipyard Bot"
 
-      - name: Write version
-        run: |
-          echo "${{ needs.tag.outputs.new_version }}" > ./static/latest
+  #    - name: Write version
+  #      run: |
+  #        echo "${{ needs.tag.outputs.new_version }}" > ./static/latest
 
-      - name: Push update
-        run: |
-          git add .
-          git commit -m "Update version to ${{ needs.tag.outputs.new_version }}"
-          git push
+  #    - name: Push update
+  #      run: |
+  #        git add .
+  #        git commit -m "Update version to ${{ needs.tag.outputs.new_version }}"
+  #        git push
 
-      - name: Send status to Discord
-        uses: sarisia/actions-status-discord@v1
-        if: always()
-        with:
-          tile: ${{ github.job_id }}
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          description: "Update website with latest version ${{ needs.tag.outputs.new_version }}"
+  #    - name: Send status to Discord
+  #      uses: sarisia/actions-status-discord@v1
+  #      if: always()
+  #      with:
+  #        tile: ${{ github.job_id }}
+  #        webhook: ${{ secrets.DISCORD_WEBHOOK }}
+  #        description: "Update website with latest version ${{ needs.tag.outputs.new_version }}"

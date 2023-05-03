@@ -12,9 +12,6 @@ type NomadCluster struct {
 
 	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
-	// Port is optional, by default the server exposes port 4646
-	Port int `hcl:"port,optional" json:"port,omitempty"`
-
 	Version       string            `hcl:"version,optional" json:"version,omitempty"`
 	ClientNodes   int               `hcl:"client_nodes,optional" json:"client_nodes,omitempty"`
 	Environment   map[string]string `hcl:"environment,optional" json:"environment,omitempty"`
@@ -24,6 +21,10 @@ type NomadCluster struct {
 	ConsulConfig  string            `hcl:"consul_config,optional" json:"consul_config,omitempty"`
 	Volumes       []Volume          `hcl:"volume,block" json:"volumes,omitempty"`                     // volumes to attach to the cluster
 	OpenInBrowser bool              `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"` // open the UI in the browser after creation
+
+	// Additional ports to expose on the nomad sever node
+	Ports      []Port      `hcl:"port,block" json:"ports,omitempty"`             // ports to expose
+	PortRanges []PortRange `hcl:"port_range,block" json:"port_ranges,omitempty"` // range of ports to expose
 
 	// Output Parameters
 
@@ -66,11 +67,6 @@ func (n *NomadCluster) Process() error {
 		n.Volumes[i].Source = ensureAbsolute(v.Source, n.File)
 	}
 
-	// set the default port
-	if n.Port == 0 {
-		n.Port = 4646
-	}
-
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
 	c, err := LoadState()
@@ -86,6 +82,11 @@ func (n *NomadCluster) Process() error {
 			n.APIPort = kstate.APIPort
 			n.ConnectorPort = kstate.ConnectorPort
 		}
+	}
+
+	// set the default port if not set
+	if n.APIPort == 0 {
+		n.APIPort = 4646
 	}
 
 	return nil

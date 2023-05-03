@@ -1,6 +1,10 @@
 package resources
 
-import "github.com/shipyard-run/hclconfig/types"
+import (
+	"fmt"
+
+	"github.com/shipyard-run/hclconfig/types"
+)
 
 // TypeIngress is the resource string for the type
 const TypeIngress string = "ingress"
@@ -15,34 +19,46 @@ const (
 type Ingress struct {
 	types.ResourceMetadata `hcl:",remain"`
 
-	Destination Traffic `hcl:"destination,block" json:"destination"`
-	Source      Traffic `hcl:"source,block" json:"source"`
+	// local port to expose the service on
+	Port int `hcl:"port" json:"port"`
+
+	// details for the destination service
+	Target TrafficTarget `hcl:"target,block" json:"target"`
 
 	// --- Output Params ----
 
-	//Id stores the ID of the created connector service
+	// IngressId stores the ID of the created connector service
 	IngressID string `hcl:"ingress_id,optional" json:"ingress_id,omitempty"`
-	Address   string `hcl:"address,optional" json:"address,omitempty"`
+
+	// Address is the fully qualified uri for accessing the resource
+	Address string `hcl:"address,optional" json:"address,omitempty"`
 }
 
 // Traffic defines either a source or a destination block for ingress traffic
-type Traffic struct {
-	// Driver to use when creating the ingress, k8s, nomad, docker, local
-	Driver string `hcl:"driver" json:"driver"`
+type TrafficTarget struct {
+	// ID of the resource that the ingress is linked to
+	ID string `hcl:"id" json:"id"`
+
+	Port      int    `hcl:"port,optional" json:"port,omitempty"`
+	NamedPort string `hcl:"named_port,optional" json:"named_port,omitempty"`
 
 	// Config is an collection which has driver specific content
-	Config TrafficConfig `hcl:"config,block" json:"config"`
-}
-
-// TrafficConfig defines the parameters for the traffic
-type TrafficConfig struct {
-	Cluster       string `hcl:"cluster,optional" json:"cluster,omitempty"`
-	Address       string `hcl:"address,optional" json:"address,omitempty"`
-	Port          string `hcl:"port" json:"port"`
-	OpenInBrowser string `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"`
+	Config map[string]string `hcl:"config" json:"config"`
 }
 
 func (i *Ingress) Process() error {
+	// connector is a reserved name
+	if i.Name == "connector" {
+		return fmt.Errorf("ingress name 'connector' is a reserved name")
+	}
+
+	// validate the remote port, can not be 60000 or 60001 as these
+	// ports are used by the connector service
+	if i.Port == 60000 || i.Port == 60001 {
+		return fmt.Errorf("unable to expose local service using remote port %d,"+
+			"ports 60000 and 60001 are reserved for internal use", i.Port)
+	}
+
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
 	c, err := LoadState()

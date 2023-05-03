@@ -20,22 +20,16 @@ resource "helm" "consul" {
   }
 }
 
-resource "ingress" "consul-http" {
-  source {
-    driver = "local"
+resource "ingress" "consul_http" {
+  port = variable.consul_port
 
-    config {
-      port = variable.consul_port
-    }
-  }
+  target {
+    id   = resource.k8s_cluster.dev.id
+    port = 8500
 
-  destination {
-    driver = "k8s"
-
-    config {
-      cluster = resource.k8s_cluster.dev.id
-      address = "consul-consul-server.default.svc"
-      port    = 8500
+    config = {
+      service   = "consul-consul-server"
+      namespace = "default"
     }
   }
 }

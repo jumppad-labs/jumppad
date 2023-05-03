@@ -65,7 +65,7 @@ func (n *NomadImpl) SetConfig(address string, port, nodes int) error {
 	return nil
 }
 
-// HealthCheckAPI executes a HTTP heathcheck for a Nomad cluster
+// HealthCheckAPI executes a HTTP heath check for a Nomad cluster
 func (n *NomadImpl) HealthCheckAPI(timeout time.Duration) error {
 	n.l.Debug("Performing Nomad health check", "address", n.address)
 	st := time.Now()
@@ -152,10 +152,13 @@ func (n *NomadImpl) Create(files []string) error {
 			return err
 		}
 
+		addr := fmt.Sprintf("%s:%d/v1/jobs", n.address, n.port)
+		n.l.Debug("Submitting job to Nomad", "file", f, "address", addr)
+
 		// submit the job top the API
 		cr := fmt.Sprintf(`{"Job": %s}`, string(jsonJob))
 
-		r, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s:%d/v1/jobs", n.address, n.port), bytes.NewReader([]byte(cr)))
+		r, err := http.NewRequest(http.MethodPost, addr, bytes.NewReader([]byte(cr)))
 		if err != nil {
 			return xerrors.Errorf("Unable to create http request: %w", err)
 		}

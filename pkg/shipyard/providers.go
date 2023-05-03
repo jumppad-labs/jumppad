@@ -35,7 +35,7 @@ func generateProviderImpl(c types.Resource, cc *clients.Clients) providers.Provi
 	case resources.TypeLocalExec:
 		return providers.NewLocalExec(c.(*resources.LocalExec), cc.Command, cc.Logger)
 	case resources.TypeNomadCluster:
-		return providers.NewNomadCluster(c.(*resources.NomadCluster), cc.ContainerTasks, cc.Nomad, cc.Logger)
+		return providers.NewNomadCluster(c.(*resources.NomadCluster), cc.ContainerTasks, cc.Nomad, cc.Connector, cc.Logger)
 	case resources.TypeNomadJob:
 		return providers.NewNomadJob(c.(*resources.NomadJob), cc.Nomad, cc.Logger)
 	case resources.TypeNetwork:
