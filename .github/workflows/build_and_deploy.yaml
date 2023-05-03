@@ -499,7 +499,7 @@ jobs:
     - name: Download-Binaries
       uses: actions/download-artifact@v2
       with:
-        name: shipyard_binaries
+        name: jumppad_binaries
         path: dist/
     
     - name: Import Code-Signing Certificates
@@ -538,8 +538,8 @@ jobs:
         ls -las ./dist
         rm -f ./dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
         rm -f ./dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
-        mv ./dist/jumppad_arm64.zip ./dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
-        mv ./dist/jumppad_amd64.zip ./dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
+        mv ./dist/jumppad_arm64.zip ./dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
+        mv ./dist/jumppad_amd64.zip ./dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
       
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
@@ -646,19 +646,19 @@ jobs:
           version "${VERSION}"
 
           if OS.mac? && Hardware::CPU.intel?
-            url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/shipyard_${VERSION}_darwin_x86_64.zip"
+            url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/jumppad_${VERSION}_darwin_x86_64.zip"
             sha256 "${DARWIN_x86_SHA}"
           end
           if OS.mac? && Hardware::CPU.arm?
-            url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/shipyard_${VERSION}_darwin_arm64.zip"
+            url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/jumppad_${VERSION}_darwin_arm64.zip"
             sha256 "${DARWIN_ARM64_SHA}"
           end
           if OS.linux? && Hardware::CPU.intel?
-            url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/shipyard_${VERSION}_linux_x86_64.tar.gz"
+            url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/jumppad_${VERSION}_linux_x86_64.tar.gz"
             sha256 "${LINUX_x86_SHA}"
           end
           if OS.linux? && Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-            url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/shipyard_${VERSION}_linux_arm64.tar.gz"
+            url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/jumppad_${VERSION}_linux_arm64.tar.gz"
             sha256 "${LINUX_ARM64_SHA}"
           end
 
@@ -701,7 +701,7 @@ jobs:
 
       - name: Replace version
         run: |
-          powershell -Command "(gc jumppad.nuspec) -replace '__version__', '${{ needs.tag.outputs.new_version }}' | Out-File -encoding ASCII shipyard.nuspec"
+          powershell -Command "(gc jumppad.nuspec) -replace '__version__', '${{ needs.tag.outputs.new_version }}' | Out-File -encoding ASCII jumppad.nuspec"
           powershell -Command "(gc tools/chocolateyinstall.ps1) -replace '__version__', '${{ needs.tag.outputs.new_version }}' | Out-File -encoding ASCII tools\chocolateyinstall.ps1"
 
       - name: Choco login
