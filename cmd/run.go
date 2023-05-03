@@ -336,6 +336,14 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 		cmd.Println("other resource parameters as you currently can with variables.")
 		cmd.Println("Not only does this add automatic dependency management, but, it")
 		cmd.Println("enables you to write better and more feature rich reusable modules.")
+		cmd.Println("")
+		cmd.Println("IMPORTANT:")
+		cmd.Println("This is the last release of the application named Shipyard.")
+		cmd.Println("Future releases will be released as JumpPad, please see:")
+		cmd.Println("")
+		cmd.Println("https://jumppad.dev/")
+		cmd.Println("")
+		cmd.Println("For information on how to upgrade and how to migrate your configuration")
 
 		return nil
 	}

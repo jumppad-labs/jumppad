@@ -321,6 +321,10 @@ func (c *NomadCluster) createServerNode(image, volumeID string, isClient bool) (
 		},
 	}
 
+	// add any custom ports
+	cc.Ports = append(cc.Ports, c.config.Ports...)
+	cc.PortRanges = append(cc.PortRanges, c.config.PortRanges...)
+
 	cc.EnvVar = map[string]string{}
 	err := c.appendProxyEnv(cc)
 	if err != nil {

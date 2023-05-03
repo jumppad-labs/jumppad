@@ -25,6 +25,9 @@ type NomadCluster struct {
 
 	ServerIPAddress string   `hcl:"server_ip_address,optional" json:"server_ip_address,omitempty" mapstructure:"server_ip_address"`
 	ClientIPAddress []string `hcl:"client_ip_address,optional" json:"client_ip_address,omitempty" mapstructure:"client_ip_address"`
+
+	Ports      []Port      `hcl:"port,block" json:"ports,omitempty"`                                        // ports to expose on server node
+	PortRanges []PortRange `hcl:"port_range,block" json:"port_ranges,omitempty" mapstructure:"port_ranges"` // range of ports to expose on server node
 }
 
 // NewCluster creates new Cluster config with the correct defaults
