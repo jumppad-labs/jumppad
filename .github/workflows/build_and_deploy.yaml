@@ -613,13 +613,13 @@ jobs:
       name: Checkout
       uses: actions/checkout@v2
       with:
-        repository: 'shipyard-run/homebrew-repo'
+        repository: 'jumppad-labs/homebrew-repo'
         token: '${{ secrets.GH_TOKEN }}'
 
     - name: Configure Git
       run: |
         git config user.email "hello@jumppad.dev"
-        git config user.name "JumpPad Bot"
+        git config user.name "Jumppad Bot"
         git pull origin main
 
     - name: Download-Binaries
@@ -687,7 +687,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
         with:
-          repository: 'jumpppad-labs/choco'
+          repository: 'jumppad-labs/choco'
 
       - name: Install dependencies
         run: |
