@@ -12,5 +12,5 @@ env:
 This blueprint shows how you can create a single container with Shipyard
 
 ```shell
-curl http://consul-http.ingress.shipyard.run:8500
+curl http://consul-http.ingress.jumppad.dev:8500
 ```

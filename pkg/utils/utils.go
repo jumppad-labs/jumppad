@@ -51,9 +51,9 @@ func ReplaceNonURIChars(s string) (string, error) {
 
 // FQDN generates the full qualified name for a container
 func FQDN(name, module, typeName string) string {
-	fqdn := fmt.Sprintf("%s.%s.shipyard.run", name, typeName)
+	fqdn := fmt.Sprintf("%s.%s.jumppad.dev", name, typeName)
 	if module != "" {
-		fqdn = fmt.Sprintf("%s.%s.%s.shipyard.run", name, module, typeName)
+		fqdn = fmt.Sprintf("%s.%s.%s.jumppad.dev", name, module, typeName)
 	}
 
 	// ensure that the name is valid for URI schema
@@ -73,7 +73,7 @@ func FQDNVolumeName(name string) string {
 		panic(err)
 	}
 
-	return fmt.Sprintf("%s.volume.shipyard.run", cleanName)
+	return fmt.Sprintf("%s.volume.jumppad.dev", cleanName)
 }
 
 // CreateKubeConfigPath creates the file path for the KubeConfig file when
@@ -110,7 +110,7 @@ func HomeEnvName() string {
 // ShipyardHome returns the location of the shipyard
 // folder, usually $HOME/.shipyard
 func ShipyardHome() string {
-	return filepath.Join(HomeFolder(), "/.shipyard")
+	return filepath.Join(HomeFolder(), "/.jumppad")
 }
 
 // ShipyardTemp returns a temporary folder
@@ -352,7 +352,7 @@ var buildSync = sync.Once{}
 
 // GetShipyardBinaryPath returns the path to the running Shipyard binary
 func GetShipyardBinaryPath() string {
-	if strings.HasSuffix(os.Args[0], "shipyard") || strings.HasSuffix(os.Args[0], "yard-dev") || strings.HasSuffix(os.Args[0], "shipyard.exe") {
+	if strings.HasSuffix(os.Args[0], "jumppad") || strings.HasSuffix(os.Args[0], "jumppad-dev") || strings.HasSuffix(os.Args[0], "jumppad.exe") {
 		ex, err := os.Executable()
 		if err != nil {
 			panic(err)
@@ -361,7 +361,7 @@ func GetShipyardBinaryPath() string {
 		return ex
 	}
 
-	tmpBinary := filepath.Join(os.TempDir(), "shipyard-dev")
+	tmpBinary := filepath.Join(os.TempDir(), "jumppad-dev")
 	buildSync.Do(func() {
 		compileShipyardBinary(tmpBinary)
 	})

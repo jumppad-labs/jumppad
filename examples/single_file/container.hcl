@@ -65,7 +65,7 @@ resource "container" "consul" {
   }
 
   volume {
-    source      = "images.volume.shipyard.run"
+    source      = "images.volume.jumppad.dev"
     destination = "/cache"
     type        = "volume"
   }

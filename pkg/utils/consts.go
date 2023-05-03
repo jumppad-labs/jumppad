@@ -13,10 +13,10 @@ const ImageVolumeName string = "images"
 const CacheResourceName string = "docker-cache"
 
 // Address of the proxy used for caching docker images
-const shipyardProxyAddress string = "http://default.image-cache.shipyard.run:3128"
+const shipyardProxyAddress string = "http://default.image-cache.jumppad.dev:3128"
 
 // Addresses to bypass when using a HTTP Proxy
-const ProxyBypass string = "localhost,127.0.0.1,cluster.local,shipyard.run,svc,consul"
+const ProxyBypass string = "localhost,127.0.0.1,cluster.local,jumppad.dev,svc,consul"
 
 const MaxRandomPort = 32767
 const MinRandomPort = 30000

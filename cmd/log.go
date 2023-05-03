@@ -195,7 +195,7 @@ func writeLogOutput(rc io.ReadCloser, stdout, stderr io.Writer, name string, c c
 		dat := make([]byte, count)
 		_, err = rc.Read(dat)
 
-		name = strings.TrimSuffix(name, ".shipyard.run")
+		name = strings.TrimSuffix(name, ".jumppad.dev")
 		colorWriter.Fprintf(w, "[%s]   %s", name, string(dat))
 	}
 }

@@ -392,8 +392,8 @@ func (d *DockerTasks) ContainerInfo(id string) (interface{}, error) {
 
 // PullImage pulls a Docker image from a remote repo
 func (d *DockerTasks) PullImage(image resources.Image, force bool) error {
-	// if image is local not try to pull shipyard.run/localcache
-	if strings.HasPrefix(image.Name, "shipyard.run/localcache") {
+	// if image is local not try to pull jumppad.dev/localcache
+	if strings.HasPrefix(image.Name, "jumppad.dev/localcache") {
 		return nil
 	}
 
@@ -510,7 +510,7 @@ func (d *DockerTasks) RemoveContainer(id string, force bool) error {
 }
 
 func (d *DockerTasks) BuildContainer(config *resources.Container, force bool) (string, error) {
-	imageName := fmt.Sprintf("shipyard.run/localcache/%s:%s", config.Name, config.Build.Tag)
+	imageName := fmt.Sprintf("jumppad.dev/localcache/%s:%s", config.Name, config.Build.Tag)
 	imageName = makeImageCanonical(imageName)
 
 	args := filters.NewArgs()

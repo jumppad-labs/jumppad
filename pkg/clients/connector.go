@@ -280,7 +280,7 @@ func (c *ConnectorImpl) GenerateLeafCert(
 		return nil, err
 	}
 
-	hosts := []string{"localhost", "*.shipyard.run", c.options.GrpcBind}
+	hosts := []string{"localhost", "*.jumppad.dev", c.options.GrpcBind}
 	hosts = append(hosts, host...)
 
 	lc, err := crypto.GenerateLeaf(

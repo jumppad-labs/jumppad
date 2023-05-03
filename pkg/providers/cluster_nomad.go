@@ -175,7 +175,7 @@ func (c *NomadCluster) createNomad() error {
 
 	// otherwise use the number of specified client nodes
 	if c.config.ClientNodes > 0 {
-		clientNodes = c.config.ClientNodes
+		clientNodes = c.config.ClientNodes + 1
 	}
 
 	// ensure all client nodes are up

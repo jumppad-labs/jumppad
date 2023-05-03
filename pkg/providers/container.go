@@ -73,7 +73,7 @@ func (c *Container) internalCreate() error {
 			"Building image",
 			"context", c.config.Build.Context,
 			"dockerfile", c.config.Build.DockerFile,
-			"image", fmt.Sprintf("shipyard.run/localcache/%s:%s", c.config.Name, c.config.Build.Tag),
+			"image", fmt.Sprintf("jumppad.dev/localcache/%s:%s", c.config.Name, c.config.Build.Tag),
 		)
 
 		name, err := c.client.BuildContainer(c.config, false)
