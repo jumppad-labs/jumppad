@@ -24,6 +24,12 @@ nomad_cluster "dev" {
     name = "network.cloud"
   }
 
+  port {
+    local  = 30000
+    remote = 30000
+    host   = 30000
+  }
+
   image {
     name = "consul:1.10.1"
   }

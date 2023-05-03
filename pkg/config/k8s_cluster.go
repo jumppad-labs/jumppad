@@ -18,8 +18,8 @@ type K8sCluster struct {
 	Images  []Image  `hcl:"image,block" json:"images,omitempty"`
 	Volumes []Volume `hcl:"volume,block" json:"volumes,omitempty"` // volumes to attach to the cluster
 
-	Ports      []Port      `hcl:"port,block" json:"ports,omitempty"`                                       // ports to expose
-	PortRanges []PortRange `hcl:"port_range,block" json:"port_ranges,omitempty" mapstructure:"port_range"` // range of ports to expose
+	Ports      []Port      `hcl:"port,block" json:"ports,omitempty"`                                        // ports to expose
+	PortRanges []PortRange `hcl:"port_range,block" json:"port_ranges,omitempty" mapstructure:"port_ranges"` // range of ports to expose
 
 	EnvVar map[string]string `hcl:"env_var,optional" json:"env_var,omitempty" mapstructure:"env_var"` // environment variables to set when starting the container
 }

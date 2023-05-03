@@ -1,5 +1,10 @@
 # Change Log
 
+## version v0.5.3
+* Final version of Shipyard as application moves towards v1.0
+* Add configurable ports to Nomad cluster
+* Update message in `run` command
+
 ## version v0.5.1
 * Fix bug in Kubernetes where the proxy was incorrectly handling logs requests
 * Update Kubernetes default to v1.26.3, support versions v1.24 and above
