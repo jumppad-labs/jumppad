@@ -7,7 +7,7 @@ require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
 	github.com/creack/pty v1.1.17
 	github.com/cucumber/godog v0.12.4
-	github.com/docker/docker v20.10.12+incompatible
+	github.com/docker/docker v20.10.24+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/fatih/color v1.13.0
 	github.com/gofiber/fiber/v2 v2.25.0
