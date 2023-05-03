@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/shipyard-run/shipyard/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/spf13/cobra"
 )
 

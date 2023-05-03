@@ -5,9 +5,9 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/jumppad-labs/jumppad/pkg/shipyard/constants"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/shipyard-run/hclconfig"
-	"github.com/shipyard-run/shipyard/pkg/shipyard/constants"
-	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/spf13/cobra"
 )
 

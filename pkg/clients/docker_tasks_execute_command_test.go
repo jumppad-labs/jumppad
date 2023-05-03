@@ -9,8 +9,8 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/hashicorp/go-hclog"
-	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
-	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	clients "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -22,7 +22,7 @@ func testExecCommandMockSetup() (*mocks.MockDocker, *mocks.ImageLog) {
 
 	mk := &mocks.MockDocker{}
 	mk.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
-  mk.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	mk.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 	mk.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(types.IDResponse{ID: "abc"}, nil)
 	mk.On("ContainerExecAttach", mock.Anything, mock.Anything, mock.Anything).Return(
 		types.HijackedResponse{

@@ -11,10 +11,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/shipyard-run/connector/crypto"
-	"github.com/shipyard-run/connector/protos/shipyard"
+	"github.com/jumppad-labs/connector/crypto"
+	"github.com/jumppad-labs/connector/protos/shipyard"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/shipyard-run/gohup"
-	"github.com/shipyard-run/shipyard/pkg/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )

@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shipyard-run/connector/crypto"
-	"github.com/shipyard-run/shipyard/pkg/utils"
+	"github.com/jumppad-labs/connector/crypto"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

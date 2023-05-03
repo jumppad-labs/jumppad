@@ -14,8 +14,8 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/hashicorp/go-hclog"
-	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
-	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	clients "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -27,7 +27,7 @@ var testCopyLocalVolume = "images"
 func testCreateCopyLocalMocks() *mocks.MockDocker {
 	mk := &mocks.MockDocker{}
 	mk.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
-  mk.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	mk.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 	mk.On("ContainerInspect", mock.Anything, mock.Anything).Return(
 		types.ContainerJSON{
 			&types.ContainerJSONBase{State: &types.ContainerState{Running: true}},

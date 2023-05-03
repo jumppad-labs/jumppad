@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/docker/docker/pkg/ioutils"
-	"github.com/shipyard-run/shipyard/pkg/clients"
-	"github.com/shipyard-run/shipyard/pkg/config"
-	"github.com/shipyard-run/shipyard/pkg/utils"
+	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/config"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

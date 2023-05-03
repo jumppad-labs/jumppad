@@ -1,10 +1,10 @@
 package shipyard
 
 import (
+	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/providers"
 	"github.com/shipyard-run/hclconfig/types"
-	"github.com/shipyard-run/shipyard/pkg/clients"
-	"github.com/shipyard-run/shipyard/pkg/config/resources"
-	"github.com/shipyard-run/shipyard/pkg/providers"
 )
 
 // generateProviderImpl returns providers grouped together in order of execution

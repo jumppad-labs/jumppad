@@ -6,7 +6,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/hashicorp/go-hclog"
-	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -14,7 +14,7 @@ import (
 func TestFindContainerIDsReturnsID(t *testing.T) {
 	md := &mocks.MockDocker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
-  md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 	md.On("ContainerList", mock.Anything, mock.Anything).Return(
 		[]types.Container{
 			types.Container{ID: "abc"},
@@ -44,7 +44,7 @@ func TestFindContainerIDsReturnsID(t *testing.T) {
 func TestFindContainerIDsReturnsErrorWhenDockerFail(t *testing.T) {
 	md := &mocks.MockDocker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
-  md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
 	dt := NewDockerTasks(md, nil, &TarGz{}, hclog.NewNullLogger())
@@ -56,7 +56,7 @@ func TestFindContainerIDsReturnsErrorWhenDockerFail(t *testing.T) {
 func TestFindContainerIDsReturnsNilWhenNoIDs(t *testing.T) {
 	md := &mocks.MockDocker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
-  md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, nil)
 
 	dt := NewDockerTasks(md, nil, &TarGz{}, hclog.NewNullLogger())
@@ -69,7 +69,7 @@ func TestFindContainerIDsReturnsNilWhenNoIDs(t *testing.T) {
 func TestFindContainerIDsReturnsNilWhenEmpty(t *testing.T) {
 	md := &mocks.MockDocker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
-  md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 	md.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{}, nil)
 
 	dt := NewDockerTasks(md, nil, &TarGz{}, hclog.NewNullLogger())

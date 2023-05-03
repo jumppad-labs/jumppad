@@ -7,8 +7,8 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/network"
 	hclog "github.com/hashicorp/go-hclog"
-	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	clients "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/stretchr/testify/mock"
 	assert "github.com/stretchr/testify/require"
 )

@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/shipyard-run/shipyard/pkg/config"
-	"github.com/shipyard-run/shipyard/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/config"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/stretchr/testify/require"
 )
 

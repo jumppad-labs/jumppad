@@ -3,7 +3,7 @@ package clients
 import (
 	"io"
 
-	"github.com/shipyard-run/shipyard/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/stretchr/testify/mock"
 )
 

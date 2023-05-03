@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/stretchr/testify/require"
 )
 

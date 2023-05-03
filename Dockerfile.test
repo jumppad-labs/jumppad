@@ -1,6 +1,6 @@
 FROM golang:latest
 
-RUN mkdir -p /go/src/github.com/shipyard-run/shipyard
-COPY ./ /go/src/github.com/shipyard-run/shipyard
+RUN mkdir -p /go/src/github.com/jumppad-labs/jumppad
+COPY ./ /go/src/github.com/jumppad-labs/jumppad
 
-WORKDIR /go/src/github.com/shipyard-run/shipyard
+WORKDIR /go/src/github.com/jumppad-labs/jumppad

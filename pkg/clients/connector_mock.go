@@ -1,7 +1,7 @@
 package clients
 
 import (
-	"github.com/shipyard-run/connector/protos/shipyard"
+	"github.com/jumppad-labs/connector/protos/shipyard"
 	"github.com/stretchr/testify/mock"
 )
 

@@ -3,7 +3,7 @@ package cmd
 import (
 	"os"
 
-	"github.com/shipyard-run/shipyard/pkg/utils"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 	gvm "github.com/shipyard-run/version-manager"
 	"github.com/spf13/cobra"
 )

@@ -3,7 +3,7 @@ package mocks
 import (
 	"time"
 
-	"github.com/shipyard-run/shipyard/pkg/utils"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/stretchr/testify/mock"
 )
 

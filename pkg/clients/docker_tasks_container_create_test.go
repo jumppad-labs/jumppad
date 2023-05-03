@@ -14,10 +14,10 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/go-hclog"
+	clients "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/config"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/mohae/deepcopy"
-	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
-	"github.com/shipyard-run/shipyard/pkg/config"
-	"github.com/shipyard-run/shipyard/pkg/utils"
 	"github.com/stretchr/testify/mock"
 	assert "github.com/stretchr/testify/require"
 )
@@ -117,8 +117,8 @@ func setupContainerMocks() (*clients.MockDocker, *clients.ImageLog) {
 	md.On("VolumeList", mock.Anything, mock.Anything).Return(nil, nil)
 	md.On("VolumeCreate", mock.Anything, mock.Anything).Return(types.Volume{Name: "test_volume"}, nil)
 	md.On("VolumeRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-  
-  md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+
+	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 
 	mic := &clients.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)

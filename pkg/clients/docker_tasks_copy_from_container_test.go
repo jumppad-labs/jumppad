@@ -9,8 +9,8 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/hashicorp/go-hclog"
-	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
-	clients "github.com/shipyard-run/shipyard/pkg/clients/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	clients "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -23,7 +23,7 @@ func TestCopyFromContainerCopiesFile(t *testing.T) {
 
 	md := &mocks.MockDocker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
-  md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 
 	mic := &clients.ImageLog{}
 	md.On("CopyFromContainer", mock.Anything, id, src).Return(
@@ -51,7 +51,7 @@ func TestCopyFromContainerReturnsErrorOnDockerError(t *testing.T) {
 
 	md := &mocks.MockDocker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
-  md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 
 	mic := &clients.ImageLog{}
 	md.On("CopyFromContainer", mock.Anything, id, src).Return(

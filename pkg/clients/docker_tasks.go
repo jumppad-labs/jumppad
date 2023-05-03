@@ -28,9 +28,9 @@ import (
 	"github.com/docker/docker/pkg/term"
 	"github.com/docker/go-connections/nat"
 	"github.com/hashicorp/go-hclog"
-	"github.com/shipyard-run/shipyard/pkg/clients/streams"
-	"github.com/shipyard-run/shipyard/pkg/config/resources"
-	"github.com/shipyard-run/shipyard/pkg/utils"
+	"github.com/jumppad-labs/jumppad/pkg/clients/streams"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"golang.org/x/xerrors"
 )
 

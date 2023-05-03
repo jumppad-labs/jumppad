@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/jumppad-labs/connector/crypto"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/sethvargo/go-retry"
-	"github.com/shipyard-run/connector/crypto"
-	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"golang.org/x/xerrors"
 )
 

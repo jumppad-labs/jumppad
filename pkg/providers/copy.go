@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	cp "github.com/otiai10/copy"
-	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"golang.org/x/xerrors"
 )
 

@@ -449,7 +449,7 @@ eval $(shipyard env)
 
 ```
 module "k8s" {
-	source = "github.com/shipyard-run/shipyard/examples//single_k3s_cluster"
+	source = "github.com/jumppad-labs/jumppad/examples//single_k3s_cluster"
 }
 
 module "consul" {

@@ -13,10 +13,10 @@ import (
 	"github.com/hashicorp/go-hclog"
 	gvm "github.com/shipyard-run/version-manager"
 
-	"github.com/shipyard-run/shipyard/pkg/clients"
-	"github.com/shipyard-run/shipyard/pkg/config/resources"
-	"github.com/shipyard-run/shipyard/pkg/shipyard"
-	"github.com/shipyard-run/shipyard/pkg/utils"
+	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/shipyard"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
 
 	markdown "github.com/MichaelMure/go-term-markdown"

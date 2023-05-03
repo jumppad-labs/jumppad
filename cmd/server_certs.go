@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/shipyard-run/connector/crypto"
+	"github.com/jumppad-labs/connector/crypto"
 	"github.com/spf13/cobra"
 )
 

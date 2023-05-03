@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/shipyard-run/hclconfig/types"
-	"github.com/shipyard-run/shipyard/pkg/clients"
-	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
-	"github.com/shipyard-run/shipyard/pkg/config/resources"
 	"github.com/stretchr/testify/mock"
 	assert "github.com/stretchr/testify/require"
 )

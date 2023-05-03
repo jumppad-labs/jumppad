@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/shipyard-run/shipyard/cmd"
+	"github.com/jumppad-labs/jumppad/cmd"
 )
 
 var version = "v0.0.0"

@@ -1,4 +1,4 @@
-module github.com/shipyard-run/shipyard
+module github.com/jumppad-labs/jumppad
 
 go 1.19
 
@@ -22,7 +22,7 @@ require (
 	github.com/otiai10/copy v1.10.0
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-retry v0.2.4
-	github.com/shipyard-run/connector v0.1.1
+	github.com/jumppad-labs/connector v0.1.1
 	github.com/shipyard-run/gohup v0.2.2
 	github.com/shipyard-run/hclconfig v0.3.1
 	github.com/shipyard-run/version-manager v0.0.5
@@ -215,4 +215,4 @@ replace github.com/creack/pty => github.com/photostorm/pty v1.1.18
 
 //replace github.com/shipyard-run/hclconfig => ../hclconfig/
 
-//replace github.com/shipyard-run/connector => ../connector
+//replace github.com/jumppad-labs/connector => ../connector

@@ -8,7 +8,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/shipyard-run/shipyard/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/spf13/cobra"
 )
 

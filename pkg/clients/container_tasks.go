@@ -3,7 +3,7 @@ package clients
 import (
 	"io"
 
-	"github.com/shipyard-run/shipyard/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 )
 
 // ContainerTasks is a task oriented client which abstracts

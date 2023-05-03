@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/docker/docker/pkg/ioutils"
-	"github.com/shipyard-run/shipyard/pkg/utils"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 func setupState(t *testing.T, state string) {

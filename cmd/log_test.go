@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/shipyard-run/shipyard/pkg/clients/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 )
 
 const (
@@ -271,7 +271,7 @@ var logState = `
       ],
       "volumes": [
         {
-          "source": "/home/nicj/go/src/github.com/shipyard-run/shipyard/examples/container/consul_config",
+          "source": "/home/nicj/go/src/github.com/jumppad-labs/jumppad/examples/container/consul_config",
           "destination": "/config"
         }
       ],

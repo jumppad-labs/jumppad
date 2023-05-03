@@ -11,7 +11,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/hcl2/hcl"
-	"github.com/shipyard-run/shipyard/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/zclconf/go-cty/cty"
 )
 

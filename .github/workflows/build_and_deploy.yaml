@@ -72,7 +72,7 @@ jobs:
  #       uses: peter-evans/repository-dispatch@v1
  #       with:
  #         token: '${{ secrets.GH_TOKEN }}'
- #         repository: shipyard-run/shipyard-mac-build
+ #         repository: jumppad-labs/jumppad-mac-build
  #         event-type: test
  #         client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}"}'
 
@@ -667,23 +667,23 @@ jobs:
           version "${VERSION}"
 
           if OS.mac? && Hardware::CPU.intel?
-            url "https://github.com/shipyard-run/shipyard/releases/download/v${VERSION}/shipyard_${VERSION}_darwin_x86_64.zip"
+            url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/shipyard_${VERSION}_darwin_x86_64.zip"
             sha256 "${DARWIN_x86_SHA}"
           end
           if OS.mac? && Hardware::CPU.arm?
-            url "https://github.com/shipyard-run/shipyard/releases/download/v${VERSION}/shipyard_${VERSION}_darwin_arm64.zip"
+            url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/shipyard_${VERSION}_darwin_arm64.zip"
             sha256 "${DARWIN_ARM64_SHA}"
           end
           if OS.linux? && Hardware::CPU.intel?
-            url "https://github.com/shipyard-run/shipyard/releases/download/v${VERSION}/shipyard_${VERSION}_linux_x86_64.tar.gz"
+            url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/shipyard_${VERSION}_linux_x86_64.tar.gz"
             sha256 "${LINUX_x86_SHA}"
           end
           if OS.linux? && Hardware::CPU.arm? && !Hardware::CPU.is_64_bit?
-            url "https://github.com/shipyard-run/shipyard/releases/download/v${VERSION}/shipyard_${VERSION}_linux_armv7.tar.gz"
+            url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/shipyard_${VERSION}_linux_armv7.tar.gz"
             sha256 "${LINUX_ARM7_SHA}"
           end
           if OS.linux? && Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-            url "https://github.com/shipyard-run/shipyard/releases/download/v${VERSION}/shipyard_${VERSION}_linux_arm64.tar.gz"
+            url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/shipyard_${VERSION}_linux_arm64.tar.gz"
             sha256 "${LINUX_ARM64_SHA}"
           end
 
@@ -721,7 +721,7 @@ jobs:
 
       - name: Replace checksum
         run: |
-          wget "https://github.com/shipyard-run/shipyard/releases/download/v${{ needs.tag.outputs.new_version }}/shipyard_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip"
+          wget "https://github.com/jumppad-labs/jumppad/releases/download/v${{ needs.tag.outputs.new_version }}/shipyard_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip"
           powershell -Command "(gc tools/chocolateyinstall.ps1) -replace '__checksum__', '$(checksum -t sha256 -f shipyard_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip)' | Out-File -encoding ASCII tools/chocolateyinstall.ps1"
 
       - name: Replace version
@@ -759,7 +759,7 @@ jobs:
     steps:
     - name: Download release
       run: |
-        wget "https://github.com/shipyard-run/shipyard/releases/download/v${{ needs.tag.outputs.new_version }}/shipyard_${{ needs.tag.outputs.new_version }}_linux_${{ matrix.arch }}"
+        wget "https://github.com/jumppad-labs/jumppad/releases/download/v${{ needs.tag.outputs.new_version }}/shipyard_${{ needs.tag.outputs.new_version }}_linux_${{ matrix.arch }}"
 
     - name: Upload release
       run: |
@@ -785,7 +785,7 @@ jobs:
         name: Checkout
         uses: actions/checkout@v2
         with:
-          repository: 'shipyard-run/shipyard-website'
+          repository: 'jumppad-labs/jumppad-website'
           token: '${{ secrets.GH_TOKEN }}'
 
       - name: Configure Git

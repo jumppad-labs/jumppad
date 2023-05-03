@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/shipyard-run/shipyard/pkg/utils"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
 	assert "github.com/stretchr/testify/require"
 )

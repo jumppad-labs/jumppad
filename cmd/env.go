@@ -6,9 +6,9 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/shipyard"
 	"github.com/shipyard-run/hclconfig/types"
-	"github.com/shipyard-run/shipyard/pkg/config/resources"
-	"github.com/shipyard-run/shipyard/pkg/shipyard"
 	"github.com/spf13/cobra"
 )
 

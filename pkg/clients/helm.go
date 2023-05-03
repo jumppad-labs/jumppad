@@ -7,8 +7,8 @@ import (
 	"sync"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/pkg/errors"
-	"github.com/shipyard-run/shipyard/pkg/utils"
 	"golang.org/x/xerrors"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"

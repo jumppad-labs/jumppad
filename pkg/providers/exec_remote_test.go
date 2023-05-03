@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/shipyard-run/shipyard/pkg/clients"
-	"github.com/shipyard-run/shipyard/pkg/config"
+	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -171,16 +171,16 @@ func TestRemoteExecRemovesContainer(t *testing.T) {
 }
 
 /*
-func TestRemoteExecRemoveContainerFailReturnsError(t *testing.T) {
-	trex, _, md := testRemoteExecSetupMocks()
-	removeOn(&md.Mock, "RemoveContainer")
-	md.On("RemoveContainer", "1234").Return(fmt.Errorf("boom"))
+	func TestRemoteExecRemoveContainerFailReturnsError(t *testing.T) {
+		trex, _, md := testRemoteExecSetupMocks()
+		removeOn(&md.Mock, "RemoveContainer")
+		md.On("RemoveContainer", "1234").Return(fmt.Errorf("boom"))
 
-	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
+		p := NewRemoteExec(trex, md, hclog.NewNullLogger())
 
-	err := p.Create()
-	assert.Error(t, err)
-}
+		err := p.Create()
+		assert.Error(t, err)
+	}
 */
 func TestRemoteExecDoesNOTRemovesContainerWhenTarget(t *testing.T) {
 	trex, _, md := testRemoteExecSetupMocks()

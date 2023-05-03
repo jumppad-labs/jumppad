@@ -3,8 +3,8 @@
 package mocks
 
 import (
-	resources "github.com/shipyard-run/shipyard/pkg/config/resources"
-	shipyard "github.com/shipyard-run/shipyard/pkg/shipyard"
+	resources "github.com/jumppad-labs/jumppad/pkg/config/resources"
+	shipyard "github.com/jumppad-labs/jumppad/pkg/shipyard"
 	mock "github.com/stretchr/testify/mock"
 
 	types "github.com/shipyard-run/hclconfig/types"

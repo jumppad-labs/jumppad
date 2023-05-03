@@ -1,10 +1,10 @@
 # Shipyard
 
 
-![](https://github.com/shipyard-run/shipyard/workflows/Build/badge.svg)  
-![](https://github.com/shipyard-run/shipyard/workflows/Release/badge.svg)  
+![](https://github.com/jumppad-labs/jumppad/workflows/Build/badge.svg)  
+![](https://github.com/jumppad-labs/jumppad/workflows/Release/badge.svg)  
   
-[![codecov](https://codecov.io/gh/shipyard-run/shipyard/branch/master/graph/badge.svg)](https://codecov.io/gh/shipyard-run/shipyard)
+[![codecov](https://codecov.io/gh/jumppad-labs/jumppad/branch/master/graph/badge.svg)](https://codecov.io/gh/jumppad-labs/jumppad)
 
 ![](./shipyard_horizontal.png)
 
@@ -256,10 +256,10 @@ To run the unit tests you can use the make recipe `make test_unit` this runs the
 ```shell
 shipyard on  master via 🐹 v1.13.5 on 🐳 v19.03.5 ()
 ➜ make test_unit
-go test -v -race github.com/shipyard-run/shipyard github.com/shipyard-run/shipyard/cmd github.com/shipyard-run/shipyard/pkg/clients github.com/shipyard-run/shipyard/pkg/clients/mocks github.com/shipyard-run/shipyard/pkg/config github.com/shipyard-run/shipyard/pkg/providers github.com/shipyard-run/shipyard/pkg/shipyard github.com/shipyard-run/shipyard/pkg/utils
+go test -v -race github.com/jumppad-labs/jumppad github.com/jumppad-labs/jumppad/cmd github.com/jumppad-labs/jumppad/pkg/clients github.com/jumppad-labs/jumppad/pkg/clients/mocks github.com/jumppad-labs/jumppad/pkg/config github.com/jumppad-labs/jumppad/pkg/providers github.com/jumppad-labs/jumppad/pkg/shipyard github.com/jumppad-labs/jumppad/pkg/utils
 testing: warning: no tests to run
 PASS
-ok      github.com/shipyard-run/shipyard        (cached) [no tests to run]
+ok      github.com/jumppad-labs/jumppad        (cached) [no tests to run]
 === RUN   TestSetsEnvVar
 --- PASS: TestSetsEnvVar (0.00s)
 === RUN   TestArgIsLocalRelativeFolder

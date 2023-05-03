@@ -5,8 +5,8 @@ import (
 	"math/rand"
 	"os"
 
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/shipyard-run/hclconfig"
-	"github.com/shipyard-run/shipyard/pkg/utils"
 )
 
 // setupHCLConfig configures the HCLConfig package and registers the custom types
