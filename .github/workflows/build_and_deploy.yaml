@@ -380,6 +380,8 @@ jobs:
   tag:
     name: Tag latest release
     runs-on: ubuntu-latest
+    permissions:
+       contents: write
     needs:
       - test
       - functional_test_docker
@@ -451,14 +453,12 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: shipyard_binaries
+          name: jumpppad_binaries
           path: |
             dist/jumppad_darwin_arm64
             dist/jumppad_darwin_amd64
             dist/jumppad_linux_amd64
             dist/jumppad_linux_arm64
-            dist/jumppad_linux_arm_7
-            dist/jumppad_linux_arm_6
             dist/jumppad_windows_amd64
 
       - name: Upload artifacts
@@ -468,17 +468,9 @@ jobs:
           path: |
             dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.rpm
             dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz
-            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv7.tar.gz
-            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv6.deb
-            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv7.rpm
             dist/jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip
             dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz
-            dist/jumppad_${{ needs.tag.outputs.new_version }}_windows_armv6.zip
-            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv7.deb
-            dist/jumppad_${{ needs.tag.outputs.new_version }}_windows_armv7.zip
-            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv6.rpm
             dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.deb
-            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv6.tar.gz
             dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.rpm
             dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
             dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
@@ -552,10 +544,10 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: shipyard_archives
+        name: jumppad_archives
         path: |
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
-          dist/shipyard_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
+          dist/jumpppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
+          dist/jumpppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
 
     - name: Send status to Discord
       uses: sarisia/actions-status-discord@v1
@@ -577,7 +569,7 @@ jobs:
     - name: Download-Binaries
       uses: actions/download-artifact@v2
       with:
-        name: shipyard_archives
+        name: jumppad_archives
         path: dist/
 
     - name: Generate SHA256 checksums
@@ -585,16 +577,10 @@ jobs:
         cd dist
         sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz > checksums.txt
         sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz >> checksums.txt
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_armv7.tar.gz >> checksums.txt
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_armv6.tar.gz >> checksums.txt
         sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.deb >> checksums.txt
         sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.deb >> checksums.txt
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_armv7.deb >> checksums.txt
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_armv6.deb >> checksums.txt
         sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.rpm >> checksums.txt
         sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.rpm >> checksums.txt
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_armv7.rpm >> checksums.txt
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_armv6.rpm >> checksums.txt
         sha256sum jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip >> checksums.txt
         sha256sum jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip >> checksums.txt
         sha256sum jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip >> checksums.txt
@@ -608,16 +594,10 @@ jobs:
           dist/checksums.txt
           dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz
           dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv7.tar.gz
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv6.tar.gz
           dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.rpm
           dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.rpm
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv7.rpm
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv6.rpm
           dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.deb
           dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.deb
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv7.deb
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv6.deb
           dist/jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip
           dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
           dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
@@ -654,7 +634,6 @@ jobs:
         export DARWIN_ARM64_SHA=$(sha256sum  ./dist/jumppad${{ needs.tag.outputs.new_version }}_darwin_arm64.zip | cut -d " " -f 1)
         export DARWIN_x86_SHA=$(sha256sum  ./dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip | cut -d " " -f 1)
         export LINUX_ARM64_SHA=$(sha256sum  ./dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz | cut -d " " -f 1)
-        export LINUX_ARM7_SHA=$(sha256sum  ./dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_armv7.tar.gz | cut -d " " -f 1)
         export LINUX_x86_SHA=$(sha256sum  ./dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz | cut -d " " -f 1)
 
         cat <<- EOF > ./jumppad.rb
@@ -678,10 +657,6 @@ jobs:
             url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/shipyard_${VERSION}_linux_x86_64.tar.gz"
             sha256 "${LINUX_x86_SHA}"
           end
-          if OS.linux? && Hardware::CPU.arm? && !Hardware::CPU.is_64_bit?
-            url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/shipyard_${VERSION}_linux_armv7.tar.gz"
-            sha256 "${LINUX_ARM7_SHA}"
-          end
           if OS.linux? && Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
             url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/shipyard_${VERSION}_linux_arm64.tar.gz"
             sha256 "${LINUX_ARM64_SHA}"
@@ -702,49 +677,49 @@ jobs:
         git commit -m "Update version to ${{ needs.tag.outputs.new_tag }}"
         git push
 
-  choco:
-    name: Update Chocolatey repository
-    runs-on: windows-latest
-    needs:
-      - github_release
-      - tag
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          repository: 'shipyard-run/choco'
+  #choco:
+  #  name: Update Chocolatey repository
+  #  runs-on: windows-latest
+  #  needs:
+  #    - github_release
+  #    - tag
+  #  steps:
+  #    - name: Checkout
+  #      uses: actions/checkout@v2
+  #      with:
+  #        repository: 'shipyard-run/choco'
 
-      - name: Install dependencies
-        run: |
-          choco install checksum -y
-          choco install wget -y
+  #    - name: Install dependencies
+  #      run: |
+  #        choco install checksum -y
+  #        choco install wget -y
 
-      - name: Replace checksum
-        run: |
-          wget "https://github.com/jumppad-labs/jumppad/releases/download/v${{ needs.tag.outputs.new_version }}/shipyard_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip"
-          powershell -Command "(gc tools/chocolateyinstall.ps1) -replace '__checksum__', '$(checksum -t sha256 -f shipyard_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip)' | Out-File -encoding ASCII tools/chocolateyinstall.ps1"
+  #    - name: Replace checksum
+  #      run: |
+  #        wget "https://github.com/jumppad-labs/jumppad/releases/download/v${{ needs.tag.outputs.new_version }}/shipyard_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip"
+  #        powershell -Command "(gc tools/chocolateyinstall.ps1) -replace '__checksum__', '$(checksum -t sha256 -f shipyard_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip)' | Out-File -encoding ASCII tools/chocolateyinstall.ps1"
 
-      - name: Replace version
-        run: |
-          powershell -Command "(gc shipyard.nuspec) -replace '__version__', '${{ needs.tag.outputs.new_version }}' | Out-File -encoding ASCII shipyard.nuspec"
-          powershell -Command "(gc tools/chocolateyinstall.ps1) -replace '__version__', '${{ needs.tag.outputs.new_version }}' | Out-File -encoding ASCII tools\chocolateyinstall.ps1"
+  #    - name: Replace version
+  #      run: |
+  #        powershell -Command "(gc shipyard.nuspec) -replace '__version__', '${{ needs.tag.outputs.new_version }}' | Out-File -encoding ASCII shipyard.nuspec"
+  #        powershell -Command "(gc tools/chocolateyinstall.ps1) -replace '__version__', '${{ needs.tag.outputs.new_version }}' | Out-File -encoding ASCII tools\chocolateyinstall.ps1"
 
-      - name: Choco login
-        run: choco apikey -k ${{ secrets.CHOCO_API_KEY }} -s https://push.chocolatey.org/
+  #    - name: Choco login
+  #      run: choco apikey -k ${{ secrets.CHOCO_API_KEY }} -s https://push.chocolatey.org/
 
-      - name: Choco build
-        run: choco pack
+  #    - name: Choco build
+  #      run: choco pack
 
-      - name: Choco push
-        run: choco push -f
+  #    - name: Choco push
+  #      run: choco push -f
 
-      - name: Send status to Discord
-        uses: sarisia/actions-status-discord@v1
-        if: always()
-        with:
-          tile: ${{ github.job_id }}
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          description: "Push new version ${{ needs.tag.outputs.new_version }} to Chocolatey"
+  #    - name: Send status to Discord
+  #      uses: sarisia/actions-status-discord@v1
+  #      if: always()
+  #      with:
+  #        tile: ${{ github.job_id }}
+  #        webhook: ${{ secrets.DISCORD_WEBHOOK }}
+  #        description: "Push new version ${{ needs.tag.outputs.new_version }} to Chocolatey"
 
   apt:
     name: Update fury.io Apt repository
@@ -754,16 +729,16 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: ["amd64.deb", "arm64.deb", "armv7.deb", "amd64.rpm", "arm64.rpm", "armv7.rpm"]
+        arch: ["amd64.deb", "arm64.deb", "amd64.rpm", "arm64.rpm"]
 
     steps:
     - name: Download release
       run: |
-        wget "https://github.com/jumppad-labs/jumppad/releases/download/v${{ needs.tag.outputs.new_version }}/shipyard_${{ needs.tag.outputs.new_version }}_linux_${{ matrix.arch }}"
+        wget "https://github.com/jumppad-labs/jumppad/releases/download/v${{ needs.tag.outputs.new_version }}/jumppad_${{ needs.tag.outputs.new_version }}_linux_${{ matrix.arch }}"
 
     - name: Upload release
       run: |
-        curl -F package=@jumppad_${{ needs.tag.outputs.new_version }}_linux_${{ matrix.arch }} https://${{ secrets.FURY_TOKEN }}@push.fury.io/shipyard-run/
+        curl -F package=@jumppad_${{ needs.tag.outputs.new_version }}_linux_${{ matrix.arch }} https://${{ secrets.FURY_TOKEN }}@push.fury.io/jumppad-dev/
 
     - name: Send status to Discord
       uses: sarisia/actions-status-discord@v1
