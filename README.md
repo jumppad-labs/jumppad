@@ -1,5 +1,7 @@
 # Shipyard
 
+**NOTE:** Shipyard is becoming JumpPad, please see https://jumppad.dev for info
+
 
 ![](https://github.com/shipyard-run/shipyard/workflows/Build/badge.svg)  
 ![](https://github.com/shipyard-run/shipyard/workflows/Release/badge.svg)  
