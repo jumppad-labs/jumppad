@@ -677,49 +677,49 @@ jobs:
         git commit -m "Update version to ${{ needs.tag.outputs.new_tag }}"
         git push
 
-  #choco:
-  #  name: Update Chocolatey repository
-  #  runs-on: windows-latest
-  #  needs:
-  #    - github_release
-  #    - tag
-  #  steps:
-  #    - name: Checkout
-  #      uses: actions/checkout@v2
-  #      with:
-  #        repository: 'shipyard-run/choco'
+  choco:
+    name: Update Chocolatey repository
+    runs-on: windows-latest
+    needs:
+      - github_release
+      - tag
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          repository: 'jumpppad-labs/choco'
 
-  #    - name: Install dependencies
-  #      run: |
-  #        choco install checksum -y
-  #        choco install wget -y
+      - name: Install dependencies
+        run: |
+          choco install checksum -y
+          choco install wget -y
 
-  #    - name: Replace checksum
-  #      run: |
-  #        wget "https://github.com/jumppad-labs/jumppad/releases/download/v${{ needs.tag.outputs.new_version }}/shipyard_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip"
-  #        powershell -Command "(gc tools/chocolateyinstall.ps1) -replace '__checksum__', '$(checksum -t sha256 -f shipyard_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip)' | Out-File -encoding ASCII tools/chocolateyinstall.ps1"
+      - name: Replace checksum
+        run: |
+          wget "https://github.com/jumppad-labs/jumppad/releases/download/v${{ needs.tag.outputs.new_version }}/jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip"
+          powershell -Command "(gc tools/chocolateyinstall.ps1) -replace '__checksum__', '$(checksum -t sha256 -f jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip)' | Out-File -encoding ASCII tools/chocolateyinstall.ps1"
 
-  #    - name: Replace version
-  #      run: |
-  #        powershell -Command "(gc shipyard.nuspec) -replace '__version__', '${{ needs.tag.outputs.new_version }}' | Out-File -encoding ASCII shipyard.nuspec"
-  #        powershell -Command "(gc tools/chocolateyinstall.ps1) -replace '__version__', '${{ needs.tag.outputs.new_version }}' | Out-File -encoding ASCII tools\chocolateyinstall.ps1"
+      - name: Replace version
+        run: |
+          powershell -Command "(gc jumppad.nuspec) -replace '__version__', '${{ needs.tag.outputs.new_version }}' | Out-File -encoding ASCII shipyard.nuspec"
+          powershell -Command "(gc tools/chocolateyinstall.ps1) -replace '__version__', '${{ needs.tag.outputs.new_version }}' | Out-File -encoding ASCII tools\chocolateyinstall.ps1"
 
-  #    - name: Choco login
-  #      run: choco apikey -k ${{ secrets.CHOCO_API_KEY }} -s https://push.chocolatey.org/
+      - name: Choco login
+        run: choco apikey -k ${{ secrets.CHOCO_API_KEY }} -s https://push.chocolatey.org/
 
-  #    - name: Choco build
-  #      run: choco pack
+      - name: Choco build
+        run: choco pack
 
-  #    - name: Choco push
-  #      run: choco push -f
+      - name: Choco push
+        run: choco push -f
 
-  #    - name: Send status to Discord
-  #      uses: sarisia/actions-status-discord@v1
-  #      if: always()
-  #      with:
-  #        tile: ${{ github.job_id }}
-  #        webhook: ${{ secrets.DISCORD_WEBHOOK }}
-  #        description: "Push new version ${{ needs.tag.outputs.new_version }} to Chocolatey"
+      - name: Send status to Discord
+        uses: sarisia/actions-status-discord@v1
+        if: always()
+        with:
+          tile: ${{ github.job_id }}
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          description: "Push new version ${{ needs.tag.outputs.new_version }} to Chocolatey"
 
   apt:
     name: Update fury.io Apt repository
@@ -748,40 +748,40 @@ jobs:
         webhook: ${{ secrets.DISCORD_WEBHOOK }}
         description: "Push new version ${{ needs.tag.outputs.new_version }} to Apt"
 
-  #update_website:
-  #  name: Update Shipyard website with latest version
-  #  needs:
-  #    - github_release
-  #    - tag
-  #  runs-on: ubuntu-latest
+  update_website:
+    name: Update Jumpad website with latest version
+    needs:
+      - github_release
+      - tag
+    runs-on: ubuntu-latest
 
-  #  steps:
-  #    -
-  #      name: Checkout
-  #      uses: actions/checkout@v2
-  #      with:
-  #        repository: 'jumppad-labs/jumppad-website'
-  #        token: '${{ secrets.GH_TOKEN }}'
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+        with:
+          repository: 'jumppad-labs/jumppad-labs.github.io'
+          token: '${{ secrets.GH_TOKEN }}'
 
-  #    - name: Configure Git
-  #      run: |
-  #        git config user.email "mail@shipyard.run"
-  #        git config user.name "Shipyard Bot"
+      - name: Configure Git
+        run: |
+          git config user.email "helo@jumppad.dev"
+          git config user.name "Jumppad Bot"
 
-  #    - name: Write version
-  #      run: |
-  #        echo "${{ needs.tag.outputs.new_version }}" > ./static/latest
+      - name: Write version
+        run: |
+          echo "${{ needs.tag.outputs.new_version }}" > ./public/latest
 
-  #    - name: Push update
-  #      run: |
-  #        git add .
-  #        git commit -m "Update version to ${{ needs.tag.outputs.new_version }}"
-  #        git push
+      - name: Push update
+        run: |
+          git add .
+          git commit -m "Update version to ${{ needs.tag.outputs.new_version }}"
+          git push
 
-  #    - name: Send status to Discord
-  #      uses: sarisia/actions-status-discord@v1
-  #      if: always()
-  #      with:
-  #        tile: ${{ github.job_id }}
-  #        webhook: ${{ secrets.DISCORD_WEBHOOK }}
-  #        description: "Update website with latest version ${{ needs.tag.outputs.new_version }}"
+      - name: Send status to Discord
+        uses: sarisia/actions-status-discord@v1
+        if: always()
+        with:
+          tile: ${{ github.job_id }}
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          description: "Update website with latest version ${{ needs.tag.outputs.new_version }}"
