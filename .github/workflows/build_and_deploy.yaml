@@ -738,7 +738,7 @@ jobs:
 
     - name: Upload release
       run: |
-        curl -F package=@jumppad_${{ needs.tag.outputs.new_version }}_linux_${{ matrix.arch }} https://${{ secrets.FURY_TOKEN }}@push.fury.io/jumppad-dev/
+        curl -F package=@jumppad_${{ needs.tag.outputs.new_version }}_linux_${{ matrix.arch }} https://${{ secrets.FURY_JUMPPAD_TOKEN }}@push.fury.io/jumppad/
 
     - name: Send status to Discord
       uses: sarisia/actions-status-discord@v1
