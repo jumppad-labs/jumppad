@@ -390,6 +390,8 @@ jobs:
   tag:
     name: Tag latest release
     runs-on: ubuntu-latest
+    permissions:
+       contents: write
     needs:
       - test
       - functional_test_docker
@@ -581,6 +583,8 @@ jobs:
       - tag
     environment:
       name: release
+    permissions:
+       contents: write
     runs-on: ubuntu-latest
     steps:
     - name: Download-Binaries
@@ -612,7 +616,7 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ needs.tag.outputs.new_tag }}
-        token: ${{ secrets.GH_TOKEN }}
+        token: ${{ secrets.GITHUB_TOKEN }}
         files: |
           dist/checksums.txt
           dist/shipyard_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz
