@@ -53,7 +53,7 @@ install_local:
 	sudo cp bin/jumppad /usr/local/bin/jumppad
 
 remove_local:
-	sudo rm /usrlocal/bin/jumppad
+	sudo rm /usr/local/bin/jumppad
 	sudo mv /usr/local/bin/jumppad-old /usr/local/bin/jumppad
 
 test_releaser:
