@@ -1,5 +1,5 @@
 Feature: Docker Container
-  In order to test Shipyard local execs correctly
+  In order to test jumppad local execs correctly
   I should apply a blueprint which defines a simple setup
   and test the resources are created correctly
 

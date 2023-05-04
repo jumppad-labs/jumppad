@@ -1,3 +1,3 @@
 FROM scratch
-COPY shipyard /
-ENTRYPOINT ["/shipyard"]
+COPY jumppad /
+ENTRYPOINT ["/jumppad"]

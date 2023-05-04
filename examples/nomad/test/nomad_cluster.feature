@@ -18,7 +18,7 @@ Feature: Nomad Cluster
 
   @multi-node
   Scenario: Nomad Multi-Node Cluster
-    Given the following shipyard variables are set
+    Given the following jumppad variables are set
       | key               | value                 |
       | client_nodes      | 3                     |
     And I have a running blueprint

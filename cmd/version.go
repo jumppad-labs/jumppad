@@ -10,8 +10,8 @@ import (
 func newVersionCmd(vm gvm.Versions) *cobra.Command {
 	var versionCmd = &cobra.Command{
 		Use:           "version",
-		Short:         "Shipyard version manager commands",
-		Long:          "Shipyard version manager commands",
+		Short:         "jumppad version manager commands",
+		Long:          "jumppad version manager commands",
 		Args:          cobra.NoArgs,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {

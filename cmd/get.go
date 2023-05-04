@@ -17,8 +17,8 @@ func newGetCmd(bp clients.Getter) *cobra.Command {
 	var force bool
 	cmd := &cobra.Command{
 		Use:   "get [remote blueprint]",
-		Short: "Download the blueprint to the Shipyard config folder",
-		Long:  `Download the blueprint to the Shipyard configuration folder`,
+		Short: "Download the blueprint to the Jumppad config folder",
+		Long:  `Download the blueprint to the Jumppad configuration folder`,
 		Example: `
   # Fetch a blueprint from GitHub
   yard get github.com/shipyard-run/blueprints//vault-k8s
@@ -55,6 +55,6 @@ func newGetCmd(bp clients.Getter) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVarP(&force, "force-update", "", false, "When set to true Shipyard will ignore cached images, or files and will download")
+	cmd.Flags().BoolVarP(&force, "force-update", "", false, "When set to true Jumppad will ignore cached images, or files and will download")
 	return cmd
 }

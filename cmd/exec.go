@@ -23,16 +23,16 @@ func newExecCmd(dt clients.ContainerTasks) *cobra.Command {
 		Long:  `Execute a command in a Resource or start a Tools resource and execute`,
 		Example: `
 		# Execute a command in the first container of a Kubernetes pod
-		shipyard exec k8s_cluster.k3s mypod -- ls -las
+		jumppad exec k8s_cluster.k3s mypod -- ls -las
 		
 		# Execute a command in the named container of a Kubernetes pod
-		shipyard exec k8s_cluster.k3s mypod web -- ls -las
+		jumppad exec k8s_cluster.k3s mypod web -- ls -las
 
 		# Create a bash shell in a container
-		shipyard exec container.consul -- bash
+		jumppad exec container.consul -- bash
 		
 		# Create a default shell in a container
-		shipyard exec container.consul
+		jumppad exec container.consul
 		`,
 		Args:               cobra.MinimumNArgs(1),
 		DisableFlagParsing: true,
@@ -170,12 +170,12 @@ func createK8sShell(r types.Resource, dt clients.ContainerTasks, pod, container 
 		},
 		resources.Volume{
 			Source:      utils.ShipyardHome(),
-			Destination: "/root/.shipyard",
+			Destination: "/root/.jumppad",
 		},
 	}
 
 	c.Environment = map[string]string{
-		"KUBECONFIG": fmt.Sprintf("/root/.shipyard/config/%s/kubeconfig-docker.yaml", clusterName),
+		"KUBECONFIG": fmt.Sprintf("/root/.jumppad/config/%s/kubeconfig-docker.yaml", clusterName),
 	}
 
 	tools, err := dt.CreateContainer(c)

@@ -11,16 +11,16 @@ import (
 
 var uninstallCmd = &cobra.Command{
 	Use:                   "uninstall",
-	Short:                 "Uninstall Shipyard",
-	Long:                  `Uninstall Shipyard`,
+	Short:                 "Uninstall jumppad",
+	Long:                  `Uninstall jumppad`,
 	DisableFlagsInUseLine: true,
 	Args:                  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		// remove the config
-		fmt.Println("Removing Shipyard configuration from", utils.ShipyardHome())
+		fmt.Println("Removing jumppad configuration from", utils.ShipyardHome())
 		err := os.RemoveAll(utils.ShipyardHome())
 		if err != nil {
-			fmt.Println("Error: Unable to remove Shipyard configuration", err)
+			fmt.Println("Error: Unable to remove jumppad configuration", err)
 			os.Exit(1)
 		}
 
@@ -28,17 +28,17 @@ var uninstallCmd = &cobra.Command{
 		ep, _ := os.Executable()
 		cf, err := filepath.Abs(ep)
 		if err != nil {
-			fmt.Println("Error: Unable to remove Shipyard application", err)
+			fmt.Println("Error: Unable to remove jumppad application", err)
 			os.Exit(1)
 		}
-		fmt.Println("Removing Shipyard application from", cf)
+		fmt.Println("Removing jumppad application from", cf)
 		err = os.Remove(cf)
 		if err != nil {
-			fmt.Println("Error: Unable to remove Shipyard application", err)
+			fmt.Println("Error: Unable to remove jumppad application", err)
 			os.Exit(1)
 		}
 
 		fmt.Println("")
-		fmt.Println("Shipyard successfully uninstalled")
+		fmt.Println("jumppad successfully uninstalled")
 	},
 }

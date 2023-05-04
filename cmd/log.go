@@ -32,10 +32,10 @@ func newLogCmd(engine shipyard.Engine, dc clients.Docker, stdout, stderr io.Writ
 		Aliases: []string{"logs"},
 		Example: `
   # Tail logs for all running resources
-	shipyard log
+	jumppad log
 
 	# Tail logs for a specific resource
-	shipyard log container.nginx
+	jumppad log container.nginx
 	`,
 		Args:              cobra.ArbitraryArgs,
 		ValidArgsFunction: getResources,

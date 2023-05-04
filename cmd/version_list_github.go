@@ -11,8 +11,8 @@ import (
 func newVersionListCmd(vm gvm.Versions) *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
-		Short: "List the available Shipyard versions",
-		Long:  "List the available Shipyard versions",
+		Short: "List the available jumppad versions",
+		Long:  "List the available jumppad versions",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			os.MkdirAll(utils.GetReleasesFolder(), os.FileMode(0755))

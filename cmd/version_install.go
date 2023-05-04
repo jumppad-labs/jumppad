@@ -10,8 +10,8 @@ import (
 func newVersionInstallCmd(vm gvm.Versions) *cobra.Command {
 	return &cobra.Command{
 		Use:   "install [version]",
-		Short: "Install a Shipyard version",
-		Long:  "Install a Shipyard version",
+		Short: "Install a jumppad version",
+		Long:  "Install a jumppad version",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ver := strings.TrimSpace(args[0])

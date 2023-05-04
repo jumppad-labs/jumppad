@@ -274,14 +274,14 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 				cmd.Println("")
 
 				if runtime.GOOS == "windows" {
-					cmd.Println(`Invoke-Expression "shipyard env" | ForEach-Object { Invoke-Expression $_ }`)
+					cmd.Println(`Invoke-Expression "jumppad env" | ForEach-Object { Invoke-Expression $_ }`)
 				} else {
-					cmd.Println("eval $(shipyard env)")
+					cmd.Println("eval $(jumppad env)")
 				}
 				cmd.Println("")
 				cmd.Println("To list output variables use the command:")
 				cmd.Println("")
-				cmd.Println("shipyard output")
+				cmd.Println("jumppad output")
 			}
 		}
 

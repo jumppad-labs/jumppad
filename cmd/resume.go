@@ -23,7 +23,7 @@ var resumeCmd = &cobra.Command{
 	Short: "Resume a paused session and restart all resources",
 	Long:  `Resume a paused session and restart all resources`,
 	Example: `
-  shipyard resume
+  jumppad resume
 	`,
 	Args: cobra.ArbitraryArgs,
 	Run: func(cmd *cobra.Command, args []string) {

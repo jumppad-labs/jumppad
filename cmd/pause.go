@@ -17,7 +17,7 @@ var pauseCmd = &cobra.Command{
 	Short: "Pauses all resources for the currently active blueprint",
 	Long:  `Pause all resources for the currently active blueprint freeing up memory and CPU`,
 	Example: `
-  shipyard pause 
+  jumppad pause 
 	`,
 	Args: cobra.ArbitraryArgs,
 	Run: func(cmd *cobra.Command, args []string) {

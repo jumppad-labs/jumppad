@@ -1,5 +1,5 @@
 Feature: Docker Container
-  In order to test Shipyard creates containers correctly
+  In order to test jumppad creates containers correctly
   I should apply a blueprint which defines a simple container setup
   and test the resources are created correctly
 
