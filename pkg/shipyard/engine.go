@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -49,7 +48,6 @@ type EngineImpl struct {
 	config      *hclconfig.Config
 	log         hclog.Logger
 	getProvider getProviderFunc
-	sync        sync.Mutex
 }
 
 // defines a function which is used for generating providers
@@ -336,9 +334,6 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 			//
 			// If the callback returns an error we need to save the state and exit
 			parsedConfig, parseError = hclParser.ParseFile(path)
-			if parseError != nil {
-				parseError = fmt.Errorf("error parsing file %s, error: %s", path, parseError)
-			}
 		} else {
 			// ParseFolder processes the HCL, builds a graph of resources then calls
 			// the callback for each resource in order
@@ -348,15 +343,12 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 			//
 			// If the callback returns an error we need to save the state and exit
 			parsedConfig, parseError = hclParser.ParseDirectory(path)
-			if parseError != nil {
-				parseError = fmt.Errorf("error parsing directory %s, error: %s", path, parseError)
-			}
 		}
 
 		// process is not called for disabled resources, add manually
 		err := e.appendDisabledResources(parsedConfig)
 		if err != nil {
-			return fmt.Errorf("error parsing directory %s, error: %s", path, parseError)
+			return parseError
 		}
 	}
 

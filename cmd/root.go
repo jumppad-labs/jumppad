@@ -125,9 +125,13 @@ func Execute(v, c, d string) error {
 	commit = c
 	date = d
 
+	rootCmd.SilenceErrors = true
+
 	err := rootCmd.Execute()
 
 	if err != nil {
+		fmt.Println("")
+		fmt.Println(err)
 		fmt.Println(discordHelp)
 	}
 

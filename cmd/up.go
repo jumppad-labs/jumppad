@@ -149,7 +149,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 		// Parse the config to check it is valid
 		_, err = e.ParseConfigWithVariables(dst, vars, *variablesFile)
 		if err != nil {
-			return fmt.Errorf("Unable to read config: %s", err)
+			return err
 		}
 
 		// have we already got a blueprint in the state
@@ -171,7 +171,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 
 		res, err := e.ApplyWithVariables(dst, vars, *variablesFile)
 		if err != nil {
-			return fmt.Errorf("Unable to apply blueprint: %s", err)
+			return err
 		}
 
 		// do not open the browser windows
@@ -274,14 +274,14 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 				cmd.Println("")
 
 				if runtime.GOOS == "windows" {
-					cmd.Println(`Invoke-Expression "shipyard env" | ForEach-Object { Invoke-Expression $_ }`)
+					cmd.Println(`Invoke-Expression "jumppad env" | ForEach-Object { Invoke-Expression $_ }`)
 				} else {
-					cmd.Println("eval $(shipyard env)")
+					cmd.Println("eval $(jumppad env)")
 				}
 				cmd.Println("")
 				cmd.Println("To list output variables use the command:")
 				cmd.Println("")
-				cmd.Println("shipyard output")
+				cmd.Println("jumppad output")
 			}
 		}
 

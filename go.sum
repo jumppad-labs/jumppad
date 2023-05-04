@@ -1180,6 +1180,8 @@ github.com/mitchellh/go-testing-interface v1.14.1/go.mod h1:gfgS7OtZj6MA4U1UrDRp
 github.com/mitchellh/go-wordwrap v0.0.0-20150314170334-ad45545899c7/go.mod h1:ZXFpozHsX6DPmq2I0TCekCxypsnAUbP2oI0UX1GXzOo=
 github.com/mitchellh/go-wordwrap v1.0.0 h1:6GlHJ/LTGMrIJbwgdqdl2eEH8o+Exx/0m8ir9Gns0u4=
 github.com/mitchellh/go-wordwrap v1.0.0/go.mod h1:ZXFpozHsX6DPmq2I0TCekCxypsnAUbP2oI0UX1GXzOo=
+github.com/mitchellh/go-wordwrap v1.0.1 h1:TLuKupo69TCn6TQSyGxwI1EblZZEsQ0vMlAFQflz0v0=
+github.com/mitchellh/go-wordwrap v1.0.1/go.mod h1:R62XHJLzvMFRBbcrT7m7WgmE1eOyTSsCt+hzestvNj0=
 github.com/mitchellh/gox v0.4.0/go.mod h1:Sd9lOJ0+aimLBi73mGofS1ycjY8lL3uZM3JPS42BGNg=
 github.com/mitchellh/hashstructure v1.0.0/go.mod h1:QjSHrPWS+BGUVBYkbTZWEnOh3G1DutKwClXU/ABz6AQ=
 github.com/mitchellh/iochan v1.0.0/go.mod h1:JwYml1nuB7xOzsp52dPpHFffvOCDupsG0QubkSMEySY=
@@ -1399,6 +1401,8 @@ github.com/shipyard-run/gohup v0.2.2 h1:yIJhQ7BItGd2cZmWeuxCneTNriIxLGaPtMt1FsW1
 github.com/shipyard-run/gohup v0.2.2/go.mod h1:jgPnkGXOn4ca6tCWUHw2FUhhvxiMskROiRIoYMYEYHM=
 github.com/shipyard-run/hclconfig v0.3.1 h1:LvpyvCQGNO5bMVVyFxd1dWLj6f8h5FiKJfn/aLLDvrE=
 github.com/shipyard-run/hclconfig v0.3.1/go.mod h1:x+CMubstQ94Gff4zfyBXmmuxlmQ308vBS/IpjPTlLE0=
+github.com/shipyard-run/hclconfig v0.4.0 h1:Fz9JAzbx4zI5irPQGsaN1YEnBnH8Xk+KRcYDUro0Df0=
+github.com/shipyard-run/hclconfig v0.4.0/go.mod h1:MnKRPprx0QkCBQYS6rZXClSTVccZPMFZ0Q7i5t+9SIg=
 github.com/shipyard-run/version-manager v0.0.5 h1:gswTn7y/f2yoUOGl9tu18Bbp84EQa7gtqMNBbPu78BA=
 github.com/shipyard-run/version-manager v0.0.5/go.mod h1:odqsb09c70cTpSnm1rhQpBV1j7dF3N1FGzdiz8W0n+c=
 github.com/shopspring/decimal v1.2.0 h1:abSATXmQEYyShuxI4/vyW3tV1MrKAJzCZ/0zLUXYbsQ=
