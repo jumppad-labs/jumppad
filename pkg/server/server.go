@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/hashicorp/go-hclog"
 
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/websocket/v2"
 )
 
@@ -30,6 +31,7 @@ func New(addr string, l hclog.Logger) *API {
 func (s *API) Start() {
 	s.log.Debug("Starting API server")
 
+	s.app.Use(cors.New())
 	s.app.Use("/terminal", func(c *fiber.Ctx) error {
 		// IsWebSocketUpgrade returns true if the client
 		// requested upgrade to the WebSocket protocol.
@@ -41,6 +43,7 @@ func (s *API) Start() {
 	})
 
 	s.app.Get("/terminal", websocket.New(s.terminalWebsocket))
+	s.app.Post("/validate", s.handleValidate)
 
 	// Start the server
 	err := s.app.Listen(s.bindAddr)
