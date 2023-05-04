@@ -173,6 +173,12 @@ func (h *Helm) Lookup() ([]string, error) {
 	return []string{}, nil
 }
 
+func (c *Helm) Refresh() error {
+	c.log.Info("Refresh Helm Chart", "ref", c.config.Name)
+
+	return nil
+}
+
 func (h *Helm) getKubeConfigPath() (string, error) {
 	target, err := h.config.ParentConfig.FindResource(h.config.Cluster)
 	if err != nil {

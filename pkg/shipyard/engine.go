@@ -394,25 +394,24 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 	// should take precedence as all new resources will have an empty state
 	sr, err := e.config.FindResource(r.Metadata().ID)
 	if err == nil {
-		// always taint output types so they are recreated
-		if sr.Metadata().Type == types.TypeOutput {
-			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusTainted
-		} else {
-			// if the state is created do nothing
-			if sr.Metadata().Properties[constants.PropertyStatus] == constants.StatusCreated {
-				return nil
-			}
+		// set the current status to the state status
+		r.Metadata().Properties[constants.PropertyStatus] = sr.Metadata().Properties[constants.PropertyStatus]
 
-			// set the current status to the state status
-			r.Metadata().Properties[constants.PropertyStatus] = sr.Metadata().Properties[constants.PropertyStatus]
-
-			// remove the resource, we will add the new version to the state
-			e.config.RemoveResource(r)
-		}
+		// remove the resource, we will add the new version to the state
+		e.config.RemoveResource(r)
 	}
 
 	var providerError error
 	switch r.Metadata().Properties[constants.PropertyStatus] {
+	case constants.StatusCreated:
+		providerError = p.Refresh()
+		if providerError != nil {
+			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
+		}
+
+		// add the resource to the state
+		e.config.AppendResource(r)
+
 	// Normal case for PendingUpdate is do nothing
 	// PendingModification causes a resource to be
 	// destroyed before created

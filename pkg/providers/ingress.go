@@ -39,8 +39,6 @@ func (c *Ingress) Create() error {
 	//if c.config.Destination.Driver == "k8s" {
 	//	return c.exposeK8sRemote()
 	//}
-
-	return nil
 }
 
 // Destroy satisfies the interface method but is not implemented by LocalExec
@@ -62,6 +60,12 @@ func (c *Ingress) Lookup() ([]string, error) {
 	c.log.Debug("Lookup Ingress", "ref", c.config.ID, "id", c.config.IngressID)
 
 	return []string{}, nil
+}
+
+func (c *Ingress) Refresh() error {
+	c.log.Info("Refresh Ingress", "ref", c.config.Name)
+
+	return nil
 }
 
 func (c *Ingress) exposeRemote() error {

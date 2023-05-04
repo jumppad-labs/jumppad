@@ -72,6 +72,12 @@ func (c *K8sCluster) Lookup() ([]string, error) {
 	return c.client.FindContainerIDs(utils.FQDN(fmt.Sprintf("server.%s", c.config.Name), c.config.Module, c.config.Type))
 }
 
+func (c *K8sCluster) Refresh() error {
+	c.log.Info("Refresh Kubernetes Cluster", "ref", c.config.Name)
+
+	return nil
+}
+
 func (c *K8sCluster) createK3s() error {
 	// create a named log
 	c.log = c.log.Named(c.config.Name)
@@ -84,7 +90,7 @@ func (c *K8sCluster) createK3s() error {
 		return err
 	}
 
-	if ids != nil && len(ids) > 0 {
+	if len(ids) > 0 {
 		return ErrClusterExists
 	}
 

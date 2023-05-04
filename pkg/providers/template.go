@@ -164,6 +164,14 @@ func (c *Template) Lookup() ([]string, error) {
 	return []string{}, nil
 }
 
+// Refresh causes the template to be destroyed and recreated
+func (c *Template) Refresh() error {
+	c.log.Info("Refresh Template", "ref", c.config.ID)
+
+	c.Destroy()
+	return c.Create()
+}
+
 // wraps the given string in quotes and returns
 func templateFuncQuote(in string) string {
 	return fmt.Sprintf(`"%s"`, in)

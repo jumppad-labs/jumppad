@@ -2,8 +2,6 @@ package providers
 
 import (
 	"fmt"
-	"html/template"
-	"io/ioutil"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
@@ -36,6 +34,46 @@ func (i *Docs) Create() error {
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+// Destroy the documentation container
+func (i *Docs) Destroy() error {
+	i.log.Info("Destroy Documentation", "ref", i.config.Name)
+
+	// remove the docs
+	ids, err := i.client.FindContainerIDs(i.config.FQDN)
+	if err != nil {
+		return err
+	}
+
+	for _, id := range ids {
+		err := i.client.RemoveContainer(id, true)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Lookup the ID of the documentation container
+func (i *Docs) Lookup() ([]string, error) {
+	/*
+		cc := &config.Container{
+			Name:       i.config.Name,
+			NetworkRef: i.config.WANRef,
+		}
+
+		p := NewContainer(cc, i.client, i.log.With("parent_ref", i.config.Name))
+	*/
+
+	return []string{}, nil
+}
+
+func (c *Docs) Refresh() error {
+	c.log.Info("Refresh Docs", "ref", c.config.Name)
 
 	return nil
 }
@@ -109,78 +147,3 @@ func (i *Docs) createDocsContainer() error {
 	_, err = i.client.CreateContainer(cc)
 	return err
 }
-
-// Destroy the documentation container
-func (i *Docs) Destroy() error {
-	i.log.Info("Destroy Documentation", "ref", i.config.Name)
-
-	// remove the docs
-	ids, err := i.client.FindContainerIDs(i.config.FQDN)
-	if err != nil {
-		return err
-	}
-
-	for _, id := range ids {
-		err := i.client.RemoveContainer(id, true)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// Lookup the ID of the documentation container
-func (i *Docs) Lookup() ([]string, error) {
-	/*
-		cc := &config.Container{
-			Name:       i.config.Name,
-			NetworkRef: i.config.WANRef,
-		}
-
-		p := NewContainer(cc, i.client, i.log.With("parent_ref", i.config.Name))
-	*/
-
-	return []string{}, nil
-}
-
-func (i *Docs) generateDocusaursIndex(title string, pages []string) (string, error) {
-	tmpFile, err := ioutil.TempFile(utils.ShipyardTemp(), "*.json")
-	if err != nil {
-		return "", err
-	}
-
-	data := struct {
-		Title string
-		Pages []string
-	}{
-		title,
-		pages,
-	}
-
-	t := template.Must(template.New("pages").Parse(sideBarsTemplate))
-	err = t.Execute(tmpFile, data)
-	if err != nil {
-		return "", err
-	}
-
-	return tmpFile.Name(), nil
-}
-
-var sideBarsTemplate = `
-module.exports = {
-    docs: {
-      {{.Title}}: [
-		{{- $first := true -}}
-		{{- range .Pages -}}
-	 		{{- if $first -}}
-        		{{- $first = false -}}
-    		{{- else -}}
-        		,
-			{{- end}}
-			"{{- .}}"
-		{{- end}}	
-	  ]
-    },
-  }
-`

@@ -61,6 +61,24 @@ func (c *Container) Create() error {
 	return nil
 }
 
+// Lookup the ID based on the config
+func (c *Container) Lookup() ([]string, error) {
+	return c.client.FindContainerIDs(c.config.FQDN)
+}
+
+func (c *Container) Refresh() error {
+	c.log.Info("Refresh Container", "ref", c.config.Name)
+
+	return nil
+}
+
+// Destroy stops and removes the container
+func (c *Container) Destroy() error {
+	c.log.Info("Destroy Container", "ref", c.config.ID)
+
+	return c.internalDestroy()
+}
+
 func (c *Container) internalCreate() error {
 	// do we need to build an image
 	if c.config.Build != nil {
@@ -139,13 +157,6 @@ func (c *Container) internalCreate() error {
 	return nil
 }
 
-// Destroy stops and removes the container
-func (c *Container) Destroy() error {
-	c.log.Info("Destroy Container", "ref", c.config.ID)
-
-	return c.internalDestroy()
-}
-
 func (c *Container) internalDestroy() error {
 	ids, err := c.Lookup()
 	if err != nil {
@@ -163,9 +174,4 @@ func (c *Container) internalDestroy() error {
 	}
 
 	return nil
-}
-
-// Lookup the ID based on the config
-func (c *Container) Lookup() ([]string, error) {
-	return c.client.FindContainerIDs(c.config.FQDN)
 }

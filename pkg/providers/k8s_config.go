@@ -72,6 +72,12 @@ func (c *K8sConfig) Lookup() ([]string, error) {
 	return []string{}, nil
 }
 
+func (c *K8sConfig) Refresh() error {
+	c.log.Info("Refresh Kubernetes configuration", "ref", c.config.Name)
+
+	return nil
+}
+
 func (c *K8sConfig) setup() error {
 	cluster, err := c.config.ParentConfig.FindResource(c.config.Cluster)
 	if err != nil {

@@ -61,6 +61,33 @@ func (c *ImageCache) Create() error {
 	return c.reConfigureNetworks(id, dependentNetworks)
 }
 
+func (c *ImageCache) Destroy() error {
+	c.log.Info("Destroy ImageCache", "ref", c.config.Name)
+
+	ids, err := c.Lookup()
+	if err != nil {
+		return err
+	}
+
+	if len(ids) > 0 {
+		for _, id := range ids {
+			c.client.RemoveContainer(id, true)
+		}
+	}
+
+	return nil
+}
+
+func (c *ImageCache) Refresh() error {
+	c.log.Info("Refresh Image Cache", "ref", c.config.Name)
+
+	return nil
+}
+
+func (c *ImageCache) Lookup() ([]string, error) {
+	return c.client.FindContainerIDs(utils.FQDN(c.config.Name, c.config.Module, c.config.Type))
+}
+
 func (c *ImageCache) createImageCache(networks []string) (string, error) {
 	// Create the volume to store the cache
 	// if this volume exists it will not be recreated
@@ -125,23 +152,6 @@ func (c *ImageCache) createImageCache(networks []string) (string, error) {
 	cc.ParentConfig = c.config.ParentConfig
 
 	return c.client.CreateContainer(cc)
-}
-
-func (c *ImageCache) Destroy() error {
-	c.log.Info("Destroy ImageCache", "ref", c.config.Name)
-
-	ids, err := c.Lookup()
-	if err != nil {
-		return err
-	}
-
-	if len(ids) > 0 {
-		for _, id := range ids {
-			c.client.RemoveContainer(id, true)
-		}
-	}
-
-	return nil
 }
 
 func (c *ImageCache) findDependentNetworks() []string {
@@ -220,8 +230,4 @@ func contains(strings []string, s string) bool {
 	}
 
 	return false
-}
-
-func (c *ImageCache) Lookup() ([]string, error) {
-	return c.client.FindContainerIDs(utils.FQDN(c.config.Name, c.config.Module, c.config.Type))
 }

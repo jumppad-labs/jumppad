@@ -108,6 +108,24 @@ func (c *RemoteExec) Create() error {
 	return err
 }
 
+// Destroy satisfies the interface requirements but is not used as the
+// resource is not persistent
+func (c *RemoteExec) Destroy() error {
+	return nil
+}
+
+// Lookup satisfies the interface requirements but is not used
+// as the resource is not persistent
+func (c *RemoteExec) Lookup() ([]string, error) {
+	return []string{}, nil
+}
+
+func (c *RemoteExec) Refresh() error {
+	c.log.Info("Refresh Remote Exec", "ref", c.config.Name)
+
+	return nil
+}
+
 func (c *RemoteExec) createRemoteExecContainer() (string, error) {
 	// generate the ID for the new container based on the clock time and a string
 
@@ -142,16 +160,4 @@ func (c *RemoteExec) createRemoteExecContainer() (string, error) {
 	}
 
 	return id, err
-}
-
-// Destroy statisfies the interface requirements but is not used as the
-// resource is not persistent
-func (c *RemoteExec) Destroy() error {
-	return nil
-}
-
-// Lookup statisfies the interface requirements but is not used
-// as the resource is not persistent
-func (c *RemoteExec) Lookup() ([]string, error) {
-	return []string{}, nil
 }

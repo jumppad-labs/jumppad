@@ -72,6 +72,12 @@ func (c *NomadCluster) Lookup() ([]string, error) {
 	return ids, nil
 }
 
+func (c *NomadCluster) Refresh() error {
+	c.log.Info("Refresh Nomad Cluster", "ref", c.config.Name)
+
+	return nil
+}
+
 func (c *NomadCluster) createNomad() error {
 	c.log.Info("Creating Cluster", "ref", c.config.Name)
 

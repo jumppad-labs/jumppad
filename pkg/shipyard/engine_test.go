@@ -92,6 +92,7 @@ func generateProviderMock(mp *[]*mocks.MockProvider, returnVals map[string]error
 		val := returnVals[c.Metadata().Name]
 		m.On("Create").Return(val)
 		m.On("Destroy").Return(val)
+		m.On("Refresh").Return(val)
 
 		*mp = append(*mp, m)
 		return m
@@ -339,6 +340,29 @@ func TestApplyCallsProviderDestroyForTaintedResources(t *testing.T) {
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1)
 	testAssertMethodCalled(t, mp, "Create", 6) // ImageCache is always created
+}
+
+func TestApplyCallsProviderRefreshForCreatedResources(t *testing.T) {
+	e, mp := setupTestsWithState(t, nil, existingState)
+
+	_, err := e.Apply("../../examples/single_file/container.hcl")
+	require.NoError(t, err)
+
+	// should only call one time as there is only one item in the state
+	// that is in the config
+	testAssertMethodCalled(t, mp, "Refresh", 1)
+}
+
+func TestApplyCallsProviderRefreshWithErrorHaltsExecution(t *testing.T) {
+	e, mp := setupTestsWithState(t, map[string]error{"consul_config": fmt.Errorf("boom")}, existingState)
+
+	_, err := e.Apply("../../examples/single_file/container.hcl")
+	require.Error(t, err)
+
+	// should only call one time as there is only one item in the state
+	// that is in the config
+	testAssertMethodCalled(t, mp, "Refresh", 1)
+	testAssertMethodCalled(t, mp, "Create", 2)
 }
 
 func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {

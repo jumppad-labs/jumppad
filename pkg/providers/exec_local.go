@@ -101,3 +101,9 @@ func (c *LocalExec) Destroy() error {
 func (c *LocalExec) Lookup() ([]string, error) {
 	return []string{}, nil
 }
+
+func (c *LocalExec) Refresh() error {
+	c.log.Info("Refresh Local Exec", "ref", c.config.Name)
+
+	return nil
+}

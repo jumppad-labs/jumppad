@@ -107,3 +107,9 @@ func (c *Copy) Destroy() error {
 func (c *Copy) Lookup() ([]string, error) {
 	return nil, nil
 }
+
+func (c *Copy) Refresh() error {
+	c.log.Info("Refresh Copied files", "ref", c.config.Name)
+
+	return nil
+}

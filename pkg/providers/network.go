@@ -85,30 +85,6 @@ func (n *Network) Create() error {
 	return err
 }
 
-func (n *Network) createWithDriver(driver string) error {
-	opts := types.NetworkCreate{
-		CheckDuplicate: true,
-		Driver:         driver,
-		IPAM: &network.IPAM{
-			Driver: "default",
-			Config: []network.IPAMConfig{
-				network.IPAMConfig{
-					Subnet: n.config.Subnet,
-				},
-			},
-		},
-		Labels: map[string]string{
-			"created_by": "shipyard",
-			"id":         n.config.ID,
-		},
-		Attachable: true,
-	}
-
-	_, err := n.client.NetworkCreate(context.Background(), n.config.Name, opts)
-
-	return err
-}
-
 // Destroy implements the provider interface method for destroying networks
 func (n *Network) Destroy() error {
 	n.log.Info("Destroy Network", "ref", n.config.Name)
@@ -140,6 +116,36 @@ func (n *Network) Lookup() ([]string, error) {
 	}
 
 	return ids, nil
+}
+
+func (c *Network) Refresh() error {
+	c.log.Info("Refresh Network", "ref", c.config.Name)
+
+	return nil
+}
+
+func (n *Network) createWithDriver(driver string) error {
+	opts := types.NetworkCreate{
+		CheckDuplicate: true,
+		Driver:         driver,
+		IPAM: &network.IPAM{
+			Driver: "default",
+			Config: []network.IPAMConfig{
+				network.IPAMConfig{
+					Subnet: n.config.Subnet,
+				},
+			},
+		},
+		Labels: map[string]string{
+			"created_by": "shipyard",
+			"id":         n.config.ID,
+		},
+		Attachable: true,
+	}
+
+	_, err := n.client.NetworkCreate(context.Background(), n.config.Name, opts)
+
+	return err
 }
 
 func (n *Network) getNetworks(name string) ([]types.NetworkResource, error) {
