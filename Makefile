@@ -24,8 +24,8 @@ test_functional:
 	go run main.go test ./examples/multiple_k3s_clusters
 
 test_e2e_cmd: install_local
-	jumppad run --no-browser ./examples/single_k3s_cluster
-	jumppad destroy
+	jumppad up --no-browser ./examples/single_k3s_cluster
+	jumppad down
 
 test_docker:
 	docker build -t shipyard-run/tests -f Dockerfile.test .
