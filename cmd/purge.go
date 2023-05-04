@@ -20,7 +20,7 @@ func newPurgeCmd(dt clients.Docker, il clients.ImageLog, l hclog.Logger) *cobra.
 		Short: "Purges Docker images, Helm charts, and Blueprints downloaded by Shipyard",
 		Long:  "Purges Docker images, Helm charts, and Blueprints downloaded by Shipyard",
 		Example: `
-  shipyard purge
+  jumppad purge
 	`,
 		Args:         cobra.ArbitraryArgs,
 		RunE:         newPurgeCmdFunc(dt, il, l),
@@ -48,7 +48,7 @@ func newPurgeCmdFunc(dt clients.Docker, il clients.ImageLog, l hclog.Logger) fun
 
 		// Remove any images which have been built
 		filter := filters.NewArgs()
-		filter.Add("reference", "shipyard.run/localcache/*")
+		filter.Add("reference", "jumppad.dev/localcache/*")
 
 		// check if the image already exists, if so do not rebuild unless force
 		sum, err := dt.ImageList(context.Background(), types.ImageListOptions{Filters: filter})
@@ -116,7 +116,7 @@ func newPurgeCmdFunc(dt clients.Docker, il clients.ImageLog, l hclog.Logger) fun
 		}
 
 		if bHasError {
-			return fmt.Errorf("An error occured when purging data")
+			return fmt.Errorf("an error occurred when purging data")
 		}
 
 		return nil

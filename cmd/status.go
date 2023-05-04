@@ -34,8 +34,8 @@ var resourceType string
 
 var statusCmd = &cobra.Command{
 	Use:   "status",
-	Short: "Show the status of the current stack",
-	Long:  `Show the status of the current stack`,
+	Short: "Show the status of the current resources",
+	Long:  `Show the status of the current resources`,
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		// load the resources from state
