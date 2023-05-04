@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -15,27 +14,27 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/fatih/color"
 	"github.com/hashicorp/go-hclog"
+	hcltypes "github.com/shipyard-run/hclconfig/types"
 	"github.com/spf13/cobra"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/shipyard"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"github.com/shipyard-run/hclconfig"
 )
 
 func newLogCmd(engine shipyard.Engine, dc clients.Docker, stdout, stderr io.Writer) *cobra.Command {
 	logCmd := &cobra.Command{
-		Use:     "log <command> ",
+		Use:     "logs [resource]",
 		Short:   "Tails logs for running shipyard resources",
 		Long:    "Tails logs for running shipyard resources",
-		Aliases: []string{"logs"},
+		Aliases: []string{"log"},
 		Example: `
   # Tail logs for all running resources
-	shipyard log
+	jumppad logs
 
 	# Tail logs for a specific resource
-	shipyard log container.nginx
+	jumppad logs resource.container.nginx
 	`,
 		Args:              cobra.ArbitraryArgs,
 		ValidArgsFunction: getResources,
@@ -74,7 +73,17 @@ func newLogCmdFunc(dc clients.Docker, stdout, stderr io.Writer) func(cmd *cobra.
 		var loggable []string
 
 		if len(args) == 1 {
-			loggable = []string{args[0]}
+			cfg, err := resources.LoadState()
+			if err != nil {
+				return fmt.Errorf("Unable to read state file")
+			}
+
+			r, err := cfg.FindResource(args[0])
+			if err != nil {
+				return fmt.Errorf("%s not found: %s", args[0], err)
+			}
+
+			loggable = getFQDNForResource(r)
 		} else {
 			var err error
 			loggable, err = getLoggable()
@@ -125,20 +134,10 @@ func newLogCmdFunc(dc clients.Docker, stdout, stderr io.Writer) func(cmd *cobra.
 // if this methods returns and error, it will get returned as shell-completion data
 // otherwise fmt.println() gets lost
 func getLoggable() ([]string, error) {
-	// get the list of resources that can be logged
-	p := hclconfig.NewParser(hclconfig.DefaultOptions())
-	d, err := ioutil.ReadFile(utils.StatePath())
+	cfg, err := resources.LoadState()
 	if err != nil {
 		return nil, fmt.Errorf("Unable to read state file")
 	}
-
-	cfg, err := p.UnmarshalJSON(d)
-	if err != nil {
-		return nil, fmt.Errorf("Unable to unmarshal state file")
-	}
-
-	// if an argument is provided, only tail logs for that resource
-	// first validate that the resource exists
 
 	loggable := []string{}
 	for _, r := range cfg.Resources {
@@ -146,26 +145,34 @@ func getLoggable() ([]string, error) {
 			continue
 		}
 
-		switch r.Metadata().Type {
-		case resources.TypeContainer:
-			loggable = append(loggable, utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type))
-		case resources.TypeK8sCluster:
-			loggable = append(loggable, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type)))
-		case resources.TypeNomadCluster:
-			loggable = append(loggable, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type)))
-
-			// add the client nodes
-			nomad := r.(*resources.NomadCluster)
-			for n := 0; n < nomad.ClientNodes; n++ {
-				loggable = append(loggable, fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type)))
-			}
-		case resources.TypeSidecar:
-			fallthrough
-		case resources.TypeImageCache:
-			loggable = append(loggable, utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type))
-		}
+		loggable = append(loggable, getFQDNForResource(r)...)
 	}
 	return loggable, nil
+}
+
+func getFQDNForResource(r hcltypes.Resource) []string {
+	fqdns := []string{}
+
+	switch r.Metadata().Type {
+	case resources.TypeContainer:
+		fqdns = append(fqdns, utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type))
+	case resources.TypeK8sCluster:
+		fqdns = append(fqdns, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type)))
+	case resources.TypeNomadCluster:
+		fqdns = append(fqdns, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type)))
+
+		// add the client nodes
+		nomad := r.(*resources.NomadCluster)
+		for n := 0; n < nomad.ClientNodes; n++ {
+			fqdns = append(fqdns, fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type)))
+		}
+	case resources.TypeSidecar:
+		fallthrough
+	case resources.TypeImageCache:
+		fqdns = append(fqdns, utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type))
+	}
+
+	return fqdns
 }
 
 func getRandomColor() color.Attribute {

@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	gvm "github.com/shipyard-run/version-manager"
 	"github.com/spf13/cobra"
 )
@@ -18,11 +16,9 @@ func newVersionCmd(vm gvm.Versions) *cobra.Command {
 			cmd.Println("Current Version:", version)
 			cmd.Println("")
 
-			return fmt.Errorf("")
+			return nil
 		},
 	}
 
-	versionCmd.AddCommand(newVersionListCmd(vm))
-	versionCmd.AddCommand(newVersionInstallCmd(vm))
 	return versionCmd
 }

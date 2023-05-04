@@ -43,14 +43,11 @@ func init() {
 
 	//rootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.shipyard/config)")
 
-	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(outputCmd)
 	rootCmd.AddCommand(newEnvCmd(engine))
 	rootCmd.AddCommand(newRunCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, vm, engineClients.Connector, logger))
 	rootCmd.AddCommand(newTestCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, logger))
-	rootCmd.AddCommand(pauseCmd)
-	rootCmd.AddCommand(resumeCmd)
 	rootCmd.AddCommand(newGetCmd(engineClients.Getter))
 	rootCmd.AddCommand(newDestroyCmd(engineClients.Connector))
 	rootCmd.AddCommand(statusCmd)

@@ -31,7 +31,7 @@ func newRunCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients
 	var variablesFile string
 
 	runCmd := &cobra.Command{
-		Use:   "up [file] | [directory] ...",
+		Use:   "up [file] | [directory]",
 		Short: "Create the resources at the given path",
 		Long:  `Create the resources at the given path`,
 		Example: `
