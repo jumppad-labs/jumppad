@@ -352,7 +352,7 @@ var buildSync = sync.Once{}
 
 // GetShipyardBinaryPath returns the path to the running Shipyard binary
 func GetShipyardBinaryPath() string {
-	if strings.HasSuffix(os.Args[0], "jumppad") || strings.HasSuffix(os.Args[0], "jumppad-dev") || strings.HasSuffix(os.Args[0], "jumppad.exe") {
+	if strings.HasSuffix(os.Args[0], "jumppad") || strings.HasSuffix(os.Args[0], "jumppad-dev") || strings.HasSuffix(os.Args[0], "jumppad.exe") || strings.HasSuffix(os.Args[0], "jp") {
 		ex, err := os.Executable()
 		if err != nil {
 			panic(err)

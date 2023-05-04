@@ -17,9 +17,9 @@ import (
 var configFile = ""
 
 var rootCmd = &cobra.Command{
-	Use:   "shipyard",
+	Use:   "jumppad",
 	Short: "Modern cloud native development environments",
-	Long:  `Shipyard is a tool that helps you create and run development, demo, and tutorial environments`,
+	Long:  `Jumppad is a tool that helps you create and run development, demo, and tutorial environments`,
 }
 
 var engine shipyard.Engine
@@ -76,8 +76,8 @@ func createEngine(l hclog.Logger) (shipyard.Engine, gvm.Versions) {
 	}
 
 	o := gvm.Options{
-		Organization: "shipyard-run",
-		Repo:         "shipyard",
+		Organization: "jumppad-labs",
+		Repo:         "jumppad",
 		ReleasesPath: utils.GetReleasesFolder(),
 	}
 
@@ -101,10 +101,10 @@ func createEngine(l hclog.Logger) (shipyard.Engine, gvm.Versions) {
 
 	o.ExeNameFunc = func(version, goos, goarch string) string {
 		if goos == "windows" {
-			return "shipyard.exe"
+			return "jumppad.exe"
 		}
 
-		return "shipyard"
+		return "jumppad"
 	}
 
 	vm := gvm.New(o)

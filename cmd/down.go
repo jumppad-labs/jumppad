@@ -11,12 +11,10 @@ import (
 
 func newDestroyCmd(cc clients.Connector) *cobra.Command {
 	return &cobra.Command{
-		Use:   "destroy [file]",
-		Short: "Destroy the current stack or file",
-		Long: `Destroy the current stack or file. 
-	If the optional parameter "file" is passed then only the resources contained
-	in the file will be destroyed`,
-		Example: `yard destroy`,
+		Use:     "down",
+		Short:   "Remove all resources in the current state",
+		Long:    "Remove all resources in the current state",
+		Example: `jumppad down`,
 		Run: func(cmd *cobra.Command, args []string) {
 			err := engine.Destroy()
 			if err != nil {

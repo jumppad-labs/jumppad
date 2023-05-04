@@ -31,28 +31,26 @@ func newRunCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients
 	var variablesFile string
 
 	runCmd := &cobra.Command{
-		Use:   "run [file] [directory] ...",
-		Short: "Run the supplied stack configuration",
-		Long:  `Run the supplied stack configuration`,
+		Use:   "up [file] | [directory] ...",
+		Short: "Create the resources at the given path",
+		Long:  `Create the resources at the given path`,
 		Example: `
-  # Recursively create a stack from a directory
-  shipyard run ./-stack
+  # Create resources from .hcl files in the current folder
+  jumppad up ./
 
-  # Create a stack from a specific file
-  shipyard run my-stack/network.hcl
+  # Create resources from a specific file
+  jumppad up my-stack/network.hcl
 
-  # Create a stack from a blueprint in GitHub
-  shipyard run github.com/shipyard-run/blueprints//vault-k8s
+  # Create resources from a blueprint in GitHub
+  jumppad up github.com/jumppad-labs/blueprints/kubernetes-vault
 	`,
 		Args:         cobra.ArbitraryArgs,
 		RunE:         newRunCmdFunc(e, bp, hc, bc, vm, cc, &noOpen, &force, &runVersion, &y, &variables, &variablesFile, l),
 		SilenceUsage: true,
 	}
 
-	runCmd.Flags().StringVarP(&runVersion, "version", "v", "", "When set, run creates the specified resources using a particular Shipyard version")
-	runCmd.Flags().BoolVarP(&y, "y", "y", false, "When set, Shipyard will not prompt for confirmation")
-	runCmd.Flags().BoolVarP(&noOpen, "no-browser", "", false, "When set to true Shipyard will not open the browser windows defined in the blueprint")
-	runCmd.Flags().BoolVarP(&force, "force-update", "", false, "When set to true Shipyard ignores cached images or files and will download all resources")
+	runCmd.Flags().BoolVarP(&noOpen, "no-browser", "", false, "When set to true Jumppad will not open the browser windows defined in the blueprint")
+	runCmd.Flags().BoolVarP(&force, "force-update", "", false, "When set to true Jumppad ignores cached images or files and will download all resources")
 	runCmd.Flags().StringSliceVarP(&variables, "var", "", nil, "Allows setting variables from the command line, variables are specified as a key and value, e.g --var key=value. Can be specified multiple times")
 	runCmd.Flags().StringVarP(&variablesFile, "vars-file", "", "", "Load variables from a location other than *.vars files in the blueprint folder. E.g --vars-file=./file.vars")
 
