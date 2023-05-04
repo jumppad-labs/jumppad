@@ -6,7 +6,7 @@
   "configurations": [
 
     {
-      "name": "Debug - Run",
+      "name": "Debug - Up",
       "type": "go",
       "request": "launch",
       "mode": "debug",
@@ -15,11 +15,11 @@
         "LOG_LEVEL": "debug"
       },
       "args": [
-        "run",
-        "./examples/local_exec",
+        "up",
+        "./examples/docs",
       ]
     },    {
-      "name": "Debug - Destroy",
+      "name": "Debug - Down",
       "type": "go",
       "request": "launch",
       "mode": "debug",
@@ -28,8 +28,7 @@
         "LOG_LEVEL": "debug"
       },
       "args": [
-        "destroy",
-        "/home/nicj/go/src/github.com/hashicorp/service-based-networking/consul-vms/users-1"
+        "down"
       ]
     },
     {

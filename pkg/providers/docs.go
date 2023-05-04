@@ -10,11 +10,10 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/shipyard-run/hclconfig/types"
-	"golang.org/x/xerrors"
 )
 
-const docsImageName = "shipyardrun/docs"
-const docsVersion = "v0.6.2"
+const docsImageName = "ghcr.io/jumppad-labs/docs"
+const docsVersion = "dev"
 
 // Docs defines a provider for creating documentation containers
 type Docs struct {
@@ -31,11 +30,6 @@ func NewDocs(c *resources.Docs, cc clients.ContainerTasks, l hclog.Logger) *Docs
 // Create a new documentation container
 func (i *Docs) Create() error {
 	i.log.Info("Creating Documentation", "ref", i.config.Name)
-
-	// set the default live reload port
-	if i.config.LiveReloadPort == 0 {
-		i.config.LiveReloadPort = 37950
-	}
 
 	// create the documentation container
 	err := i.createDocsContainer()
@@ -79,41 +73,24 @@ func (i *Docs) createDocsContainer() error {
 			cc.Volumes,
 			resources.Volume{
 				Source:      i.config.Path,
-				Destination: "/shipyard/docs",
+				Destination: "/content",
 			},
 		)
-	}
-
-	// if the index pages have been set
-	// generate the javascript
-	if i.config.IndexTitle != "" && len(i.config.IndexPages) > 0 {
-		indexPath, err := i.generateDocusaursIndex(i.config.IndexTitle, i.config.IndexPages)
-		if err != nil {
-			return xerrors.Errorf("Unable to generate index for documentation: %w", err)
-		}
-
 		cc.Volumes = append(
 			cc.Volumes,
 			resources.Volume{
-				Source:      indexPath,
-				Destination: "/shipyard/sidebars.js",
+				Source:      i.config.NavigationFile,
+				Destination: "/config/navigation.jsx",
 			},
 		)
 	}
 
 	// add the ports
 	cc.Ports = []resources.Port{
-		// set the doumentation port
 		resources.Port{
 			Local:  "80",
 			Remote: "80",
 			Host:   fmt.Sprintf("%d", i.config.Port),
-		},
-		// set the livereload port
-		resources.Port{
-			Local:  "37950",
-			Remote: "37950",
-			Host:   fmt.Sprintf("%d", i.config.LiveReloadPort),
 		},
 	}
 

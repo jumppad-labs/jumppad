@@ -1,0 +1,5 @@
+#!/bin/bash -e
+
+# Is the 'terraform version' command used?
+validate history contains --match-line "terraform version" \
+  || validate fail "'terraform version' command was not used to validate the installed version"
