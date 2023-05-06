@@ -24,7 +24,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-retry v0.2.4
 	github.com/shipyard-run/gohup v0.2.2
-	github.com/shipyard-run/hclconfig v0.5.0
+	github.com/shipyard-run/hclconfig v0.5.1
 	github.com/shipyard-run/version-manager v0.0.5
 	github.com/spf13/cobra v1.3.0
 	github.com/stretchr/testify v1.8.1
@@ -214,6 +214,6 @@ require (
 
 replace github.com/creack/pty => github.com/photostorm/pty v1.1.18
 
-replace github.com/shipyard-run/hclconfig => ../../shipyard-run/hclconfig/
+//replace github.com/shipyard-run/hclconfig => ../../shipyard-run/hclconfig/
 
 //replace github.com/jumppad-labs/connector => ../connector
