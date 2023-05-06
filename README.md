@@ -18,13 +18,13 @@ Join our community on Discord: [https://discord.gg/ZuEFPJU69D](https://discord.g
 Kind of, but more about local environments rather than infrastructure
 
 ## Why not use Docker Compose?
-Docker Compose is one of our favourite tools but we found it does not manage dependencies particulary well. Compose also works on a really low level of abstraction. Shipyard addresses these missing features.
+Docker Compose is one of our favorite tools but we found it does not manage dependencies particulary well. Compose also works on a really low level of abstraction. Shipyard addresses these missing features.
 
 ## Is Shipyard just for Docker?
-No, Shipyard is designed to work with Docker, Podman, Raw binaries, etc. At present we only have a Driver for Docker and Podman, but others are on our Roadmap.
+No, Shipyard is designed to work with Docker, Podman, Raw binaries, etc. At present we only have a Driver for Docker and Podman, but others are on our roadmap.
 
 ## Can I use Shipyard for anything other than Dev environments?
-Yes, Shipyard can be used to create interactive documentation for your applications and redistributable demo environments to show off your tool or product.
+Yes, Shipyard can be used to create interactive documentation for your applications and distributable demo environments to show off your tool or product.
 
 ## Example Shipyard Config
 The following snippets are examples of things you can build with Shipyard, for more detailed examples please see the Blueprints repo [https://github.com/shipyard-run/blueprints](https://github.com/shipyard-run/blueprints)

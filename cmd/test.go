@@ -708,7 +708,7 @@ func (cr *CucumberRunner) executeCommand(cmd string) error {
 }
 
 func (cr *CucumberRunner) getJSONPath(path, resource string) (string, error) {
-	fqdn, err := hcltypes.ParseFQDN(resource)
+	fqdn, err := hcltypes.ParseFQRN(resource)
 	if err != nil {
 		return "", fmt.Errorf("invalid resource name: %s", err)
 	}

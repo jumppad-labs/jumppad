@@ -1,6 +1,10 @@
 package resources
 
-import "github.com/shipyard-run/hclconfig/types"
+import (
+	"fmt"
+
+	"github.com/shipyard-run/hclconfig/types"
+)
 
 // TypeCluster is the resource string for a Cluster resource
 const TypeNomadCluster string = "nomad_cluster"
@@ -12,15 +16,19 @@ type NomadCluster struct {
 
 	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
+	Image *Image `hcl:"image,block" json:"images,omitempty"` // optional image to use for the cluster
+
 	Version       string            `hcl:"version,optional" json:"version,omitempty"`
 	ClientNodes   int               `hcl:"client_nodes,optional" json:"client_nodes,omitempty"`
 	Environment   map[string]string `hcl:"environment,optional" json:"environment,omitempty"`
-	Images        []Image           `hcl:"image,block" json:"images,omitempty"`
 	ServerConfig  string            `hcl:"server_config,optional" json:"server_config,omitempty"`
 	ClientConfig  string            `hcl:"client_config,optional" json:"client_config,omitempty"`
 	ConsulConfig  string            `hcl:"consul_config,optional" json:"consul_config,omitempty"`
 	Volumes       []Volume          `hcl:"volume,block" json:"volumes,omitempty"`                     // volumes to attach to the cluster
 	OpenInBrowser bool              `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"` // open the UI in the browser after creation
+
+	// Images that will be copied from the local docker cache to the cluster
+	CopyImages []Image `hcl:"copy_image,block" json:"copy_images,omitempty"`
 
 	// Additional ports to expose on the nomad sever node
 	Ports      []Port      `hcl:"port,block" json:"ports,omitempty"`             // ports to expose
@@ -48,7 +56,14 @@ type NomadCluster struct {
 	ExternalIP string `hcl:"external_ip,optional" json:"external_ip,omitempty"`
 }
 
+const nomadBaseImage = "shipyardrun/nomad"
+const nomadBaseVersion = "1.4.0"
+
 func (n *NomadCluster) Process() error {
+	if n.Image == nil {
+		n.Image = &Image{Name: fmt.Sprintf("%s:%s", nomadBaseImage, nomadBaseVersion)}
+	}
+
 	if n.ServerConfig != "" {
 		n.ServerConfig = ensureAbsolute(n.ServerConfig, n.File)
 	}

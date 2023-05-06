@@ -16,7 +16,8 @@
       },
       "args": [
         "up",
-        "./examples/docs",
+        "--var='client_nodes=4'",
+        "./examples/nomad",
       ]
     },    {
       "name": "Debug - Down",

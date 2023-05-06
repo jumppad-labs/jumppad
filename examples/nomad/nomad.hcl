@@ -25,7 +25,7 @@ resource "nomad_cluster" "dev" {
     id = resource.network.cloud.id
   }
 
-  image {
+  copy_image {
     name = "consul:1.10.1"
   }
 

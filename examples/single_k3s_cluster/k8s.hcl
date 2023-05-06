@@ -7,7 +7,7 @@ resource "k8s_cluster" "k3s" {
     id = resource.network.cloud.id
   }
 
-  image {
+  copy_image {
     name = "shipyardrun/connector:v0.1.0"
   }
 }

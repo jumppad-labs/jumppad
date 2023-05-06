@@ -24,13 +24,13 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-retry v0.2.4
 	github.com/shipyard-run/gohup v0.2.2
-	github.com/shipyard-run/hclconfig v0.4.0
+	github.com/shipyard-run/hclconfig v0.5.0
 	github.com/shipyard-run/version-manager v0.0.5
 	github.com/spf13/cobra v1.3.0
 	github.com/stretchr/testify v1.8.1
 	github.com/zclconf/go-cty v1.12.0
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2
-	google.golang.org/grpc v1.50.1
+	google.golang.org/grpc v1.53.0
 	helm.sh/helm/v3 v3.8.2
 	k8s.io/api v0.23.5
 	k8s.io/apimachinery v0.23.5
@@ -38,10 +38,11 @@ require (
 )
 
 require (
-	cloud.google.com/go v0.104.0 // indirect
-	cloud.google.com/go/compute v1.10.0 // indirect
-	cloud.google.com/go/iam v0.5.0 // indirect
-	cloud.google.com/go/storage v1.27.0 // indirect
+	cloud.google.com/go v0.110.0 // indirect
+	cloud.google.com/go/compute v1.18.0 // indirect
+	cloud.google.com/go/compute/metadata v0.2.3 // indirect
+	cloud.google.com/go/iam v0.12.0 // indirect
+	cloud.google.com/go/storage v1.28.1 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/BurntSushi/toml v0.4.1 // indirect
 	github.com/MakeNowJust/heredoc v0.0.0-20170808103936-bb23615498cd // indirect
@@ -62,7 +63,7 @@ require (
 	github.com/aws/aws-sdk-go v1.44.122 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
-	github.com/cespare/xxhash/v2 v2.1.2 // indirect
+	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/chai2010/gettext-go v0.0.0-20160711120539-c6fed771bfd5 // indirect
 	github.com/containerd/containerd v1.6.1 // indirect
 	github.com/cucumber/gherkin-go/v19 v19.0.3 // indirect
@@ -103,8 +104,8 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/google/uuid v1.3.0 // indirect
-	github.com/googleapis/enterprise-certificate-proxy v0.2.0 // indirect
-	github.com/googleapis/gax-go/v2 v2.6.0 // indirect
+	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
+	github.com/googleapis/gax-go/v2 v2.7.1 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7 // indirect
@@ -176,21 +177,21 @@ require (
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	github.com/xlab/treeprint v0.0.0-20181112141820-a009c3971eca // indirect
-	go.opencensus.io v0.23.0 // indirect
+	go.opencensus.io v0.24.0 // indirect
 	go.starlark.net v0.0.0-20200306205701-8dd3e2ee1dd5 // indirect
 	golang.org/x/crypto v0.0.0-20211117183948-ae814b36b871 // indirect
 	golang.org/x/image v0.0.0-20191206065243-da761ea9ff43 // indirect
-	golang.org/x/net v0.7.0 // indirect
-	golang.org/x/oauth2 v0.1.0 // indirect
-	golang.org/x/sync v0.0.0-20220929204114-8fcdb60fdcc0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
-	golang.org/x/term v0.5.0 // indirect
-	golang.org/x/text v0.7.0 // indirect
+	golang.org/x/net v0.8.0 // indirect
+	golang.org/x/oauth2 v0.6.0 // indirect
+	golang.org/x/sync v0.1.0 // indirect
+	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/term v0.6.0 // indirect
+	golang.org/x/text v0.8.0 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
-	google.golang.org/api v0.100.0 // indirect
+	google.golang.org/api v0.114.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20221025140454-527a21cfbd71 // indirect
-	google.golang.org/protobuf v1.28.1 // indirect
+	google.golang.org/genproto v0.0.0-20230320184635-7606e756e683 // indirect
+	google.golang.org/protobuf v1.29.1 // indirect
 	gopkg.in/gorp.v1 v1.7.2 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
@@ -213,6 +214,6 @@ require (
 
 replace github.com/creack/pty => github.com/photostorm/pty v1.1.18
 
-//replace github.com/shipyard-run/hclconfig => ../hclconfig/
+replace github.com/shipyard-run/hclconfig => ../../shipyard-run/hclconfig/
 
 //replace github.com/jumppad-labs/connector => ../connector

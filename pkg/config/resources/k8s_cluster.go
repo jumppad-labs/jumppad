@@ -1,6 +1,8 @@
 package resources
 
 import (
+	"fmt"
+
 	"github.com/shipyard-run/hclconfig/types"
 )
 
@@ -14,11 +16,13 @@ type K8sCluster struct {
 
 	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
+	Image   *Image   `hcl:"image,block" json:"images,omitempty"` // optional image to use when creating the cluster
 	Driver  string   `hcl:"driver" json:"driver,omitempty"`
-	Version string   `hcl:"version,optional" json:"version,omitempty"`
 	Nodes   int      `hcl:"nodes,optional" json:"nodes,omitempty"`
-	Images  []Image  `hcl:"image,block" json:"images,omitempty"`
 	Volumes []Volume `hcl:"volume,block" json:"volumes,omitempty"` // volumes to attach to the cluster
+
+	// Images that will be copied from the local docker cache to the cluster
+	CopyImages []Image `hcl:"copy_image,block" json:"copy_images,omitempty"`
 
 	Ports      []Port      `hcl:"port,block" json:"ports,omitempty"`             // ports to expose
 	PortRanges []PortRange `hcl:"port_range,block" json:"port_ranges,omitempty"` // range of ports to expose
@@ -45,7 +49,14 @@ type K8sCluster struct {
 	ExternalIP string `hcl:"external_ip,optional" json:"external_ip,omitempty"`
 }
 
+const k3sBaseImage = "shipyardrun/k3s"
+const k3sBaseVersion = "v1.26.3"
+
 func (k *K8sCluster) Process() error {
+	if k.Image == nil {
+		k.Image = &Image{Name: fmt.Sprintf("%s:%s", k3sBaseImage, k3sBaseVersion)}
+	}
+
 	for i, v := range k.Volumes {
 		k.Volumes[i].Source = ensureAbsolute(v.Source, k.File)
 	}

@@ -398,7 +398,10 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 		r.Metadata().Properties[constants.PropertyStatus] = sr.Metadata().Properties[constants.PropertyStatus]
 
 		// remove the resource, we will add the new version to the state
-		e.config.RemoveResource(r)
+		err = e.config.RemoveResource(r)
+		if err != nil {
+			return fmt.Errorf(`unable to remove resource "%s" from state, %s`, r.Metadata().ID, err)
+		}
 	}
 
 	var providerError error
@@ -408,9 +411,6 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 		if providerError != nil {
 			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
 		}
-
-		// add the resource to the state
-		e.config.AppendResource(r)
 
 	// Normal case for PendingUpdate is do nothing
 	// PendingModification causes a resource to be
@@ -436,7 +436,10 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 	}
 
 	// add the resource to the state
-	e.config.AppendResource(r)
+	err = e.config.AppendResource(r)
+	if err != nil {
+		return fmt.Errorf(`unable add resource "%s" to state, %s`, r.Metadata().ID, err)
+	}
 
 	// did we just create a network, if so we need to attach the image cache
 	// to the network and set the dependency
