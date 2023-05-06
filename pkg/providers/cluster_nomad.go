@@ -104,14 +104,30 @@ func (c *NomadCluster) Refresh() error {
 		// add the nodes to the remove list
 		nodesToRemove := c.config.ClientFQDN[:removeCount]
 
+		wg := sync.WaitGroup{}
+		wg.Add(len(nodesToRemove))
+
 		for _, n := range nodesToRemove {
 			c.log.Debug("Removing node", "ref", c.config.ID, "client", n)
-			err := c.destroyNode(n)
-			if err != nil {
-				return err
-			}
+
+			go func(name string) {
+				err := c.destroyNode(name)
+				wg.Done()
+
+				if err != nil {
+					c.log.Error("Unable to remove node", "ref", c.config.ID, "client", name)
+				}
+			}(n)
 
 			c.config.ClientFQDN = removeElement(c.config.ClientFQDN, n)
+		}
+
+		wg.Wait()
+
+		c.nomadClient.SetConfig(fmt.Sprintf("http://%s", c.config.ExternalIP), c.config.APIPort, c.config.ClientNodes+1)
+		err := c.nomadClient.HealthCheckAPI(startTimeout)
+		if err != nil {
+			return err
 		}
 
 		return nil
@@ -136,6 +152,13 @@ func (c *NomadCluster) Refresh() error {
 
 			c.log.Debug("Successfully created client node", "ref", c.config.ID, "client", fqdn)
 		}
+
+		c.nomadClient.SetConfig(fmt.Sprintf("http://%s", c.config.ExternalIP), c.config.APIPort, c.config.ClientNodes+1)
+		err := c.nomadClient.HealthCheckAPI(startTimeout)
+		if err != nil {
+			return err
+		}
+
 	}
 
 	return nil
@@ -672,18 +695,27 @@ func (c *NomadCluster) ImportLocalDockerImages(name string, id string, images []
 func (c *NomadCluster) destroyNomad() error {
 	c.log.Info("Destroy Nomad Cluster", "ref", c.config.Name)
 
+	// destroy the clients
+	wg := sync.WaitGroup{}
+	wg.Add(len(c.config.ClientFQDN))
+
+	for _, cl := range c.config.ClientFQDN {
+		go func(name string) {
+			defer wg.Done()
+
+			err := c.destroyNode(name)
+			if err != nil {
+				c.log.Error("unable to remove cluster client", "client", name)
+			}
+		}(cl)
+	}
+
+	wg.Wait()
+
 	// destroy the server
 	err := c.destroyNode(c.config.ServerFQDN)
 	if err != nil {
 		return err
-	}
-
-	// destroy the clients
-	for _, cl := range c.config.ClientFQDN {
-		err := c.destroyNode(cl)
-		if err != nil {
-			return err
-		}
 	}
 
 	// remove the config
