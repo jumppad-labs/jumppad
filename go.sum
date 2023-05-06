@@ -1408,8 +1408,8 @@ github.com/sethvargo/go-retry v0.2.4 h1:T+jHEQy/zKJf5s95UkguisicE0zuF9y7+/vgz08O
 github.com/sethvargo/go-retry v0.2.4/go.mod h1:1afjQuvh7s4gflMObvjLPaWgluLLyhA1wmVZ6KLpICw=
 github.com/shipyard-run/gohup v0.2.2 h1:yIJhQ7BItGd2cZmWeuxCneTNriIxLGaPtMt1FsW191A=
 github.com/shipyard-run/gohup v0.2.2/go.mod h1:jgPnkGXOn4ca6tCWUHw2FUhhvxiMskROiRIoYMYEYHM=
-github.com/shipyard-run/hclconfig v0.5.0 h1:mqBgSMlgnbM0Z2mHEZ3aWFHUalHvS285EXpTDOxUf+w=
-github.com/shipyard-run/hclconfig v0.5.0/go.mod h1:MnKRPprx0QkCBQYS6rZXClSTVccZPMFZ0Q7i5t+9SIg=
+github.com/shipyard-run/hclconfig v0.5.1 h1:AEWk0HIDriAoV5uXK+9Tt8wym6UBQn4lSYxJAFNlyKI=
+github.com/shipyard-run/hclconfig v0.5.1/go.mod h1:MnKRPprx0QkCBQYS6rZXClSTVccZPMFZ0Q7i5t+9SIg=
 github.com/shipyard-run/version-manager v0.0.5 h1:gswTn7y/f2yoUOGl9tu18Bbp84EQa7gtqMNBbPu78BA=
 github.com/shipyard-run/version-manager v0.0.5/go.mod h1:odqsb09c70cTpSnm1rhQpBV1j7dF3N1FGzdiz8W0n+c=
 github.com/shopspring/decimal v1.2.0 h1:abSATXmQEYyShuxI4/vyW3tV1MrKAJzCZ/0zLUXYbsQ=
