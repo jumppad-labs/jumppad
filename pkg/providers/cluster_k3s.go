@@ -46,22 +46,12 @@ func NewK8sCluster(c *resources.K8sCluster, cc clients.ContainerTasks, kc client
 
 // Create implements interface method to create a cluster of the specified type
 func (c *K8sCluster) Create() error {
-	switch c.config.Driver {
-	case "k3s":
-		return c.createK3s()
-	default:
-		return ErrClusterDriverNotImplemented
-	}
+	return c.createK3s()
 }
 
 // Destroy implements interface method to destroy a cluster
 func (c *K8sCluster) Destroy() error {
-	switch c.config.Driver {
-	case "k3s":
-		return c.destroyK3s()
-	default:
-		return ErrClusterDriverNotImplemented
-	}
+	return c.destroyK3s()
 }
 
 // Lookup the a clusters current state
@@ -191,8 +181,7 @@ func (c *K8sCluster) createK3s() error {
 		cc.Environment[k] = v
 	}
 
-	// set the API server port to a random number
-	c.config.APIPort = rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
+	// set the Connector server port to a random number
 	c.config.ConnectorPort = rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
 
 	// determine the snapshotter, if a storage driver other than overlay is used then
@@ -224,7 +213,7 @@ func (c *K8sCluster) createK3s() error {
 
 	// create the server address
 	FQDN := fmt.Sprintf("server.%s", utils.FQDN(c.config.Name, c.config.Module, c.config.Type))
-	c.config.FQDN = FQDN
+	c.config.FQRN = FQDN
 
 	// Set the default startup args
 	// Also set netfilter settings to fix behaviour introduced in Linux Kernel 5.12

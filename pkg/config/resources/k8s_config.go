@@ -9,8 +9,6 @@ const TypeK8sConfig string = "k8s_config"
 type K8sConfig struct {
 	types.ResourceMetadata `hcl:",remain"`
 
-	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
-
 	// Cluster is the name of the cluster to apply configuration to
 	Cluster string `hcl:"cluster" json:"cluster"`
 	// Path of a file or directory of Kubernetes config files to apply

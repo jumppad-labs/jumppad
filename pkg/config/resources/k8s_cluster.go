@@ -17,7 +17,6 @@ type K8sCluster struct {
 	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
 	Image   *Image   `hcl:"image,block" json:"images,omitempty"` // optional image to use when creating the cluster
-	Driver  string   `hcl:"driver" json:"driver,omitempty"`
 	Nodes   int      `hcl:"nodes,optional" json:"nodes,omitempty"`
 	Volumes []Volume `hcl:"volume,block" json:"volumes,omitempty"` // volumes to attach to the cluster
 
@@ -42,7 +41,7 @@ type K8sCluster struct {
 
 	// Fully qualified domain name for the container, this address can be
 	// used to reference the container within docker and from other containers
-	FQDN string `hcl:"fqdn,optional" json:"fqdn,omitempty"`
+	FQRN string `hcl:"fqrn,optional" json:"fqrn,omitempty"`
 
 	// ExternalIP is the ip address of the cluster, this generally resolves
 	// to the docker ip
@@ -53,6 +52,10 @@ const k3sBaseImage = "shipyardrun/k3s"
 const k3sBaseVersion = "v1.26.3"
 
 func (k *K8sCluster) Process() error {
+	if k.APIPort == 0 {
+		k.APIPort = 443
+	}
+
 	if k.Image == nil {
 		k.Image = &Image{Name: fmt.Sprintf("%s:%s", k3sBaseImage, k3sBaseVersion)}
 	}
@@ -70,7 +73,7 @@ func (k *K8sCluster) Process() error {
 		if r != nil {
 			kstate := r.(*K8sCluster)
 			k.KubeConfig = kstate.KubeConfig
-			k.FQDN = kstate.FQDN
+			k.FQRN = kstate.FQRN
 			k.APIPort = kstate.APIPort
 			k.ConnectorPort = kstate.ConnectorPort
 			k.ExternalIP = kstate.ExternalIP

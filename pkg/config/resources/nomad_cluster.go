@@ -14,18 +14,15 @@ type NomadCluster struct {
 	// embedded type holding name, etc
 	types.ResourceMetadata `hcl:",remain"`
 
-	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
-
-	Image *Image `hcl:"image,block" json:"images,omitempty"` // optional image to use for the cluster
-
-	Version       string            `hcl:"version,optional" json:"version,omitempty"`
-	ClientNodes   int               `hcl:"client_nodes,optional" json:"client_nodes,omitempty"`
-	Environment   map[string]string `hcl:"environment,optional" json:"environment,omitempty"`
-	ServerConfig  string            `hcl:"server_config,optional" json:"server_config,omitempty"`
-	ClientConfig  string            `hcl:"client_config,optional" json:"client_config,omitempty"`
-	ConsulConfig  string            `hcl:"consul_config,optional" json:"consul_config,omitempty"`
-	Volumes       []Volume          `hcl:"volume,block" json:"volumes,omitempty"`                     // volumes to attach to the cluster
-	OpenInBrowser bool              `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"` // open the UI in the browser after creation
+	Networks      []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
+	Image         *Image              `hcl:"image,block" json:"images,omitempty"`     // optional image to use for the cluster
+	ClientNodes   int                 `hcl:"client_nodes,optional" json:"client_nodes,omitempty"`
+	Environment   map[string]string   `hcl:"environment,optional" json:"environment,omitempty"`
+	ServerConfig  string              `hcl:"server_config,optional" json:"server_config,omitempty"`
+	ClientConfig  string              `hcl:"client_config,optional" json:"client_config,omitempty"`
+	ConsulConfig  string              `hcl:"consul_config,optional" json:"consul_config,omitempty"`
+	Volumes       []Volume            `hcl:"volume,block" json:"volumes,omitempty"`                     // volumes to attach to the cluster
+	OpenInBrowser bool                `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"` // open the UI in the browser after creation
 
 	// Images that will be copied from the local docker cache to the cluster
 	CopyImages []Image `hcl:"copy_image,block" json:"copy_images,omitempty"`
@@ -46,10 +43,10 @@ type NomadCluster struct {
 	ConfigDir string `hcl:"config_dir,optional" json:"config_dir,omitempty"`
 
 	// The fully qualified docker address for the server
-	ServerFQDN string `hcl:"server_fqdn,optional" json:"server_fqdn,omitempty"`
+	ServerFQRN string `hcl:"server_fqrn,optional" json:"server_fqrn,omitempty"`
 
 	// The fully qualified docker address for the client nodes
-	ClientFQDN []string `hcl:"client_fqdn,optional" json:"client_fqdn,omitempty"`
+	ClientFQRN []string `hcl:"client_fqrn,optional" json:"client_fqrn,omitempty"`
 
 	// ExternalIP is the ip address of the cluster, this generally resolves
 	// to the docker ip
@@ -92,8 +89,8 @@ func (n *NomadCluster) Process() error {
 			kstate := r.(*NomadCluster)
 			n.ExternalIP = kstate.ExternalIP
 			n.ConfigDir = kstate.ConfigDir
-			n.ServerFQDN = kstate.ServerFQDN
-			n.ClientFQDN = kstate.ClientFQDN
+			n.ServerFQRN = kstate.ServerFQRN
+			n.ClientFQRN = kstate.ClientFQRN
 			n.APIPort = kstate.APIPort
 			n.ConnectorPort = kstate.ConnectorPort
 		}

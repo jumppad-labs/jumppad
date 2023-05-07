@@ -314,12 +314,12 @@ func getLookupAddress(resourceName string) (string, string, int, error) {
 	case resources.TypeNetwork:
 		return res.Metadata().Name, res.Metadata().Type, 1, nil
 	case resources.TypeK8sCluster:
-		return res.(*resources.K8sCluster).FQDN, res.Metadata().Type, 1, nil
+		return res.(*resources.K8sCluster).FQRN, res.Metadata().Type, 1, nil
 	case resources.TypeNomadCluster:
 		cl := res.(*resources.NomadCluster)
-		return cl.ServerFQDN, res.Metadata().Type, cl.ClientNodes + 1, nil
+		return cl.ServerFQRN, res.Metadata().Type, cl.ClientNodes + 1, nil
 	case resources.TypeContainer:
-		return res.(*resources.Container).FQDN, res.Metadata().Type, 1, nil
+		return res.(*resources.Container).FQRN, res.Metadata().Type, 1, nil
 	case resources.TypeSidecar:
 		return res.(*resources.Sidecar).FQDN, res.Metadata().Type, 1, nil
 	case resources.TypeDocs:

@@ -1,8 +1,6 @@
 resource "k8s_cluster" "dev" {
-  driver = "k3s" // default
-  #version = "v1.18.16"
-
-  nodes = 1 // default
+  // use a random port for the cluster
+  api_port = random_number(10000, 20000)
 
   network {
     id = variable.network_id

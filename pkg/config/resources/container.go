@@ -12,21 +12,17 @@ type Container struct {
 	// embedded type holding name, etc
 	types.ResourceMetadata `hcl:",remain"`
 
-	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
-
-	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
-
-	Image       *Image            `hcl:"image,block" json:"image"`                          // Image to use for the container
-	Build       *Build            `hcl:"build,block" json:"build"`                          // Enables containers to be built on the fly
-	Entrypoint  []string          `hcl:"entrypoint,optional" json:"entrypoint,omitempty"`   // entrypoint to use when starting the container
-	Command     []string          `hcl:"command,optional" json:"command,omitempty"`         // command to use when starting the container
-	Environment map[string]string `hcl:"environment,optional" json:"environment,omitempty"` // environment variables to set when starting the container
-	Volumes     []Volume          `hcl:"volume,block" json:"volumes,omitempty"`             // volumes to attach to the container
-	Ports       []Port            `hcl:"port,block" json:"ports,omitempty"`                 // ports to expose
-	PortRanges  []PortRange       `hcl:"port_range,block" json:"port_ranges,omitempty"`     // range of ports to expose
-	DNS         []string          `hcl:"dns,optional" json:"dns,omitempty"`                 // Add custom DNS servers to the container
-
-	Privileged bool `hcl:"privileged,optional" json:"privileged,omitempty"` // run the container in privileged mode?
+	Networks        []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"`           // Attach to the correct network // only when Image is specified
+	Image           *Image              `hcl:"image,block" json:"image"`                          // Image to use for the container
+	Entrypoint      []string            `hcl:"entrypoint,optional" json:"entrypoint,omitempty"`   // entrypoint to use when starting the container
+	Command         []string            `hcl:"command,optional" json:"command,omitempty"`         // command to use when starting the container
+	Environment     map[string]string   `hcl:"environment,optional" json:"environment,omitempty"` // environment variables to set when starting the container
+	Volumes         []Volume            `hcl:"volume,block" json:"volumes,omitempty"`             // volumes to attach to the container
+	Ports           []Port              `hcl:"port,block" json:"ports,omitempty"`                 // ports to expose
+	PortRanges      []PortRange         `hcl:"port_range,block" json:"port_ranges,omitempty"`     // range of ports to expose
+	DNS             []string            `hcl:"dns,optional" json:"dns,omitempty"`                 // Add custom DNS servers to the container
+	Privileged      bool                `hcl:"privileged,optional" json:"privileged,omitempty"`   // run the container in privileged mode?
+	MaxRestartCount int                 `hcl:"max_restart_count,optional" json:"max_restart_count,omitempty"`
 
 	// resource constraints
 	Resources *Resources `hcl:"resources,block" json:"resources,omitempty"` // resource constraints for the container
@@ -34,16 +30,17 @@ type Container struct {
 	// health checks for the container
 	HealthCheck *HealthCheck `hcl:"health_check,block" json:"health_check,omitempty"`
 
-	MaxRestartCount int `hcl:"max_restart_count,optional" json:"max_restart_count,omitempty"`
-
 	// User block for mapping the user id and group id inside the container
 	RunAs *User `hcl:"run_as,block" json:"run_as,omitempty"`
 
+	// Enables containers to be built on the fly
+	Build *Build `hcl:"build,block" json:"build"`
+
 	// Output parameters
 
-	// FQDN is the fully qualified domain name for the container, this can be used
+	// FQRN is the fully qualified domain name for the container, this can be used
 	// to access the container from other sources
-	FQDN string `hcl:"fqdn,optional" json:"fqdn,omitempty"`
+	FQRN string `hcl:"fqrn,optional" json:"fqrn,omitempty"`
 }
 
 type User struct {
@@ -55,12 +52,12 @@ type User struct {
 
 type NetworkAttachment struct {
 	ID        string   `hcl:"id" json:"id"`
-	IPAddress string   `hcl:"ip_address,optional" json:"ip_address,omitempty"`
-	Aliases   []string `hcl:"aliases,optional" json:"aliases,omitempty"` // Network aliases for the resource
+	IPAddress string   `hcl:"ip_address,optional" json:"ip_address,omitempty"` // Optional address to assign
+	Aliases   []string `hcl:"aliases,optional" json:"aliases,omitempty"`       // Network aliases for the resource
 
 	// output
 
-	// Name will equal the name of the network as created by shipyard
+	// Name will equal the name of the network as created by jumppad
 	Name string `hcl:"name,optional" json:"name,omitempty"`
 
 	// AssignedAddress will equal if IPAddress is set, else it will be the value automatically
@@ -115,7 +112,7 @@ func (c *Container) Process() error {
 		r, _ := cfg.FindResource(c.ID)
 		if r != nil {
 			kstate := r.(*Container)
-			c.FQDN = kstate.FQDN
+			c.FQRN = kstate.FQRN
 
 			// add the network addresses
 			for _, a := range kstate.Networks {
