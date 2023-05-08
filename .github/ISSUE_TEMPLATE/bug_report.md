@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: 'Create a report to help us improve Shipyard, for questions please join our
+about: 'Create a report to help us improve jumppad, for questions please join our
   community on Discord: https://discord.gg/ZuEFPJU69D'
 title: ''
 labels: ''

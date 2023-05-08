@@ -1,13 +1,13 @@
 Feature: Docker Container
-  In order to test Shipyard creates containers correctly using variables
+  In order to test jumppad creates containers correctly using variables
   I should apply a blueprint which defines a simple container setup
   and test the resources are created correctly
 
-Scenario: Single Container with Shipyard Variables
+Scenario: Single Container with jumppad Variables
   Given the following environment variables are set
     | key            | value                 |
     | BAH            | bah                   |
-  And the following shipyard variables are set
+  And the following jumppad variables are set
     | key            | value                 |
     | something      | set by test           |
   And I have a running blueprint

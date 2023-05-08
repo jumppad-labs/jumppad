@@ -84,11 +84,11 @@ func createEngine(l hclog.Logger) (shipyard.Engine, gvm.Versions) {
 
 		switch goos {
 		case "linux":
-			return fmt.Sprintf("shipyard_%s_%s_%s.tar.gz", version, goos, goarch)
+			return fmt.Sprintf("jumppad_%s_%s_%s.tar.gz", version, goos, goarch)
 		case "darwin":
-			return fmt.Sprintf("shipyard_%s_%s_%s.zip", version, goos, goarch)
+			return fmt.Sprintf("jumppad_%s_%s_%s.zip", version, goos, goarch)
 		case "windows":
-			return fmt.Sprintf("shipyard_%s_%s_%s.zip", version, goos, goarch)
+			return fmt.Sprintf("jumppad_%s_%s_%s.zip", version, goos, goarch)
 		}
 
 		return ""

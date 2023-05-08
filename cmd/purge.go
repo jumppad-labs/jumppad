@@ -17,8 +17,8 @@ import (
 func newPurgeCmd(dt clients.Docker, il clients.ImageLog, l hclog.Logger) *cobra.Command {
 	purgeCmd := &cobra.Command{
 		Use:   "purge",
-		Short: "Purges Docker images, Helm charts, and Blueprints downloaded by Shipyard",
-		Long:  "Purges Docker images, Helm charts, and Blueprints downloaded by Shipyard",
+		Short: "Purges Docker images, Helm charts, and Blueprints downloaded by jumppad",
+		Long:  "Purges Docker images, Helm charts, and Blueprints downloaded by jumppad",
 		Example: `
   jumppad purge
 	`,

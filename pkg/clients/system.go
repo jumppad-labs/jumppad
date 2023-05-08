@@ -166,14 +166,14 @@ func (b *SystemImpl) PromptInput(in io.Reader, out io.Writer, message string) st
 
 var updateText = `
 ########################################################
-                   SHIPYARD UPDATE
+                   JUMPPAD UPDATE
 ########################################################
 
-The current version of shipyard is "%s", you have "%s".
+The current version of jumppad is "%s", you have "%s".
 
-To upgrade Shipyard please use your package manager or, 
+To upgrade jumppad please use your package manager or, 
 see the documentation at:
-https://shipyard.run/docs/install for other options.
+https://jumppad.dev/docs/introduction/installation for other options.
 `
 
 func checkDocker() error {

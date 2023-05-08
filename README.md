@@ -1,4 +1,4 @@
-# Shipyard
+# jumppad
 
 
 ![](https://github.com/jumppad-labs/jumppad/workflows/Build/badge.svg)  
@@ -8,26 +8,26 @@
 
 ![](./shipyard_horizontal.png)
 
-Shipyard is a tool for building modern cloud native development environments. Using the Shipyard configuration language you can create OCI containers, Nomad/Kubernetes clusters and more.
+Jumppad is a tool for building modern cloud native development environments. Using the Jumppad configuration language you can create OCI containers, Nomad/Kubernetes clusters and more.
 
 ## Community
 Join our community on Discord: [https://discord.gg/ZuEFPJU69D](https://discord.gg/ZuEFPJU69D)
 
 ## Questions
-## Is Shipyard like Terraform?
+## Is Jumppad like Terraform?
 Kind of, but more about local environments rather than infrastructure
 
 ## Why not use Docker Compose?
-Docker Compose is one of our favorite tools but we found it does not manage dependencies particulary well. Compose also works on a really low level of abstraction. Shipyard addresses these missing features.
+Docker Compose is one of our favourite tools but we found it does not manage dependencies particulary well. Compose also works on a really low level of abstraction. Jumppad addresses these missing features.
 
-## Is Shipyard just for Docker?
-No, Shipyard is designed to work with Docker, Podman, Raw binaries, etc. At present we only have a Driver for Docker and Podman, but others are on our roadmap.
+## Is Jumppad just for Docker?
+No, Jumppad is designed to work with Docker, Podman, Raw binaries, etc. At present we only have a Driver for Docker and Podman, but others are on our Roadmap.
 
-## Can I use Shipyard for anything other than Dev environments?
-Yes, Shipyard can be used to create interactive documentation for your applications and distributable demo environments to show off your tool or product.
+## Can I use Jumppad for anything other than Dev environments?
+Yes, Jumppad can be used to create interactive documentation for your applications and redistributable demo environments to show off your tool or product.
 
-## Example Shipyard Config
-The following snippets are examples of things you can build with Shipyard, for more detailed examples please see the Blueprints repo [https://github.com/shipyard-run/blueprints](https://github.com/shipyard-run/blueprints)
+## Example Jumppad Config
+The following snippets are examples of things you can build with Jumppad, for more detailed examples please see the Blueprints repo [https://github.com/shipyard-run/blueprints](https://github.com/shipyard-run/blueprints)
 
 ## Kubernetes Cluster
 
@@ -163,7 +163,7 @@ Podman support is experimental and at present many features such as Kubernetes c
 
 ## Enable the podman socket
 
-Shipyard uses podman's API, which is compatible with the Docker Enginer API. To enable this, you need to run the podman socket as a group that your user has access to. The following example uses the `docker` group:
+Jumppad uses podman's API, which is compatible with the Docker Enginer API. To enable this, you need to run the podman socket as a group that your user has access to. The following example uses the `docker` group:
 
 ```
 sudo sed '/^SocketMode=.*/a SocketGroup=docker' -i /lib/systemd/system/podman.socket
@@ -254,7 +254,7 @@ The project has two types of tests, pure code Unit tests and Functional tests, w
 To run the unit tests you can use the make recipe `make test_unit` this runs the `go test` and excludes the functional tests.
 
 ```shell
-shipyard on  master via 🐹 v1.13.5 on 🐳 v19.03.5 ()
+jumppad on  master via 🐹 v1.13.5 on 🐳 v19.03.5 ()
 ➜ make test_unit
 go test -v -race github.com/jumppad-labs/jumppad github.com/jumppad-labs/jumppad/cmd github.com/jumppad-labs/jumppad/pkg/clients github.com/jumppad-labs/jumppad/pkg/clients/mocks github.com/jumppad-labs/jumppad/pkg/config github.com/jumppad-labs/jumppad/pkg/providers github.com/jumppad-labs/jumppad/pkg/shipyard github.com/jumppad-labs/jumppad/pkg/utils
 testing: warning: no tests to run

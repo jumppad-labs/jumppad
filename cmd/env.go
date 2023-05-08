@@ -21,22 +21,22 @@ func newEnvCmd(e shipyard.Engine) *cobra.Command {
 		Long:  "Prints environment variables defined by the blueprint",
 		Example: `
   # Display environment variables
-  shipyard env
+  jumppad env
   
   VAR1=value
   VAR2=value
   
   # Set environment variables on Linux based systems
-  eval $(shipyard env)
+  eval $(jumppad env)
     
   # Set environment variables on Windows based systems
-  Invoke-Expression "shipyard env" | ForEach-Object { Invoke-Expression $_ }
+  Invoke-Expression "jumppad env" | ForEach-Object { Invoke-Expression $_ }
 
   # Unset environment variables on Linux based systems
-  eval $(shipyard env --unset)
+  eval $(jumppad env --unset)
 
   # Unset environment variables on Windows based systems
-  Invoke-Expression "shipyard env --unset" | ForEach-Object { Remove-Item $_ }
+  Invoke-Expression "jumppad env --unset" | ForEach-Object { Remove-Item $_ }
 `,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -83,6 +83,6 @@ func newEnvCmd(e shipyard.Engine) *cobra.Command {
 		SilenceUsage: true,
 	}
 
-	envCmd.Flags().BoolVarP(&unset, "unset", "", false, "When set to true Shipyard will print unset commands for environment variables defined by the blueprint")
+	envCmd.Flags().BoolVarP(&unset, "unset", "", false, "When set to true jumppad will print unset commands for environment variables defined by the blueprint")
 	return envCmd
 }

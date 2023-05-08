@@ -57,19 +57,19 @@ func newTestCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc client
 	var testCmd = &cobra.Command{
 		Use:                   "test [blueprint]",
 		Short:                 "Run functional tests for the blueprint",
-		Long:                  `Run functional tests for the blueprint, this command will start the shipyard blueprint `,
+		Long:                  `Run functional tests for the blueprint, this command will start the jumppad blueprint `,
 		DisableFlagsInUseLine: true,
 		Args:                  cobra.ArbitraryArgs,
 		RunE:                  newTestCmdFunc(e, bp, hc, bc, testFolder, &force, &purge, &variables, &variablesFile, &tags, &dontDestroy, l),
 	}
 
 	testCmd.Flags().StringVarP(&testFolder, "test-folder", "", "", "Specify the folder containing the functional tests.")
-	testCmd.Flags().BoolVarP(&force, "force-update", "", false, "When set to true Shipyard will ignore cached images or files and will download all resources")
-	testCmd.Flags().BoolVarP(&purge, "purge", "", false, "When set to true Shipyard will remove any cached images or blueprints")
+	testCmd.Flags().BoolVarP(&force, "force-update", "", false, "When set to true jumppad will ignore cached images or files and will download all resources")
+	testCmd.Flags().BoolVarP(&purge, "purge", "", false, "When set to true jumppad will remove any cached images or blueprints")
 	testCmd.Flags().StringSliceVarP(&variables, "var", "", nil, "Allows setting variables from the command line, variables are specified as a key and value, e.g --var key=value. Can be specified multiple times")
 	testCmd.Flags().StringVarP(&variablesFile, "vars-file", "", "", "Load variables from a location other than *.vars files in the blueprint folder. E.g --vars-file=./file.vars")
 	testCmd.Flags().StringVarP(&tags, "tags", "", "", "Test tags to run e.g. @wip, @wip,@new, when not set all tests are run")
-	testCmd.Flags().BoolVarP(&dontDestroy, "dont-destroy", "", false, "When set to true, Shipyard does not destroy the blueprint after executing the tests")
+	testCmd.Flags().BoolVarP(&dontDestroy, "dont-destroy", "", false, "When set to true, jumppad does not destroy the blueprint after executing the tests")
 
 	return testCmd
 }
@@ -186,7 +186,7 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 		}
 
 		if *cr.dontDestroy {
-			fmt.Println("Not automatically destroying resources, run the command 'shipyard destroy' manually")
+			fmt.Println("Not automatically destroying resources, run the command 'jumppad destroy' manually")
 			return
 		}
 
@@ -199,8 +199,8 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 	ctx.Step(`^I have a running blueprint at path "([^"]*)"$`, cr.iRunApplyAtPath)
 	ctx.Step(`^the following environment variables are set$`, cr.theFollowingEnvironmentVariablesAreSet)
 	ctx.Step(`^the environment variable "([^"]*)" has a value "([^"]*)"$`, cr.theEnvironmentVariableKHasAValueV)
-	ctx.Step(`^the following shipyard variables are set$`, cr.theFollowingShipyardVariablesAreSet)
-	ctx.Step(`^the shipyard variable "([^"]*)" has a value "([^"]*)"$`, cr.theShipyardVariableKHasAValueV)
+	ctx.Step(`^the following jumppad variables are set$`, cr.theFollowingShipyardVariablesAreSet)
+	ctx.Step(`^the jumppad variable "([^"]*)" has a value "([^"]*)"$`, cr.theShipyardVariableKHasAValueV)
 	ctx.Step(`^there should be a resource running called "([^"]*)"$`, cr.thereShouldBeAResourceRunningCalled)
 	ctx.Step(`^the following resources should be running$`, cr.theFollowingResourcesShouldBeRunning)
 	ctx.Step(`^a HTTP call to "([^"]*)" should result in status (\d+)$`, cr.aCallToShouldResultInStatus)
