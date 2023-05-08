@@ -17,8 +17,8 @@ var uninstallCmd = &cobra.Command{
 	Args:                  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		// remove the config
-		fmt.Println("Removing Shipyard configuration from", utils.ShipyardHome())
-		err := os.RemoveAll(utils.ShipyardHome())
+		fmt.Println("Removing Shipyard configuration from", utils.JumppadHome())
+		err := os.RemoveAll(utils.JumppadHome())
 		if err != nil {
 			fmt.Println("Error: Unable to remove Shipyard configuration", err)
 			os.Exit(1)

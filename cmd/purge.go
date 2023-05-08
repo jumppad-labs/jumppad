@@ -107,7 +107,7 @@ func newPurgeCmdFunc(dt clients.Docker, il clients.ImageLog, l hclog.Logger) fun
 			bHasError = true
 		}
 
-		cp := path.Join(utils.ShipyardHome(), "config")
+		cp := path.Join(utils.JumppadHome(), "config")
 		l.Info("Removing config", "path", cp)
 		err = os.RemoveAll(cp)
 		if err != nil {

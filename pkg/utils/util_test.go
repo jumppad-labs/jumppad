@@ -155,7 +155,7 @@ func setupClusterConfigTest(t *testing.T) {
 func TestGetClusterConfigReturnsExistingConfig(t *testing.T) {
 	setupClusterConfigTest(t)
 
-	configDir := filepath.Join(ShipyardHome(), "config", "testing")
+	configDir := filepath.Join(JumppadHome(), "config", "testing")
 	os.MkdirAll(configDir, os.ModePerm)
 
 	// create the temp config
@@ -183,7 +183,7 @@ func TestGetClusterConfigReturnsEmptyWhenUnableToParseName(t *testing.T) {
 
 func TestGetClusterConfigCreatesNewNomadConfig(t *testing.T) {
 	setupClusterConfigTest(t)
-	configDir := filepath.Join(ShipyardHome(), "config", "testing")
+	configDir := filepath.Join(JumppadHome(), "config", "testing")
 
 	conf, dir := GetClusterConfig("nomad_cluster.testing")
 
@@ -205,7 +205,7 @@ func TestGetClusterConfigTwiceReturnsSameConfig(t *testing.T) {
 
 func TestGetClusterConfigCreatesNewKubernetesConfig(t *testing.T) {
 	setupClusterConfigTest(t)
-	configDir := filepath.Join(ShipyardHome(), "config", "testing")
+	configDir := filepath.Join(JumppadHome(), "config", "testing")
 
 	conf, dir := GetClusterConfig("k8s_cluster.testing")
 
@@ -306,7 +306,7 @@ func TestIsHCLFile(t *testing.T) {
 func TestBlueprintLocalFolder(t *testing.T) {
 	dst := GetBlueprintLocalFolder("github.com/shipyard-run/blueprints//vault-k8s?ref=dfdf&foo=bah")
 
-	assert.Equal(t, filepath.Join(ShipyardHome(), "/blueprints/github.com/shipyard-run/blueprints/vault-k8s/ref/dfdf/foo/bah"), dst)
+	assert.Equal(t, filepath.Join(JumppadHome(), "/blueprints/github.com/shipyard-run/blueprints/vault-k8s/ref/dfdf/foo/bah"), dst)
 }
 
 func TestDockerHostWithDefaultReturnsCorrectValue(t *testing.T) {

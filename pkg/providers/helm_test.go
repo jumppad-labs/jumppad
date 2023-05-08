@@ -83,7 +83,7 @@ func TestHelmCreateGetsRemoteRepo(t *testing.T) {
 	hc, _ := c.FindResource("helm.test")
 	hc.(*config.Helm).Chart = "github.com/shipyard-run/blueprints//vault-k8s"
 
-	helmFolder := filepath.Join(utils.ShipyardHome(), "helm_charts", strings.Replace(hc.(*config.Helm).Chart, "//", "/", -1))
+	helmFolder := filepath.Join(utils.JumppadHome(), "helm_charts", strings.Replace(hc.(*config.Helm).Chart, "//", "/", -1))
 
 	err := p.Create()
 	assert.NoError(t, err)

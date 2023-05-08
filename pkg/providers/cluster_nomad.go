@@ -226,7 +226,7 @@ func (c *NomadCluster) createNomad() error {
 
 	// set the API server port to a random number
 	c.config.ConnectorPort = rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
-	c.config.ConfigDir = path.Join(utils.ShipyardHome(), c.config.Name, "config")
+	c.config.ConfigDir = path.Join(utils.JumppadHome(), c.config.Name, "config")
 	c.config.ExternalIP = utils.GetDockerIP()
 
 	serverID, err := c.createServerNode(c.config.Image.Name, volID, isClient)

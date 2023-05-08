@@ -267,7 +267,7 @@ func TestRunSetsDestinationToDownloadedBlueprintFromArgsWhenRemote(t *testing.T)
 	err := rf.Execute()
 	assert.NoError(t, err)
 
-	rm.engine.AssertCalled(t, "ApplyWithVariables", filepath.Join(utils.ShipyardHome(), "blueprints/github.com/shipyard-run/blueprints/vault-k8s"), mock.Anything, mock.Anything)
+	rm.engine.AssertCalled(t, "ApplyWithVariables", filepath.Join(utils.JumppadHome(), "blueprints/github.com/shipyard-run/blueprints/vault-k8s"), mock.Anything, mock.Anything)
 }
 
 func TestRunFetchesBlueprint(t *testing.T) {
