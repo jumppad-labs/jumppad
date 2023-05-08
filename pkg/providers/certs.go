@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -36,6 +37,14 @@ func NewCertificateLeaf(co *resources.CertificateLeaf, l hclog.Logger) *Certific
 func (c *CertificateCA) Create() error {
 	c.log.Info("Creating CA Certificate", "ref", c.config.Name)
 
+	directory := strings.Replace(c.config.Module, ".", "_", -1)
+	directory = path.Join(c.config.Output, directory)
+	os.MkdirAll(directory, os.ModePerm)
+
+	keyFile := path.Join(directory, fmt.Sprintf("%s.key", c.config.Name))
+	pubkeyFile := path.Join(directory, fmt.Sprintf("%s.pub", c.config.Name))
+	certFile := path.Join(directory, fmt.Sprintf("%s.cert", c.config.Name))
+
 	k, err := crypto.GenerateKeyPair()
 	if err != nil {
 		return err
@@ -46,21 +55,42 @@ func (c *CertificateCA) Create() error {
 		return err
 	}
 
-	keyFile := path.Join(c.config.Output, fmt.Sprintf("%s.key", c.config.Name))
 	err = k.Private.WriteFile(keyFile)
 	if err != nil {
 		return err
 	}
 
-	certFile := path.Join(c.config.Output, fmt.Sprintf("%s.cert", c.config.Name))
+	err = k.Public.WriteFile(pubkeyFile)
+	if err != nil {
+		return err
+	}
+
 	err = ca.WriteFile(certFile)
 	if err != nil {
 		return err
 	}
 
 	// set the outputs
-	c.config.CertPath = certFile
-	c.config.KeyPath = keyFile
+	c.config.Cert = &resources.File{
+		Path:      certFile,
+		Directory: directory,
+		Filename:  fmt.Sprintf("%s.cert", c.config.Name),
+		Contents:  ca.String(),
+	}
+
+	c.config.PrivateKey = &resources.File{
+		Path:      keyFile,
+		Directory: directory,
+		Filename:  fmt.Sprintf("%s.key", c.config.Name),
+		Contents:  k.Private.String(),
+	}
+
+	c.config.PublicKey = &resources.File{
+		Path:      pubkeyFile,
+		Directory: directory,
+		Filename:  fmt.Sprintf("%s.pub", c.config.Name),
+		Contents:  k.Public.String(),
+	}
 
 	return nil
 }
@@ -87,8 +117,13 @@ func (c *CertificateLeaf) Create() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	keyFile := path.Join(c.config.Output, fmt.Sprintf("%s.key", c.config.Name))
-	certFile := path.Join(c.config.Output, fmt.Sprintf("%s.cert", c.config.Name))
+	directory := strings.Replace(c.config.Module, ".", "_", -1)
+	directory = path.Join(c.config.Output, directory)
+	os.MkdirAll(directory, os.ModePerm)
+
+	keyFile := path.Join(directory, fmt.Sprintf("%s-leaf.key", c.config.Name))
+	pubkeyFile := path.Join(directory, fmt.Sprintf("%s-leaf.pub", c.config.Name))
+	certFile := path.Join(directory, fmt.Sprintf("%s-leaf.cert", c.config.Name))
 
 	err := retry.Constant(ctx, 1*time.Second, func(ctx context.Context) error {
 		ca := &crypto.X509{}
@@ -114,18 +149,41 @@ func (c *CertificateLeaf) Create() error {
 			return err
 		}
 
+		err = k.Public.WriteFile(pubkeyFile)
+		if err != nil {
+			return err
+		}
+
 		lc, err := crypto.GenerateLeaf(c.config.Name, c.config.IPAddresses, c.config.DNSNames, ca, rk.Private, k.Private)
 		if err != nil {
 			return err
 		}
 
+		// set the outputs
+		c.config.PublicKey = &resources.File{
+			Path:      pubkeyFile,
+			Directory: directory,
+			Filename:  fmt.Sprintf("%s-leaf.pub", c.config.Name),
+			Contents:  k.Public.String(),
+		}
+
+		c.config.Cert = &resources.File{
+			Path:      certFile,
+			Directory: directory,
+			Filename:  fmt.Sprintf("%s-leaf.cert", c.config.Name),
+			Contents:  lc.String(),
+		}
+
+		c.config.PrivateKey = &resources.File{
+			Path:      keyFile,
+			Directory: directory,
+			Filename:  fmt.Sprintf("%s-leaf.key", c.config.Name),
+			Contents:  k.Private.String(),
+		}
+
 		// Save the certificate
 		return lc.WriteFile(certFile)
 	})
-
-	// set the outputs
-	c.config.CertPath = certFile
-	c.config.KeyPath = keyFile
 
 	return err
 }
@@ -133,7 +191,11 @@ func (c *CertificateLeaf) Create() error {
 func (c *CertificateLeaf) Destroy() error {
 	c.log.Info("Destroy Leaf Certificate", "ref", c.config.Name)
 
-	return destroy(c.config.Name, c.config.Output, c.log)
+	directory := strings.Replace(c.config.Module, ".", "_", -1)
+	directory = path.Join(c.config.Output, directory)
+	os.MkdirAll(directory, os.ModePerm)
+
+	return destroy(c.config.Name, directory, c.log)
 }
 
 func (c *CertificateLeaf) Lookup() ([]string, error) {

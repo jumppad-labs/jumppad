@@ -1051,8 +1051,8 @@ github.com/jtolds/gls v4.20.0+incompatible h1:xdiiI2gbIgH/gLH7ADydsJ1uDOEzR8yvV7
 github.com/jtolds/gls v4.20.0+incompatible/go.mod h1:QJZ7F/aHp+rZTRtaJ1ow/lLfFfVYBRgL+9YlvaHOwJU=
 github.com/julienschmidt/httprouter v1.2.0/go.mod h1:SYymIcj16QtmaHHD7aYtjjsJG7VTCxuUUipMqKk8s4w=
 github.com/julienschmidt/httprouter v1.3.0/go.mod h1:JR6WtHb+2LUe8TCKY3cZOxFyyO8IZAc4RVcycCCAKdM=
-github.com/jumppad-labs/connector v0.2.1 h1:crmyF3xNpw5Fe975Kzkc5kYXmy61TYSc82v84GAVzeM=
-github.com/jumppad-labs/connector v0.2.1/go.mod h1:PqRmJZKayHw4j8JfNkugRMtdQF8ldjdTvtmTxF3O/44=
+github.com/jumppad-labs/connector v0.3.0 h1:C+6YpMfhRBzuCAmkDpYEWbIIYN7q6gB9kWRPxvrBIew=
+github.com/jumppad-labs/connector v0.3.0/go.mod h1:PqRmJZKayHw4j8JfNkugRMtdQF8ldjdTvtmTxF3O/44=
 github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0/go.mod h1:1NbS8ALrpOvjt0rHPNLyCIeMtbizbir8U//inJ+zuB8=
 github.com/karrick/godirwalk v1.15.8 h1:7+rWAZPn9zuRxaIqqT8Ohs2Q2Ac0msBqwRdxNCr2VVs=
 github.com/karrick/godirwalk v1.15.8/go.mod h1:j4mkqPuvaLI8mp1DroR3P6ad7cyYd4c1qeJ3RV7ULlk=
