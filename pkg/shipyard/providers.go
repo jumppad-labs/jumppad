@@ -44,6 +44,8 @@ func generateProviderImpl(c types.Resource, cc *clients.Clients) providers.Provi
 		return providers.NewNull(c.Metadata(), cc.Logger)
 	case resources.TypeRemoteExec:
 		return providers.NewRemoteExec(c.(*resources.RemoteExec), cc.ContainerTasks, cc.Logger)
+	case resources.TypeRandomNumber:
+		return providers.NewRandomNumber(c.(*resources.RandomNumber), cc.Logger)
 	case resources.TypeSidecar:
 		return providers.NewContainerSidecar(c.(*resources.Sidecar), cc.ContainerTasks, cc.HTTP, cc.Logger)
 	case resources.TypeTemplate:

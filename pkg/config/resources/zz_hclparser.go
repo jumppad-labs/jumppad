@@ -34,6 +34,7 @@ func SetupHCLConfig(callback hclconfig.ProcessCallback, variables map[string]str
 	p.RegisterType(TypeNetwork, &Network{})
 	p.RegisterType(TypeNomadCluster, &NomadCluster{})
 	p.RegisterType(TypeNomadJob, &NomadJob{})
+	p.RegisterType(TypeRandomNumber, &RandomNumber{})
 	p.RegisterType(TypeSidecar, &Sidecar{})
 	p.RegisterType(TypeTemplate, &Template{})
 

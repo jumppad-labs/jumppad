@@ -18,7 +18,8 @@ type CertificateCA struct {
 	PrivateKey *File `hcl:"private_key,block" json:"private_key"`
 
 	// Key is the value related to the certificate key
-	PublicKey *File `hcl:"public_key,block" json:"public_key"`
+	PublicKeyPEM *File `hcl:"public_key_pem,block" json:"public_key_pem"`
+	PublicKeySSH *File `hcl:"public_key_ssh,block" json:"public_key_ssh"`
 
 	// Cert is the value related to the certificate
 	Cert *File `hcl:"certificate,block" json:"cert"`
@@ -27,7 +28,8 @@ type CertificateCA struct {
 func (c *CertificateCA) Process() error {
 	c.Output = ensureAbsolute(c.Output, c.File)
 	c.PrivateKey = &File{}
-	c.PublicKey = &File{}
+	c.PublicKeySSH = &File{}
+	c.PublicKeyPEM = &File{}
 	c.Cert = &File{}
 
 	// do we have an existing resource in the state?
@@ -39,7 +41,8 @@ func (c *CertificateCA) Process() error {
 		if r != nil {
 			kstate := r.(*CertificateCA)
 			c.PrivateKey = kstate.PrivateKey
-			c.PublicKey = kstate.PublicKey
+			c.PublicKeySSH = kstate.PublicKeySSH
+			c.PublicKeyPEM = kstate.PublicKeyPEM
 			c.Cert = kstate.Cert
 		}
 	}
@@ -68,7 +71,8 @@ type CertificateLeaf struct {
 	PrivateKey *File `hcl:"private_key,block" json:"private_key"`
 
 	// Key is the value related to the certificate key
-	PublicKey *File `hcl:"public_key,block" json:"public_key"`
+	PublicKeyPEM *File `hcl:"public_key_pem,block" json:"public_key_pem"`
+	PublicKeySSH *File `hcl:"public_key_ssh,block" json:"public_key_ssh"`
 
 	// Cert is the value related to the certificate
 	Cert *File `hcl:"certificate,block" json:"cert"`
@@ -78,6 +82,9 @@ func (c *CertificateLeaf) Process() error {
 	c.CACert = ensureAbsolute(c.CACert, c.File)
 	c.CAKey = ensureAbsolute(c.CAKey, c.File)
 	c.Output = ensureAbsolute(c.Output, c.File)
+	c.PrivateKey = &File{}
+	c.PublicKeySSH = &File{}
+	c.PublicKeyPEM = &File{}
 
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
@@ -88,7 +95,8 @@ func (c *CertificateLeaf) Process() error {
 		if r != nil {
 			kstate := r.(*CertificateLeaf)
 			c.PrivateKey = kstate.PrivateKey
-			c.PublicKey = kstate.PublicKey
+			c.PublicKeySSH = &File{}
+			c.PublicKeyPEM = &File{}
 			c.Cert = kstate.Cert
 		}
 	}
