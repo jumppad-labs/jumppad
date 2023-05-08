@@ -1,4 +1,4 @@
-resource "container" "1-consul" {
+resource "container" "consul" {
   image {
     name = "consul:1.10.6"
   }
