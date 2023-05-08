@@ -31,3 +31,7 @@ func (n *Null) Destroy() error {
 func (n *Null) Lookup() ([]string, error) {
 	return nil, nil
 }
+
+func (n *Null) Refresh() error {
+	return nil
+}

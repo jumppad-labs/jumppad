@@ -102,4 +102,10 @@ func (n *NomadJob) Lookup() ([]string, error) {
 	return nil, nil
 }
 
+func (c *NomadJob) Refresh() error {
+	c.log.Info("Refresh Nomad Job", "ref", c.config.Name)
+
+	return nil
+}
+
 // /v1/jobs/parse

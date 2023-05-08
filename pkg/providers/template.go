@@ -82,7 +82,7 @@ func (c *Template) Create() error {
 		return fmt.Errorf("template source empty")
 	}
 
-	if _, ok := c.config.Vars.(*hcl.Attribute); !ok {
+	if _, ok := c.config.Variables.(*hcl.Attribute); !ok {
 		// no variables just write the file
 		f, err := os.Create(c.config.Destination)
 		if err != nil {
@@ -96,7 +96,7 @@ func (c *Template) Create() error {
 		return err
 	}
 
-	val, _ := c.config.Vars.(*hcl.Attribute).Expr.Value(&hcl.EvalContext{})
+	val, _ := c.config.Variables.(*hcl.Attribute).Expr.Value(&hcl.EvalContext{})
 	m := val.AsValueMap()
 	vars := parseVars(m)
 
@@ -162,6 +162,14 @@ func (c *Template) Destroy() error {
 // Lookup satisfies the interface method but is not implemented by Template
 func (c *Template) Lookup() ([]string, error) {
 	return []string{}, nil
+}
+
+// Refresh causes the template to be destroyed and recreated
+func (c *Template) Refresh() error {
+	c.log.Info("Refresh Template", "ref", c.config.ID)
+
+	c.Destroy()
+	return c.Create()
 }
 
 // wraps the given string in quotes and returns

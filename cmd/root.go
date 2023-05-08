@@ -43,20 +43,15 @@ func init() {
 
 	//rootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.shipyard/config)")
 
-	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(outputCmd)
 	rootCmd.AddCommand(newEnvCmd(engine))
 	rootCmd.AddCommand(newRunCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, vm, engineClients.Connector, logger))
 	rootCmd.AddCommand(newTestCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, logger))
-	rootCmd.AddCommand(pauseCmd)
-	rootCmd.AddCommand(resumeCmd)
-	rootCmd.AddCommand(newGetCmd(engineClients.Getter))
 	rootCmd.AddCommand(newDestroyCmd(engineClients.Connector))
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(newPurgeCmd(engineClients.Docker, engineClients.ImageLog, logger))
 	rootCmd.AddCommand(taintCmd)
-	rootCmd.AddCommand(newExecCmd(engineClients.ContainerTasks))
 	rootCmd.AddCommand(newVersionCmd(vm))
 	rootCmd.AddCommand(uninstallCmd)
 	rootCmd.AddCommand(newPushCmd(engineClients.ContainerTasks, engineClients.Kubernetes, engineClients.HTTP, engineClients.Nomad, logger))
@@ -130,9 +125,13 @@ func Execute(v, c, d string) error {
 	commit = c
 	date = d
 
+	rootCmd.SilenceErrors = true
+
 	err := rootCmd.Execute()
 
 	if err != nil {
+		fmt.Println("")
+		fmt.Println(err)
 		fmt.Println(discordHelp)
 	}
 

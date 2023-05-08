@@ -2,19 +2,16 @@ package providers
 
 import (
 	"fmt"
-	"html/template"
-	"io/ioutil"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/shipyard-run/hclconfig/types"
-	"golang.org/x/xerrors"
 )
 
-const docsImageName = "shipyardrun/docs"
-const docsVersion = "v0.6.2"
+const docsImageName = "ghcr.io/jumppad-labs/docs"
+const docsVersion = "dev"
 
 // Docs defines a provider for creating documentation containers
 type Docs struct {
@@ -32,16 +29,51 @@ func NewDocs(c *resources.Docs, cc clients.ContainerTasks, l hclog.Logger) *Docs
 func (i *Docs) Create() error {
 	i.log.Info("Creating Documentation", "ref", i.config.Name)
 
-	// set the default live reload port
-	if i.config.LiveReloadPort == 0 {
-		i.config.LiveReloadPort = 37950
-	}
-
 	// create the documentation container
 	err := i.createDocsContainer()
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+// Destroy the documentation container
+func (i *Docs) Destroy() error {
+	i.log.Info("Destroy Documentation", "ref", i.config.Name)
+
+	// remove the docs
+	ids, err := i.client.FindContainerIDs(i.config.FQDN)
+	if err != nil {
+		return err
+	}
+
+	for _, id := range ids {
+		err := i.client.RemoveContainer(id, true)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Lookup the ID of the documentation container
+func (i *Docs) Lookup() ([]string, error) {
+	/*
+		cc := &config.Container{
+			Name:       i.config.Name,
+			NetworkRef: i.config.WANRef,
+		}
+
+		p := NewContainer(cc, i.client, i.log.With("parent_ref", i.config.Name))
+	*/
+
+	return []string{}, nil
+}
+
+func (c *Docs) Refresh() error {
+	c.log.Info("Refresh Docs", "ref", c.config.Name)
 
 	return nil
 }
@@ -79,41 +111,24 @@ func (i *Docs) createDocsContainer() error {
 			cc.Volumes,
 			resources.Volume{
 				Source:      i.config.Path,
-				Destination: "/shipyard/docs",
+				Destination: "/content",
 			},
 		)
-	}
-
-	// if the index pages have been set
-	// generate the javascript
-	if i.config.IndexTitle != "" && len(i.config.IndexPages) > 0 {
-		indexPath, err := i.generateDocusaursIndex(i.config.IndexTitle, i.config.IndexPages)
-		if err != nil {
-			return xerrors.Errorf("Unable to generate index for documentation: %w", err)
-		}
-
 		cc.Volumes = append(
 			cc.Volumes,
 			resources.Volume{
-				Source:      indexPath,
-				Destination: "/shipyard/sidebars.js",
+				Source:      i.config.NavigationFile,
+				Destination: "/config/navigation.jsx",
 			},
 		)
 	}
 
 	// add the ports
 	cc.Ports = []resources.Port{
-		// set the doumentation port
 		resources.Port{
 			Local:  "80",
 			Remote: "80",
 			Host:   fmt.Sprintf("%d", i.config.Port),
-		},
-		// set the livereload port
-		resources.Port{
-			Local:  "37950",
-			Remote: "37950",
-			Host:   fmt.Sprintf("%d", i.config.LiveReloadPort),
 		},
 	}
 
@@ -132,78 +147,3 @@ func (i *Docs) createDocsContainer() error {
 	_, err = i.client.CreateContainer(cc)
 	return err
 }
-
-// Destroy the documentation container
-func (i *Docs) Destroy() error {
-	i.log.Info("Destroy Documentation", "ref", i.config.Name)
-
-	// remove the docs
-	ids, err := i.client.FindContainerIDs(i.config.FQDN)
-	if err != nil {
-		return err
-	}
-
-	for _, id := range ids {
-		err := i.client.RemoveContainer(id, true)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// Lookup the ID of the documentation container
-func (i *Docs) Lookup() ([]string, error) {
-	/*
-		cc := &config.Container{
-			Name:       i.config.Name,
-			NetworkRef: i.config.WANRef,
-		}
-
-		p := NewContainer(cc, i.client, i.log.With("parent_ref", i.config.Name))
-	*/
-
-	return []string{}, nil
-}
-
-func (i *Docs) generateDocusaursIndex(title string, pages []string) (string, error) {
-	tmpFile, err := ioutil.TempFile(utils.ShipyardTemp(), "*.json")
-	if err != nil {
-		return "", err
-	}
-
-	data := struct {
-		Title string
-		Pages []string
-	}{
-		title,
-		pages,
-	}
-
-	t := template.Must(template.New("pages").Parse(sideBarsTemplate))
-	err = t.Execute(tmpFile, data)
-	if err != nil {
-		return "", err
-	}
-
-	return tmpFile.Name(), nil
-}
-
-var sideBarsTemplate = `
-module.exports = {
-    docs: {
-      {{.Title}}: [
-		{{- $first := true -}}
-		{{- range .Pages -}}
-	 		{{- if $first -}}
-        		{{- $first = false -}}
-    		{{- else -}}
-        		,
-			{{- end}}
-			"{{- .}}"
-		{{- end}}	
-	  ]
-    },
-  }
-`

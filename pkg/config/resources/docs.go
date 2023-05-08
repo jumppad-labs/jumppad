@@ -10,19 +10,14 @@ const TypeDocs string = "docs"
 type Docs struct {
 	types.ResourceMetadata `hcl:",remain"`
 
-	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
-
 	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
 	Image *Image `hcl:"image,block" json:"image,omitempty"` // image to use for the container
 
 	Path           string `hcl:"path" json:"path"`
+	NavigationFile string `hcl:"navigation_file" json:"navigation_file"`
 	Port           int    `hcl:"port" json:"port"`
-	LiveReloadPort int    `hcl:"live_reload_port,optional" json:"live_reload_port,omitempty"`
 	OpenInBrowser  bool   `hcl:"open_in_browser,optional" json:"open_in_browser"` // When a host port is defined open the location in a browser
-
-	IndexTitle string   `hcl:"index_title,optional" json:"index_title"`
-	IndexPages []string `hcl:"index_pages,optional" json:"index_pages,omitempty"`
 
 	// Output parameters
 
@@ -33,6 +28,12 @@ type Docs struct {
 
 func (d *Docs) Process() error {
 	d.Path = ensureAbsolute(d.Path, d.File)
+	d.NavigationFile = ensureAbsolute(d.NavigationFile, d.File)
+
+	// if port not set set port to 80
+	if d.Port == 0 {
+		d.Port = 80
+	}
 
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents

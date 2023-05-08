@@ -75,6 +75,12 @@ func (c *CertificateCA) Lookup() ([]string, error) {
 	return nil, nil
 }
 
+func (c *CertificateCA) Refresh() error {
+	c.log.Info("Refresh CA Certificate", "ref", c.config.Name)
+
+	return nil
+}
+
 func (c *CertificateLeaf) Create() error {
 	c.log.Info("Creating Leaf Certificate", "ref", c.config.Name)
 
@@ -132,6 +138,12 @@ func (c *CertificateLeaf) Destroy() error {
 
 func (c *CertificateLeaf) Lookup() ([]string, error) {
 	return nil, nil
+}
+
+func (c *CertificateLeaf) Refresh() error {
+	c.log.Info("Refresh Leaf Certificate", "ref", c.config.Name)
+
+	return nil
 }
 
 func destroy(name, output string, log hclog.Logger) error {

@@ -25,9 +25,6 @@ import (
 
 // https://github.com/rancher/k3d/blob/master/cli/commands.go
 
-const k3sBaseImage = "shipyardrun/k3s"
-const k3sBaseVersion = "v1.26.3"
-
 var startTimeout = (300 * time.Second)
 
 //var startTimeout = (60 * time.Second)
@@ -49,27 +46,23 @@ func NewK8sCluster(c *resources.K8sCluster, cc clients.ContainerTasks, kc client
 
 // Create implements interface method to create a cluster of the specified type
 func (c *K8sCluster) Create() error {
-	switch c.config.Driver {
-	case "k3s":
-		return c.createK3s()
-	default:
-		return ErrClusterDriverNotImplemented
-	}
+	return c.createK3s()
 }
 
 // Destroy implements interface method to destroy a cluster
 func (c *K8sCluster) Destroy() error {
-	switch c.config.Driver {
-	case "k3s":
-		return c.destroyK3s()
-	default:
-		return ErrClusterDriverNotImplemented
-	}
+	return c.destroyK3s()
 }
 
 // Lookup the a clusters current state
 func (c *K8sCluster) Lookup() ([]string, error) {
 	return c.client.FindContainerIDs(utils.FQDN(fmt.Sprintf("server.%s", c.config.Name), c.config.Module, c.config.Type))
+}
+
+func (c *K8sCluster) Refresh() error {
+	c.log.Info("Refresh Kubernetes Cluster", "ref", c.config.Name)
+
+	return nil
 }
 
 func (c *K8sCluster) createK3s() error {
@@ -84,19 +77,12 @@ func (c *K8sCluster) createK3s() error {
 		return err
 	}
 
-	if ids != nil && len(ids) > 0 {
+	if len(ids) > 0 {
 		return ErrClusterExists
 	}
 
-	if c.config.Version == "" {
-		c.config.Version = k3sBaseVersion
-	}
-
-	// set the image
-	image := fmt.Sprintf("%s:%s", k3sBaseImage, c.config.Version)
-
 	// pull the container image
-	err = c.client.PullImage(resources.Image{Name: image}, false)
+	err = c.client.PullImage(*c.config.Image, false)
 	if err != nil {
 		return err
 	}
@@ -119,7 +105,7 @@ func (c *K8sCluster) createK3s() error {
 
 	cc.ParentConfig = c.config.Metadata().ParentConfig
 
-	cc.Image = &resources.Image{Name: image}
+	cc.Image = c.config.Image
 	cc.Networks = c.config.Networks
 	cc.Privileged = true // k3s must run Privlidged
 
@@ -151,7 +137,14 @@ func (c *K8sCluster) createK3s() error {
 		return err
 	}
 
-	v, err := semver.NewVersion(c.config.Version)
+	// get the version from the image so we can calculate parameters
+	version := "v99"
+	vParts := strings.Split(c.config.Image.Name, ":")
+	if len(vParts) == 2 && vParts[1] != "latest" {
+		version = vParts[1]
+	}
+
+	v, err := semver.NewVersion(version)
 	if err != nil {
 		return fmt.Errorf("kubernetes version is not valid semantic version: %s", err)
 	}
@@ -188,8 +181,7 @@ func (c *K8sCluster) createK3s() error {
 		cc.Environment[k] = v
 	}
 
-	// set the API server port to a random number
-	c.config.APIPort = rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
+	// set the Connector server port to a random number
 	c.config.ConnectorPort = rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
 
 	// determine the snapshotter, if a storage driver other than overlay is used then
@@ -221,7 +213,7 @@ func (c *K8sCluster) createK3s() error {
 
 	// create the server address
 	FQDN := fmt.Sprintf("server.%s", utils.FQDN(c.config.Name, c.config.Module, c.config.Type))
-	c.config.FQDN = FQDN
+	c.config.FQRN = FQDN
 
 	// Set the default startup args
 	// Also set netfilter settings to fix behaviour introduced in Linux Kernel 5.12
@@ -330,8 +322,8 @@ func (c *K8sCluster) createK3s() error {
 
 	// import the images to the servers container d instance
 	// importing images means that k3s does not need to pull from a remote docker hub
-	if c.config.Images != nil && len(c.config.Images) > 0 {
-		err := c.ImportLocalDockerImages(utils.ImageVolumeName, id, c.config.Images, false)
+	if c.config.CopyImages != nil && len(c.config.CopyImages) > 0 {
+		err := c.ImportLocalDockerImages(utils.ImageVolumeName, id, c.config.CopyImages, false)
 		if err != nil {
 			return xerrors.Errorf("unable to importing Docker images: %w", err)
 		}

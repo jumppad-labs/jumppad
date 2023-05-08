@@ -31,7 +31,7 @@ func newRunCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients
 	var variablesFile string
 
 	runCmd := &cobra.Command{
-		Use:   "up [file] | [directory] ...",
+		Use:   "up [file] | [directory]",
 		Short: "Create the resources at the given path",
 		Long:  `Create the resources at the given path`,
 		Example: `
@@ -149,7 +149,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 		// Parse the config to check it is valid
 		_, err = e.ParseConfigWithVariables(dst, vars, *variablesFile)
 		if err != nil {
-			return fmt.Errorf("Unable to read config: %s", err)
+			return err
 		}
 
 		// have we already got a blueprint in the state
@@ -171,7 +171,7 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 
 		res, err := e.ApplyWithVariables(dst, vars, *variablesFile)
 		if err != nil {
-			return fmt.Errorf("Unable to apply blueprint: %s", err)
+			return err
 		}
 
 		// do not open the browser windows

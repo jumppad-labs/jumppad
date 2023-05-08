@@ -79,7 +79,7 @@ func FQDNVolumeName(name string) string {
 // CreateKubeConfigPath creates the file path for the KubeConfig file when
 // using Kubernetes cluster
 func CreateKubeConfigPath(name string) (dir, filePath string, dockerPath string) {
-	dir = filepath.Join(ShipyardHome(), "/config/", name)
+	dir = filepath.Join(JumppadHome(), "/config/", name)
 	filePath = filepath.Join(dir, "/kubeconfig.yaml")
 	dockerPath = filepath.Join(dir, "/kubeconfig-docker.yaml")
 
@@ -107,15 +107,15 @@ func HomeEnvName() string {
 	return "HOME"
 }
 
-// ShipyardHome returns the location of the shipyard
+// JumppadHome returns the location of the shipyard
 // folder, usually $HOME/.shipyard
-func ShipyardHome() string {
+func JumppadHome() string {
 	return filepath.Join(HomeFolder(), "/.jumppad")
 }
 
 // ShipyardTemp returns a temporary folder
 func ShipyardTemp() string {
-	dir := filepath.Join(ShipyardHome(), "/tmp")
+	dir := filepath.Join(JumppadHome(), "/tmp")
 	err := os.MkdirAll(dir, 0755)
 	if err != nil {
 		panic(err)
@@ -127,13 +127,13 @@ func ShipyardTemp() string {
 // StateDir returns the location of the shipyard
 // state, usually $HOME/.shipyard/state
 func StateDir() string {
-	return filepath.Join(ShipyardHome(), "/state")
+	return filepath.Join(JumppadHome(), "/state")
 }
 
 // CertsDir returns the location of the certificates for the given resource
 // used to secure the Shipyard ingress, usually rooted at $HOME/.shipyard/certs
 func CertsDir(name string) string {
-	certs := filepath.Join(ShipyardHome(), "/certs", name)
+	certs := filepath.Join(JumppadHome(), "/certs", name)
 	certs = filepath.FromSlash(certs)
 
 	// create the folder if it does not exist
@@ -144,7 +144,7 @@ func CertsDir(name string) string {
 // LogsDir returns the location of the logs
 // used to secure the Shipyard ingress, usually $HOME/.shipyard/logs
 func LogsDir() string {
-	logs := filepath.Join(ShipyardHome(), "/logs")
+	logs := filepath.Join(JumppadHome(), "/logs")
 
 	os.MkdirAll(logs, os.ModePerm)
 	return logs
@@ -157,7 +157,7 @@ func StatePath() string {
 
 // ImageCacheLog returns the location of the image cache log
 func ImageCacheLog() string {
-	return fmt.Sprintf("%s/images.log", ShipyardHome())
+	return fmt.Sprintf("%s/images.log", JumppadHome())
 }
 
 // IsLocalFolder tests if the given path is a localfolder and can
@@ -226,7 +226,7 @@ func GetBlueprintLocalFolder(blueprint string) string {
 	// replace these separators with /
 	blueprint = sanitizeBlueprintFolder(blueprint)
 
-	return filepath.Join(ShipyardHome(), "blueprints", blueprint)
+	return filepath.Join(JumppadHome(), "blueprints", blueprint)
 }
 
 // GetHelmLocalFolder returns the full storage path
@@ -234,17 +234,17 @@ func GetBlueprintLocalFolder(blueprint string) string {
 func GetHelmLocalFolder(chart string) string {
 	chart = sanitizeBlueprintFolder(chart)
 
-	return filepath.Join(ShipyardHome(), "helm_charts", chart)
+	return filepath.Join(JumppadHome(), "helm_charts", chart)
 }
 
 // GetReleasesFolder return the path of the Shipyard releases
 func GetReleasesFolder() string {
-	return filepath.Join(ShipyardHome(), "releases")
+	return filepath.Join(JumppadHome(), "releases")
 }
 
 // GetDataFolder creates the data directory used by the application
 func GetDataFolder(p string, perms os.FileMode) string {
-	data := filepath.Join(ShipyardHome(), "data", p)
+	data := filepath.Join(JumppadHome(), "data", p)
 
 	// create the folder if it does not exist
 	os.MkdirAll(data, perms)
@@ -284,7 +284,7 @@ func GetDockerIP() string {
 
 // GetConnectorPIDFile returns the connector PID file used by the connector
 func GetConnectorPIDFile() string {
-	return filepath.Join(ShipyardHome(), "connector.pid")
+	return filepath.Join(JumppadHome(), "connector.pid")
 }
 
 // GetConnectorLogFile returns the log file used by the connector

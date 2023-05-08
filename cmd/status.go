@@ -2,14 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/shipyard/constants"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"github.com/shipyard-run/hclconfig"
 	"github.com/shipyard-run/hclconfig/types"
 	"github.com/spf13/cobra"
 )
@@ -36,35 +34,29 @@ var resourceType string
 
 var statusCmd = &cobra.Command{
 	Use:   "status",
-	Short: "Show the status of the current stack",
-	Long:  `Show the status of the current stack`,
+	Short: "Show the status of the current resources",
+	Long:  `Show the status of the current resources`,
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		// load the stack
-		p := hclconfig.NewParser(hclconfig.DefaultOptions())
-		d, err := ioutil.ReadFile(utils.StatePath())
+		// load the resources from state
+
+		cfg, err := resources.LoadState()
 		if err != nil {
 			fmt.Printf("Unable to read state file")
-			os.Exit(1)
-		}
-
-		cfg, err := p.UnmarshalJSON(d)
-		if err != nil {
-			fmt.Printf("Unable to unmarshal state file")
 			os.Exit(1)
 		}
 
 		if jsonFlag {
 			s, err := prettyjson.Marshal(cfg)
 			if err != nil {
-				fmt.Println("Unable to load state", err)
+				fmt.Println("Unable to output state as JSON", err)
 				os.Exit(1)
 			}
 
 			fmt.Println(string(s))
 		} else {
 			fmt.Println()
-			fmt.Printf("%-13s %-30s %s\n", "STATUS", "RESOURCE", "FQDN")
+			fmt.Printf("%-13s %-60s %s\n", "STATUS", "RESOURCE", "FQDN")
 
 			createdCount := 0
 			failedCount := 0
@@ -104,23 +96,23 @@ var statusCmd = &cobra.Command{
 
 					switch r.Metadata().Type {
 					case resources.TypeNomadCluster:
-						fmt.Printf("%-13s %-30s %s\n", status, r.Metadata().ID, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, "", string(r.Metadata().Type))))
+						fmt.Printf("%-13s %-50s %s\n", status, r.Metadata().ID, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, "", string(r.Metadata().Type))))
 
 						// add the client nodes
 						nomad := r.(*resources.NomadCluster)
 						for n := 0; n < nomad.ClientNodes; n++ {
-							fmt.Printf("%-13s %-30s %s\n", "", "", fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Metadata().Name, "", r.Metadata().Type)))
+							fmt.Printf("%-13s %-50s %s\n", "", "", fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Metadata().Name, "", r.Metadata().Type)))
 						}
 					case resources.TypeK8sCluster:
-						fmt.Printf("%-13s %-30s %s\n", status, r.Metadata().ID, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, "", r.Metadata().Type)))
+						fmt.Printf("%-13s %-50s %s\n", status, r.Metadata().ID, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, "", r.Metadata().Type)))
 					case resources.TypeContainer:
 						fallthrough
 					case resources.TypeSidecar:
 						fallthrough
 					case resources.TypeImageCache:
-						fmt.Printf("%-13s %-30s %s\n", status, r.Metadata().ID, "")
+						fmt.Printf("%-13s %-50s %s\n", status, r.Metadata().ID, "")
 					default:
-						fmt.Printf("%-13s %-30s %s\n", status, r.Metadata().ID, "")
+						fmt.Printf("%-13s %-50s %s\n", status, r.Metadata().ID, "")
 					}
 				}
 			}

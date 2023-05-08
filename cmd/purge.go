@@ -48,7 +48,7 @@ func newPurgeCmdFunc(dt clients.Docker, il clients.ImageLog, l hclog.Logger) fun
 
 		// Remove any images which have been built
 		filter := filters.NewArgs()
-		filter.Add("reference", "shipyard.run/localcache/*")
+		filter.Add("reference", "jumppad.dev/localcache/*")
 
 		// check if the image already exists, if so do not rebuild unless force
 		sum, err := dt.ImageList(context.Background(), types.ImageListOptions{Filters: filter})
@@ -107,7 +107,7 @@ func newPurgeCmdFunc(dt clients.Docker, il clients.ImageLog, l hclog.Logger) fun
 			bHasError = true
 		}
 
-		cp := path.Join(utils.ShipyardHome(), "config")
+		cp := path.Join(utils.JumppadHome(), "config")
 		l.Info("Removing config", "path", cp)
 		err = os.RemoveAll(cp)
 		if err != nil {
@@ -116,7 +116,7 @@ func newPurgeCmdFunc(dt clients.Docker, il clients.ImageLog, l hclog.Logger) fun
 		}
 
 		if bHasError {
-			return fmt.Errorf("An error occured when purging data")
+			return fmt.Errorf("an error occurred when purging data")
 		}
 
 		return nil

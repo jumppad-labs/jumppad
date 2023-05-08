@@ -8,7 +8,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -49,7 +48,6 @@ type EngineImpl struct {
 	config      *hclconfig.Config
 	log         hclog.Logger
 	getProvider getProviderFunc
-	sync        sync.Mutex
 }
 
 // defines a function which is used for generating providers
@@ -336,9 +334,6 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 			//
 			// If the callback returns an error we need to save the state and exit
 			parsedConfig, parseError = hclParser.ParseFile(path)
-			if parseError != nil {
-				parseError = fmt.Errorf("error parsing file %s, error: %s", path, parseError)
-			}
 		} else {
 			// ParseFolder processes the HCL, builds a graph of resources then calls
 			// the callback for each resource in order
@@ -348,15 +343,12 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 			//
 			// If the callback returns an error we need to save the state and exit
 			parsedConfig, parseError = hclParser.ParseDirectory(path)
-			if parseError != nil {
-				parseError = fmt.Errorf("error parsing directory %s, error: %s", path, parseError)
-			}
 		}
 
 		// process is not called for disabled resources, add manually
 		err := e.appendDisabledResources(parsedConfig)
 		if err != nil {
-			return fmt.Errorf("error parsing directory %s, error: %s", path, parseError)
+			return parseError
 		}
 	}
 
@@ -402,25 +394,24 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 	// should take precedence as all new resources will have an empty state
 	sr, err := e.config.FindResource(r.Metadata().ID)
 	if err == nil {
-		// always taint output types so they are recreated
-		if sr.Metadata().Type == types.TypeOutput {
-			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusTainted
-		} else {
-			// if the state is created do nothing
-			if sr.Metadata().Properties[constants.PropertyStatus] == constants.StatusCreated {
-				return nil
-			}
+		// set the current status to the state status
+		r.Metadata().Properties[constants.PropertyStatus] = sr.Metadata().Properties[constants.PropertyStatus]
 
-			// set the current status to the state status
-			r.Metadata().Properties[constants.PropertyStatus] = sr.Metadata().Properties[constants.PropertyStatus]
-
-			// remove the resource, we will add the new version to the state
-			e.config.RemoveResource(r)
+		// remove the resource, we will add the new version to the state
+		err = e.config.RemoveResource(r)
+		if err != nil {
+			return fmt.Errorf(`unable to remove resource "%s" from state, %s`, r.Metadata().ID, err)
 		}
 	}
 
 	var providerError error
 	switch r.Metadata().Properties[constants.PropertyStatus] {
+	case constants.StatusCreated:
+		providerError = p.Refresh()
+		if providerError != nil {
+			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
+		}
+
 	// Normal case for PendingUpdate is do nothing
 	// PendingModification causes a resource to be
 	// destroyed before created
@@ -445,7 +436,10 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 	}
 
 	// add the resource to the state
-	e.config.AppendResource(r)
+	err = e.config.AppendResource(r)
+	if err != nil {
+		return fmt.Errorf(`unable add resource "%s" to state, %s`, r.Metadata().ID, err)
+	}
 
 	// did we just create a network, if so we need to attach the image cache
 	// to the network and set the dependency

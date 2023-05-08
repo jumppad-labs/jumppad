@@ -23,7 +23,7 @@ resource "template" "consul_config" {
 
   destination = "${data("single")}/consul.hcl"
 
-  vars = {
+  variables = {
     data_dir = "/tmp"
   }
 }

@@ -1,0 +1,32 @@
+# List state
+
+The `terraform state list` command is used to list all resources in the state file matching the given addresses (if any). 
+If no addresses are given, all resources are listed.
+
+The resources listed are sorted according to module depth order followed by alphabetical. 
+This means that resources that are in your immediate configuration are listed first, and resources that are more deeply nested within modules are listed last.
+
+For complex infrastructures, the state can contain thousands of resources. 
+To filter these, provide one or more patterns to the command. 
+Patterns are in [resource addressing format](https://developer.hashicorp.com/terraform/cli/state/resource-addressing).
+
+### Command-line flags
+
+<Properties>
+  <Property name="state" type="string" required="false" value="terraform.tfstate">
+    Path to the state file. Defaults to "terraform.tfstate". Ignored when remote state is used.
+  </Property>
+  <Property name="id" type="string" required="false" value="">
+    ID of resources to show. Ignored when unset.
+  </Property>
+</Properties>
+
+<Task>
+  <Instructions>
+    Instructions
+  </Instructions>
+  <Conditions>
+    <Condition status="success" description="The resource is destroyed" />
+    <Condition status="fail" description="The state does not contain the resource" />
+  </Conditions>
+</Task>

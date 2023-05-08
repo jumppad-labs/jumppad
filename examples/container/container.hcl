@@ -35,7 +35,7 @@ resource "template" "consul_config" {
 
   destination = "${data("config")}/consul.hcl"
 
-  vars = {
+  variables = {
     data_dir = "/tmp"
   }
 }

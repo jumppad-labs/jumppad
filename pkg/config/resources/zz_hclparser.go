@@ -38,7 +38,7 @@ func SetupHCLConfig(callback hclconfig.ProcessCallback, variables map[string]str
 	p.RegisterType(TypeTemplate, &Template{})
 
 	// Register the custom functions
-	p.RegisterFunction("shipyard", customHCLFuncShipyard)
+	p.RegisterFunction("jumppad", customHCLFuncJumppad)
 	p.RegisterFunction("docker_ip", customHCLFuncDockerIP)
 	p.RegisterFunction("docker_host", customHCLFuncDockerHost)
 	p.RegisterFunction("data", customHCLFuncDataFolder)
@@ -49,8 +49,8 @@ func SetupHCLConfig(callback hclconfig.ProcessCallback, variables map[string]str
 	return p
 }
 
-func customHCLFuncShipyard() (string, error) {
-	return utils.ShipyardHome(), nil
+func customHCLFuncJumppad() (string, error) {
+	return utils.JumppadHome(), nil
 }
 
 // returns the docker host ip address

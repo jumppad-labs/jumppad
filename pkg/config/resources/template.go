@@ -13,11 +13,10 @@ const TypeTemplate string = "template"
 type Template struct {
 	types.ResourceMetadata `hcl:",remain"`
 
-	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
+	Source      string      `hcl:"source" json:"source"`                          // Source template to be processed as string
+	Destination string      `hcl:"destination" json:"destination"`                // Destination filename to write
+	Variables   interface{} `hcl:"variables,optional" json:"variables,omitempty"` // Variables to be processed in the template
 
-	Source       string                 `hcl:"source" json:"source"`                // Source template to be processed as string
-	Destination  string                 `hcl:"destination" json:"destination"`      // Destination filename to write
-	Vars         interface{}            `hcl:"vars,optional" json:"vars,omitempty"` // Variables to be processed in the template
 	InternalVars map[string]interface{} // stores a converted go type version of the hcl.Value types
 }
 

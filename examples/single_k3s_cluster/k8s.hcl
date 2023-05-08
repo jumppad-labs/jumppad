@@ -1,13 +1,9 @@
 resource "k8s_cluster" "k3s" {
-  driver = "k3s" // default
-
-  nodes = 1 // default
-
   network {
     id = resource.network.cloud.id
   }
 
-  image {
+  copy_image {
     name = "shipyardrun/connector:v0.1.0"
   }
 }

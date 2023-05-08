@@ -24,6 +24,11 @@ func (m *MockProvider) Destroy() error {
 	return args.Error(0)
 }
 
+func (m *MockProvider) Refresh() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
 func (m *MockProvider) Lookup() ([]string, error) {
 	args := m.Called()
 	return args.Get(0).([]string), args.Error(1)

@@ -2,6 +2,7 @@ package providers
 
 import (
 	"fmt"
+	"net"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
@@ -38,8 +39,6 @@ func (c *Ingress) Create() error {
 	//if c.config.Destination.Driver == "k8s" {
 	//	return c.exposeK8sRemote()
 	//}
-
-	return nil
 }
 
 // Destroy satisfies the interface method but is not implemented by LocalExec
@@ -63,11 +62,29 @@ func (c *Ingress) Lookup() ([]string, error) {
 	return []string{}, nil
 }
 
+func (c *Ingress) Refresh() error {
+	c.log.Info("Refresh Ingress", "ref", c.config.Name)
+
+	return nil
+}
+
 func (c *Ingress) exposeRemote() error {
 	// get the target
 	r, err := c.config.ParentConfig.FindResource(c.config.Target.ID)
 	if err != nil {
 		return err
+	}
+
+	// check if the port is in use, if so, return an immediate error
+	c.log.Debug("Checking if port is available", "port", c.config.Port)
+	tc, err := net.Dial("tcp", fmt.Sprintf("0.0.0.0:%d", c.config.Port))
+	if err == nil {
+		c.log.Debug("Port in use", "port", c.config.Port)
+		return fmt.Errorf("unable to create ingress port %d in use", c.config.Port)
+	}
+
+	if tc != nil {
+		tc.Close()
 	}
 
 	// address of the remote connector

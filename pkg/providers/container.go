@@ -39,7 +39,7 @@ func NewContainerSidecar(cs *resources.Sidecar, cl clients.ContainerTasks, hc cl
 	co.Privileged = cs.Privileged
 	co.Resources = cs.Resources
 	co.MaxRestartCount = cs.MaxRestartCount
-	co.FQDN = cs.FQDN
+	co.FQRN = cs.FQDN
 
 	return &Container{config: co, client: cl, httpClient: hc, log: l, sidecar: cs}
 }
@@ -55,10 +55,28 @@ func (c *Container) Create() error {
 
 	// we need to set the fqdn on the original object
 	if c.sidecar != nil {
-		c.sidecar.FQDN = c.config.FQDN
+		c.sidecar.FQDN = c.config.FQRN
 	}
 
 	return nil
+}
+
+// Lookup the ID based on the config
+func (c *Container) Lookup() ([]string, error) {
+	return c.client.FindContainerIDs(c.config.FQRN)
+}
+
+func (c *Container) Refresh() error {
+	c.log.Info("Refresh Container", "ref", c.config.Name)
+
+	return nil
+}
+
+// Destroy stops and removes the container
+func (c *Container) Destroy() error {
+	c.log.Info("Destroy Container", "ref", c.config.ID)
+
+	return c.internalDestroy()
 }
 
 func (c *Container) internalCreate() error {
@@ -101,7 +119,7 @@ func (c *Container) internalCreate() error {
 
 	// set the fqdn
 	fqdn := utils.FQDN(c.config.Name, c.config.Module, c.config.Type)
-	c.config.FQDN = fqdn
+	c.config.FQRN = fqdn
 
 	// get the assigned ip addresses for the container
 	dc := c.client.ListNetworks(id)
@@ -139,13 +157,6 @@ func (c *Container) internalCreate() error {
 	return nil
 }
 
-// Destroy stops and removes the container
-func (c *Container) Destroy() error {
-	c.log.Info("Destroy Container", "ref", c.config.ID)
-
-	return c.internalDestroy()
-}
-
 func (c *Container) internalDestroy() error {
 	ids, err := c.Lookup()
 	if err != nil {
@@ -163,9 +174,4 @@ func (c *Container) internalDestroy() error {
 	}
 
 	return nil
-}
-
-// Lookup the ID based on the config
-func (c *Container) Lookup() ([]string, error) {
-	return c.client.FindContainerIDs(c.config.FQDN)
 }

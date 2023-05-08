@@ -1,0 +1,5 @@
+#!/bin/bash -e
+
+# Is the 'terraform plan' command used?
+validate history contains "terraform plan" \
+  || validate fail "'terraform plan' command was not used to preview changes"

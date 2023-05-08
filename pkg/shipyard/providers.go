@@ -18,8 +18,6 @@ func generateProviderImpl(c types.Resource, cc *clients.Clients) providers.Provi
 		return providers.NewContainer(c.(*resources.Container), cc.ContainerTasks, cc.HTTP, cc.Logger)
 	case resources.TypeCopy:
 		return providers.NewCopy(c.(*resources.Copy), cc.Logger)
-	case resources.TypeSidecar:
-		return providers.NewContainerSidecar(c.(*resources.Sidecar), cc.ContainerTasks, cc.HTTP, cc.Logger)
 	case resources.TypeDocs:
 		return providers.NewDocs(c.(*resources.Docs), cc.ContainerTasks, cc.Logger)
 	case resources.TypeHelm:
@@ -46,6 +44,8 @@ func generateProviderImpl(c types.Resource, cc *clients.Clients) providers.Provi
 		return providers.NewNull(c.Metadata(), cc.Logger)
 	case resources.TypeRemoteExec:
 		return providers.NewRemoteExec(c.(*resources.RemoteExec), cc.ContainerTasks, cc.Logger)
+	case resources.TypeSidecar:
+		return providers.NewContainerSidecar(c.(*resources.Sidecar), cc.ContainerTasks, cc.HTTP, cc.Logger)
 	case resources.TypeTemplate:
 		return providers.NewTemplate(c.(*resources.Template), cc.Logger)
 	}
