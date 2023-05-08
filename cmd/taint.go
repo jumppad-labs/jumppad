@@ -5,9 +5,9 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/shipyard/constants"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"github.com/shipyard-run/hclconfig"
 	"github.com/spf13/cobra"
 )
 
@@ -25,16 +25,9 @@ var taintCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		p := hclconfig.NewParser(hclconfig.DefaultOptions())
-		d, err := ioutil.ReadFile(utils.StatePath())
+		cfg, err := resources.LoadState()
 		if err != nil {
-			fmt.Printf("Unable to read state file")
-			os.Exit(1)
-		}
-
-		cfg, err := p.UnmarshalJSON(d)
-		if err != nil {
-			fmt.Printf("Unable to unmarshal state file")
+			fmt.Println("Unable to load statefile, do you have a running blueprint?")
 			os.Exit(1)
 		}
 
@@ -46,7 +39,7 @@ var taintCmd = &cobra.Command{
 
 		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusTainted
 
-		d, err = cfg.ToJSON()
+		d, err := cfg.ToJSON()
 		if err != nil {
 			fmt.Println("Unable to save state", err)
 			os.Exit(1)
