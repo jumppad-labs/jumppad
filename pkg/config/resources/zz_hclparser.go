@@ -80,7 +80,7 @@ func customHCLFuncRandomCreature() (string, error) {
 }
 
 func customHCLFuncRandomNumber(min int, max int) (int, error) {
-	rn := rand.Intn(max+min) - min
+	rn := rand.Intn(max-min) + min
 
 	return rn, nil
 }
