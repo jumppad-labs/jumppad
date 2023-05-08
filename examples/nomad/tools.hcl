@@ -16,6 +16,6 @@ resource "container" "tools" {
   }
 
   environment = {
-    "NOMAD_ADDR" = "http://${resource.nomad_cluster.dev.server_fqdn}:${resource.nomad_cluster.dev.api_port}"
+    "NOMAD_ADDR" = "http://${resource.nomad_cluster.dev.server_fqrn}:${resource.nomad_cluster.dev.api_port}"
   }
 }

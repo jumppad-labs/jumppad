@@ -76,7 +76,7 @@ resource "container" "consul" {
     foo             = env("BAH")
     file            = file("./conf.txt")
     abc             = "123"
-    SHIPYARD_FOLDER = shipyard()
+    SHIPYARD_FOLDER = jumppad()
     HOME_FOLDER     = home()
   }
 
