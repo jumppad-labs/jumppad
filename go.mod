@@ -25,11 +25,12 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sethvargo/go-retry v0.2.4
 	github.com/shipyard-run/gohup v0.2.2
-	github.com/shipyard-run/hclconfig v0.5.1
+	github.com/shipyard-run/hclconfig v0.5.2
 	github.com/shipyard-run/version-manager v0.0.5
 	github.com/spf13/cobra v1.3.0
 	github.com/stretchr/testify v1.8.1
 	github.com/zclconf/go-cty v1.12.0
+	golang.org/x/crypto v0.0.0-20211117183948-ae814b36b871
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2
 	google.golang.org/grpc v1.53.0
 	helm.sh/helm/v3 v3.8.2
@@ -179,7 +180,6 @@ require (
 	github.com/xlab/treeprint v0.0.0-20181112141820-a009c3971eca // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.starlark.net v0.0.0-20200306205701-8dd3e2ee1dd5 // indirect
-	golang.org/x/crypto v0.0.0-20211117183948-ae814b36b871 // indirect
 	golang.org/x/image v0.0.0-20191206065243-da761ea9ff43 // indirect
 	golang.org/x/net v0.8.0 // indirect
 	golang.org/x/oauth2 v0.6.0 // indirect
@@ -214,6 +214,6 @@ require (
 
 replace github.com/creack/pty => github.com/photostorm/pty v1.1.18
 
-//replace github.com/shipyard-run/hclconfig => ../../shipyard-run/hclconfig/
+// replace github.com/shipyard-run/hclconfig => ../../shipyard-run/hclconfig/
 
 //replace github.com/jumppad-labs/connector => ../connector
