@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 
@@ -198,11 +199,12 @@ func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
 	// and twice for ImageCache that is manually added.
 	// the provider for image cache is called once for the initial creation
 	// and once for each network
-	testAssertMethodCalled(t, mp, "Create", 11)
+	rc := len(e.config.Resources) + 1
+	testAssertMethodCalled(t, mp, "Create", rc)
 
 	// the state should also contain 10 resources
 	sf := testLoadState(t, e)
-	require.Equal(t, 10, sf.ResourceCount())
+	require.Equal(t, 11, sf.ResourceCount())
 }
 
 func TestApplyDoesNotCallsProviderCreateWhenInState(t *testing.T) {
@@ -235,10 +237,10 @@ func TestApplyNotCallsProviderCreateForDisabledResources(t *testing.T) {
 	// should contain 2 from the config plus the image cache
 	require.Equal(t, 3, sf.ResourceCount())
 
-	// the status should be set to disabled
+	// the resource should be in the state but there should be no status
 	r, err := sf.FindResource("resource.container.consul_disabled")
 	require.NoError(t, err)
-	require.Equal(t, constants.StatusDisabled, r.Metadata().Properties[constants.PropertyStatus])
+	require.Nil(t, r.Metadata().Properties[constants.PropertyStatus])
 }
 
 func TestApplyShouldNotAddDuplicateDisabledResources(t *testing.T) {
@@ -340,6 +342,27 @@ func TestApplyCallsProviderDestroyForTaintedResources(t *testing.T) {
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1)
 	testAssertMethodCalled(t, mp, "Create", 6) // ImageCache is always created
+}
+
+func TestApplyCallsProviderDestroyForDisabledResources(t *testing.T) {
+	// resources that were created but subsequently set to disabled should be
+	// destroyed
+	e, mp := setupTestsWithState(t, nil, disabledAndCreatedState)
+
+	_, err := e.Apply(".")
+	require.NoError(t, err)
+
+	// get the disabled resource
+	r,err:= e.config.FindResource("resource.container.consul_disabled")
+	require.NoError(t,err)
+	require.NotNil(t,r)
+
+	// property should be disabled
+	require.Equal(t,constants.StatusDisabled ,r.Metadata().Properties[constants.PropertyStatus])
+
+	// should have call create for each provider
+	testAssertMethodCalled(t, mp, "Destroy", 1, r)
+	testAssertMethodCalled(t, mp, "Create", 0) // ImageCache is always created
 }
 
 func TestApplyCallsProviderRefreshForCreatedResources(t *testing.T) {
@@ -446,21 +469,37 @@ func TestParseWithVariables(t *testing.T) {
 	require.Equal(t, "consul:1.8.1", c.(*resources.Container).Image.Name)
 }
 
-func testAssertMethodCalled(t *testing.T, p *[]*mocks.MockProvider, method string, n int, args ...interface{}) {
+func testAssertMethodCalled(t *testing.T, p *[]*mocks.MockProvider, method string, n int, resource ...types.Resource) {
 	callCount := 0
 
+	calls := map[string][]string{}
+
 	for _, pm := range *p {
-		// cast the provider into a mock
+		// are we trying to filter on a specific resource
+		if len(resource) == 1 {
+			if resource[0] != pm.Config() {
+				continue
+			}
+		}
+
 		for _, c := range pm.Calls {
+			calls[pm.Config().Metadata().Name] = append(calls[pm.Config().Metadata().Name], c.Method)
+
 			if c.Method == method {
 				callCount++
 			}
 		}
 	}
 
-	if callCount != n {
-		t.Fatalf("Expected %d calls got %d", n, callCount)
+	callStrings := []string{}
+	for k, v := range calls {
+		calls := strings.Join(v, ",")
+		callStrings = append(callStrings, fmt.Sprintf("%s[%s]", k, calls))
 	}
+
+	callString := strings.Join(callStrings, " ")
+
+	require.Equal(t, n, callCount, fmt.Sprintf("expected %d calls, actual calls %d: %s", n, callCount, callString))
 }
 
 var failedState = `
@@ -589,6 +628,37 @@ var disabledState = `
       "name": "consul_disabled",
       "properties": {
 				"status": "disabled"
+			},
+      "type": "container"
+	}
+  ]
+}
+`
+
+var disabledAndCreatedState = `
+{
+  "blueprint": null,
+  "resources": [
+	{
+      "name": "default",
+      "properties": {
+				"status": "created"
+			},
+      "type": "image_cache"
+	},
+	{
+      "name": "dc1_enabled",
+      "properties": {
+				"status": "created"
+			},
+      "subnet": "10.15.0.0/16",
+      "type": "network"
+	},
+	{
+		 "disabled": true,
+      "name": "consul_disabled",
+      "properties": {
+				"status": "created"
 			},
       "type": "container"
 	}
