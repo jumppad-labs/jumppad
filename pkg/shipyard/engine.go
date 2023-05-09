@@ -282,12 +282,6 @@ func (e *EngineImpl) Destroy() error {
 	// destroyed last
 	err = e.config.Process(e.destroyCallback, true)
 	if err != nil {
-		// save the state
-		stateErr := resources.SaveState(e.config)
-		if stateErr != nil {
-			// if we can not save the state, log
-			e.log.Info("Unable to save state", "error", stateErr)
-		}
 
 		// return the process error
 		return fmt.Errorf("error trying to call Destroy on provider: %s", err)
@@ -350,6 +344,12 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 		if err != nil {
 			return parseError
 		}
+
+		// process is not called for module resources, add manually
+		err = e.appendModuleResources(parsedConfig)
+		if err != nil {
+			return parseError
+		}
 	}
 
 	return parseError
@@ -375,6 +375,31 @@ func (e *EngineImpl) appendDisabledResources(c *hclconfig.Config) error {
 			err = e.config.AppendResource(r)
 			if err != nil {
 				return fmt.Errorf("unable to add disabled resource: %s", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// appends module in the given config to the engines config
+func (e *EngineImpl) appendModuleResources(c *hclconfig.Config) error {
+	if c == nil {
+		return nil
+	}
+
+	for _, r := range c.Resources {
+		if r.Metadata().Type == types.TypeModule {
+			// if the resource already exists remove it
+			er, err := e.config.FindResource(types.FQDNFromResource(r).String())
+			if err == nil {
+				e.config.RemoveResource(er)
+			}
+
+			// add the resource to the state
+			err = e.config.AppendResource(r)
+			if err != nil {
+				return fmt.Errorf("unable to add module resource: %s", err)
 			}
 		}
 	}
