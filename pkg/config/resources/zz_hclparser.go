@@ -19,6 +19,7 @@ func SetupHCLConfig(callback hclconfig.ProcessCallback, variables map[string]str
 	p := hclconfig.NewParser(cfg)
 
 	// Register the types
+	p.RegisterType(TypeBlueprint, &Blueprint{})
 	p.RegisterType(TypeCertificateCA, &CertificateCA{})
 	p.RegisterType(TypeCertificateLeaf, &CertificateLeaf{})
 	p.RegisterType(TypeContainer, &Container{})

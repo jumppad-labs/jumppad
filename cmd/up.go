@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/shipyard-run/hclconfig/types"
 	gvm "github.com/shipyard-run/version-manager"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients"
@@ -152,12 +153,6 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 			return err
 		}
 
-		// have we already got a blueprint in the state
-		blueprintExists := false
-		if bluePrintInState() {
-			blueprintExists = true
-		}
-
 		// update status every 30s to let people know we are still running
 		statusUpdate := time.NewTicker(15 * time.Second)
 		startTime := time.Now()
@@ -175,22 +170,10 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 		}
 
 		// do not open the browser windows
-		if *noOpen == false {
+		if !*noOpen {
 
 			browserList := []string{}
 			checkDuration := 30 * time.Second
-
-			// check if blueprint is in the state, if so do not open these windows again
-			if !blueprintExists && e.Blueprint() != nil {
-				browserList = e.Blueprint().BrowserWindows
-				// check for browser windows in the applied resources
-				if e.Blueprint().HealthCheckTimeout != "" {
-					cd, err := time.ParseDuration(e.Blueprint().HealthCheckTimeout)
-					if err == nil {
-						checkDuration = cd
-					}
-				}
-			}
 
 			for _, r := range res {
 				switch r.Metadata().Type {
@@ -202,10 +185,10 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 						}
 					}
 				case resources.TypeIngress:
-					//c := r.(*resources.Ingress)
-					//if c.Source.Driver == resources.IngressSourceLocal && c.Source.Config.OpenInBrowser != "" && c.Source.Config.Port != "" {
-					//	browserList = append(browserList, buildBrowserPath(r.Metadata().Name, c.Source.Config.Port, r.Metadata().Type, c.Source.Config.OpenInBrowser))
-					//}
+					c := r.(*resources.Ingress)
+					if c.OpenInBrowser != "" {
+						browserList = append(browserList, buildBrowserPath(r.Metadata().Name, fmt.Sprintf("%d", c.Port), r.Metadata().Type, c.OpenInBrowser))
+					}
 				case resources.TypeNomadCluster:
 					c := r.(*resources.NomadCluster)
 					if c.OpenInBrowser {
@@ -253,22 +236,56 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 		statusUpdate.Stop()
 
 		// if we have a blueprint show the header
-		if e.Blueprint() != nil {
+		var blueprint *resources.Blueprint
+		bps, _ := e.Config().FindResourcesByType(resources.TypeBlueprint)
+		for _, bp := range bps {
+			// pick the first blueprint in the root
+			if bp.Metadata().Module == "" {
+				blueprint = bp.(*resources.Blueprint)
+				break
+			}
+		}
+
+		if blueprint != nil {
 			cmd.Println("")
 			cmd.Println("########################################################")
 			cmd.Println("")
-			cmd.Println("Title", e.Blueprint().Title)
-			cmd.Println("Author", e.Blueprint().Author)
+			cmd.Println("Title", blueprint.Title)
+			cmd.Println("Author", blueprint.Author)
 
 			// parse the body as markdown and print
-			intro := markdown.Render(e.Blueprint().Intro, 80, 0)
+			intro := markdown.Render(blueprint.Description, 80, 0)
 
 			cmd.Println("")
 			cmd.Print(string(intro))
 
-			if len(e.Blueprint().Environment) > 0 || e.ResourceCountForType("output") > 0 {
+			outputs := []*types.Output{}
+			os, _ := e.Config().FindResourcesByType(types.TypeOutput)
+			for _, o := range os {
+				// only grab the root outputs
+				if o.Metadata().Module == "" {
+					outputs = append(outputs, o.(*types.Output))
+				}
+			}
+
+			if len(outputs) > 0 {
 				cmd.Println("")
-				cmd.Printf("This blueprint defines %d output variables.\n", e.ResourceCountForType("output"))
+				cmd.Printf("This blueprint defines %d output variables.\n", len(outputs))
+				cmd.Println("")
+
+				maxLen := 0
+				for _, o := range outputs {
+					if len(o.Name) > maxLen {
+						maxLen = len(o.Name)
+					}
+				}
+
+				format := fmt.Sprintf(" * %%%ds: %%s\n", maxLen)
+
+				for _, o := range outputs {
+					fmt.Printf(format, o.Name, o.Value)
+				}
+
 				cmd.Println("")
 				cmd.Println("You can set output variables as environment variables for your current terminal session using the following command:")
 				cmd.Println("")
@@ -278,10 +295,6 @@ func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc cli
 				} else {
 					cmd.Println("eval $(jumppad env)")
 				}
-				cmd.Println("")
-				cmd.Println("To list output variables use the command:")
-				cmd.Println("")
-				cmd.Println("jumppad output")
 			}
 		}
 
@@ -302,13 +315,4 @@ func buildBrowserPath(n, p string, resourceType string, path string) string {
 	ty := resourceType
 
 	return fmt.Sprintf("http://%s:%s.%s", utils.FQDN(n, "", ty), p, path)
-}
-
-func bluePrintInState() bool {
-	//load the state
-	//sc := config.New()
-	//sc.FromJSON(utils.StatePath())
-
-	//return sc.Blueprint != nil
-	return false
 }

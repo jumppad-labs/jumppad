@@ -37,9 +37,7 @@ type Engine interface {
 	ParseConfig(string) ([]types.Resource, error)
 	ParseConfigWithVariables(string, map[string]string, string) ([]types.Resource, error)
 	Destroy() error
-	ResourceCount() int
-	ResourceCountForType(string) int
-	Blueprint() *resources.Blueprint
+	Config() *hclconfig.Config
 }
 
 // EngineImpl is responsible for creating and destroying resources
@@ -127,8 +125,9 @@ func (e *EngineImpl) GetClients() *clients.Clients {
 	return e.clients
 }
 
-func (e *EngineImpl) Blueprint() *resources.Blueprint {
-	return nil
+// Config returns the parsed config
+func (e *EngineImpl) Config() *hclconfig.Config {
+	return e.config
 }
 
 // ParseConfig parses the given Shipyard files and creating the resource types but does
