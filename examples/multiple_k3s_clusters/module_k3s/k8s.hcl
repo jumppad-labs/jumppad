@@ -1,6 +1,11 @@
+resource "random_number" "port" {
+  minimum = 10000
+  maximum = 20000
+}
+
 resource "k8s_cluster" "dev" {
   // use a random port for the cluster
-  api_port = random_number(10000, 20000)
+  api_port = resource.random_number.port.value
 
   network {
     id = variable.network_id
