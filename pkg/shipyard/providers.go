@@ -46,6 +46,14 @@ func generateProviderImpl(c types.Resource, cc *clients.Clients) providers.Provi
 		return providers.NewRemoteExec(c.(*resources.RemoteExec), cc.ContainerTasks, cc.Logger)
 	case resources.TypeRandomNumber:
 		return providers.NewRandomNumber(c.(*resources.RandomNumber), cc.Logger)
+	case resources.TypeRandomID:
+		return providers.NewRandomID(c.(*resources.RandomID), cc.Logger)
+	case resources.TypeRandomPassword:
+		return providers.NewRandomPassword(c.(*resources.RandomPassword), cc.Logger)
+	case resources.TypeRandomUUID:
+		return providers.NewRandomUUID(c.(*resources.RandomUUID), cc.Logger)
+	case resources.TypeRandomCreature:
+		return providers.NewRandomCreature(c.(*resources.RandomCreature), cc.Logger)
 	case resources.TypeSidecar:
 		return providers.NewContainerSidecar(c.(*resources.Sidecar), cc.ContainerTasks, cc.HTTP, cc.Logger)
 	case resources.TypeTemplate:
