@@ -6,14 +6,14 @@ resource "blueprint" "container" {
     This is the description for the blueprint, it can contain
     markdown such as:
 
-    ## Column headings
+    ### Column headings
     And things like bulleted lists
 
     * one
     * two
     * three
 
-    ### Example Usage
+    #### Example Usage
     It is also possible to incude code blocks
 
     ```hcl

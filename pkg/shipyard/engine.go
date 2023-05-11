@@ -348,7 +348,7 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 	}
 
 	// process is not called for module resources, add manually
-	err = e.appendModuleResources(parsedConfig)
+	err = e.appendModuleAndVariableResources(parsedConfig)
 	if err != nil {
 		return parseError
 	}
@@ -420,13 +420,13 @@ func (e *EngineImpl) appendDisabledResources(c *hclconfig.Config) error {
 }
 
 // appends module in the given config to the engines config
-func (e *EngineImpl) appendModuleResources(c *hclconfig.Config) error {
+func (e *EngineImpl) appendModuleAndVariableResources(c *hclconfig.Config) error {
 	if c == nil {
 		return nil
 	}
 
 	for _, r := range c.Resources {
-		if r.Metadata().Type == types.TypeModule {
+		if r.Metadata().Type == types.TypeModule || r.Metadata().Type == types.TypeVariable {
 			// if the resource already exists remove it
 			er, err := e.config.FindResource(types.FQDNFromResource(r).String())
 			if err == nil {
@@ -436,7 +436,7 @@ func (e *EngineImpl) appendModuleResources(c *hclconfig.Config) error {
 			// add the resource to the state
 			err = e.config.AppendResource(r)
 			if err != nil {
-				return fmt.Errorf("unable to add module resource: %s", err)
+				return fmt.Errorf("unable to add resource: %s", err)
 			}
 		}
 	}

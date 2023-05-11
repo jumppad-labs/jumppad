@@ -52,8 +52,9 @@ func newGenerateReadmeCommand(e shipyard.Engine) *cobra.Command {
 
 			// print the authors
 			cmd.Println("| <!-- -->    | <!-- -->    |")
-			cmd.Println("| Author | %s |", blueprint.Author)
-			cmd.Println("| Slug | %s |", blueprint.Slug)
+			cmd.Println("| ---- |  ----------- |")
+			cmd.Printf("| Author | %s |\n", blueprint.Author)
+			cmd.Printf("| Slug | %s |\n", blueprint.Slug)
 			cmd.Println("")
 
 			cmd.Println("## Description")
@@ -74,11 +75,11 @@ func newGenerateReadmeCommand(e shipyard.Engine) *cobra.Command {
 				cmd.Println("These variables can be set to configure this blueprint")
 				cmd.Println("")
 
-				cmd.Println("| Name | Default | Description |")
-				cmd.Println("| ---- | ------- | ----------- |")
+				cmd.Println("| Name |  Description |")
+				cmd.Println("| ---- |  ----------- |")
 
 				for _, v := range variables {
-					cmd.Printf("| %s | %s | %s |\n", v.Name, v.Default, v.Description)
+					cmd.Printf("| %s | %s |\n", v.Name, v.Description)
 				}
 				cmd.Println("")
 			}
@@ -102,7 +103,7 @@ func newGenerateReadmeCommand(e shipyard.Engine) *cobra.Command {
 				cmd.Println("| ---- |  ----------- |")
 
 				for _, v := range outputs {
-					cmd.Printf("| %s | %s |\n", v.Name, "")
+					cmd.Printf("| %s | %s |\n", v.Name, v.Description)
 				}
 				cmd.Println("")
 			}
