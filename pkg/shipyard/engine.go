@@ -37,9 +37,7 @@ type Engine interface {
 	ParseConfig(string) ([]types.Resource, error)
 	ParseConfigWithVariables(string, map[string]string, string) ([]types.Resource, error)
 	Destroy() error
-	ResourceCount() int
-	ResourceCountForType(string) int
-	Blueprint() *resources.Blueprint
+	Config() *hclconfig.Config
 }
 
 // EngineImpl is responsible for creating and destroying resources
@@ -127,8 +125,9 @@ func (e *EngineImpl) GetClients() *clients.Clients {
 	return e.clients
 }
 
-func (e *EngineImpl) Blueprint() *resources.Blueprint {
-	return nil
+// Config returns the parsed config
+func (e *EngineImpl) Config() *hclconfig.Config {
+	return e.config
 }
 
 // ParseConfig parses the given Shipyard files and creating the resource types but does
@@ -349,7 +348,7 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 	}
 
 	// process is not called for module resources, add manually
-	err = e.appendModuleResources(parsedConfig)
+	err = e.appendModuleAndVariableResources(parsedConfig)
 	if err != nil {
 		return parseError
 	}
@@ -421,13 +420,13 @@ func (e *EngineImpl) appendDisabledResources(c *hclconfig.Config) error {
 }
 
 // appends module in the given config to the engines config
-func (e *EngineImpl) appendModuleResources(c *hclconfig.Config) error {
+func (e *EngineImpl) appendModuleAndVariableResources(c *hclconfig.Config) error {
 	if c == nil {
 		return nil
 	}
 
 	for _, r := range c.Resources {
-		if r.Metadata().Type == types.TypeModule {
+		if r.Metadata().Type == types.TypeModule || r.Metadata().Type == types.TypeVariable {
 			// if the resource already exists remove it
 			er, err := e.config.FindResource(types.FQDNFromResource(r).String())
 			if err == nil {
@@ -437,7 +436,7 @@ func (e *EngineImpl) appendModuleResources(c *hclconfig.Config) error {
 			// add the resource to the state
 			err = e.config.AppendResource(r)
 			if err != nil {
-				return fmt.Errorf("unable to add module resource: %s", err)
+				return fmt.Errorf("unable to add resource: %s", err)
 			}
 		}
 	}

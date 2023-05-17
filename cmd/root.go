@@ -62,6 +62,10 @@ func init() {
 	connectorCmd.AddCommand(newConnectorRunCommand())
 	connectorCmd.AddCommand(connectorStopCmd)
 	connectorCmd.AddCommand(newConnectorCertCmd())
+
+	// add the generate command
+	rootCmd.AddCommand(generateCmd)
+	generateCmd.AddCommand(newGenerateReadmeCommand(engine))
 }
 
 func createEngine(l hclog.Logger) (shipyard.Engine, gvm.Versions) {
