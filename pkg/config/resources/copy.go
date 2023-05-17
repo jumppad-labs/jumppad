@@ -18,7 +18,7 @@ type Copy struct {
 	Permissions string `hcl:"permissions,optional" json:"permissions,omitempty"` // Permissions 0777 to set for written file
 
 	// outputs
-	CopiedFiles []string `hcl:"permissions,optional" json:"copied_files"`
+	CopiedFiles []string `hcl:"copied_files,optional" json:"copied_files"`
 }
 
 func (t *Copy) Process() error {

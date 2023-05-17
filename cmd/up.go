@@ -314,5 +314,5 @@ func buildBrowserPath(n, p string, resourceType string, path string) string {
 
 	ty := resourceType
 
-	return fmt.Sprintf("http://%s:%s.%s", utils.FQDN(n, "", ty), p, path)
+	return fmt.Sprintf("http://%s:%s%s", utils.FQDN(n, "", ty), p, path)
 }
