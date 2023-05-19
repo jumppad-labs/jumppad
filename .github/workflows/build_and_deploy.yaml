@@ -133,7 +133,7 @@ jobs:
           './examples/single_k3s_cluster',
           './examples/multiple_k3s_clusters',
           './examples/local_exec',
-          './examples/certifcates',
+          './examples/certificates',
         ]
 
     steps:
