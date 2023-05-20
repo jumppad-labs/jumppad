@@ -474,6 +474,8 @@ func (d *DockerTasks) FindContainerIDs(fqdn string) ([]string, error) {
 		return nil, err
 	}
 
+	d.l.Debug("Found container ids", "fqrn", fqdn, "ids", cl, "opts", opts)
+
 	if len(cl) > 0 {
 		ids := []string{}
 		for _, c := range cl {

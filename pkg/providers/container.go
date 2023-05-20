@@ -80,6 +80,11 @@ func (c *Container) Destroy() error {
 }
 
 func (c *Container) internalCreate() error {
+
+	// set the fqdn
+	fqdn := utils.FQDN(c.config.Name, c.config.Module, c.config.Type)
+	c.config.FQRN = fqdn
+
 	// do we need to build an image
 	if c.config.Build != nil {
 
@@ -116,10 +121,6 @@ func (c *Container) internalCreate() error {
 		c.log.Error("Unable to create container", "ref", c.config.ID, "error", err)
 		return err
 	}
-
-	// set the fqdn
-	fqdn := utils.FQDN(c.config.Name, c.config.Module, c.config.Type)
-	c.config.FQRN = fqdn
 
 	// get the assigned ip addresses for the container
 	dc := c.client.ListNetworks(id)
