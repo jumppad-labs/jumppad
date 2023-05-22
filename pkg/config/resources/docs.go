@@ -16,7 +16,7 @@ type Docs struct {
 
 	Path           string `hcl:"path" json:"path"`
 	NavigationFile string `hcl:"navigation_file" json:"navigation_file"`
-	Port           int    `hcl:"port" json:"port"`
+	Port           int    `hcl:"port,optional" json:"port"`
 	OpenInBrowser  bool   `hcl:"open_in_browser,optional" json:"open_in_browser"` // When a host port is defined open the location in a browser
 
 	// Output parameters
