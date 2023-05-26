@@ -3,7 +3,7 @@ package resources
 import (
 	"os"
 
-	"github.com/shipyard-run/hclconfig/types"
+	"github.com/jumppad-labs/hclconfig/types"
 )
 
 // TypeTemplate is the resource string for a Template resource

@@ -1,9 +1,9 @@
 package cmd
 
 import (
+	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
-	"github.com/shipyard-run/hclconfig/types"
 	"github.com/spf13/cobra"
 )
 

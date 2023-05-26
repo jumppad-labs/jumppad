@@ -14,7 +14,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/fatih/color"
 	"github.com/hashicorp/go-hclog"
-	hcltypes "github.com/shipyard-run/hclconfig/types"
+	hcltypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/spf13/cobra"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients"

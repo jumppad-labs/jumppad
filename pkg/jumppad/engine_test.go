@@ -13,14 +13,14 @@ import (
 
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/hashicorp/go-hclog"
+	"github.com/jumppad-labs/hclconfig"
+	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad/constants"
 	"github.com/jumppad-labs/jumppad/pkg/providers"
 	"github.com/jumppad-labs/jumppad/pkg/providers/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"github.com/shipyard-run/hclconfig"
-	"github.com/shipyard-run/hclconfig/types"
 
 	"github.com/stretchr/testify/require"
 	assert "github.com/stretchr/testify/require"

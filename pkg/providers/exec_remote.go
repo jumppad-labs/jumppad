@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	hclog "github.com/hashicorp/go-hclog"
+	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"github.com/shipyard-run/hclconfig/types"
 	"golang.org/x/xerrors"
 )
 

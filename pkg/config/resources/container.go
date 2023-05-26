@@ -1,7 +1,7 @@
 package resources
 
 import (
-	"github.com/shipyard-run/hclconfig/types"
+	"github.com/jumppad-labs/hclconfig/types"
 )
 
 // TypeContainer is the resource string for a Container resource

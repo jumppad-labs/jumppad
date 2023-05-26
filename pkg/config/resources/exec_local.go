@@ -1,6 +1,6 @@
 package resources
 
-import "github.com/shipyard-run/hclconfig/types"
+import "github.com/jumppad-labs/hclconfig/types"
 
 // TypeExecLocal is the resource string for a LocalExec resource
 const TypeLocalExec string = "local_exec"

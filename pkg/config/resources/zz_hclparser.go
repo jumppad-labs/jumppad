@@ -3,8 +3,8 @@ package resources
 import (
 	"os"
 
+	"github.com/jumppad-labs/hclconfig"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"github.com/shipyard-run/hclconfig"
 )
 
 // setupHCLConfig configures the HCLConfig package and registers the custom types

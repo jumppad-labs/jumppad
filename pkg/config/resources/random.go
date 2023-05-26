@@ -1,6 +1,6 @@
 package resources
 
-import "github.com/shipyard-run/hclconfig/types"
+import "github.com/jumppad-labs/hclconfig/types"
 
 // TypeRandomNumber is the resource for generating random numbers
 const TypeRandomNumber string = "random_number"

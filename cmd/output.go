@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/hokaccha/go-prettyjson"
+	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
-	"github.com/shipyard-run/hclconfig/types"
 	"github.com/spf13/cobra"
 )
 

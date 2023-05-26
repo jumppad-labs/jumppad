@@ -1,6 +1,6 @@
 package resources
 
-import "github.com/shipyard-run/hclconfig/types"
+import "github.com/jumppad-labs/hclconfig/types"
 
 // TypeCertificateCA is the resource string for a self-signed CA
 const TypeCertificateCA string = "certificate_ca"

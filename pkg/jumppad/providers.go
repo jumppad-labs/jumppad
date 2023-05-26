@@ -1,10 +1,10 @@
 package jumppad
 
 import (
+	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/providers"
-	"github.com/shipyard-run/hclconfig/types"
 )
 
 // generateProviderImpl returns providers grouped together in order of execution

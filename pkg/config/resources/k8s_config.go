@@ -1,6 +1,6 @@
 package resources
 
-import "github.com/shipyard-run/hclconfig/types"
+import "github.com/jumppad-labs/hclconfig/types"
 
 // TypeK8sConfig defines the string type for the Kubernetes config resource
 const TypeK8sConfig string = "k8s_config"
