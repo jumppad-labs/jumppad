@@ -1,4 +1,4 @@
-package shipyard
+package jumppad
 
 import (
 	"github.com/jumppad-labs/jumppad/pkg/clients"

@@ -19,15 +19,15 @@ import (
 
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
-	"github.com/jumppad-labs/jumppad/pkg/shipyard"
+	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
-func newLogCmd(engine shipyard.Engine, dc clients.Docker, stdout, stderr io.Writer) *cobra.Command {
+func newLogCmd(engine jumppad.Engine, dc clients.Docker, stdout, stderr io.Writer) *cobra.Command {
 	logCmd := &cobra.Command{
 		Use:     "logs [resource]",
-		Short:   "Tails logs for running shipyard resources",
-		Long:    "Tails logs for running shipyard resources",
+		Short:   "Tails logs for running jumppad resources",
+		Long:    "Tails logs for running jumppad resources",
 		Aliases: []string{"log"},
 		Example: `
   # Tail logs for all running resources

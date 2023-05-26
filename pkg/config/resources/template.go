@@ -16,8 +16,6 @@ type Template struct {
 	Source      string      `hcl:"source" json:"source"`                          // Source template to be processed as string
 	Destination string      `hcl:"destination" json:"destination"`                // Destination filename to write
 	Variables   interface{} `hcl:"variables,optional" json:"variables,omitempty"` // Variables to be processed in the template
-
-	InternalVars map[string]interface{} // stores a converted go type version of the hcl.Value types
 }
 
 func (t *Template) Process() error {

@@ -16,14 +16,14 @@ import (
 
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
-	"github.com/jumppad-labs/jumppad/pkg/shipyard"
+	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
 
 	markdown "github.com/MichaelMure/go-term-markdown"
 )
 
-func newRunCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, vm gvm.Versions, cc clients.Connector, l hclog.Logger) *cobra.Command {
+func newRunCmd(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, vm gvm.Versions, cc clients.Connector, l hclog.Logger) *cobra.Command {
 	var noOpen bool
 	var force bool
 	var y bool
@@ -58,7 +58,7 @@ func newRunCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients
 	return runCmd
 }
 
-func newRunCmdFunc(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, vm gvm.Versions, cc clients.Connector, noOpen *bool, force *bool, runVersion *string, autoApprove *bool, variables *[]string, variablesFile *string, l hclog.Logger) func(cmd *cobra.Command, args []string) error {
+func newRunCmdFunc(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, vm gvm.Versions, cc clients.Connector, noOpen *bool, force *bool, runVersion *string, autoApprove *bool, variables *[]string, variablesFile *string, l hclog.Logger) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		// create the shipyard and sub folders in the users home directory
 		utils.CreateFolders()

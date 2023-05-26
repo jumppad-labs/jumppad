@@ -7,12 +7,12 @@ import (
 	"strings"
 
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
-	"github.com/jumppad-labs/jumppad/pkg/shipyard"
+	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/shipyard-run/hclconfig/types"
 	"github.com/spf13/cobra"
 )
 
-func newEnvCmd(e shipyard.Engine) *cobra.Command {
+func newEnvCmd(e jumppad.Engine) *cobra.Command {
 	var unset bool
 
 	envCmd := &cobra.Command{

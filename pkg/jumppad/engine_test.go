@@ -1,4 +1,4 @@
-package shipyard
+package jumppad
 
 import (
 	"fmt"
@@ -15,9 +15,9 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/jumppad/constants"
 	"github.com/jumppad-labs/jumppad/pkg/providers"
 	"github.com/jumppad-labs/jumppad/pkg/providers/mocks"
-	"github.com/jumppad-labs/jumppad/pkg/shipyard/constants"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/shipyard-run/hclconfig"
 	"github.com/shipyard-run/hclconfig/types"
@@ -353,12 +353,12 @@ func TestApplyCallsProviderDestroyForDisabledResources(t *testing.T) {
 	require.NoError(t, err)
 
 	// get the disabled resource
-	r,err:= e.config.FindResource("resource.container.consul_disabled")
-	require.NoError(t,err)
-	require.NotNil(t,r)
+	r, err := e.config.FindResource("resource.container.consul_disabled")
+	require.NoError(t, err)
+	require.NotNil(t, r)
 
 	// property should be disabled
-	require.Equal(t,constants.StatusDisabled ,r.Metadata().Properties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusDisabled, r.Metadata().Properties[constants.PropertyStatus])
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1, r)

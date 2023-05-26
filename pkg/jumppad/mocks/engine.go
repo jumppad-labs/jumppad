@@ -4,7 +4,7 @@ package mocks
 
 import (
 	resources "github.com/jumppad-labs/jumppad/pkg/config/resources"
-	shipyard "github.com/jumppad-labs/jumppad/pkg/shipyard"
+	"github.com/jumppad-labs/jumppad/pkg/clients"
 	mock "github.com/stretchr/testify/mock"
 
 	types "github.com/shipyard-run/hclconfig/types"
@@ -98,15 +98,15 @@ func (_m *Engine) Destroy() error {
 }
 
 // GetClients provides a mock function with given fields:
-func (_m *Engine) GetClients() *shipyard.Clients {
+func (_m *Engine) GetClients() *clients.Clients {
 	ret := _m.Called()
 
-	var r0 *shipyard.Clients
-	if rf, ok := ret.Get(0).(func() *shipyard.Clients); ok {
+	var r0 *clients.Clients
+	if rf, ok := ret.Get(0).(func() *clients.Clients); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*shipyard.Clients)
+			r0 = ret.Get(0).(*clients.Clients)
 		}
 	}
 

@@ -94,18 +94,18 @@ func TestValidatesNameAndReturnsErrorWhenTooLong(t *testing.T) {
 }
 
 func TestFQDNReturnsCorrectValue(t *testing.T) {
-	fq := FQDN("test", "type")
-	assert.Equal(t, "test.type.shipyard.run", fq)
+	fq := FQDN("test", "", "type")
+	assert.Equal(t, "test.type.jumppad.dev", fq)
 }
 
 func TestFQDNReplacesInvalidChars(t *testing.T) {
-	fq := FQDN("tes&t", "k8s_cluster")
-	assert.Equal(t, "tes-t.k8s-cluster.shipyard.run", fq)
+	fq := FQDN("tes&t", "", "kubernetes_cluster")
+	assert.Equal(t, "tes-t.k8s-cluster.jumppad.dev", fq)
 }
 
 func TestFQDNVolumeReturnsCorrectValue(t *testing.T) {
 	fq := FQDNVolumeName("test")
-	assert.Equal(t, "test.volume.shipyard.run", fq)
+	assert.Equal(t, "test.volume.jumppad.dev", fq)
 }
 
 func TestHomeReturnsCorrectValue(t *testing.T) {
@@ -189,7 +189,7 @@ func TestGetClusterConfigCreatesNewNomadConfig(t *testing.T) {
 
 	assert.Contains(t, GetDockerIP(), conf.LocalAddress)
 	assert.Equal(t, 4646, conf.RemoteAPIPort)
-	assert.Equal(t, "server.testing.nomad-cluster.shipyard.run", conf.RemoteAddress)
+	assert.Equal(t, "server.testing.nomad-cluster.jumppad.dev", conf.RemoteAddress)
 	assert.Equal(t, GetDockerIP(), conf.LocalAddress)
 	assert.Equal(t, configDir, dir)
 }
@@ -207,11 +207,11 @@ func TestGetClusterConfigCreatesNewKubernetesConfig(t *testing.T) {
 	setupClusterConfigTest(t)
 	configDir := filepath.Join(JumppadHome(), "config", "testing")
 
-	conf, dir := GetClusterConfig("k8s_cluster.testing")
+	conf, dir := GetClusterConfig("kubernetes_cluster.testing")
 
 	assert.Contains(t, GetDockerIP(), conf.LocalAddress)
 	assert.Equal(t, conf.APIPort, conf.RemoteAPIPort)
-	assert.Equal(t, "server.testing.k8s-cluster.shipyard.run", conf.RemoteAddress)
+	assert.Equal(t, "server.testing.kubernetes-cluster.jumppad.dev", conf.RemoteAddress)
 	assert.Equal(t, GetDockerIP(), conf.LocalAddress)
 	assert.Equal(t, configDir, dir)
 }
