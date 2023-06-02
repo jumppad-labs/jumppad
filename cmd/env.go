@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"runtime"
@@ -70,7 +71,9 @@ func newEnvCmd(e jumppad.Engine) *cobra.Command {
 						continue
 					}
 
-					val := strings.ReplaceAll(r.(*types.Output).Value, `\`, `\\`)
+					d, _ := json.Marshal(r.(*types.Output).Value)
+					val := strings.ReplaceAll(string(d), `\`, `\\`)
+					val = strings.ReplaceAll(val, `"`, `\"`)
 					if unset {
 						fmt.Printf("%s%s\n", prefix, r.Metadata().Name)
 					} else {
