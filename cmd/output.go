@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 
@@ -23,7 +25,7 @@ var outputCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		out := map[string]string{}
+		out := map[string]interface{}{}
 		// get the output variables
 		for _, r := range cfg.Resources {
 			if r.Metadata().Type == types.TypeOutput {
@@ -38,14 +40,15 @@ var outputCmd = &cobra.Command{
 
 				out[r.Metadata().Name] = r.(*types.Output).Value
 
-				if len(args) > 0 && strings.ToLower(args[0]) == strings.ToLower(r.Metadata().Name) {
-					cmd.Println(r.(*types.Output).Value)
+				if len(args) > 0 && strings.EqualFold(args[0], r.Metadata().Name) {
+					d, _ := json.Marshal(r.(*types.Output).Value)
+					fmt.Printf("%s", string(d))
 					return
 				}
 			}
 		}
 
-		s, _ := prettyjson.Marshal(out)
-		cmd.Println(string(s))
+		d, _ := prettyjson.Marshal(out)
+		fmt.Printf("%s", string(d))
 	},
 }
