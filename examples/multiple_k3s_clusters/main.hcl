@@ -24,10 +24,20 @@ module "consul_dc2" {
   }
 }
 
-output "dc1_addr" {
-  value = module.consul_dc1.output.consul_http_addr
+output "dc1_id" {
+  value = module.consul_dc1.output.k8s_port
 }
 
-output "dc2_addr" {
-  value = module.consul_dc2.output.consul_http_addr
+output "addr_map" {
+  value = {
+    dc1 = module.consul_dc1.output.consul_http_addr
+    dc2 = module.consul_dc2.output.consul_http_addr
+  }
+}
+
+output "addr_list" {
+  value = [
+    module.consul_dc1.output.consul_http_addr,
+    module.consul_dc2.output.consul_http_addr
+  ]
 }
