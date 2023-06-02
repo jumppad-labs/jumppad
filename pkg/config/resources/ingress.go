@@ -3,7 +3,7 @@ package resources
 import (
 	"fmt"
 
-	"github.com/shipyard-run/hclconfig/types"
+	"github.com/jumppad-labs/hclconfig/types"
 )
 
 // TypeIngress is the resource string for the type

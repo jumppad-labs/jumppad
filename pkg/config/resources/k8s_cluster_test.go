@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/shipyard-run/hclconfig/types"
+	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/stretchr/testify/require"
 )
 

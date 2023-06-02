@@ -3,7 +3,7 @@ package resources
 import (
 	"fmt"
 
-	"github.com/shipyard-run/hclconfig/types"
+	"github.com/jumppad-labs/hclconfig/types"
 )
 
 // TypeCluster is the resource string for a Cluster resource

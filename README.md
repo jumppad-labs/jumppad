@@ -256,7 +256,7 @@ To run the unit tests you can use the make recipe `make test_unit` this runs the
 ```shell
 jumppad on  master via 🐹 v1.13.5 on 🐳 v19.03.5 ()
 ➜ make test_unit
-go test -v -race github.com/jumppad-labs/jumppad github.com/jumppad-labs/jumppad/cmd github.com/jumppad-labs/jumppad/pkg/clients github.com/jumppad-labs/jumppad/pkg/clients/mocks github.com/jumppad-labs/jumppad/pkg/config github.com/jumppad-labs/jumppad/pkg/providers github.com/jumppad-labs/jumppad/pkg/shipyard github.com/jumppad-labs/jumppad/pkg/utils
+go test -v -race github.com/jumppad-labs/jumppad github.com/jumppad-labs/jumppad/cmd github.com/jumppad-labs/jumppad/pkg/clients github.com/jumppad-labs/jumppad/pkg/clients/mocks github.com/jumppad-labs/jumppad/pkg/config github.com/jumppad-labs/jumppad/pkg/providers github.com/jumppad-labs/jumppad/pkg/jumppad github.com/jumppad-labs/jumppad/pkg/utils
 testing: warning: no tests to run
 PASS
 ok      github.com/jumppad-labs/jumppad        (cached) [no tests to run]
@@ -297,7 +297,7 @@ Feature: Docmentation
 2020-02-08T17:03:41.271Z [DEBUG] Attaching container to network: ref=terminal network=wan
     When I run apply                                                   # main_test.go:111 -> iRunApply
     Then there should be 1 network called "wan"                        # main_test.go:149 -> thereShouldBe1NetworkCalled
-    And there should be 1 container running called "docs.docs.shipyard.run" # main_test.go:115 -> thereShouldBeContainerRunningCalled
+    And there should be 1 container running called "docs.docs.jumppad.dev" # main_test.go:115 -> thereShouldBeContainerRunningCalled
     And a call to "http://localhost:8080/" should result in status 200 #
 
 # ...

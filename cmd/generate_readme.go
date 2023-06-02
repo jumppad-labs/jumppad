@@ -1,13 +1,13 @@
 package cmd
 
 import (
+	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
-	"github.com/jumppad-labs/jumppad/pkg/shipyard"
-	"github.com/shipyard-run/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/spf13/cobra"
 )
 
-func newGenerateReadmeCommand(e shipyard.Engine) *cobra.Command {
+func newGenerateReadmeCommand(e jumppad.Engine) *cobra.Command {
 	connectorRunCmd := &cobra.Command{
 		Use:   "readme",
 		Short: "Generate a markdown readme for the blueprints",

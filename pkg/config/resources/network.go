@@ -1,6 +1,6 @@
 package resources
 
-import "github.com/shipyard-run/hclconfig/types"
+import "github.com/jumppad-labs/hclconfig/types"
 
 // TypeNetwork is the string resource type for Network resources
 const TypeNetwork string = "network"

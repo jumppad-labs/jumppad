@@ -1,4 +1,4 @@
-package shipyard
+package jumppad
 
 import (
 
@@ -12,13 +12,13 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 
+	"github.com/jumppad-labs/hclconfig"
+	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/jumppad/constants"
 	"github.com/jumppad-labs/jumppad/pkg/providers"
-	"github.com/jumppad-labs/jumppad/pkg/shipyard/constants"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"github.com/shipyard-run/hclconfig"
-	"github.com/shipyard-run/hclconfig/types"
 )
 
 // Clients contains clients which are responsible for creating and destroying resources

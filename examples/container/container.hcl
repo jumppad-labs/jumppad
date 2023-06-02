@@ -9,7 +9,7 @@ variable "envoy_version" {
 resource "template" "consul_config" {
 
   source = <<-EOF
-  data_dir = "#{{ .Vars.data_dir }}"
+  data_dir = "{{ data_dir }}"
   log_level = "DEBUG"
   
   datacenter = "dc1"

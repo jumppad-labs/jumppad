@@ -13,8 +13,8 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	clientmocks "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/config"
-	"github.com/jumppad-labs/jumppad/pkg/shipyard"
-	"github.com/jumppad-labs/jumppad/pkg/shipyard/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/jumppad"
+	"github.com/jumppad-labs/jumppad/pkg/jumppad/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	gvm "github.com/shipyard-run/version-manager"
 	"github.com/spf13/cobra"
@@ -67,7 +67,7 @@ func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
 		nil,
 	)
 
-	clients := &shipyard.Clients{
+	clients := &jumppad.Clients{
 		HTTP:           mockHTTP,
 		Getter:         mockGetter,
 		Browser:        mockSystem,
@@ -353,7 +353,7 @@ func TestRunOpensBrowserWindowForResources(t *testing.T) {
 
 	// should open
 	c := config.NewContainer("test")
-	c.Ports = []config.Port{config.Port{Host: "8080", OpenInBrowser: "https://test.container.shipyard.run:8080"}}
+	c.Ports = []config.Port{config.Port{Host: "8080", OpenInBrowser: "https://test.container.jumppad.dev:8080"}}
 
 	// should not be opened
 	c2 := config.NewContainer("test2")
@@ -383,12 +383,12 @@ func TestRunOpensBrowserWindowForResources(t *testing.T) {
 	rm.http.AssertNumberOfCalls(t, "HealthCheckHTTP", 6)
 	rm.system.AssertNumberOfCalls(t, "OpenBrowser", 6)
 
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://test.ingress.shipyard.run:8080/", []int{200}, 30*time.Second)
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "https://test.container.shipyard.run:8080", []int{200}, 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://test.ingress.jumppad.dev:8080/", []int{200}, 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "https://test.container.jumppad.dev:8080", []int{200}, 30*time.Second)
 	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost", []int{200}, 30*time.Second)
 	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", []int{200}, 30*time.Second)
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://test.docs.shipyard.run:80", []int{200}, 30*time.Second)
-	rm.http.AssertCalled(t, "HealthCheckHTTP", fmt.Sprintf("http://server.test.nomad-cluster.shipyard.run:%d/", nomadConfig.APIPort), []int{200}, 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://test.docs.jumppad.dev:80", []int{200}, 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", fmt.Sprintf("http://server.test.nomad-cluster.jumppad.dev:%d/", nomadConfig.APIPort), []int{200}, 30*time.Second)
 }
 
 func TestRunDoesNotOpensBrowserWindowWhenCheckError(t *testing.T) {

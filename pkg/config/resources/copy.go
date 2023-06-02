@@ -1,6 +1,6 @@
 package resources
 
-import "github.com/shipyard-run/hclconfig/types"
+import "github.com/jumppad-labs/hclconfig/types"
 
 // TypeCopy copies files from one location to another
 const TypeCopy string = "copy"

@@ -1,6 +1,6 @@
 package resources
 
-import "github.com/shipyard-run/hclconfig/types"
+import "github.com/jumppad-labs/hclconfig/types"
 
 // TypeExecRemote is the resource string for a ExecRemote resource
 const TypeRemoteExec string = "remote_exec"

@@ -1,6 +1,6 @@
 package resources
 
-import "github.com/shipyard-run/hclconfig/types"
+import "github.com/jumppad-labs/hclconfig/types"
 
 // TypeNomadJob defines the string type for the Kubernetes config resource
 const TypeNomadJob string = "nomad_job"

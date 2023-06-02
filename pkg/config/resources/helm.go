@@ -1,8 +1,8 @@
 package resources
 
 import (
+	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"github.com/shipyard-run/hclconfig/types"
 )
 
 // TypeHelm is the string representation of the ResourceType

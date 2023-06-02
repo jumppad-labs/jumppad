@@ -6,11 +6,11 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/jumppad-labs/hclconfig"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/providers"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"github.com/shipyard-run/hclconfig"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 )
