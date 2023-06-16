@@ -51,6 +51,8 @@ const (
 	StorageDriverOverlay      = "overlay"
 )
 
+const defaultExitCode = 254
+
 // DockerTasks is a concrete implementation of ContainerTasks which uses the Docker SDK
 type DockerTasks struct {
 	engineType    string
@@ -783,7 +785,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 
 	// create the directory paths ensure unix paths for containers
 	destPath := filepath.ToSlash(filepath.Join("/cache", path))
-	err = d.ExecuteCommand(tmpID, []string{"mkdir", "-p", destPath}, nil, "/", "", "", nil)
+	_, err = d.ExecuteCommand(tmpID, []string{"mkdir", "-p", destPath}, nil, "/", "", "", 300, nil)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to create destination path %s in volume: %s", destPath, err)
 	}
@@ -797,7 +799,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 
 		// check if the image exists if we are not doing a forced update
 		if !d.force && !force {
-			err := d.ExecuteCommand(tmpID, []string{"find", destFile}, nil, "/", "", "", nil)
+			_, err := d.ExecuteCommand(tmpID, []string{"find", destFile}, nil, "/", "", "", 300, nil)
 			if err == nil {
 				// we have the image already
 				d.l.Debug("File already cached", "name", name, "path", path)
@@ -818,7 +820,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 }
 
 // CopyFileToContainer copies the file at path filename to the container containerID and
-// stores it in the container at the path path.
+// stores it in the container at the directory path.
 func (d *DockerTasks) CopyFileToContainer(containerID, filename, path string) error {
 	f, err := os.Open(filename)
 	if err != nil {
@@ -878,7 +880,7 @@ func (d *DockerTasks) CopyFileToContainer(containerID, filename, path string) er
 // id is the id of the container to execute the command in
 // command is a slice of strings to execute
 // writer [optional] will be used to write any output from the command execution.
-func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, workingDir string, user, group string, writer io.Writer) error {
+func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, workingDir string, user, group string, timeout int, writer io.Writer) (int, error) {
 	// set the user details
 	if user != "" && group != "" {
 		user = fmt.Sprintf("%s:%s", user, group)
@@ -894,18 +896,18 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 	})
 
 	if err != nil {
-		return xerrors.Errorf("unable to create container exec: %w", err)
+		return defaultExitCode, xerrors.Errorf("unable to create container exec: %w", err)
 	}
 
 	// get logs from an attach
 	stream, err := d.c.ContainerExecAttach(context.Background(), execid.ID, types.ExecStartCheck{})
 	if err != nil {
-		return xerrors.Errorf("unable to attach logging to exec process: %w", err)
+		return defaultExitCode, xerrors.Errorf("unable to attach logging to exec process: %w", err)
 	}
 
 	defer stream.Close()
 
-	streamContext, cancelStream := context.WithCancel(context.Background())
+	streamContext, cancelStream := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
 	defer cancelStream()
 
 	// if we have a writer stream the logs from the container to the writer
@@ -927,7 +929,7 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 
 		if err := <-errCh; err != nil {
 			d.l.Error("unable to hijack exec stream: %s", err)
-			return err
+			return defaultExitCode, err
 		}
 	}
 
@@ -935,15 +937,15 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 	for {
 		i, err := d.c.ContainerExecInspect(context.Background(), execid.ID)
 		if err != nil {
-			return xerrors.Errorf("unable to determine status of exec process: %w", err)
+			return defaultExitCode, xerrors.Errorf("unable to determine status of exec process: %w", err)
 		}
 
 		if !i.Running {
 			if i.ExitCode == 0 {
-				return nil
+				return i.ExitCode, nil
 			}
 
-			return xerrors.Errorf("container exec failed with exit code %d", i.ExitCode)
+			return i.ExitCode, xerrors.Errorf("container exec failed with exit code %d", i.ExitCode)
 		}
 
 		time.Sleep(1 * time.Second)

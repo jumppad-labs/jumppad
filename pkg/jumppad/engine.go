@@ -376,7 +376,7 @@ func (e *EngineImpl) destroyDisabledResources() error {
 			p := e.getProvider(r, e.clients)
 			if p == nil {
 				r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
-				return fmt.Errorf("unable to create provider for resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
+				return fmt.Errorf("unable to create provider for resource Name: %s, Type: %s. Please check the provider is registered in providers.go", r.Metadata().Name, r.Metadata().Type)
 			}
 
 			// call destroy

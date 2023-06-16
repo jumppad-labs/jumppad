@@ -94,7 +94,7 @@ func (c *RemoteExec) Create() error {
 		group = c.config.RunAs.Group
 	}
 
-	err := c.client.ExecuteCommand(targetID, command, envs, c.config.WorkingDirectory, user, group, c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
+	_, err := c.client.ExecuteCommand(targetID, command, envs, c.config.WorkingDirectory, user, group, 300, c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
 	if err != nil {
 		c.log.Error("Error executing command", "ref", c.config.Name, "image", c.config.Image, "command", c.config.Command)
 		err = xerrors.Errorf("Unable to execute command: in remote container: %w", err)

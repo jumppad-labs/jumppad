@@ -60,6 +60,12 @@ func generateProviderImpl(c types.Resource, cc *clients.Clients) providers.Provi
 		return providers.NewContainerSidecar(c.(*resources.Sidecar), cc.ContainerTasks, cc.HTTP, cc.Logger)
 	case resources.TypeTemplate:
 		return providers.NewTemplate(c.(*resources.Template), cc.Logger)
+	case resources.TypeBook:
+		return providers.NewBook(c.(*resources.Book), cc.Logger)
+	case resources.TypeChapter:
+		return providers.NewChapter(c.(*resources.Chapter), cc.Logger)
+	case resources.TypeTask:
+		return providers.NewTask(c.(*resources.Task), cc.Logger)
 	}
 
 	return nil

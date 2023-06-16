@@ -49,7 +49,7 @@ func TestExecuteCommandCreatesExec(t *testing.T) {
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}
-	err := md.ExecuteCommand("testcontainer", command, []string{"abc=123"}, "/files", "1000", "2000", writer)
+	_, err := md.ExecuteCommand("testcontainer", command, []string{"abc=123"}, "/files", "1000", "2000", 300, writer)
 	assert.NoError(t, err)
 
 	mk.AssertCalled(t, "ContainerExecCreate", mock.Anything, "testcontainer", mock.Anything)
@@ -81,7 +81,7 @@ func TestExecuteCommandExecFailReturnError(t *testing.T) {
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}
-	err := md.ExecuteCommand("testcontainer", command, nil, "/", "", "", writer)
+	_, err := md.ExecuteCommand("testcontainer", command, nil, "/", "", "", 300, writer)
 	assert.Error(t, err)
 }
 
@@ -95,7 +95,7 @@ func TestExecuteCommandAttachesToExec(t *testing.T) {
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}
-	err := md.ExecuteCommand("testcontainer", command, nil, "/", "", "", writer)
+	_, err := md.ExecuteCommand("testcontainer", command, nil, "/", "", "", 300, writer)
 	assert.NoError(t, err)
 
 	mk.AssertCalled(t, "ContainerExecAttach", mock.Anything, "abc", mock.Anything)
@@ -113,7 +113,7 @@ func TestExecuteCommandAttachFailReturnError(t *testing.T) {
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}
-	err := md.ExecuteCommand("testcontainer", command, nil, "/", "", "", writer)
+	_, err := md.ExecuteCommand("testcontainer", command, nil, "/", "", "", 300, writer)
 	assert.Error(t, err)
 }
 
@@ -161,7 +161,7 @@ func TestExecuteCommandInspectsExecAndReturnsErrorOnFail(t *testing.T) {
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}
-	err := md.ExecuteCommand("testcontainer", command, nil, "/", "", "", writer)
+	_, err := md.ExecuteCommand("testcontainer", command, nil, "/", "", "", 300, writer)
 	assert.Error(t, err)
 
 	mk.AssertCalled(t, "ContainerExecInspect", mock.Anything, "abc", mock.Anything)

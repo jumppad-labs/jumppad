@@ -14,12 +14,16 @@ type Docs struct {
 
 	Image *Image `hcl:"image,block" json:"image,omitempty"` // image to use for the container
 
+	Content []string `hcl:"content" json:"content"`
+
 	Path           string `hcl:"path" json:"path"`
 	NavigationFile string `hcl:"navigation_file" json:"navigation_file"`
 	Port           int    `hcl:"port,optional" json:"port"`
 	OpenInBrowser  bool   `hcl:"open_in_browser,optional" json:"open_in_browser"` // When a host port is defined open the location in a browser
 
 	// Output parameters
+
+	// Navigation string `hcl:"navigation,optional" json:"navigation"`
 
 	// FQDN is the fully qualified domain name for the container, this can be used
 	// to access the container from other sources

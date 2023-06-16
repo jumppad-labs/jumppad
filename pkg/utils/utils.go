@@ -253,6 +253,17 @@ func GetDataFolder(p string, perms os.FileMode) string {
 	return data
 }
 
+// GetLibraryFolder creates the library directory used by the application
+func GetLibraryFolder(p string, perms os.FileMode) string {
+	data := filepath.Join(JumppadHome(), "library", p)
+
+	// create the folder if it does not exist
+	os.MkdirAll(data, perms)
+	os.Chmod(data, perms)
+
+	return data
+}
+
 // GetDockerHost returns the location of the Docker API depending on the platform
 func GetDockerHost() string {
 	if dh := os.Getenv("DOCKER_HOST"); dh != "" {
