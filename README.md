@@ -1,37 +1,42 @@
 # jumppad
 
+![build](https://github.com/jumppad-labs/jumppad/workflows/Build/badge.svg)  
 
-![](https://github.com/jumppad-labs/jumppad/workflows/Build/badge.svg)  
-![](https://github.com/jumppad-labs/jumppad/workflows/Release/badge.svg)  
+![release](https://github.com/jumppad-labs/jumppad/workflows/Release/badge.svg)  
   
 [![codecov](https://codecov.io/gh/jumppad-labs/jumppad/branch/master/graph/badge.svg)](https://codecov.io/gh/jumppad-labs/jumppad)
-
-![](./shipyard_horizontal.png)
 
 Jumppad is a tool for building modern cloud native development environments. Using the Jumppad configuration language you can create OCI containers, Nomad/Kubernetes clusters and more.
 
 ## Community
+
 Join our community on Discord: [https://discord.gg/ZuEFPJU69D](https://discord.gg/ZuEFPJU69D)
 
 ## Questions
-## Is Jumppad like Terraform?
+
+### Is Jumppad like Terraform?
+
 Kind of, but more about local environments rather than infrastructure
 
-## Why not use Docker Compose?
+### Why not use Docker Compose?
+
 Docker Compose is one of our favourite tools but we found it does not manage dependencies particulary well. Compose also works on a really low level of abstraction. Jumppad addresses these missing features.
 
-## Is Jumppad just for Docker?
+### Is Jumppad just for Docker?
+
 No, Jumppad is designed to work with Docker, Podman, Raw binaries, etc. At present we only have a Driver for Docker and Podman, but others are on our Roadmap.
 
-## Can I use Jumppad for anything other than Dev environments?
+### Can I use Jumppad for anything other than Dev environments?
+
 Yes, Jumppad can be used to create interactive documentation for your applications and redistributable demo environments to show off your tool or product.
 
 ## Example Jumppad Config
+
 The following snippets are examples of things you can build with Jumppad, for more detailed examples please see the Blueprints repo [https://github.com/shipyard-run/blueprints](https://github.com/shipyard-run/blueprints)
 
-## Kubernetes Cluster
+### Kubernetes Cluster
 
-```
+```hcl
 k8s_cluster "k3s" {
   driver  = "k3s" // default
 
@@ -69,9 +74,9 @@ k8s_ingress "consul-http" {
 }
 ```
 
-## Nomad Cluster
+### Nomad Cluster
 
-```
+```hcl
 nomad_cluster "dev" {
   version = "v0.10.2"
 
@@ -111,9 +116,9 @@ nomad_ingress "nomad-http" {
 }
 ```
 
-## Docker Container
+### Docker Container
 
-```
+```hcl
 container "consul" {
   image   {
     name = "consul:1.6.1"
@@ -161,17 +166,17 @@ container "consul" {
 
 Podman support is experimental and at present many features such as Kubernetes clusters do not work with rootless podman and require root access.
 
-## Enable the podman socket
+### Enable the podman socket
 
 Jumppad uses podman's API, which is compatible with the Docker Enginer API. To enable this, you need to run the podman socket as a group that your user has access to. The following example uses the `docker` group:
 
-```
+```shell
 sudo sed '/^SocketMode=.*/a SocketGroup=docker' -i /lib/systemd/system/podman.socket
 ```
 
 Then emable the podman socket service
 
-```
+```shell
 sudo systemctl daemon-reload
 
 sudo systemctl enable podman.socket
@@ -182,25 +187,25 @@ sudo systemctl start podman.service
 
 For sockets to be writable they also require execute permission on the parent folder
 
-```
+```shell
 sudo chmod +x /run/podman
 ```
 
 Point your DOCKER_HOST environment variable at the socket
 
-```
+```shell
 export DOCKER_HOST=unix:///run/podman/podman.sock
 ```
 
 If you have the Docker CLI installed you should be able to contact the podman daemon using the standard Docker commands
 
-```
+```shell
 docker ps
 ```
 
 ### Default network
 
-```
+```shell
 ➜ sudo podman network ls
 NETWORK ID    NAME    VERSION  PLUGINS
 2f259bab93aa  podman  0.4.0    bridge,portmap,firewall,tuning
@@ -210,7 +215,7 @@ NETWORK ID    NAME    VERSION  PLUGINS
 
 Image pull silently fails if there are no registries defined in podmans /etc/containers/registries.conf
 
-```
+```shell
 echo -e "[registries.search]\nregistries = ['docker.io']" | sudo tee /etc/containers/registries.conf
 ```
 
@@ -228,28 +233,24 @@ https://www.linuxuprising.com/2020/07/ubuntu-how-to-free-up-port-53-used-by.html
 
 Install dnsmasq
 
-```
+```shell
 sudo apt install dnsmasq
 ```
 
 Configure dnsmasq for external name server resolution or external network connections will not work
 
-Install the podman dns plugin
-
-https://github.com/containers/dnsname/blob/main/README_PODMAN.md
-
+![Install the podman dns plugin](https://github.com/containers/dnsname/blob/main/README_PODMAN.md).
 
 ## Contributing
 
 We love contributions to the project, to contribute, first ensure that there is an issue and that it has been acknowledged by one of the maintainers of the project. Ensuring an issue exists and has been acknowledged ensures that the work you are about to submit will not be rejected due to specifications or duplicate work.
 Once an issue exists, you can modify the code and raise a PR against this repo. We are working on increasing code coverage, please ensure that your work has at least 80% test coverage before submitting.
 
-
-## Testing:
+## Testing
 
 The project has two types of tests, pure code Unit tests and Functional tests, which apply real blueprints to a locally-running Docker engine and test output.
 
-### Unit tests:
+### Unit tests
 
 To run the unit tests you can use the make recipe `make test_unit` this runs the `go test` and excludes the functional tests.
 
@@ -275,7 +276,7 @@ ok      github.com/jumppad-labs/jumppad        (cached) [no tests to run]
 === RUN   TestArgIsNotBlueprintFolder
 ```
 
-### Functional tests:
+### Functional tests
 
 To run the functional tests ensure that Docker is running in your environment then run `make test_functional`. functional tests are executed with GoDog cucumber test runner for Go. Note: These tests execute real blueprints and can a few minutes to run.
 
@@ -309,6 +310,6 @@ testing: warning: no tests to run
 PASS
 ```
 
-## Creating a release:
+## Creating a release
 
 To create a release tag a commit `git tag <semver>` and push this to GitHub `git push origin <semver>` GitHub actions will build and create the release.
