@@ -16,24 +16,17 @@ type Docs struct {
 
 	Content []string `hcl:"content" json:"content"`
 
-	Path           string `hcl:"path" json:"path"`
-	NavigationFile string `hcl:"navigation_file" json:"navigation_file"`
-	Port           int    `hcl:"port,optional" json:"port"`
-	OpenInBrowser  bool   `hcl:"open_in_browser,optional" json:"open_in_browser"` // When a host port is defined open the location in a browser
+	Port          int  `hcl:"port,optional" json:"port"`
+	OpenInBrowser bool `hcl:"open_in_browser,optional" json:"open_in_browser"` // When a host port is defined open the location in a browser
 
 	// Output parameters
 
-	// Navigation string `hcl:"navigation,optional" json:"navigation"`
-
-	// FQDN is the fully qualified domain name for the container, this can be used
+	// FQRN is the fully qualified resource name for the container, this can be used
 	// to access the container from other sources
-	FQDN string `hcl:"fqdn,optional" json:"fqdn,omitempty"`
+	FQRN string `hcl:"fqdn,optional" json:"fqdn,omitempty"`
 }
 
 func (d *Docs) Process() error {
-	d.Path = ensureAbsolute(d.Path, d.File)
-	d.NavigationFile = ensureAbsolute(d.NavigationFile, d.File)
-
 	// if port not set set port to 80
 	if d.Port == 0 {
 		d.Port = 80
@@ -47,7 +40,7 @@ func (d *Docs) Process() error {
 		r, _ := cfg.FindResource(d.ID)
 		if r != nil {
 			kstate := r.(*Docs)
-			d.FQDN = kstate.FQDN
+			d.FQRN = kstate.FQRN
 		}
 	}
 

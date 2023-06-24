@@ -954,7 +954,7 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 	}
 }
 
-// TODO: this is all exploritory, works but needs a major tidy
+// TODO: this is all exploratory, works but needs a major tidy
 
 // CreateShell creates an interactive shell inside a container
 // https://github.com/docker/cli/blob/ae1618713f83e7da07317d579d0675f578de22fa/cli/command/container/exec.go

@@ -17,7 +17,7 @@ type NomadJob struct {
 	Paths []string `hcl:"paths" validator:"filepath" json:"paths"`
 
 	// HealthCheck defines a health check for the resource
-	HealthCheck *HealthCheck `hcl:"health_check,block" json:"health_check,omitempty"`
+	HealthCheck *HealthCheckNomad `hcl:"health_check,block" json:"health_check,omitempty"`
 }
 
 func (n *NomadJob) Process() error {
