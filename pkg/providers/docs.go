@@ -43,7 +43,7 @@ func (i *Docs) Destroy() error {
 	i.log.Info("Destroy Documentation", "ref", i.config.Name)
 
 	// remove the docs
-	ids, err := i.client.FindContainerIDs(i.config.FQDN)
+	ids, err := i.client.FindContainerIDs(i.config.FQRN)
 	if err != nil {
 		return err
 	}
@@ -142,7 +142,7 @@ func (i *Docs) createDocsContainer() error {
 
 	// set the FQDN
 	fqdn := utils.FQDN(i.config.Name, i.config.Module, i.config.Type)
-	i.config.FQDN = fqdn
+	i.config.FQRN = fqdn
 
 	_, err = i.client.CreateContainer(cc)
 	return err

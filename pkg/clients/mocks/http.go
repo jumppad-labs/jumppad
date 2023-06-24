@@ -21,6 +21,12 @@ func (m *MockHTTP) HealthCheckHTTP(uri string, codes []int, timeout time.Duratio
 	return args.Error(0)
 }
 
+func (m *MockHTTP) HealthCheckTCP(uri string, timeout time.Duration) error {
+	args := m.Called(uri, timeout)
+
+	return args.Error(0)
+}
+
 func (m *MockHTTP) Do(r *http.Request) (*http.Response, error) {
 	args := m.Called(r)
 

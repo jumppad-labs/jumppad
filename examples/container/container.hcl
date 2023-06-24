@@ -94,6 +94,27 @@ resource "container" "consul" {
     enable_host = true
   }
 
+  health_check {
+    timeout = "30s"
+
+    http {
+      address       = "http://localhost:8500"
+      success_codes = [200]
+    }
+
+    tcp {
+      address = "localhost:8500"
+    }
+
+    exec {
+      script = <<-EOF
+        #!/bin/sh -e
+
+        ls -las
+      EOF
+    }
+  }
+
 }
 
 resource "sidecar" "envoy" {

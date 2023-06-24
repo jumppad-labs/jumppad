@@ -43,7 +43,8 @@ type Helm struct {
 	// Timeout specifies the maximum time a chart can run, default 300s
 	Timeout string `hcl:"timeout,optional" json:"timeout"`
 
-	HealthCheck *HealthCheck `hcl:"health_check,block" json:"health_check,omitempty"`
+	// Define health checks for the pods deployed by the chart
+	HealthCheck *HealthCheckKubernetes `hcl:"health_check,block" json:"health_check,omitempty"`
 }
 
 type HelmRepository struct {

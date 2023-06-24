@@ -51,7 +51,7 @@ func (n *NomadJob) Create() error {
 			return err
 		}
 
-		for _, j := range n.config.HealthCheck.NomadJobs {
+		for _, j := range n.config.HealthCheck.Jobs {
 			for {
 				if time.Now().Sub(st) >= dur {
 					return xerrors.Errorf("Timeout waiting for job '%s' to start", j)
