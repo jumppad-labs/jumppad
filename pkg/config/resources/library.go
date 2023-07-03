@@ -38,6 +38,9 @@ type Chapter struct {
 
 	Title string `hcl:"title,optional" json:"title,omitempty"`
 	Pages []Page `hcl:"page,block" json:"pages"`
+
+	// Output parameters
+	Tasks []string `hcl:"tasks,optional" json:"tasks"`
 }
 
 type Page struct {

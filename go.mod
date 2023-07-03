@@ -20,11 +20,7 @@ require (
 	github.com/hashicorp/hcl2 v0.0.0-20191002203319-fb75b3253c80
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	github.com/jumppad-labs/connector v0.3.0
-<<<<<<< HEAD
-	github.com/jumppad-labs/hclconfig v0.6.2
-=======
-	github.com/jumppad-labs/hclconfig v0.7.0
->>>>>>> Add complex outputs for modules
+	github.com/jumppad-labs/hclconfig v0.7.1
 	github.com/mailgun/raymond/v2 v2.0.48
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/opencontainers/image-spec v1.0.2

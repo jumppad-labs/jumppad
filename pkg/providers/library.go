@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
@@ -102,16 +101,26 @@ func (b *Book) Refresh() error {
 }
 
 type Chapter struct {
-	config types.Resource
+	config *resources.Chapter
 	log    hclog.Logger
 }
 
-func NewChapter(c types.Resource, l hclog.Logger) *Chapter {
+func NewChapter(c *resources.Chapter, l hclog.Logger) *Chapter {
 	return &Chapter{c, l}
 }
 
 func (c *Chapter) Create() error {
 	c.log.Info(fmt.Sprintf("Creating %s", strings.Title(string(c.config.Metadata().Type))), "ref", c.config.Metadata().Name)
+
+	tasks := []string{}
+
+	for _, p := range c.config.Pages {
+		for _, task := range p.Tasks {
+			tasks = append(tasks, task)
+		}
+	}
+
+	c.config.Tasks = tasks
 
 	return nil
 }
