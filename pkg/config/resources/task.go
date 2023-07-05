@@ -44,6 +44,21 @@ type Task struct {
 	Validation Validation `hcl:"validation,optional" json:"validation"`
 }
 
+func (t *Task) Process() {
+	// do we have an existing resource in the state?
+	// if so we need to set any computed resources for dependents
+	cfg, err := LoadState()
+	if err == nil {
+		// try and find the resource in the state
+		r, _ := cfg.FindResource(t.ID)
+		if r != nil {
+			kstate := r.(*Task)
+			t.Progress = kstate.Progress
+			t.Validation = kstate.Validation
+		}
+	}
+}
+
 type Condition struct {
 	Name             string `hcl:"id,label" json:"id"`
 	Description      string `hcl:"description" json:"description"`
