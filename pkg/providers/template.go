@@ -1,17 +1,15 @@
 package providers
 
 import (
-	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
-	"text/template"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/hcl2/hcl"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/mailgun/raymond/v2"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -100,22 +98,21 @@ func (c *Template) Create() error {
 	m := val.AsValueMap()
 	vars := parseVars(m)
 
-	c.config.InternalVars = vars
-
-	tmpl := template.New("template").Delims("#{{", "}}")
-	tmpl.Funcs(template.FuncMap{
-		"file":  templateFuncFile,
-		"quote": templateFuncQuote,
-		"trim":  templateFuncTrim,
-	})
-
-	t, err := tmpl.Parse(c.config.Source)
+	tmpl, err := raymond.Parse(c.config.Source)
 	if err != nil {
-		return fmt.Errorf("unable to parse template: %s", err)
+		return fmt.Errorf("error parsing template: %s", err)
 	}
 
-	bs := bytes.NewBufferString("")
-	err = t.Execute(bs, struct{ Vars map[string]interface{} }{Vars: c.config.InternalVars})
+	tmpl.RegisterHelpers(map[string]interface{}{
+		"quote": func(in string) string {
+			return fmt.Sprintf(`"%s"`, in)
+		},
+		"trim": func(in string) string {
+			return strings.TrimSpace(in)
+		},
+	})
+
+	result, err := tmpl.Exec(vars)
 	if err != nil {
 		return fmt.Errorf("error processing template: %s", err)
 	}
@@ -138,9 +135,9 @@ func (c *Template) Create() error {
 	}
 	defer f.Close()
 
-	f.WriteString(bs.String())
+	f.WriteString(result)
 
-	c.log.Debug("Template output", "ref", c.config.Name, "destination", bs.String())
+	c.log.Debug("Template output", "ref", c.config.Name, "destination", c.config.Destination, "result", result)
 
 	return nil
 }
@@ -170,24 +167,4 @@ func (c *Template) Refresh() error {
 
 	c.Destroy()
 	return c.Create()
-}
-
-// wraps the given string in quotes and returns
-func templateFuncQuote(in string) string {
-	return fmt.Sprintf(`"%s"`, in)
-}
-
-// trims whitespace from the given string
-func templateFuncTrim(in string) string {
-	return strings.TrimSpace(in)
-}
-
-// template function that reads a file an returns the string contents
-func templateFuncFile(path string) string {
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return err.Error()
-	}
-
-	return string(data)
 }

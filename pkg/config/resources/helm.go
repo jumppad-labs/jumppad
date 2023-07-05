@@ -1,8 +1,8 @@
 package resources
 
 import (
+	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"github.com/shipyard-run/hclconfig/types"
 )
 
 // TypeHelm is the string representation of the ResourceType
@@ -43,7 +43,8 @@ type Helm struct {
 	// Timeout specifies the maximum time a chart can run, default 300s
 	Timeout string `hcl:"timeout,optional" json:"timeout"`
 
-	HealthCheck *HealthCheck `hcl:"health_check,block" json:"health_check,omitempty"`
+	// Define health checks for the pods deployed by the chart
+	HealthCheck *HealthCheckKubernetes `hcl:"health_check,block" json:"health_check,omitempty"`
 }
 
 type HelmRepository struct {

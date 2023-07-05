@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
-	"github.com/jumppad-labs/jumppad/pkg/shipyard/constants"
+	"github.com/jumppad-labs/jumppad/pkg/jumppad/constants"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
 )

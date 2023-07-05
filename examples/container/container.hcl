@@ -9,7 +9,7 @@ variable "envoy_version" {
 resource "template" "consul_config" {
 
   source = <<-EOF
-  data_dir = "#{{ .Vars.data_dir }}"
+  data_dir = "{{ data_dir }}"
   log_level = "DEBUG"
   
   datacenter = "dc1"
@@ -92,6 +92,27 @@ resource "container" "consul" {
   port_range {
     range       = "8500-8502"
     enable_host = true
+  }
+
+  health_check {
+    timeout = "30s"
+
+    http {
+      address       = "http://localhost:8500"
+      success_codes = [200]
+    }
+
+    tcp {
+      address = "localhost:8500"
+    }
+
+    exec {
+      script = <<-EOF
+        #!/bin/sh -e
+
+        ls -las
+      EOF
+    }
   }
 
 }

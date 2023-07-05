@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/shipyard-run/hclconfig/types"
+	"github.com/jumppad-labs/hclconfig/types"
 )
 
 // Null is a noop provider

@@ -1,6 +1,6 @@
 package resources
 
-import "github.com/shipyard-run/hclconfig/types"
+import "github.com/jumppad-labs/hclconfig/types"
 
 // TypeDocs is the resource string for a Docs resource
 const TypeDocs string = "docs"
@@ -16,14 +16,14 @@ type Docs struct {
 
 	Path           string `hcl:"path" json:"path"`
 	NavigationFile string `hcl:"navigation_file" json:"navigation_file"`
-	Port           int    `hcl:"port" json:"port"`
+	Port           int    `hcl:"port,optional" json:"port"`
 	OpenInBrowser  bool   `hcl:"open_in_browser,optional" json:"open_in_browser"` // When a host port is defined open the location in a browser
 
 	// Output parameters
 
-	// FQDN is the fully qualified domain name for the container, this can be used
+	// FQRN is the fully qualified resource name for the container, this can be used
 	// to access the container from other sources
-	FQDN string `hcl:"fqdn,optional" json:"fqdn,omitempty"`
+	FQRN string `hcl:"fqdn,optional" json:"fqdn,omitempty"`
 }
 
 func (d *Docs) Process() error {
@@ -43,7 +43,7 @@ func (d *Docs) Process() error {
 		r, _ := cfg.FindResource(d.ID)
 		if r != nil {
 			kstate := r.(*Docs)
-			d.FQDN = kstate.FQDN
+			d.FQRN = kstate.FQRN
 		}
 	}
 

@@ -1,4 +1,4 @@
-package shipyard
+package jumppad
 
 import (
 
@@ -12,13 +12,13 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 
+	"github.com/jumppad-labs/hclconfig"
+	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/jumppad/constants"
 	"github.com/jumppad-labs/jumppad/pkg/providers"
-	"github.com/jumppad-labs/jumppad/pkg/shipyard/constants"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"github.com/shipyard-run/hclconfig"
-	"github.com/shipyard-run/hclconfig/types"
 )
 
 // Clients contains clients which are responsible for creating and destroying resources
@@ -37,9 +37,7 @@ type Engine interface {
 	ParseConfig(string) ([]types.Resource, error)
 	ParseConfigWithVariables(string, map[string]string, string) ([]types.Resource, error)
 	Destroy() error
-	ResourceCount() int
-	ResourceCountForType(string) int
-	Blueprint() *resources.Blueprint
+	Config() *hclconfig.Config
 }
 
 // EngineImpl is responsible for creating and destroying resources
@@ -127,8 +125,9 @@ func (e *EngineImpl) GetClients() *clients.Clients {
 	return e.clients
 }
 
-func (e *EngineImpl) Blueprint() *resources.Blueprint {
-	return nil
+// Config returns the parsed config
+func (e *EngineImpl) Config() *hclconfig.Config {
+	return e.config
 }
 
 // ParseConfig parses the given Shipyard files and creating the resource types but does
@@ -311,48 +310,87 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 	var parseError error
 	var parsedConfig *hclconfig.Config
 
-	if path != "" {
-		variablesFiles := []string{}
-		if variablesFile != "" {
-			variablesFiles = append(variablesFiles, variablesFile)
-		}
+	if path == "" {
+		return nil
+	}
 
-		hclParser := resources.SetupHCLConfig(callback, variables, variablesFiles)
+	variablesFiles := []string{}
+	if variablesFile != "" {
+		variablesFiles = append(variablesFiles, variablesFile)
+	}
 
-		if utils.IsHCLFile(path) {
-			// ParseFile processes the HCL, builds a graph of resources then calls
-			// the callback for each resource in order
-			//
-			// We are not using the returned config as the resources are added to the
-			// state on the callback
-			//
-			// If the callback returns an error we need to save the state and exit
-			parsedConfig, parseError = hclParser.ParseFile(path)
-		} else {
-			// ParseFolder processes the HCL, builds a graph of resources then calls
-			// the callback for each resource in order
-			//
-			// We are not using the returned config as the resources are added to the
-			// state on the callback
-			//
-			// If the callback returns an error we need to save the state and exit
-			parsedConfig, parseError = hclParser.ParseDirectory(path)
-		}
+	hclParser := resources.SetupHCLConfig(callback, variables, variablesFiles)
 
-		// process is not called for disabled resources, add manually
-		err := e.appendDisabledResources(parsedConfig)
-		if err != nil {
-			return parseError
-		}
+	if utils.IsHCLFile(path) {
+		// ParseFile processes the HCL, builds a graph of resources then calls
+		// the callback for each resource in order
+		//
+		// We are not using the returned config as the resources are added to the
+		// state on the callback
+		//
+		// If the callback returns an error we need to save the state and exit
+		parsedConfig, parseError = hclParser.ParseFile(path)
+	} else {
+		// ParseFolder processes the HCL, builds a graph of resources then calls
+		// the callback for each resource in order
+		//
+		// We are not using the returned config as the resources are added to the
+		// state on the callback
+		//
+		// If the callback returns an error we need to save the state and exit
+		parsedConfig, parseError = hclParser.ParseDirectory(path)
+	}
 
-		// process is not called for module resources, add manually
-		err = e.appendModuleResources(parsedConfig)
-		if err != nil {
-			return parseError
-		}
+	// process is not called for disabled resources, add manually
+	err := e.appendDisabledResources(parsedConfig)
+	if err != nil {
+		return parseError
+	}
+
+	// process is not called for module resources, add manually
+	err = e.appendModuleAndVariableResources(parsedConfig)
+	if err != nil {
+		return parseError
+	}
+
+	// destroy an resouces that might have been set to disabled
+	err = e.destroyDisabledResources()
+	if err != nil {
+		return err
 	}
 
 	return parseError
+}
+
+// destroyDisabledResources destroys any resrouces that were created but
+// have subsequently been set to disabled
+func (e *EngineImpl) destroyDisabledResources() error {
+	// we need to check if we have any disabbled resroucea that are marked
+	// as created, this could be because the disabled state has changed
+	// these respurces should be destroyed
+
+	for _, r := range e.config.Resources {
+		if r.Metadata().Disabled &&
+			r.Metadata().Properties[constants.PropertyStatus] == constants.StatusCreated {
+
+			p := e.getProvider(r, e.clients)
+			if p == nil {
+				r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
+				return fmt.Errorf("unable to create provider for resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
+			}
+
+			// call destroy
+			err := p.Destroy()
+			if err != nil {
+				r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
+				return fmt.Errorf("unable to destroy resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
+			}
+
+			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusDisabled
+		}
+	}
+
+	return nil
 }
 
 // appends disabled resources in the given config to the engines config
@@ -363,15 +401,14 @@ func (e *EngineImpl) appendDisabledResources(c *hclconfig.Config) error {
 
 	for _, r := range c.Resources {
 		if r.Metadata().Disabled {
-			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusDisabled
-
-			// if the resource already exists remove it
+			// if the resource already exists just set the status to disabled
 			er, err := e.config.FindResource(types.FQDNFromResource(r).String())
 			if err == nil {
-				e.config.RemoveResource(er)
+				er.Metadata().Disabled = true
+				continue
 			}
 
-			// add the resource to the state
+			// otherwise if not found the resource to the state
 			err = e.config.AppendResource(r)
 			if err != nil {
 				return fmt.Errorf("unable to add disabled resource: %s", err)
@@ -383,13 +420,13 @@ func (e *EngineImpl) appendDisabledResources(c *hclconfig.Config) error {
 }
 
 // appends module in the given config to the engines config
-func (e *EngineImpl) appendModuleResources(c *hclconfig.Config) error {
+func (e *EngineImpl) appendModuleAndVariableResources(c *hclconfig.Config) error {
 	if c == nil {
 		return nil
 	}
 
 	for _, r := range c.Resources {
-		if r.Metadata().Type == types.TypeModule {
+		if r.Metadata().Type == types.TypeModule || r.Metadata().Type == types.TypeVariable {
 			// if the resource already exists remove it
 			er, err := e.config.FindResource(types.FQDNFromResource(r).String())
 			if err == nil {
@@ -399,7 +436,7 @@ func (e *EngineImpl) appendModuleResources(c *hclconfig.Config) error {
 			// add the resource to the state
 			err = e.config.AppendResource(r)
 			if err != nil {
-				return fmt.Errorf("unable to add module resource: %s", err)
+				return fmt.Errorf("unable to add resource: %s", err)
 			}
 		}
 	}
@@ -409,7 +446,6 @@ func (e *EngineImpl) appendModuleResources(c *hclconfig.Config) error {
 
 func (e *EngineImpl) createCallback(r types.Resource) error {
 	p := e.getProvider(r, e.clients)
-
 	if p == nil {
 		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
 		return fmt.Errorf("unable to create provider for resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)

@@ -1,6 +1,6 @@
 package resources
 
-import "github.com/shipyard-run/hclconfig/types"
+import "github.com/jumppad-labs/hclconfig/types"
 
 // TypeCertificateCA is the resource string for a self-signed CA
 const TypeCertificateCA string = "certificate_ca"
@@ -22,7 +22,7 @@ type CertificateCA struct {
 	PublicKeySSH *File `hcl:"public_key_ssh,block" json:"public_key_ssh"`
 
 	// Cert is the value related to the certificate
-	Cert *File `hcl:"certificate,block" json:"cert"`
+	Cert *File `hcl:"certificate,block" json:"certificate"`
 }
 
 func (c *CertificateCA) Process() error {
@@ -75,7 +75,7 @@ type CertificateLeaf struct {
 	PublicKeySSH *File `hcl:"public_key_ssh,block" json:"public_key_ssh"`
 
 	// Cert is the value related to the certificate
-	Cert *File `hcl:"certificate,block" json:"cert"`
+	Cert *File `hcl:"certificate,block" json:"certificate"`
 }
 
 func (c *CertificateLeaf) Process() error {
@@ -85,6 +85,7 @@ func (c *CertificateLeaf) Process() error {
 	c.PrivateKey = &File{}
 	c.PublicKeySSH = &File{}
 	c.PublicKeyPEM = &File{}
+	c.Cert = &File{}
 
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
@@ -95,8 +96,8 @@ func (c *CertificateLeaf) Process() error {
 		if r != nil {
 			kstate := r.(*CertificateLeaf)
 			c.PrivateKey = kstate.PrivateKey
-			c.PublicKeySSH = &File{}
-			c.PublicKeyPEM = &File{}
+			c.PublicKeySSH = kstate.PublicKeySSH
+			c.PublicKeyPEM = kstate.PublicKeyPEM
 			c.Cert = kstate.Cert
 		}
 	}

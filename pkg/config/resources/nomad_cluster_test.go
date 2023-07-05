@@ -5,7 +5,7 @@ import (
 	"path"
 	"testing"
 
-	"github.com/shipyard-run/hclconfig/types"
+	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -65,8 +65,8 @@ func TestNomadClusterSetsOutputsFromState(t *testing.T) {
 	c.Process()
 
 	require.Equal(t, "127.0.0.1", c.ExternalIP)
-	require.Equal(t, "server.something.something", c.ServerFQDN)
-	require.Equal(t, []string{"1.client.something.something", "2.client.something.something"}, c.ClientFQDN)
+	require.Equal(t, "server.something.something", c.ServerFQRN)
+	require.Equal(t, []string{"1.client.something.something", "2.client.something.something"}, c.ClientFQRN)
 	require.Equal(t, 123, c.APIPort)
 	require.Equal(t, 124, c.ConnectorPort)
 	require.Equal(t, "abc/123", c.ConfigDir)

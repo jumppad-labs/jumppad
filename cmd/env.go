@@ -1,18 +1,19 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"runtime"
 	"strings"
 
+	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
-	"github.com/jumppad-labs/jumppad/pkg/shipyard"
-	"github.com/shipyard-run/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/spf13/cobra"
 )
 
-func newEnvCmd(e shipyard.Engine) *cobra.Command {
+func newEnvCmd(e jumppad.Engine) *cobra.Command {
 	var unset bool
 
 	envCmd := &cobra.Command{
@@ -70,7 +71,9 @@ func newEnvCmd(e shipyard.Engine) *cobra.Command {
 						continue
 					}
 
-					val := strings.ReplaceAll(r.(*types.Output).Value, `\`, `\\`)
+					d, _ := json.Marshal(r.(*types.Output).Value)
+					val := strings.ReplaceAll(string(d), `\`, `\\`)
+					val = strings.ReplaceAll(val, `"`, `\"`)
 					if unset {
 						fmt.Printf("%s%s\n", prefix, r.Metadata().Name)
 					} else {

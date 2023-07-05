@@ -3,17 +3,11 @@ package resources
 import (
 	"fmt"
 
-	"github.com/shipyard-run/hclconfig/types"
+	"github.com/jumppad-labs/hclconfig/types"
 )
 
 // TypeIngress is the resource string for the type
 const TypeIngress string = "ingress"
-
-const (
-	IngressSourceLocal  = "local"
-	IngressSourceK8s    = "k8s"
-	IngressSourceDocker = "docker"
-)
 
 // Ingress defines an ingress service mapping ports between local host and resources like containers and kube cluster
 type Ingress struct {
@@ -24,6 +18,9 @@ type Ingress struct {
 
 	// details for the destination service
 	Target TrafficTarget `hcl:"target,block" json:"target"`
+
+	// path to open in the browser
+	OpenInBrowser string `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"`
 
 	// --- Output Params ----
 

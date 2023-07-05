@@ -5,8 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/jumppad-labs/hclconfig"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"github.com/shipyard-run/hclconfig"
 )
 
 func LoadState() (*hclconfig.Config, error) {

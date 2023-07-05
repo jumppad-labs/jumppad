@@ -1,3 +1,4 @@
 output "consul_http_addr" {
-  value = "http://${resource.container.consul.fqrn}:8500"
+  description = "HTTP address for the consul server"
+  value       = "http://${resource.container.consul.fqrn}:8500"
 }

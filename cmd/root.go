@@ -8,7 +8,7 @@ import (
 	gvm "github.com/shipyard-run/version-manager"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/shipyard"
+	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 
 	"github.com/spf13/cobra"
@@ -22,7 +22,7 @@ var rootCmd = &cobra.Command{
 	Long:  `Jumppad is a tool that helps you create and run development, demo, and tutorial environments`,
 }
 
-var engine shipyard.Engine
+var engine jumppad.Engine
 var logger hclog.Logger
 var engineClients *clients.Clients
 
@@ -41,7 +41,7 @@ func init() {
 
 	//cobra.OnInitialize(configure)
 
-	//rootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.shipyard/config)")
+	//rootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.jumppad/config)")
 
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(outputCmd)
@@ -62,10 +62,14 @@ func init() {
 	connectorCmd.AddCommand(newConnectorRunCommand())
 	connectorCmd.AddCommand(connectorStopCmd)
 	connectorCmd.AddCommand(newConnectorCertCmd())
+
+	// add the generate command
+	rootCmd.AddCommand(generateCmd)
+	generateCmd.AddCommand(newGenerateReadmeCommand(engine))
 }
 
-func createEngine(l hclog.Logger) (shipyard.Engine, gvm.Versions) {
-	engine, err := shipyard.New(l)
+func createEngine(l hclog.Logger) (jumppad.Engine, gvm.Versions) {
+	engine, err := jumppad.New(l)
 	if err != nil {
 		panic(err)
 	}

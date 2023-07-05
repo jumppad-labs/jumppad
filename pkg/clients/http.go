@@ -3,6 +3,7 @@ package clients
 import (
 	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -16,6 +17,11 @@ type HTTP interface {
 	// If it is not possible to contact the URI or if any status other than the passed codes is returned
 	// by the upstream, then the URI is retried until the timeout elapses.
 	HealthCheckHTTP(uri string, codes []int, timeout time.Duration) error
+
+	// HealthCheckTCP attempts to connect to a raw socket at the given address
+	// if a connection is established the health check is marked as a success
+	// if failed the check will retry until the timeout occurs
+	HealthCheckTCP(uri string, timeout time.Duration) error
 	// Do executes a HTTP request and returns the response
 	Do(r *http.Request) (*http.Response, error)
 }
@@ -36,18 +42,40 @@ func NewHTTP(backoff time.Duration, l hclog.Logger) HTTP {
 
 // HealthCheckHTTP checks a http or HTTPS endpoint for a status 200
 func (h *HTTPImpl) HealthCheckHTTP(address string, codes []int, timeout time.Duration) error {
-	h.l.Debug("Performing health check for address", "address", address)
+	h.l.Debug("Performing HTTP health check for address", "address", address)
 	st := time.Now()
 	for {
-		if time.Now().Sub(st) > timeout {
-			h.l.Error("Timeout wating for HTTP healthcheck", "address", address)
+		if time.Since(st) > timeout {
+			h.l.Error("Timeout waiting for HTTP health check", "address", address)
 
-			return fmt.Errorf("Timeout waiting for HTTP healthcheck %s", address)
+			return fmt.Errorf("timeout waiting for HTTP health check %s", address)
 		}
 
 		resp, err := h.httpc.Get(address)
 		if err == nil && assertResponseCode(codes, resp.StatusCode) {
-			h.l.Debug("Health check complete", "address", address)
+			h.l.Debug("HTTP health check complete", "address", address)
+			return nil
+		}
+
+		// backoff
+		time.Sleep(h.backoff)
+	}
+}
+
+func (h *HTTPImpl) HealthCheckTCP(address string, timeout time.Duration) error {
+	h.l.Debug("Performing TCP health check for address", "address", address)
+	st := time.Now()
+	for {
+		if time.Since(st) > timeout {
+			h.l.Error("timeout waiting for TCP health check", "address", address)
+
+			return fmt.Errorf("timeout waiting for HTTP health check %s", address)
+		}
+
+		// attempt to open a socket
+		_, err := net.Dial("tcp", address)
+		if err == nil {
+			h.l.Debug("TCP health check complete", "address", address)
 			return nil
 		}
 

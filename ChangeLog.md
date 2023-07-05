@@ -1,5 +1,34 @@
 # Change Log
 
+## version v0.5.9
+* Changed health checks to move checks like kubernetes pods to specific resources
+* Added exec health check for containers
+
+```hcl
+resource "container" {
+  health_check {
+    timeout = "30s"
+
+    http {
+      address       = "http://localhost:8500"
+      success_codes = [200]
+    }
+
+    tcp {
+      address = "localhost:8500"
+    }
+
+    exec {
+      script = <<-EOF
+        #!/bin/sh -e
+
+        ls -las
+      EOF
+    }
+  }
+}
+```
+
 ## version v0.4.14
 * Fix bug in latest Kubernetes release where DNS san for certificate did not contain the fully qualified name of the server
 

@@ -42,6 +42,6 @@ resource "nomad_job" "example_2" {
 
   health_check {
     timeout    = "60s"
-    nomad_jobs = ["example_2"]
+    jobs = ["example_2"]
   }
 }

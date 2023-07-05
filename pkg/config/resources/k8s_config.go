@@ -1,6 +1,6 @@
 package resources
 
-import "github.com/shipyard-run/hclconfig/types"
+import "github.com/jumppad-labs/hclconfig/types"
 
 // TypeK8sConfig defines the string type for the Kubernetes config resource
 const TypeK8sConfig string = "k8s_config"
@@ -17,7 +17,7 @@ type K8sConfig struct {
 	WaitUntilReady bool `hcl:"wait_until_ready" json:"wait_until_ready"`
 
 	// HealthCheck defines a health check for the resource
-	HealthCheck *HealthCheck `hcl:"health_check,block" json:"health_check,omitempty"`
+	HealthCheck *HealthCheckKubernetes `hcl:"health_check,block" json:"health_check,omitempty"`
 }
 
 func (k *K8sConfig) Process() error {

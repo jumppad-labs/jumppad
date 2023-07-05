@@ -24,11 +24,11 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/hashicorp/go-hclog"
+	hcltypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
-	"github.com/jumppad-labs/jumppad/pkg/shipyard"
+	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	hcltypes "github.com/shipyard-run/hclconfig/types"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/util/jsonpath"
 )
@@ -45,7 +45,7 @@ var output = bytes.NewBufferString("")
 var commandOutput = bytes.NewBufferString("")
 var commandExitCode = 0
 
-func newTestCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, l hclog.Logger) *cobra.Command {
+func newTestCmd(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, l hclog.Logger) *cobra.Command {
 	var testFolder string
 	var force bool
 	var dontDestroy bool
@@ -75,7 +75,7 @@ func newTestCmd(e shipyard.Engine, bp clients.Getter, hc clients.HTTP, bc client
 }
 
 func newTestCmdFunc(
-	e shipyard.Engine,
+	e jumppad.Engine,
 	bp clients.Getter,
 	hc clients.HTTP,
 	bc clients.System,
@@ -100,7 +100,7 @@ func newTestCmdFunc(
 type CucumberRunner struct {
 	cmd           *cobra.Command
 	args          []string
-	e             shipyard.Engine
+	e             jumppad.Engine
 	bp            clients.Getter
 	hc            clients.HTTP
 	bc            clients.System
@@ -321,9 +321,9 @@ func getLookupAddress(resourceName string) (string, string, int, error) {
 	case resources.TypeContainer:
 		return res.(*resources.Container).FQRN, res.Metadata().Type, 1, nil
 	case resources.TypeSidecar:
-		return res.(*resources.Sidecar).FQDN, res.Metadata().Type, 1, nil
+		return res.(*resources.Sidecar).FQRN, res.Metadata().Type, 1, nil
 	case resources.TypeDocs:
-		return res.(*resources.Docs).FQDN, res.Metadata().Type, 1, nil
+		return res.(*resources.Docs).FQRN, res.Metadata().Type, 1, nil
 	default:
 		return "", "", 0, fmt.Errorf("resource type %s is not supported", res.Metadata().Type)
 	}

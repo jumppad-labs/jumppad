@@ -1,7 +1,6 @@
 package providers
 
 import (
-	"context"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -9,9 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/connector/crypto"
@@ -139,9 +136,6 @@ func (c *CertificateCA) Refresh() error {
 func (c *CertificateLeaf) Create() error {
 	c.log.Info("Creating Leaf Certificate", "ref", c.config.Name)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
 	directory := strings.Replace(c.config.Module, ".", "_", -1)
 	directory = path.Join(c.config.Output, directory)
 	os.MkdirAll(directory, os.ModePerm)
@@ -151,83 +145,84 @@ func (c *CertificateLeaf) Create() error {
 	pubsshFile := path.Join(directory, fmt.Sprintf("%s-leaf.ssh", c.config.Name))
 	certFile := path.Join(directory, fmt.Sprintf("%s-leaf.cert", c.config.Name))
 
-	err := retry.Constant(ctx, 1*time.Second, func(ctx context.Context) error {
-		ca := &crypto.X509{}
-		err := ca.ReadFile(c.config.CACert)
-		if err != nil {
-			return retry.RetryableError(xerrors.Errorf("Unable to read root certificate %s: %w", c.config.CACert, err))
-		}
+	ca := &crypto.X509{}
+	err := ca.ReadFile(c.config.CACert)
+	if err != nil {
+		return retry.RetryableError(xerrors.Errorf("Unable to read root certificate %s: %w", c.config.CACert, err))
+	}
 
-		rk := crypto.NewKeyPair()
-		err = rk.Private.ReadFile(c.config.CAKey)
-		if err != nil {
-			return retry.RetryableError(xerrors.Errorf("Unable to read root key %s: %w", c.config.CAKey, err))
-		}
+	rk := crypto.NewKeyPair()
+	err = rk.Private.ReadFile(c.config.CAKey)
+	if err != nil {
+		return retry.RetryableError(xerrors.Errorf("Unable to read root key %s: %w", c.config.CAKey, err))
+	}
 
-		k, err := crypto.GenerateKeyPair()
-		if err != nil {
-			return err
-		}
+	k, err := crypto.GenerateKeyPair()
+	if err != nil {
+		return err
+	}
 
-		// Save the key
-		err = k.Private.WriteFile(keyFile)
-		if err != nil {
-			return err
-		}
+	lc, err := crypto.GenerateLeaf(c.config.Name, c.config.IPAddresses, c.config.DNSNames, ca, rk.Private, k.Private)
+	if err != nil {
+		return err
+	}
 
-		err = k.Public.WriteFile(pubkeyFile)
-		if err != nil {
-			return err
-		}
+	// output the public ssh key
+	ssh, err := publicPEMtoOpenSSH(k.Public.PEMBlock())
+	if err != nil {
+		return err
+	}
 
-		lc, err := crypto.GenerateLeaf(c.config.Name, c.config.IPAddresses, c.config.DNSNames, ca, rk.Private, k.Private)
-		if err != nil {
-			return err
-		}
+	// Save the certificate
+	err = lc.WriteFile(certFile)
+	if err != nil {
+		return err
+	}
 
-		// output the public ssh key
-		ssh, err := publicPEMtoOpenSSH(k.Public.PEMBlock())
-		if err != nil {
-			return err
-		}
+	// Save the keys
+	err = k.Private.WriteFile(keyFile)
+	if err != nil {
+		return err
+	}
 
-		err = ioutil.WriteFile(pubsshFile, []byte(ssh), os.ModePerm)
-		if err != nil {
-			return err
-		}
+	err = k.Public.WriteFile(pubkeyFile)
+	if err != nil {
+		return err
+	}
 
-		// set the outputs
-		c.config.PublicKeySSH = &resources.File{
-			Path:      pubsshFile,
-			Directory: directory,
-			Filename:  fmt.Sprintf("%s-leaf.ssh", c.config.Name),
-			Contents:  ssh,
-		}
+	err = ioutil.WriteFile(pubsshFile, []byte(ssh), os.ModePerm)
+	if err != nil {
+		return err
+	}
 
-		c.config.PublicKeyPEM = &resources.File{
-			Path:      pubkeyFile,
-			Directory: directory,
-			Filename:  fmt.Sprintf("%s-leaf.pub", c.config.Name),
-			Contents:  k.Public.String(),
-		}
+	// set the outputs
+	c.config.PublicKeySSH = &resources.File{
+		Path:      pubsshFile,
+		Directory: directory,
+		Filename:  fmt.Sprintf("%s-leaf.ssh", c.config.Name),
+		Contents:  ssh,
+	}
 
-		c.config.Cert = &resources.File{
-			Path:      certFile,
-			Directory: directory,
-			Filename:  fmt.Sprintf("%s-leaf.cert", c.config.Name),
-			Contents:  lc.String(),
-		}
+	c.config.PublicKeyPEM = &resources.File{
+		Path:      pubkeyFile,
+		Directory: directory,
+		Filename:  fmt.Sprintf("%s-leaf.pub", c.config.Name),
+		Contents:  k.Public.String(),
+	}
 
-		c.config.PrivateKey = &resources.File{
-			Path:      keyFile,
-			Directory: directory,
-			Filename:  fmt.Sprintf("%s-leaf.key", c.config.Name),
-			Contents:  k.Private.String(),
-		}
+	c.config.Cert = &resources.File{
+		Path:      certFile,
+		Directory: directory,
+		Filename:  fmt.Sprintf("%s-leaf.cert", c.config.Name),
+		Contents:  lc.String(),
+	}
 
-		// Save the certificate
-		return lc.WriteFile(certFile)
-	})
+	c.config.PrivateKey = &resources.File{
+		Path:      keyFile,
+		Directory: directory,
+		Filename:  fmt.Sprintf("%s-leaf.key", c.config.Name),
+		Contents:  k.Private.String(),
+	}
 
 	return err
 }
@@ -239,7 +234,7 @@ func (c *CertificateLeaf) Destroy() error {
 	directory = path.Join(c.config.Output, directory)
 	os.MkdirAll(directory, os.ModePerm)
 
-	return destroy(c.config.Name, directory, c.log)
+	return destroy(fmt.Sprintf("%s-%s", c.config.Name, "leaf"), directory, c.log)
 }
 
 func (c *CertificateLeaf) Lookup() ([]string, error) {
@@ -253,16 +248,29 @@ func (c *CertificateLeaf) Refresh() error {
 }
 
 func destroy(name, output string, log hclog.Logger) error {
-	kp, _ := filepath.Abs(path.Join(output, fmt.Sprintf("%s.key", name)))
-	err := os.Remove(kp)
+	keyFile := path.Join(output, fmt.Sprintf("%s.key", name))
+	pubkeyFile := path.Join(output, fmt.Sprintf("%s.pub", name))
+	pubsshFile := path.Join(output, fmt.Sprintf("%s.ssh", name))
+	certFile := path.Join(output, fmt.Sprintf("%s.cert", name))
+
+	err := os.Remove(keyFile)
 	if err != nil {
-		log.Debug("Unable to remove key", "ref", name, "error", err)
+		log.Debug("Unable to remove private key", "ref", name, "error", err)
 	}
 
-	cp, _ := filepath.Abs(path.Join(output, fmt.Sprintf("%s.cert", name)))
-	err = os.Remove(cp)
+	err = os.Remove(pubkeyFile)
 	if err != nil {
-		log.Debug("Unable to remove cert", "ref", name, "error", err)
+		log.Debug("Unable to remove public key", "ref", name, "error", err)
+	}
+
+	err = os.Remove(pubsshFile)
+	if err != nil {
+		log.Debug("Unable to remove ssh key", "ref", name, "error", err)
+	}
+
+	err = os.Remove(certFile)
+	if err != nil {
+		log.Debug("Unable to remove certificate", "ref", name, "error", err)
 	}
 
 	return nil

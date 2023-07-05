@@ -6,29 +6,40 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
-	"github.com/shipyard-run/hclconfig/types"
 	"github.com/stretchr/testify/mock"
 	assert "github.com/stretchr/testify/require"
 )
 
-func TestContainerCreatesSuccessfully(t *testing.T) {
+func setupContainerTests(t *testing.T) (*resources.Container, *clients.MockContainerTasks, *mocks.MockHTTP) {
 	cc := &resources.Container{ResourceMetadata: types.ResourceMetadata{
 		Name: "tests",
 	}}
 
-	cc.Image = &resources.Image{}
+	cc.Image = &resources.Image{Name: "consul"}
+
 	md := &clients.MockContainerTasks{}
 	hc := &mocks.MockHTTP{}
-	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
 	// check pulls image before creating container
 	md.On("PullImage", *cc.Image, false).Once().Return(nil)
 
 	// check calls CreateContainer with the config
-	md.On("CreateContainer", cc).Once().Return("", nil)
+	md.On("CreateContainer", cc).Once().Return("12345", nil)
+
+	// after creation the
+	md.On("ListNetworks", "12345").Once().Return(nil, nil)
+
+	return cc, md, hc
+}
+
+func TestContainerCreatesSuccessfully(t *testing.T) {
+	cc, md, hc := setupContainerTests(t)
+
+	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
 	err := c.Create()
 	assert.NoError(t, err)
@@ -37,89 +48,55 @@ func TestContainerCreatesSuccessfully(t *testing.T) {
 }
 
 func TestContainerSidecarCreatesContainerSuccessfully(t *testing.T) {
-	md := &clients.MockContainerTasks{}
-	hc := &mocks.MockHTTP{}
+	_, md, hc := setupContainerTests(t)
+	removeOn(&md.Mock, "CreateContainer")
+	md.On("CreateContainer", mock.Anything).Once().Return("12345", nil)
 
-	cc := &resources.Container{ResourceMetadata: types.ResourceMetadata{
+	cs := &resources.Sidecar{ResourceMetadata: types.ResourceMetadata{
 		Name: "tests",
 	}}
 
-	cc.Depends = []string{"resource.network.test"}
-	cc.Image = &resources.Image{Name: "abc"}
-	cc.Volumes = []resources.Volume{resources.Volume{}}
-	cc.Command = []string{"hello"}
-	cc.Entrypoint = []string{"hello"}
-	cc.Env = map[string]string{"hello": "world"}
-	cc.HealthCheck = &resources.HealthCheck{}
-	cc.Privileged = true
-	cc.Resources = &resources.Resources{}
-	cc.MaxRestartCount = 10
+	cs.Target = "resources.container.consul"
+	cs.Volumes = []resources.Volume{resources.Volume{}}
+	cs.Command = []string{"hello"}
+	cs.Entrypoint = []string{"hello"}
+	cs.Environment = map[string]string{"hello": "world"}
+	cs.HealthCheck = &resources.HealthCheckContainer{}
+	cs.Image = resources.Image{Name: "consul"}
+	cs.Privileged = true
+	cs.Resources = &resources.Resources{}
+	cs.MaxRestartCount = 10
 
-	md.On("PullImage", cc.Image, false).Once().Return(nil)
-	md.On("CreateContainer", mock.Anything).Once().Return("", nil)
-
-	c := NewContainerSidecar(cc, md, hc, hclog.NewNullLogger())
+	c := NewContainerSidecar(cs, md, hc, hclog.NewNullLogger())
 	err := c.Create()
 	assert.NoError(t, err)
 
 	ac := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*resources.Container)
 
-	assert.Equal(t, cc.Name, ac.Name)
-	assert.Equal(t, cc.Depends, ac.Depends)
-	assert.Equal(t, cc.Volumes, ac.Volumes)
-	assert.Equal(t, cc.Command, ac.Command)
-	assert.Equal(t, cc.Entrypoint, ac.Entrypoint)
-	assert.Equal(t, cc.Env, ac.Env)
-	assert.Equal(t, cc.HealthCheck, ac.HealthCheck)
-	assert.Equal(t, cc.Image.Name, ac.Image.Name)
-	assert.Equal(t, cc.Privileged, ac.Privileged)
-	assert.Equal(t, cc.Resources, ac.Resources)
-	assert.Equal(t, cc.Type, ac.Type)
-	assert.Equal(t, cc.MaxRestartCount, ac.MaxRestartCount)
+	assert.Equal(t, cs.Name, ac.Name)
+	assert.Equal(t, "resources.container.consul", ac.Networks[0].ID)
+	assert.Equal(t, cs.Volumes, ac.Volumes)
+	assert.Equal(t, cs.Command, ac.Command)
+	assert.Equal(t, cs.Entrypoint, ac.Entrypoint)
+	assert.Equal(t, cs.Environment, ac.Environment)
+	assert.Equal(t, cs.HealthCheck, ac.HealthCheck)
+	assert.Equal(t, &cs.Image, ac.Image)
+	assert.Equal(t, cs.Privileged, ac.Privileged)
+	assert.Equal(t, cs.Resources, ac.Resources)
+	assert.Equal(t, cs.MaxRestartCount, ac.MaxRestartCount)
 }
 
 func TestContainerRunsHTTPChecks(t *testing.T) {
-	cc := &resources.Container{ResourceMetadata: types.ResourceMetadata{
-		Name: "tests",
-	}}
-	cc.Image = &resources.Image{}
-	cc.HealthCheck = &resources.HealthCheck{
+	cc, md, hc := setupContainerTests(t)
+	cc.HealthCheck = &resources.HealthCheckContainer{
 		Timeout: "30s",
-		HTTP:    "http://localhost:8500",
+		HTTP: &resources.HealthCheckHTTP{
+			Address:      "http://localhost:8500",
+			SuccessCodes: []int{200, 429},
+		},
 	}
 
-	md := &clients.MockContainerTasks{}
-	hc := &mocks.MockHTTP{}
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
-
-	md.On("PullImage", *cc.Image, false).Once().Return(nil)
-	md.On("CreateContainer", cc).Once().Return("", nil)
-
-	hc.On("HealthCheckHTTP", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-	err := c.Create()
-	assert.NoError(t, err)
-
-	hc.AssertCalled(t, "HealthCheckHTTP", "http://localhost:8500", []int{200}, 30*time.Second)
-}
-
-func TestContainerRunsHTTPChecksWithCustomStatusCodes(t *testing.T) {
-	cc := &resources.Container{ResourceMetadata: types.ResourceMetadata{
-		Name: "tests",
-	}}
-	cc.Image = &resources.Image{}
-	cc.HealthCheck = &resources.HealthCheck{
-		Timeout:          "30s",
-		HTTP:             "http://localhost:8500",
-		HTTPSuccessCodes: []int{200, 429},
-	}
-
-	md := &clients.MockContainerTasks{}
-	hc := &mocks.MockHTTP{}
-	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
-
-	md.On("PullImage", *cc.Image, false).Once().Return(nil)
-	md.On("CreateContainer", cc).Once().Return("", nil)
 
 	hc.On("HealthCheckHTTP", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
@@ -129,16 +106,73 @@ func TestContainerRunsHTTPChecksWithCustomStatusCodes(t *testing.T) {
 	hc.AssertCalled(t, "HealthCheckHTTP", "http://localhost:8500", []int{200, 429}, 30*time.Second)
 }
 
+func TestContainerRunsTCPChecks(t *testing.T) {
+	cc, md, hc := setupContainerTests(t)
+	cc.HealthCheck = &resources.HealthCheckContainer{
+		Timeout: "30s",
+		TCP: &resources.HealthCheckTCP{
+			Address: "http://localhost:8500",
+		},
+	}
+
+	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
+
+	hc.On("HealthCheckTCP", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	err := c.Create()
+	assert.NoError(t, err)
+
+	hc.AssertCalled(t, "HealthCheckTCP", "http://localhost:8500", 30*time.Second)
+}
+
+func TestContainerRunsExecChecksWithCommand(t *testing.T) {
+	command := []string{"terraform", "apply"}
+	cc, md, hc := setupContainerTests(t)
+	cc.HealthCheck = &resources.HealthCheckContainer{
+		Timeout: "30s",
+		Exec: &resources.HealthCheckExec{
+			Command: command,
+		},
+	}
+
+	md.On("ExecuteCommand", "12345", command, mock.Anything, "/tmp", "", "", mock.Anything).Return(nil)
+
+	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
+
+	err := c.Create()
+	assert.NoError(t, err)
+
+	md.AssertNumberOfCalls(t, "ExecuteCommand", 1)
+}
+
+func TestContainerRunsExecChecksWithScript(t *testing.T) {
+	cc, md, hc := setupContainerTests(t)
+	cc.HealthCheck = &resources.HealthCheckContainer{
+		Timeout: "30s",
+		Exec: &resources.HealthCheckExec{
+			Script: `#!/bin/bash
+				curl http://something.com
+			`,
+		},
+	}
+
+	md.On("CopyFileToContainer", "12345", mock.Anything, mock.Anything).Return(nil)
+	md.On("ExecuteCommand", "12345", []string{"sh", "/tmp/script.sh"}, mock.Anything, "/tmp", "", "", mock.Anything).Return(nil)
+
+	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
+
+	err := c.Create()
+	assert.NoError(t, err)
+
+	md.AssertNumberOfCalls(t, "ExecuteCommand", 1)
+}
+
 func TestContainerDoesNOTCreateWhenPullImageFail(t *testing.T) {
-	cc := &resources.Container{ResourceMetadata: types.ResourceMetadata{
-		Name: "tests",
-	}}
-	cc.Image = &resources.Image{}
-	md := &clients.MockContainerTasks{}
-	hc := &mocks.MockHTTP{}
+	cc, md, hc := setupContainerTests(t)
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
 	// check pulls image before creating container and return an erro
+	removeOn(&md.Mock, "PullImage")
 	imageErr := fmt.Errorf("Unable to pull image")
 	md.On("PullImage", *cc.Image, false).Once().Return(imageErr)
 
@@ -150,15 +184,11 @@ func TestContainerDoesNOTCreateWhenPullImageFail(t *testing.T) {
 }
 
 func TestContainerDestroysCorrectlyWhenContainerExists(t *testing.T) {
-	cc := &resources.Container{ResourceMetadata: types.ResourceMetadata{
-		Name: "tests",
-	}}
+	cc, md, hc := setupContainerTests(t)
 	cc.Networks = []resources.NetworkAttachment{resources.NetworkAttachment{Name: "cloud"}}
-	md := &clients.MockContainerTasks{}
-	hc := &mocks.MockHTTP{}
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
-	md.On("FindContainerIDs", cc.Name, cc.Type).Return([]string{"abc"}, nil)
+	md.On("FindContainerIDs", cc.FQRN).Return([]string{"abc"}, nil)
 	md.On("RemoveContainer", "abc", false).Return(nil)
 	md.On("DetachNetwork", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
@@ -167,15 +197,11 @@ func TestContainerDestroysCorrectlyWhenContainerExists(t *testing.T) {
 }
 
 func TestContainerDoesNotDestroysWhenNotExists(t *testing.T) {
-	cc := &resources.Container{ResourceMetadata: types.ResourceMetadata{
-		Name: "tests",
-	}}
+	cc, md, hc := setupContainerTests(t)
 	cc.Networks = []resources.NetworkAttachment{resources.NetworkAttachment{Name: "cloud"}}
-	md := &clients.MockContainerTasks{}
-	hc := &mocks.MockHTTP{}
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
-	md.On("FindContainerIDs", cc.Name, cc.Type).Return(nil, nil)
+	md.On("FindContainerIDs", cc.FQRN).Return(nil, nil)
 
 	err := c.Destroy()
 	assert.NoError(t, err)
@@ -183,15 +209,11 @@ func TestContainerDoesNotDestroysWhenNotExists(t *testing.T) {
 }
 
 func TestContainerDoesNotDestroysWhenLookupError(t *testing.T) {
-	cc := &resources.Container{ResourceMetadata: types.ResourceMetadata{
-		Name: "tests",
-	}}
+	cc, md, hc := setupContainerTests(t)
 	cc.Networks = []resources.NetworkAttachment{resources.NetworkAttachment{Name: "cloud"}}
-	md := &clients.MockContainerTasks{}
-	hc := &mocks.MockHTTP{}
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
-	md.On("FindContainerIDs", cc.Name, cc.Type).Return(nil, fmt.Errorf("boom"))
+	md.On("FindContainerIDs", cc.FQRN).Return(nil, fmt.Errorf("boom"))
 
 	err := c.Destroy()
 	assert.Error(t, err)
@@ -199,15 +221,11 @@ func TestContainerDoesNotDestroysWhenLookupError(t *testing.T) {
 }
 
 func TestContainerLooksupIDs(t *testing.T) {
-	cc := &resources.Container{ResourceMetadata: types.ResourceMetadata{
-		Name: "tests",
-	}}
+	cc, md, hc := setupContainerTests(t)
 	cc.Networks = []resources.NetworkAttachment{resources.NetworkAttachment{Name: "cloud"}}
-	md := &clients.MockContainerTasks{}
-	hc := &mocks.MockHTTP{}
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
-	md.On("FindContainerIDs", cc.Name, cc.Type).Return([]string{"abc"}, nil)
+	md.On("FindContainerIDs", cc.FQRN).Return([]string{"abc"}, nil)
 
 	ids, err := c.Lookup()
 	assert.NoError(t, err)
@@ -215,16 +233,11 @@ func TestContainerLooksupIDs(t *testing.T) {
 }
 
 func TestContainerBuildsContainer(t *testing.T) {
-	cc := &resources.Container{ResourceMetadata: types.ResourceMetadata{
-		Name: "tests",
-	}}
-	cc.Build = &resources.Build{Context: "./", File: "./"}
+	cc, md, hc := setupContainerTests(t)
+	cc.Build = &resources.Build{Context: "./"}
 
-	md := &clients.MockContainerTasks{}
 	md.On("BuildContainer", mock.Anything, mock.Anything).Return("testimage", nil)
-	md.On("CreateContainer", cc).Once().Return("", nil)
 
-	hc := &mocks.MockHTTP{}
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
 	err := c.Create()

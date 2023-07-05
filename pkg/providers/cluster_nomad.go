@@ -14,10 +14,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/go-hclog"
+	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"github.com/shipyard-run/hclconfig/types"
 	"golang.org/x/xerrors"
 )
 
@@ -263,12 +263,13 @@ func (c *NomadCluster) createNomad() error {
 	}
 
 	clWait.Wait()
-	if clientError != nil {
-		return xerrors.Errorf("Unable to create client nodes: %w", clientError)
-	}
 
 	// set the client ids
 	c.config.ClientFQRN = clientFQDN
+
+	if clientError != nil {
+		return xerrors.Errorf("Unable to create client nodes: %w", clientError)
+	}
 
 	// if client nodes is 0 then the server acts as both client and server
 	// in this instance set the health check to 1 node

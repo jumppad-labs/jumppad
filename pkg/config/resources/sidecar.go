@@ -1,6 +1,6 @@
 package resources
 
-import "github.com/shipyard-run/hclconfig/types"
+import "github.com/jumppad-labs/hclconfig/types"
 
 // TypeSidecar is the resource string for a Sidecar resource
 const TypeSidecar string = "sidecar"
@@ -24,15 +24,15 @@ type Sidecar struct {
 	Resources *Resources `hcl:"resources,block" json:"resources,omitempty"` // resource constraints for the container
 
 	// health checks for the container
-	HealthCheck *HealthCheck `hcl:"health_check,block" json:"health_check,omitempty"`
+	HealthCheck *HealthCheckContainer `hcl:"health_check,block" json:"health_check,omitempty"`
 
 	MaxRestartCount int `hcl:"max_restart_count,optional" json:"max_restart_count,omitempty"`
 
 	// Output parameters
 
-	// FQDN is the fully qualified domain name for the container, this can be used
-	// to access the container from other sources
-	FQDN string `hcl:"fqdn,optional" json:"fqdn,omitempty"`
+	// FQRN is the fully qualified domain name for the container the sidecar is linked to, this can be used
+	// to access the sidecar from other sources
+	FQRN string `hcl:"fqrn,optional" json:"fqrn,omitempty"`
 }
 
 func (c *Sidecar) Process() error {
@@ -53,7 +53,7 @@ func (c *Sidecar) Process() error {
 		r, _ := cfg.FindResource(c.ID)
 		if r != nil {
 			kstate := r.(*Sidecar)
-			c.FQDN = kstate.FQDN
+			c.FQRN = kstate.FQRN
 		}
 	}
 

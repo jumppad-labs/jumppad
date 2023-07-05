@@ -5,10 +5,10 @@ import (
 	"os"
 
 	"github.com/hokaccha/go-prettyjson"
+	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
-	"github.com/jumppad-labs/jumppad/pkg/shipyard/constants"
+	"github.com/jumppad-labs/jumppad/pkg/jumppad/constants"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"github.com/shipyard-run/hclconfig/types"
 	"github.com/spf13/cobra"
 )
 
@@ -60,6 +60,7 @@ var statusCmd = &cobra.Command{
 
 			createdCount := 0
 			failedCount := 0
+			disabledCount := 0
 			pendingCount := 0
 
 			// sort the resources
@@ -75,23 +76,25 @@ var statusCmd = &cobra.Command{
 
 			for _, ress := range resourceMap {
 				for _, r := range ress {
-					if resourceType != "" && string(r.Metadata().Type) != resourceType {
+					if (resourceType != "" && r.Metadata().Type != resourceType) || r.Metadata().Type == types.TypeModule {
 						continue
 					}
 
 					status := fmt.Sprintf(White, "[ PENDING ]  ")
-					switch r.Metadata().Properties[constants.PropertyStatus] {
-					case constants.StatusCreated:
-						status = fmt.Sprintf(Green, "[ CREATED ]  ")
-						createdCount++
-					case constants.StatusFailed:
-						status = fmt.Sprintf(Red, "[ FAILED ]   ")
-						failedCount++
-					case constants.StatusDisabled:
+					if r.Metadata().Disabled {
 						status = fmt.Sprintf(Teal, "[ DISABLED ] ")
-						failedCount++
-					default:
-						pendingCount++
+						disabledCount++
+					} else {
+						switch r.Metadata().Properties[constants.PropertyStatus] {
+						case constants.StatusCreated:
+							status = fmt.Sprintf(Green, "[ CREATED ]  ")
+							createdCount++
+						case constants.StatusFailed:
+							status = fmt.Sprintf(Red, "[ FAILED ]   ")
+							failedCount++
+						default:
+							pendingCount++
+						}
 					}
 
 					switch r.Metadata().Type {
@@ -118,7 +121,7 @@ var statusCmd = &cobra.Command{
 			}
 
 			fmt.Println()
-			fmt.Printf("Pending: %d Created: %d Failed: %d\n", pendingCount, createdCount, failedCount)
+			fmt.Printf("Pending: %d Created: %d Failed: %d Disabled: %d\n", pendingCount, createdCount, failedCount, disabledCount)
 		}
 	},
 }

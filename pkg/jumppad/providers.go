@@ -1,15 +1,17 @@
-package shipyard
+package jumppad
 
 import (
+	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/providers"
-	"github.com/shipyard-run/hclconfig/types"
 )
 
 // generateProviderImpl returns providers grouped together in order of execution
 func generateProviderImpl(c types.Resource, cc *clients.Clients) providers.Provider {
 	switch c.Metadata().Type {
+	case resources.TypeBlueprint:
+		return providers.NewNull(c.Metadata(), cc.Logger)
 	case resources.TypeCertificateCA:
 		return providers.NewCertificateCA(c.(*resources.CertificateCA), cc.Logger)
 	case resources.TypeCertificateLeaf:
@@ -46,6 +48,14 @@ func generateProviderImpl(c types.Resource, cc *clients.Clients) providers.Provi
 		return providers.NewRemoteExec(c.(*resources.RemoteExec), cc.ContainerTasks, cc.Logger)
 	case resources.TypeRandomNumber:
 		return providers.NewRandomNumber(c.(*resources.RandomNumber), cc.Logger)
+	case resources.TypeRandomID:
+		return providers.NewRandomID(c.(*resources.RandomID), cc.Logger)
+	case resources.TypeRandomPassword:
+		return providers.NewRandomPassword(c.(*resources.RandomPassword), cc.Logger)
+	case resources.TypeRandomUUID:
+		return providers.NewRandomUUID(c.(*resources.RandomUUID), cc.Logger)
+	case resources.TypeRandomCreature:
+		return providers.NewRandomCreature(c.(*resources.RandomCreature), cc.Logger)
 	case resources.TypeSidecar:
 		return providers.NewContainerSidecar(c.(*resources.Sidecar), cc.ContainerTasks, cc.HTTP, cc.Logger)
 	case resources.TypeTemplate:
