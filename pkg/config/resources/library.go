@@ -34,7 +34,7 @@ const TypeChapter string = "chapter"
 type Chapter struct {
 	types.ResourceMetadata `hcl:",remain"`
 
-	Prerequisites []string `hcl:"prerequisites,optional" json:"prerequisites,omitempty"`
+	Prerequisites []string `hcl:"prerequisites,optional" json:"prerequisites"`
 
 	Title string `hcl:"title,optional" json:"title,omitempty"`
 	Pages []Page `hcl:"page,block" json:"pages"`

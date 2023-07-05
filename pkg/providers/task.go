@@ -36,6 +36,7 @@ func (t *Task) Create() error {
 
 	if len(t.config.Prerequisites) == 0 {
 		progress.Status = "unlocked"
+		progress.Prerequisites = []string{}
 	}
 
 	validation := resources.Validation{
