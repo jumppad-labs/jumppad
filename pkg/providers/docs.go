@@ -109,6 +109,23 @@ func (i *Docs) createDocsContainer() error {
 
 	cc.Volumes = []resources.Volume{}
 
+	// add the ports
+	cc.Ports = []resources.Port{
+		{
+			Local:  "80",
+			Remote: "80",
+			Host:   fmt.Sprintf("%d", i.config.Port),
+		},
+	}
+
+	// add the environment variables for the
+	// ip and port of the terminal server
+	localIP, _ := utils.GetLocalIPAndHostname()
+	cc.Environment = map[string]string{
+		"TERMINAL_SERVER_IP":   localIP,
+		"TERMINAL_SERVER_PORT": "30003",
+	}
+
 	indices := []resources.IndexBook{}
 
 	contentPath := utils.GetLibraryFolder("content", 0775)
@@ -116,7 +133,7 @@ func (i *Docs) createDocsContainer() error {
 	checksPath := utils.GetLibraryFolder("checks", 0775)
 
 	// Add book content and navigation
-	for _, book := range i.config.Content {
+	for index, book := range i.config.Content {
 		br, err := i.config.ParentConfig.FindResource(book)
 		if err != nil {
 			return err
@@ -135,6 +152,10 @@ func (i *Docs) createDocsContainer() error {
 		)
 
 		indices = append(indices, b.Index)
+
+		if index == 0 {
+			cc.Environment["DEFAULT_PATH"] = b.Index.Chapters[0].Pages[0].URI
+		}
 	}
 
 	navigationJSON, err := json.MarshalIndent(indices, "", " ")
@@ -204,23 +225,6 @@ func (i *Docs) createDocsContainer() error {
 	err = os.WriteFile(checksSource, []byte(checksJSON), 0755)
 	if err != nil {
 		return fmt.Errorf("Unable to write checks configuration to disk at %s", checksSource)
-	}
-
-	// add the ports
-	cc.Ports = []resources.Port{
-		{
-			Local:  "80",
-			Remote: "80",
-			Host:   fmt.Sprintf("%d", i.config.Port),
-		},
-	}
-
-	// add the environment variables for the
-	// ip and port of the terminal server
-	localIP, _ := utils.GetLocalIPAndHostname()
-	cc.Environment = map[string]string{
-		"TERMINAL_SERVER_IP":   localIP,
-		"TERMINAL_SERVER_PORT": "30003",
 	}
 
 	// set the FQDN
