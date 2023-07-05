@@ -206,14 +206,6 @@ func (i *Docs) createDocsContainer() error {
 		return fmt.Errorf("Unable to write checks configuration to disk at %s", checksSource)
 	}
 
-	// cc.Volumes = append(
-	// 	cc.Volumes,
-	// 	resources.Volume{
-	// 		Source:      checksPath,
-	// 		Destination: "/checks",
-	// 	},
-	// )
-
 	// add the ports
 	cc.Ports = []resources.Port{
 		{
