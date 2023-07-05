@@ -23,7 +23,7 @@ type Docs struct {
 
 	// FQRN is the fully qualified resource name for the container, this can be used
 	// to access the container from other sources
-	FQDN string `hcl:"fqdn,optional" json:"fqdn,omitempty"`
+	FQRN string `hcl:"fqdn,optional" json:"fqdn,omitempty"`
 }
 
 func (d *Docs) Process() error {
