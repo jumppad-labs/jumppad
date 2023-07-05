@@ -1,7 +1,10 @@
 package providers
 
 import (
+	"bytes"
 	"fmt"
+	"os"
+	"path"
 	"time"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -28,6 +31,7 @@ func NewContainer(co *resources.Container, cl clients.ContainerTasks, hc clients
 func NewContainerSidecar(cs *resources.Sidecar, cl clients.ContainerTasks, hc clients.HTTP, l hclog.Logger) *Container {
 	co := &resources.Container{}
 	co.ResourceMetadata = cs.ResourceMetadata
+	co.FQRN = cs.FQRN
 
 	co.Networks = []resources.NetworkAttachment{resources.NetworkAttachment{ID: cs.Target}}
 	co.Volumes = cs.Volumes
@@ -39,7 +43,6 @@ func NewContainerSidecar(cs *resources.Sidecar, cl clients.ContainerTasks, hc cl
 	co.Privileged = cs.Privileged
 	co.Resources = cs.Resources
 	co.MaxRestartCount = cs.MaxRestartCount
-	co.FQRN = cs.FQDN
 
 	return &Container{config: co, client: cl, httpClient: hc, log: l, sidecar: cs}
 }
@@ -55,7 +58,7 @@ func (c *Container) Create() error {
 
 	// we need to set the fqdn on the original object
 	if c.sidecar != nil {
-		c.sidecar.FQDN = c.config.FQRN
+		c.sidecar.FQRN = c.config.FQRN
 	}
 
 	return nil
@@ -63,6 +66,8 @@ func (c *Container) Create() error {
 
 // Lookup the ID based on the config
 func (c *Container) Lookup() ([]string, error) {
+	c.log.Debug("Lookup Container Details", "fqrn", c.config.FQRN)
+
 	return c.client.FindContainerIDs(c.config.FQRN)
 }
 
@@ -139,20 +144,96 @@ func (c *Container) internalCreate() error {
 		return nil
 	}
 
+	timeout, err := time.ParseDuration(c.config.HealthCheck.Timeout)
+	if err != nil {
+		return fmt.Errorf("unable to parse duration for the health check timeout, please specify as a go duration i.e 30s, 1m: %s", err)
+	}
+
 	// check the health of the container
-	if hc := c.config.HealthCheck.HTTP; hc != "" {
-		d, err := time.ParseDuration(c.config.HealthCheck.Timeout)
+	if c.config.HealthCheck.HTTP != nil {
+		err := c.httpClient.HealthCheckHTTP(
+			c.config.HealthCheck.HTTP.Address,
+			c.config.HealthCheck.HTTP.SuccessCodes,
+			timeout,
+		)
+
 		if err != nil {
 			return err
 		}
+	}
 
-		// do we have custom status codes, if not use 200
-		codes := c.config.HealthCheck.HTTPSuccessCodes
-		if codes == nil {
-			codes = []int{200}
+	if c.config.HealthCheck.TCP != nil {
+		err := c.httpClient.HealthCheckTCP(
+			c.config.HealthCheck.TCP.Address,
+			timeout,
+		)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	if c.config.HealthCheck.Exec != nil {
+		err := c.runExecHealthCheck(id, timeout)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Container) runExecHealthCheck(id string, timeout time.Duration) error {
+	command := []string{}
+
+	if len(c.config.HealthCheck.Exec.Command) > 0 {
+		command = c.config.HealthCheck.Exec.Command
+	}
+
+	if len(c.config.HealthCheck.Exec.Script) > 0 {
+		// write the script to a temp file
+		dir, err := os.MkdirTemp(os.TempDir(), "script*")
+		if err != nil {
+			return fmt.Errorf("unable to create temporary directory for script: %s", err)
 		}
 
-		return c.httpClient.HealthCheckHTTP(hc, codes, d)
+		defer os.RemoveAll(dir)
+		fn := path.Join(dir, "script.sh")
+
+		err = os.WriteFile(fn, []byte(c.config.HealthCheck.Exec.Script), os.ModePerm)
+		if err != nil {
+			return fmt.Errorf("unable to write script to temporary file %s: %s", dir, err)
+		}
+
+		// copy the script to the container
+		c.client.CopyFileToContainer(id, fn, "/tmp")
+
+		c.log.Debug("Written script to file", "script", c.config.HealthCheck.Exec.Script, "file", fn)
+
+		command = []string{"sh", "/tmp/script.sh"}
+	}
+
+	c.log.Debug("Performing Exec health check with", "command", command)
+	st := time.Now()
+
+	for {
+		if time.Since(st) > timeout {
+			c.log.Error("Timeout waiting for Exec health check")
+
+			return fmt.Errorf("timeout waiting for Exec health check %v", command)
+		}
+
+		var output bytes.Buffer
+		err := c.client.ExecuteCommand(id, command, []string{}, "/tmp", "", "", &output)
+		if err == nil {
+			c.log.Debug("Exec health check success", "command", command, "output", output.String())
+			return nil
+		}
+
+		c.log.Debug("Exec health check failed, retrying in 10s", "command", command, "output", output.String())
+
+		// back off
+		time.Sleep(10 * time.Second)
 	}
 
 	return nil

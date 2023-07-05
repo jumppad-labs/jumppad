@@ -14,25 +14,19 @@ helm "consul" {
 
   health_check {
     timeout = "2m"
-    http     = "http://consul-consul:8500/v1/leader"                          // can the http endpoint be reached
-    tcp      = "consul-consul:8500"                                           // can a TCP connection be made
-    services = ["consul-consul"]                                              // does service exist and there are endpoints
-    pods     = ["component=server,app=consul", "component=client,app=consul"] // is the pod running and healthy
+    pods    = ["component=server,app=consul", "component=client,app=consul"] // is the pod running and healthy
   }
 }
 
 // runs kubectl apply
 k8s_config "dashboard" {
-  cluster = "cluster.cloud"
-  paths  = ["${env("SHIPYARD_HOME")}/k8s_config/dashboard.yml"]
+  cluster          = "cluster.cloud"
+  paths            = ["${env("SHIPYARD_HOME")}/k8s_config/dashboard.yml"]
   wait_until_ready = false
 
   health_check {
     timeout = "2m"
-    http     = "http://consul-consul:8500/v1/leader"                          // can the http endpoint be reached
-    tcp      = "consul-consul:8500"                                           // can a TCP connection be made
-    services = ["consul-consul"]                                              // does service exist and there are endpoints
-    pods     = ["component=server,app=consul", "component=client,app=consul"] // is the pod running and healthy
+    pods    = ["component=server,app=consul", "component=client,app=consul"] // is the pod running and healthy
   }
 }
 

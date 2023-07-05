@@ -28,7 +28,7 @@ type Container struct {
 	Resources *Resources `hcl:"resources,block" json:"resources,omitempty"` // resource constraints for the container
 
 	// health checks for the container
-	HealthCheck *HealthCheck `hcl:"health_check,block" json:"health_check,omitempty"`
+	HealthCheck *HealthCheckContainer `hcl:"health_check,block" json:"health_check,omitempty"`
 
 	// User block for mapping the user id and group id inside the container
 	RunAs *User `hcl:"run_as,block" json:"run_as,omitempty"`

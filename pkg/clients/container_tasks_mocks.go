@@ -129,7 +129,11 @@ func (d *MockContainerTasks) AttachNetwork(network, containerid string, aliases 
 func (d *MockContainerTasks) ListNetworks(id string) []resources.NetworkAttachment {
 	args := d.Called(id)
 
-	return args.Get(0).([]resources.NetworkAttachment)
+	if n, ok := args.Get(0).([]resources.NetworkAttachment); ok {
+		return n
+	}
+
+	return nil
 }
 
 func (d *MockContainerTasks) CreateShell(id string, command []string, stdin io.ReadCloser, stdout io.Writer, stderr io.Writer) error {
