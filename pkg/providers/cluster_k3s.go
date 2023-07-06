@@ -267,7 +267,6 @@ func (c *K8sCluster) createK3s() error {
 	// and set that to the config
 	dc := c.client.ListNetworks(id)
 	for _, n := range dc {
-		c.log.Info("network", "net", n)
 		for i, net := range c.config.Networks {
 			if net.ID == n.ID {
 				// set the assigned address and name

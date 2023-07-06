@@ -130,7 +130,6 @@ func (c *Container) internalCreate() error {
 	// get the assigned ip addresses for the container
 	dc := c.client.ListNetworks(id)
 	for _, n := range dc {
-		c.log.Info("network", "net", n)
 		for i, net := range c.config.Networks {
 			if net.ID == n.ID {
 				// set the assigned address and name
