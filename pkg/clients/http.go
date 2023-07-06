@@ -17,6 +17,7 @@ type HTTP interface {
 	// if a successful status []codes is returned the method returns a nil error.
 	// If it is not possible to contact the URI or if any status other than the passed codes is returned
 	// by the upstream, then the URI is retried until the timeout elapses.
+
 	HealthCheckHTTP(uri, method string, headers map[string][]string, body string, codes []int, timeout time.Duration) error
 
 	// HealthCheckTCP attempts to connect to a raw socket at the given address

@@ -33,6 +33,7 @@ type HealthCheckExec struct {
 	Script string `hcl:"script,optional" json:"script,omitempty"`
 	// ExitCode to mark a successful check, default 0
 	ExitCode int `hcl:"exit_code,optional" json:"exit_code,omitempty"`
+
 }
 
 type HealthCheckKubernetes struct {
