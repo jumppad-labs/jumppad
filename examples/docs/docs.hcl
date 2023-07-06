@@ -1,8 +1,4 @@
 resource "docs" "docs" {
-  image {
-    name = "ghcr.io/jumppad-labs/docs:v0.0.2"
-  }
-
   content = [
     resource.book.terraform_basics.id
   ]

@@ -38,6 +38,7 @@ type Engine interface {
 	ParseConfigWithVariables(string, map[string]string, string) ([]types.Resource, error)
 	Destroy() error
 	Config() *hclconfig.Config
+	Diff(path string, variables map[string]string, variablesFile string) (new []types.Resource, changed []types.Resource, removed []types.Resource, err error)
 }
 
 // EngineImpl is responsible for creating and destroying resources
@@ -157,13 +158,7 @@ func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]strin
 		}
 	}
 
-	// load the state
-	c, err := resources.LoadState()
-	if err != nil {
-		e.log.Debug("unable to load state", "error", err)
-	}
-
-	e.config = c
+	e.config = hclconfig.NewConfig()
 
 	err = e.readAndProcessConfig(path, vars, variablesFile, func(r types.Resource) error {
 		e.config.AppendResource(r)
@@ -171,6 +166,60 @@ func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]strin
 	})
 
 	return e.config.Resources, err
+}
+
+func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFile string) (new []types.Resource, changed []types.Resource, removed []types.Resource, err error) {
+
+	// load the stack
+	past, _ := resources.LoadState()
+
+	// Parse the config to check it is valid
+	res, err := e.ParseConfigWithVariables(path, variables, variablesFile)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	for _, r := range res {
+		// does the resource exist
+		cr, err := past.FindResource(r.Metadata().ID)
+
+		// check if the resource has been found
+		if err != nil {
+			// resource does not exist
+			new = append(new, r)
+			continue
+		}
+
+		// check if the resource has changed
+		if cr.Metadata().Checksum != r.Metadata().Checksum {
+			// resource has changes rebuild
+			changed = append(changed, r)
+			continue
+		}
+	}
+
+	// check if there are resources in the state that are no longer
+	// in the config
+	for _, r := range past.Resources {
+		// if this is the image cache continue as this is always added
+		if r.Metadata().Type == resources.TypeImageCache {
+			continue
+		}
+
+		found := false
+		for _, r2 := range res {
+			if r.Metadata().ID == r2.Metadata().ID {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			removed = append(removed, r)
+		}
+	}
+
+	return new, changed, removed, err
 }
 
 // Apply the configuration and create or destroy the resources
@@ -196,11 +245,19 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 		}
 	}
 
+	// get a diff of resources
+
+	_, _, removed, err := e.Diff(path, vars, variablesFile)
+	if err != nil {
+		return nil, err
+	}
+
 	// load the state
 	c, err := resources.LoadState()
 	if err != nil {
 		e.log.Debug("unable to load state", "error", err)
 	}
+
 	e.config = c
 
 	// check to see we already have an image cache
@@ -240,6 +297,27 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 
 	// finally we can process and create resources
 	processErr := e.readAndProcessConfig(path, vars, variablesFile, e.createCallback)
+
+	// we need to remove any resources that are in the state but not in the config
+	e.log.Debug("removing resources in state but not in current config")
+	for _, r := range removed {
+		e.log.Debug("removing", "id", r.Metadata().ID)
+
+		p := e.getProvider(r, e.clients)
+		if p == nil {
+			processErr = fmt.Errorf("unable to create provider for resource Name: %s, Type: %s. Please check the provider is registered in providers.go", r.Metadata().Name, r.Metadata().Type)
+			continue
+		}
+
+		// call destroy
+		err := p.Destroy()
+		if err != nil {
+			processErr = fmt.Errorf("unable to destroy resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
+			continue
+		}
+
+		e.config.RemoveResource(r)
+	}
 
 	// save the state regardless of error
 	stateErr := resources.SaveState(e.config)
@@ -306,7 +384,6 @@ func (e *EngineImpl) ResourceCountForType(t string) int {
 }
 
 func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]string, variablesFile string, callback hclconfig.ProcessCallback) error {
-
 	var parseError error
 	var parsedConfig *hclconfig.Config
 
@@ -353,7 +430,7 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 		return parseError
 	}
 
-	// destroy an resouces that might have been set to disabled
+	// destroy any resources that might have been set to disabled
 	err = e.destroyDisabledResources()
 	if err != nil {
 		return err

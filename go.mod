@@ -221,6 +221,6 @@ require (
 
 replace github.com/creack/pty => github.com/photostorm/pty v1.1.18
 
-// replace github.com/jumppad-labs/hclconfig => ../../jumppad-labs/hclconfig/
+replace github.com/jumppad-labs/hclconfig => ../../jumppad-labs/hclconfig/
 
 //replace github.com/jumppad-labs/connector => ../connector

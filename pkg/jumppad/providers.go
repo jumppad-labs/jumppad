@@ -10,6 +10,8 @@ import (
 // generateProviderImpl returns providers grouped together in order of execution
 func generateProviderImpl(c types.Resource, cc *clients.Clients) providers.Provider {
 	switch c.Metadata().Type {
+	case types.TypeVariable:
+		return providers.NewNull(c.Metadata(), cc.Logger)
 	case resources.TypeBlueprint:
 		return providers.NewNull(c.Metadata(), cc.Logger)
 	case resources.TypeCertificateCA:
