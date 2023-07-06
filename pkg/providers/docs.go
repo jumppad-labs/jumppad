@@ -154,7 +154,13 @@ func (i *Docs) createDocsContainer() error {
 		indices = append(indices, b.Index)
 
 		if index == 0 {
-			cc.Environment["DEFAULT_PATH"] = b.Index.Chapters[0].Pages[0].URI
+			defaultPath := "/"
+			if len(b.Index.Chapters) > 0 {
+				if len(b.Index.Chapters[0].Pages) > 0 {
+					defaultPath = b.Index.Chapters[0].Pages[0].URI
+				}
+			}
+			cc.Environment["DEFAULT_PATH"] = defaultPath
 		}
 	}
 
