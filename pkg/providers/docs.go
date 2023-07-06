@@ -179,11 +179,8 @@ func (i *Docs) createDocsContainer() error {
 		},
 	)
 
-	// Add task progress
-	tasks, err := i.config.ParentConfig.FindResourcesByType(resources.TypeTask)
-	if err != nil {
-		return err
-	}
+	// Add optional task progress
+	tasks, _ := i.config.ParentConfig.FindResourcesByType(resources.TypeTask)
 
 	progress := []resources.Progress{}
 	checks := []resources.Validation{}

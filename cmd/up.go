@@ -216,7 +216,7 @@ func newRunCmdFunc(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clie
 			for _, b := range browserList {
 				go func(uri string) {
 					// health check the URL
-					err := hc.HealthCheckHTTP(uri, []int{200}, checkDuration)
+					err := hc.HealthCheckHTTP(uri, "", nil, "", []int{200}, checkDuration)
 					if err == nil {
 						be := bc.OpenBrowser(uri)
 						if be != nil {

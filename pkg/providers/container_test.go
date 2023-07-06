@@ -90,10 +90,10 @@ func TestContainerRunsHTTPChecks(t *testing.T) {
 	cc, md, hc := setupContainerTests(t)
 	cc.HealthCheck = &resources.HealthCheckContainer{
 		Timeout: "30s",
-		HTTP: &resources.HealthCheckHTTP{
+		HTTP: []resources.HealthCheckHTTP{resources.HealthCheckHTTP{
 			Address:      "http://localhost:8500",
 			SuccessCodes: []int{200, 429},
-		},
+		}},
 	}
 
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
@@ -110,9 +110,9 @@ func TestContainerRunsTCPChecks(t *testing.T) {
 	cc, md, hc := setupContainerTests(t)
 	cc.HealthCheck = &resources.HealthCheckContainer{
 		Timeout: "30s",
-		TCP: &resources.HealthCheckTCP{
+		TCP: []resources.HealthCheckTCP{resources.HealthCheckTCP{
 			Address: "http://localhost:8500",
-		},
+		}},
 	}
 
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
@@ -130,12 +130,12 @@ func TestContainerRunsExecChecksWithCommand(t *testing.T) {
 	cc, md, hc := setupContainerTests(t)
 	cc.HealthCheck = &resources.HealthCheckContainer{
 		Timeout: "30s",
-		Exec: &resources.HealthCheckExec{
+		Exec: []resources.HealthCheckExec{resources.HealthCheckExec{
 			Command: command,
-		},
+		}},
 	}
 
-	md.On("ExecuteCommand", "12345", command, mock.Anything, "/tmp", "", "", mock.Anything).Return(nil)
+	md.On("ExecuteCommand", "12345", command, mock.Anything, "/tmp", "", "", mock.Anything).Return(0, nil)
 
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 
@@ -149,15 +149,15 @@ func TestContainerRunsExecChecksWithScript(t *testing.T) {
 	cc, md, hc := setupContainerTests(t)
 	cc.HealthCheck = &resources.HealthCheckContainer{
 		Timeout: "30s",
-		Exec: &resources.HealthCheckExec{
+		Exec: []resources.HealthCheckExec{resources.HealthCheckExec{
 			Script: `#!/bin/bash
 				curl http://something.com
 			`,
-		},
+		}},
 	}
 
 	md.On("CopyFileToContainer", "12345", mock.Anything, mock.Anything).Return(nil)
-	md.On("ExecuteCommand", "12345", []string{"sh", "/tmp/script.sh"}, mock.Anything, "/tmp", "", "", mock.Anything).Return(nil)
+	md.On("ExecuteCommand", "12345", []string{"sh", "/tmp/script.sh"}, mock.Anything, "/tmp", "", "", mock.Anything).Return(0, nil)
 
 	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
 

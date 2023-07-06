@@ -108,10 +108,10 @@ func (d *MockContainerTasks) CopyFilesToVolume(volume string, files []string, pa
 	return nil, args.Error(1)
 }
 
-func (d *MockContainerTasks) ExecuteCommand(id string, command []string, env []string, workingDirectory string, user, group string, writer io.Writer) error {
+func (d *MockContainerTasks) ExecuteCommand(id string, command []string, env []string, workingDirectory string, user, group string, timeout int, writer io.Writer) (int, error) {
 	args := d.Called(id, command, env, workingDirectory, user, group, writer)
 
-	return args.Error(0)
+	return args.Int(0), args.Error(1)
 }
 
 func (d *MockContainerTasks) DetachNetwork(network, containerid string) error {
