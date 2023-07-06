@@ -2,11 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/jumppad-labs/hclconfig"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/providers"
@@ -41,23 +40,17 @@ func newPushCmd(ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTT
 			fmt.Printf("Pushing image %s to cluster %s\n\n", image, cluster)
 
 			// check the resource is of the allowed type
-			if !strings.HasPrefix(cluster, "nomad_cluster") && !strings.HasPrefix(cluster, "k8s_cluster") {
+			if !strings.Contains(cluster, "nomad_cluster") && !strings.Contains(cluster, "k8s_cluster") {
 				return xerrors.Errorf("Invalid resource type, only resources type nomad_cluster and k8s_cluster are supported")
 			}
 
-			// find the cluster in the state
-			p := hclconfig.NewParser(hclconfig.DefaultOptions())
-			d, err := ioutil.ReadFile(utils.StatePath())
+			c, err := resources.LoadState()
 			if err != nil {
-				return fmt.Errorf("Unable to read state file")
+				cmd.Println("Error: Unable to load state, ", err)
+				os.Exit(1)
 			}
 
-			cfg, err := p.UnmarshalJSON(d)
-			if err != nil {
-				return fmt.Errorf("Unable to unmarshal state file")
-			}
-
-			r, err := cfg.FindResource(cluster)
+			r, err := c.FindResource(cluster)
 			if err != nil {
 				return xerrors.Errorf("Cluster %s is not running", cluster)
 			}
