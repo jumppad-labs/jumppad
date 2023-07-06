@@ -44,7 +44,7 @@ type Task struct {
 	Validation Validation `hcl:"validation,optional" json:"validation"`
 }
 
-func (t *Task) Process() {
+func (t *Task) Process() error {
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
 	cfg, err := LoadState()
@@ -57,6 +57,8 @@ func (t *Task) Process() {
 			t.Validation = kstate.Validation
 		}
 	}
+
+	return nil
 }
 
 type Condition struct {

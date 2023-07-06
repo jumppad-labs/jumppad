@@ -29,7 +29,7 @@ type Book struct {
 	Index IndexBook `hcl:"index,optional" json:"index"`
 }
 
-func (b *Book) Process() {
+func (b *Book) Process() error {
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
 	cfg, err := LoadState()
@@ -41,6 +41,8 @@ func (b *Book) Process() {
 			b.Index = kstate.Index
 		}
 	}
+
+	return nil
 }
 
 const TypeChapter string = "chapter"
@@ -57,7 +59,7 @@ type Chapter struct {
 	Tasks []string `hcl:"tasks,optional" json:"tasks"`
 }
 
-func (c *Chapter) Process() {
+func (c *Chapter) Process() error {
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
 	cfg, err := LoadState()
@@ -69,6 +71,8 @@ func (c *Chapter) Process() {
 			c.Tasks = kstate.Tasks
 		}
 	}
+
+	return nil
 }
 
 type Page struct {
