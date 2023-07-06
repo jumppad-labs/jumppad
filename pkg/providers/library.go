@@ -40,36 +40,15 @@ func (b *Book) Create() error {
 		c := cr.(*resources.Chapter)
 
 		chapterPath := filepath.Join(bookPath, c.Name)
-		os.MkdirAll(chapterPath, 0755)
-		os.Chmod(chapterPath, 0755)
 
 		chapter := resources.IndexChapter{
 			Title: c.Title,
 		}
 
 		for _, p := range c.Pages {
-			if len(p.Tasks) > 0 {
-				r, _ := regexp.Compile("<Task id=\"(?P<id>.*)\">")
-				match := r.FindStringSubmatch(p.Content)
-				result := map[string]string{}
-				for i, name := range r.SubexpNames() {
-					if i != 0 && name != "" {
-						result[name] = match[i]
-					}
-				}
-
-				if len(match) > 0 {
-					taskID := result["id"]
-					resourceID := fmt.Sprintf("<Task id=\"%s\">", p.Tasks[taskID])
-					p.Content = r.ReplaceAllString(p.Content, resourceID)
-				}
-			}
-
-			pageFile := fmt.Sprintf("%s.mdx", p.Name)
-			pagePath := filepath.Join(chapterPath, pageFile)
-			err := os.WriteFile(pagePath, []byte(p.Content), 0755)
+			err = b.writePage(chapterPath, p)
 			if err != nil {
-				return fmt.Errorf("Unable to write page %s to disk at %s", p.Name, pagePath)
+				return err
 			}
 
 			page := resources.IndexPage{
@@ -97,6 +76,60 @@ func (b *Book) Lookup() ([]string, error) {
 }
 
 func (b *Book) Refresh() error {
+	b.log.Info("Refresh Book", "ref", b.config.Name)
+
+	libraryPath := utils.GetLibraryFolder("", 0775)
+	bookPath := filepath.Join(libraryPath, "content", b.config.Name)
+
+	for _, bc := range b.config.Chapters {
+		cr, err := b.config.ParentConfig.FindResource(bc)
+		if err != nil {
+			return err
+		}
+
+		c := cr.(*resources.Chapter)
+
+		chapterPath := filepath.Join(bookPath, c.Name)
+
+		for _, p := range c.Pages {
+			err = b.writePage(chapterPath, p)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (b *Book) writePage(chapterPath string, page resources.Page) error {
+	os.MkdirAll(chapterPath, 0755)
+	os.Chmod(chapterPath, 0755)
+
+	if len(page.Tasks) > 0 {
+		r, _ := regexp.Compile("<Task id=\"(?P<id>.*)\">")
+		match := r.FindStringSubmatch(page.Content)
+		result := map[string]string{}
+		for i, name := range r.SubexpNames() {
+			if i != 0 && name != "" {
+				result[name] = match[i]
+			}
+		}
+
+		if len(match) > 0 {
+			taskID := result["id"]
+			resourceID := fmt.Sprintf("<Task id=\"%s\">", page.Tasks[taskID])
+			page.Content = r.ReplaceAllString(page.Content, resourceID)
+		}
+	}
+
+	pageFile := fmt.Sprintf("%s.mdx", page.Name)
+	pagePath := filepath.Join(chapterPath, pageFile)
+	err := os.WriteFile(pagePath, []byte(page.Content), 0755)
+	if err != nil {
+		return fmt.Errorf("Unable to write page %s to disk at %s", page.Name, pagePath)
+	}
+
 	return nil
 }
 
