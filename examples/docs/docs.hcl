@@ -1,12 +1,4 @@
-resource "network" "main" {
-  subnet = "10.6.0.0/16"
-}
-
 resource "docs" "docs" {
-  network {
-    id = resource.network.main.id
-  }
-
   image {
     name = "ghcr.io/jumppad-labs/docs:v0.0.2"
   }
