@@ -63,8 +63,9 @@ type ContainerTasks interface {
 	// Execute command allows the execution of commands in a running docker container
 	// id is the id of the container to execute the command in
 	// command is a slice of strings to execute
+	// timeout in seconds
 	// writer [optional] will be used to write any output from the command execution.
-	ExecuteCommand(id string, command []string, env []string, workingDirectory string, user, group string, writer io.Writer) error
+	ExecuteCommand(id string, command []string, env []string, workingDirectory string, user, group string, timeout int, writer io.Writer) (int, error)
 	// AttachNetwork attaches a container to a network
 	// if aliases is set an alias for the container name will be added
 	// if ipAddress is not null then a user defined ipaddress will be used

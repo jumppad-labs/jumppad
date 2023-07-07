@@ -1,7 +1,10 @@
 package providers
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/hclconfig/types"
@@ -11,7 +14,11 @@ import (
 )
 
 const docsImageName = "ghcr.io/jumppad-labs/docs"
-const docsVersion = "dev"
+const docsVersion = "v0.0.3"
+
+type DocsConfig struct {
+	DefaultPath string `json:"defaultPath"`
+}
 
 // Docs defines a provider for creating documentation containers
 type Docs struct {
@@ -72,63 +79,94 @@ func (i *Docs) Lookup() ([]string, error) {
 	return []string{}, nil
 }
 
-func (c *Docs) Refresh() error {
-	c.log.Info("Refresh Docs", "ref", c.config.Name)
+func (d *Docs) Refresh() error {
+	d.log.Info("Refresh Docs", "ref", d.config.Name)
+
+	configPath := utils.GetLibraryFolder("config", 0775)
+	checksPath := utils.GetLibraryFolder("checks", 0775)
+
+	indices := []resources.IndexBook{}
+	docsConfig := DocsConfig{}
+
+	for index, book := range d.config.Content {
+		br, err := d.config.ParentConfig.FindResource(book)
+		if err != nil {
+			return err
+		}
+
+		b := br.(*resources.Book)
+
+		if index == 0 {
+			if len(b.Index.Chapters) > 0 {
+				if len(b.Index.Chapters[0].Pages) > 0 {
+					docsConfig.DefaultPath = b.Index.Chapters[0].Pages[0].URI
+				}
+			}
+		}
+
+		indices = append(indices, b.Index)
+	}
+
+	docsConfigPath := filepath.Join(configPath, "jumppad.config.js")
+	err := d.writeConfig(docsConfigPath, &docsConfig)
+	if err != nil {
+		return err
+	}
+
+	navigationPath := filepath.Join(configPath, "navigation.jsx")
+	err = d.writeNavigation(navigationPath, indices)
+	if err != nil {
+		return err
+	}
+
+	progressPath := filepath.Join(configPath, "progress.jsx")
+	err = d.writeProgress(progressPath)
+	if err != nil {
+		return err
+	}
+
+	err = d.writeChecks(checksPath)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
-func (i *Docs) createDocsContainer() error {
+func (d *Docs) createDocsContainer() error {
 	// create the container config
 	cc := &resources.Container{
 		ResourceMetadata: types.ResourceMetadata{
-			Name:   i.config.Name,
-			Type:   i.config.Type,
-			Module: i.config.Module,
+			Name:   d.config.Name,
+			Type:   d.config.Type,
+			Module: d.config.Module,
 		},
 	}
-	cc.ParentConfig = i.config.Metadata().ParentConfig
+	cc.ParentConfig = d.config.Metadata().ParentConfig
 
-	cc.Networks = i.config.Networks
+	cc.Networks = d.config.Networks
 
 	cc.Image = &resources.Image{Name: fmt.Sprintf("%s:%s", docsImageName, docsVersion)}
 
 	// if image is set override defaults
-	if i.config.Image != nil {
-		cc.Image = i.config.Image
+	if d.config.Image != nil {
+		cc.Image = d.config.Image
 	}
 
 	// pull the docker image
-	err := i.client.PullImage(*cc.Image, false)
+	err := d.client.PullImage(*cc.Image, false)
 	if err != nil {
 		return err
 	}
 
 	cc.Volumes = []resources.Volume{}
 
-	if i.config.Path != "" {
-		cc.Volumes = append(
-			cc.Volumes,
-			resources.Volume{
-				Source:      i.config.Path,
-				Destination: "/content",
-			},
-		)
-		cc.Volumes = append(
-			cc.Volumes,
-			resources.Volume{
-				Source:      i.config.NavigationFile,
-				Destination: "/config/navigation.jsx",
-			},
-		)
-	}
-
 	// add the ports
 	cc.Ports = []resources.Port{
-		resources.Port{
+		{
 			Local:  "80",
 			Remote: "80",
-			Host:   fmt.Sprintf("%d", i.config.Port),
+			Host:   fmt.Sprintf("%d", d.config.Port),
 		},
 	}
 
@@ -140,10 +178,170 @@ func (i *Docs) createDocsContainer() error {
 		"TERMINAL_SERVER_PORT": "30003",
 	}
 
-	// set the FQDN
-	fqdn := utils.FQDN(i.config.Name, i.config.Module, i.config.Type)
-	i.config.FQRN = fqdn
+	configPath := utils.GetLibraryFolder("config", 0775)
+	contentPath := utils.GetLibraryFolder("content", 0775)
+	checksPath := utils.GetLibraryFolder("checks", 0775)
 
-	_, err = i.client.CreateContainer(cc)
+	indices := []resources.IndexBook{}
+	docsConfig := DocsConfig{}
+
+	for index, book := range d.config.Content {
+		br, err := d.config.ParentConfig.FindResource(book)
+		if err != nil {
+			return err
+		}
+
+		b := br.(*resources.Book)
+
+		bookPath := filepath.Join(contentPath, b.Name)
+		destinationPath := filepath.Join("/content", b.Name)
+		cc.Volumes = append(
+			cc.Volumes,
+			resources.Volume{
+				Source:      bookPath,
+				Destination: destinationPath,
+			},
+		)
+
+		if index == 0 {
+			if len(b.Index.Chapters) > 0 {
+				if len(b.Index.Chapters[0].Pages) > 0 {
+					docsConfig.DefaultPath = b.Index.Chapters[0].Pages[0].URI
+				}
+			}
+		}
+
+		indices = append(indices, b.Index)
+	}
+
+	docsConfigPath := filepath.Join(configPath, "jumppad.config.js")
+	d.writeConfig(docsConfigPath, &docsConfig)
+
+	docsConfigDestination := filepath.Join("/jumppad", "jumppad.config.mjs")
+	cc.Volumes = append(
+		cc.Volumes,
+		resources.Volume{
+			Source:      docsConfigPath,
+			Destination: docsConfigDestination,
+		},
+	)
+
+	navigationPath := filepath.Join(configPath, "navigation.jsx")
+	err = d.writeNavigation(navigationPath, indices)
+	if err != nil {
+		return err
+	}
+
+	navigationDestination := filepath.Join("/config", "navigation.jsx")
+	cc.Volumes = append(
+		cc.Volumes,
+		resources.Volume{
+			Source:      navigationPath,
+			Destination: navigationDestination,
+		},
+	)
+
+	progressPath := filepath.Join(configPath, "progress.jsx")
+	err = d.writeProgress(progressPath)
+	if err != nil {
+		return err
+	}
+
+	progressDestination := filepath.Join("/config", "progress.jsx")
+	cc.Volumes = append(
+		cc.Volumes,
+		resources.Volume{
+			Source:      progressPath,
+			Destination: progressDestination,
+		},
+	)
+
+	err = d.writeChecks(checksPath)
+	if err != nil {
+		return err
+	}
+
+	// set the FQDN
+	fqdn := utils.FQDN(d.config.Name, d.config.Module, d.config.Type)
+	d.config.FQRN = fqdn
+
+	_, err = d.client.CreateContainer(cc)
 	return err
+}
+
+func (i *Docs) writeConfig(configPath string, config *DocsConfig) error {
+	configJSON, err := json.MarshalIndent(config, "", " ")
+	if err != nil {
+		return err
+	}
+
+	configJS := fmt.Sprintf("export const jumppad = %s", configJSON)
+	err = os.WriteFile(configPath, []byte(configJS), 0755)
+	if err != nil {
+		return fmt.Errorf("Unable to write config to disk at %s", configPath)
+	}
+
+	return nil
+}
+
+func (i *Docs) writeNavigation(navigationPath string, indices []resources.IndexBook) error {
+	navigationJSON, err := json.MarshalIndent(indices, "", " ")
+	if err != nil {
+		return err
+	}
+
+	navigationJSX := fmt.Sprintf("export const navigation = %s", navigationJSON)
+	err = os.WriteFile(navigationPath, []byte(navigationJSX), 0755)
+	if err != nil {
+		return fmt.Errorf("Unable to write navigation to disk at %s", navigationPath)
+	}
+
+	return nil
+}
+
+// Add optional task progress
+func (i *Docs) writeProgress(progressPath string) error {
+	tasks, _ := i.config.ParentConfig.FindResourcesByType(resources.TypeTask)
+
+	progress := []resources.Progress{}
+	for _, tr := range tasks {
+		task := tr.(*resources.Task)
+		progress = append(progress, task.Progress)
+	}
+
+	progressJSON, err := json.MarshalIndent(progress, "", " ")
+	if err != nil {
+		return err
+	}
+
+	progressJSX := fmt.Sprintf("export const progress = %s", progressJSON)
+	err = os.WriteFile(progressPath, []byte(progressJSX), 0755)
+	if err != nil {
+		return fmt.Errorf("Unable to write progress to disk at %s", progressPath)
+	}
+
+	return nil
+}
+
+func (i *Docs) writeChecks(checksPath string) error {
+	tasks, _ := i.config.ParentConfig.FindResourcesByType(resources.TypeTask)
+
+	checks := []resources.Validation{}
+	for _, tr := range tasks {
+		task := tr.(*resources.Task)
+		checks = append(checks, task.Validation)
+	}
+
+	checksJSON, err := json.MarshalIndent(checks, "", " ")
+	if err != nil {
+		return err
+	}
+
+	checksDestination := filepath.Join(checksPath, "checks.json")
+	err = os.WriteFile(checksDestination, []byte(checksJSON), 0755)
+	if err != nil {
+		return fmt.Errorf("Unable to write checks configuration to disk at %s", checksDestination)
+	}
+
+	return nil
 }

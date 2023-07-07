@@ -45,6 +45,7 @@ func init() {
 
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(outputCmd)
+	rootCmd.AddCommand(newDevCmd(engine, engineClients.Connector, logger))
 	rootCmd.AddCommand(newEnvCmd(engine))
 	rootCmd.AddCommand(newRunCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, vm, engineClients.Connector, logger))
 	rootCmd.AddCommand(newTestCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, logger))

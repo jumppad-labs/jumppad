@@ -267,7 +267,6 @@ func (c *K8sCluster) createK3s() error {
 	// and set that to the config
 	dc := c.client.ListNetworks(id)
 	for _, n := range dc {
-		c.log.Info("network", "net", n)
 		for i, net := range c.config.Networks {
 			if net.ID == n.ID {
 				// set the assigned address and name
@@ -541,7 +540,7 @@ func (c *K8sCluster) ImportLocalDockerImages(name string, id string, images []re
 	for _, i := range imagesFile {
 		// execute the command to import the image
 		// write any command output to the logger
-		err = c.client.ExecuteCommand(id, []string{"ctr", "image", "import", i}, nil, "/", "", "", c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
+		_, err = c.client.ExecuteCommand(id, []string{"ctr", "image", "import", i}, nil, "/", "", "", 300, c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
 		if err != nil {
 			return err
 		}

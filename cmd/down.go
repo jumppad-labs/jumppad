@@ -25,6 +25,9 @@ func newDestroyCmd(cc clients.Connector) *cobra.Command {
 			// clean up the data folder
 			os.RemoveAll(utils.GetDataFolder("", os.ModePerm))
 
+			// clean up the library folder
+			os.RemoveAll(utils.GetLibraryFolder("", os.ModePerm))
+
 			// remove the certs
 			os.RemoveAll(utils.CertsDir(""))
 

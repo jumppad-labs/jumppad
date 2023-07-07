@@ -130,7 +130,6 @@ func (c *Container) internalCreate() error {
 	// get the assigned ip addresses for the container
 	dc := c.client.ListNetworks(id)
 	for _, n := range dc {
-		c.log.Info("network", "net", n)
 		for i, net := range c.config.Networks {
 			if net.ID == n.ID {
 				// set the assigned address and name
@@ -144,27 +143,19 @@ func (c *Container) internalCreate() error {
 		return nil
 	}
 
+	if c.config.HealthCheck.Timeout == "" {
+		c.config.HealthCheck.Timeout = "30s"
+	}
+
 	timeout, err := time.ParseDuration(c.config.HealthCheck.Timeout)
 	if err != nil {
 		return fmt.Errorf("unable to parse duration for the health check timeout, please specify as a go duration i.e 30s, 1m: %s", err)
 	}
 
-	// check the health of the container
-	if c.config.HealthCheck.HTTP != nil {
-		err := c.httpClient.HealthCheckHTTP(
-			c.config.HealthCheck.HTTP.Address,
-			c.config.HealthCheck.HTTP.SuccessCodes,
-			timeout,
-		)
-
-		if err != nil {
-			return err
-		}
-	}
-
-	if c.config.HealthCheck.TCP != nil {
+	// execute tcp health checks
+	for _, hc := range c.config.HealthCheck.TCP {
 		err := c.httpClient.HealthCheckTCP(
-			c.config.HealthCheck.TCP.Address,
+			hc.Address,
 			timeout,
 		)
 
@@ -173,8 +164,24 @@ func (c *Container) internalCreate() error {
 		}
 	}
 
-	if c.config.HealthCheck.Exec != nil {
-		err := c.runExecHealthCheck(id, timeout)
+	// execute http health checks
+	for _, hc := range c.config.HealthCheck.HTTP {
+		err := c.httpClient.HealthCheckHTTP(
+			hc.Address,
+			hc.Method,
+			hc.Headers,
+			hc.Body,
+			hc.SuccessCodes,
+			timeout,
+		)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, hc := range c.config.HealthCheck.Exec {
+		err := c.runExecHealthCheck(id, hc.Command, hc.Script, hc.ExitCode, timeout)
 		if err != nil {
 			return err
 		}
@@ -183,14 +190,8 @@ func (c *Container) internalCreate() error {
 	return nil
 }
 
-func (c *Container) runExecHealthCheck(id string, timeout time.Duration) error {
-	command := []string{}
-
-	if len(c.config.HealthCheck.Exec.Command) > 0 {
-		command = c.config.HealthCheck.Exec.Command
-	}
-
-	if len(c.config.HealthCheck.Exec.Script) > 0 {
+func (c *Container) runExecHealthCheck(id string, command []string, script string, exitCode int, timeout time.Duration) error {
+	if len(script) > 0 {
 		// write the script to a temp file
 		dir, err := os.MkdirTemp(os.TempDir(), "script*")
 		if err != nil {
@@ -200,7 +201,7 @@ func (c *Container) runExecHealthCheck(id string, timeout time.Duration) error {
 		defer os.RemoveAll(dir)
 		fn := path.Join(dir, "script.sh")
 
-		err = os.WriteFile(fn, []byte(c.config.HealthCheck.Exec.Script), os.ModePerm)
+		err = os.WriteFile(fn, []byte(script), os.ModePerm)
 		if err != nil {
 			return fmt.Errorf("unable to write script to temporary file %s: %s", dir, err)
 		}
@@ -208,7 +209,7 @@ func (c *Container) runExecHealthCheck(id string, timeout time.Duration) error {
 		// copy the script to the container
 		c.client.CopyFileToContainer(id, fn, "/tmp")
 
-		c.log.Debug("Written script to file", "script", c.config.HealthCheck.Exec.Script, "file", fn)
+		c.log.Debug("Written script to file", "script", script, "file", fn)
 
 		command = []string{"sh", "/tmp/script.sh"}
 	}
@@ -224,8 +225,8 @@ func (c *Container) runExecHealthCheck(id string, timeout time.Duration) error {
 		}
 
 		var output bytes.Buffer
-		err := c.client.ExecuteCommand(id, command, []string{}, "/tmp", "", "", &output)
-		if err == nil {
+		res, err := c.client.ExecuteCommand(id, command, []string{}, "/tmp", "", "", 300, &output)
+		if err == nil && exitCode == res {
 			c.log.Debug("Exec health check success", "command", command, "output", output.String())
 			return nil
 		}
@@ -235,8 +236,6 @@ func (c *Container) runExecHealthCheck(id string, timeout time.Duration) error {
 		// back off
 		time.Sleep(10 * time.Second)
 	}
-
-	return nil
 }
 
 func (c *Container) internalDestroy() error {

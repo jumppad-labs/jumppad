@@ -14,10 +14,10 @@ type Docs struct {
 
 	Image *Image `hcl:"image,block" json:"image,omitempty"` // image to use for the container
 
-	Path           string `hcl:"path" json:"path"`
-	NavigationFile string `hcl:"navigation_file" json:"navigation_file"`
-	Port           int    `hcl:"port,optional" json:"port"`
-	OpenInBrowser  bool   `hcl:"open_in_browser,optional" json:"open_in_browser"` // When a host port is defined open the location in a browser
+	Content []string `hcl:"content" json:"content"`
+
+	Port          int  `hcl:"port,optional" json:"port"`
+	OpenInBrowser bool `hcl:"open_in_browser,optional" json:"open_in_browser"` // When a host port is defined open the location in a browser
 
 	// Output parameters
 
@@ -27,9 +27,6 @@ type Docs struct {
 }
 
 func (d *Docs) Process() error {
-	d.Path = ensureAbsolute(d.Path, d.File)
-	d.NavigationFile = ensureAbsolute(d.NavigationFile, d.File)
-
 	// if port not set set port to 80
 	if d.Port == 0 {
 		d.Port = 80

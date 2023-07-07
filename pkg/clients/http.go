@@ -1,6 +1,7 @@
 package clients
 
 import (
+	"bytes"
 	"crypto/tls"
 	"fmt"
 	"net"
@@ -16,7 +17,8 @@ type HTTP interface {
 	// if a successful status []codes is returned the method returns a nil error.
 	// If it is not possible to contact the URI or if any status other than the passed codes is returned
 	// by the upstream, then the URI is retried until the timeout elapses.
-	HealthCheckHTTP(uri string, codes []int, timeout time.Duration) error
+
+	HealthCheckHTTP(uri, method string, headers map[string][]string, body string, codes []int, timeout time.Duration) error
 
 	// HealthCheckTCP attempts to connect to a raw socket at the given address
 	// if a connection is established the health check is marked as a success
@@ -41,8 +43,8 @@ func NewHTTP(backoff time.Duration, l hclog.Logger) HTTP {
 }
 
 // HealthCheckHTTP checks a http or HTTPS endpoint for a status 200
-func (h *HTTPImpl) HealthCheckHTTP(address string, codes []int, timeout time.Duration) error {
-	h.l.Debug("Performing HTTP health check for address", "address", address)
+func (h *HTTPImpl) HealthCheckHTTP(address, method string, headers map[string][]string, body string, codes []int, timeout time.Duration) error {
+	h.l.Debug("Performing HTTP health check for address", "address", address, "method", method, "headers", headers, "body", body, "codes", codes)
 	st := time.Now()
 	for {
 		if time.Since(st) > timeout {
@@ -51,13 +53,30 @@ func (h *HTTPImpl) HealthCheckHTTP(address string, codes []int, timeout time.Dur
 			return fmt.Errorf("timeout waiting for HTTP health check %s", address)
 		}
 
-		resp, err := h.httpc.Get(address)
+		if method != "" {
+			method = http.MethodGet
+		}
+
+		buffBody := bytes.NewBuffer([]byte(body))
+
+		rq, err := http.NewRequest(method, address, buffBody)
+		if err != nil {
+			return fmt.Errorf("unable to constrcut http request: %s", err)
+		}
+
+		rq.Header = headers
+
+		if len(codes) == 0 {
+			codes = []int{200}
+		}
+
+		resp, err := h.httpc.Do(rq)
 		if err == nil && assertResponseCode(codes, resp.StatusCode) {
 			h.l.Debug("HTTP health check complete", "address", address)
 			return nil
 		}
 
-		// backoff
+		// back off
 		time.Sleep(h.backoff)
 	}
 }

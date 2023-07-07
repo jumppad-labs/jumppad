@@ -6,17 +6,18 @@ type HealthCheckContainer struct {
 	// Timeout expressed as a go duration i.e 10s
 	Timeout string `hcl:"timeout" json:"timeout"`
 
-	HTTP *HealthCheckHTTP `hcl:"http,block" json:"http,omitempty"`
-	TCP  *HealthCheckTCP  `hcl:"tcp,block" json:"tcp,omitempty"`
-	Exec *HealthCheckExec `hcl:"exec,block" json:"exec,omitempty"`
+	HTTP []HealthCheckHTTP `hcl:"http,block" json:"http,omitempty"`
+	TCP  []HealthCheckTCP  `hcl:"tcp,block" json:"tcp,omitempty"`
+	Exec []HealthCheckExec `hcl:"exec,block" json:"exec,omitempty"`
 }
 
 // HealthCheckHTTP defines a HTTP based health check
 type HealthCheckHTTP struct {
-	// address = "http://consul-consul:8500/v1/leader" // can the http endpoint be reached
-	Address string `hcl:"address" json:"address,omitempty"`
-	// success_codes  = [200,429] // https status codes that signal the health of the endpoint
-	SuccessCodes []int `hcl:"success_codes" json:"success_codes,omitempty"`
+	Address      string              `hcl:"address" json:"address,omitempty"`                      // HTTP endpoint to check
+	Method       string              `hcl:"method,optional" json:"method,omitempty"`               // HTTP method to use, default GET
+	Body         string              `hcl:"body,optional" json:"body,omitempty"`                   // Payload to send with check
+	Headers      map[string][]string `hcl:"headers,optional" json:"headers,omitempty"`             // HTTP headers to send with request
+	SuccessCodes []int               `hcl:"success_codes,optional" json:"success_codes,omitempty"` // HTTP status codes that signal the health of the endpoint, default 200
 }
 
 type HealthCheckTCP struct {
@@ -30,6 +31,9 @@ type HealthCheckExec struct {
 	// Script specified as a string to execute, the script can be a bash or a sh script
 	// scripts are copied to the container /tmp directory, marked as executable and run
 	Script string `hcl:"script,optional" json:"script,omitempty"`
+	// ExitCode to mark a successful check, default 0
+	ExitCode int `hcl:"exit_code,optional" json:"exit_code,omitempty"`
+
 }
 
 type HealthCheckKubernetes struct {

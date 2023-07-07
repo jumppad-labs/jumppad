@@ -1,15 +1,16 @@
 package server
 
 import (
-	"context"
+	"bytes"
 	"encoding/json"
 	"os"
-	"os/exec"
-	"path"
-	"syscall"
-	"time"
+	"path/filepath"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 type ValidateResponse struct {
@@ -28,8 +29,6 @@ type ValidateRequest struct {
 	Target    string `json:"target"`
 }
 
-var defaultFailedCode = 254
-
 func (a *API) handleValidate(c *fiber.Ctx) error {
 	validateRequest := ValidateRequest{
 		WorkDir: "/",
@@ -39,45 +38,93 @@ func (a *API) handleValidate(c *fiber.Ctx) error {
 
 	err := json.Unmarshal(c.Body(), &validateRequest)
 	if err != nil {
-		c.Status(500).JSON(err.Error())
+		return c.Status(500).JSON(err.Error())
 	}
 
-	var cancel context.CancelFunc
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(validateRequest.Timeout)*time.Second)
-	defer cancel()
+	checksPath := utils.GetLibraryFolder("checks", 0775)
+	checksFile := filepath.Join(checksPath, "checks.json")
+	content, err := os.ReadFile(checksFile)
+	if err != nil {
+		return c.Status(500).JSON(err.Error())
+	}
 
+	checks := []resources.Validation{}
+	err = json.Unmarshal(content, &checks)
+	if err != nil {
+		return c.Status(500).JSON(err.Error())
+	}
+
+	var target string
 	var message string
 	var exitCode int
 
-	check := path.Join("/var/lib/jumppad", validateRequest.Task, validateRequest.Condition)
+	for _, check := range checks {
+		if check.ID == validateRequest.Task {
+			for _, condition := range check.Conditions {
+				if condition.ID == validateRequest.Condition {
+					fqrn, err := types.ParseFQRN(condition.Target)
+					if err != nil {
+						return c.Status(500).JSON(err.Error())
+					}
 
-	args := []string{"exec", "-t", "-w", validateRequest.WorkDir, "-u", validateRequest.User, validateRequest.Target}
-	args = append(args, "bash", "-e", "-c", check)
+					target = utils.FQDN(fqrn.Resource, fqrn.Module, fqrn.Type)
+					message = condition.FailureMessage
+					break
+				}
+			}
+			break
+		}
+	}
+
+	checkPath := filepath.Join(checksPath, validateRequest.Task, validateRequest.Condition)
+	checkDestination := filepath.Join("/tmp", validateRequest.Condition)
+
+	dc, err := clients.NewDocker()
+	if err != nil {
+		return c.Status(500).JSON(err.Error())
+	}
+
+	il := clients.NewImageFileLog(utils.ImageCacheLog())
+	tgz := &clients.TarGz{}
+
+	ct := clients.NewDockerTasks(dc, il, tgz, a.log)
+
+	id, err := ct.FindContainerIDs(target)
+	if err != nil {
+		a.log.Error("Could not find container for target", "target", target)
+		return c.Status(500).JSON(err.Error())
+	}
+
+	err = ct.CopyFileToContainer(id[0], checkPath, "/tmp")
+	if err != nil {
+		a.log.Error("Could not copy file to container", "error", err.Error(), "id", id[0], "from", checkPath, "to", checkDestination)
+		return c.Status(500).JSON(err.Error())
+	}
+
+	env := os.Environ()
+	env = append(env, "TERM=xterm")
+
+	args := []string{"bash", "-e", "-c", checkDestination}
+
+	output := bytes.NewBufferString("")
 
 	a.log.Info("Executing command", "args", args)
-
-	cmd := exec.CommandContext(ctx, "docker", args...)
-	cmd.Env = append(os.Environ(), "TERM=xterm")
-
-	output, err := cmd.CombinedOutput()
-	message = string(output)
+	exitCode, err = ct.ExecuteCommand(
+		id[0],
+		args,
+		env,
+		validateRequest.WorkDir,
+		validateRequest.User,
+		"",
+		validateRequest.Timeout,
+		output,
+	)
 
 	if err != nil {
-		// try to get the exit code
-		if exitError, ok := err.(*exec.ExitError); ok {
-			ws := exitError.Sys().(syscall.WaitStatus)
-			exitCode = ws.ExitStatus()
-		} else {
-			a.log.Error("could not get exit code for failed program", "check", check)
-			exitCode = defaultFailedCode
-			if message == "" {
-				message = err.Error()
-			}
+		if exitCode != 1 {
+			a.log.Error("exec failed", "error", err.Error(), "message", message)
+			message = err.Error()
 		}
-	} else {
-		// success, exitCode should be 0 if go is ok
-		ws := cmd.ProcessState.Sys().(syscall.WaitStatus)
-		exitCode = ws.ExitStatus()
 	}
 
 	return c.Status(200).JSON(ValidateResponse{
