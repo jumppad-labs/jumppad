@@ -540,11 +540,18 @@ func (d *DockerTasks) BuildContainer(config *resources.Container, force bool) (s
 		config.Build.DockerFile = "./Dockerfile"
 	}
 
+	// configure the build args
+	buildArgs := map[string]*string{}
+	for k, v := range config.Build.Args {
+		buildArgs[k] = &v
+	}
+
 	// tar the build context folder and send to the server
 	buildOpts := types.ImageBuildOptions{
 		Dockerfile: config.Build.DockerFile,
 		Tags:       []string{imageName},
 		Remove:     true,
+		BuildArgs:  buildArgs,
 	}
 
 	var buf bytes.Buffer
