@@ -33,6 +33,7 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/zclconf/go-cty v1.12.0
 	golang.org/x/crypto v0.7.0
+	golang.org/x/mod v0.8.0
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2
 	google.golang.org/grpc v1.53.0
 	helm.sh/helm/v3 v3.8.2

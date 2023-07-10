@@ -120,6 +120,11 @@ func (c *Container) Process() error {
 			kstate := r.(*Container)
 			c.FQRN = kstate.FQRN
 
+			// add the build checksum
+			if c.Build != nil && kstate.Build != nil {
+				c.Build.Checksum = kstate.Build.Checksum
+			}
+
 			// add the network addresses
 			for _, a := range kstate.Networks {
 				for i, m := range c.Networks {

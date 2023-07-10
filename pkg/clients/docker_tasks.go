@@ -544,6 +544,7 @@ func (d *DockerTasks) BuildContainer(config *resources.Container, force bool) (s
 	buildOpts := types.ImageBuildOptions{
 		Dockerfile: config.Build.DockerFile,
 		Tags:       []string{imageName},
+		Remove:     true,
 	}
 
 	var buf bytes.Buffer

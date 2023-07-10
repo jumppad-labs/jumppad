@@ -175,7 +175,7 @@ func newRunCmdFunc(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clie
 			browserList := []string{}
 			checkDuration := 30 * time.Second
 
-			for _, r := range res {
+			for _, r := range res.Resources {
 				switch r.Metadata().Type {
 				case resources.TypeContainer:
 					c := r.(*resources.Container)

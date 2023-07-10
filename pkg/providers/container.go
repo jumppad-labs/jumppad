@@ -11,6 +11,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	"golang.org/x/mod/sumdb/dirhash"
 	"golang.org/x/xerrors"
 )
 
@@ -73,6 +74,24 @@ func (c *Container) Lookup() ([]string, error) {
 
 func (c *Container) Refresh() error {
 	c.log.Info("Refresh Container", "ref", c.config.Name)
+	if c.config.Build != nil {
+
+		// calculate the hash
+		hash, err := dirhash.HashDir(c.config.Build.Context, "", dirhash.DefaultHash)
+		if err != nil {
+			return xerrors.Errorf("unable to hash directory: %w", err)
+		}
+
+		if hash != c.config.Build.Checksum {
+			c.log.Info("Build status changed, rebuild")
+			err := c.Destroy()
+			if err != nil {
+				return xerrors.Errorf("unable to destroy existing container: %w", err)
+			}
+
+			return c.Create()
+		}
+	}
 
 	return nil
 }
@@ -182,22 +201,32 @@ func (c *Container) buildContainer() error {
 		c.config.Build.Tag = "latest"
 	}
 
-	c.log.Debug(
+	// calculate the hash
+	hash, err := dirhash.HashDir(c.config.Build.Context, "", dirhash.DefaultHash)
+	if err != nil {
+		return xerrors.Errorf("unable to hash directory: %w", err)
+	}
+
+	c.log.Info(
 		"Building image",
 		"context", c.config.Build.Context,
 		"dockerfile", c.config.Build.DockerFile,
 		"image", fmt.Sprintf("jumppad.dev/localcache/%s:%s", c.config.Name, c.config.Build.Tag),
 	)
 
-	name, err := c.client.BuildContainer(c.config, false)
+	force := false
+	if hash != c.config.Build.Checksum {
+		force = true
+	}
+
+	name, err := c.client.BuildContainer(c.config, force)
 	if err != nil {
-		return xerrors.Errorf("Unable to build image: %w", err)
+		return xerrors.Errorf("unable to build image: %w", err)
 	}
 
 	// set the image to be loaded and continue with the container creation
 	c.config.Image = &resources.Image{Name: name}
-
-	// set the hash
+	c.config.Build.Checksum = hash
 
 	return nil
 }

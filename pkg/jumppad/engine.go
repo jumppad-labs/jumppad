@@ -28,17 +28,17 @@ import (
 //go:generate mockery --name Engine --filename engine.go
 type Engine interface {
 	GetClients() *clients.Clients
-	Apply(string) ([]types.Resource, error)
+	Apply(string) (*hclconfig.Config, error)
 
 	// ApplyWithVariables applies a configuration file or directory containing
 	// configuration. Optionally the user can provide a map of variables which the configuration
 	// uses and / or a file containing variables.
-	ApplyWithVariables(path string, variables map[string]string, variablesFile string) ([]types.Resource, error)
-	ParseConfig(string) ([]types.Resource, error)
-	ParseConfigWithVariables(string, map[string]string, string) ([]types.Resource, error)
+	ApplyWithVariables(path string, variables map[string]string, variablesFile string) (*hclconfig.Config, error)
+	ParseConfig(string) (*hclconfig.Config, error)
+	ParseConfigWithVariables(string, map[string]string, string) (*hclconfig.Config, error)
 	Destroy() error
 	Config() *hclconfig.Config
-	Diff(path string, variables map[string]string, variablesFile string) (new []types.Resource, changed []types.Resource, removed []types.Resource, err error)
+	Diff(path string, variables map[string]string, variablesFile string) (new []types.Resource, changed []types.Resource, removed []types.Resource, cfg *hclconfig.Config, err error)
 }
 
 // EngineImpl is responsible for creating and destroying resources
@@ -134,14 +134,14 @@ func (e *EngineImpl) Config() *hclconfig.Config {
 // ParseConfig parses the given Shipyard files and creating the resource types but does
 // not apply or destroy the resources.
 // This function can be used to check the validity of a configuration without making changes
-func (e *EngineImpl) ParseConfig(path string) ([]types.Resource, error) {
+func (e *EngineImpl) ParseConfig(path string) (*hclconfig.Config, error) {
 	return e.ParseConfigWithVariables(path, nil, "")
 }
 
 // ParseConfigWithVariables parses the given Shipyard files and creating the resource types but does
 // not apply or destroy the resources.
 // This function can be used to check the validity of a configuration without making changes
-func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]string, variablesFile string) ([]types.Resource, error) {
+func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]string, variablesFile string) (*hclconfig.Config, error) {
 	// abs paths
 	var err error
 	path, err = filepath.Abs(path)
@@ -165,21 +165,22 @@ func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]strin
 		return nil
 	})
 
-	return e.config.Resources, err
+	return e.config, err
 }
 
-func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFile string) (new []types.Resource, changed []types.Resource, removed []types.Resource, err error) {
-
+func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFile string) (
+	new []types.Resource, changed []types.Resource, removed []types.Resource, config *hclconfig.Config, err error,
+) {
 	// load the stack
 	past, _ := resources.LoadState()
 
 	// Parse the config to check it is valid
 	res, err := e.ParseConfigWithVariables(path, variables, variablesFile)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
-	for _, r := range res {
+	for _, r := range res.Resources {
 		// does the resource exist
 		cr, err := past.FindResource(r.Metadata().ID)
 
@@ -207,7 +208,7 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 		}
 
 		found := false
-		for _, r2 := range res {
+		for _, r2 := range res.Resources {
 			if r.Metadata().ID == r2.Metadata().ID {
 				found = true
 				break
@@ -219,16 +220,16 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 		}
 	}
 
-	return new, changed, removed, err
+	return new, changed, removed, res, err
 }
 
 // Apply the configuration and create or destroy the resources
-func (e *EngineImpl) Apply(path string) ([]types.Resource, error) {
+func (e *EngineImpl) Apply(path string) (*hclconfig.Config, error) {
 	return e.ApplyWithVariables(path, nil, "")
 }
 
 // ApplyWithVariables applies the current config creating the resources
-func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, variablesFile string) ([]types.Resource, error) {
+func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, variablesFile string) (*hclconfig.Config, error) {
 	// abs paths
 	var err error
 	path, err = filepath.Abs(path)
@@ -247,7 +248,7 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 
 	// get a diff of resources
 
-	_, _, removed, err := e.Diff(path, vars, variablesFile)
+	_, _, removed, _, err := e.Diff(path, vars, variablesFile)
 	if err != nil {
 		return nil, err
 	}
@@ -325,7 +326,7 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 		e.log.Info("Unable to save state", "error", stateErr)
 	}
 
-	return e.config.Resources, processErr
+	return e.config, processErr
 }
 
 // checks if a string exists in an array if not it appends and returns a new

@@ -3,8 +3,9 @@
 package mocks
 
 import (
-	resources "github.com/jumppad-labs/jumppad/pkg/config/resources"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
+	hclconfig "github.com/jumppad-labs/hclconfig"
+	clients "github.com/jumppad-labs/jumppad/pkg/clients"
+
 	mock "github.com/stretchr/testify/mock"
 
 	types "github.com/jumppad-labs/hclconfig/types"
@@ -16,19 +17,19 @@ type Engine struct {
 }
 
 // Apply provides a mock function with given fields: _a0
-func (_m *Engine) Apply(_a0 string) ([]types.Resource, error) {
+func (_m *Engine) Apply(_a0 string) (*hclconfig.Config, error) {
 	ret := _m.Called(_a0)
 
-	var r0 []types.Resource
+	var r0 *hclconfig.Config
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string) ([]types.Resource, error)); ok {
+	if rf, ok := ret.Get(0).(func(string) (*hclconfig.Config, error)); ok {
 		return rf(_a0)
 	}
-	if rf, ok := ret.Get(0).(func(string) []types.Resource); ok {
+	if rf, ok := ret.Get(0).(func(string) *hclconfig.Config); ok {
 		r0 = rf(_a0)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]types.Resource)
+			r0 = ret.Get(0).(*hclconfig.Config)
 		}
 	}
 
@@ -42,19 +43,19 @@ func (_m *Engine) Apply(_a0 string) ([]types.Resource, error) {
 }
 
 // ApplyWithVariables provides a mock function with given fields: path, variables, variablesFile
-func (_m *Engine) ApplyWithVariables(path string, variables map[string]string, variablesFile string) ([]types.Resource, error) {
+func (_m *Engine) ApplyWithVariables(path string, variables map[string]string, variablesFile string) (*hclconfig.Config, error) {
 	ret := _m.Called(path, variables, variablesFile)
 
-	var r0 []types.Resource
+	var r0 *hclconfig.Config
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string, map[string]string, string) ([]types.Resource, error)); ok {
+	if rf, ok := ret.Get(0).(func(string, map[string]string, string) (*hclconfig.Config, error)); ok {
 		return rf(path, variables, variablesFile)
 	}
-	if rf, ok := ret.Get(0).(func(string, map[string]string, string) []types.Resource); ok {
+	if rf, ok := ret.Get(0).(func(string, map[string]string, string) *hclconfig.Config); ok {
 		r0 = rf(path, variables, variablesFile)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]types.Resource)
+			r0 = ret.Get(0).(*hclconfig.Config)
 		}
 	}
 
@@ -67,16 +68,16 @@ func (_m *Engine) ApplyWithVariables(path string, variables map[string]string, v
 	return r0, r1
 }
 
-// Blueprint provides a mock function with given fields:
-func (_m *Engine) Blueprint() *resources.Blueprint {
+// Config provides a mock function with given fields:
+func (_m *Engine) Config() *hclconfig.Config {
 	ret := _m.Called()
 
-	var r0 *resources.Blueprint
-	if rf, ok := ret.Get(0).(func() *resources.Blueprint); ok {
+	var r0 *hclconfig.Config
+	if rf, ok := ret.Get(0).(func() *hclconfig.Config); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*resources.Blueprint)
+			r0 = ret.Get(0).(*hclconfig.Config)
 		}
 	}
 
@@ -97,6 +98,59 @@ func (_m *Engine) Destroy() error {
 	return r0
 }
 
+// Diff provides a mock function with given fields: path, variables, variablesFile
+func (_m *Engine) Diff(path string, variables map[string]string, variablesFile string) ([]types.Resource, []types.Resource, []types.Resource, *hclconfig.Config, error) {
+	ret := _m.Called(path, variables, variablesFile)
+
+	var r0 []types.Resource
+	var r1 []types.Resource
+	var r2 []types.Resource
+	var r3 *hclconfig.Config
+	var r4 error
+	if rf, ok := ret.Get(0).(func(string, map[string]string, string) ([]types.Resource, []types.Resource, []types.Resource, *hclconfig.Config, error)); ok {
+		return rf(path, variables, variablesFile)
+	}
+	if rf, ok := ret.Get(0).(func(string, map[string]string, string) []types.Resource); ok {
+		r0 = rf(path, variables, variablesFile)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]types.Resource)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(string, map[string]string, string) []types.Resource); ok {
+		r1 = rf(path, variables, variablesFile)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]types.Resource)
+		}
+	}
+
+	if rf, ok := ret.Get(2).(func(string, map[string]string, string) []types.Resource); ok {
+		r2 = rf(path, variables, variablesFile)
+	} else {
+		if ret.Get(2) != nil {
+			r2 = ret.Get(2).([]types.Resource)
+		}
+	}
+
+	if rf, ok := ret.Get(3).(func(string, map[string]string, string) *hclconfig.Config); ok {
+		r3 = rf(path, variables, variablesFile)
+	} else {
+		if ret.Get(3) != nil {
+			r3 = ret.Get(3).(*hclconfig.Config)
+		}
+	}
+
+	if rf, ok := ret.Get(4).(func(string, map[string]string, string) error); ok {
+		r4 = rf(path, variables, variablesFile)
+	} else {
+		r4 = ret.Error(4)
+	}
+
+	return r0, r1, r2, r3, r4
+}
+
 // GetClients provides a mock function with given fields:
 func (_m *Engine) GetClients() *clients.Clients {
 	ret := _m.Called()
@@ -114,59 +168,55 @@ func (_m *Engine) GetClients() *clients.Clients {
 }
 
 // ParseConfig provides a mock function with given fields: _a0
-func (_m *Engine) ParseConfig(_a0 string) error {
+func (_m *Engine) ParseConfig(_a0 string) (*hclconfig.Config, error) {
 	ret := _m.Called(_a0)
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(string) error); ok {
+	var r0 *hclconfig.Config
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string) (*hclconfig.Config, error)); ok {
+		return rf(_a0)
+	}
+	if rf, ok := ret.Get(0).(func(string) *hclconfig.Config); ok {
 		r0 = rf(_a0)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*hclconfig.Config)
+		}
 	}
 
-	return r0
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // ParseConfigWithVariables provides a mock function with given fields: _a0, _a1, _a2
-func (_m *Engine) ParseConfigWithVariables(_a0 string, _a1 map[string]string, _a2 string) error {
+func (_m *Engine) ParseConfigWithVariables(_a0 string, _a1 map[string]string, _a2 string) (*hclconfig.Config, error) {
 	ret := _m.Called(_a0, _a1, _a2)
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(string, map[string]string, string) error); ok {
+	var r0 *hclconfig.Config
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string, map[string]string, string) (*hclconfig.Config, error)); ok {
+		return rf(_a0, _a1, _a2)
+	}
+	if rf, ok := ret.Get(0).(func(string, map[string]string, string) *hclconfig.Config); ok {
 		r0 = rf(_a0, _a1, _a2)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*hclconfig.Config)
+		}
 	}
 
-	return r0
-}
-
-// ResourceCount provides a mock function with given fields:
-func (_m *Engine) ResourceCount() int {
-	ret := _m.Called()
-
-	var r0 int
-	if rf, ok := ret.Get(0).(func() int); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(1).(func(string, map[string]string, string) error); ok {
+		r1 = rf(_a0, _a1, _a2)
 	} else {
-		r0 = ret.Get(0).(int)
+		r1 = ret.Error(1)
 	}
 
-	return r0
-}
-
-// ResourceCountForType provides a mock function with given fields: _a0
-func (_m *Engine) ResourceCountForType(_a0 string) int {
-	ret := _m.Called(_a0)
-
-	var r0 int
-	if rf, ok := ret.Get(0).(func(string) int); ok {
-		r0 = rf(_a0)
-	} else {
-		r0 = ret.Get(0).(int)
-	}
-
-	return r0
+	return r0, r1
 }
 
 type mockConstructorTestingTNewEngine interface {
