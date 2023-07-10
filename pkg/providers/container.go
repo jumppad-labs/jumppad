@@ -92,25 +92,12 @@ func (c *Container) internalCreate() error {
 
 	// do we need to build an image
 	if c.config.Build != nil {
-
-		if c.config.Build.Tag == "" {
-			c.config.Build.Tag = "latest"
-		}
-
-		c.log.Debug(
-			"Building image",
-			"context", c.config.Build.Context,
-			"dockerfile", c.config.Build.DockerFile,
-			"image", fmt.Sprintf("jumppad.dev/localcache/%s:%s", c.config.Name, c.config.Build.Tag),
-		)
-
-		name, err := c.client.BuildContainer(c.config, false)
+		err := c.buildContainer()
 		if err != nil {
-			return xerrors.Errorf("Unable to build image: %w", err)
-		}
+			c.log.Error("Unable to build container image", "ref", c.config.ID, "error", err)
 
-		// set the image to be loaded and continue with the container creation
-		c.config.Image = &resources.Image{Name: name}
+			return err
+		}
 	} else {
 		// pull any images needed for this container
 		err := c.client.PullImage(*c.config.Image, false)
@@ -186,6 +173,31 @@ func (c *Container) internalCreate() error {
 			return err
 		}
 	}
+
+	return nil
+}
+
+func (c *Container) buildContainer() error {
+	if c.config.Build.Tag == "" {
+		c.config.Build.Tag = "latest"
+	}
+
+	c.log.Debug(
+		"Building image",
+		"context", c.config.Build.Context,
+		"dockerfile", c.config.Build.DockerFile,
+		"image", fmt.Sprintf("jumppad.dev/localcache/%s:%s", c.config.Name, c.config.Build.Tag),
+	)
+
+	name, err := c.client.BuildContainer(c.config, false)
+	if err != nil {
+		return xerrors.Errorf("Unable to build image: %w", err)
+	}
+
+	// set the image to be loaded and continue with the container creation
+	c.config.Image = &resources.Image{Name: name}
+
+	// set the hash
 
 	return nil
 }

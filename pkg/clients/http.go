@@ -73,10 +73,17 @@ func (h *HTTPImpl) HealthCheckHTTP(address, method string, headers map[string][]
 		resp, err := h.httpc.Do(rq)
 		if err == nil && assertResponseCode(codes, resp.StatusCode) {
 			h.l.Debug("HTTP health check complete", "address", address)
+
 			return nil
 		}
 
+		status := 0
+		if err == nil {
+			status = resp.StatusCode
+		}
+
 		// back off
+		h.l.Debug("HTTP health check failed, retrying", "address", address, "response", status, "error", err)
 		time.Sleep(h.backoff)
 	}
 }
