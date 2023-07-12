@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
@@ -27,11 +26,11 @@ type NomadCluster struct {
 	client      clients.ContainerTasks
 	nomadClient clients.Nomad
 	connector   clients.Connector
-	log         hclog.Logger
+	log         clients.Logger
 }
 
 // NewNomadCluster creates a new Nomad cluster provider
-func NewNomadCluster(c *resources.NomadCluster, cc clients.ContainerTasks, hc clients.Nomad, con clients.Connector, l hclog.Logger) *NomadCluster {
+func NewNomadCluster(c *resources.NomadCluster, cc clients.ContainerTasks, hc clients.Nomad, con clients.Connector, l clients.Logger) *NomadCluster {
 	return &NomadCluster{c, cc, hc, con, l}
 }
 
@@ -162,6 +161,12 @@ func (c *NomadCluster) Refresh() error {
 	}
 
 	return nil
+}
+
+func (c *NomadCluster) Changed() (bool, error) {
+	c.log.Info("Checking changes Leaf Certificate", "ref", c.config.Name)
+
+	return false, nil
 }
 
 func removeElement(s []string, item string) []string {
@@ -684,7 +689,7 @@ func (c *NomadCluster) ImportLocalDockerImages(name string, id string, images []
 	// execute the command to import the image
 	// write any command output to the logger
 	for _, i := range imagesFile {
-		_, err = c.client.ExecuteCommand(id, []string{"docker", "load", "-i", i}, nil, "/", "", "", 300, c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
+		_, err = c.client.ExecuteCommand(id, []string{"docker", "load", "-i", i}, nil, "/", "", "", 300, c.log.StandardWriter())
 		if err != nil {
 			return err
 		}

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 
-	hclog "github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
@@ -16,7 +15,7 @@ type Ingress struct {
 	config    *resources.Ingress
 	client    clients.ContainerTasks
 	connector clients.Connector
-	log       hclog.Logger
+	log       clients.Logger
 }
 
 // NewIngress creates a new ingress provider
@@ -24,7 +23,7 @@ func NewIngress(
 	c *resources.Ingress,
 	cc clients.ContainerTasks,
 	co clients.Connector,
-	l hclog.Logger) *Ingress {
+	l clients.Logger) *Ingress {
 
 	return &Ingress{c, cc, co, l}
 }
@@ -66,6 +65,12 @@ func (c *Ingress) Refresh() error {
 	c.log.Info("Refresh Ingress", "ref", c.config.Name)
 
 	return nil
+}
+
+func (c *Ingress) Changed() (bool, error) {
+	c.log.Info("Checking changes", "ref", c.config.Name)
+
+	return false, nil
 }
 
 func (c *Ingress) exposeRemote() error {

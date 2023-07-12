@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hashicorp/go-hclog"
 	gvm "github.com/shipyard-run/version-manager"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients"
@@ -23,7 +22,7 @@ var rootCmd = &cobra.Command{
 }
 
 var engine jumppad.Engine
-var logger hclog.Logger
+var logger clients.Logger
 var engineClients *clients.Clients
 
 var version string // set by build process
@@ -69,7 +68,7 @@ func init() {
 	generateCmd.AddCommand(newGenerateReadmeCommand(engine))
 }
 
-func createEngine(l hclog.Logger) (jumppad.Engine, gvm.Versions) {
+func createEngine(l clients.Logger) (jumppad.Engine, gvm.Versions) {
 	engine, err := jumppad.New(l)
 	if err != nil {
 		panic(err)
@@ -112,16 +111,13 @@ func createEngine(l hclog.Logger) (jumppad.Engine, gvm.Versions) {
 	return engine, vm
 }
 
-func createLogger() hclog.Logger {
-
-	opts := &hclog.LoggerOptions{Color: hclog.AutoColor}
-
+func createLogger() clients.Logger {
 	// set the log level
 	if lev := os.Getenv("LOG_LEVEL"); lev != "" {
-		opts.Level = hclog.LevelFromString(lev)
+		return clients.NewLogger(os.Stdout, lev)
 	}
 
-	return hclog.New(opts)
+	return clients.NewLogger(os.Stdout, clients.LogLevelInfo)
 }
 
 // Execute the root command

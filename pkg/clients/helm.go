@@ -6,7 +6,6 @@ import (
 	"path"
 	"sync"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/pkg/errors"
 	"golang.org/x/xerrors"
@@ -42,14 +41,14 @@ type Helm interface {
 }
 
 type HelmImpl struct {
-	log        hclog.Logger
+	log        Logger
 	repoPath   string
 	cachePath  string
 	dataPath   string
 	configPath string
 }
 
-func NewHelm(l hclog.Logger) Helm {
+func NewHelm(l Logger) Helm {
 	helmCachePath := path.Join(utils.GetHelmLocalFolder(""), "cache")
 	helmRepoConfig := path.Join(utils.GetHelmLocalFolder(""), "repo")
 
@@ -144,7 +143,7 @@ func (h *HelmImpl) Create(kubeConfig, name, namespace string, createNamespace bo
 		if err := action.CheckDependencies(chartRequested, req); err != nil {
 			if client.DependencyUpdate {
 				man := &downloader.Manager{
-					Out:              h.log.StandardWriter(&hclog.StandardLoggerOptions{}),
+					Out:              h.log.StandardWriter(),
 					ChartPath:        cp,
 					Keyring:          client.ChartPathOptions.Keyring,
 					SkipUpdate:       false,

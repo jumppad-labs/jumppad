@@ -6,17 +6,17 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/hashicorp/go-hclog"
+	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 type Task struct {
 	config *resources.Task
-	log    hclog.Logger
+	log    clients.Logger
 }
 
-func NewTask(t *resources.Task, l hclog.Logger) *Task {
+func NewTask(t *resources.Task, l clients.Logger) *Task {
 	return &Task{t, l}
 }
 
@@ -85,4 +85,8 @@ func (t *Task) Lookup() ([]string, error) {
 
 func (t *Task) Refresh() error {
 	return nil
+}
+
+func (t *Task) Changed() (bool, error) {
+	return false, nil
 }

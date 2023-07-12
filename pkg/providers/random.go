@@ -9,8 +9,8 @@ import (
 	mrand "math/rand"
 	"sort"
 
-	"github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"golang.org/x/xerrors"
 )
@@ -18,11 +18,11 @@ import (
 // RandomNumber is a random number provider
 type RandomNumber struct {
 	config *resources.RandomNumber
-	log    hclog.Logger
+	log    clients.Logger
 }
 
 // NewRandomNumber creates a random number provider
-func NewRandomNumber(c *resources.RandomNumber, l hclog.Logger) *RandomNumber {
+func NewRandomNumber(c *resources.RandomNumber, l clients.Logger) *RandomNumber {
 	return &RandomNumber{c, l}
 }
 
@@ -49,14 +49,20 @@ func (n *RandomNumber) Refresh() error {
 	return nil
 }
 
+func (c *RandomNumber) Changed() (bool, error) {
+	c.log.Info("Checking changes", "ref", c.config.Name)
+
+	return false, nil
+}
+
 // RandomID is a provider for generating random IDs
 type RandomID struct {
 	config *resources.RandomID
-	log    hclog.Logger
+	log    clients.Logger
 }
 
 // NewRandomID creates a new random ID
-func NewRandomID(r *resources.RandomID, l hclog.Logger) *RandomID {
+func NewRandomID(r *resources.RandomID, l clients.Logger) *RandomID {
 	return &RandomID{r, l}
 }
 
@@ -96,14 +102,20 @@ func (n *RandomID) Refresh() error {
 	return nil
 }
 
+func (c *RandomID) Changed() (bool, error) {
+	c.log.Info("Checking changes", "ref", c.config.Name)
+
+	return false, nil
+}
+
 // RandomPassword is a provider for generating random passwords
 type RandomPassword struct {
 	config *resources.RandomPassword
-	log    hclog.Logger
+	log    clients.Logger
 }
 
 // NewRandomPassword creates a new random password
-func NewRandomPassword(r *resources.RandomPassword, l hclog.Logger) *RandomPassword {
+func NewRandomPassword(r *resources.RandomPassword, l clients.Logger) *RandomPassword {
 	return &RandomPassword{r, l}
 }
 
@@ -185,14 +197,20 @@ func (r *RandomPassword) Refresh() error {
 	return nil
 }
 
+func (c *RandomPassword) Changed() (bool, error) {
+	c.log.Info("Checking changes", "ref", c.config.Name)
+
+	return false, nil
+}
+
 // RandomUUID is a provider for generating random UUIDs
 type RandomUUID struct {
 	config *resources.RandomUUID
-	log    hclog.Logger
+	log    clients.Logger
 }
 
 // NewRandomUUID creates a new random UUID
-func NewRandomUUID(r *resources.RandomUUID, l hclog.Logger) *RandomUUID {
+func NewRandomUUID(r *resources.RandomUUID, l clients.Logger) *RandomUUID {
 	return &RandomUUID{r, l}
 }
 
@@ -217,6 +235,12 @@ func (r *RandomUUID) Lookup() ([]string, error) {
 
 func (r *RandomUUID) Refresh() error {
 	return nil
+}
+
+func (c *RandomUUID) Changed() (bool, error) {
+	c.log.Info("Checking changes", "ref", c.config.Name)
+
+	return false, nil
 }
 
 func generateRandomBytes(charSet *string, length int64) ([]byte, error) {
@@ -445,11 +469,11 @@ var adjectives = []string{
 // RandomCreature is a provider for generating random creatures
 type RandomCreature struct {
 	config *resources.RandomCreature
-	log    hclog.Logger
+	log    clients.Logger
 }
 
 // NewRandomCreature creates a new random Creature
-func NewRandomCreature(r *resources.RandomCreature, l hclog.Logger) *RandomCreature {
+func NewRandomCreature(r *resources.RandomCreature, l clients.Logger) *RandomCreature {
 	return &RandomCreature{r, l}
 }
 
@@ -472,4 +496,10 @@ func (r *RandomCreature) Lookup() ([]string, error) {
 
 func (r *RandomCreature) Refresh() error {
 	return nil
+}
+
+func (c *RandomCreature) Changed() (bool, error) {
+	c.log.Info("Checking changes", "ref", c.config.Name)
+
+	return false, nil
 }

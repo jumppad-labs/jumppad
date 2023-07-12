@@ -8,7 +8,6 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
-	hclog "github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"golang.org/x/xerrors"
@@ -18,11 +17,11 @@ import (
 type Network struct {
 	config *resources.Network
 	client clients.Docker
-	log    hclog.Logger
+	log    clients.Logger
 }
 
 // NewNetwork creates a new network with the given config and Docker client
-func NewNetwork(co *resources.Network, cl clients.Docker, l hclog.Logger) *Network {
+func NewNetwork(co *resources.Network, cl clients.Docker, l clients.Logger) *Network {
 	return &Network{co, cl, l}
 }
 
@@ -122,6 +121,12 @@ func (c *Network) Refresh() error {
 	c.log.Info("Refresh Network", "ref", c.config.Name)
 
 	return nil
+}
+
+func (c *Network) Changed() (bool, error) {
+	c.log.Info("Checking changes", "ref", c.config.Name)
+
+	return false, nil
 }
 
 func (n *Network) createWithDriver(driver string) error {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"runtime"
 	"sync"
 
@@ -11,7 +12,6 @@ import (
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/docker/pkg/term"
-	"github.com/hashicorp/go-hclog"
 )
 
 // The default escape key sequence: ctrl-p, ctrl-q
@@ -31,12 +31,10 @@ type HijackedIOStreamer struct {
 
 	tty        bool
 	detachKeys string
-
-	logger hclog.Logger
 }
 
 // NewHijackedStreamer creates a new stream for reading and writing TTY terminals
-func NewHijackedStreamer(inStr *In, outStr *Out, inputStream io.ReadCloser, outputStream io.Writer, errorStream io.Writer, resp types.HijackedResponse, tty bool, detachKeys string, logger hclog.Logger) *HijackedIOStreamer {
+func NewHijackedStreamer(inStr *In, outStr *Out, inputStream io.ReadCloser, outputStream io.Writer, errorStream io.Writer, resp types.HijackedResponse, tty bool, detachKeys string) *HijackedIOStreamer {
 	return &HijackedIOStreamer{
 		inStr:        inStr,
 		outStr:       outStr,
@@ -46,7 +44,6 @@ func NewHijackedStreamer(inStr *In, outStr *Out, inputStream io.ReadCloser, outp
 		resp:         resp,
 		tty:          tty,
 		detachKeys:   detachKeys,
-		logger:       logger,
 	}
 }
 
@@ -114,7 +111,7 @@ func (h *HijackedIOStreamer) setupInput() (restore func(), err error) {
 	if h.detachKeys != "" {
 		customEscapeKeys, err := term.ToBytes(h.detachKeys)
 		if err != nil {
-			h.logger.Warn("invalid detach escape keys, using default", "error", err)
+			log.Printf("invalid detach escape keys, using default: error %s\n", err)
 		} else {
 			escapeKeys = customEscapeKeys
 		}
@@ -146,10 +143,8 @@ func (h *HijackedIOStreamer) beginOutputStream(restoreInput func()) <-chan error
 			_, err = stdcopy.StdCopy(h.outputStream, h.errorStream, h.resp.Reader)
 		}
 
-		h.logger.Trace("[hijack] End of stdout")
-
 		if err != nil {
-			h.logger.Trace("Error receiveStdout", "error", err)
+			log.Printf("Error receiveStdout: error %s\n", err)
 		}
 
 		outputDone <- err
@@ -170,8 +165,6 @@ func (h *HijackedIOStreamer) beginInputStream(restoreInput func()) (doneC <-chan
 			// messages will be in normal type.
 			restoreInput()
 
-			h.logger.Trace("[hijack] End of stdin")
-
 			if _, ok := err.(term.EscapeError); ok {
 				detached <- err
 				return
@@ -181,12 +174,12 @@ func (h *HijackedIOStreamer) beginInputStream(restoreInput func()) (doneC <-chan
 				// This error will also occur on the receive
 				// side (from stdout) where it will be
 				// propagated back to the caller.
-				h.logger.Trace("Error sendStdin", "error", err)
+				log.Printf("Error receiveStdin: error %s\n", err)
 			}
 		}
 
 		if err := h.resp.CloseWrite(); err != nil {
-			h.logger.Trace("Couldn't send EOF", "error", err)
+			log.Printf("Couldn't send EOF: error %s\n", err)
 		}
 
 		close(inputDone)

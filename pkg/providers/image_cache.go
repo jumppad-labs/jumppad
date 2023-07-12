@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"github.com/docker/docker/api/types"
-	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
@@ -19,11 +18,11 @@ type ImageCache struct {
 	config     *resources.ImageCache
 	client     clients.ContainerTasks
 	httpClient clients.HTTP
-	log        hclog.Logger
+	log        clients.Logger
 }
 
 // NewContainer creates a new container with the given config and Docker client
-func NewImageCache(co *resources.ImageCache, cl clients.ContainerTasks, hc clients.HTTP, l hclog.Logger) *ImageCache {
+func NewImageCache(co *resources.ImageCache, cl clients.ContainerTasks, hc clients.HTTP, l clients.Logger) *ImageCache {
 
 	return &ImageCache{co, cl, hc, l}
 }
@@ -86,6 +85,12 @@ func (c *ImageCache) Refresh() error {
 
 func (c *ImageCache) Lookup() ([]string, error) {
 	return c.client.FindContainerIDs(utils.FQDN(c.config.Name, c.config.Module, c.config.Type))
+}
+
+func (c *ImageCache) Changed() (bool, error) {
+	c.log.Info("Checking changes", "ref", c.config.Name)
+
+	return false, nil
 }
 
 func (c *ImageCache) createImageCache(networks []string) (string, error) {

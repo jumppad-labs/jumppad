@@ -7,12 +7,9 @@ import (
 	"path"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"golang.org/x/mod/sumdb/dirhash"
-	"golang.org/x/xerrors"
 )
 
 // Container is a provider for creating and destroying Docker containers
@@ -21,15 +18,15 @@ type Container struct {
 	sidecar    *resources.Sidecar
 	client     clients.ContainerTasks
 	httpClient clients.HTTP
-	log        hclog.Logger
+	log        clients.Logger
 }
 
 // NewContainer creates a new container with the given config and Docker client
-func NewContainer(co *resources.Container, cl clients.ContainerTasks, hc clients.HTTP, l hclog.Logger) *Container {
+func NewContainer(co *resources.Container, cl clients.ContainerTasks, hc clients.HTTP, l clients.Logger) *Container {
 	return &Container{config: co, client: cl, httpClient: hc, log: l}
 }
 
-func NewContainerSidecar(cs *resources.Sidecar, cl clients.ContainerTasks, hc clients.HTTP, l hclog.Logger) *Container {
+func NewContainerSidecar(cs *resources.Sidecar, cl clients.ContainerTasks, hc clients.HTTP, l clients.Logger) *Container {
 	co := &resources.Container{}
 	co.ResourceMetadata = cs.ResourceMetadata
 	co.FQRN = cs.FQRN
@@ -74,23 +71,19 @@ func (c *Container) Lookup() ([]string, error) {
 
 func (c *Container) Refresh() error {
 	c.log.Info("Refresh Container", "ref", c.config.Name)
-	if c.config.Build != nil {
 
-		// calculate the hash
-		hash, err := dirhash.HashDir(c.config.Build.Context, "", dirhash.DefaultHash)
+	changed, err := c.Changed()
+	if err != nil {
+		return err
+	}
+
+	if changed {
+		err := c.Destroy()
 		if err != nil {
-			return xerrors.Errorf("unable to hash directory: %w", err)
+			return err
 		}
 
-		if hash != c.config.Build.Checksum {
-			c.log.Info("Build status changed, rebuild")
-			err := c.Destroy()
-			if err != nil {
-				return xerrors.Errorf("unable to destroy existing container: %w", err)
-			}
-
-			return c.Create()
-		}
+		return c.Create()
 	}
 
 	return nil
@@ -103,31 +96,55 @@ func (c *Container) Destroy() error {
 	return c.internalDestroy()
 }
 
+func (c *Container) Changed() (bool, error) {
+	c.log.Info("Checking changes", "ref", c.config.Name)
+
+	// has the image id changed
+	id, err := c.client.FindImageInLocalRegistry(*c.config.Image)
+	if err != nil {
+		c.log.Error("Unable to lookup image in local registry", "ref", c.config.ID, "error", err)
+		return false, err
+	}
+
+	// check that the current registry id for the image is the same
+	// as the image that was used to create this container
+	if id != c.config.Image.ID {
+		c.log.Debug("Container image changed, needs refresh", "ref", c.config.Name)
+		return true, nil
+	}
+
+	return false, nil
+}
+
 func (c *Container) internalCreate() error {
 
 	// set the fqdn
 	fqdn := utils.FQDN(c.config.Name, c.config.Module, c.config.Type)
 	c.config.FQRN = fqdn
 
-	// do we need to build an image
-	if c.config.Build != nil {
-		err := c.buildContainer()
-		if err != nil {
-			c.log.Error("Unable to build container image", "ref", c.config.ID, "error", err)
-
-			return err
-		}
-	} else {
-		// pull any images needed for this container
-		err := c.client.PullImage(*c.config.Image, false)
-		if err != nil {
-			c.log.Error("Error pulling container image", "ref", c.config.ID, "image", c.config.Image.Name)
-
-			return err
-		}
+	if c.config.Image == nil {
+		return fmt.Errorf("need to specify an image")
 	}
 
-	id, err := c.client.CreateContainer(c.config)
+	// pull any images needed for this container
+	err := c.client.PullImage(*c.config.Image, false)
+	if err != nil {
+		c.log.Error("Error pulling container image", "ref", c.config.ID, "image", c.config.Image.Name)
+
+		return err
+	}
+
+	// update the image ID
+	id, err := c.client.FindImageInLocalRegistry(*c.config.Image)
+	if err != nil {
+		c.log.Error("Unable to lookup image in local registry", "ref", c.config.ID, "error", err)
+		return err
+	}
+
+	// id should never be blank here as we have pulled the image
+	c.config.Image.ID = id
+
+	id, err = c.client.CreateContainer(c.config)
 	if err != nil {
 		c.log.Error("Unable to create container", "ref", c.config.ID, "error", err)
 		return err
@@ -192,41 +209,6 @@ func (c *Container) internalCreate() error {
 			return err
 		}
 	}
-
-	return nil
-}
-
-func (c *Container) buildContainer() error {
-	if c.config.Build.Tag == "" {
-		c.config.Build.Tag = "latest"
-	}
-
-	// calculate the hash
-	hash, err := dirhash.HashDir(c.config.Build.Context, "", dirhash.DefaultHash)
-	if err != nil {
-		return xerrors.Errorf("unable to hash directory: %w", err)
-	}
-
-	c.log.Info(
-		"Building image",
-		"context", c.config.Build.Context,
-		"dockerfile", c.config.Build.DockerFile,
-		"image", fmt.Sprintf("jumppad.dev/localcache/%s:%s", c.config.Name, c.config.Build.Tag),
-	)
-
-	force := false
-	if hash != c.config.Build.Checksum {
-		force = true
-	}
-
-	name, err := c.client.BuildContainer(c.config, force)
-	if err != nil {
-		return xerrors.Errorf("unable to build image: %w", err)
-	}
-
-	// set the image to be loaded and continue with the container creation
-	c.config.Image = &resources.Image{Name: name}
-	c.config.Build.Checksum = hash
 
 	return nil
 }

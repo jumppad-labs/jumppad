@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 
-	hclog "github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
@@ -24,11 +23,11 @@ type DocsConfig struct {
 type Docs struct {
 	config *resources.Docs
 	client clients.ContainerTasks
-	log    hclog.Logger
+	log    clients.Logger
 }
 
 // NewDocs creates a new Docs provider
-func NewDocs(c *resources.Docs, cc clients.ContainerTasks, l hclog.Logger) *Docs {
+func NewDocs(c *resources.Docs, cc clients.ContainerTasks, l clients.Logger) *Docs {
 	return &Docs{c, cc, l}
 }
 
@@ -131,6 +130,12 @@ func (d *Docs) Refresh() error {
 	}
 
 	return nil
+}
+
+func (c *Docs) Changed() (bool, error) {
+	c.log.Info("Checking changes", "ref", c.config.Name)
+
+	return false, nil
 }
 
 func (d *Docs) createDocsContainer() error {

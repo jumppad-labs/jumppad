@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/hcl2/hcl"
+	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/mailgun/raymond/v2"
 	"github.com/zclconf/go-cty/cty"
@@ -16,11 +16,11 @@ import (
 // Template provider allows parsing and output of file based templates
 type Template struct {
 	config *resources.Template
-	log    hclog.Logger
+	log    clients.Logger
 }
 
 // NewTemplate creates a new Local Exec provider
-func NewTemplate(c *resources.Template, l hclog.Logger) *Template {
+func NewTemplate(c *resources.Template, l clients.Logger) *Template {
 	return &Template{c, l}
 }
 
@@ -167,4 +167,10 @@ func (c *Template) Refresh() error {
 
 	c.Destroy()
 	return c.Create()
+}
+
+func (c *Template) Changed() (bool, error) {
+	c.log.Info("Checking changes", "ref", c.config.Name)
+
+	return false, nil
 }

@@ -29,12 +29,18 @@ type ContainerTasks interface {
 	// If a cahced image already exists Build will noop
 	// When force is specificed BuildContainer will rebuild the container regardless of cached images
 	// Returns the canonical name of the built image and an error
-	BuildContainer(config *resources.Container, force bool) (string, error)
+	BuildContainer(config *resources.Build, force bool) (string, error)
 	// CreateVolume creates a new volume with the given name.
 	// If successful the id of the newly created volume is returned
 	CreateVolume(name string) (id string, err error)
 	// RemoveVolume removes a volume with the given name
 	RemoveVolume(name string) error
+	// FindImageInLocalRegistry returns the unique identifier for an image specified by the given
+	// tag in the local registry. If no image is found the function returns an
+	// empty id and no error
+	// An error is only returned on internal errors when communicating with the
+	// Docker API
+	FindImageInLocalRegistry(image resources.Image) (string, error)
 	// PullImage pulls a Docker image from the registry if it is not already
 	// present in the local cache.
 	// If the Username and Password config options are set then PullImage will attempt to

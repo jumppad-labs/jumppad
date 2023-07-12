@@ -2,7 +2,7 @@ package server
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/hashicorp/go-hclog"
+	"github.com/jumppad-labs/jumppad/pkg/clients"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/websocket/v2"
@@ -11,11 +11,11 @@ import (
 type API struct {
 	bindAddr string
 	app      *fiber.App
-	log      hclog.Logger
+	log      clients.Logger
 }
 
 // New creates a new server
-func New(addr string, l hclog.Logger) *API {
+func New(addr string, l clients.Logger) *API {
 	config := fiber.Config{
 		DisableStartupMessage: true,
 	}

@@ -3,7 +3,6 @@ package providers
 import (
 	"fmt"
 
-	hclog "github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
@@ -16,11 +15,11 @@ import (
 type RemoteExec struct {
 	config *resources.RemoteExec
 	client clients.ContainerTasks
-	log    hclog.Logger
+	log    clients.Logger
 }
 
 // NewRemoteExec creates a new Exec provider
-func NewRemoteExec(c *resources.RemoteExec, ex clients.ContainerTasks, l hclog.Logger) *RemoteExec {
+func NewRemoteExec(c *resources.RemoteExec, ex clients.ContainerTasks, l clients.Logger) *RemoteExec {
 	return &RemoteExec{c, ex, l}
 }
 
@@ -94,7 +93,7 @@ func (c *RemoteExec) Create() error {
 		group = c.config.RunAs.Group
 	}
 
-	_, err := c.client.ExecuteCommand(targetID, command, envs, c.config.WorkingDirectory, user, group, 300, c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
+	_, err := c.client.ExecuteCommand(targetID, command, envs, c.config.WorkingDirectory, user, group, 300, c.log.StandardWriter())
 	if err != nil {
 		c.log.Error("Error executing command", "ref", c.config.Name, "image", c.config.Image, "command", c.config.Command)
 		err = xerrors.Errorf("Unable to execute command: in remote container: %w", err)
@@ -124,6 +123,12 @@ func (c *RemoteExec) Refresh() error {
 	c.log.Info("Refresh Remote Exec", "ref", c.config.Name)
 
 	return nil
+}
+
+func (c *RemoteExec) Changed() (bool, error) {
+	c.log.Info("Checking changes", "ref", c.config.Name)
+
+	return false, nil
 }
 
 func (c *RemoteExec) createRemoteExecContainer() (string, error) {

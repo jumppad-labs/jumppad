@@ -33,9 +33,6 @@ type Container struct {
 	// User block for mapping the user id and group id inside the container
 	RunAs *User `hcl:"run_as,block" json:"run_as,omitempty"`
 
-	// Enables containers to be built on the fly
-	Build *Build `hcl:"build,block" json:"build"`
-
 	// Output parameters
 
 	// FQRN is the fully qualified domain name for the container, this can be used
@@ -82,20 +79,6 @@ type Volume struct {
 	BindPropagationNonRecursive bool   `hcl:"bind_propagation_non_recursive,optional" json:"bind_propagation_non_recursive,omitempty"` // recursive bind mount, default true
 }
 
-// Build allows you to define the conditions for building a container
-// on run from a Dockerfile
-type Build struct {
-	DockerFile string            `hcl:"dockerfile,optional" json:"dockerfile,omitempty"` // Location of build file inside build context defaults to ./Dockerfile
-	Context    string            `hcl:"context" json:"context"`                          // Path to build context
-	Tag        string            `hcl:"tag,optional" json:"tag,omitempty"`               // Image tag, defaults to latest
-	Args       map[string]string `hcl:"args,optional" json:"args,omitempty"`             // Build args to pass  to the container
-
-	// output
-
-	// Checksum is calculated from the Context files
-	Checksum string `hcl:"checksum,optional" json:"checksum,omitempty"`
-}
-
 func (c *Container) Process() error {
 	// process volumes
 	for i, v := range c.Volumes {
@@ -103,11 +86,6 @@ func (c *Container) Process() error {
 		if v.Type == "" || v.Type == "bind" {
 			c.Volumes[i].Source = ensureAbsolute(v.Source, c.File)
 		}
-	}
-
-	// make sure build paths are absolute
-	if c.Build != nil {
-		c.Build.Context = ensureAbsolute(c.Build.Context, c.File)
 	}
 
 	// do we have an existing resource in the state?
@@ -120,10 +98,8 @@ func (c *Container) Process() error {
 			kstate := r.(*Container)
 			c.FQRN = kstate.FQRN
 
-			// add the build checksum
-			if c.Build != nil && kstate.Build != nil {
-				c.Build.Checksum = kstate.Build.Checksum
-			}
+			// add the image id from state
+			c.Image.ID = kstate.Image.ID
 
 			// add the network addresses
 			for _, a := range kstate.Networks {

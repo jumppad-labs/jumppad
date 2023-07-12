@@ -27,7 +27,6 @@ import (
 	"github.com/docker/docker/pkg/signal"
 	"github.com/docker/docker/pkg/term"
 	"github.com/docker/go-connections/nat"
-	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients/streams"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
@@ -59,13 +58,13 @@ type DockerTasks struct {
 	storageDriver string
 	c             Docker
 	il            ImageLog
-	l             hclog.Logger
+	l             Logger
 	tg            *TarGz
 	force         bool
 }
 
 // NewDockerTasks creates a DockerTasks with the given Docker client
-func NewDockerTasks(c Docker, il ImageLog, tg *TarGz, l hclog.Logger) *DockerTasks {
+func NewDockerTasks(c Docker, il ImageLog, tg *TarGz, l Logger) *DockerTasks {
 
 	// Set the engine type, Docker, Podman
 	ver, err := c.ServerVersion(context.Background())
@@ -392,6 +391,44 @@ func (d *DockerTasks) ContainerInfo(id string) (interface{}, error) {
 	return cj, nil
 }
 
+// FindImageInLocalRegistry returns the id for an image in the local registry that
+// matches the given tag. If no image is found an empty string is returned.
+func (d *DockerTasks) FindImageInLocalRegistry(image resources.Image) (string, error) {
+	args := filters.NewArgs()
+	args.Add("reference", image.Name)
+
+	sum, err := d.c.ImageList(context.Background(), types.ImageListOptions{Filters: args})
+	if err != nil {
+		return "", xerrors.Errorf("unable to list images in local Docker cache: %w", err)
+	}
+
+	// we have images do not pull
+	if len(sum) > 0 {
+		d.l.Debug("Image exists in local cache", "image", image.Name, "id", sum[0].ID, "created", sum[0].Created)
+
+		return sum[0].ID, nil
+	}
+
+	// check the canonical name as this might be a podman docker server
+	in := makeImageCanonical(image.Name)
+	args = filters.NewArgs()
+	args.Add("reference", in)
+
+	sum, err = d.c.ImageList(context.Background(), types.ImageListOptions{Filters: args})
+	if err != nil {
+		return "", xerrors.Errorf("unable to list images in local Docker cache: %w", err)
+	}
+
+	// we have images do not pull
+	if len(sum) > 0 {
+		d.l.Debug("Image exists in local cache", "image", image.Name, "id", sum[0].ID, "created", sum[0].Created)
+
+		return sum[0].ID, nil
+	}
+
+	return "", nil
+}
+
 // PullImage pulls a Docker image from a remote repo
 func (d *DockerTasks) PullImage(image resources.Image, force bool) error {
 	// if image is local not try to pull jumppad.dev/localcache
@@ -402,36 +439,15 @@ func (d *DockerTasks) PullImage(image resources.Image, force bool) error {
 	in := makeImageCanonical(image.Name)
 
 	// only pull if image is not in current registry so check to see if the image is present
-	// if force then skil this check
+	// if force then skip this check
 	if !force && !d.force {
-		args := filters.NewArgs()
-		args.Add("reference", image.Name)
-
-		sum, err := d.c.ImageList(context.Background(), types.ImageListOptions{Filters: args})
+		id, err := d.FindImageInLocalRegistry(image)
 		if err != nil {
-			return xerrors.Errorf("unable to list images in local Docker cache: %w", err)
+			return err
 		}
 
-		// we have images do not pull
-		if len(sum) > 0 {
-			d.l.Debug("Image exists in local cache", "image", image.Name)
-
-			return nil
-		}
-
-		// check the canonical name as this might be a podman docker server
-		args = filters.NewArgs()
-		args.Add("reference", in)
-
-		sum, err = d.c.ImageList(context.Background(), types.ImageListOptions{Filters: args})
-		if err != nil {
-			return xerrors.Errorf("unable to list images in local Docker cache: %w", err)
-		}
-
-		// we have images do not pull
-		if len(sum) > 0 {
-			d.l.Debug("Image exists in local cache", "image", image.Name)
-
+		// found the image do nothing
+		if id != "" {
 			return nil
 		}
 	}
@@ -458,7 +474,7 @@ func (d *DockerTasks) PullImage(image resources.Image, force bool) error {
 	}
 
 	// write the output to the debug log
-	io.Copy(d.l.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}), out)
+	io.Copy(d.l.StandardWriter(), out)
 
 	return nil
 }
@@ -513,8 +529,8 @@ func (d *DockerTasks) RemoveContainer(id string, force bool) error {
 	return d.c.ContainerRemove(context.Background(), id, types.ContainerRemoveOptions{Force: true, RemoveVolumes: true})
 }
 
-func (d *DockerTasks) BuildContainer(config *resources.Container, force bool) (string, error) {
-	imageName := fmt.Sprintf("jumppad.dev/localcache/%s:%s", config.Name, config.Build.Tag)
+func (d *DockerTasks) BuildContainer(config *resources.Build, force bool) (string, error) {
+	imageName := fmt.Sprintf("jumppad.dev/localcache/%s:%s", config.Name, config.Container.Tag)
 	imageName = makeImageCanonical(imageName)
 
 	args := filters.NewArgs()
@@ -536,26 +552,26 @@ func (d *DockerTasks) BuildContainer(config *resources.Container, force bool) (s
 	}
 
 	// if the Dockerfile is not set, set to default
-	if config.Build.DockerFile == "" {
-		config.Build.DockerFile = "./Dockerfile"
+	if config.Container.DockerFile == "" {
+		config.Container.DockerFile = "./Dockerfile"
 	}
 
 	// configure the build args
 	buildArgs := map[string]*string{}
-	for k, v := range config.Build.Args {
+	for k, v := range config.Container.Args {
 		buildArgs[k] = &v
 	}
 
 	// tar the build context folder and send to the server
 	buildOpts := types.ImageBuildOptions{
-		Dockerfile: config.Build.DockerFile,
+		Dockerfile: config.Container.DockerFile,
 		Tags:       []string{imageName},
 		Remove:     true,
 		BuildArgs:  buildArgs,
 	}
 
 	var buf bytes.Buffer
-	d.tg.Compress(&buf, &TarGzOptions{OmitRoot: true}, config.Build.Context)
+	d.tg.Compress(&buf, &TarGzOptions{OmitRoot: true}, config.Container.Context)
 
 	resp, err := d.c.ImageBuild(context.Background(), &buf, buildOpts)
 	if err != nil {
@@ -563,7 +579,7 @@ func (d *DockerTasks) BuildContainer(config *resources.Container, force bool) (s
 	}
 	defer resp.Body.Close()
 
-	out := d.l.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug})
+	out := d.l.StandardWriter()
 	termFd, _ := term.GetFdInfo(out)
 	err = jsonmessage.DisplayJSONMessagesStream(resp.Body, out, termFd, false, nil)
 
@@ -931,7 +947,7 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 		go func() {
 			defer close(errCh)
 			errCh <- func() error {
-				streamer := streams.NewHijackedStreamer(nil, ttyOut, nil, ttyOut, ttyErr, stream, false, "", d.l)
+				streamer := streams.NewHijackedStreamer(nil, ttyOut, nil, ttyOut, ttyErr, stream, false, "")
 
 				return streamer.Stream(streamContext)
 			}()
@@ -1005,7 +1021,7 @@ func (d *DockerTasks) CreateShell(id string, command []string, stdin io.ReadClos
 		defer close(errCh)
 		errCh <- func() error {
 
-			streamer := streams.NewHijackedStreamer(ttyIn, ttyOut, ttyIn, ttyOut, ttyErr, resp, true, "", d.l)
+			streamer := streams.NewHijackedStreamer(ttyIn, ttyOut, ttyIn, ttyOut, ttyErr, resp, true, "")
 
 			return streamer.Stream(streamContext)
 		}()

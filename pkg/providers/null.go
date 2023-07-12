@@ -4,18 +4,18 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients"
 )
 
 // Null is a noop provider
 type Null struct {
 	config types.Resource
-	log    hclog.Logger
+	log    clients.Logger
 }
 
 // NewNull creates a null noop provider
-func NewNull(c types.Resource, l hclog.Logger) *Null {
+func NewNull(c types.Resource, l clients.Logger) *Null {
 	return &Null{c, l}
 }
 
@@ -34,4 +34,8 @@ func (n *Null) Lookup() ([]string, error) {
 
 func (n *Null) Refresh() error {
 	return nil
+}
+
+func (c *Null) Changed() (bool, error) {
+	return false, nil
 }

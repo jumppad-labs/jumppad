@@ -3,7 +3,6 @@ package providers
 import (
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
@@ -13,11 +12,11 @@ import (
 type K8sConfig struct {
 	config *resources.K8sConfig
 	client clients.Kubernetes
-	log    hclog.Logger
+	log    clients.Logger
 }
 
 // NewK8sConfig creates a provider which can create and destroy kubernetes configuration
-func NewK8sConfig(c *resources.K8sConfig, kc clients.Kubernetes, l hclog.Logger) *K8sConfig {
+func NewK8sConfig(c *resources.K8sConfig, kc clients.Kubernetes, l clients.Logger) *K8sConfig {
 	return &K8sConfig{c, kc, l}
 }
 
@@ -76,6 +75,12 @@ func (c *K8sConfig) Refresh() error {
 	c.log.Info("Refresh Kubernetes configuration", "ref", c.config.Name)
 
 	return nil
+}
+
+func (c *K8sConfig) Changed() (bool, error) {
+	c.log.Info("Checking changes", "ref", c.config.Name)
+
+	return false, nil
 }
 
 func (c *K8sConfig) setup() error {

@@ -7,8 +7,6 @@ import (
 	"net"
 	"net/http"
 	"time"
-
-	"github.com/hashicorp/go-hclog"
 )
 
 // HTTP defines an interface for a HTTP client
@@ -31,10 +29,10 @@ type HTTP interface {
 type HTTPImpl struct {
 	backoff time.Duration
 	httpc   *http.Client
-	l       hclog.Logger
+	l       Logger
 }
 
-func NewHTTP(backoff time.Duration, l hclog.Logger) HTTP {
+func NewHTTP(backoff time.Duration, l Logger) HTTP {
 	httpc := &http.Client{}
 	httpc.Transport = http.DefaultTransport.(*http.Transport).Clone()
 	httpc.Transport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}

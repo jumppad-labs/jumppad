@@ -7,17 +7,17 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/go-hclog"
+	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 type Book struct {
 	config *resources.Book
-	log    hclog.Logger
+	log    clients.Logger
 }
 
-func NewBook(b *resources.Book, l hclog.Logger) *Book {
+func NewBook(b *resources.Book, l clients.Logger) *Book {
 	return &Book{b, l}
 }
 
@@ -102,6 +102,12 @@ func (b *Book) Refresh() error {
 	return nil
 }
 
+func (c *Book) Changed() (bool, error) {
+	c.log.Info("Checking changes", "ref", c.config.Name)
+
+	return false, nil
+}
+
 func (b *Book) writePage(chapterPath string, page resources.Page) error {
 	os.MkdirAll(chapterPath, 0755)
 	os.Chmod(chapterPath, 0755)
@@ -135,10 +141,10 @@ func (b *Book) writePage(chapterPath string, page resources.Page) error {
 
 type Chapter struct {
 	config *resources.Chapter
-	log    hclog.Logger
+	log    clients.Logger
 }
 
-func NewChapter(c *resources.Chapter, l hclog.Logger) *Chapter {
+func NewChapter(c *resources.Chapter, l clients.Logger) *Chapter {
 	return &Chapter{c, l}
 }
 
@@ -168,4 +174,10 @@ func (c *Chapter) Lookup() ([]string, error) {
 
 func (c *Chapter) Refresh() error {
 	return nil
+}
+
+func (c *Chapter) Changed() (bool, error) {
+	c.log.Info("Checking changes", "ref", c.config.Name)
+
+	return false, nil
 }

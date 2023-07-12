@@ -8,16 +8,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
-	"golang.org/x/mod/sumdb/dirhash"
 )
 
-func newDevCmd(e jumppad.Engine, cc clients.Connector, l hclog.Logger) *cobra.Command {
+func newDevCmd(e jumppad.Engine, cc clients.Connector, l clients.Logger) *cobra.Command {
 	var variables []string
 	var variablesFile string
 	var interval string
@@ -41,7 +38,7 @@ func newDevCmd(e jumppad.Engine, cc clients.Connector, l hclog.Logger) *cobra.Co
 	return devCmd
 }
 
-func newDevCmdFunc(e jumppad.Engine, cc clients.Connector, l hclog.Logger, variables *[]string, variablesFile, interval *string) func(cmd *cobra.Command, args []string) error {
+func newDevCmdFunc(e jumppad.Engine, cc clients.Connector, l clients.Logger, variables *[]string, variablesFile, interval *string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		// create the shipyard and sub folders in the users home directory
 		utils.CreateFolders()
@@ -115,27 +112,9 @@ func newDevCmdFunc(e jumppad.Engine, cc clients.Connector, l hclog.Logger, varia
 		for {
 			cmd.Println("Checking for changes...")
 
-			new, changed, removed, cfg, err := e.Diff(dst, vars, *variablesFile)
+			new, changed, removed, _, err := e.Diff(dst, vars, *variablesFile)
 			if err != nil {
 				cmd.PrintErr(err)
-			}
-
-			// check any containers that may be using build
-			conts, _ := cfg.FindResourcesByType(resources.TypeContainer)
-			for _, c := range conts {
-				cont := c.(*resources.Container)
-
-				if cont.Build != nil {
-					// check the checksum
-					hash, err := dirhash.HashDir(cont.Build.Context, "", dirhash.DefaultHash)
-					if err != nil {
-						cmd.PrintErr(err)
-					}
-
-					if hash != cont.Build.Checksum {
-						changed = append(changed, c)
-					}
-				}
 			}
 
 			if len(new) > 0 || len(changed) > 0 || len(removed) > 0 {

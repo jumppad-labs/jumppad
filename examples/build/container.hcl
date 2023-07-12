@@ -1,7 +1,6 @@
-resource "container" "build" {
-  build {
-    dockerfile = "Dockerfile"
-    context    = "./src"
+resource "container" "app" {
+  image {
+    name = resource.build.app.image
   }
 
   command = ["/bin/app"]
@@ -14,6 +13,13 @@ resource "container" "build" {
 
   network {
     id = resource.network.onprem.id
+  }
+}
+
+resource "build" "app" {
+  container {
+    dockerfile = "Dockerfile"
+    context    = "./src"
   }
 }
 

@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
 	"golang.org/x/xerrors"
 	"helm.sh/helm/v3/pkg/kube"
 	v1 "k8s.io/api/core/v1"
@@ -35,11 +34,11 @@ type KubernetesImpl struct {
 	client     corev1.CoreV1Interface
 	configPath string
 	timeout    time.Duration
-	l          hclog.Logger
+	l          Logger
 }
 
 // NewKubernetes creates a new client for interacting with Kubernetes clusters
-func NewKubernetes(t time.Duration, l hclog.Logger) Kubernetes {
+func NewKubernetes(t time.Duration, l Logger) Kubernetes {
 	return &KubernetesImpl{timeout: t, l: l}
 }
 
@@ -48,7 +47,6 @@ func (k *KubernetesImpl) SetConfig(kubeconfig string) (Kubernetes, error) {
 	kc := NewKubernetes(k.timeout, k.l).(*KubernetesImpl)
 
 	kc.configPath = kubeconfig
-	kc.l = kc.l.With("config", kc.configPath)
 	st := time.Now()
 	for {
 		err := kc.setConfig()

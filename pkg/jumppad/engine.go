@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
-
 	"github.com/jumppad-labs/hclconfig"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
@@ -45,7 +43,7 @@ type Engine interface {
 type EngineImpl struct {
 	clients     *clients.Clients
 	config      *hclconfig.Config
-	log         hclog.Logger
+	log         clients.Logger
 	getProvider getProviderFunc
 }
 
@@ -54,7 +52,7 @@ type EngineImpl struct {
 type getProviderFunc func(c types.Resource, cl *clients.Clients) providers.Provider
 
 // GenerateClients creates the various clients for creating and destroying resources
-func GenerateClients(l hclog.Logger) (*clients.Clients, error) {
+func GenerateClients(l clients.Logger) (*clients.Clients, error) {
 	dc, err := clients.NewDocker()
 	if err != nil {
 		return nil, err
@@ -101,14 +99,14 @@ func GenerateClients(l hclog.Logger) (*clients.Clients, error) {
 }
 
 // New creates a new shipyard engine
-func New(l hclog.Logger) (Engine, error) {
+func New(l clients.Logger) (Engine, error) {
 	var err error
 	e := &EngineImpl{}
 	e.log = l
 	e.getProvider = generateProviderImpl
 
 	// Set the standard writer to our logger as the DAG uses the standard library log.
-	log.SetOutput(l.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Trace}))
+	log.SetOutput(l.StandardWriter())
 
 	// create the clients
 	cl, err := GenerateClients(l)
@@ -180,6 +178,8 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 		return nil, nil, nil, nil, err
 	}
 
+	unchanged := []types.Resource{}
+
 	for _, r := range res.Resources {
 		// does the resource exist
 		cr, err := past.FindResource(r.Metadata().ID)
@@ -197,6 +197,8 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 			changed = append(changed, r)
 			continue
 		}
+
+		unchanged = append(unchanged, r)
 	}
 
 	// check if there are resources in the state that are no longer
@@ -217,6 +219,25 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 
 		if !found {
 			removed = append(removed, r)
+		}
+	}
+
+	// loop through the remaining resources and call changed on the provider
+	// to see if any internal properties have changed
+	for _, r := range unchanged {
+		p := e.getProvider(r, e.clients)
+		if p == nil {
+			return nil, nil, nil, nil, fmt.Errorf("unable to create provider for resource Name: %s, Type: %s. Please check the provider is registered in providers.go", r.Metadata().Name, r.Metadata().Type)
+		}
+
+		// call destroy
+		c, err := p.Changed()
+		if err != nil {
+			return nil, nil, nil, nil, fmt.Errorf("unable to determine if resource has changed Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
+		}
+
+		if c {
+			changed = append(changed, r)
 		}
 	}
 
@@ -247,7 +268,6 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 	}
 
 	// get a diff of resources
-
 	_, _, removed, _, err := e.Diff(path, vars, variablesFile)
 	if err != nil {
 		return nil, err

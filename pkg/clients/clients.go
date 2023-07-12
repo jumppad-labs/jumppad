@@ -1,7 +1,5 @@
 package clients
 
-import "github.com/hashicorp/go-hclog"
-
 type Clients struct {
 	Docker         Docker
 	ContainerTasks ContainerTasks
@@ -10,7 +8,7 @@ type Clients struct {
 	HTTP           HTTP
 	Nomad          Nomad
 	Command        Command
-	Logger         hclog.Logger
+	Logger         Logger
 	Getter         Getter
 	Browser        System
 	ImageLog       ImageLog

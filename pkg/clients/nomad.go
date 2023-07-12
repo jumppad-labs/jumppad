@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
 	"golang.org/x/xerrors"
 )
 
@@ -35,7 +34,7 @@ type Nomad interface {
 // NomadImpl is an implementation of the Nomad interface
 type NomadImpl struct {
 	httpClient  HTTP
-	l           hclog.Logger
+	l           Logger
 	backoff     time.Duration
 	address     string
 	port        int
@@ -43,7 +42,7 @@ type NomadImpl struct {
 }
 
 // NewNomad creates a new Nomad client
-func NewNomad(c HTTP, backoff time.Duration, l hclog.Logger) Nomad {
+func NewNomad(c HTTP, backoff time.Duration, l Logger) Nomad {
 	return &NomadImpl{httpClient: c, l: l, backoff: backoff}
 }
 

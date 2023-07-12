@@ -10,8 +10,8 @@ import (
 	"path"
 	"strings"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/connector/crypto"
+	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/pkg/errors"
 	"github.com/sethvargo/go-retry"
@@ -21,19 +21,19 @@ import (
 
 type CertificateCA struct {
 	config *resources.CertificateCA
-	log    hclog.Logger
+	log    clients.Logger
 }
 
 type CertificateLeaf struct {
 	config *resources.CertificateLeaf
-	log    hclog.Logger
+	log    clients.Logger
 }
 
-func NewCertificateCA(co *resources.CertificateCA, l hclog.Logger) *CertificateCA {
+func NewCertificateCA(co *resources.CertificateCA, l clients.Logger) *CertificateCA {
 	return &CertificateCA{co, l}
 }
 
-func NewCertificateLeaf(co *resources.CertificateLeaf, l hclog.Logger) *CertificateLeaf {
+func NewCertificateLeaf(co *resources.CertificateLeaf, l clients.Logger) *CertificateLeaf {
 	return &CertificateLeaf{co, l}
 }
 
@@ -131,6 +131,12 @@ func (c *CertificateCA) Refresh() error {
 	c.log.Info("Refresh CA Certificate", "ref", c.config.Name)
 
 	return nil
+}
+
+func (c *CertificateCA) Changed() (bool, error) {
+	c.log.Info("Checking changes Leaf Certificate", "ref", c.config.Name)
+
+	return false, nil
 }
 
 func (c *CertificateLeaf) Create() error {
@@ -247,7 +253,13 @@ func (c *CertificateLeaf) Refresh() error {
 	return nil
 }
 
-func destroy(name, output string, log hclog.Logger) error {
+func (c *CertificateLeaf) Changed() (bool, error) {
+	c.log.Info("Checking changes Leaf Certificate", "ref", c.config.Name)
+
+	return false, nil
+}
+
+func destroy(name, output string, log clients.Logger) error {
 	keyFile := path.Join(output, fmt.Sprintf("%s.key", name))
 	pubkeyFile := path.Join(output, fmt.Sprintf("%s.pub", name))
 	pubsshFile := path.Join(output, fmt.Sprintf("%s.ssh", name))

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"golang.org/x/xerrors"
@@ -15,11 +14,11 @@ import (
 type NomadJob struct {
 	config *resources.NomadJob
 	client clients.Nomad
-	log    hclog.Logger
+	log    clients.Logger
 }
 
 // NewNomadJob creates a provider which can create and destroy Nomad jobs
-func NewNomadJob(c *resources.NomadJob, hc clients.Nomad, l hclog.Logger) *NomadJob {
+func NewNomadJob(c *resources.NomadJob, hc clients.Nomad, l clients.Logger) *NomadJob {
 	return &NomadJob{c, hc, l}
 }
 
@@ -106,6 +105,12 @@ func (c *NomadJob) Refresh() error {
 	c.log.Info("Refresh Nomad Job", "ref", c.config.Name)
 
 	return nil
+}
+
+func (c *NomadJob) Changed() (bool, error) {
+	c.log.Info("Checking changes", "ref", c.config.Name)
+
+	return false, nil
 }
 
 // /v1/jobs/parse
