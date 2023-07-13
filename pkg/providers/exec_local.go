@@ -102,13 +102,13 @@ func (c *LocalExec) Lookup() ([]string, error) {
 }
 
 func (c *LocalExec) Refresh() error {
-	c.log.Info("Refresh Local Exec", "ref", c.config.Name)
+	c.log.Debug("Refresh Local Exec", "ref", c.config.Name)
 
 	return nil
 }
 
 func (c *LocalExec) Changed() (bool, error) {
-	c.log.Info("Checking changes", "ref", c.config.Name)
+	c.log.Debug("Checking changes", "ref", c.config.Name)
 
 	return false, nil
 }

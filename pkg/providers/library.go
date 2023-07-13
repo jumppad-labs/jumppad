@@ -76,7 +76,7 @@ func (b *Book) Lookup() ([]string, error) {
 }
 
 func (b *Book) Refresh() error {
-	b.log.Info("Refresh Book", "ref", b.config.Name)
+	b.log.Debug("Refresh Book", "ref", b.config.Name)
 
 	libraryPath := utils.GetLibraryFolder("", 0775)
 	bookPath := filepath.Join(libraryPath, "content", b.config.Name)
@@ -103,7 +103,7 @@ func (b *Book) Refresh() error {
 }
 
 func (c *Book) Changed() (bool, error) {
-	c.log.Info("Checking changes", "ref", c.config.Name)
+	c.log.Debug("Checking changes", "ref", c.config.Name)
 
 	return false, nil
 }
@@ -177,7 +177,7 @@ func (c *Chapter) Refresh() error {
 }
 
 func (c *Chapter) Changed() (bool, error) {
-	c.log.Info("Checking changes", "ref", c.config.Name)
+	c.log.Debug("Checking changes", "ref", c.config.Name)
 
 	return false, nil
 }

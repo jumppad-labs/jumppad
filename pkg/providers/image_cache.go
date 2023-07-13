@@ -78,7 +78,7 @@ func (c *ImageCache) Destroy() error {
 }
 
 func (c *ImageCache) Refresh() error {
-	c.log.Info("Refresh Image Cache", "ref", c.config.Name)
+	c.log.Debug("Refresh Image Cache", "ref", c.config.Name)
 
 	return nil
 }
@@ -88,7 +88,7 @@ func (c *ImageCache) Lookup() ([]string, error) {
 }
 
 func (c *ImageCache) Changed() (bool, error) {
-	c.log.Info("Checking changes", "ref", c.config.Name)
+	c.log.Debug("Checking changes", "ref", c.config.Name)
 
 	return false, nil
 }

@@ -128,13 +128,13 @@ func (c *CertificateCA) Lookup() ([]string, error) {
 }
 
 func (c *CertificateCA) Refresh() error {
-	c.log.Info("Refresh CA Certificate", "ref", c.config.Name)
+	c.log.Debug("Refresh CA Certificate", "ref", c.config.Name)
 
 	return nil
 }
 
 func (c *CertificateCA) Changed() (bool, error) {
-	c.log.Info("Checking changes Leaf Certificate", "ref", c.config.Name)
+	c.log.Debug("Checking changes Leaf Certificate", "ref", c.config.Name)
 
 	return false, nil
 }
@@ -248,13 +248,13 @@ func (c *CertificateLeaf) Lookup() ([]string, error) {
 }
 
 func (c *CertificateLeaf) Refresh() error {
-	c.log.Info("Refresh Leaf Certificate", "ref", c.config.Name)
+	c.log.Debug("Refresh Leaf Certificate", "ref", c.config.Name)
 
 	return nil
 }
 
 func (c *CertificateLeaf) Changed() (bool, error) {
-	c.log.Info("Checking changes Leaf Certificate", "ref", c.config.Name)
+	c.log.Debug("Checking changes Leaf Certificate", "ref", c.config.Name)
 
 	return false, nil
 }

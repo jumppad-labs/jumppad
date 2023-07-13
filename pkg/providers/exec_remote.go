@@ -120,13 +120,13 @@ func (c *RemoteExec) Lookup() ([]string, error) {
 }
 
 func (c *RemoteExec) Refresh() error {
-	c.log.Info("Refresh Remote Exec", "ref", c.config.Name)
+	c.log.Debug("Refresh Remote Exec", "ref", c.config.Name)
 
 	return nil
 }
 
 func (c *RemoteExec) Changed() (bool, error) {
-	c.log.Info("Checking changes", "ref", c.config.Name)
+	c.log.Debug("Checking changes", "ref", c.config.Name)
 
 	return false, nil
 }

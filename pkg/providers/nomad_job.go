@@ -102,13 +102,13 @@ func (n *NomadJob) Lookup() ([]string, error) {
 }
 
 func (c *NomadJob) Refresh() error {
-	c.log.Info("Refresh Nomad Job", "ref", c.config.Name)
+	c.log.Debug("Refresh Nomad Job", "ref", c.config.Name)
 
 	return nil
 }
 
 func (c *NomadJob) Changed() (bool, error) {
-	c.log.Info("Checking changes", "ref", c.config.Name)
+	c.log.Debug("Checking changes", "ref", c.config.Name)
 
 	return false, nil
 }

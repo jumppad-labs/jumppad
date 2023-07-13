@@ -86,7 +86,7 @@ func (b *Build) Refresh() error {
 }
 
 func (b *Build) Changed() (bool, error) {
-	b.log.Info("Checking changes", "ref", b.config.ID)
+	b.log.Debug("Checking changes", "ref", b.config.ID)
 	return b.hasChanged()
 }
 

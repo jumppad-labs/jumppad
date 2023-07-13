@@ -71,7 +71,7 @@ func (c *NomadCluster) Lookup() ([]string, error) {
 // Refresh is called when `up` is run and the resource has been marked as created
 // checks the nodes are healthy and replaces if needed.
 func (c *NomadCluster) Refresh() error {
-	c.log.Info("Refresh Nomad Cluster", "ref", c.config.ID)
+	c.log.Debug("Refresh Nomad Cluster", "ref", c.config.ID)
 
 	c.log.Debug("Checking health of server node", "ref", c.config.ID, "server", c.config.ServerFQRN)
 
@@ -164,7 +164,7 @@ func (c *NomadCluster) Refresh() error {
 }
 
 func (c *NomadCluster) Changed() (bool, error) {
-	c.log.Info("Checking changes Leaf Certificate", "ref", c.config.Name)
+	c.log.Debug("Checking changes Leaf Certificate", "ref", c.config.Name)
 
 	return false, nil
 }

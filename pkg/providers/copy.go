@@ -109,13 +109,13 @@ func (c *Copy) Lookup() ([]string, error) {
 }
 
 func (c *Copy) Refresh() error {
-	c.log.Info("Refresh Copied files", "ref", c.config.Name)
+	c.log.Debug("Refresh Copied files", "ref", c.config.Name)
 
 	return nil
 }
 
 func (c *Copy) Changed() (bool, error) {
-	c.log.Info("Checking changes", "ref", c.config.Name)
+	c.log.Debug("Checking changes", "ref", c.config.Name)
 
 	return false, nil
 }

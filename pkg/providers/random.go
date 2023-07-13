@@ -50,7 +50,7 @@ func (n *RandomNumber) Refresh() error {
 }
 
 func (c *RandomNumber) Changed() (bool, error) {
-	c.log.Info("Checking changes", "ref", c.config.Name)
+	c.log.Debug("Checking changes", "ref", c.config.Name)
 
 	return false, nil
 }
@@ -103,7 +103,7 @@ func (n *RandomID) Refresh() error {
 }
 
 func (c *RandomID) Changed() (bool, error) {
-	c.log.Info("Checking changes", "ref", c.config.Name)
+	c.log.Debug("Checking changes", "ref", c.config.Name)
 
 	return false, nil
 }
@@ -198,7 +198,7 @@ func (r *RandomPassword) Refresh() error {
 }
 
 func (c *RandomPassword) Changed() (bool, error) {
-	c.log.Info("Checking changes", "ref", c.config.Name)
+	c.log.Debug("Checking changes", "ref", c.config.Name)
 
 	return false, nil
 }
@@ -238,7 +238,7 @@ func (r *RandomUUID) Refresh() error {
 }
 
 func (c *RandomUUID) Changed() (bool, error) {
-	c.log.Info("Checking changes", "ref", c.config.Name)
+	c.log.Debug("Checking changes", "ref", c.config.Name)
 
 	return false, nil
 }
@@ -499,7 +499,7 @@ func (r *RandomCreature) Refresh() error {
 }
 
 func (c *RandomCreature) Changed() (bool, error) {
-	c.log.Info("Checking changes", "ref", c.config.Name)
+	c.log.Debug("Checking changes", "ref", c.config.Name)
 
 	return false, nil
 }

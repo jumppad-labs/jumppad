@@ -72,13 +72,13 @@ func (c *K8sConfig) Lookup() ([]string, error) {
 }
 
 func (c *K8sConfig) Refresh() error {
-	c.log.Info("Refresh Kubernetes configuration", "ref", c.config.Name)
+	c.log.Debug("Refresh Kubernetes configuration", "ref", c.config.Name)
 
 	return nil
 }
 
 func (c *K8sConfig) Changed() (bool, error) {
-	c.log.Info("Checking changes", "ref", c.config.Name)
+	c.log.Debug("Checking changes", "ref", c.config.Name)
 
 	return false, nil
 }

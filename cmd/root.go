@@ -38,13 +38,9 @@ func init() {
 	engine, vm = createEngine(logger)
 	engineClients = engine.GetClients()
 
-	//cobra.OnInitialize(configure)
-
-	//rootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.jumppad/config)")
-
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(outputCmd)
-	rootCmd.AddCommand(newDevCmd(engine, engineClients.Connector, logger))
+	rootCmd.AddCommand(newDevCmd())
 	rootCmd.AddCommand(newEnvCmd(engine))
 	rootCmd.AddCommand(newRunCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, vm, engineClients.Connector, logger))
 	rootCmd.AddCommand(newTestCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, logger))

@@ -163,14 +163,14 @@ func (c *Template) Lookup() ([]string, error) {
 
 // Refresh causes the template to be destroyed and recreated
 func (c *Template) Refresh() error {
-	c.log.Info("Refresh Template", "ref", c.config.ID)
+	c.log.Debug("Refresh Template", "ref", c.config.ID)
 
 	c.Destroy()
 	return c.Create()
 }
 
 func (c *Template) Changed() (bool, error) {
-	c.log.Info("Checking changes", "ref", c.config.Name)
+	c.log.Debug("Checking changes", "ref", c.config.Name)
 
 	return false, nil
 }

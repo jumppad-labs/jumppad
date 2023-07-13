@@ -62,13 +62,13 @@ func (c *Ingress) Lookup() ([]string, error) {
 }
 
 func (c *Ingress) Refresh() error {
-	c.log.Info("Refresh Ingress", "ref", c.config.Name)
+	c.log.Debug("Refresh Ingress", "ref", c.config.Name)
 
 	return nil
 }
 
 func (c *Ingress) Changed() (bool, error) {
-	c.log.Info("Checking changes", "ref", c.config.Name)
+	c.log.Debug("Checking changes", "ref", c.config.Name)
 
 	return false, nil
 }

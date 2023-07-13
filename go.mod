@@ -5,6 +5,9 @@ go 1.19
 require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/MichaelMure/go-term-markdown v0.1.4
+	github.com/charmbracelet/bubbles v0.16.1
+	github.com/charmbracelet/bubbletea v0.24.2
+	github.com/charmbracelet/lipgloss v0.7.1
 	github.com/charmbracelet/log v0.2.2
 	github.com/creack/pty v1.1.17
 	github.com/cucumber/godog v0.12.4
@@ -22,8 +25,11 @@ require (
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	github.com/jumppad-labs/connector v0.3.0
 	github.com/jumppad-labs/hclconfig v0.8.1
+	github.com/knipferrc/teacup v0.3.1
 	github.com/mailgun/raymond/v2 v2.0.48
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
+	github.com/muesli/reflow v0.3.0
+	github.com/muesli/termenv v0.15.2
 	github.com/opencontainers/image-spec v1.0.2
 	github.com/otiai10/copy v1.10.0
 	github.com/pkg/errors v0.9.1
@@ -31,7 +37,7 @@ require (
 	github.com/shipyard-run/gohup v0.2.2
 	github.com/shipyard-run/version-manager v0.0.5
 	github.com/spf13/cobra v1.3.0
-	github.com/stretchr/testify v1.8.3
+	github.com/stretchr/testify v1.8.4
 	github.com/zclconf/go-cty v1.12.0
 	golang.org/x/crypto v0.7.0
 	golang.org/x/mod v0.8.0
@@ -61,7 +67,7 @@ require (
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/agext/levenshtein v1.2.2 // indirect
-	github.com/alecthomas/chroma v0.7.1 // indirect
+	github.com/alecthomas/chroma v0.10.0 // indirect
 	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/apparentlymart/go-textseg v1.0.0 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
@@ -72,15 +78,14 @@ require (
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/chai2010/gettext-go v0.0.0-20160711120539-c6fed771bfd5 // indirect
-	github.com/charmbracelet/lipgloss v0.7.1 // indirect
+	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
 	github.com/containerd/containerd v1.6.1 // indirect
 	github.com/cucumber/gherkin-go/v19 v19.0.3 // indirect
 	github.com/cucumber/messages-go/v16 v16.0.1 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
-	github.com/danwakefield/fnmatch v0.0.0-20160403171240-cbb64ac3d964 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
-	github.com/dlclark/regexp2 v1.1.6 // indirect
+	github.com/dlclark/regexp2 v1.10.0 // indirect
 	github.com/docker/cli v20.10.11+incompatible // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.6.4 // indirect
@@ -147,7 +152,8 @@ require (
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.18 // indirect
+	github.com/mattn/go-isatty v0.0.19 // indirect
+	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
@@ -163,8 +169,8 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
-	github.com/muesli/reflow v0.3.0 // indirect
-	github.com/muesli/termenv v0.15.1 // indirect
+	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
+	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/philhofer/fwd v1.1.2 // indirect
@@ -173,7 +179,7 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.30.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
-	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/rubenv/sql-migrate v0.0.0-20210614095031-55d5740dbbcc // indirect
 	github.com/russross/blackfriday v1.5.2 // indirect
 	github.com/savsgio/dictpool v0.0.0-20221023140959-7bf2e61cea94 // indirect
@@ -194,13 +200,13 @@ require (
 	github.com/xlab/treeprint v0.0.0-20181112141820-a009c3971eca // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.starlark.net v0.0.0-20200306205701-8dd3e2ee1dd5 // indirect
-	golang.org/x/image v0.0.0-20191206065243-da761ea9ff43 // indirect
-	golang.org/x/net v0.8.0 // indirect
+	golang.org/x/image v0.7.0 // indirect
+	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/oauth2 v0.6.0 // indirect
-	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.6.0 // indirect
-	golang.org/x/term v0.6.0 // indirect
-	golang.org/x/text v0.8.0 // indirect
+	golang.org/x/sync v0.2.0 // indirect
+	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/term v0.8.0 // indirect
+	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	google.golang.org/api v0.114.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
@@ -227,6 +233,8 @@ require (
 )
 
 replace github.com/creack/pty => github.com/photostorm/pty v1.1.18
+
+replace github.com/charmbracelet/log => github.com/jumppad-labs/log v0.0.0-20230711151418-55bbc87954b7
 
 // replace github.com/jumppad-labs/hclconfig => ../../jumppad-labs/hclconfig/
 

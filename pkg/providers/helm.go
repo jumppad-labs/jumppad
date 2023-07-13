@@ -173,13 +173,13 @@ func (h *Helm) Lookup() ([]string, error) {
 }
 
 func (c *Helm) Refresh() error {
-	c.log.Info("Refresh Helm Chart", "ref", c.config.Name)
+	c.log.Debug("Refresh Helm Chart", "ref", c.config.Name)
 
 	return nil
 }
 
 func (c *Helm) Changed() (bool, error) {
-	c.log.Info("Checking changes", "ref", c.config.Name)
+	c.log.Debug("Checking changes", "ref", c.config.Name)
 
 	return false, nil
 }

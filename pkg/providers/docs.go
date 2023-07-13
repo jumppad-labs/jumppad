@@ -79,7 +79,7 @@ func (i *Docs) Lookup() ([]string, error) {
 }
 
 func (d *Docs) Refresh() error {
-	d.log.Info("Refresh Docs", "ref", d.config.Name)
+	d.log.Debug("Refresh Docs", "ref", d.config.Name)
 
 	configPath := utils.GetLibraryFolder("config", 0775)
 	checksPath := utils.GetLibraryFolder("checks", 0775)
@@ -133,7 +133,7 @@ func (d *Docs) Refresh() error {
 }
 
 func (c *Docs) Changed() (bool, error) {
-	c.log.Info("Checking changes", "ref", c.config.Name)
+	c.log.Debug("Checking changes", "ref", c.config.Name)
 
 	return false, nil
 }

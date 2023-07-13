@@ -118,13 +118,13 @@ func (n *Network) Lookup() ([]string, error) {
 }
 
 func (c *Network) Refresh() error {
-	c.log.Info("Refresh Network", "ref", c.config.Name)
+	c.log.Debug("Refresh Network", "ref", c.config.Name)
 
 	return nil
 }
 
 func (c *Network) Changed() (bool, error) {
-	c.log.Info("Checking changes", "ref", c.config.Name)
+	c.log.Debug("Checking changes", "ref", c.config.Name)
 
 	return false, nil
 }

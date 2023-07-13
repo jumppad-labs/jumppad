@@ -59,13 +59,13 @@ func (c *K8sCluster) Lookup() ([]string, error) {
 }
 
 func (c *K8sCluster) Refresh() error {
-	c.log.Info("Refresh Kubernetes Cluster", "ref", c.config.Name)
+	c.log.Debug("Refresh Kubernetes Cluster", "ref", c.config.Name)
 
 	return nil
 }
 
 func (c *K8sCluster) Changed() (bool, error) {
-	c.log.Info("Checking changes Leaf Certificate", "ref", c.config.Name)
+	c.log.Debug("Checking changes Leaf Certificate", "ref", c.config.Name)
 
 	return false, nil
 }

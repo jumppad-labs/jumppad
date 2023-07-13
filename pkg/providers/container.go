@@ -70,7 +70,7 @@ func (c *Container) Lookup() ([]string, error) {
 }
 
 func (c *Container) Refresh() error {
-	c.log.Info("Refresh Container", "ref", c.config.Name)
+	c.log.Debug("Refresh Container", "ref", c.config.Name)
 
 	changed, err := c.Changed()
 	if err != nil {
@@ -97,7 +97,7 @@ func (c *Container) Destroy() error {
 }
 
 func (c *Container) Changed() (bool, error) {
-	c.log.Info("Checking changes", "ref", c.config.Name)
+	c.log.Debug("Checking changes", "ref", c.config.Name)
 
 	// has the image id changed
 	id, err := c.client.FindImageInLocalRegistry(*c.config.Image)
