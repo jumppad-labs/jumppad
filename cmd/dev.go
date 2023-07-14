@@ -41,9 +41,18 @@ func newDevCmd() *cobra.Command {
 func newDevCmdFunc(variables *[]string, variablesFile, interval *string, ttyFlag *bool) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		// create the output view
-		v, err := view.NewCmdView(!*ttyFlag)
-		if err != nil {
-			return fmt.Errorf("unable to create output view: %s", err)
+		var v view.View
+		var err error
+		if *ttyFlag {
+			v, err = view.NewLogView()
+			if err != nil {
+				return fmt.Errorf("unable to create output view: %s", err)
+			}
+		} else {
+			v, err = view.NewTTYView()
+			if err != nil {
+				return fmt.Errorf("unable to create output view: %s", err)
+			}
 		}
 
 		engine, _ = createEngine(v.Logger())
@@ -126,7 +135,7 @@ func newDevCmdFunc(variables *[]string, variablesFile, interval *string, ttyFlag
 	}
 }
 
-func doUpdates(v *view.CmdView, e jumppad.Engine, source string, variables map[string]string, variableFile string, interval time.Duration) {
+func doUpdates(v view.View, e jumppad.Engine, source string, variables map[string]string, variableFile string, interval time.Duration) {
 	v.UpdateStatus("Checking for changes...", false)
 
 	for {

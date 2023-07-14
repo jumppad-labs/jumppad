@@ -9,6 +9,10 @@ type messageWriter struct {
 }
 
 func (m *messageWriter) Write(b []byte) (int, error) {
-	m.program.Send(LogMsg(b))
-	return len(b), nil
+	if m.program != nil {
+		m.program.Send(LogMsg(b))
+		return len(b), nil
+	}
+
+	return 0, nil
 }
