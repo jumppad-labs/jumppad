@@ -20,17 +20,26 @@ type CmdView struct {
 	initialModel model
 }
 
-func NewCmdView() (*CmdView, error) {
+func NewCmdView(useTTY bool) (*CmdView, error) {
 	c := &CmdView{}
-
 	c.initialModel = initialModel()
-	c.program = tea.NewProgram(c.initialModel, tea.WithAltScreen())
+	if useTTY {
+		c.program = tea.NewProgram(c.initialModel, tea.WithAltScreen())
 
-	mw := &messageWriter{
-		program: c.program,
+		mw := &messageWriter{
+			program: c.program,
+		}
+
+		c.logger = clients.NewTTYLogger(mw, clients.LogLevelInfo)
+	} else {
+		c.program = tea.NewProgram(c.initialModel, tea.WithoutRenderer())
+
+		mw := &messageWriter{
+			program: c.program,
+		}
+
+		c.logger = clients.NewLogger(mw, clients.LogLevelInfo)
 	}
-
-	c.logger = clients.NewTTYLogger(mw, clients.LogLevelInfo)
 
 	return c, nil
 }

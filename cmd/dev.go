@@ -16,6 +16,7 @@ func newDevCmd() *cobra.Command {
 	var variables []string
 	var variablesFile string
 	var interval string
+	var ttyFlag bool
 
 	devCmd := &cobra.Command{
 		Use:   "dev",
@@ -25,21 +26,22 @@ func newDevCmd() *cobra.Command {
 		jumppad dev ./
 `,
 		Args:         cobra.ArbitraryArgs,
-		RunE:         newDevCmdFunc(&variables, &variablesFile, &interval),
+		RunE:         newDevCmdFunc(&variables, &variablesFile, &interval, &ttyFlag),
 		SilenceUsage: true,
 	}
 
 	devCmd.Flags().StringSliceVarP(&variables, "var", "", nil, "Allows setting variables from the command line, variables are specified as a key and value, e.g --var key=value. Can be specified multiple times")
 	devCmd.Flags().StringVarP(&variablesFile, "vars-file", "", "", "Load variables from a location other than *.vars files in the blueprint folder. E.g --vars-file=./file.vars")
 	devCmd.Flags().StringVarP(&interval, "interval", "", "5s", "Interval to check for changes. E.g. --interval=5s")
+	devCmd.Flags().BoolVarP(&ttyFlag, "disable-tty", "", false, "Enable/disable output to TTY")
 
 	return devCmd
 }
 
-func newDevCmdFunc(variables *[]string, variablesFile, interval *string) func(cmd *cobra.Command, args []string) error {
+func newDevCmdFunc(variables *[]string, variablesFile, interval *string, ttyFlag *bool) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		// create the output view
-		v, err := view.NewCmdView()
+		v, err := view.NewCmdView(!*ttyFlag)
 		if err != nil {
 			return fmt.Errorf("unable to create output view: %s", err)
 		}
@@ -142,7 +144,7 @@ func doUpdates(v *view.CmdView, e jumppad.Engine, source string, variables map[s
 					len(new),
 					len(changed),
 					len(removed),
-				), false)
+				), true)
 
 			_, err := e.ApplyWithVariables(source, variables, variableFile)
 			if err != nil {

@@ -13,6 +13,8 @@ import (
 	"github.com/muesli/reflow/wordwrap"
 )
 
+var tickDuration = 250 * time.Millisecond
+
 // LogMsg sends data to the log panel
 type LogMsg string
 type ErrMsg error
@@ -75,11 +77,23 @@ func initialModel() model {
 
 func (m model) Init() tea.Cmd {
 	// init child models
-	return nil
+	return tea.Batch(m.statusbar.Init(), m.tick())
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+
+	// when receiving a tick all components that require
+	// tick updates must be called
+	// tick also must be called to ensure that the tick
+	// continues
+	case TickMsg:
+		// update the status model so that the spinner updates
+		sm, sCmd := m.statusbar.Update(msg)
+		m.statusbar = sm
+
+		return m, tea.Batch(sCmd, m.tick())
+
 	case tea.MouseMsg:
 		switch msg.Type {
 		case tea.MouseWheelUp:
@@ -106,7 +120,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.WindowSizeMsg:
-		fmt.Println("size")
 		// this message is always fired when first displaying the view
 		// then after every terminal resize
 		headerHeight := 2 //lipgloss.Height(m.headerView())
@@ -139,13 +152,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case StatusMsg:
-		var cmd tea.Cmd
-		m.statusbar, cmd = m.statusbar.Update(msg)
-
-		return m, cmd
-
-	// handle tick updates from the statusbar
-	case StatusTickMsg:
 		var cmd tea.Cmd
 		m.statusbar, cmd = m.statusbar.Update(msg)
 
@@ -188,6 +194,13 @@ func (m model) footerView() string {
 	line := lipgloss.NewStyle().Foreground(lipgloss.Color("37")).Render(strings.Repeat("─", m.width-m.left))
 
 	return lipgloss.JoinVertical(lipgloss.Top, line, m.statusbar.View())
+}
+
+// tick ensures that there are regular heartbeats for components that need them
+func (m model) tick() tea.Cmd {
+	return tea.Tick(tickDuration, func(t time.Time) tea.Msg {
+		return TickMsg(time.Now())
+	})
 }
 
 func wrapMessage(m string, width int) string {

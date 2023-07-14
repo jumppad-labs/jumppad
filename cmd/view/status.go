@@ -1,14 +1,14 @@
 package view
 
 import (
+	"fmt"
+	"math"
 	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
-
-var statusSpinnerDuration = 100 * time.Millisecond
 
 // StatusMsg updates the status bar, optionally the elapsed time and
 // spinner can be enabled
@@ -17,14 +17,11 @@ type StatusMsg struct {
 	ShowElapsed bool
 }
 
-type StatusTickMsg struct {
-	spinnerMsg tea.Msg
-}
-
 type StatusModel struct {
 	spinner     spinner.Model
 	message     string
 	showSpinner bool
+	startTime   time.Time
 }
 
 func NewStatus() StatusModel {
@@ -44,19 +41,24 @@ func (m StatusModel) Init() tea.Cmd {
 
 func (m StatusModel) Update(msg tea.Msg) (StatusModel, tea.Cmd) {
 	switch msg := msg.(type) {
-	case StatusTickMsg:
-		m.spinner, _ = m.spinner.Update(msg.spinnerMsg)
+	case TickMsg:
+		// advance the spinner
+		var spCmd tea.Cmd
+		spMsg := m.spinner.Tick()
+		m.spinner, spCmd = m.spinner.Update(spMsg)
+
+		return m, spCmd
 
 	case StatusMsg:
 		m.message = msg.Message
 		m.showSpinner = msg.ShowElapsed
-	}
 
-	// after updating the spinner or after the spinner has been enabled
-	// by a status message
-	// we need to return a command to ensure that the spinner is updated again after an interval
-	if m.showSpinner {
-		return m, m.tick()
+		// if we are getting a new message that sets a timer
+		// set the current start time to now so that it is possible to calculate
+		// elapsed time
+		if m.showSpinner {
+			m.startTime = time.Now()
+		}
 	}
 
 	return m, nil
@@ -64,17 +66,15 @@ func (m StatusModel) Update(msg tea.Msg) (StatusModel, tea.Cmd) {
 
 func (m StatusModel) View() string {
 	if m.showSpinner {
+		et := time.Since(m.startTime)
+		elapsed := fmt.Sprintf("%ds", int(math.Round(float64(et)/float64(time.Second))))
+
 		spinner := lipgloss.NewStyle().MarginRight(1).Render(m.spinner.View())
-		return lipgloss.JoinHorizontal(lipgloss.Left, spinner, m.message)
+		text := lipgloss.NewStyle().MarginRight(4).Render(m.message)
+
+		return lipgloss.JoinHorizontal(lipgloss.Left, spinner, text, elapsed)
 	}
 
 	message := lipgloss.NewStyle().MarginLeft(1).Render(m.message)
 	return lipgloss.JoinHorizontal(lipgloss.Left, message)
-}
-
-// tick ensures that the spinner is updated
-func (m StatusModel) tick() tea.Cmd {
-	return tea.Tick(statusSpinnerDuration, func(t time.Time) tea.Msg {
-		return StatusTickMsg{m.spinner.Tick()}
-	})
 }
