@@ -138,7 +138,7 @@ func doUpdates(v *view.CmdView, e jumppad.Engine, source string, variables map[s
 		if len(new) > 0 || len(changed) > 0 || len(removed) > 0 {
 			v.UpdateStatus(
 				fmt.Sprintf(
-					"Applying changes, %d resources to add, %d resources changed, %d resources to delete, running up\n",
+					"Applying changes, %d resources to add, %d resources changed, %d resources to delete, running up",
 					len(new),
 					len(changed),
 					len(removed),
