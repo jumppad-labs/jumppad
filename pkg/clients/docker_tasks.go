@@ -671,7 +671,7 @@ func (d *DockerTasks) CopyFromContainer(id, src, dst string) error {
 var importMutex = sync.Mutex{}
 
 // CopyLocalDockerImagesToVolume writes multiple Docker images to a Docker container as a compressed archive
-// returns the filename of the archive and an error if one occured
+// returns the filename of the archive and an error if one occurred
 func (d *DockerTasks) CopyLocalDockerImagesToVolume(images []string, volume string, force bool) ([]string, error) {
 	d.l.Debug("Writing docker images to volume", "images", images, "volume", volume)
 
@@ -721,7 +721,7 @@ func (d *DockerTasks) CopyLocalDockerImagesToVolume(images []string, volume stri
 	}
 
 	for _, i := range images {
-		compressedImageName := fmt.Sprintf("%s", base64.StdEncoding.EncodeToString([]byte(i)))
+		compressedImageName := base64.StdEncoding.EncodeToString([]byte(i))
 
 		d.l.Debug("Copying image to container", "image", i)
 		imageFile, err := d.saveImageToTempFile(i, compressedImageName)
@@ -729,7 +729,7 @@ func (d *DockerTasks) CopyLocalDockerImagesToVolume(images []string, volume stri
 			return nil, err
 		}
 
-		// clean up after ourselfs
+		// clean up
 		defer os.Remove(imageFile)
 		savedImages = append(savedImages, imageFile)
 	}

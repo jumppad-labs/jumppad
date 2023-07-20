@@ -88,6 +88,15 @@ func (k *K8sCluster) Process() error {
 					}
 				}
 			}
+
+			// add the image id from state
+			for x, img := range k.CopyImages {
+				for _, sImg := range kstate.CopyImages {
+					if img.Name == sImg.Name && img.Username == sImg.Username {
+						k.CopyImages[x].ID = sImg.ID
+					}
+				}
+			}
 		}
 	}
 

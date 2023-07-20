@@ -157,16 +157,65 @@ func (c *NomadCluster) Refresh() error {
 		if err != nil {
 			return err
 		}
+	}
 
+	// do we need to re-import any images?
+	ci, err := c.getChangedImages()
+	if err != nil {
+		return err
+	}
+
+	if len(ci) > 0 {
+		ids, err := c.Lookup()
+		if err != nil {
+			return err
+		}
+
+		for _, id := range ids {
+			c.log.Debug("Importing docker images", "ref", c.config.ID, "id", id)
+			c.ImportLocalDockerImages(utils.ImageVolumeName, id, ci, false)
+		}
 	}
 
 	return nil
 }
 
 func (c *NomadCluster) Changed() (bool, error) {
-	c.log.Debug("Checking changes Leaf Certificate", "ref", c.config.Name)
+	c.log.Debug("Checking changes", "ref", c.config.Name)
+
+	// check to see if the any of the copied images have changed
+	i, err := c.getChangedImages()
+	if err != nil {
+		return false, err
+	}
+
+	if len(i) > 0 {
+		return true, nil
+	}
 
 	return false, nil
+}
+
+func (c *NomadCluster) getChangedImages() ([]resources.Image, error) {
+	changed := []resources.Image{}
+
+	for _, i := range c.config.CopyImages {
+		// has the image id changed
+		id, err := c.client.FindImageInLocalRegistry(i)
+		if err != nil {
+			c.log.Error("Unable to lookup image in local registry", "ref", c.config.ID, "error", err)
+			return nil, err
+		}
+
+		// check that the current registry id for the image is the same
+		// as the image that was used to create this container
+		if id != i.ID {
+			c.log.Debug("Container image changed, needs refresh", "ref", c.config.Name, "image", i.Name)
+			changed = append(changed, i)
+		}
+	}
+
+	return changed, nil
 }
 
 func removeElement(s []string, item string) []string {
