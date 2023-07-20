@@ -18,12 +18,25 @@ type NomadJob struct {
 
 	// HealthCheck defines a health check for the resource
 	HealthCheck *HealthCheckNomad `hcl:"health_check,block" json:"health_check,omitempty"`
+
+	// output
+	JobChecksums []string `hcl:"job_checksums,optional" json:"job_checksums",omitempty"`
 }
 
 func (n *NomadJob) Process() error {
 	// make all the paths absolute
 	for i, p := range n.Paths {
 		n.Paths[i] = ensureAbsolute(p, n.File)
+	}
+	
+	cfg, err := LoadState()
+	if err == nil {
+		// try and find the resource in the state
+		r, _ := cfg.FindResource(n.ID)
+		if r != nil {
+			kstate := r.(*NomadJob)
+			n.JobChecksums = kstate.JobChecksums
+		}
 	}
 
 	return nil
