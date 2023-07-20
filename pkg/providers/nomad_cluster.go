@@ -166,6 +166,8 @@ func (c *NomadCluster) Refresh() error {
 	}
 
 	if len(ci) > 0 {
+		c.log.Info("Copyied images changed, pushing new copy to the cluster","ref",c.config.ID)
+
 		ids, err := c.Lookup()
 		if err != nil {
 			return err
@@ -173,9 +175,12 @@ func (c *NomadCluster) Refresh() error {
 
 		for _, id := range ids {
 			c.log.Debug("Importing docker images", "ref", c.config.ID, "id", id)
-			c.ImportLocalDockerImages(utils.ImageVolumeName, id, ci, false)
+			c.ImportLocalDockerImages(utils.ImageVolumeName, id, ci, true)
 		}
 	}
+
+	// update the config with the image ids
+	c.updateCopyImageIDs()
 
 	return nil
 }
@@ -217,6 +222,22 @@ func (c *NomadCluster) getChangedImages() ([]resources.Image, error) {
 
 	return changed, nil
 }
+
+// updates the ids for images that are copied to the container
+// we store the image id in addition to the name so we can
+// detect when it has changed
+func (c *NomadCluster) updateCopyImageIDs() error {
+	for n,i:=range c.config.CopyImages {
+		id,err:=c.client.FindImageInLocalRegistry(i)
+		if err != nil {
+			return err
+		}
+
+		c.config.CopyImages[n].ID = id
+	}
+
+	return nil
+}	
 
 func removeElement(s []string, item string) []string {
 	// find the element
@@ -376,6 +397,9 @@ func (c *NomadCluster) createNomad() error {
 	if err != nil {
 		return fmt.Errorf("unable to deploy Connector: %s", err)
 	}
+
+	// update the copied image ids so that we can detect changes later
+	c.updateCopyImageIDs()
 
 	return nil
 }
