@@ -394,39 +394,55 @@ func (d *DockerTasks) ContainerInfo(id string) (interface{}, error) {
 // FindImageInLocalRegistry returns the id for an image in the local registry that
 // matches the given tag. If no image is found an empty string is returned.
 func (d *DockerTasks) FindImageInLocalRegistry(image resources.Image) (string, error) {
+	images, err := d.FindImagesInLocalRegistry(image.Name)
+	if err != nil {
+		return "", err
+	}
+
+	return images[0], nil
+}
+
+// Finds images in the local registry that match the filter
+func (d *DockerTasks) FindImagesInLocalRegistry(filter string) ([]string, error) {
+	images := []string{}
+
 	args := filters.NewArgs()
-	args.Add("reference", image.Name)
+	args.Add("reference", filter)
 
 	sum, err := d.c.ImageList(context.Background(), types.ImageListOptions{Filters: args})
 	if err != nil {
-		return "", xerrors.Errorf("unable to list images in local Docker cache: %w", err)
+		return nil, xerrors.Errorf("unable to list images in local Docker cache: %w", err)
 	}
 
-	// we have images do not pull
+	// we have images return
 	if len(sum) > 0 {
-		d.l.Debug("Image exists in local cache", "image", image.Name, "id", sum[0].ID, "created", sum[0].Created)
+		for _, i := range sum {
+			images = append(images, i.ID)
+		}
 
-		return sum[0].ID, nil
+		return images, nil
 	}
 
 	// check the canonical name as this might be a podman docker server
-	in := makeImageCanonical(image.Name)
+	in := makeImageCanonical(filter)
 	args = filters.NewArgs()
 	args.Add("reference", in)
 
 	sum, err = d.c.ImageList(context.Background(), types.ImageListOptions{Filters: args})
 	if err != nil {
-		return "", xerrors.Errorf("unable to list images in local Docker cache: %w", err)
+		return nil, xerrors.Errorf("unable to list images in local Docker cache: %w", err)
 	}
 
 	// we have images do not pull
 	if len(sum) > 0 {
-		d.l.Debug("Image exists in local cache", "image", image.Name, "id", sum[0].ID, "created", sum[0].Created)
+		for _, i := range sum {
+			images = append(images, i.ID)
+		}
 
-		return sum[0].ID, nil
+		return images, nil
 	}
 
-	return "", nil
+	return nil, nil
 }
 
 // PullImage pulls a Docker image from a remote repo
@@ -527,12 +543,28 @@ func (d *DockerTasks) RemoveContainer(id string, force bool) error {
 	return d.c.ContainerRemove(context.Background(), id, types.ContainerRemoveOptions{Force: true, RemoveVolumes: true})
 }
 
+func (d *DockerTasks) RemoveImage(id string) error {
+	_, err := d.c.ImageRemove(context.Background(), id, types.ImageRemoveOptions{Force: true})
+
+	return err
+}
+
 func (d *DockerTasks) BuildContainer(config *resources.Build, force bool) (string, error) {
-	imageName := fmt.Sprintf("jumppad.dev/localcache/%s:%s", config.Name, config.Container.Tag)
-	imageName = makeImageCanonical(imageName)
+	// get the checksum for the id
+	cs, err := utils.HashDir(config.Container.Context)
+	if err != nil {
+		return "", err
+	}
+
+	// strip the prefix and grab the first 8chars for the id
+	cs, _ = utils.ReplaceNonURIChars(cs[3:11])
+
+	// create the fully qualified name using the checksum for the content
+	imageWithId := fmt.Sprintf("jumppad.dev/localcache/%s:%s", config.Name, strings.ToLower(cs))
+	imageWithId = makeImageCanonical(imageWithId)
 
 	args := filters.NewArgs()
-	args.Add("reference", imageName)
+	args.Add("reference", imageWithId)
 
 	// check if the image already exists, if so do not rebuild unless force
 	if !force && !d.force {
@@ -541,11 +573,11 @@ func (d *DockerTasks) BuildContainer(config *resources.Build, force bool) (strin
 			return "", xerrors.Errorf("unable to list images in local Docker cache: %w", err)
 		}
 
-		// if we have images do not pull
+		// if we have images do not build
 		if len(sum) > 0 {
-			d.l.Debug("Image exists in local cache, skip build", "image", imageName)
+			d.l.Debug("Image exists in local cache, skip build", "image", imageWithId)
 
-			return imageName, nil
+			return imageWithId, nil
 		}
 	}
 
@@ -560,10 +592,12 @@ func (d *DockerTasks) BuildContainer(config *resources.Build, force bool) (strin
 		buildArgs[k] = &v
 	}
 
+	d.l.Debug("Building image", "id", imageWithId)
+
 	// tar the build context folder and send to the server
 	buildOpts := types.ImageBuildOptions{
 		Dockerfile: config.Container.DockerFile,
-		Tags:       []string{imageName},
+		Tags:       []string{imageWithId},
 		Remove:     true,
 		BuildArgs:  buildArgs,
 	}
@@ -585,7 +619,7 @@ func (d *DockerTasks) BuildContainer(config *resources.Build, force bool) (strin
 		return "", err
 	}
 
-	return imageName, nil
+	return imageWithId, nil
 }
 
 // CreateVolume creates a Docker volume for a cluster
@@ -693,7 +727,6 @@ func (d *DockerTasks) CopyLocalDockerImagesToVolume(images []string, volume stri
 
 		// we have image
 		if len(sum) > 0 {
-			d.l.Debug("Image exists in local cache", "image", i)
 			continue
 		}
 
@@ -709,7 +742,6 @@ func (d *DockerTasks) CopyLocalDockerImagesToVolume(images []string, volume stri
 		}
 
 		if len(sum) > 0 {
-			d.l.Debug("Image exists in local cache", "image", in)
 			// update the image name in the collection to the canonical name
 			images[n] = in
 			continue

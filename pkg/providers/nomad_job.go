@@ -2,10 +2,12 @@ package providers
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"golang.org/x/xerrors"
 )
 
@@ -52,8 +54,8 @@ func (n *NomadJob) Create() error {
 
 		for _, j := range n.config.HealthCheck.Jobs {
 			for {
-				if time.Now().Sub(st) >= dur {
-					return xerrors.Errorf("Timeout waiting for job '%s' to start", j)
+				if time.Since(st) >= dur {
+					return xerrors.Errorf("timeout waiting for job '%s' to start", j)
 				}
 
 				n.log.Debug("Checking health for", "ref", n.config.Name, "job", j)
@@ -69,6 +71,14 @@ func (n *NomadJob) Create() error {
 		}
 
 	}
+
+	// set the checksums
+	cs, err := n.generateChecksums()
+	if err != nil {
+		return xerrors.Errorf("unable to generate checksums: %w", err)
+	}
+
+	n.config.JobChecksums = cs
 
 	return nil
 }
@@ -101,16 +111,97 @@ func (n *NomadJob) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (c *NomadJob) Refresh() error {
-	c.log.Debug("Refresh Nomad Job", "ref", c.config.Name)
+func (n *NomadJob) Refresh() error {
+	cp, err := n.getChangedPaths()
+	if err != nil {
+		return err
+	}
 
-	return nil
+	if len(cp) < 1 {
+		return nil
+	}
+
+	n.log.Info("Refresh Nomad Jobs", "ref", n.config.ID, "paths", cp)
+
+	err = n.Destroy()
+	if err != nil {
+		return err
+	}
+
+	return n.Create()
 }
 
-func (c *NomadJob) Changed() (bool, error) {
-	c.log.Debug("Checking changes", "ref", c.config.Name)
+func (n *NomadJob) Changed() (bool, error) {
+	cp, err := n.getChangedPaths()
+	if err != nil {
+		return false, err
+	}
+
+	if len(cp) > 0 {
+		n.log.Debug("Nomad jobs changed, needs refresh", "ref", n.config.ID)
+		return true, nil
+	}
 
 	return false, nil
+}
+
+// generateChecksums generates a sha256 checksum for each of the the paths
+func (n *NomadJob) generateChecksums() ([]string, error) {
+	checksums := []string{}
+
+	for _, p := range n.config.Paths {
+		f, err := os.Open(p)
+		if err != nil {
+			return nil, err
+		}
+
+		fi, err := f.Stat()
+		if err != nil {
+			return nil, err
+		}
+
+		var hash string
+
+		if fi.IsDir() {
+			hash, err = utils.HashDir(p)
+		} else {
+			hash, err = utils.HashFile(p)
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		checksums = append(checksums, hash)
+	}
+
+	return checksums, nil
+}
+
+// getChangedPaths returns the paths that have changed since the nomad jobs
+// were last applied
+func (n *NomadJob) getChangedPaths() ([]string, error) {
+	// get the checksums
+	cs, err := n.generateChecksums()
+	if err != nil {
+		return nil, err
+	}
+
+	// if we have more checksums than previous assume everything has changed
+	if len(n.config.JobChecksums) != len(cs) {
+		return n.config.Paths, nil
+	}
+
+	// compare the checksums
+	diff := []string{}
+	for i, c := range n.config.JobChecksums {
+
+		if c != cs[i] {
+			diff = append(diff, n.config.Paths[i])
+		}
+	}
+
+	return diff, nil
 }
 
 // /v1/jobs/parse

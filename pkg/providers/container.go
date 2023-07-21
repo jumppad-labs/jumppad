@@ -64,20 +64,17 @@ func (c *Container) Create() error {
 
 // Lookup the ID based on the config
 func (c *Container) Lookup() ([]string, error) {
-	c.log.Debug("Lookup Container Details", "fqrn", c.config.FQRN)
-
 	return c.client.FindContainerIDs(c.config.FQRN)
 }
 
 func (c *Container) Refresh() error {
-	c.log.Debug("Refresh Container", "ref", c.config.Name)
-
 	changed, err := c.Changed()
 	if err != nil {
 		return err
 	}
 
 	if changed {
+		c.log.Debug("Refresh Container", "ref", c.config.ID)
 		err := c.Destroy()
 		if err != nil {
 			return err
@@ -97,8 +94,6 @@ func (c *Container) Destroy() error {
 }
 
 func (c *Container) Changed() (bool, error) {
-	c.log.Debug("Checking changes", "ref", c.config.Name)
-
 	// has the image id changed
 	id, err := c.client.FindImageInLocalRegistry(*c.config.Image)
 	if err != nil {
@@ -109,7 +104,7 @@ func (c *Container) Changed() (bool, error) {
 	// check that the current registry id for the image is the same
 	// as the image that was used to create this container
 	if id != c.config.Image.ID {
-		c.log.Debug("Container image changed, needs refresh", "ref", c.config.Name)
+		c.log.Debug("Container image changed, needs refresh", "ref", c.config.ID)
 		return true, nil
 	}
 
@@ -117,7 +112,6 @@ func (c *Container) Changed() (bool, error) {
 }
 
 func (c *Container) internalCreate() error {
-
 	// set the fqdn
 	fqdn := utils.FQDN(c.config.Name, c.config.Module, c.config.Type)
 	c.config.FQRN = fqdn

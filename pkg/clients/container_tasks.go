@@ -41,6 +41,12 @@ type ContainerTasks interface {
 	// An error is only returned on internal errors when communicating with the
 	// Docker API
 	FindImageInLocalRegistry(image resources.Image) (string, error)
+	// FindImageInLocalRegistry returns the unique identifiers for an image specified by the given
+	// tag in the local registry. If no image is found the function returns an
+	// empty id and no error
+	// An error is only returned on internal errors when communicating with the
+	// Docker API
+	FindImagesInLocalRegistry(filter string) ([]string, error)
 	// PullImage pulls a Docker image from the registry if it is not already
 	// present in the local cache.
 	// If the Username and Password config options are set then PullImage will attempt to
@@ -50,6 +56,8 @@ type ContainerTasks interface {
 	PullImage(image resources.Image, force bool) error
 	// FindContainerIDs returns the Container IDs for the given identifier
 	FindContainerIDs(fqdn string) ([]string, error)
+	// RemoveImage removes the image with the given id from the local registry
+	RemoveImage(id string) error
 	// ContainerLogs attaches to the container and streams the logs to the returned
 	// io.ReadCloser.
 	// Returns an error if the container is not running

@@ -20,6 +20,8 @@ type NomadJob struct {
 	HealthCheck *HealthCheckNomad `hcl:"health_check,block" json:"health_check,omitempty"`
 
 	// output
+
+	// JobChecksums stores a checksum of the files or paths
 	JobChecksums []string `hcl:"job_checksums,optional" json:"job_checksums",omitempty"`
 }
 

@@ -170,7 +170,6 @@ func (c *Template) Refresh() error {
 }
 
 func (c *Template) Changed() (bool, error) {
-	c.log.Debug("Checking changes", "ref", c.config.Name)
 
 	return false, nil
 }

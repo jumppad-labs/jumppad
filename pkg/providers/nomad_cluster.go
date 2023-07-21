@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -166,7 +167,7 @@ func (c *NomadCluster) Refresh() error {
 	}
 
 	if len(ci) > 0 {
-		c.log.Info("Copyied images changed, pushing new copy to the cluster","ref",c.config.ID)
+		c.log.Info("Copyied images changed, pushing new copy to the cluster", "ref", c.config.ID)
 
 		ids, err := c.Lookup()
 		if err != nil {
@@ -177,10 +178,34 @@ func (c *NomadCluster) Refresh() error {
 			c.log.Debug("Importing docker images", "ref", c.config.ID, "id", id)
 			c.ImportLocalDockerImages(utils.ImageVolumeName, id, ci, true)
 		}
+
+		// prune the build images
+		c.pruneBuildImages()
 	}
 
 	// update the config with the image ids
 	c.updateCopyImageIDs()
+
+	return nil
+}
+
+// PruneBuildImages removes any images
+func (c *NomadCluster) pruneBuildImages() error {
+	ids, err := c.Lookup()
+	if err != nil {
+		return err
+	}
+
+	command := `docker rmi $(for IMAGE in $(docker images --filter reference="jumppad.dev/localcache/*" --format '{{.Repository}}' | sort | uniq); do docker images --filter reference=$IMAGE -q | awk '{if(NR>2)print}'; done)`
+
+	output := bytes.NewBufferString("")
+
+	for _, id := range ids {
+		c.log.Debug("Prune build images from nomad node", "id", id)
+
+		_, _ = c.client.ExecuteCommand(id, []string{"sh", "-c", command}, nil, "", "", "", 30, output)
+		c.log.Debug("output", "result", output.String())
+	}
 
 	return nil
 }
@@ -227,8 +252,8 @@ func (c *NomadCluster) getChangedImages() ([]resources.Image, error) {
 // we store the image id in addition to the name so we can
 // detect when it has changed
 func (c *NomadCluster) updateCopyImageIDs() error {
-	for n,i:=range c.config.CopyImages {
-		id,err:=c.client.FindImageInLocalRegistry(i)
+	for n, i := range c.config.CopyImages {
+		id, err := c.client.FindImageInLocalRegistry(i)
 		if err != nil {
 			return err
 		}
@@ -237,7 +262,7 @@ func (c *NomadCluster) updateCopyImageIDs() error {
 	}
 
 	return nil
-}	
+}
 
 func removeElement(s []string, item string) []string {
 	// find the element

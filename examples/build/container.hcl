@@ -1,9 +1,7 @@
-
 resource "build" "app" {
   container {
     dockerfile = "Dockerfile"
     context    = "./src"
-    tag        = "dev"
   }
 }
 
@@ -35,14 +33,14 @@ resource "nomad_cluster" "dev" {
   network {
     id = resource.network.onprem.id
   }
-  
+
   copy_image {
     name = resource.build.app.image
   }
 }
 
 resource "template" "app_job" {
- source = <<-EOF
+  source = <<-EOF
  job "app" {
    datacenters = ["dc1"]
    type = "service"
@@ -69,7 +67,7 @@ resource "template" "app_job" {
  }
  EOF
 
- destination = "${data("jobs")}/job.nomad"
+  destination = "${data("jobs")}/job.nomad"
 }
 
 resource "nomad_job" "app" {

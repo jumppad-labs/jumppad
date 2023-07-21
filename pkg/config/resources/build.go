@@ -13,8 +13,9 @@ type Build struct {
 
 	// outputs
 
-	// Image is the local reference of the built image
+	// Image is the full local reference of the built image
 	Image string `hcl:"image,optional" json:"image"`
+
 	// Checksum is calculated from the Context files
 	BuildChecksum string `hcl:"build_checksum,optional" json:"build_checksum,omitempty"`
 }
@@ -22,7 +23,6 @@ type Build struct {
 type BuildContainer struct {
 	DockerFile string            `hcl:"dockerfile,optional" json:"dockerfile,omitempty"` // Location of build file inside build context defaults to ./Dockerfile
 	Context    string            `hcl:"context" json:"context"`                          // Path to build context
-	Tag        string            `hcl:"tag,optional" json:"tag,omitempty"`               // Image tag, defaults to latest
 	Args       map[string]string `hcl:"args,optional" json:"args,omitempty"`             // Build args to pass  to the container
 }
 
