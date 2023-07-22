@@ -399,7 +399,11 @@ func (d *DockerTasks) FindImageInLocalRegistry(image resources.Image) (string, e
 		return "", err
 	}
 
-	return images[0], nil
+	if len(images) > 0 {
+		return images[0], nil
+	}
+
+	return "", nil
 }
 
 // Finds images in the local registry that match the filter

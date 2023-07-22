@@ -54,7 +54,7 @@ type NomadCluster struct {
 }
 
 const nomadBaseImage = "shipyardrun/nomad"
-const nomadBaseVersion = "1.4.0"
+const nomadBaseVersion = "1.6.1"
 
 func (n *NomadCluster) Process() error {
 	if n.Image == nil {
