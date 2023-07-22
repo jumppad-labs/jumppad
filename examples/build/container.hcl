@@ -83,3 +83,18 @@ resource "nomad_job" "app" {
 
   paths = [resource.template.app_job.destination]
 }
+
+resource "ingress" "app" {
+  port = 19090
+
+  target {
+    id         = resource.nomad_cluster.dev.id
+    named_port = "http"
+
+    config = {
+      job   = "app"
+      group = "app"
+      task  = "app"
+    }
+  }
+}

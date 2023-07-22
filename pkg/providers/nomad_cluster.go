@@ -167,26 +167,45 @@ func (c *NomadCluster) Refresh() error {
 	}
 
 	if len(ci) > 0 {
-		c.log.Info("Copyied images changed, pushing new copy to the cluster", "ref", c.config.ID)
-
-		ids, err := c.Lookup()
+		c.log.Info("Copied images changed, pushing new copy to the cluster", "ref", c.config.ID)
+		err := c.copyImagesToCluster(ci)
 		if err != nil {
 			return err
 		}
-
-		for _, id := range ids {
-			c.log.Debug("Importing docker images", "ref", c.config.ID, "id", id)
-			c.ImportLocalDockerImages(utils.ImageVolumeName, id, ci, true)
-		}
-
-		// prune the build images
-		c.pruneBuildImages()
 	}
+
+	return nil
+}
+
+func (c *NomadCluster) copyImagesToCluster(images []resources.Image) error {
+	// get the ids of the nodes
+	ids, err := c.Lookup()
+	if err != nil {
+		return err
+	}
+
+	clWait := sync.WaitGroup{}
+	clWait.Add(len(ids))
+
+	for _, id := range ids {
+		func(ref, id string, images []resources.Image) {
+			c.log.Debug("Importing docker images", "ref", c.config.ID, "id", id)
+			c.ImportLocalDockerImages(utils.ImageVolumeName, id, images, true)
+			if err != nil {
+				c.log.Error("Unable to import docker images", "error", err)
+			}
+			clWait.Done()
+		}(c.config.ID, id, images)
+	}
+
+	// wait until all images have been imported
+	clWait.Wait()
+
+	// prune the build images
+	c.pruneBuildImages()
 
 	// update the config with the image ids
 	c.updateCopyImageIDs()
-
-	return nil
 }
 
 // PruneBuildImages removes any images
@@ -389,33 +408,7 @@ func (c *NomadCluster) createNomad() error {
 
 	// import the images to the servers container d instance
 	// importing images means that Nomad does not need to pull from a remote docker hub
-	if c.config.CopyImages != nil && len(c.config.CopyImages) > 0 {
-		// import into the server
-		err := c.ImportLocalDockerImages("images", serverID, c.config.CopyImages, false)
-		if err != nil {
-			return xerrors.Errorf("Error importing Docker images: %w", err)
-		}
-
-		// import cached images to the clients asynchronously
-		clWait := sync.WaitGroup{}
-		clWait.Add(c.config.ClientNodes)
-		var importErr error
-		for _, id := range clientIDs {
-			go func(id string) {
-				err := c.ImportLocalDockerImages("images", id, c.config.CopyImages, false)
-				clWait.Done()
-				if err != nil {
-					cMutex.Lock()
-					importErr = xerrors.Errorf("Error importing Docker images: %w", err)
-					cMutex.Unlock()
-				}
-			}(id)
-		}
-
-		clWait.Wait()
-		if importErr != nil {
-			return importErr
-		}
+	if len(c.config.CopyImages) > 0 {
 	}
 
 	err = c.deployConnector()
@@ -760,7 +753,7 @@ func (c *NomadCluster) deployConnector() error {
 }
 
 // ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
-func (c *NomadCluster) ImportLocalDockerImages(name string, id string, images []resources.Image, force bool) error {
+func (c *NomadCluster) ImportLocalDockerImages(name string, nodeIDs []string, images []resources.Image, force bool) error {
 	imgs := []string{}
 
 	for _, i := range images {
@@ -783,6 +776,29 @@ func (c *NomadCluster) ImportLocalDockerImages(name string, id string, images []
 	if err != nil {
 		return err
 	}
+
+	clWait := sync.WaitGroup{}
+	clWait.Add(len(nodeIDs))
+
+	for _, id := range ids {
+		func(ref, id string, images []resources.Image) {
+			c.log.Debug("Importing docker images", "ref", c.config.ID, "id", id)
+			c.ImportLocalDockerImages(utils.ImageVolumeName, id, images, true)
+			if err != nil {
+				c.log.Error("Unable to import docker images", "error", err)
+			}
+			clWait.Done()
+		}(c.config.ID, id, images)
+	}
+
+	// wait until all images have been imported
+	clWait.Wait()
+
+	// prune the build images
+	c.pruneBuildImages()
+
+	// update the config with the image ids
+	c.updateCopyImageIDs()
 
 	// execute the command to import the image
 	// write any command output to the logger
