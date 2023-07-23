@@ -25,11 +25,11 @@ import (
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/signal"
-	"github.com/docker/docker/pkg/term"
 	"github.com/docker/go-connections/nat"
 	"github.com/jumppad-labs/jumppad/pkg/clients/streams"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	"github.com/moby/term"
 	"golang.org/x/xerrors"
 )
 
@@ -529,8 +529,8 @@ func (d *DockerTasks) RemoveContainer(id string, force bool) error {
 	var err error
 	if !force {
 		// try and shutdown graceful
-		timeout := 30 * time.Second
-		err = d.c.ContainerStop(context.Background(), id, &timeout)
+		timeout := 30
+		err = d.c.ContainerStop(context.Background(), id, container.StopOptions{Timeout: &timeout})
 		if err == nil {
 			d.l.Debug("Container stopped gracefully, removing", "container", id)
 			err = d.c.ContainerRemove(context.Background(), id, types.ContainerRemoveOptions{Force: false, RemoveVolumes: true})
@@ -778,7 +778,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 	// make sure we have the alpine image needed to copy
 	err := d.PullImage(resources.Image{Name: "alpine:latest"}, false)
 	if err != nil {
-		return nil, xerrors.Errorf("Unable pull alpine:latest for importing images: %w", err)
+		return nil, xerrors.Errorf("unable pull alpine:latest for importing images: %w", err)
 	}
 
 	// create a dummy container to import to volume
@@ -800,7 +800,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 
 	tmpID, err := d.CreateContainer(cc)
 	if err != nil {
-		return nil, xerrors.Errorf("Unable to create dummy container for importing files: %w", err)
+		return nil, xerrors.Errorf("unable to create dummy container for importing files: %w", err)
 	}
 	defer d.RemoveContainer(tmpID, true)
 
@@ -835,7 +835,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 		// failed waiting for start
 		if failCount == 5 {
 			d.l.Error("Timeout waiting for container to start", "ref", tmpID, "error", err)
-			startError = fmt.Errorf("timeout waiting for container to start: %s", startError)
+			startError = xerrors.Errorf("timeout waiting for container to start: %w", startError)
 
 			return nil, startError
 		}
@@ -847,7 +847,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 	destPath := filepath.ToSlash(filepath.Join("/cache", path))
 	_, err = d.ExecuteCommand(tmpID, []string{"mkdir", "-p", destPath}, nil, "/", "", "", 300, nil)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to create destination path %s in volume: %s", destPath, err)
+		return nil, xerrors.Errorf("unable to create destination path '%s' in volume: %w", destPath, err)
 	}
 
 	// add each file individually
@@ -870,7 +870,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 
 		err = d.CopyFileToContainer(utils.FQDN(cc.Name, "", cc.Type), f, destPath)
 		if err != nil {
-			return nil, fmt.Errorf("Unable to copy file %s to container: %s", f, err)
+			return nil, xerrors.Errorf("unable to copy file %s to container: %w", f, err)
 		}
 
 		imported = append(imported, destFile)

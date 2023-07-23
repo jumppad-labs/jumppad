@@ -102,6 +102,7 @@ func (n *NomadImpl) HealthCheckAPI(timeout time.Duration) error {
 				}
 
 				var driversHealthy = true
+				var dockerDetected = false
 				for k, v := range drivers {
 					driver, ok := v.(map[string]interface{})
 					if !ok {
@@ -117,14 +118,22 @@ func (n *NomadImpl) HealthCheckAPI(timeout time.Duration) error {
 					if !ok || !detected {
 						continue
 					}
+				
+					// we need to make a special case to check the docker driver is
+					// present as if the nomad server starts before docker then the
+					// presence of docker will not be detected
+					if k == "docker" {
+						dockerDetected = true
+					}
 
 					n.l.Debug("Driver status", "node", nodeName, "driver", k, "healthy", healthy)
 					if !healthy {
 						driversHealthy = false
 					}
+
 				}
 
-				if nodeStatus == "ready" && nodeEligable == "eligible" && driversHealthy {
+				if nodeStatus == "ready" && nodeEligable == "eligible" && driversHealthy && dockerDetected {
 					readyCount++
 				}
 			}

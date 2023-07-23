@@ -107,7 +107,7 @@ func (c *ImageCache) createImageCache(networks []string) (string, error) {
 
 	_, err = c.client.CopyFilesToVolume(volID, []string{cert, key}, "/ca", true)
 	if err != nil {
-		return "", fmt.Errorf("Unable to copy certificates for image cache: %s", err)
+		return "", xerrors.Errorf("unable to copy certificates for image cache: %w", err)
 	}
 
 	// pull the container image

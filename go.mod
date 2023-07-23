@@ -1,6 +1,8 @@
 module github.com/jumppad-labs/jumppad
 
-go 1.19
+// Only use  version 1,20.5 and lower until the followinis patched
+// https://github.com/docker/cli/issues/4437
+go 1.20
 
 require (
 	github.com/Masterminds/semver v1.5.0
@@ -9,9 +11,9 @@ require (
 	github.com/charmbracelet/bubbletea v0.24.2
 	github.com/charmbracelet/lipgloss v0.7.1
 	github.com/charmbracelet/log v0.2.2
-	github.com/creack/pty v1.1.17
+	github.com/creack/pty v1.1.18
 	github.com/cucumber/godog v0.12.4
-	github.com/docker/docker v20.10.12+incompatible
+	github.com/docker/docker v23.0.6+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/fatih/color v1.13.0
 	github.com/gofiber/fiber/v2 v2.43.0
@@ -25,8 +27,8 @@ require (
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	github.com/jumppad-labs/connector v0.3.0
 	github.com/jumppad-labs/hclconfig v0.8.1
-	github.com/knipferrc/teacup v0.3.1
 	github.com/mailgun/raymond/v2 v2.0.48
+	github.com/moby/term v0.5.0
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/muesli/reflow v0.3.0
 	github.com/muesli/termenv v0.15.2
@@ -164,7 +166,7 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/locker v1.0.1 // indirect
 	github.com/moby/spdystream v0.2.0 // indirect
-	github.com/moby/term v0.0.0-20210610120745-9d4ed1856297 // indirect
+	github.com/moby/sys/signal v0.6.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect

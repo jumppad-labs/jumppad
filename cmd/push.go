@@ -94,17 +94,11 @@ func pushNomadCluster(image string, c *resources.NomadCluster, ct clients.Contai
 	cl := providers.NewNomadCluster(c, ct, ht, nil, log)
 
 	// get the id of the cluster
-	ids, err := cl.Lookup()
-	if err != nil {
-		return xerrors.Errorf("Error getting id for cluster")
-	}
 
-	for _, id := range ids {
-		log.Info("Pushing to container", "id", id, "image", image)
-		err = cl.ImportLocalDockerImages(utils.ImageVolumeName, id, []resources.Image{resources.Image{Name: strings.Trim(image, " ")}}, force)
-		if err != nil {
-			return xerrors.Errorf("Error pushing image: %w ", err)
-		}
+	log.Info("Pushing to container", "ref", c.ID, "image", image)
+	err := cl.ImportLocalDockerImages([]resources.Image{resources.Image{Name: strings.Trim(image, " ")}}, force)
+	if err != nil {
+		return xerrors.Errorf("Error pushing image: %w ", err)
 	}
 
 	return nil

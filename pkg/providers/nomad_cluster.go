@@ -168,44 +168,13 @@ func (c *NomadCluster) Refresh() error {
 
 	if len(ci) > 0 {
 		c.log.Info("Copied images changed, pushing new copy to the cluster", "ref", c.config.ID)
-		err := c.copyImagesToCluster(ci)
+		err := c.ImportLocalDockerImages(ci, false)
 		if err != nil {
 			return err
 		}
 	}
 
 	return nil
-}
-
-func (c *NomadCluster) copyImagesToCluster(images []resources.Image) error {
-	// get the ids of the nodes
-	ids, err := c.Lookup()
-	if err != nil {
-		return err
-	}
-
-	clWait := sync.WaitGroup{}
-	clWait.Add(len(ids))
-
-	for _, id := range ids {
-		func(ref, id string, images []resources.Image) {
-			c.log.Debug("Importing docker images", "ref", c.config.ID, "id", id)
-			c.ImportLocalDockerImages(utils.ImageVolumeName, id, images, true)
-			if err != nil {
-				c.log.Error("Unable to import docker images", "error", err)
-			}
-			clWait.Done()
-		}(c.config.ID, id, images)
-	}
-
-	// wait until all images have been imported
-	clWait.Wait()
-
-	// prune the build images
-	c.pruneBuildImages()
-
-	// update the config with the image ids
-	c.updateCopyImageIDs()
 }
 
 // PruneBuildImages removes any images
@@ -243,62 +212,6 @@ func (c *NomadCluster) Changed() (bool, error) {
 	}
 
 	return false, nil
-}
-
-func (c *NomadCluster) getChangedImages() ([]resources.Image, error) {
-	changed := []resources.Image{}
-
-	for _, i := range c.config.CopyImages {
-		// has the image id changed
-		id, err := c.client.FindImageInLocalRegistry(i)
-		if err != nil {
-			c.log.Error("Unable to lookup image in local registry", "ref", c.config.ID, "error", err)
-			return nil, err
-		}
-
-		// check that the current registry id for the image is the same
-		// as the image that was used to create this container
-		if id != i.ID {
-			c.log.Debug("Container image changed, needs refresh", "ref", c.config.Name, "image", i.Name)
-			changed = append(changed, i)
-		}
-	}
-
-	return changed, nil
-}
-
-// updates the ids for images that are copied to the container
-// we store the image id in addition to the name so we can
-// detect when it has changed
-func (c *NomadCluster) updateCopyImageIDs() error {
-	for n, i := range c.config.CopyImages {
-		id, err := c.client.FindImageInLocalRegistry(i)
-		if err != nil {
-			return err
-		}
-
-		c.config.CopyImages[n].ID = id
-	}
-
-	return nil
-}
-
-func removeElement(s []string, item string) []string {
-	// find the element
-	index := -1
-	for i, f := range s {
-		if f == item {
-			index = i
-			break
-		}
-	}
-
-	// not found
-	if index < 0 {
-		return s
-	}
-
-	return append(s[:index], s[index+1:]...)
 }
 
 func (c *NomadCluster) createNomad() error {
@@ -348,7 +261,7 @@ func (c *NomadCluster) createNomad() error {
 	c.config.ConfigDir = path.Join(utils.JumppadHome(), c.config.Name, "config")
 	c.config.ExternalIP = utils.GetDockerIP()
 
-	serverID, err := c.createServerNode(c.config.Image.Name, volID, isClient)
+	_, err = c.createServerNode(c.config.Image.Name, volID, isClient)
 	if err != nil {
 		return err
 	}
@@ -358,7 +271,6 @@ func (c *NomadCluster) createNomad() error {
 
 	cMutex := sync.Mutex{}
 	clientFQDN := []string{}
-	clientIDs := []string{}
 	clWait := sync.WaitGroup{}
 	clWait.Add(c.config.ClientNodes)
 
@@ -366,14 +278,13 @@ func (c *NomadCluster) createNomad() error {
 	for i := 0; i < c.config.ClientNodes; i++ {
 		// create client node asynchronously
 		go func(id string, image, volID, name string) {
-			fqdn, clientID, err := c.createClientNode(id, image, volID, name)
+			fqdn, _, err := c.createClientNode(id, image, volID, name)
 			if err != nil {
 				clientError = err
 			}
 
 			cMutex.Lock()
 
-			clientIDs = append(clientIDs, clientID)
 			clientFQDN = append(clientFQDN, fqdn)
 			cMutex.Unlock()
 
@@ -409,15 +320,16 @@ func (c *NomadCluster) createNomad() error {
 	// import the images to the servers container d instance
 	// importing images means that Nomad does not need to pull from a remote docker hub
 	if len(c.config.CopyImages) > 0 {
+		err := c.ImportLocalDockerImages(c.config.CopyImages, false)
+		if err != nil {
+			return fmt.Errorf("unable to copy images to cluster: %w", err)
+		}
 	}
 
 	err = c.deployConnector()
 	if err != nil {
 		return fmt.Errorf("unable to deploy Connector: %s", err)
 	}
-
-	// update the copied image ids so that we can detect changes later
-	c.updateCopyImageIDs()
 
 	return nil
 }
@@ -753,9 +665,13 @@ func (c *NomadCluster) deployConnector() error {
 }
 
 // ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
-func (c *NomadCluster) ImportLocalDockerImages(name string, nodeIDs []string, images []resources.Image, force bool) error {
-	imgs := []string{}
+func (c *NomadCluster) ImportLocalDockerImages(images []resources.Image, force bool) error {
+	ids, err := c.Lookup()
+	if err != nil {
+		return err
+	}
 
+	imgs := []string{}
 	for _, i := range images {
 		// ignore when the name is empty
 		if i.Name == "" {
@@ -771,24 +687,28 @@ func (c *NomadCluster) ImportLocalDockerImages(name string, nodeIDs []string, im
 	}
 
 	// import to volume
-	vn := utils.FQDNVolumeName(name)
+	vn := utils.FQDNVolumeName(utils.ImageVolumeName)
 	imagesFile, err := c.client.CopyLocalDockerImagesToVolume(imgs, vn, force)
 	if err != nil {
 		return err
 	}
 
 	clWait := sync.WaitGroup{}
-	clWait.Add(len(nodeIDs))
+	clWait.Add(len(ids))
 
 	for _, id := range ids {
-		func(ref, id string, images []resources.Image) {
+		go func(ref, id string, images []string) {
 			c.log.Debug("Importing docker images", "ref", c.config.ID, "id", id)
-			c.ImportLocalDockerImages(utils.ImageVolumeName, id, images, true)
-			if err != nil {
-				c.log.Error("Unable to import docker images", "error", err)
+			// execute the command to import the image
+			// write any command output to the logger
+			for _, i := range images {
+				_, err = c.client.ExecuteCommand(id, []string{"docker", "load", "-i", i}, nil, "/", "", "", 300, c.log.StandardWriter())
+				if err != nil {
+					c.log.Error("Unable to import docker images", "error", err)
+				}
 			}
 			clWait.Done()
-		}(c.config.ID, id, images)
+		}(c.config.ID, id, imagesFile)
 	}
 
 	// wait until all images have been imported
@@ -799,15 +719,6 @@ func (c *NomadCluster) ImportLocalDockerImages(name string, nodeIDs []string, im
 
 	// update the config with the image ids
 	c.updateCopyImageIDs()
-
-	// execute the command to import the image
-	// write any command output to the logger
-	for _, i := range imagesFile {
-		_, err = c.client.ExecuteCommand(id, []string{"docker", "load", "-i", i}, nil, "/", "", "", 300, c.log.StandardWriter())
-		if err != nil {
-			return err
-		}
-	}
 
 	return nil
 }
@@ -881,6 +792,62 @@ func (c *NomadCluster) destroyNode(id string) error {
 	}
 
 	return nil
+}
+
+func (c *NomadCluster) getChangedImages() ([]resources.Image, error) {
+	changed := []resources.Image{}
+
+	for _, i := range c.config.CopyImages {
+		// has the image id changed
+		id, err := c.client.FindImageInLocalRegistry(i)
+		if err != nil {
+			c.log.Error("Unable to lookup image in local registry", "ref", c.config.ID, "error", err)
+			return nil, err
+		}
+
+		// check that the current registry id for the image is the same
+		// as the image that was used to create this container
+		if id != i.ID {
+			c.log.Debug("Container image changed, needs refresh", "ref", c.config.Name, "image", i.Name)
+			changed = append(changed, i)
+		}
+	}
+
+	return changed, nil
+}
+
+// updates the ids for images that are copied to the container
+// we store the image id in addition to the name so we can
+// detect when it has changed
+func (c *NomadCluster) updateCopyImageIDs() error {
+	for n, i := range c.config.CopyImages {
+		id, err := c.client.FindImageInLocalRegistry(i)
+		if err != nil {
+			return err
+		}
+
+		c.config.CopyImages[n].ID = id
+	}
+
+	return nil
+}
+
+func removeElement(s []string, item string) []string {
+	// find the element
+	index := -1
+	for i, f := range s {
+		if f == item {
+			index = i
+			break
+		}
+	}
+
+	// not found
+	if index < 0 {
+		return s
+	}
+
+	return append(s[:index], s[index+1:]...)
 }
 
 func randomID() string {
