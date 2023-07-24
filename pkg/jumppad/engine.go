@@ -349,18 +349,6 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 	return e.config, processErr
 }
 
-// checks if a string exists in an array if not it appends and returns a new
-// copy
-func appendIfNotContains(existing []string, s string) []string {
-	for _, v := range existing {
-		if v == s {
-			return existing
-		}
-	}
-
-	return append(existing, s)
-}
-
 // Destroy the resources defined by the state
 func (e *EngineImpl) Destroy() error {
 	e.log.Info("Destroying resources")
@@ -611,7 +599,7 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 
 			// reload the networks
 			np := e.getProvider(ic, e.clients)
-			np.Create()
+			np.Refresh()
 		} else {
 			e.log.Error("Unable to find Image Cache", "error", err)
 		}
@@ -648,4 +636,16 @@ func (e *EngineImpl) destroyCallback(r types.Resource) error {
 	e.config.RemoveResource(r)
 
 	return nil
+}
+
+// checks if a string exists in an array if not it appends and returns a new
+// copy
+func appendIfNotContains(existing []string, s string) []string {
+	for _, v := range existing {
+		if v == s {
+			return existing
+		}
+	}
+
+	return append(existing, s)
 }

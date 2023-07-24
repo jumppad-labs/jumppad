@@ -36,28 +36,17 @@ func (c *ImageCache) Create() error {
 		return err
 	}
 
-	id := ""
-
 	// get a list of dependent networks for the resource
 	dependentNetworks := c.findDependentNetworks()
 
 	if len(ids) == 0 {
-		var err error
-		id, err = c.createImageCache(dependentNetworks)
+		_, err := c.createImageCache(dependentNetworks)
 		if err != nil {
 			return err
 		}
-
-		return nil
 	}
 
-	c.log.Debug("ImageCache already exists, not recreating")
-	id = ids[0]
-
-	// Create is called whenever any Network resources are added or removed in Shipyard
-	// this is because we need to ensure that the cache is attached to all networks so that
-	// it can work with any clusters that may be on those networks.
-	return c.reConfigureNetworks(id, dependentNetworks)
+	return nil
 }
 
 func (c *ImageCache) Destroy() error {
@@ -77,10 +66,16 @@ func (c *ImageCache) Destroy() error {
 	return nil
 }
 
+// Refresh is called whenever any Network resources are added or removed in Shipyard
+// this is because we need to ensure that the cache is attached to all networks so that
+// it can work with any clusters that may be on those networks.
 func (c *ImageCache) Refresh() error {
 	c.log.Debug("Refresh Image Cache", "ref", c.config.Name)
 
-	return nil
+	// get a list of dependent networks for the resource
+	dependentNetworks := c.findDependentNetworks()
+
+	return c.reConfigureNetworks(dependentNetworks)
 }
 
 func (c *ImageCache) Lookup() ([]string, error) {
@@ -163,11 +158,10 @@ func (c *ImageCache) findDependentNetworks() []string {
 	nets := []string{}
 
 	for _, n := range c.config.DependsOn {
-		c.log.Debug("Connecting cache to network", "name", n)
 		target, err := c.config.ParentConfig.FindResource(n)
 		if err != nil {
 			// ignore this network
-			c.log.Warn("Unable to attach cache to network, network does not exist", "name", n, "error", err)
+			c.log.Warn("A network ImageCache depends on does not exist", "name", n, "error", err)
 			continue
 		}
 
@@ -182,17 +176,23 @@ func (c *ImageCache) findDependentNetworks() []string {
 // reConfigureNetworks updates the network attachments for the cache ensuring that it is
 // attached to new networks that may have been added since the first run. And removed
 // from any networks that may have been removed since the first run
-func (c *ImageCache) reConfigureNetworks(id string, dependentNetworks []string) error {
+func (c *ImageCache) reConfigureNetworks(dependentNetworks []string) error {
 	currentNetworks := []string{}
 	added := []string{}
 
-	// get a list of the current networks the container is attached to
-	info, err := c.client.ContainerInfo(id)
+	// get the container id
+	ids, err := c.Lookup()
 	if err != nil {
-		return xerrors.Errorf("Unable to remove container from the default network: %w", err)
+		return err
 	}
 
-	// flattern the docker object into a simple slice
+	// get a list of the current networks the container is attached to
+	info, err := c.client.ContainerInfo(ids[0])
+	if err != nil {
+		return xerrors.Errorf("unable to remove container from the default network: %w", err)
+	}
+
+	// flatten the docker object into a simple slice
 	for k, _ := range info.(types.ContainerJSON).NetworkSettings.Networks {
 		currentNetworks = append(currentNetworks, k)
 	}
@@ -201,9 +201,9 @@ func (c *ImageCache) reConfigureNetworks(id string, dependentNetworks []string) 
 	for _, n := range dependentNetworks {
 		// only add the network if it does not already exist
 		if !contains(currentNetworks, n) {
-			err = c.client.AttachNetwork(n, id, nil, "")
+			err = c.client.AttachNetwork(n, ids[0], nil, "")
 			if err != nil {
-				return fmt.Errorf("Unable to attach cache to network: %s", err)
+				return fmt.Errorf("unable to attach cache to network: %s", err)
 			}
 
 			c.config.Networks = append(c.config.Networks, n)
@@ -215,9 +215,9 @@ func (c *ImageCache) reConfigureNetworks(id string, dependentNetworks []string) 
 	// now remove any extra networks that are no longer required
 	for _, n := range currentNetworks {
 		if !contains(added, n) {
-			c.log.Debug("Detaching container from network", "ref", c.config.Name, "id", id, "network", n)
+			c.log.Debug("Detaching container from network", "ref", c.config.Name, "id", ids[0], "network", n)
 
-			err := c.client.DetachNetwork(n, id)
+			err := c.client.DetachNetwork(n, ids[0])
 			if err != nil {
 				c.log.Warn("Unable to detach network", "ref", c.config.Name, "network", n)
 			}
