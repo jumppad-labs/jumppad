@@ -17,7 +17,7 @@ func setupCACert(t *testing.T) (*resources.CertificateCA, *CertificateCA) {
 	cc := config.NewCertificateCA("test")
 	cc.Output = dir
 
-	p := NewCertificateCA(cc, hclog.NewNullLogger())
+	p := NewCertificateCA(cc, clients.NewTestLogger(t))
 
 	return cc, p
 }
@@ -26,7 +26,7 @@ func setupLeafCert(t *testing.T) (*config.CertificateLeaf, *CertificateLeaf) {
 	dir := t.TempDir()
 
 	cc := config.NewCertificateCA("root")
-	p := NewCertificateCA(cc, hclog.NewNullLogger())
+	p := NewCertificateCA(cc, clients.NewTestLogger(t))
 
 	cc.Output = dir
 	err := p.Create()
@@ -39,7 +39,7 @@ func setupLeafCert(t *testing.T) (*config.CertificateLeaf, *CertificateLeaf) {
 	cl.CACert = path.Join(dir, "root.cert")
 	cl.CAKey = path.Join(dir, "root.key")
 
-	pl := NewCertificateLeaf(cl, hclog.NewNullLogger())
+	pl := NewCertificateLeaf(cl, clients.NewTestLogger(t))
 
 	return cl, pl
 }

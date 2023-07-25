@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
-	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	clients "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -23,7 +23,7 @@ func TestFindContainerIDsReturnsID(t *testing.T) {
 		nil,
 	)
 
-	dt := NewDockerTasks(md, nil, &TarGz{}, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, nil, &TarGz{}, clients.NewTestLogger(t))
 
 	ids, err := dt.FindContainerIDs("test", "cloud")
 	assert.NoError(t, err)
@@ -47,7 +47,7 @@ func TestFindContainerIDsReturnsErrorWhenDockerFail(t *testing.T) {
 	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
-	dt := NewDockerTasks(md, nil, &TarGz{}, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, nil, &TarGz{}, clients.NewTestLogger(t))
 
 	_, err := dt.FindContainerIDs("test", "cloud")
 	assert.Error(t, err)
@@ -59,7 +59,7 @@ func TestFindContainerIDsReturnsNilWhenNoIDs(t *testing.T) {
 	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, nil)
 
-	dt := NewDockerTasks(md, nil, &TarGz{}, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, nil, &TarGz{}, clients.NewTestLogger(t))
 
 	ids, err := dt.FindContainerIDs("test", "cloud")
 	assert.NoError(t, err)
@@ -72,7 +72,7 @@ func TestFindContainerIDsReturnsNilWhenEmpty(t *testing.T) {
 	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 	md.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{}, nil)
 
-	dt := NewDockerTasks(md, nil, &TarGz{}, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, nil, &TarGz{}, clients.NewTestLogger(t))
 
 	ids, err := dt.FindContainerIDs("test", "cloud")
 	assert.NoError(t, err)

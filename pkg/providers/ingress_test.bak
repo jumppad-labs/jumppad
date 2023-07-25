@@ -40,7 +40,7 @@ func TestIngressExposeLocalErrorsWhenUnableToFindDependencies(t *testing.T) {
 	tc.Source.Config.Cluster = "blah"
 	c.AddResource(&tc)
 
-	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -54,7 +54,7 @@ func TestIngressExposeLocalErrorsWhenInvalidName(t *testing.T) {
 	tc.Name = "connector"
 	c.AddResource(&tc)
 
-	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -68,7 +68,7 @@ func TestIngressExposeLocalErrorsWhenInvalidPort(t *testing.T) {
 	tc.Source.Config.Port = "abc"
 	c.AddResource(&tc)
 
-	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -82,14 +82,14 @@ func TestIngressExposeLocalErrorsWhenPortReserved(t *testing.T) {
 	tc.Source.Config.Port = "60000"
 	c.AddResource(&tc)
 
-	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
 
 	tc.Source.Config.Port = "60001"
 
-	p = NewIngress(&tc, md, mc, hclog.NewNullLogger())
+	p = NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
 	err = p.Create()
 	assert.Error(t, err)
@@ -103,7 +103,7 @@ func TestIngressExposeLocalErrorsWhenInvalidAddress(t *testing.T) {
 	tc.Destination.Config.Address = ""
 	c.AddResource(&tc)
 
-	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -118,7 +118,7 @@ func TestIngressExposeLocalCallsExpose(t *testing.T) {
 
 	clusterConfig, _ := utils.GetClusterConfig(testIngressExposeK8sLocalConfig.Source.Config.Cluster)
 
-	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -143,7 +143,7 @@ func TestIngressExposeRemoteErrorsWhenUnableToFindDependencies(t *testing.T) {
 	tc.Destination.Config.Cluster = "blah"
 	c.AddResource(&tc)
 
-	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -157,7 +157,7 @@ func TestIngressExposeRemoteErrorsWhenNoDestinationAddress(t *testing.T) {
 	tc.Destination.Config.Address = ""
 	c.AddResource(&tc)
 
-	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -171,7 +171,7 @@ func TestIngressExposeRemoteErrorsWhenUnableToParsePort(t *testing.T) {
 	tc.Source.Config.Port = "sdf"
 	c.AddResource(&tc)
 
-	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -185,14 +185,14 @@ func TestIngressExposeRemoteErrorsWhenReservedPort(t *testing.T) {
 	tc.Source.Config.Port = "30001"
 	c.AddResource(&tc)
 
-	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
 
 	tc.Source.Config.Port = "30002"
 
-	p = NewIngress(&tc, md, mc, hclog.NewNullLogger())
+	p = NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
 	err = p.Create()
 	assert.Error(t, err)
@@ -207,7 +207,7 @@ func TestIngressExposeRemoteCallsExpose(t *testing.T) {
 
 	clusterConfig, _ := utils.GetClusterConfig(testIngressExposeK8sLocalConfig.Source.Config.Cluster)
 
-	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -231,7 +231,7 @@ func TestIngressDestroyCallsRemove(t *testing.T) {
 	tc := testIngressExposesLocalK8sServiceConfig
 	tc.Id = "12345"
 
-	p := NewIngress(&tc, md, mc, hclog.NewNullLogger())
+	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
 	err := p.Destroy()
 	assert.NoError(t, err)

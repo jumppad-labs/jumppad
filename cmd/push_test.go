@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/spf13/cobra"
@@ -24,7 +23,7 @@ func setupPush(state string) (*cobra.Command, *clients.MockContainerTasks, func(
 	mh := &mocks.MockHTTP{}
 	mn := &mocks.MockNomad{}
 
-	return newPushCmd(mt, mk, mh, mn, hclog.NewNullLogger()), mt, setupState(state)
+	return newPushCmd(mt, mk, mh, mn, clients.NewTestLogger(t)), mt, setupState(state)
 }
 
 func TestPushInvalidArgsReturnsError(t *testing.T) {

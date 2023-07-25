@@ -38,7 +38,7 @@ func setupHelm() (*mocks.MockHelm, *clients.MockKubernetes, *mocks.Getter, *conf
 	c.AddResource(cl)
 	c.AddResource(ch)
 
-	p := NewHelm(ch, kc, mh, mg, hclog.NewNullLogger())
+	p := NewHelm(ch, kc, mh, mg, clients.NewTestLogger(t))
 
 	return mh, kc, mg, c, p
 }

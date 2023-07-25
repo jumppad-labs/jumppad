@@ -27,14 +27,6 @@ resource "container" "app" {
   }
 }
 
-#test "continuous" "app" {
-#  image {}
-#
-#  source = ""
-#
-#  target = ""
-#}
-
 resource "nomad_cluster" "dev" {
   client_nodes = 2
 

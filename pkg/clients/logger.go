@@ -1,7 +1,11 @@
 package clients
 
 import (
+	"fmt"
 	"io"
+	"strings"
+
+	"testing"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
@@ -142,4 +146,25 @@ func LoggerAsHCLogger(l Logger) hclog.Logger {
 	lo.Output = l.Output()
 
 	return hclog.New(&lo)
+}
+
+type NullLogger struct {
+	Logger
+	LogOutput *strings.Builder
+}
+
+// Logger that sends all output to a string buffer the captured log output
+// can be retrieved by accessing the string buffer at LogOutput
+// In the instance of a test failure, the log output is written to StdOut
+func NewTestLogger(t *testing.T) Logger {
+	sb := &strings.Builder{}
+	cl := NewLogger(sb, LogLevelDebug)
+
+	t.Cleanup(func() {
+		if t.Failed() {
+			fmt.Println(sb.String())
+		}
+	})
+
+	return &NullLogger{cl, sb}
 }

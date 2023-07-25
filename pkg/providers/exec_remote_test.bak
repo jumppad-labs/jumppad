@@ -45,7 +45,7 @@ func testRemoteExecSetupMocks() (*config.ExecRemote, *config.Network, *clients.M
 func TestRemoteExecThrowsErrorIfScript(t *testing.T) {
 	trex, _, md := testRemoteExecSetupMocks()
 	trex.Script = "./script.sh"
-	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
+	p := NewRemoteExec(trex, md, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -54,7 +54,7 @@ func TestRemoteExecThrowsErrorIfScript(t *testing.T) {
 
 func TestRemoteExecPullsImageWhenNoTarget(t *testing.T) {
 	trex, _, md := testRemoteExecSetupMocks()
-	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
+	p := NewRemoteExec(trex, md, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -66,7 +66,7 @@ func TestRemoteExecPullsImageReturnsErrorWhenError(t *testing.T) {
 	removeOn(&md.Mock, "PullImage")
 	md.On("PullImage", mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
-	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
+	p := NewRemoteExec(trex, md, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -74,7 +74,7 @@ func TestRemoteExecPullsImageReturnsErrorWhenError(t *testing.T) {
 
 func TestRemoteExecCreatesContainerWhenNoTarget(t *testing.T) {
 	trex, _, md := testRemoteExecSetupMocks()
-	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
+	p := NewRemoteExec(trex, md, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -86,7 +86,7 @@ func TestRemoteExecCreatesContainerFailsReturnError(t *testing.T) {
 	removeOn(&md.Mock, "CreateContainer")
 	md.On("CreateContainer", mock.Anything).Return("", fmt.Errorf("boom"))
 
-	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
+	p := NewRemoteExec(trex, md, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -95,7 +95,7 @@ func TestRemoteExecCreatesContainerFailsReturnError(t *testing.T) {
 func TestRemoteExecWithTargetLooksupID(t *testing.T) {
 	trex, _, md := testRemoteExecSetupMocks()
 	trex.Target = "container.test"
-	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
+	p := NewRemoteExec(trex, md, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -107,7 +107,7 @@ func TestRemoteExecWithTargetLooksupIDNotFoundReturnsError(t *testing.T) {
 	trex.Target = "container.test"
 	removeOn(&md.Mock, "FindContainerIDs")
 	md.On("FindContainerIDs", "test", config.TypeContainer).Return([]string{}, nil)
-	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
+	p := NewRemoteExec(trex, md, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -115,7 +115,7 @@ func TestRemoteExecWithTargetLooksupIDNotFoundReturnsError(t *testing.T) {
 
 func TestRemoteExecExecutesCommand(t *testing.T) {
 	trex, _, md := testRemoteExecSetupMocks()
-	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
+	p := NewRemoteExec(trex, md, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -139,7 +139,7 @@ func TestRemoteExecRunsAsUserWhenSpecified(t *testing.T) {
 		Group: "1011",
 	}
 
-	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
+	p := NewRemoteExec(trex, md, clients.NewTestLogger(t))
 	err := p.Create()
 	assert.NoError(t, err)
 
@@ -155,7 +155,7 @@ func TestRemoteExecExecutesCommandFailReturnsError(t *testing.T) {
 	removeOn(&md.Mock, "ExecuteCommand")
 	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
-	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
+	p := NewRemoteExec(trex, md, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -163,7 +163,7 @@ func TestRemoteExecExecutesCommandFailReturnsError(t *testing.T) {
 
 func TestRemoteExecRemovesContainer(t *testing.T) {
 	trex, _, md := testRemoteExecSetupMocks()
-	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
+	p := NewRemoteExec(trex, md, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -176,7 +176,7 @@ func TestRemoteExecRemovesContainer(t *testing.T) {
 		removeOn(&md.Mock, "RemoveContainer")
 		md.On("RemoveContainer", "1234").Return(fmt.Errorf("boom"))
 
-		p := NewRemoteExec(trex, md, hclog.NewNullLogger())
+		p := NewRemoteExec(trex, md, clients.NewTestLogger(t))
 
 		err := p.Create()
 		assert.Error(t, err)
@@ -185,7 +185,7 @@ func TestRemoteExecRemovesContainer(t *testing.T) {
 func TestRemoteExecDoesNOTRemovesContainerWhenTarget(t *testing.T) {
 	trex, _, md := testRemoteExecSetupMocks()
 	trex.Target = "container.test"
-	p := NewRemoteExec(trex, md, hclog.NewNullLogger())
+	p := NewRemoteExec(trex, md, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.NoError(t, err)

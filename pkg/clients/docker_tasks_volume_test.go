@@ -7,14 +7,14 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/volume"
-	"github.com/hashicorp/go-hclog"
+	clients "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
 func TestCreateVolumeDoesNothingWhenVolumeExists(t *testing.T) {
 	_, _, _, md, mic := createContainerConfig()
-	p := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())
+	p := NewDockerTasks(md, mic, &TarGz{}, clients.NewTestLogger(t))
 
 	removeOn(&md.Mock, "VolumeList")
 	f := filters.NewArgs()
@@ -29,7 +29,7 @@ func TestCreateVolumeDoesNothingWhenVolumeExists(t *testing.T) {
 
 func TestCreateVolumeReturnsErrorWhenVolumeListError(t *testing.T) {
 	_, _, _, md, mic := createContainerConfig()
-	p := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())
+	p := NewDockerTasks(md, mic, &TarGz{}, clients.NewTestLogger(t))
 
 	removeOn(&md.Mock, "VolumeList")
 	f := filters.NewArgs()
@@ -44,7 +44,7 @@ func TestCreateVolumeReturnsErrorWhenVolumeListError(t *testing.T) {
 
 func TestCreateVolumeCreatesSuccesfully(t *testing.T) {
 	_, _, _, md, mic := createContainerConfig()
-	p := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())
+	p := NewDockerTasks(md, mic, &TarGz{}, clients.NewTestLogger(t))
 
 	id, err := p.CreateVolume("test")
 	assert.NoError(t, err)
@@ -55,7 +55,7 @@ func TestCreateVolumeCreatesSuccesfully(t *testing.T) {
 
 func TestRemoveVolumeRemotesSuccesfully(t *testing.T) {
 	_, _, _, md, mic := createContainerConfig()
-	p := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())
+	p := NewDockerTasks(md, mic, &TarGz{}, clients.NewTestLogger(t))
 
 	err := p.RemoveVolume("test")
 	assert.NoError(t, err)

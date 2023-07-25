@@ -15,7 +15,7 @@ import (
 func setupTemplate(t *testing.T, filename string) (*config.Template, *Template) {
 	tmpl := createTemplate(t, filename)
 
-	return tmpl, NewTemplate(tmpl, hclog.NewNullLogger())
+	return tmpl, NewTemplate(tmpl, clients.NewTestLogger(t))
 }
 
 func TestTemplateReturnsErrorWhenEmpty(t *testing.T) {

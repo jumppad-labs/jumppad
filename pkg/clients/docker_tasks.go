@@ -27,6 +27,7 @@ import (
 	"github.com/docker/docker/pkg/signal"
 	"github.com/docker/go-connections/nat"
 	"github.com/jumppad-labs/jumppad/pkg/clients/streams"
+	et "github.com/jumppad-labs/jumppad/pkg/clients/types"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/moby/term"
@@ -96,8 +97,8 @@ func NewDockerTasks(c Docker, il ImageLog, tg *TarGz, l Logger) *DockerTasks {
 	return &DockerTasks{engineType: t, storageDriver: info.Driver, c: c, il: il, tg: tg, l: l}
 }
 
-func (d *DockerTasks) EngineInfo() *EngineInfo {
-	return &EngineInfo{StorageDriver: d.storageDriver, EngineType: d.engineType}
+func (d *DockerTasks) EngineInfo() *et.EngineInfo {
+	return &et.EngineInfo{StorageDriver: d.storageDriver, EngineType: d.engineType}
 }
 
 // SetForcePull sets a global override for the DockerTasks, when set to true

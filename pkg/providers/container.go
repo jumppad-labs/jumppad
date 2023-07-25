@@ -242,7 +242,7 @@ func (c *Container) runExecHealthCheck(id string, command []string, script strin
 		}
 
 		var output bytes.Buffer
-		res, err := c.client.ExecuteCommand(id, command, []string{}, "/tmp", "", "", 300, &output)
+		res, err := c.client.ExecuteCommand(id, command, []string{}, "/tmp", "", "", int(timeout.Seconds()), &output)
 		if err == nil && exitCode == res {
 			c.log.Debug("Exec health check success", "command", command, "output", output.String())
 			return nil

@@ -14,6 +14,8 @@ import (
 )
 
 // Docker defines an interface for a Docker client
+//
+//go:generate mockery --name Docker --filename docker.go
 type Docker interface {
 	ContainerCreate(
 		ctx context.Context,

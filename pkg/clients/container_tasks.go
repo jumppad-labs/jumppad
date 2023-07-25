@@ -3,6 +3,7 @@ package clients
 import (
 	"io"
 
+	"github.com/jumppad-labs/jumppad/pkg/clients/types"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 )
 
@@ -14,20 +15,22 @@ import (
 // The Docker SDK can also be quite terse, the API design for this client
 // is design is centered around performing a task such as CreateContainer,
 // this may be composed of many individual SDK calls.
+//
+//go:generate mockery --name ContainerTasks --filename container_tasks.go
 type ContainerTasks interface {
 	SetForcePull(bool)
 	// CreateContainer creates a new container for the given configuration
 	// if successful CreateContainer returns the ID of the created container and a nil error
 	// if not successful CreateContainer returns a blank string for the id and an error message
 	CreateContainer(*resources.Container) (id string, err error)
-	// Container Info returns an annonymous interface corresponding to the container info
+	// Container Info returns an anonymous interface corresponding to the container info
 	// returns error when unable to read info such as when the container does not exist.
 	ContainerInfo(id string) (interface{}, error)
 	// RemoveContainer stops and removes a running container
 	RemoveContainer(id string, force bool) error
 	// BuildContainer builds a container based on the given configuration
-	// If a cahced image already exists Build will noop
-	// When force is specificed BuildContainer will rebuild the container regardless of cached images
+	// If a cached image already exists Build will noop
+	// When force is specified BuildContainer will rebuild the container regardless of cached images
 	// Returns the canonical name of the built image and an error
 	BuildContainer(config *resources.Build, force bool) (string, error)
 	// CreateVolume creates a new volume with the given name.
@@ -93,13 +96,5 @@ type ContainerTasks interface {
 	CreateShell(id string, command []string, stdin io.ReadCloser, stdout io.Writer, stderr io.Writer) error
 
 	// Returns basic information related to the Docker Engine
-	EngineInfo() *EngineInfo
-}
-
-type EngineInfo struct {
-	// StorageDriver used by the engine, overlay, devicemapper, etc
-	StorageDriver string
-
-	// EngineType, docker, podman, not found
-	EngineType string
+	EngineInfo() *types.EngineInfo
 }
