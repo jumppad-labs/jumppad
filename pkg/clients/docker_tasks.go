@@ -226,7 +226,7 @@ func (d *DockerTasks) CreateContainer(c *resources.Container) (string, error) {
 				// source does not exist, create the source as a directory
 				err := os.MkdirAll(vc.Source, os.ModePerm)
 				if err != nil {
-					return "", xerrors.Errorf("Source for Volume %s does not exist, error creating directory: %w", err)
+					return "", xerrors.Errorf("source for Volume %s does not exist, error creating directory: %w", err)
 				}
 			}
 		}
@@ -269,7 +269,7 @@ func (d *DockerTasks) CreateContainer(c *resources.Container) (string, error) {
 	// create the port ranges
 	portRanges, err := createPublishedPortRanges(c.PortRanges)
 	if err != nil {
-		return "", xerrors.Errorf("Unable to attach to container network, invalid port range: %w", err)
+		return "", xerrors.Errorf("unable to attach to container network, invalid port range: %w", err)
 	}
 
 	for k, p := range portRanges.ExposedPorts {
@@ -294,11 +294,11 @@ func (d *DockerTasks) CreateContainer(c *resources.Container) (string, error) {
 			// find the id of the container
 			ids, err := d.FindContainerIDs(utils.FQDN(net.Metadata().Name, net.Metadata().Module, net.Metadata().Type))
 			if err != nil {
-				return "", xerrors.Errorf("Unable to attach to container network, ID for container not found: %w", err)
+				return "", xerrors.Errorf("unable to attach to container network, ID for container not found: %w", err)
 			}
 
 			if len(ids) != 1 {
-				return "", xerrors.Errorf("Unable to attach to container network, ID for container not found")
+				return "", xerrors.Errorf("unable to attach to container network, ID for container not found")
 			}
 
 			d.l.Debug("Attaching as sidecar", "ref", c.Metadata().Name, "container", n.ID)
@@ -328,7 +328,7 @@ func (d *DockerTasks) CreateContainer(c *resources.Container) (string, error) {
 
 		info, err := d.c.ContainerInspect(context.Background(), cont.ID)
 		if err != nil {
-			return "", xerrors.Errorf("Unable to remove container from the default network: %w", err)
+			return "", xerrors.Errorf("unable to remove container from the default network: %w", err)
 		}
 
 		// get all attached networks, we will disconnect these later
@@ -343,10 +343,10 @@ func (d *DockerTasks) CreateContainer(c *resources.Container) (string, error) {
 			if err != nil {
 				errRemove := d.RemoveContainer(cont.ID, false)
 				if errRemove != nil {
-					return "", xerrors.Errorf("Unable to connect container to network %s, unable to roll back container: %w", n.ID, err)
+					return "", xerrors.Errorf("unable to remove container from network %s, unable to roll back container: %w", n.ID, err)
 				}
 
-				return "", xerrors.Errorf("Network not found: %w", err)
+				return "", xerrors.Errorf("unable to remove network %s from container, network not found: %w", n.ID, err)
 			}
 
 			err = d.AttachNetwork(net.Metadata().Name, cont.ID, n.Aliases, n.IPAddress)
@@ -355,10 +355,10 @@ func (d *DockerTasks) CreateContainer(c *resources.Container) (string, error) {
 				// if we fail to connect to the network roll back the container
 				errRemove := d.RemoveContainer(cont.ID, false)
 				if errRemove != nil {
-					return "", xerrors.Errorf("Unable to connect container to network %s, unable to roll back container: %w", n.ID, err)
+					return "", xerrors.Errorf("failed to attach network %s to container %s, unable to roll back container: %w", n.ID, cont.ID, err)
 				}
 
-				return "", xerrors.Errorf("Unable to connect container to network %s: %w", n.ID, err)
+				return "", xerrors.Errorf("unable to connect container to network %s, successfully rolled back container: %w", n.ID, err)
 			}
 		}
 
@@ -386,7 +386,7 @@ func (d *DockerTasks) CreateContainer(c *resources.Container) (string, error) {
 func (d *DockerTasks) ContainerInfo(id string) (interface{}, error) {
 	cj, err := d.c.ContainerInspect(context.Background(), id)
 	if err != nil {
-		return nil, xerrors.Errorf("Unable to read information about Docker container %s: %w", id, err)
+		return nil, xerrors.Errorf("unable to read information about Docker container %s: %w", id, err)
 	}
 
 	return cj, nil
@@ -534,6 +534,7 @@ func (d *DockerTasks) RemoveContainer(id string, force bool) error {
 		err = d.c.ContainerStop(context.Background(), id, container.StopOptions{Timeout: &timeout})
 		if err == nil {
 			d.l.Debug("Container stopped gracefully, removing", "container", id)
+
 			err = d.c.ContainerRemove(context.Background(), id, types.ContainerRemoveOptions{Force: false, RemoveVolumes: true})
 			if err == nil {
 				return nil
@@ -638,7 +639,7 @@ func (d *DockerTasks) CreateVolume(name string) (string, error) {
 	args.Add("name", vn)
 	ops, err := d.c.VolumeList(context.Background(), args)
 	if err != nil {
-		return "", fmt.Errorf("unable to lookup volume [%s] for cluster [%s]\n%+v", vn, name, err)
+		return "", xerrors.Errorf("unable to list docker volume '%s': %w", vn, err)
 	}
 
 	if len(ops.Volumes) > 0 {
@@ -648,7 +649,7 @@ func (d *DockerTasks) CreateVolume(name string) (string, error) {
 
 	d.l.Debug("Create Volume", "ref", name, "name", vn)
 
-	volumeCreateOptions := volume.VolumeCreateBody{
+	volumeCreateOptions := volume.CreateOptions{
 		Name:       vn,
 		Driver:     "local", //TODO: allow setting driver + opts
 		DriverOpts: map[string]string{},
@@ -656,7 +657,7 @@ func (d *DockerTasks) CreateVolume(name string) (string, error) {
 
 	vol, err := d.c.VolumeCreate(context.Background(), volumeCreateOptions)
 	if err != nil {
-		return "", fmt.Errorf("failed to create image volume [%s] for cluster [%s]\n%+v", vn, name, err)
+		return "", xerrors.Errorf("failed to create volume '%s': %w", vn, err)
 	}
 
 	return vol.Name, nil
@@ -681,13 +682,13 @@ func (d *DockerTasks) CopyFromContainer(id, src, dst string) error {
 
 	reader, _, err := d.c.CopyFromContainer(context.Background(), id, src)
 	if err != nil {
-		return fmt.Errorf("Couldn't copy kubeconfig.yaml from server container %s\n%+v", id, err)
+		return xerrors.Errorf("unable to copy '%s' from container '%s': %w", src, id, err)
 	}
 	defer reader.Close()
 
 	readBytes, err := ioutil.ReadAll(reader)
 	if err != nil {
-		return fmt.Errorf("Couldn't read kubeconfig from container\n%+v", err)
+		return fmt.Errorf("unable to read file '%s' from container '%s': %w", src, id, err)
 	}
 
 	// write to file, skipping the first 512 bytes which contain file metadata
@@ -696,7 +697,7 @@ func (d *DockerTasks) CopyFromContainer(id, src, dst string) error {
 
 	file, err := os.Create(dst)
 	if err != nil {
-		return fmt.Errorf("Couldn't create file %s\n%+v", dst, err)
+		return fmt.Errorf("unable to create destination file '%s' when copying file '%s' from container '%s': %w", dst, src, id, err)
 	}
 
 	defer file.Close()
@@ -752,7 +753,7 @@ func (d *DockerTasks) CopyLocalDockerImagesToVolume(images []string, volume stri
 			continue
 		}
 
-		return nil, fmt.Errorf("unable to find image %s in the local Docker cache, please pull the image before attempting to copy to a volume", i)
+		return nil, fmt.Errorf("unable to find image '%s' in the local Docker cache, please pull the image before attempting to copy to a volume", i)
 	}
 
 	for _, i := range images {
@@ -779,7 +780,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 	// make sure we have the alpine image needed to copy
 	err := d.PullImage(resources.Image{Name: "alpine:latest"}, false)
 	if err != nil {
-		return nil, xerrors.Errorf("unable pull alpine:latest for importing images: %w", err)
+		return nil, xerrors.Errorf("unable pull 'alpine:latest' needed to copy files to volume: %w", err)
 	}
 
 	// create a dummy container to import to volume
@@ -885,7 +886,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 func (d *DockerTasks) CopyFileToContainer(containerID, filename, path string) error {
 	f, err := os.Open(filename)
 	if err != nil {
-		return xerrors.Errorf("unable to open file: %w", err)
+		return xerrors.Errorf("unable to open file '%s': %w", filename, err)
 	}
 	defer f.Close()
 
@@ -896,7 +897,7 @@ func (d *DockerTasks) CopyFileToContainer(containerID, filename, path string) er
 	// save image to a tar
 	tmpTarFile, err := ioutil.TempFile("", "")
 	if err != nil {
-		return xerrors.Errorf("unable to create temporary file: %w for tar achive", err)
+		return xerrors.Errorf("unable to create temporary file for tar archive: %w", err)
 	}
 
 	defer func() {
@@ -910,7 +911,7 @@ func (d *DockerTasks) CopyFileToContainer(containerID, filename, path string) er
 
 	hdr, err := tar.FileInfoHeader(fi, fi.Name())
 	if err != nil {
-		return xerrors.Errorf("unable to create header for tar: %w", err)
+		return xerrors.Errorf("unable to create file info header for tar: %w", err)
 	}
 
 	// write the header to the tar file, this has to happen before the file
@@ -1137,22 +1138,22 @@ func (d *DockerTasks) resizeTTY(id string, out *streams.Out) error {
 	return nil
 }
 
-func (d *DockerTasks) AttachNetwork(net, containerid string, aliases []string, ipaddress string) error {
-	d.l.Debug("Attaching container to network", "ref", containerid, "network", net)
+func (d *DockerTasks) AttachNetwork(net, containerID string, aliases []string, ipAddress string) error {
+	d.l.Debug("Attaching container to network", "ref", containerID, "network", net)
 	es := &network.EndpointSettings{NetworkID: net}
 
 	// if we have network aliases defined, add them to the network connection
-	if aliases != nil && len(aliases) > 0 {
+	if len(aliases) > 0 {
 		es.Aliases = aliases
 	}
 
 	// are we binding to a specific ip
 	if ipaddress != "" {
-		d.l.Debug("Assigning static ip address", "ref", containerid, "network", net, "ip_address", ipaddress)
-		es.IPAMConfig = &network.EndpointIPAMConfig{IPv4Address: ipaddress}
+		d.l.Debug("Assigning static ip address", "ref", containerID, "network", net, "ip_address", ipAddress)
+		es.IPAMConfig = &network.EndpointIPAMConfig{IPv4Address: ipAddress}
 	}
 
-	return d.c.NetworkConnect(context.Background(), net, containerid, es)
+	return d.c.NetworkConnect(context.Background(), net, containerID, es)
 }
 
 // ListNetworks lists the networks a container is attached to
@@ -1187,9 +1188,9 @@ func (d *DockerTasks) ListNetworks(id string) []resources.NetworkAttachment {
 // TODO: Docker returns success before removing a container
 // tasks which depend on the network being removed may fail in the future
 // we need to check it has been removed before returning
-func (d *DockerTasks) DetachNetwork(network, containerid string) error {
+func (d *DockerTasks) DetachNetwork(network, containerID string) error {
 	network = strings.Replace(network, "network.", "", -1)
-	err := d.c.NetworkDisconnect(context.Background(), network, containerid, true)
+	err := d.c.NetworkDisconnect(context.Background(), network, containerID, true)
 
 	// Hacky hack for now
 	//time.Sleep(1000 * time.Millisecond)
@@ -1232,6 +1233,8 @@ func createPublishedPorts(ps []resources.Port) publishedPorts {
 }
 
 func createPublishedPortRanges(ps []resources.PortRange) (publishedPorts, error) {
+	var portRangeError = xerrors.Errorf("invalid port range, range should be written start-end, e.g 80-82")
+
 	pp := publishedPorts{
 		ExposedPorts: make(map[nat.Port]struct{}, 0),
 		PortBindings: make(map[nat.Port][]nat.PortBinding, 0),
@@ -1241,7 +1244,7 @@ func createPublishedPortRanges(ps []resources.PortRange) (publishedPorts, error)
 		// split the range
 		parts := strings.Split(p.Range, "-")
 		if len(parts) != 2 {
-			return pp, fmt.Errorf("Invalid port range, range should be written start-end, e.g 80-82")
+			return pp, portRangeError
 		}
 
 		// ensure the start is less than the end
@@ -1249,15 +1252,11 @@ func createPublishedPortRanges(ps []resources.PortRange) (publishedPorts, error)
 		end, eerr := strconv.Atoi(parts[1])
 
 		if serr != nil || eerr != nil {
-			return pp, fmt.Errorf(
-				"Invalid port range, range should be numbers and written start-end, e.g 80-82",
-			)
+			return pp, portRangeError
 		}
 
 		if start > end {
-			return pp, fmt.Errorf(
-				"Invalid port range, start and end ports should be numeric and written start-end, e.g 80-82",
-			)
+			return pp, portRangeError
 		}
 
 		// range is ok, generate ports
