@@ -47,12 +47,12 @@ func setupTestsBase(t *testing.T, returnVals map[string]error, state string) (*E
 		getProvider: generateProviderMock(p, returnVals),
 	}
 
-	setupState(t, state)
+	testutils.SetupState(t, state)
 
 	return e, p
 }
 
-func setupState(t *testing.T, state string) {
+func testutils.SetupState(t *testing.T, state string) {
 	// set the home folder to a tmpFolder for the tests
 	dir, err := ioutils.TempDir("", "")
 	if err != nil {

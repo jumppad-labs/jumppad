@@ -1,4 +1,4 @@
-package resources
+package testutils
 
 import (
 	"os"
@@ -8,7 +8,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
-func setupState(t *testing.T, state string) {
+func SetupState(t *testing.T, state string) {
 	// set the home folder to a tmpFolder for the tests
 	dir, err := ioutils.TempDir("", "")
 	if err != nil {

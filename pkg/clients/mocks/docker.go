@@ -27,6 +27,46 @@ type Docker struct {
 	mock.Mock
 }
 
+// CheckpointCreate provides a mock function with given fields: ctx, _a1, options
+func (_m *Docker) CheckpointCreate(ctx context.Context, _a1 string, options types.CheckpointCreateOptions) error {
+	ret := _m.Called(ctx, _a1, options)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.CheckpointCreateOptions) error); ok {
+		r0 = rf(ctx, _a1, options)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// CheckpointList provides a mock function with given fields: ctx, _a1, options
+func (_m *Docker) CheckpointList(ctx context.Context, _a1 string, options types.CheckpointListOptions) ([]types.Checkpoint, error) {
+	ret := _m.Called(ctx, _a1, options)
+
+	var r0 []types.Checkpoint
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.CheckpointListOptions) ([]types.Checkpoint, error)); ok {
+		return rf(ctx, _a1, options)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.CheckpointListOptions) []types.Checkpoint); ok {
+		r0 = rf(ctx, _a1, options)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]types.Checkpoint)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, types.CheckpointListOptions) error); ok {
+		r1 = rf(ctx, _a1, options)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ContainerCreate provides a mock function with given fields: ctx, config, hostConfig, networkingConfig, platform, containerName
 func (_m *Docker) ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, platform *v1.Platform, containerName string) (container.CreateResponse, error) {
 	ret := _m.Called(ctx, config, hostConfig, networkingConfig, platform, containerName)

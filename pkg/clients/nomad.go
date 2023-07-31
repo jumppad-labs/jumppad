@@ -12,6 +12,8 @@ import (
 )
 
 // Nomad defines an interface for a Nomad client
+//
+//go:generate mockery --name Nomad --filename nomad.go
 type Nomad interface {
 	// SetConfig for the client, path is a valid Nomad JSON config file
 	SetConfig(address string, port, nodes int) error
@@ -118,7 +120,7 @@ func (n *NomadImpl) HealthCheckAPI(timeout time.Duration) error {
 					if !ok || !detected {
 						continue
 					}
-				
+
 					// we need to make a special case to check the docker driver is
 					// present as if the nomad server starts before docker then the
 					// presence of docker will not be detected

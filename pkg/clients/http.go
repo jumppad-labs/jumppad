@@ -10,6 +10,8 @@ import (
 )
 
 // HTTP defines an interface for a HTTP client
+
+//go:generate mockery --name HTTP --filename http.go
 type HTTP interface {
 	// HealthCheckHTTP makes a HTTP GET request to the given URI and
 	// if a successful status []codes is returned the method returns a nil error.

@@ -6,13 +6,14 @@ import (
 
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-func setupPush(state string) (*cobra.Command, *clients.MockContainerTasks, func()) {
-	mt := &clients.MockContainerTasks{}
+func setupPush(t *testing.T, state string) (*cobra.Command, *mocks.ContainerTasks) {
+	mt := &mocks.ContainerTasks{}
 	mt.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
 	mt.On("PullImage", mock.Anything, false).Return(nil)
 	mt.On("CopyLocalDockerImagesToVolume", mock.Anything, mock.Anything, mock.Anything).Return([]string{"/images/file.tar"}, nil)
@@ -20,23 +21,24 @@ func setupPush(state string) (*cobra.Command, *clients.MockContainerTasks, func(
 	mt.On("SetForcePull", mock.Anything).Return(nil)
 
 	mk := &clients.MockKubernetes{}
-	mh := &mocks.MockHTTP{}
-	mn := &mocks.MockNomad{}
+	mh := &mocks.HTTP{}
+	mn := &mocks.Nomad{}
+	tl := clients.NewTestLogger(t)
 
-	return newPushCmd(mt, mk, mh, mn, clients.NewTestLogger(t)), mt, setupState(state)
+	testutils.SetupState(t, state)
+
+	return newPushCmd(mt, mk, mh, mn, tl), mt
 }
 
 func TestPushInvalidArgsReturnsError(t *testing.T) {
-	c, _, cleanup := setupPush(clusterState)
-	defer cleanup()
+	c, _ := setupPush(t, clusterState)
 
 	err := c.Execute()
 	assert.Error(t, err)
 }
 
 func TestPushNoResourceReturnsError(t *testing.T) {
-	c, _, cleanup := setupPush(clusterState)
-	defer cleanup()
+	c, _ := setupPush(t, clusterState)
 
 	c.SetArgs([]string{"consul:v1.6.1", "nomad_clsuter.dev"})
 	err := c.Execute()
@@ -44,8 +46,7 @@ func TestPushNoResourceReturnsError(t *testing.T) {
 }
 
 func TestPushInvalidResourceReturnsError(t *testing.T) {
-	c, _, cleanup := setupPush(clusterState)
-	defer cleanup()
+	c, _ := setupPush(t, clusterState)
 
 	c.SetArgs([]string{"consul:v1.6.1", "container.dev"})
 	err := c.Execute()
@@ -53,8 +54,7 @@ func TestPushInvalidResourceReturnsError(t *testing.T) {
 }
 
 func TestPushK8sClusterIDErrorReturnsError(t *testing.T) {
-	c, mt, cleanup := setupPush(clusterState)
-	defer cleanup()
+	c, mt := setupPush(t, clusterState)
 
 	removeOn(&mt.Mock, "FindContainerIDs")
 	mt.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{}, fmt.Errorf("boom"))
@@ -65,8 +65,7 @@ func TestPushK8sClusterIDErrorReturnsError(t *testing.T) {
 }
 
 func TestPushK8sClusterIDNotFoundReturnsError(t *testing.T) {
-	c, mt, cleanup := setupPush(clusterState)
-	defer cleanup()
+	c, mt := setupPush(t, clusterState)
 
 	removeOn(&mt.Mock, "FindContainerIDs")
 	mt.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{}, nil)
@@ -79,8 +78,7 @@ func TestPushK8sClusterIDNotFoundReturnsError(t *testing.T) {
 }
 
 func TestPushWithForceSetsFlag(t *testing.T) {
-	c, mt, cleanup := setupPush(clusterState)
-	defer cleanup()
+	c, mt := setupPush(t, clusterState)
 
 	c.SetArgs([]string{"consul:v1.6.1", "k8s_cluster.k3s"})
 	c.Flags().Set("force-update", "true")
@@ -92,8 +90,7 @@ func TestPushWithForceSetsFlag(t *testing.T) {
 }
 
 func TestPushK8sClusterPushesImage(t *testing.T) {
-	c, mt, cleanup := setupPush(clusterState)
-	defer cleanup()
+	c, mt := setupPush(t, clusterState)
 
 	c.SetArgs([]string{"consul:v1.6.1", "k8s_cluster.k3s"})
 	err := c.Execute()
@@ -103,8 +100,7 @@ func TestPushK8sClusterPushesImage(t *testing.T) {
 }
 
 func TestPushNomadClusterIDErrorReturnsError(t *testing.T) {
-	c, mt, cleanup := setupPush(clusterState)
-	defer cleanup()
+	c, mt := setupPush(t, clusterState)
 
 	removeOn(&mt.Mock, "FindContainerIDs")
 	mt.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{}, fmt.Errorf("boom"))
@@ -115,8 +111,7 @@ func TestPushNomadClusterIDErrorReturnsError(t *testing.T) {
 }
 
 func TestPushNomadClusterIDNotFoundReturnsError(t *testing.T) {
-	c, mt, cleanup := setupPush(clusterState)
-	defer cleanup()
+	c, mt := setupPush(t, clusterState)
 
 	removeOn(&mt.Mock, "FindContainerIDs")
 	mt.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{}, nil)
@@ -129,8 +124,7 @@ func TestPushNomadClusterIDNotFoundReturnsError(t *testing.T) {
 }
 
 func TestPushNomadClusterPushesImage(t *testing.T) {
-	c, mt, cleanup := setupPush(clusterState)
-	defer cleanup()
+	c, mt := setupPush(t, clusterState)
 
 	c.SetArgs([]string{"consul:v1.6.1", "nomad_cluster.nomad"})
 	err := c.Execute()

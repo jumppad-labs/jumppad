@@ -62,7 +62,7 @@ func newRunCmdFunc(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clie
 		// create the shipyard and sub folders in the users home directory
 		utils.CreateFolders()
 
-		if *force == true {
+		if *force {
 			bp.SetForce(true)
 			e.GetClients().ContainerTasks.SetForcePull(true)
 		}
@@ -88,7 +88,7 @@ func newRunCmdFunc(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clie
 		// check the variables file exists
 		if variablesFile != nil && *variablesFile != "" {
 			if _, err := os.Stat(*variablesFile); err != nil {
-				return fmt.Errorf("Variables file %s, does not exist", *variablesFile)
+				return fmt.Errorf("variables file %s, does not exist", *variablesFile)
 			}
 		} else {
 			vf := ""
@@ -101,7 +101,7 @@ func newRunCmdFunc(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clie
 			l.Debug("Generating TLS Certificates for Ingress", "path", utils.CertsDir(""))
 			_, err := cc.GenerateLocalCertBundle(utils.CertsDir(""))
 			if err != nil {
-				return fmt.Errorf("Unable to generate connector certificates: %s", err)
+				return fmt.Errorf("unable to generate connector certificates: %s", err)
 			}
 		}
 
@@ -109,14 +109,14 @@ func newRunCmdFunc(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clie
 		if !cc.IsRunning() {
 			cb, err := cc.GetLocalCertBundle(utils.CertsDir(""))
 			if err != nil {
-				return fmt.Errorf("Unable to get certificates to secure ingress: %s", err)
+				return fmt.Errorf("unable to get certificates to secure ingress: %s", err)
 			}
 
 			l.Debug("Starting API server")
 
 			err = cc.Start(cb)
 			if err != nil {
-				return fmt.Errorf("Unable to start API server: %s", err)
+				return fmt.Errorf("unable to start API server: %s", err)
 			}
 		}
 
@@ -139,7 +139,7 @@ func newRunCmdFunc(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clie
 				// fetch the remote server from github
 				err := bp.Get(dst, utils.GetBlueprintLocalFolder(dst))
 				if err != nil {
-					return fmt.Errorf("Unable to retrieve blueprint: %s", err)
+					return fmt.Errorf("unable to retrieve blueprint: %s", err)
 				}
 
 				dst = utils.GetBlueprintLocalFolder(dst)

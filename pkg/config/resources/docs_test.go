@@ -1,30 +1,24 @@
 package resources
 
 import (
-	"os"
 	"testing"
 
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDocsProcessSetsAbsolute(t *testing.T) {
-	wd, err := os.Getwd()
-	require.NoError(t, err)
-
 	h := &Docs{
 		ResourceMetadata: types.ResourceMetadata{File: "./"},
-		Path:             "./",
 	}
 
-	err = h.Process()
+	err := h.Process()
 	require.NoError(t, err)
-
-	require.Equal(t, wd, h.Path)
 }
 
 func TestDocsLoadsValuesFromState(t *testing.T) {
-	setupState(t, `
+	testutils.SetupState(t, `
 {
   "blueprint": null,
   "resources": [
@@ -33,7 +27,7 @@ func TestDocsLoadsValuesFromState(t *testing.T) {
       "name": "test",
       "status": "created",
       "type": "docs",
-			"fqdn": "fqdn.mine"
+			"fqrn": "fqdn.mine"
 	}
 	]
 }`)
@@ -48,5 +42,5 @@ func TestDocsLoadsValuesFromState(t *testing.T) {
 	err := docs.Process()
 	require.NoError(t, err)
 
-	require.Equal(t, "fqdn.mine", docs.FQDN)
+	require.Equal(t, "fqdn.mine", docs.FQRN)
 }

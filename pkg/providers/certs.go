@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -45,9 +46,9 @@ func (c *CertificateCA) Create() error {
 	os.MkdirAll(directory, os.ModePerm)
 
 	keyFile := path.Join(directory, fmt.Sprintf("%s.key", c.config.Name))
-	pubkeyFile := path.Join(directory, fmt.Sprintf("%s.pub", c.config.Name))
-	pubsshFile := path.Join(directory, fmt.Sprintf("%s.ssh", c.config.Name))
-	certFile := path.Join(directory, fmt.Sprintf("%s.cert", c.config.Name))
+	publicKeyFile := path.Join(directory, fmt.Sprintf("%s.pub", c.config.Name))
+	publicSSHFile := path.Join(directory, fmt.Sprintf("%s.ssh", c.config.Name))
+	certificateFile := path.Join(directory, fmt.Sprintf("%s.cert", c.config.Name))
 
 	k, err := crypto.GenerateKeyPair()
 	if err != nil {
@@ -64,12 +65,12 @@ func (c *CertificateCA) Create() error {
 		return err
 	}
 
-	err = k.Public.WriteFile(pubkeyFile)
+	err = k.Public.WriteFile(publicKeyFile)
 	if err != nil {
 		return err
 	}
 
-	err = ca.WriteFile(certFile)
+	err = ca.WriteFile(certificateFile)
 	if err != nil {
 		return err
 	}
@@ -80,14 +81,14 @@ func (c *CertificateCA) Create() error {
 		return err
 	}
 
-	err = ioutil.WriteFile(pubsshFile, []byte(ssh), os.ModePerm)
+	err = ioutil.WriteFile(publicSSHFile, []byte(ssh), os.ModePerm)
 	if err != nil {
 		return err
 	}
 
 	// set the outputs
 	c.config.Cert = &resources.File{
-		Path:      certFile,
+		Path:      certificateFile,
 		Directory: directory,
 		Filename:  fmt.Sprintf("%s.cert", c.config.Name),
 		Contents:  ca.String(),
@@ -101,14 +102,14 @@ func (c *CertificateCA) Create() error {
 	}
 
 	c.config.PublicKeyPEM = &resources.File{
-		Path:      pubkeyFile,
+		Path:      publicKeyFile,
 		Directory: directory,
 		Filename:  fmt.Sprintf("%s.pub", c.config.Name),
 		Contents:  k.Public.String(),
 	}
 
 	c.config.PublicKeySSH = &resources.File{
-		Path:      pubsshFile,
+		Path:      publicSSHFile,
 		Directory: directory,
 		Filename:  fmt.Sprintf("%s.ssh", c.config.Name),
 		Contents:  ssh,
@@ -120,7 +121,7 @@ func (c *CertificateCA) Create() error {
 func (c *CertificateCA) Destroy() error {
 	c.log.Info("Destroy CA Certificate", "ref", c.config.Name)
 
-	return destroy(c.config.Name, c.config.Output, c.log)
+	return destroy(c.config.Module, c.config.Name, c.config.Output, c.log)
 }
 
 func (c *CertificateCA) Lookup() ([]string, error) {
@@ -236,11 +237,7 @@ func (c *CertificateLeaf) Create() error {
 func (c *CertificateLeaf) Destroy() error {
 	c.log.Info("Destroy Leaf Certificate", "ref", c.config.Name)
 
-	directory := strings.Replace(c.config.Module, ".", "_", -1)
-	directory = path.Join(c.config.Output, directory)
-	os.MkdirAll(directory, os.ModePerm)
-
-	return destroy(fmt.Sprintf("%s-%s", c.config.Name, "leaf"), directory, c.log)
+	return destroy(c.config.Module, fmt.Sprintf("%s-leaf", c.config.Name), c.config.Output, c.log)
 }
 
 func (c *CertificateLeaf) Lookup() ([]string, error) {
@@ -259,7 +256,7 @@ func (c *CertificateLeaf) Changed() (bool, error) {
 	return false, nil
 }
 
-func destroy(name, output string, log clients.Logger) error {
+func destroy(module, name, output string, log clients.Logger) error {
 	keyFile := path.Join(output, fmt.Sprintf("%s.key", name))
 	pubkeyFile := path.Join(output, fmt.Sprintf("%s.pub", name))
 	pubsshFile := path.Join(output, fmt.Sprintf("%s.ssh", name))
@@ -285,7 +282,31 @@ func destroy(name, output string, log clients.Logger) error {
 		log.Debug("Unable to remove certificate", "ref", name, "error", err)
 	}
 
+	// if there is a module directory and it is empty, remove it
+	if module != "" {
+		directory := strings.Replace(module, ".", "_", -1)
+		directory = path.Join(output, directory)
+
+		if empty, err := isEmpty(directory); empty && err != nil {
+			os.RemoveAll(directory)
+		}
+	}
+
 	return nil
+}
+
+func isEmpty(name string) (bool, error) {
+	f, err := os.Open(name)
+	if err != nil {
+		return false, err
+	}
+	defer f.Close()
+
+	_, err = f.Readdirnames(1) // Or f.Readdir(1)
+	if err == io.EOF {
+		return true, nil
+	}
+	return false, err // Either not empty or error, suits both cases
 }
 
 // thanks to https://gist.github.com/sriramsa/68d150ad50db4828f139e60a0efbde5a

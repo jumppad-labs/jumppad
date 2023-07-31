@@ -1,41 +1,20 @@
-resource "build" "app" {
-  container {
-    dockerfile = "Dockerfile"
-    context    = "./src"
-  }
+variable "image" {
+  default = ""
 }
 
-resource "network" "onprem" {
-  subnet = "10.6.0.0/16"
-}
-
-resource "container" "app" {
-  image {
-    name = resource.build.app.image
-  }
-
-  command = ["/bin/app"]
-
-  port {
-    local  = 9090
-    remote = 9090
-    host   = 9090
-  }
-
-  network {
-    id = resource.network.onprem.id
-  }
+variable "network" {
+  default = ""
 }
 
 resource "nomad_cluster" "dev" {
   client_nodes = 2
 
   network {
-    id = resource.network.onprem.id
+    id = variable.network
   }
 
   copy_image {
-    name = resource.build.app.image
+    name = variable.image
   }
 }
 
@@ -59,7 +38,7 @@ resource "template" "app_job" {
        driver = "docker"
  
        config {
-         image = "${resource.build.app.image}"
+         image = "${variable.image}"
          ports = ["http"]
        }
      }

@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	"github.com/jumppad-labs/jumppad/testutils"
 )
 
 const (
@@ -39,9 +40,9 @@ func (tw *testWriter) Write(p []byte) (n int, err error) {
 	return tw.Buffer.Write(p)
 }
 
-func setupLog(t *testing.T, logStream int) (*cobra.Command, *mocks.MockDocker, *bytes.Buffer, *bytes.Buffer) {
+func setupLog(t *testing.T, logStream int) (*cobra.Command, *mocks.Docker, *bytes.Buffer, *bytes.Buffer) {
 	// setup the statefile
-	t.Cleanup(setupState(logState))
+	t.Cleanup(testutils.SetupState(logState))
 
 	// hijack stdout and stderr
 	stdout := newTestWriter()
@@ -49,7 +50,7 @@ func setupLog(t *testing.T, logStream int) (*cobra.Command, *mocks.MockDocker, *
 
 	log := createLogOutput(logStream)
 
-	md := &mocks.MockDocker{}
+	md := &mocks.Docker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 
 	md.On("ContainerLogs", mock.Anything, mock.Anything, mock.Anything).Once().Return(

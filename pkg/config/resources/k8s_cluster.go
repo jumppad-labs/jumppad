@@ -49,7 +49,7 @@ type K8sCluster struct {
 }
 
 const k3sBaseImage = "shipyardrun/k3s"
-const k3sBaseVersion = "v1.26.3"
+const k3sBaseVersion = "v1.27.4"
 
 func (k *K8sCluster) Process() error {
 	if k.APIPort == 0 {

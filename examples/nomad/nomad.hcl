@@ -15,14 +15,6 @@ resource "template" "nomad_config" {
   destination = "${data("nomad-config")}/user_config.hcl"
 }
 
-//build "app" {
-//container {
-//  dockerfile = "Dockerfile"
-//  context    = "./src"
-//  tag        = "latest"
-//}
-//}
-
 resource "nomad_cluster" "dev" {
   client_nodes = variable.client_nodes
 
@@ -35,10 +27,6 @@ resource "nomad_cluster" "dev" {
 
   copy_image {
     name = "consul:1.10.1"
-  }
-  
-  copy_image {
-    id = resources.build.app.image_id
   }
 
   volume {

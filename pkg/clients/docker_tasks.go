@@ -1148,7 +1148,7 @@ func (d *DockerTasks) AttachNetwork(net, containerID string, aliases []string, i
 	}
 
 	// are we binding to a specific ip
-	if ipaddress != "" {
+	if ipAddress != "" {
 		d.l.Debug("Assigning static ip address", "ref", containerID, "network", net, "ip_address", ipAddress)
 		es.IPAMConfig = &network.EndpointIPAMConfig{IPv4Address: ipAddress}
 	}
