@@ -712,7 +712,7 @@ jobs:
         run: choco pack
 
       - name: Choco push
-        run: choco push -f
+        run: choco push -f -s https://push.chocolatey.org/
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
