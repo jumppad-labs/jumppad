@@ -37,81 +37,130 @@ The following snippets are examples of things you can build with Jumppad, for mo
 ### Kubernetes Cluster
 
 ```hcl
-k8s_cluster "k3s" {
-  driver  = "k3s" // default
+resource "network" "cloud" {
+  subnet = "10.5.0.0/16"
+}
+
+resource "k8s_cluster" "k3s" {
+  driver = "k3s" // default
 
   nodes = 1 // default
 
   network {
-    name = "network.cloud"
+    id = resource.network.cloud.id
+  }
+
+  copy_image {
+    name = "shipyardrun/connector:v0.1.0"
   }
 }
 
-helm "consul" {
-  cluster = "k8s_cluster.k3s"
-  chart = "./helm/consul-helm-0.16.2"
-  values = "./helm/consul-values.yaml"
+resource "k8s_config" "fake_service" {
+  cluster = resource.k8s_cluster.k3s.id
+
+  paths = ["./fake_service.yaml"]
 
   health_check {
-    timeout = "60s"
-    pods = ["release=consul"]
+    timeout = "240s"
+    pods    = ["app.kubernetes.io/name=fake-service"]
   }
 }
 
-k8s_ingress "consul-http" {
-  cluster = "k8s_cluster.k3s"
-  service  = "consul-consul-server"
+resource "helm" "vault" {
+  cluster = resource.k8s_cluster.k3s.id
 
-  network {
-    name = "network.cloud"
+  repository {
+    name = "hashicorp"
+    url  = "https://helm.releases.hashicorp.com"
   }
 
-  port {
-    local  = 8500
-    remote = 8500
-    host   = 18500
+  chart   = "hashicorp/vault"
+  version = "v0.18.0"
+
+  values = "./helm/vault-values.yaml"
+
+  health_check {
+    timeout = "240s"
+    pods    = ["app.kubernetes.io/name=vault"]
   }
 }
+
+resource "ingress" "vault_http" {
+  port = 18200
+
+  target {
+    id   = resource.k8s_cluster.k3s.id
+    port = 8200
+
+    config = {
+      service   = "vault"
+      namespace = "default"
+    }
+  }
+}
+
+resource "ingress" "fake_service" {
+  port = 19090
+
+  target {
+    id   = resource.k8s_cluster.k3s.id
+    port = 9090
+
+    config = {
+      service   = "fake-service"
+      namespace = "default"
+    }
+  }
+}
+
+output "VAULT_ADDR" {
+  value = resource.ingress.vault_http.address
+}
+
+output "KUBECONFIG" {
+  value = resource.k8s_cluster.k3s.kubeconfig
+}
+
 ```
 
 ### Nomad Cluster
 
 ```hcl
-nomad_cluster "dev" {
-  version = "v0.10.2"
+resource "network" "cloud" {
+  subnet = "10.10.0.0/16"
+}
 
-  nodes = 1 // default
+resource "nomad_cluster" "dev" {
+  client_nodes=3
 
   network {
-    name = "network.cloud"
+    id = resource.network.cloud.id
   }
 }
 
-nomad_job "redis" {
-  cluster = "nomad_cluster.dev"
+resource "nomad_job" "example_1" {
+  cluster = resource.nomad_cluster.dev.id
 
-  paths = ["./app_config/example2.nomad"]
+  paths = ["./app_config/example1.nomad"]
+
   health_check {
-    timeout = "60s"
-    nomad_jobs = ["example_2"]
+    timeout    = "60s"
+    nomad_jobs = ["example_1"]
   }
 }
 
-nomad_ingress "nomad-http" {
-  cluster  = "nomad_cluster.dev"
-  job = ""
-  group = ""
-  task = ""
+resource "ingress" "fake_service_1" {
+  port = 19090
 
-  port {
-    local  = 4646
-    remote = 4646
-    host   = 14646
-    open_in_browser = "/"
-  }
+  target {
+    id         = resource.nomad_cluster.dev.id
+    named_port = "http"
 
-  network  {
-    name = "network.cloud"
+    config = {
+      job   = "example_1"
+      group = "fake_service"
+      task  = "fake_service"
+    }
   }
 }
 ```
@@ -119,46 +168,47 @@ nomad_ingress "nomad-http" {
 ### Docker Container
 
 ```hcl
-container "consul" {
-  image   {
-    name = "consul:1.6.1"
-  }
+resource "container" "unique_name" {
+    depends_on = ["resource.container.another"]
 
-  command = ["consul", "agent", "-config-file=/config/consul.hcl"]
+    network {
+        id         = resource.network.cloud.id
+        ip_address = "10.16.0.200"
+        aliases    = ["my_unique_name_ip_address"]
+    }
 
-  volume {
-    source      = "./consul_config"
-    destination = "/config"
-  }
+    image {
+        name     = "consul:1.6.1"
+        username = "repo_username"
+        password = "repo_password"
+    }
 
-  network {
-    name = "network.onprem"
-    ip_address = "10.5.0.200" // optional
-  }
+    command = [
+        "consul",
+        "agent"
+    ]
 
-  resources {
-    # Max CPU to consume, 1024 is one core, default unlimited
-    cpu = 2048
-    # Pin container to specified CPU cores, default all cores
-    cpu_pin = [1,2]
-    # max memory in MB to consume, default unlimited
-    memory = 1024
-  }
+    environment = {
+        CONSUL_HTTP_ADDR = "http://localhost:8500"
+    }
 
-  env {
-    key ="abc"
-    value = "123"
-  }
+    volume {
+        source      = "./config"
+        destination = "/config"
+    }
 
-  env {
-    key ="SHIPYARD_FOLDER"
-    value = "${shipyard()}"
-  }
+    port {
+        local  = 8500
+        remote = 8500
+        host   = 18500
+    }
+    
+    port_range {
+        range       = "9000-9002"
+        enable_host = true
+    }
 
-  env {
-    key ="HOME_FOLDER"
-    value = "${home()}"
-  }
+    privileged = false
 }
 ```
 
