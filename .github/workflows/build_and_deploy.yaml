@@ -706,13 +706,13 @@ jobs:
           powershell -Command "(gc tools/chocolateyinstall.ps1) -replace '__version__', '${{ needs.tag.outputs.new_version }}' | Out-File -encoding ASCII tools\chocolateyinstall.ps1"
 
       - name: Choco login
-        run: choco apikey -k ${{ secrets.CHOCO_API_KEY }} -s https://push.chocolatey.org/
+        run: choco apikey add -k ${{ secrets.CHOCO_API_KEY }} -s https://push.chocolatey.org/
 
       - name: Choco build
         run: choco pack
 
       - name: Choco push
-        run: choco push -f --source=https://push.chocolatey.org/
+        run: choco push -f
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
