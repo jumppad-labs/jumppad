@@ -53,7 +53,7 @@ func (b *Book) Create() error {
 
 			page := resources.IndexPage{
 				Title: p.Title,
-				URI:   filepath.Join("/", b.config.Name, c.Name, p.Name),
+				URI:   fmt.Sprintf("/%s/%s/%s", b.config.Name, c.Name, p.Name),
 			}
 
 			chapter.Pages = append(chapter.Pages, page)
