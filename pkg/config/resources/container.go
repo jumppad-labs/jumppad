@@ -82,7 +82,7 @@ type Volume struct {
 func (c *Container) Process() error {
 	// process volumes
 	for i, v := range c.Volumes {
-		// make sure mount paths are absolute when type is bind
+		// make sure mount paths are absolute when type is bind, unless this is the docker sock
 		if v.Type == "" || v.Type == "bind" {
 			c.Volumes[i].Source = ensureAbsolute(v.Source, c.File)
 		}
