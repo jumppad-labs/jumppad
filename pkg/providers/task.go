@@ -2,13 +2,10 @@ package providers
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 type Task struct {
@@ -22,11 +19,6 @@ func NewTask(t *resources.Task, l clients.Logger) *Task {
 
 func (t *Task) Create() error {
 	t.log.Info(fmt.Sprintf("Creating %s", strings.Title(string(t.config.Metadata().Type))), "ref", t.config.Metadata().Name)
-
-	checksPath := utils.GetLibraryFolder("checks", 0775)
-	taskPath := filepath.Join(checksPath, t.config.ID)
-	os.MkdirAll(taskPath, 0755)
-	os.Chmod(taskPath, 0755)
 
 	progress := resources.Progress{
 		ID:            t.config.ID,
@@ -50,17 +42,10 @@ func (t *Task) Create() error {
 			Status:      "",
 		})
 
-		checkPath := filepath.Join(taskPath, c.Name)
-
-		err := os.WriteFile(checkPath, []byte(c.Check), 0755)
-		if err != nil {
-			return fmt.Errorf("Unable to write check %s to disk at %s", c.Name, taskPath)
-		}
-
 		validation.Conditions = append(validation.Conditions, resources.ValidationCondition{
 			ID:               c.Name,
-			Check:            filepath.Join("/checks", t.config.ID, c.Name),
-			Solve:            c.Solve,
+			Check:            fmt.Sprintf("/validation/%s/%s.check", t.config.ID, c.Name),
+			Solve:            fmt.Sprintf("/validation/%s/%s.solve", t.config.ID, c.Name),
 			FailureMessage:   c.FailureMessage,
 			SuccessMessage:   c.SuccessMessage,
 			Target:           c.Target,

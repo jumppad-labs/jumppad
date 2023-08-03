@@ -2,6 +2,8 @@ module github.com/jumppad-labs/jumppad
 
 // Only use  version 1,20.5 and lower until the followinis patched
 // https://github.com/docker/cli/issues/4437
+// fixed it by using docker v23.0.7-0.20230714215826-f00e7af96042+incompatible
+// switch to v24.0.4+incompatible once github actions updates their docker version
 go 1.20
 
 require (
@@ -13,12 +15,13 @@ require (
 	github.com/charmbracelet/log v0.2.2
 	github.com/creack/pty v1.1.18
 	github.com/cucumber/godog v0.12.4
-	github.com/docker/docker v23.0.6+incompatible
+	github.com/docker/docker v23.0.7-0.20230714215826-f00e7af96042+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/fatih/color v1.13.0
-	github.com/gofiber/fiber/v2 v2.43.0
-	github.com/gofiber/websocket/v2 v2.0.15
+	github.com/go-chi/chi v1.5.4
+	github.com/go-chi/cors v1.2.1
 	github.com/google/uuid v1.3.0
+	github.com/gorilla/websocket v1.4.2
 	github.com/gosuri/uitable v0.0.4
 	github.com/hashicorp/go-getter v1.7.0
 	github.com/hashicorp/go-hclog v1.1.0
@@ -70,7 +73,6 @@ require (
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/agext/levenshtein v1.2.2 // indirect
 	github.com/alecthomas/chroma v0.10.0 // indirect
-	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/apparentlymart/go-textseg v1.0.0 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20200428143746-21a406dcc535 // indirect
@@ -96,7 +98,6 @@ require (
 	github.com/eliukblau/pixterm/pkg/ansimage v0.0.0-20191210081756-9fb6cf8c2f75 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect
-	github.com/fasthttp/websocket v1.4.4 // indirect
 	github.com/flytam/filenamify v1.1.1 // indirect
 	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
@@ -175,7 +176,6 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
-	github.com/philhofer/fwd v1.1.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.11.0 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
@@ -184,18 +184,12 @@ require (
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/rubenv/sql-migrate v0.0.0-20210614095031-55d5740dbbcc // indirect
 	github.com/russross/blackfriday v1.5.2 // indirect
-	github.com/savsgio/dictpool v0.0.0-20221023140959-7bf2e61cea94 // indirect
-	github.com/savsgio/gotils v0.0.0-20230208104028-c358bd845dee // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
-	github.com/tinylib/msgp v1.1.8 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
-	github.com/valyala/bytebufferpool v1.0.0 // indirect
-	github.com/valyala/fasthttp v1.45.0 // indirect
-	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect

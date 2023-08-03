@@ -881,6 +881,28 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 	return imported, nil
 }
 
+// CreateFileInContainer creates a file with the given contents and name in the container containerID and
+// stores it in the container at the directory path.
+func (d *DockerTasks) CreateFileInContainer(containerID, contents, filename, path string) error {
+	tmpFile := filepath.Join(os.TempDir(), filename)
+
+	err := os.WriteFile(tmpFile, []byte(contents), 0755)
+	if err != nil {
+		return xerrors.Errorf("unable to write contents to temporary file: %w", err)
+	}
+
+	defer func() {
+		os.Remove(tmpFile)
+	}()
+
+	err = d.CopyFileToContainer(containerID, tmpFile, path)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // CopyFileToContainer copies the file at path filename to the container containerID and
 // stores it in the container at the directory path.
 func (d *DockerTasks) CopyFileToContainer(containerID, filename, path string) error {
@@ -895,7 +917,7 @@ func (d *DockerTasks) CopyFileToContainer(containerID, filename, path string) er
 	// if we write the original file the output will not be a single file
 	// but the contents of the tar. To bypass this we need to add the output from
 	// save image to a tar
-	tmpTarFile, err := ioutil.TempFile("", "")
+	tmpTarFile, err := os.CreateTemp("", "")
 	if err != nil {
 		return xerrors.Errorf("unable to create temporary file for tar archive: %w", err)
 	}
@@ -1012,6 +1034,32 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 
 		time.Sleep(1 * time.Second)
 	}
+}
+
+// ExecuteScript allows the execution of a script in a running docker container
+// id is the id of the container to execute the command in
+// contents is the contents of the script to execute
+// writer [optional] will be used to write any output from the command execution.
+func (d *DockerTasks) ExecuteScript(id string, contents string, env []string, workingDir string, user, group string, timeout int, writer io.Writer) (int, error) {
+	// set the user details
+
+	if user != "" && group != "" {
+		user = fmt.Sprintf("%s:%s", user, group)
+	}
+
+	command := []string{"sh", "-c", "/tmp/script.sh"}
+
+	err := d.CreateFileInContainer(id, contents, "script.sh", "/tmp")
+	if err != nil {
+		return defaultExitCode, xerrors.Errorf("unable to create script in container: %w", err)
+	}
+
+	exitCode, err := d.ExecuteCommand(id, command, env, workingDir, user, group, timeout, writer)
+	if err != nil {
+		return exitCode, err
+	}
+
+	return exitCode, nil
 }
 
 // TODO: this is all exploratory, works but needs a major tidy
