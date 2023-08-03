@@ -25,7 +25,7 @@ func NewRemoteExec(c *resources.RemoteExec, ex clients.ContainerTasks, l clients
 
 // Create a new execution instance
 func (c *RemoteExec) Create() error {
-	c.log.Info("Remote executing command", "ref", c.config.Name, "command", c.config.Command, "image", c.config.Image)
+	c.log.Info("Remote executing command", "ref", c.config.Name, "script", c.config.Script, "image", c.config.Image)
 
 	/*
 		if c.config.Script != "" {
@@ -76,7 +76,7 @@ func (c *RemoteExec) Create() error {
 	}
 
 	// execute the script in the container
-	command := c.config.Command
+	script := c.config.Script
 
 	// build the environment variables
 	envs := []string{}
@@ -93,9 +93,9 @@ func (c *RemoteExec) Create() error {
 		group = c.config.RunAs.Group
 	}
 
-	_, err := c.client.ExecuteCommand(targetID, command, envs, c.config.WorkingDirectory, user, group, 300, c.log.StandardWriter())
+	_, err := c.client.ExecuteScript(targetID, script, envs, c.config.WorkingDirectory, user, group, 300, c.log.StandardWriter())
 	if err != nil {
-		c.log.Error("Error executing command", "ref", c.config.Name, "image", c.config.Image, "command", c.config.Command)
+		c.log.Error("Error executing command", "ref", c.config.Name, "image", c.config.Image, "script", c.config.Script)
 		err = xerrors.Errorf("Unable to execute command: in remote container: %w", err)
 	}
 

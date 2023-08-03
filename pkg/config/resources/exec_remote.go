@@ -16,9 +16,8 @@ type RemoteExec struct {
 	Target string `hcl:"target,optional" json:"target,omitempty"` // Attach to a running target and exec
 
 	// Either Script or Command must be specified
-	//Script    string   `hcl:"script,optional" json:"script,omitempty"` // Path to a script to execute
-	Command          []string `hcl:"command,optional" json:"command,omitempty"`                     // Command to execute
-	WorkingDirectory string   `hcl:"working_directory,optional" json:"working_directory,omitempty"` // Working directory to execute commands
+	Script           string `hcl:"script,optional" json:"script,omitempty"`                       // Path to a script to execute
+	WorkingDirectory string `hcl:"working_directory,optional" json:"working_directory,omitempty"` // Working directory to execute commands
 
 	Volumes     []Volume          `hcl:"volume,block" json:"volumes,omitempty"`             // Volumes to mount to container
 	Environment map[string]string `hcl:"environment,optional" json:"environment,omitempty"` // environment variables to set when starting the container

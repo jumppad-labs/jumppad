@@ -69,6 +69,9 @@ type ContainerTasks interface {
 	CopyFromContainer(id, src, dst string) error
 	// CopyToContainer allows a file to be copied into a container
 	CopyFileToContainer(id, src, dst string) error
+	// CreateFileInContainer creates a file with the given contents and name in the container containerID and
+	// stores it in the container at the directory path.
+	CreateFileInContainer(containerID, contents, filename, path string) error
 	// CopyLocaDockerImageToVolume copies the docker images to the docker volume as a
 	// compressed archive.
 	// the path in the docker volume where the archive is created is returned
@@ -83,6 +86,11 @@ type ContainerTasks interface {
 	// timeout in seconds
 	// writer [optional] will be used to write any output from the command execution.
 	ExecuteCommand(id string, command []string, env []string, workingDirectory string, user, group string, timeout int, writer io.Writer) (int, error)
+	// ExecuteScript allows the execution of a script in a running docker container
+	// id is the id of the container to execute the command in
+	// contents is the contents of the script to execute
+	// writer [optional] will be used to write any output from the command execution.
+	ExecuteScript(id string, contents string, env []string, workingDirectory string, user, group string, timeout int, writer io.Writer) (int, error)
 	// AttachNetwork attaches a container to a network
 	// if aliases is set an alias for the container name will be added
 	// if ipAddress is not null then a user defined ipaddress will be used
