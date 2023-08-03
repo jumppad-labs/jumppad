@@ -1041,13 +1041,15 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 // contents is the contents of the script to execute
 // writer [optional] will be used to write any output from the command execution.
 func (d *DockerTasks) ExecuteScript(id string, contents string, env []string, workingDir string, user, group string, timeout int, writer io.Writer) (int, error) {
-	// set the user details
+	// ensure we only have unix line ending in ths script
+	contents = strings.Replace(contents, "\r\n", "\n", -1)
 
+	// set the user details
 	if user != "" && group != "" {
 		user = fmt.Sprintf("%s:%s", user, group)
 	}
 
-	command := []string{"sh", "-c", "/tmp/script.sh"}
+	command := []string{"sh", "/tmp/script.sh"}
 
 	err := d.CreateFileInContainer(id, contents, "script.sh", "/tmp")
 	if err != nil {
