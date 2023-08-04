@@ -172,6 +172,7 @@ jobs:
   functional_test_podman:
     name: Functional Test Podman
     runs-on: ubuntu-latest
+    needs: functional_test_build
 
     strategy:
       max-parallel: 2
