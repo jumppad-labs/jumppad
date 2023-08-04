@@ -238,6 +238,12 @@ jobs:
           sudo chmod +x /run/podman
           sudo chmod 777 /run/podman/podman.sock
 
+      - name: Check podman
+        run: |
+          export DOCKER_HOST=unix:///run/podman/podman.sock
+          sudo podman info
+          docker info
+      
       - name: Run tests
         run: |
           export DOCKER_HOST=unix:///run/podman/podman.sock
