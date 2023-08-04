@@ -240,18 +240,20 @@ jobs:
 
       - name: Check podman
         run: |
-          export DOCKER_HOST=unix:///run/podman/podman.sock
           sudo podman context ls
           docker context ls
+        env:
+          DOCKER_HOST: "unix:///run/podman/podman.sock"
       
       - name: Run tests
         run: |
-          export DOCKER_HOST=unix:///run/podman/podman.socs
           env
           jumppad check
           jumppad purge
           jumppad up ${{matrix.folder}}
           sudo podman ps
+        env:
+          DOCKER_HOST: "unix:///run/podman/podman.sock"
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
