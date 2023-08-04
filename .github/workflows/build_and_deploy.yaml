@@ -232,11 +232,11 @@ jobs:
           sudo apt-get -y upgrade
           sudo apt-get -y install podman
 
-          # Start the podman sock
-          nohup podman system service -t 0 > ./podman.log &
+          # Start the Podman sock
+          sudo nohup podman system service -t 0 > ./podman.log &
           sleep 10
-          chmod +x /run/podman
-          chmod 777 /run/podman/podman.sock
+          sudo chmod +x /run/podman
+          sudo chmod 777 /run/podman/podman.sock
 
       - name: Run tests
         run: |
