@@ -1,17 +1,13 @@
-variable "consul_version" {
-  default = "1.10.6"
-}
-
 resource "network" "onprem" {
   subnet = "10.6.0.0/16"
 }
 
-resource "container" "consul" {
+resource "container" "alpine" {
   image {
-    name = "consul:${variable.consul_version}"
+    name = "alpine"
   }
 
-  command = ["consul", "agent"]
+  command = ["tail", "-f", "/dev/null"]
 
   network {
     id         = resource.network.onprem.id
@@ -21,7 +17,7 @@ resource "container" "consul" {
 }
 
 resource "remote_exec" "in_container" {
-  target = resource.container.consul.id
+  target = resource.container.alpine.id
 
   script = <<-EOF
   #/bin/sh -e
@@ -32,7 +28,7 @@ resource "remote_exec" "in_container" {
 
 resource "remote_exec" "standalone" {
   image {
-    name = "consul:${variable.consul_version}"
+    name = "alpine"
   }
 
   script = <<-EOF

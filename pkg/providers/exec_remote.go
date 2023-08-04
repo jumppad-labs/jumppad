@@ -25,13 +25,7 @@ func NewRemoteExec(c *resources.RemoteExec, ex clients.ContainerTasks, l clients
 
 // Create a new execution instance
 func (c *RemoteExec) Create() error {
-	c.log.Info("Remote executing command", "ref", c.config.Name, "script", c.config.Script, "image", c.config.Image)
-
-	/*
-		if c.config.Script != "" {
-			return fmt.Errorf("Remote execution of Scripts are not currently implemented: %s", c.config.Script)
-		}
-	*/
+	c.log.Info("Remote executing script", "ref", c.config.ID)
 
 	// execution target id
 	targetID := ""

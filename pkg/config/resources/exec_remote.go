@@ -1,6 +1,10 @@
 package resources
 
-import "github.com/jumppad-labs/hclconfig/types"
+import (
+	"strings"
+
+	"github.com/jumppad-labs/hclconfig/types"
+)
 
 // TypeExecRemote is the resource string for a ExecRemote resource
 const TypeRemoteExec string = "remote_exec"
@@ -32,6 +36,9 @@ func (e *RemoteExec) Process() error {
 	for i, v := range e.Volumes {
 		e.Volumes[i].Source = ensureAbsolute(v.Source, e.File)
 	}
+
+	// make sure line endings are linux
+	e.Script = strings.Replace(e.Script, "\r\n", "\n", -1)
 
 	return nil
 }

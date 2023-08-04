@@ -1,6 +1,8 @@
 package resources
 
 import (
+	"strings"
+
 	"github.com/jumppad-labs/hclconfig/types"
 )
 
@@ -85,6 +87,13 @@ func (c *Container) Process() error {
 		// make sure mount paths are absolute when type is bind, unless this is the docker sock
 		if v.Type == "" || v.Type == "bind" {
 			c.Volumes[i].Source = ensureAbsolute(v.Source, c.File)
+		}
+	}
+
+	// make sure line endings are linux
+	if c.HealthCheck != nil {
+		for i := range c.HealthCheck.Exec {
+			c.HealthCheck.Exec[i].Script = strings.Replace(c.HealthCheck.Exec[i].Script, "\r\n", "\n", -1)
 		}
 	}
 

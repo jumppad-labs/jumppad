@@ -2,6 +2,7 @@ package resources
 
 import (
 	"os"
+	"strings"
 
 	"github.com/jumppad-labs/hclconfig/types"
 )
@@ -29,6 +30,9 @@ func (t *Template) Process() error {
 	if _, err := os.Stat(absSrc); err == nil {
 		// file exists
 		t.Source = absSrc
+	} else {
+		// source is a string, replace line endings
+		t.Source = strings.Replace(t.Source, "\r\n", "\n", -1)
 	}
 
 	return nil
