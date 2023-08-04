@@ -182,8 +182,8 @@ jobs:
           './examples/container',
          # './examples/build',
          # './examples/docs',
-         # './examples/single_k3s_cluster',
-         # './examples/nomad',
+          './examples/single_k3s_cluster',
+          './examples/nomad',
          # './examples/local_exec',
         ]
 
@@ -237,20 +237,12 @@ jobs:
           sleep 10
           sudo chmod +x /run/podman
           sudo chmod 777 /run/podman/podman.sock
-
-      - name: Check podman
-        run: |
-          sudo podman context ls
-          docker context ls
-        env:
-          DOCKER_HOST: "unix:///run/podman/podman.sock"
       
       - name: Run tests
         run: |
           jumppad check
           jumppad purge
-          jumppad up ${{matrix.folder}}
-          sudo podman ps
+          jumppad test ${{matrix.folder}}
         env:
           DOCKER_HOST: "unix:///run/podman/podman.sock"
 
