@@ -241,16 +241,16 @@ jobs:
       - name: Check podman
         run: |
           export DOCKER_HOST=unix:///run/podman/podman.sock
-          sudo podman info
-          docker info
+          sudo podman context ls
+          docker context ls
       
       - name: Run tests
         run: |
           export DOCKER_HOST=unix:///run/podman/podman.socs
           env
-          DOCKER_HOST=unix:///run/podman/podman.socs jumppad check
-          DOCKER_HOST=unix:///run/podman/podman.socs jumppad purge
-          DOCKER_HOST=unix:///run/podman/podman.socs jumppad up ${{matrix.folder}}
+          jumppad check
+          jumppad purge
+          jumppad up ${{matrix.folder}}
           sudo podman ps
 
       - name: Send status to Discord
