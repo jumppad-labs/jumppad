@@ -223,21 +223,23 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 	}
 
 	// loop through the remaining resources and call changed on the provider
-	// to see if any internal properties have changed
+	// to see if any internal properties that have changed
 	for _, r := range unchanged {
-		p := e.getProvider(r, e.clients)
-		if p == nil {
-			return nil, nil, nil, nil, fmt.Errorf("unable to create provider for resource Name: %s, Type: %s. Please check the provider is registered in providers.go", r.Metadata().Name, r.Metadata().Type)
-		}
+		// call changed on when not disabled
+		if !r.Metadata().Disabled {
+			p := e.getProvider(r, e.clients)
+			if p == nil {
+				return nil, nil, nil, nil, fmt.Errorf("unable to create provider for resource Name: %s, Type: %s. Please check the provider is registered in providers.go", r.Metadata().Name, r.Metadata().Type)
+			}
 
-		// call destroy
-		c, err := p.Changed()
-		if err != nil {
-			return nil, nil, nil, nil, fmt.Errorf("unable to determine if resource has changed Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
-		}
+			c, err := p.Changed()
+			if err != nil {
+				return nil, nil, nil, nil, fmt.Errorf("unable to determine if resource has changed Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
+			}
 
-		if c {
-			changed = append(changed, r)
+			if c {
+				changed = append(changed, r)
+			}
 		}
 	}
 

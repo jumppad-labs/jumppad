@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/hashicorp/hcl2/hcl"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/mailgun/raymond/v2"
@@ -24,7 +23,7 @@ func NewTemplate(c *resources.Template, l clients.Logger) *Template {
 	return &Template{c, l}
 }
 
-// parseVarse converts a map[string]cty.Value into map[string]interface
+// parseVars converts a map[string]cty.Value into map[string]interface
 // where the interface are generic go types like string, number, bool, slice, map
 //
 // TODO move this into the parser class and add more robust testing
@@ -80,7 +79,7 @@ func (c *Template) Create() error {
 		return fmt.Errorf("template source empty")
 	}
 
-	if _, ok := c.config.Variables.(*hcl.Attribute); !ok {
+	if c.config.Variables == nil {
 		// no variables just write the file
 		f, err := os.Create(c.config.Destination)
 		if err != nil {
@@ -94,9 +93,7 @@ func (c *Template) Create() error {
 		return err
 	}
 
-	val, _ := c.config.Variables.(*hcl.Attribute).Expr.Value(&hcl.EvalContext{})
-	m := val.AsValueMap()
-	vars := parseVars(m)
+	vars := parseVars(c.config.Variables)
 
 	tmpl, err := raymond.Parse(c.config.Source)
 	if err != nil {
