@@ -246,10 +246,11 @@ jobs:
       
       - name: Run tests
         run: |
-          export DOCKER_HOST=unix:///run/podman/podman.sock
-          DOCKER_HOST=unix:///run/podman/podman.sock jumppad check
-          DOCKER_HOST=unix:///run/podman/podman.sock jumppad purge
-          DOCKER_HOST=unix:///run/podman/podman.sock jumppad up ${{matrix.folder}}
+          export DOCKER_HOST=unix:///run/podman/podman.socs
+          env
+          DOCKER_HOST=unix:///run/podman/podman.socs jumppad check
+          DOCKER_HOST=unix:///run/podman/podman.socs jumppad purge
+          DOCKER_HOST=unix:///run/podman/podman.socs jumppad up ${{matrix.folder}}
           sudo podman ps
 
       - name: Send status to Discord
