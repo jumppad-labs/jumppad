@@ -247,7 +247,6 @@ jobs:
       
       - name: Run tests
         run: |
-          env
           jumppad check
           jumppad purge
           jumppad up ${{matrix.folder}}
