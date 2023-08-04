@@ -240,11 +240,10 @@ jobs:
 
       - name: Run tests
         run: |
+          export DOCKER_HOST=unix:///run/podman/podman.sock
           jumppad check
           jumppad purge
           jumppad test ${{matrix.folder}}
-        env:
-          DOCKER_HOST: unix:///run/podman/podman.sock
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
