@@ -90,6 +90,16 @@ func (a *API) validation(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if script == "" {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(ValidationResponse{
+			Task:      req.Task,
+			Condition: req.Condition,
+			ExitCode:  0,
+		})
+		return
+	}
+
 	dc, err := clients.NewDocker()
 	if err != nil {
 		a.log.Error("Could not create docker client", "error", err.Error())

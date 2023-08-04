@@ -23,7 +23,7 @@ type Validation struct {
 type ValidationCondition struct {
 	ID               string `json:"id"`
 	Check            string `json:"check"`
-	Solve            string `json:"solve,omitempty"`
+	Solve            string `json:"solve"`
 	FailureMessage   string `json:"failure_message"`
 	SuccessMessage   string `json:"success_message,omitempty"`
 	Target           string `json:"target,omitempty"`
