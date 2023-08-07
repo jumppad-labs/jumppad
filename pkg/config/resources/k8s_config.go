@@ -1,6 +1,9 @@
 package resources
 
-import "github.com/jumppad-labs/hclconfig/types"
+import (
+	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
+)
 
 // TypeK8sConfig defines the string type for the Kubernetes config resource
 const TypeK8sConfig string = "k8s_config"
@@ -23,7 +26,7 @@ type K8sConfig struct {
 func (k *K8sConfig) Process() error {
 	// make all the paths absolute
 	for i, p := range k.Paths {
-		k.Paths[i] = ensureAbsolute(p, k.File)
+		k.Paths[i] = utils.EnsureAbsolute(p, k.File)
 	}
 
 	return nil

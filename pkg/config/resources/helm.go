@@ -54,12 +54,12 @@ type HelmRepository struct {
 
 func (h *Helm) Process() error {
 	// only set absolute if is local folder
-	if h.Chart != "" && utils.IsLocalFolder(ensureAbsolute(h.Chart, h.File)) {
-		h.Chart = ensureAbsolute(h.Chart, h.File)
+	if h.Chart != "" && utils.IsLocalFolder(utils.EnsureAbsolute(h.Chart, h.File)) {
+		h.Chart = utils.EnsureAbsolute(h.Chart, h.File)
 	}
 
 	if h.Values != "" {
-		h.Values = ensureAbsolute(h.Values, h.File)
+		h.Values = utils.EnsureAbsolute(h.Values, h.File)
 	}
 
 	return nil

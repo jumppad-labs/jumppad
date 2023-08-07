@@ -1,6 +1,9 @@
 package resources
 
-import "github.com/jumppad-labs/hclconfig/types"
+import (
+	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+)
 
 // TypeDocs is the resource string for a Docs resource
 const TypeDocs string = "docs"
@@ -10,9 +13,9 @@ const TypeDocs string = "docs"
 type Docs struct {
 	types.ResourceMetadata `hcl:",remain"`
 
-	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
+	Networks []container.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
-	Image *Image `hcl:"image,block" json:"image,omitempty"` // image to use for the container
+	Image *container.Image `hcl:"image,block" json:"image,omitempty"` // image to use for the container
 
 	Content []string `hcl:"content" json:"content"`
 

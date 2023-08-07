@@ -9,8 +9,8 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
 	dtypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	cmocks "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/assert"
@@ -27,14 +27,14 @@ func setupImagePullMocks() (*mocks.Docker, *cmocks.ImageLog) {
 		nil,
 	)
 
-	mic := &mocks.ImageLog{}
+	mic := &cmocks.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
 	mic.On("Read", mock.Anything, mock.Anything).Return([]string{}, nil)
 
 	return md, mic
 }
 
-func createImagePullConfig() (dtypes.Image, *mocks.Docker, *mocks.ImageLog) {
+func createImagePullConfig() (dtypes.Image, *mocks.Docker, *cmocks.ImageLog) {
 	ic := dtypes.Image{
 		Name: "consul:1.6.1",
 	}
@@ -43,7 +43,7 @@ func createImagePullConfig() (dtypes.Image, *mocks.Docker, *mocks.ImageLog) {
 	return ic, mk, mic
 }
 
-func setupImagePull(t *testing.T, cc dtypes.Image, md *mocks.Docker, mic *mocks.ImageLog, force bool) {
+func setupImagePull(t *testing.T, cc dtypes.Image, md *mocks.Docker, mic *cmocks.ImageLog, force bool) {
 	p := NewDockerTasks(md, mic, &clients.TarGz{}, clients.NewTestLogger(t))
 
 	// create the container

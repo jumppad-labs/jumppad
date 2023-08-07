@@ -12,6 +12,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/go-connections/nat"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
@@ -96,7 +97,7 @@ func setupContainerMocks() (*mocks.Docker, *cmocks.ImageLog) {
 		nil,
 	)
 	md.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(container.ContainerCreateCreatedBody{ID: "test"}, nil)
+		Return(container.CreateResponse{ID: "test"}, nil)
 	md.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("ContainerStop", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -104,7 +105,7 @@ func setupContainerMocks() (*mocks.Docker, *cmocks.ImageLog) {
 	md.On("NetworkDisconnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	md.On("VolumeList", mock.Anything, mock.Anything).Return(nil, nil)
-	md.On("VolumeCreate", mock.Anything, mock.Anything).Return(types.Volume{Name: "test_volume"}, nil)
+	md.On("VolumeCreate", mock.Anything, mock.Anything).Return(volume.Volume{Name: "test_volume"}, nil)
 	md.On("VolumeRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)

@@ -14,7 +14,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
 	cmocks "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/assert"
@@ -41,7 +41,7 @@ func testSetupCopyLocal(t *testing.T) (*DockerTasks, *mocks.Docker) {
 	)
 
 	mk.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(container.ContainerCreateCreatedBody{ID: "myid"}, nil)
+		Return(container.CreateResponse{ID: "myid"}, nil)
 
 	mk.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
@@ -81,7 +81,7 @@ func testSetupCopyLocal(t *testing.T) (*DockerTasks, *mocks.Docker) {
 		Return(types.ContainerExecInspect{Running: false, ExitCode: 0}, nil)
 
 	mk.On("VolumeList", mock.Anything, mock.Anything).
-		Return(volume.VolumeListOKBody{Volumes: []*types.Volume{&types.Volume{}}})
+		Return(volume.ListResponse{Volumes: []*volume.Volume{&volume.Volume{}}})
 
 	mic := &cmocks.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
@@ -208,7 +208,7 @@ func TestCopyToVolumeTempContainerFailsReturnError(t *testing.T) {
 	dt, mk := testSetupCopyLocal(t)
 	testutils.RemoveOn(&mk.Mock, "ContainerCreate")
 	mk.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(container.ContainerCreateCreatedBody{}, fmt.Errorf("boom"))
+		Return(container.CreateResponse{}, fmt.Errorf("boom"))
 
 	dt.SetForcePull(true) // set force pull to avoid execute command block
 
@@ -250,7 +250,7 @@ func TestCopyToVolumeCopiesArchiveFailReturnsError(t *testing.T) {
 	dt, mk := testSetupCopyLocal(t)
 	testutils.RemoveOn(&mk.Mock, "CopyToContainer")
 	mk.On("CopyToContainer", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
-	
+
 	dt.SetForcePull(true) // set force pull to avoid execute command block
 
 	_, err := dt.CopyLocalDockerImagesToVolume(testCopyLocalImages, testCopyLocalVolume, false)

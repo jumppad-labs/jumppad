@@ -9,6 +9,7 @@ import (
 
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
+	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -22,11 +23,11 @@ type Provider struct {
 }
 
 // NewContainer creates a new container with the given config and Docker client
-func NewContainerProvider(co *Container, cl clients.ContainerTasks, hc clients.HTTP, l clients.Logger) *Provider {
+func NewContainerProvider(co *Container, cl container.ContainerTasks, hc clients.HTTP, l clients.Logger) *Provider {
 	return &Provider{config: co, client: cl, httpClient: hc, log: l}
 }
 
-func NewSidecarProvider(cs *Sidecar, cl clients.ContainerTasks, hc clients.HTTP, l clients.Logger) *Provider {
+func NewSidecarProvider(cs *Sidecar, cl container.ContainerTasks, hc clients.HTTP, l clients.Logger) *Provider {
 	co := &Container{}
 	co.ResourceMetadata = cs.ResourceMetadata
 	co.FQRN = cs.FQRN
@@ -49,7 +50,7 @@ func NewSidecarProvider(cs *Sidecar, cl clients.ContainerTasks, hc clients.HTTP,
 func (c *Provider) Create() error {
 	c.log.Info("Creating Container", "ref", c.config.ID)
 
-	err := c.internalCreate()
+	err := c.internalCreate(c.sidecar != nil)
 	if err != nil {
 		return err
 	}
@@ -95,7 +96,7 @@ func (c *Provider) Destroy() error {
 
 func (c *Provider) Changed() (bool, error) {
 	// has the image id changed
-	id, err := c.client.FindImageInLocalRegistry(*c.config.Image)
+	id, err := c.client.FindImageInLocalRegistry(types.Image{Name: c.config.Image.Name})
 	if err != nil {
 		c.log.Error("Unable to lookup image in local registry", "ref", c.config.ID, "error", err)
 		return false, err
@@ -111,7 +112,7 @@ func (c *Provider) Changed() (bool, error) {
 	return false, nil
 }
 
-func (c *Provider) internalCreate() error {
+func (c *Provider) internalCreate(sidecar bool) error {
 	// set the fqdn
 	fqdn := utils.FQDN(c.config.Name, c.config.Module, c.config.Type)
 	c.config.FQRN = fqdn
@@ -121,7 +122,13 @@ func (c *Provider) internalCreate() error {
 	}
 
 	// pull any images needed for this container
-	err := c.client.PullImage(*c.config.Image, false)
+	img := types.Image{
+		Name:     c.config.Image.Name,
+		Username: c.config.Image.Username,
+		Password: c.config.Image.Password,
+	}
+
+	err := c.client.PullImage(img, false)
 	if err != nil {
 		c.log.Error("Error pulling container image", "ref", c.config.ID, "image", c.config.Image.Name)
 
@@ -129,7 +136,7 @@ func (c *Provider) internalCreate() error {
 	}
 
 	// update the image ID
-	id, err := c.client.FindImageInLocalRegistry(*c.config.Image)
+	id, err := c.client.FindImageInLocalRegistry(img)
 	if err != nil {
 		c.log.Error("Unable to lookup image in local registry", "ref", c.config.ID, "error", err)
 		return err
@@ -138,7 +145,72 @@ func (c *Provider) internalCreate() error {
 	// id should never be blank here as we have pulled the image
 	c.config.Image.ID = id
 
-	id, err = c.client.CreateContainer(c.config)
+	new := types.Container{
+		Name:            fqdn,
+		Image:           &img,
+		Entrypoint:      c.config.Entrypoint,
+		Command:         c.config.Command,
+		Environment:     c.config.Environment,
+		DNS:             c.config.DNS,
+		Privileged:      c.config.Privileged,
+		MaxRestartCount: c.config.MaxRestartCount,
+	}
+
+	for _, v := range c.config.Networks {
+		new.Networks = append(new.Networks, types.NetworkAttachment{
+			ID:          v.ID,
+			Name:        v.Name,
+			IPAddress:   v.IPAddress,
+			Aliases:     v.Aliases,
+			IsContainer: sidecar,
+		})
+	}
+
+	for _, v := range c.config.Volumes {
+		new.Volumes = append(new.Volumes, types.Volume{
+			Source:                      v.Source,
+			Destination:                 v.Destination,
+			Type:                        v.Type,
+			ReadOnly:                    v.ReadOnly,
+			BindPropagation:             v.BindPropagation,
+			BindPropagationNonRecursive: v.BindPropagationNonRecursive,
+		})
+	}
+
+	for _, p := range c.config.Ports {
+		new.Ports = append(new.Ports, types.Port{
+			Local:         p.Local,
+			Remote:        p.Remote,
+			Host:          p.Host,
+			Protocol:      p.Protocol,
+			OpenInBrowser: p.OpenInBrowser,
+		})
+	}
+
+	for _, pr := range c.config.PortRanges {
+		new.PortRanges = append(new.PortRanges, types.PortRange{
+			Range:      pr.Range,
+			EnableHost: pr.EnableHost,
+			Protocol:   pr.Protocol,
+		})
+	}
+
+	if c.config.Resources != nil {
+		new.Resources = &types.Resources{
+			CPU:    c.config.Resources.CPU,
+			CPUPin: c.config.Resources.CPUPin,
+			Memory: c.config.Resources.Memory,
+		}
+	}
+
+	if c.config.RunAs != nil {
+		new.RunAs = &types.User{
+			User:  c.config.RunAs.User,
+			Group: c.config.RunAs.Group,
+		}
+	}
+
+	id, err = c.client.CreateContainer(&new)
 	if err != nil {
 		c.log.Error("Unable to create container", "ref", c.config.ID, "error", err)
 		return err
@@ -150,7 +222,7 @@ func (c *Provider) internalCreate() error {
 		for i, net := range c.config.Networks {
 			if net.ID == n.ID {
 				// set the assigned address and name
-				c.config.Networks[i].AssignedAddress = n.AssignedAddress
+				c.config.Networks[i].AssignedAddress = n.IPAddress
 				c.config.Networks[i].Name = n.Name
 			}
 		}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 // TypeCluster is the resource string for a Cluster resource
@@ -62,21 +63,21 @@ func (n *NomadCluster) Process() error {
 	}
 
 	if n.ServerConfig != "" {
-		n.ServerConfig = ensureAbsolute(n.ServerConfig, n.File)
+		n.ServerConfig = utils.EnsureAbsolute(n.ServerConfig, n.File)
 	}
 
 	if n.ClientConfig != "" {
-		n.ClientConfig = ensureAbsolute(n.ClientConfig, n.File)
+		n.ClientConfig = utils.EnsureAbsolute(n.ClientConfig, n.File)
 	}
 
 	if n.ConsulConfig != "" {
-		n.ConsulConfig = ensureAbsolute(n.ConsulConfig, n.File)
+		n.ConsulConfig = utils.EnsureAbsolute(n.ConsulConfig, n.File)
 	}
 
 	// Process volumes
 	// make sure mount paths are absolute
 	for i, v := range n.Volumes {
-		n.Volumes[i].Source = ensureAbsolute(v.Source, n.File)
+		n.Volumes[i].Source = utils.EnsureAbsolute(v.Source, n.File)
 	}
 
 	// do we have an existing resource in the state?

@@ -6,12 +6,12 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"os/exec"
 	"runtime"
 	"strings"
 	"time"
 
+	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 )
@@ -31,7 +31,9 @@ type System interface {
 }
 
 // SystemImpl is a concrete implementation of the System interface
-type SystemImpl struct{}
+type SystemImpl struct {
+	logger clients.Logger
+}
 
 // OpenBrowser opens a URI in a new browser window
 func (b *SystemImpl) OpenBrowser(uri string) error {
@@ -81,23 +83,34 @@ func (b *SystemImpl) Preflight() (string, error) {
 
 	// check docker
 
-	if checkDocker() != nil {
-		output += fmt.Sprintf(" [ %s ] Docker\n", fmt.Sprintf(Red, " ERROR "))
-		errors += "* Unable to connect to Docker, ensure Docker is installed and running.\n"
+	if b.checkDocker() != nil {
 		dockerPass = false
 	} else {
 		output += fmt.Sprintf(" [ %s ] Docker\n", fmt.Sprintf(Green, "  OK   "))
 	}
 
-	if checkPodman() != nil {
-		output += fmt.Sprintf(" [ %s ] Podman\n", fmt.Sprintf(Red, " ERROR "))
-		errors += "* Unable to connect to Podman, ensure Podman is installed and running.\n"
+	if b.checkPodman() != nil {
 		podmanPass = false
 	} else {
 		output += fmt.Sprintf(" [ %s ] Podman\n", fmt.Sprintf(Green, "  OK   "))
 	}
 
-	if checkGit() != nil {
+	if !dockerPass && podmanPass {
+		output += fmt.Sprintf(" [ %s ] Docker\n", fmt.Sprintf(Yellow, "WARNING"))
+	}
+
+	if dockerPass && !podmanPass {
+		output += fmt.Sprintf(" [ %s ] Podman\n", fmt.Sprintf(Yellow, "WARNING"))
+	}
+
+	if !dockerPass && !podmanPass {
+		output += fmt.Sprintf(" [ %s ] Docker\n", fmt.Sprintf(Red, " ERROR "))
+		errors += "* Unable to connect to Docker, ensure Docker is installed and running.\n"
+		output += fmt.Sprintf(" [ %s ] Podman\n", fmt.Sprintf(Red, " ERROR "))
+		errors += "* Unable to connect to Podman, ensure Podman is installed and running.\n"
+	}
+
+	if b.checkGit() != nil {
 		output += fmt.Sprintf(" [ %s ] Git\n", fmt.Sprintf(Red, " ERROR "))
 		errors += "* Unable to find 'git' command, ensure Git is installed. Shipyard uses the git CLI to download blueprints.\n"
 		gitPass = false
@@ -106,7 +119,7 @@ func (b *SystemImpl) Preflight() (string, error) {
 	}
 
 	if runtime.GOOS == "linux" {
-		if checkXdgOpen() != nil {
+		if b.checkXdgOpen() != nil {
 			output += fmt.Sprintf(" [ %s ] xdg-open\n", fmt.Sprintf(Yellow, "WARNING"))
 			errors += "* Unable to find 'xdg-open' command, ensure 'xdg-open' is installed. Shipyard uses the 'xdg-open' to open browser windows.\n"
 		} else {
@@ -177,13 +190,13 @@ see the documentation at:
 https://jumppad.dev/docs/introduction/installation for other options.
 `
 
-func checkDocker() error {
+func (b *SystemImpl) checkDocker() error {
 	d, err := container.NewDocker()
 	if err != nil {
 		return err
 	}
 
-	dt := container.NewDockerTasks(d, nil, nil, createLogger())
+	dt := container.NewDockerTasks(d, nil, nil, b.logger)
 
 	if dt == nil {
 		return fmt.Errorf("unable to determine docker engine, please check that Docker or Podman is installed and the DOCKER_HOST is set")
@@ -198,13 +211,13 @@ func checkDocker() error {
 	return nil
 }
 
-func checkPodman() error {
+func (b *SystemImpl) checkPodman() error {
 	d, err := container.NewDocker()
 	if err != nil {
 		return err
 	}
 
-	dt := container.NewDockerTasks(d, nil, nil, createLogger())
+	dt := container.NewDockerTasks(d, nil, nil, b.logger)
 
 	if dt == nil {
 		return fmt.Errorf("unable to determine docker engine, please check that Docker or Podman is installed and the DOCKER_HOST is set")
@@ -219,22 +232,12 @@ func checkPodman() error {
 	return nil
 }
 
-func createLogger() Logger {
-
-	// set the log level
-	if lev := os.Getenv("LOG_LEVEL"); lev != "" {
-		NewLogger(os.Stdout, lev)
-	}
-
-	return NewLogger(os.Stdout, LogLevelInfo)
-}
-
-func checkGit() error {
+func (b *SystemImpl) checkGit() error {
 	_, err := exec.LookPath("git")
 	return err
 }
 
-func checkXdgOpen() error {
+func (b *SystemImpl) checkXdgOpen() error {
 	_, err := exec.LookPath("xdg-open")
 	return err
 }

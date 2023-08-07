@@ -1,6 +1,9 @@
 package resources
 
-import "github.com/jumppad-labs/hclconfig/types"
+import (
+	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
+)
 
 // TypeCopy copies files from one location to another
 const TypeCopy string = "copy"
@@ -22,8 +25,8 @@ type Copy struct {
 }
 
 func (t *Copy) Process() error {
-	t.Source = ensureAbsolute(t.Source, t.File)
-	t.Destination = ensureAbsolute(t.Destination, t.File)
+	t.Source = utils.EnsureAbsolute(t.Source, t.File)
+	t.Destination = utils.EnsureAbsolute(t.Destination, t.File)
 
 	cfg, err := LoadState()
 	if err == nil {

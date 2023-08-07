@@ -1,6 +1,11 @@
 package container
 
-import "github.com/jumppad-labs/hclconfig/types"
+import (
+	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/healthcheck"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
+)
 
 // TypeSidecar is the resource string for a Sidecar resource
 const TypeSidecar string = "sidecar"
@@ -24,7 +29,7 @@ type Sidecar struct {
 	Resources *Resources `hcl:"resources,block" json:"resources,omitempty"` // resource constraints for the container
 
 	// health checks for the container
-	HealthCheck *HealthCheckContainer `hcl:"health_check,block" json:"health_check,omitempty"`
+	HealthCheck *healthcheck.HealthCheckContainer `hcl:"health_check,block" json:"health_check,omitempty"`
 
 	MaxRestartCount int `hcl:"max_restart_count,optional" json:"max_restart_count,omitempty"`
 
@@ -40,14 +45,14 @@ func (c *Sidecar) Process() error {
 	for i, v := range c.Volumes {
 		// make sure mount paths are absolute when type is bind
 		if v.Type == "" || v.Type == "bind" {
-			c.Volumes[i].Source = ensureAbsolute(v.Source, c.File)
-			c.Volumes[i].Destination = ensureAbsolute(v.Destination, c.File)
+			c.Volumes[i].Source = utils.EnsureAbsolute(v.Source, c.File)
+			c.Volumes[i].Destination = utils.EnsureAbsolute(v.Destination, c.File)
 		}
 	}
 
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
-	cfg, err := LoadState()
+	cfg, err := resources.LoadState()
 	if err == nil {
 		// try and find the resource in the state
 		r, _ := cfg.FindResource(c.ID)

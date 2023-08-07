@@ -14,6 +14,7 @@ import (
 
 	"github.com/jumppad-labs/connector/crypto"
 	"github.com/jumppad-labs/connector/protos/shipyard"
+	"github.com/jumppad-labs/jumppad/pkg/clients/connector/types"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/shipyard-run/gohup"
 	"google.golang.org/grpc"
@@ -26,7 +27,7 @@ import (
 //go:generate mockery --name Connector --filename connector.go
 type Connector interface {
 	// Start the Connector, returns an error on failure
-	Start(*CertBundle) error
+	Start(*types.CertBundle) error
 	// Stop the Connector, returns an error on failure
 	Stop() error
 	// IsRunning returns true when the Connector is running
@@ -36,18 +37,18 @@ type Connector interface {
 	// securing connector communications for the local instance
 	// this function is a convenience function which wraps other
 	// methods
-	GenerateLocalCertBundle(out string) (*CertBundle, error)
+	GenerateLocalCertBundle(out string) (*types.CertBundle, error)
 
 	// Fetches the local certificate bundle from the given directory
 	// if any of the required files do not exist an error and a nil
 	// CertBundle will be returned
-	GetLocalCertBundle(dir string) (*CertBundle, error)
+	GetLocalCertBundle(dir string) (*types.CertBundle, error)
 
 	// Generates a Leaf certificate for securing a connector
 	GenerateLeafCert(
 		privateKey, rootCA string,
 		hosts, ips []string,
-		dir string) (*CertBundle, error)
+		dir string) (*types.CertBundle, error)
 
 	// ExposeService allows you to expose a local or remote
 	// service with another connector
@@ -86,13 +87,6 @@ type ConnectorOptions struct {
 	PidFile      string
 }
 
-type CertBundle struct {
-	RootCertPath string
-	RootKeyPath  string
-	LeafCertPath string
-	LeafKeyPath  string
-}
-
 func DefaultConnectorOptions() ConnectorOptions {
 	co := ConnectorOptions{}
 	co.LogDirectory = utils.LogsDir()
@@ -112,7 +106,7 @@ func NewConnector(opts ConnectorOptions) Connector {
 }
 
 // Start the Connector, returns an error on failure
-func (c *ConnectorImpl) Start(cb *CertBundle) error {
+func (c *ConnectorImpl) Start(cb *types.CertBundle) error {
 	// get the log level from the environment variable
 	ll := os.Getenv("LOG_LEVEL")
 	if ll == "" {
@@ -166,8 +160,8 @@ func (c *ConnectorImpl) IsRunning() bool {
 }
 
 // creates a CA and local leaf cert
-func (c *ConnectorImpl) GenerateLocalCertBundle(out string) (*CertBundle, error) {
-	cb := &CertBundle{
+func (c *ConnectorImpl) GenerateLocalCertBundle(out string) (*types.CertBundle, error) {
+	cb := &types.CertBundle{
 		RootCertPath: filepath.Join(out, "root.cert"),
 		RootKeyPath:  filepath.Join(out, "root.key"),
 		LeafCertPath: filepath.Join(out, "leaf.cert"),
@@ -210,8 +204,8 @@ func (c *ConnectorImpl) GenerateLocalCertBundle(out string) (*CertBundle, error)
 	return c.GenerateLeafCert(cb.RootKeyPath, cb.RootCertPath, host, ips, out)
 }
 
-func (c *ConnectorImpl) GetLocalCertBundle(dir string) (*CertBundle, error) {
-	cb := &CertBundle{
+func (c *ConnectorImpl) GetLocalCertBundle(dir string) (*types.CertBundle, error) {
+	cb := &types.CertBundle{
 		RootCertPath: filepath.Join(dir, "root.cert"),
 		RootKeyPath:  filepath.Join(dir, "root.key"),
 		LeafCertPath: filepath.Join(dir, "leaf.cert"),
@@ -259,9 +253,9 @@ func (c *ConnectorImpl) GetLocalCertBundle(dir string) (*CertBundle, error) {
 
 // GenerateLeafCert generates a x509 leaf certificate with the given details
 func (c *ConnectorImpl) GenerateLeafCert(
-	rootKey, rootCA string, host, ips []string, dir string) (*CertBundle, error) {
+	rootKey, rootCA string, host, ips []string, dir string) (*types.CertBundle, error) {
 
-	cb := &CertBundle{
+	cb := &types.CertBundle{
 		RootCertPath: rootCA,
 		RootKeyPath:  rootKey,
 		LeafCertPath: path.Join(dir, "leaf.cert"),
@@ -403,7 +397,7 @@ func (c *ConnectorImpl) ListServices() ([]*shipyard.Service, error) {
 	return lr.Services, nil
 }
 
-func getClient(cert *CertBundle, uri string) (shipyard.RemoteConnectionClient, error) {
+func getClient(cert *types.CertBundle, uri string) (shipyard.RemoteConnectionClient, error) {
 	// if we are using TLS create a TLS client
 	certificate, err := tls.LoadX509KeyPair(cert.LeafCertPath, cert.LeafKeyPath)
 	if err != nil {

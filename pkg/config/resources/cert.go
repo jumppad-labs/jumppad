@@ -1,6 +1,9 @@
 package resources
 
-import "github.com/jumppad-labs/hclconfig/types"
+import (
+	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
+)
 
 // TypeCertificateCA is the resource string for a self-signed CA
 const TypeCertificateCA string = "certificate_ca"
@@ -26,7 +29,7 @@ type CertificateCA struct {
 }
 
 func (c *CertificateCA) Process() error {
-	c.Output = ensureAbsolute(c.Output, c.File)
+	c.Output = utils.EnsureAbsolute(c.Output, c.File)
 	c.PrivateKey = &File{}
 	c.PublicKeySSH = &File{}
 	c.PublicKeyPEM = &File{}
@@ -79,9 +82,9 @@ type CertificateLeaf struct {
 }
 
 func (c *CertificateLeaf) Process() error {
-	c.CACert = ensureAbsolute(c.CACert, c.File)
-	c.CAKey = ensureAbsolute(c.CAKey, c.File)
-	c.Output = ensureAbsolute(c.Output, c.File)
+	c.CACert = utils.EnsureAbsolute(c.CACert, c.File)
+	c.CAKey = utils.EnsureAbsolute(c.CAKey, c.File)
+	c.Output = utils.EnsureAbsolute(c.Output, c.File)
 	c.PrivateKey = &File{}
 	c.PublicKeySSH = &File{}
 	c.PublicKeyPEM = &File{}

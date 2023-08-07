@@ -1,6 +1,9 @@
 package resources
 
-import "github.com/jumppad-labs/hclconfig/types"
+import (
+	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
+)
 
 // TypeNomadJob defines the string type for the Kubernetes config resource
 const TypeNomadJob string = "nomad_job"
@@ -28,9 +31,9 @@ type NomadJob struct {
 func (n *NomadJob) Process() error {
 	// make all the paths absolute
 	for i, p := range n.Paths {
-		n.Paths[i] = ensureAbsolute(p, n.File)
+		n.Paths[i] = utils.EnsureAbsolute(p, n.File)
 	}
-	
+
 	cfg, err := LoadState()
 	if err == nil {
 		// try and find the resource in the state

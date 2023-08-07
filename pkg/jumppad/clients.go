@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/connector"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/system"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
@@ -21,7 +22,7 @@ type Clients struct {
 	Getter         clients.Getter
 	Browser        system.System
 	ImageLog       clients.ImageLog
-	Connector      clients.Connector
+	Connector      connector.Connector
 	TarGz          *clients.TarGz
 }
 
@@ -52,8 +53,8 @@ func GenerateClients(l clients.Logger) (*Clients, error) {
 
 	ct := container.NewDockerTasks(dc, il, tgz, l)
 
-	co := clients.DefaultConnectorOptions()
-	cc := clients.NewConnector(co)
+	co := connector.DefaultConnectorOptions()
+	cc := connector.NewConnector(co)
 
 	return &Clients{
 		ContainerTasks: ct,

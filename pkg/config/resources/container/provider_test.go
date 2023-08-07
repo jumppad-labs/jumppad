@@ -5,17 +5,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/container"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
+	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	cmocks "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/healthcheck"
 	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/mock"
 	assert "github.com/stretchr/testify/require"
 )
 
-func setupContainerTests(t *testing.T) (*Container, *mocks.ContainerTasks, *mocks.MockHTTP) {
+func setupContainerTests(t *testing.T) (*Container, *mocks.ContainerTasks, *cmocks.HTTP) {
 	cc := &Container{ResourceMetadata: types.ResourceMetadata{
 		Name: "tests",
 	}}
@@ -23,7 +24,7 @@ func setupContainerTests(t *testing.T) (*Container, *mocks.ContainerTasks, *mock
 	cc.Image = &Image{Name: "consul"}
 
 	md := &mocks.ContainerTasks{}
-	hc := &mocks.MockHTTP{}
+	hc := &cmocks.HTTP{}
 
 	// check pulls image before creating container
 	md.On("PullImage", *cc.Image, false).Once().Return(nil)
@@ -75,7 +76,7 @@ func TestContainerSidecarCreatesContainerSuccessfully(t *testing.T) {
 	err := c.Create()
 	assert.NoError(t, err)
 
-	ac := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*container.Container)
+	ac := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*ctypes.Container)
 
 	assert.Equal(t, cs.Name, ac.Name)
 	assert.Equal(t, "resources.container.consul", ac.Networks[0].ID)
@@ -83,7 +84,6 @@ func TestContainerSidecarCreatesContainerSuccessfully(t *testing.T) {
 	assert.Equal(t, cs.Command, ac.Command)
 	assert.Equal(t, cs.Entrypoint, ac.Entrypoint)
 	assert.Equal(t, cs.Environment, ac.Environment)
-	assert.Equal(t, cs.HealthCheck, ac.HealthCheck)
 	assert.Equal(t, &cs.Image, ac.Image)
 	assert.Equal(t, cs.Privileged, ac.Privileged)
 	assert.Equal(t, cs.Resources, ac.Resources)

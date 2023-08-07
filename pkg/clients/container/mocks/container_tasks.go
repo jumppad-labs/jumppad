@@ -6,7 +6,6 @@ import (
 	io "io"
 
 	types "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	resourcescontainer "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -416,15 +415,15 @@ func (_m *ContainerTasks) FindImagesInLocalRegistry(filter string) ([]string, er
 }
 
 // ListNetworks provides a mock function with given fields: id
-func (_m *ContainerTasks) ListNetworks(id string) []resourcescontainer.NetworkAttachment {
+func (_m *ContainerTasks) ListNetworks(id string) []types.NetworkAttachment {
 	ret := _m.Called(id)
 
-	var r0 []resourcescontainer.NetworkAttachment
-	if rf, ok := ret.Get(0).(func(string) []resourcescontainer.NetworkAttachment); ok {
+	var r0 []types.NetworkAttachment
+	if rf, ok := ret.Get(0).(func(string) []types.NetworkAttachment); ok {
 		r0 = rf(id)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]resourcescontainer.NetworkAttachment)
+			r0 = ret.Get(0).([]types.NetworkAttachment)
 		}
 	}
 

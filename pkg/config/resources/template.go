@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -21,12 +22,12 @@ type Template struct {
 }
 
 func (t *Template) Process() error {
-	t.Destination = ensureAbsolute(t.Destination, t.File)
+	t.Destination = utils.EnsureAbsolute(t.Destination, t.File)
 
 	// Source can be a file or a template as a string
 	// check to see if a valid file before making absolute
 	src := t.Source
-	absSrc := ensureAbsolute(src, t.File)
+	absSrc := utils.EnsureAbsolute(src, t.File)
 
 	if _, err := os.Stat(absSrc); err == nil {
 		// file exists

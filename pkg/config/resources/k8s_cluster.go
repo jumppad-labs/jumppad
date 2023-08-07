@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 // TypeK8sCluster is the resource string for a Cluster resource
@@ -61,7 +62,7 @@ func (k *K8sCluster) Process() error {
 	}
 
 	for i, v := range k.Volumes {
-		k.Volumes[i].Source = ensureAbsolute(v.Source, k.File)
+		k.Volumes[i].Source = utils.EnsureAbsolute(v.Source, k.File)
 	}
 
 	// do we have an existing resource in the state?

@@ -4,7 +4,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
 )
 
@@ -16,7 +15,7 @@ func TestUpsertChartRepository(t *testing.T) {
 		os.RemoveAll(dir)
 	})
 
-	hc := NewHelm(hclog.Default())
+	hc := NewHelm(NewTestLogger(t))
 	err := hc.UpsertChartRepository("hashicorp", "https://helm.releases.hashicorp.com")
 	require.NoError(t, err)
 }

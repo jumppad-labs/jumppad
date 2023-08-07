@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	clients "github.com/jumppad-labs/jumppad/pkg/clients"
+	types "github.com/jumppad-labs/jumppad/pkg/clients/command/types"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -13,21 +13,21 @@ type Command struct {
 }
 
 // Execute provides a mock function with given fields: config
-func (_m *Command) Execute(config clients.CommandConfig) (int, error) {
+func (_m *Command) Execute(config types.CommandConfig) (int, error) {
 	ret := _m.Called(config)
 
 	var r0 int
 	var r1 error
-	if rf, ok := ret.Get(0).(func(clients.CommandConfig) (int, error)); ok {
+	if rf, ok := ret.Get(0).(func(types.CommandConfig) (int, error)); ok {
 		return rf(config)
 	}
-	if rf, ok := ret.Get(0).(func(clients.CommandConfig) int); ok {
+	if rf, ok := ret.Get(0).(func(types.CommandConfig) int); ok {
 		r0 = rf(config)
 	} else {
 		r0 = ret.Get(0).(int)
 	}
 
-	if rf, ok := ret.Get(1).(func(clients.CommandConfig) error); ok {
+	if rf, ok := ret.Get(1).(func(types.CommandConfig) error); ok {
 		r1 = rf(config)
 	} else {
 		r1 = ret.Error(1)

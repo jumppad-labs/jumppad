@@ -6,8 +6,6 @@ import (
 	context "context"
 	io "io"
 
-	filters "github.com/docker/docker/api/types/filters"
-
 	mock "github.com/stretchr/testify/mock"
 
 	network "github.com/docker/docker/api/types/network"
@@ -671,23 +669,23 @@ func (_m *Docker) VolumeCreate(ctx context.Context, options volume.CreateOptions
 	return r0, r1
 }
 
-// VolumeList provides a mock function with given fields: ctx, filter
-func (_m *Docker) VolumeList(ctx context.Context, filter filters.Args) (volume.ListResponse, error) {
-	ret := _m.Called(ctx, filter)
+// VolumeList provides a mock function with given fields: ctx, opts
+func (_m *Docker) VolumeList(ctx context.Context, opts volume.ListOptions) (volume.ListResponse, error) {
+	ret := _m.Called(ctx, opts)
 
 	var r0 volume.ListResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, filters.Args) (volume.ListResponse, error)); ok {
-		return rf(ctx, filter)
+	if rf, ok := ret.Get(0).(func(context.Context, volume.ListOptions) (volume.ListResponse, error)); ok {
+		return rf(ctx, opts)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, filters.Args) volume.ListResponse); ok {
-		r0 = rf(ctx, filter)
+	if rf, ok := ret.Get(0).(func(context.Context, volume.ListOptions) volume.ListResponse); ok {
+		r0 = rf(ctx, opts)
 	} else {
 		r0 = ret.Get(0).(volume.ListResponse)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, filters.Args) error); ok {
-		r1 = rf(ctx, filter)
+	if rf, ok := ret.Get(1).(func(context.Context, volume.ListOptions) error); ok {
+		r1 = rf(ctx, opts)
 	} else {
 		r1 = ret.Error(1)
 	}

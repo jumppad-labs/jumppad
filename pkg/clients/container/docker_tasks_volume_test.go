@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
@@ -19,7 +18,7 @@ func TestCreateVolumeDoesNothingWhenVolumeExists(t *testing.T) {
 	testutils.RemoveOn(&md.Mock, "VolumeList")
 	f := filters.NewArgs()
 	f.Add("name", "test.volume.shipyard.run")
-	md.On("VolumeList", mock.Anything, f).Return(volume.VolumeListOKBody{Volumes: []*types.Volume{&types.Volume{}}}, nil)
+	md.On("VolumeList", mock.Anything, f).Return(volume.ListResponse{Volumes: []*volume.Volume{&volume.Volume{}}}, nil)
 
 	p := NewDockerTasks(md, mic, &clients.TarGz{}, clients.NewTestLogger(t))
 	_, err := p.CreateVolume("test")

@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/container"
+	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"golang.org/x/mod/sumdb/dirhash"
 	"golang.org/x/xerrors"
@@ -12,12 +14,12 @@ import (
 // Null is a noop provider
 type Provider struct {
 	config *Build
-	client clients.ContainerTasks
+	client container.ContainerTasks
 	log    clients.Logger
 }
 
 // NewBuild creates a null noop provider
-func NewProvider(cfg *Build, cli clients.ContainerTasks, l clients.Logger) *Provider {
+func NewProvider(cfg *Build, cli container.ContainerTasks, l clients.Logger) *Provider {
 	return &Provider{cfg, cli, l}
 }
 
@@ -42,7 +44,14 @@ func (b *Provider) Create() error {
 		force = true
 	}
 
-	name, err := b.client.BuildContainer(b.config, force)
+	build := &types.Build{
+		Name:       b.config.Name,
+		DockerFile: b.config.Container.DockerFile,
+		Context:    b.config.Container.Context,
+		Args:       b.config.Container.Args,
+	}
+
+	name, err := b.client.BuildContainer(build, force)
 	if err != nil {
 		return xerrors.Errorf("unable to build image: %w", err)
 	}

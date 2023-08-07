@@ -5,11 +5,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/command/types"
 	"github.com/stretchr/testify/assert"
 )
 
 func setupExecute(t *testing.T) Command {
-	return NewCommand(3*time.Second, NewTestLogger(t))
+	return NewCommand(3*time.Second, clients.NewTestLogger(t))
 }
 
 func TestExecuteForgroundWithBasicParams(t *testing.T) {
@@ -23,7 +25,7 @@ func TestExecuteForgroundWithBasicParams(t *testing.T) {
 
 	e := setupExecute(t)
 
-	p, err := e.Execute(CommandConfig{
+	p, err := e.Execute(types.CommandConfig{
 		Command: command,
 		Args:    args,
 	})
@@ -43,7 +45,7 @@ func TestExecuteForgroundLongRunningTimesOut(t *testing.T) {
 
 	e := setupExecute(t)
 
-	p, err := e.Execute(CommandConfig{
+	p, err := e.Execute(types.CommandConfig{
 		Command: command,
 		Args:    args,
 	})
@@ -56,7 +58,7 @@ func TestExecuteForgroundLongRunningTimesOut(t *testing.T) {
 func TestExecuteInvalidCommandReturnsError(t *testing.T) {
 	e := setupExecute(t)
 
-	_, err := e.Execute(CommandConfig{Command: "nocommand"})
+	_, err := e.Execute(types.CommandConfig{Command: "nocommand"})
 	assert.Error(t, err)
 }
 
@@ -75,7 +77,7 @@ func TestExecuteBackgroundWithBasicParams(t *testing.T) {
 	doneCh := make(chan done)
 
 	go func() {
-		p, err := e.Execute(CommandConfig{
+		p, err := e.Execute(types.CommandConfig{
 			Command:         command,
 			Args:            args,
 			RunInBackground: true,
@@ -108,7 +110,7 @@ func TestKillRemovesProcessWhenRunning(t *testing.T) {
 	doneCh := make(chan done)
 
 	go func() {
-		p, err := e.Execute(CommandConfig{
+		p, err := e.Execute(types.CommandConfig{
 			Command:         command,
 			Args:            args,
 			RunInBackground: true,

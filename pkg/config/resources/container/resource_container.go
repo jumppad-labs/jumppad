@@ -4,6 +4,9 @@ import (
 	"strings"
 
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/healthcheck"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 // TypeContainer is the resource string for a Container resource
@@ -30,7 +33,7 @@ type Container struct {
 	Resources *Resources `hcl:"resources,block" json:"resources,omitempty"` // resource constraints for the container
 
 	// health checks for the container
-	HealthCheck *HealthCheckContainer `hcl:"health_check,block" json:"health_check,omitempty"`
+	HealthCheck *healthcheck.HealthCheckContainer `hcl:"health_check,block" json:"health_check,omitempty"`
 
 	// User block for mapping the user id and group id inside the container
 	RunAs *User `hcl:"run_as,block" json:"run_as,omitempty"`
@@ -86,7 +89,7 @@ func (c *Container) Process() error {
 	for i, v := range c.Volumes {
 		// make sure mount paths are absolute when type is bind, unless this is the docker sock
 		if v.Type == "" || v.Type == "bind" {
-			c.Volumes[i].Source = ensureAbsolute(v.Source, c.File)
+			c.Volumes[i].Source = utils.EnsureAbsolute(v.Source, c.File)
 		}
 	}
 
@@ -99,7 +102,7 @@ func (c *Container) Process() error {
 
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
-	cfg, err := LoadState()
+	cfg, err := resources.LoadState()
 	if err == nil {
 		// try and find the resource in the state
 		r, _ := cfg.FindResource(c.ID)

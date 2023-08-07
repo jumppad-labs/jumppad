@@ -8,6 +8,7 @@ import (
 
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
@@ -100,7 +101,7 @@ func (a *API) validation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dc, err := clients.NewDocker()
+	dc, err := container.NewDocker()
 	if err != nil {
 		a.log.Error("Could not create docker client", "error", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
@@ -110,7 +111,7 @@ func (a *API) validation(w http.ResponseWriter, r *http.Request) {
 
 	il := clients.NewImageFileLog(utils.ImageCacheLog())
 	tz := &clients.TarGz{}
-	ct := clients.NewDockerTasks(dc, il, tz, a.log)
+	ct := container.NewDockerTasks(dc, il, tz, a.log)
 
 	id, err := ct.FindContainerIDs(target)
 	if err != nil || len(id) == 0 {

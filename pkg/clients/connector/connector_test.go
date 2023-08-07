@@ -10,7 +10,8 @@ import (
 	"time"
 
 	"github.com/jumppad-labs/connector/protos/shipyard"
-	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/connector/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/connector/types"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/stretchr/testify/mock"
 	assert "github.com/stretchr/testify/require"
@@ -18,7 +19,7 @@ import (
 
 var suiteTemp string
 var suiteBinary string
-var suiteCertBundle *CertBundle
+var suiteCertBundle *types.CertBundle
 var suiteOptions ConnectorOptions
 
 func TestConnectorSuite(t *testing.T) {

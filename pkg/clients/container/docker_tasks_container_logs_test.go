@@ -8,7 +8,8 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
+	cmocks "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -23,7 +24,7 @@ func TestContainerLogsCalled(t *testing.T) {
 
 	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 
-	mic := &mocks.ImageLog{}
+	mic := &cmocks.ImageLog{}
 
 	dt := NewDockerTasks(md, mic, &clients.TarGz{}, clients.NewTestLogger(t))
 

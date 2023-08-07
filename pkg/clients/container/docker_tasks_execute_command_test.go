@@ -9,14 +9,14 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
 	cmocks "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-func testExecCommandSetup(t *testing.T) (*DockerTasks, *mocks.Docker, *mocks.ImageLog) {
+func testExecCommandSetup(t *testing.T) (*DockerTasks, *mocks.Docker, *cmocks.ImageLog) {
 	// we need to add the stream index (stdout) as the first byte for the hijacker
 	writerOutput := []byte("log output")
 	writerOutput = append([]byte{1}, writerOutput...)

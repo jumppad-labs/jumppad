@@ -1,6 +1,10 @@
 package build
 
-import "github.com/jumppad-labs/hclconfig/types"
+import (
+	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
+)
 
 // TypeBuild builds containers and other resources
 const TypeBuild string = "build"
@@ -27,9 +31,9 @@ type BuildContainer struct {
 }
 
 func (b *Build) Process() error {
-	b.Container.Context = ensureAbsolute(b.Container.Context, b.File)
+	b.Container.Context = utils.EnsureAbsolute(b.Container.Context, b.File)
 
-	cfg, err := LoadState()
+	cfg, err := resources.LoadState()
 	if err == nil {
 		// try and find the resource in the state
 		r, _ := cfg.FindResource(b.ID)

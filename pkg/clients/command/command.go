@@ -7,35 +7,27 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/command/types"
 	"github.com/shipyard-run/gohup"
 )
 
 var ErrorCommandTimeout = fmt.Errorf("Command timed out before completing")
 
-type CommandConfig struct {
-	Command          string
-	Args             []string
-	Env              []string
-	WorkingDirectory string
-	RunInBackground  bool
-	LogFilePath      string
-	Timeout          time.Duration
-}
-
 //go:generate mockery --name Command --filename command.go
 type Command interface {
-	Execute(config CommandConfig) (int, error)
+	Execute(config types.CommandConfig) (int, error)
 	Kill(pid int) error
 }
 
 // Command executes local commands
 type CommandImpl struct {
 	timeout time.Duration
-	log     Logger
+	log     clients.Logger
 }
 
 // NewCommand creates a new command with the given logger and maximum command time
-func NewCommand(maxCommandTime time.Duration, l Logger) Command {
+func NewCommand(maxCommandTime time.Duration, l clients.Logger) Command {
 	return &CommandImpl{maxCommandTime, l}
 }
 
@@ -45,7 +37,7 @@ type done struct {
 }
 
 // Execute the given command
-func (c *CommandImpl) Execute(config CommandConfig) (int, error) {
+func (c *CommandImpl) Execute(config types.CommandConfig) (int, error) {
 	mutex := sync.Mutex{}
 
 	lp := &gohup.LocalProcess{}

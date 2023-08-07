@@ -24,12 +24,12 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/pkg/jsonmessage"
-	"github.com/docker/docker/pkg/signal"
 	"github.com/docker/go-connections/nat"
 	mainClients "github.com/jumppad-labs/jumppad/pkg/clients"
 	dtypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/streams"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	"github.com/moby/sys/signal"
 	"github.com/moby/term"
 	"golang.org/x/xerrors"
 )
@@ -603,9 +603,10 @@ func (d *DockerTasks) BuildContainer(config *dtypes.Build, force bool) (string, 
 func (d *DockerTasks) CreateVolume(name string) (string, error) {
 	vn := utils.FQDNVolumeName(name)
 
-	args := filters.NewArgs()
 	// By default Docker will wildcard searches, use regex to return the absolute
-	args.Add("name", vn)
+	args := volume.ListOptions{}
+	args.Filters.Add("name", vn)
+
 	ops, err := d.c.VolumeList(context.Background(), args)
 	if err != nil {
 		return "", xerrors.Errorf("unable to list docker volume '%s': %w", vn, err)
