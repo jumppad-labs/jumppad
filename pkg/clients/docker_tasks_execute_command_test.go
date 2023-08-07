@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
-	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	clients "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/stretchr/testify/assert"
@@ -45,11 +44,11 @@ func TestExecuteCommandCreatesExec(t *testing.T) {
 	}
 
 	mk, mic := testExecCommandMockSetup()
-	md := NewDockerTasks(mk, mic, &TarGz{}, hclog.NewNullLogger())
+	md := NewDockerTasks(mk, mic, &TarGz{}, clients.NewTestLogger(t))
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}
-	err := md.ExecuteCommand("testcontainer", command, []string{"abc=123"}, "/files", "1000", "2000", writer)
+	_, err := md.ExecuteCommand("testcontainer", command, []string{"abc=123"}, "/files", "1000", "2000", 300, writer)
 	assert.NoError(t, err)
 
 	mk.AssertCalled(t, "ContainerExecCreate", mock.Anything, "testcontainer", mock.Anything)
@@ -77,11 +76,11 @@ func TestExecuteCommandExecFailReturnError(t *testing.T) {
 	removeOn(&mk.Mock, "ContainerExecCreate")
 	mk.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
-	md := NewDockerTasks(mk, mic, &TarGz{}, hclog.NewNullLogger())
+	md := NewDockerTasks(mk, mic, &TarGz{}, clients.NewTestLogger(t))
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}
-	err := md.ExecuteCommand("testcontainer", command, nil, "/", "", "", writer)
+	_, err := md.ExecuteCommand("testcontainer", command, nil, "/", "", "", 300, writer)
 	assert.Error(t, err)
 }
 
@@ -91,11 +90,11 @@ func TestExecuteCommandAttachesToExec(t *testing.T) {
 	}
 
 	mk, mic := testExecCommandMockSetup()
-	md := NewDockerTasks(mk, mic, &TarGz{}, hclog.NewNullLogger())
+	md := NewDockerTasks(mk, mic, &TarGz{}, clients.NewTestLogger(t))
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}
-	err := md.ExecuteCommand("testcontainer", command, nil, "/", "", "", writer)
+	_, err := md.ExecuteCommand("testcontainer", command, nil, "/", "", "", 300, writer)
 	assert.NoError(t, err)
 
 	mk.AssertCalled(t, "ContainerExecAttach", mock.Anything, "abc", mock.Anything)
@@ -109,11 +108,11 @@ func TestExecuteCommandAttachFailReturnError(t *testing.T) {
 	mk, mic := testExecCommandMockSetup()
 	removeOn(&mk.Mock, "ContainerExecAttach")
 	mk.On("ContainerExecAttach", mock.Anything, "abc", mock.Anything).Return(nil, fmt.Errorf("boom"))
-	md := NewDockerTasks(mk, mic, &TarGz{}, hclog.NewNullLogger())
+	md := NewDockerTasks(mk, mic, &TarGz{}, clients.NewTestLogger(t))
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}
-	err := md.ExecuteCommand("testcontainer", command, nil, "/", "", "", writer)
+	_, err := md.ExecuteCommand("testcontainer", command, nil, "/", "", "", 300, writer)
 	assert.Error(t, err)
 }
 
@@ -123,7 +122,7 @@ func TestExecuteCommandAttachFailReturnError(t *testing.T) {
 //	}
 //
 //	mk, mic := testExecCommandMockSetup()
-//	md := NewDockerTasks(mk, mic, &TarGz{}, hclog.NewNullLogger())
+//	md := NewDockerTasks(mk, mic, &TarGz{}, clients.NewTestLogger(t))
 //	writer := bytes.NewBufferString("")
 //
 //	command := []string{"ls", "-las"}
@@ -141,7 +140,7 @@ func TestExecuteCommandAttachFailReturnError(t *testing.T) {
 //	mk, mic := testExecCommandMockSetup()
 //	removeOn(&mk.Mock, "ContainerExecStart")
 //	mk.On("ContainerExecStart", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
-//	md := NewDockerTasks(mk, mic, &TarGz{}, hclog.NewNullLogger())
+//	md := NewDockerTasks(mk, mic, &TarGz{}, clients.NewTestLogger(t))
 //	writer := bytes.NewBufferString("")
 //
 //	command := []string{"ls", "-las"}
@@ -157,11 +156,11 @@ func TestExecuteCommandInspectsExecAndReturnsErrorOnFail(t *testing.T) {
 	mk, mic := testExecCommandMockSetup()
 	removeOn(&mk.Mock, "ContainerExecInspect")
 	mk.On("ContainerExecInspect", mock.Anything, mock.Anything, mock.Anything).Return(types.ContainerExecInspect{Running: false, ExitCode: 1}, nil)
-	md := NewDockerTasks(mk, mic, &TarGz{}, hclog.NewNullLogger())
+	md := NewDockerTasks(mk, mic, &TarGz{}, clients.NewTestLogger(t))
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}
-	err := md.ExecuteCommand("testcontainer", command, nil, "/", "", "", writer)
+	_, err := md.ExecuteCommand("testcontainer", command, nil, "/", "", "", 300, writer)
 	assert.Error(t, err)
 
 	mk.AssertCalled(t, "ContainerExecInspect", mock.Anything, "abc", mock.Anything)

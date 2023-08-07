@@ -3,7 +3,6 @@ package providers
 import (
 	"fmt"
 
-	hclog "github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
@@ -16,23 +15,17 @@ import (
 type RemoteExec struct {
 	config *resources.RemoteExec
 	client clients.ContainerTasks
-	log    hclog.Logger
+	log    clients.Logger
 }
 
 // NewRemoteExec creates a new Exec provider
-func NewRemoteExec(c *resources.RemoteExec, ex clients.ContainerTasks, l hclog.Logger) *RemoteExec {
+func NewRemoteExec(c *resources.RemoteExec, ex clients.ContainerTasks, l clients.Logger) *RemoteExec {
 	return &RemoteExec{c, ex, l}
 }
 
 // Create a new execution instance
 func (c *RemoteExec) Create() error {
-	c.log.Info("Remote executing command", "ref", c.config.Name, "command", c.config.Command, "image", c.config.Image)
-
-	/*
-		if c.config.Script != "" {
-			return fmt.Errorf("Remote execution of Scripts are not currently implemented: %s", c.config.Script)
-		}
-	*/
+	c.log.Info("Remote executing script", "ref", c.config.ID)
 
 	// execution target id
 	targetID := ""
@@ -77,7 +70,7 @@ func (c *RemoteExec) Create() error {
 	}
 
 	// execute the script in the container
-	command := c.config.Command
+	script := c.config.Script
 
 	// build the environment variables
 	envs := []string{}
@@ -94,9 +87,9 @@ func (c *RemoteExec) Create() error {
 		group = c.config.RunAs.Group
 	}
 
-	err := c.client.ExecuteCommand(targetID, command, envs, c.config.WorkingDirectory, user, group, c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
+	_, err := c.client.ExecuteScript(targetID, script, envs, c.config.WorkingDirectory, user, group, 300, c.log.StandardWriter())
 	if err != nil {
-		c.log.Error("Error executing command", "ref", c.config.Name, "image", c.config.Image, "command", c.config.Command)
+		c.log.Error("Error executing command", "ref", c.config.Name, "image", c.config.Image, "script", c.config.Script)
 		err = xerrors.Errorf("Unable to execute command: in remote container: %w", err)
 	}
 
@@ -121,9 +114,15 @@ func (c *RemoteExec) Lookup() ([]string, error) {
 }
 
 func (c *RemoteExec) Refresh() error {
-	c.log.Info("Refresh Remote Exec", "ref", c.config.Name)
+	c.log.Debug("Refresh Remote Exec", "ref", c.config.Name)
 
 	return nil
+}
+
+func (c *RemoteExec) Changed() (bool, error) {
+	c.log.Debug("Checking changes", "ref", c.config.Name)
+
+	return false, nil
 }
 
 func (c *RemoteExec) createRemoteExecContainer() (string, error) {

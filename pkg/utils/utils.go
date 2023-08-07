@@ -2,7 +2,10 @@ package utils
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/url"
@@ -13,6 +16,8 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+
+	"golang.org/x/mod/sumdb/dirhash"
 )
 
 // Creates the required file structure in the users Home directory
@@ -253,6 +258,17 @@ func GetDataFolder(p string, perms os.FileMode) string {
 	return data
 }
 
+// GetLibraryFolder creates the library directory used by the application
+func GetLibraryFolder(p string, perms os.FileMode) string {
+	data := filepath.Join(JumppadHome(), "library", p)
+
+	// create the folder if it does not exist
+	os.MkdirAll(data, perms)
+	os.Chmod(data, perms)
+
+	return data
+}
+
 // GetDockerHost returns the location of the Docker API depending on the platform
 func GetDockerHost() string {
 	if dh := os.Getenv("DOCKER_HOST"); dh != "" {
@@ -448,6 +464,29 @@ func SubnetIPs(subnet string) ([]string, error) {
 	}
 
 	return ipList, nil
+}
+
+// HashDir generates a hash of the given directory
+func HashDir(dir string) (string, error) {
+	return dirhash.HashDir(dir, "", dirhash.DefaultHash)
+}
+
+// HashFile returns a sha256 hash of the given file
+func HashFile(file string) (string, error) {
+	r, err := os.Open(file)
+	if err != nil {
+		return "", err
+	}
+	defer r.Close()
+
+	hf := sha256.New()
+	_, err = io.Copy(hf, r)
+
+	if err != nil {
+		return "", err
+	}
+
+	return "h1:" + base64.StdEncoding.EncodeToString(hf.Sum(nil)), nil
 }
 
 func incIP(ip net.IP) net.IP {

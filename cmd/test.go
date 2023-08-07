@@ -23,7 +23,6 @@ import (
 	"github.com/cucumber/godog/colors"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/hashicorp/go-hclog"
 	hcltypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
@@ -45,7 +44,7 @@ var output = bytes.NewBufferString("")
 var commandOutput = bytes.NewBufferString("")
 var commandExitCode = 0
 
-func newTestCmd(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, l hclog.Logger) *cobra.Command {
+func newTestCmd(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, l clients.Logger) *cobra.Command {
 	var testFolder string
 	var force bool
 	var dontDestroy bool
@@ -86,7 +85,7 @@ func newTestCmdFunc(
 	variablesFile *string,
 	tags *string,
 	dontDestroy *bool,
-	l hclog.Logger) func(cmd *cobra.Command, args []string) error {
+	l clients.Logger) func(cmd *cobra.Command, args []string) error {
 
 	return func(cmd *cobra.Command, args []string) error {
 		tr := CucumberRunner{cmd, args, e, bp, hc, bc, testFolder, "", "", force, purge, l, *variables, nil, *variablesFile, *tags, dontDestroy}
@@ -109,7 +108,7 @@ type CucumberRunner struct {
 	basePath      string
 	force         *bool
 	purge         *bool
-	l             hclog.Logger
+	l             clients.Logger
 	baseVariables []string
 	variables     []string
 	variablesFile string
@@ -237,23 +236,8 @@ func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
 
 	args = []string{absPath}
 
-	opts := &hclog.LoggerOptions{
-		Color: hclog.AutoColor,
-	}
+	logger := createLogger()
 
-	// set the log level
-	opts.Level = hclog.Debug
-	if lev := os.Getenv("LOG_LEVEL"); lev != "" {
-		opts.Level = hclog.LevelFromString(lev)
-	}
-
-	// if the log level is not debug write it to a buffer
-	if os.Getenv("LOG_LEVEL") != "debug" {
-		opts.Output = output
-		opts.Color = hclog.ColorOff
-	}
-
-	logger := hclog.New(opts)
 	engine, vm := createEngine(logger)
 
 	cr.e = engine

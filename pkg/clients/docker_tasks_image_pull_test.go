@@ -8,8 +8,8 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	clients "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -42,7 +42,7 @@ func createImagePullConfig() (config.Image, *mocks.MockDocker, *mocks.ImageLog) 
 }
 
 func setupImagePull(t *testing.T, cc config.Image, md *mocks.MockDocker, mic *mocks.ImageLog, force bool) {
-	p := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())
+	p := NewDockerTasks(md, mic, &TarGz{}, clients.NewTestLogger(t))
 
 	// create the container
 	err := p.PullImage(cc, force)

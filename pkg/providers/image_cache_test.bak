@@ -38,7 +38,7 @@ func setupImageCacheTests(t *testing.T) (*config.ImageCache, *clients.MockContai
 func TestImageCacheCreateDoesNotCreateContainerWhenExists(t *testing.T) {
 	cc, md, hc := setupImageCacheTests(t)
 
-	c := NewImageCache(cc, md, hc, hclog.NewNullLogger())
+	c := NewImageCache(cc, md, hc, clients.NewTestLogger(t))
 	err := c.Create()
 	assert.NoError(t, err)
 
@@ -51,7 +51,7 @@ func TestImageCacheCreateDoesNotCreateContainerWhenExists(t *testing.T) {
 func TestImageCacheCreateCreatesVolume(t *testing.T) {
 	cc, md, hc := setupImageCacheTests(t)
 
-	c := NewImageCache(cc, md, hc, hclog.NewNullLogger())
+	c := NewImageCache(cc, md, hc, clients.NewTestLogger(t))
 	err := c.Create()
 	assert.NoError(t, err)
 
@@ -61,7 +61,7 @@ func TestImageCacheCreateCreatesVolume(t *testing.T) {
 func TestImageCachePullsImage(t *testing.T) {
 	cc, md, hc := setupImageCacheTests(t)
 
-	c := NewImageCache(cc, md, hc, hclog.NewNullLogger())
+	c := NewImageCache(cc, md, hc, clients.NewTestLogger(t))
 	err := c.Create()
 	assert.NoError(t, err)
 
@@ -71,7 +71,7 @@ func TestImageCachePullsImage(t *testing.T) {
 func TestImageCacheCreateAddsVolumes(t *testing.T) {
 	cc, md, hc := setupImageCacheTests(t)
 
-	c := NewImageCache(cc, md, hc, hclog.NewNullLogger())
+	c := NewImageCache(cc, md, hc, clients.NewTestLogger(t))
 	err := c.Create()
 	assert.NoError(t, err)
 
@@ -89,7 +89,7 @@ func TestImageCacheCreateAddsVolumes(t *testing.T) {
 func TestImageCacheCreateAddsEnvironmentVariables(t *testing.T) {
 	cc, md, hc := setupImageCacheTests(t)
 
-	c := NewImageCache(cc, md, hc, hclog.NewNullLogger())
+	c := NewImageCache(cc, md, hc, clients.NewTestLogger(t))
 	err := c.Create()
 	assert.NoError(t, err)
 
@@ -110,7 +110,7 @@ func TestImageCacheCreateAddsEnvironmentVariables(t *testing.T) {
 func TestImageCacheCreateCopiesCerts(t *testing.T) {
 	cc, md, hc := setupImageCacheTests(t)
 
-	c := NewImageCache(cc, md, hc, hclog.NewNullLogger())
+	c := NewImageCache(cc, md, hc, clients.NewTestLogger(t))
 	err := c.Create()
 	assert.NoError(t, err)
 
@@ -147,7 +147,7 @@ func TestImageCacheDetachesNetworksAndAttachesNew(t *testing.T) {
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Once().Return([]string{"abc"}, nil)
 	md.On("ContainerInfo", "abc").Once().Return(*containerJSON, nil)
 
-	c := NewImageCache(cc, md, hc, hclog.NewNullLogger())
+	c := NewImageCache(cc, md, hc, clients.NewTestLogger(t))
 	err := c.Create()
 	assert.NoError(t, err)
 

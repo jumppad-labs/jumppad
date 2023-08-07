@@ -72,7 +72,13 @@ func newEnvCmd(e jumppad.Engine) *cobra.Command {
 					}
 
 					d, _ := json.Marshal(r.(*types.Output).Value)
-					val := strings.ReplaceAll(string(d), `\`, `\\`)
+
+					// trim any strings that wrap the output from marshaling
+					val := strings.TrimPrefix(string(d), "\"")
+					val = strings.TrimSuffix(val, "\"")
+
+					// escape any json
+					val = strings.ReplaceAll(val, `\`, `\\`)
 					val = strings.ReplaceAll(val, `"`, `\"`)
 					if unset {
 						fmt.Printf("%s%s\n", prefix, r.Metadata().Name)

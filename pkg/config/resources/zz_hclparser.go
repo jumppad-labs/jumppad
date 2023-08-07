@@ -18,8 +18,11 @@ func SetupHCLConfig(callback hclconfig.ProcessCallback, variables map[string]str
 
 	// Register the types
 	p.RegisterType(TypeBlueprint, &Blueprint{})
+	p.RegisterType(TypeBook, &Book{})
+	p.RegisterType(TypeBuild, &Build{})
 	p.RegisterType(TypeCertificateCA, &CertificateCA{})
 	p.RegisterType(TypeCertificateLeaf, &CertificateLeaf{})
+	p.RegisterType(TypeChapter, &Chapter{})
 	p.RegisterType(TypeContainer, &Container{})
 	p.RegisterType(TypeCopy, &Copy{})
 	p.RegisterType(TypeDocs, &Docs{})
@@ -39,6 +42,7 @@ func SetupHCLConfig(callback hclconfig.ProcessCallback, variables map[string]str
 	p.RegisterType(TypeRandomUUID, &RandomUUID{})
 	p.RegisterType(TypeRandomCreature, &RandomCreature{})
 	p.RegisterType(TypeSidecar, &Sidecar{})
+	p.RegisterType(TypeTask, &Task{})
 	p.RegisterType(TypeTemplate, &Template{})
 
 	// Register the custom functions

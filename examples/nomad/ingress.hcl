@@ -1,18 +1,3 @@
-resource "ingress" "fake_service_1" {
-  port = 19090
-
-  target {
-    id         = resource.nomad_cluster.dev.id
-    named_port = "http"
-
-    config = {
-      job   = "example_1"
-      group = "fake_service"
-      task  = "fake_service"
-    }
-  }
-}
-
 resource "ingress" "fake_service_2" {
   port = 19091
 
@@ -28,10 +13,6 @@ resource "ingress" "fake_service_2" {
   }
 }
 
-output "fake_service_addr_1" {
-  value = resource.ingress.fake_service_1.address
-}
-
-output "fake_service_addr_2" {
+output "fake_service_addr" {
   value = resource.ingress.fake_service_2.address
 }

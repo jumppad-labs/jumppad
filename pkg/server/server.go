@@ -1,61 +1,75 @@
 package server
 
 import (
-	"github.com/gofiber/fiber/v2"
-	"github.com/hashicorp/go-hclog"
+	"context"
+	"log"
+	"net/http"
+	"time"
 
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/websocket/v2"
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/cors"
+	"github.com/jumppad-labs/jumppad/pkg/clients"
 )
 
 type API struct {
-	bindAddr string
-	app      *fiber.App
-	log      hclog.Logger
+	server *http.Server
+	log    clients.Logger
 }
 
 // New creates a new server
-func New(addr string, l hclog.Logger) *API {
-	config := fiber.Config{
-		DisableStartupMessage: true,
+func New(addr string, l clients.Logger) *API {
+	router := chi.NewRouter()
+	router.Use(middleware.RequestID)
+	router.Use(middleware.RealIP)
+	router.Use(middleware.RequestLogger(&middleware.DefaultLogFormatter{Logger: log.New(l.StandardWriter(), "", log.Default().Flags()), NoColor: true}))
+	router.Use(middleware.Recoverer)
+	router.Use(cors.Handler(cors.Options{
+		// AllowedOrigins: []string{"https://foo.com"}, // Use this to allow specific origin hosts
+		// AllowedOrigins: []string{"https://*", "http://*"},
+		AllowOriginFunc:  func(r *http.Request, origin string) bool { return true },
+		AllowedMethods:   []string{"HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"*"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
+
+	server := &http.Server{
+		Addr:     addr,
+		Handler:  router,
+		ErrorLog: log.New(l.StandardWriter(), "", log.Default().Flags()),
 	}
 
-	return &API{
-		bindAddr: addr,
-		app:      fiber.New(config),
-		log:      l,
+	api := &API{
+		server: server,
+		log:    l,
 	}
+
+	router.Get("/terminal", api.terminal)
+	router.Post("/validate", api.validation)
+
+	return api
 }
 
 // Start the API server
-func (s *API) Start() {
-	s.log.Debug("Starting API server")
+func (a *API) Start() {
+	a.log.Debug("Starting API server")
 
-	s.app.Use(cors.New())
-	s.app.Use("/terminal", func(c *fiber.Ctx) error {
-		// IsWebSocketUpgrade returns true if the client
-		// requested upgrade to the WebSocket protocol.
-		if websocket.IsWebSocketUpgrade(c) {
-			c.Locals("allowed", true)
-			return c.Next()
-		}
-		return fiber.ErrUpgradeRequired
-	})
-
-	s.app.Get("/terminal", websocket.New(s.terminalWebsocket))
-	s.app.Post("/validate", s.handleValidate)
-
-	// Start the server
-	err := s.app.Listen(s.bindAddr)
-	if err != nil {
-		s.log.Error("Listen exit with", "error", err)
+	// // Start the server
+	err := a.server.ListenAndServe()
+	if err != nil && err != http.ErrServerClosed {
+		a.log.Error("Listen exit with", "error", err)
 	}
 
-	s.log.Info("Listen exit")
+	a.log.Info("Listen exit")
 }
 
 // Stop the API server
 func (s *API) Stop() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	s.log.Info("Shutdown API server")
-	s.app.Shutdown()
+	s.server.Shutdown(ctx)
 }

@@ -39,7 +39,7 @@ func TestNomadJobWithNonExistentClusterReturnsError(t *testing.T) {
 	jc, mh := setupNomadJobMocks()
 	jc.Config.Resources = jc.Config.Resources[1:]
 
-	p := NewNomadJob(jc, mh, hclog.NewNullLogger())
+	p := NewNomadJob(jc, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -52,7 +52,7 @@ func TestNomadJobUnableToLoadConfigReturnsError(t *testing.T) {
 	removeOn(&mh.Mock, "SetConfig")
 	mh.On("SetConfig", mock.Anything).Return(fmt.Errorf("boom"))
 
-	p := NewNomadJob(jc, mh, hclog.NewNullLogger())
+	p := NewNomadJob(jc, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -63,7 +63,7 @@ func TestNomadJobCreateReturnsError(t *testing.T) {
 	removeOn(&mh.Mock, "Create")
 	mh.On("Create", mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
-	p := NewNomadJob(jc, mh, hclog.NewNullLogger())
+	p := NewNomadJob(jc, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -72,7 +72,7 @@ func TestNomadJobCreateReturnsError(t *testing.T) {
 func TestNomadJobValidatesConfig(t *testing.T) {
 	jc, mh := setupNomadJobMocks()
 
-	p := NewNomadJob(jc, mh, hclog.NewNullLogger())
+	p := NewNomadJob(jc, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -87,7 +87,7 @@ func TestNomadJobHealthCheckInvalidDurationReturnsError(t *testing.T) {
 
 	mh.On("JobRunning", mock.Anything).Return(false, nil)
 
-	p := NewNomadJob(jc, mh, hclog.NewNullLogger())
+	p := NewNomadJob(jc, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -101,7 +101,7 @@ func TestNomadJobHealthCheckReturnsErrorWhenNotHealthy(t *testing.T) {
 	}
 	mh.On("JobRunning", mock.Anything).Return(false, nil)
 
-	p := NewNomadJob(jc, mh, hclog.NewNullLogger())
+	p := NewNomadJob(jc, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -116,7 +116,7 @@ func TestNomadJobHealthCheckReturnsErrorWhenHealthError(t *testing.T) {
 	}
 	mh.On("JobRunning", mock.Anything).Return(true, fmt.Errorf("boom"))
 
-	p := NewNomadJob(jc, mh, hclog.NewNullLogger())
+	p := NewNomadJob(jc, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -131,7 +131,7 @@ func TestNomadJobHealthCheckReturnsOKHealthy(t *testing.T) {
 	}
 	mh.On("JobRunning", mock.Anything).Return(true, nil)
 
-	p := NewNomadJob(jc, mh, hclog.NewNullLogger())
+	p := NewNomadJob(jc, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -142,7 +142,7 @@ func TestNomadJobDestroyReturnsErrorWhenNoCluster(t *testing.T) {
 	jc, mh := setupNomadJobMocks()
 	jc.Config.Resources = jc.Config.Resources[1:]
 
-	p := NewNomadJob(jc, mh, hclog.NewNullLogger())
+	p := NewNomadJob(jc, mh, clients.NewTestLogger(t))
 
 	err := p.Destroy()
 	assert.Error(t, err)
@@ -154,7 +154,7 @@ func TestNomadJobDestroyCallsStop(t *testing.T) {
 
 	mh.On("Stop", mock.Anything).Return(nil)
 
-	p := NewNomadJob(jc, mh, hclog.NewNullLogger())
+	p := NewNomadJob(jc, mh, clients.NewTestLogger(t))
 
 	err := p.Destroy()
 	assert.NoError(t, err)

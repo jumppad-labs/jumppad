@@ -7,11 +7,9 @@ import (
 	"path"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"golang.org/x/xerrors"
 )
 
 // Container is a provider for creating and destroying Docker containers
@@ -20,15 +18,15 @@ type Container struct {
 	sidecar    *resources.Sidecar
 	client     clients.ContainerTasks
 	httpClient clients.HTTP
-	log        hclog.Logger
+	log        clients.Logger
 }
 
 // NewContainer creates a new container with the given config and Docker client
-func NewContainer(co *resources.Container, cl clients.ContainerTasks, hc clients.HTTP, l hclog.Logger) *Container {
+func NewContainer(co *resources.Container, cl clients.ContainerTasks, hc clients.HTTP, l clients.Logger) *Container {
 	return &Container{config: co, client: cl, httpClient: hc, log: l}
 }
 
-func NewContainerSidecar(cs *resources.Sidecar, cl clients.ContainerTasks, hc clients.HTTP, l hclog.Logger) *Container {
+func NewContainerSidecar(cs *resources.Sidecar, cl clients.ContainerTasks, hc clients.HTTP, l clients.Logger) *Container {
 	co := &resources.Container{}
 	co.ResourceMetadata = cs.ResourceMetadata
 	co.FQRN = cs.FQRN
@@ -66,13 +64,24 @@ func (c *Container) Create() error {
 
 // Lookup the ID based on the config
 func (c *Container) Lookup() ([]string, error) {
-	c.log.Debug("Lookup Container Details", "fqrn", c.config.FQRN)
-
 	return c.client.FindContainerIDs(c.config.FQRN)
 }
 
 func (c *Container) Refresh() error {
-	c.log.Info("Refresh Container", "ref", c.config.Name)
+	changed, err := c.Changed()
+	if err != nil {
+		return err
+	}
+
+	if changed {
+		c.log.Debug("Refresh Container", "ref", c.config.ID)
+		err := c.Destroy()
+		if err != nil {
+			return err
+		}
+
+		return c.Create()
+	}
 
 	return nil
 }
@@ -84,44 +93,52 @@ func (c *Container) Destroy() error {
 	return c.internalDestroy()
 }
 
-func (c *Container) internalCreate() error {
+func (c *Container) Changed() (bool, error) {
+	// has the image id changed
+	id, err := c.client.FindImageInLocalRegistry(*c.config.Image)
+	if err != nil {
+		c.log.Error("Unable to lookup image in local registry", "ref", c.config.ID, "error", err)
+		return false, err
+	}
 
+	// check that the current registry id for the image is the same
+	// as the image that was used to create this container
+	if id != c.config.Image.ID {
+		c.log.Debug("Container image changed, needs refresh", "ref", c.config.ID)
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func (c *Container) internalCreate() error {
 	// set the fqdn
 	fqdn := utils.FQDN(c.config.Name, c.config.Module, c.config.Type)
 	c.config.FQRN = fqdn
 
-	// do we need to build an image
-	if c.config.Build != nil {
-
-		if c.config.Build.Tag == "" {
-			c.config.Build.Tag = "latest"
-		}
-
-		c.log.Debug(
-			"Building image",
-			"context", c.config.Build.Context,
-			"dockerfile", c.config.Build.DockerFile,
-			"image", fmt.Sprintf("jumppad.dev/localcache/%s:%s", c.config.Name, c.config.Build.Tag),
-		)
-
-		name, err := c.client.BuildContainer(c.config, false)
-		if err != nil {
-			return xerrors.Errorf("Unable to build image: %w", err)
-		}
-
-		// set the image to be loaded and continue with the container creation
-		c.config.Image = &resources.Image{Name: name}
-	} else {
-		// pull any images needed for this container
-		err := c.client.PullImage(*c.config.Image, false)
-		if err != nil {
-			c.log.Error("Error pulling container image", "ref", c.config.ID, "image", c.config.Image.Name)
-
-			return err
-		}
+	if c.config.Image == nil {
+		return fmt.Errorf("need to specify an image")
 	}
 
-	id, err := c.client.CreateContainer(c.config)
+	// pull any images needed for this container
+	err := c.client.PullImage(*c.config.Image, false)
+	if err != nil {
+		c.log.Error("Error pulling container image", "ref", c.config.ID, "image", c.config.Image.Name)
+
+		return err
+	}
+
+	// update the image ID
+	id, err := c.client.FindImageInLocalRegistry(*c.config.Image)
+	if err != nil {
+		c.log.Error("Unable to lookup image in local registry", "ref", c.config.ID, "error", err)
+		return err
+	}
+
+	// id should never be blank here as we have pulled the image
+	c.config.Image.ID = id
+
+	id, err = c.client.CreateContainer(c.config)
 	if err != nil {
 		c.log.Error("Unable to create container", "ref", c.config.ID, "error", err)
 		return err
@@ -130,7 +147,6 @@ func (c *Container) internalCreate() error {
 	// get the assigned ip addresses for the container
 	dc := c.client.ListNetworks(id)
 	for _, n := range dc {
-		c.log.Info("network", "net", n)
 		for i, net := range c.config.Networks {
 			if net.ID == n.ID {
 				// set the assigned address and name
@@ -144,27 +160,19 @@ func (c *Container) internalCreate() error {
 		return nil
 	}
 
+	if c.config.HealthCheck.Timeout == "" {
+		c.config.HealthCheck.Timeout = "30s"
+	}
+
 	timeout, err := time.ParseDuration(c.config.HealthCheck.Timeout)
 	if err != nil {
 		return fmt.Errorf("unable to parse duration for the health check timeout, please specify as a go duration i.e 30s, 1m: %s", err)
 	}
 
-	// check the health of the container
-	if c.config.HealthCheck.HTTP != nil {
-		err := c.httpClient.HealthCheckHTTP(
-			c.config.HealthCheck.HTTP.Address,
-			c.config.HealthCheck.HTTP.SuccessCodes,
-			timeout,
-		)
-
-		if err != nil {
-			return err
-		}
-	}
-
-	if c.config.HealthCheck.TCP != nil {
+	// execute tcp health checks
+	for _, hc := range c.config.HealthCheck.TCP {
 		err := c.httpClient.HealthCheckTCP(
-			c.config.HealthCheck.TCP.Address,
+			hc.Address,
 			timeout,
 		)
 
@@ -173,8 +181,24 @@ func (c *Container) internalCreate() error {
 		}
 	}
 
-	if c.config.HealthCheck.Exec != nil {
-		err := c.runExecHealthCheck(id, timeout)
+	// execute http health checks
+	for _, hc := range c.config.HealthCheck.HTTP {
+		err := c.httpClient.HealthCheckHTTP(
+			hc.Address,
+			hc.Method,
+			hc.Headers,
+			hc.Body,
+			hc.SuccessCodes,
+			timeout,
+		)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, hc := range c.config.HealthCheck.Exec {
+		err := c.runExecHealthCheck(id, hc.Command, hc.Script, hc.ExitCode, timeout)
 		if err != nil {
 			return err
 		}
@@ -183,14 +207,8 @@ func (c *Container) internalCreate() error {
 	return nil
 }
 
-func (c *Container) runExecHealthCheck(id string, timeout time.Duration) error {
-	command := []string{}
-
-	if len(c.config.HealthCheck.Exec.Command) > 0 {
-		command = c.config.HealthCheck.Exec.Command
-	}
-
-	if len(c.config.HealthCheck.Exec.Script) > 0 {
+func (c *Container) runExecHealthCheck(id string, command []string, script string, exitCode int, timeout time.Duration) error {
+	if len(script) > 0 {
 		// write the script to a temp file
 		dir, err := os.MkdirTemp(os.TempDir(), "script*")
 		if err != nil {
@@ -200,7 +218,7 @@ func (c *Container) runExecHealthCheck(id string, timeout time.Duration) error {
 		defer os.RemoveAll(dir)
 		fn := path.Join(dir, "script.sh")
 
-		err = os.WriteFile(fn, []byte(c.config.HealthCheck.Exec.Script), os.ModePerm)
+		err = os.WriteFile(fn, []byte(script), os.ModePerm)
 		if err != nil {
 			return fmt.Errorf("unable to write script to temporary file %s: %s", dir, err)
 		}
@@ -208,7 +226,7 @@ func (c *Container) runExecHealthCheck(id string, timeout time.Duration) error {
 		// copy the script to the container
 		c.client.CopyFileToContainer(id, fn, "/tmp")
 
-		c.log.Debug("Written script to file", "script", c.config.HealthCheck.Exec.Script, "file", fn)
+		c.log.Debug("Written script to file", "script", script, "file", fn)
 
 		command = []string{"sh", "/tmp/script.sh"}
 	}
@@ -224,8 +242,8 @@ func (c *Container) runExecHealthCheck(id string, timeout time.Duration) error {
 		}
 
 		var output bytes.Buffer
-		err := c.client.ExecuteCommand(id, command, []string{}, "/tmp", "", "", &output)
-		if err == nil {
+		res, err := c.client.ExecuteCommand(id, command, []string{}, "/tmp", "", "", int(timeout.Seconds()), &output)
+		if err == nil && exitCode == res {
 			c.log.Debug("Exec health check success", "command", command, "output", output.String())
 			return nil
 		}
@@ -235,8 +253,6 @@ func (c *Container) runExecHealthCheck(id string, timeout time.Duration) error {
 		// back off
 		time.Sleep(10 * time.Second)
 	}
-
-	return nil
 }
 
 func (c *Container) internalDestroy() error {

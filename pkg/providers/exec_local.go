@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
@@ -16,11 +15,11 @@ import (
 type LocalExec struct {
 	config *resources.LocalExec
 	client clients.Command
-	log    hclog.Logger
+	log    clients.Logger
 }
 
 // NewExecLocal creates a new Local Exec provider
-func NewLocalExec(c *resources.LocalExec, ex clients.Command, l hclog.Logger) *LocalExec {
+func NewLocalExec(c *resources.LocalExec, ex clients.Command, l clients.Logger) *LocalExec {
 	return &LocalExec{c, ex, l}
 }
 
@@ -103,7 +102,13 @@ func (c *LocalExec) Lookup() ([]string, error) {
 }
 
 func (c *LocalExec) Refresh() error {
-	c.log.Info("Refresh Local Exec", "ref", c.config.Name)
+	c.log.Debug("Refresh Local Exec", "ref", c.config.Name)
 
 	return nil
+}
+
+func (c *LocalExec) Changed() (bool, error) {
+	c.log.Debug("Checking changes", "ref", c.config.Name)
+
+	return false, nil
 }

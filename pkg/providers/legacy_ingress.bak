@@ -16,11 +16,11 @@ const ingressImage = "shipyardrun/ingress:v0.3.0"
 type LegacyIngress struct {
 	config *config.LegacyIngress
 	client clients.ContainerTasks
-	log    hclog.Logger
+	log    clients.Logger
 }
 
 // NewNomadIngress creates an ingress type for resources in a Nomad cluster
-func NewNomadIngress(ci *config.NomadIngress, cc clients.ContainerTasks, l hclog.Logger) *LegacyIngress {
+func NewNomadIngress(ci *config.NomadIngress, cc clients.ContainerTasks, l clients.Logger) *LegacyIngress {
 	c := config.NewLegacyIngress(ci.Name)
 	c.Depends = ci.Depends
 	c.Networks = ci.Networks
@@ -36,7 +36,7 @@ func NewNomadIngress(ci *config.NomadIngress, cc clients.ContainerTasks, l hclog
 }
 
 // NewK8sIngress creates an Ingress from Kubernetes config
-func NewK8sIngress(kc *config.K8sIngress, cc clients.ContainerTasks, l hclog.Logger) *LegacyIngress {
+func NewK8sIngress(kc *config.K8sIngress, cc clients.ContainerTasks, l clients.Logger) *LegacyIngress {
 	// convert the config
 	c := config.NewLegacyIngress(kc.Name)
 

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
+	clients "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,7 +27,7 @@ func TestHTTPHealthCallsGet(t *testing.T) {
 	url, reqs, cleanup := testSetupHTTPBasicServer(http.StatusOK, "")
 	defer cleanup()
 
-	c := NewHTTP(1*time.Millisecond, hclog.NewNullLogger())
+	c := NewHTTP(1*time.Millisecond, clients.NewTestLogger(t))
 
 	err := c.HealthCheckHTTP(url, []int{200}, 10*time.Millisecond)
 	assert.NoError(t, err)
@@ -38,7 +38,7 @@ func TestHTTPHealthCallsGetMultipleStatusCodes(t *testing.T) {
 	url, reqs, cleanup := testSetupHTTPBasicServer(http.StatusNoContent, "")
 	defer cleanup()
 
-	c := NewHTTP(1*time.Millisecond, hclog.NewNullLogger())
+	c := NewHTTP(1*time.Millisecond, clients.NewTestLogger(t))
 
 	err := c.HealthCheckHTTP(url, []int{200, 204}, 10*time.Millisecond)
 	assert.NoError(t, err)
@@ -49,7 +49,7 @@ func TestHTTPHealthRetryiesOnServerErrorCode(t *testing.T) {
 	url, reqs, cleanup := testSetupHTTPBasicServer(http.StatusBadRequest, "")
 	defer cleanup()
 
-	c := NewHTTP(1*time.Millisecond, hclog.NewNullLogger())
+	c := NewHTTP(1*time.Millisecond, clients.NewTestLogger(t))
 
 	err := c.HealthCheckHTTP(url, []int{200}, 10*time.Millisecond)
 	assert.Error(t, err)
@@ -60,7 +60,7 @@ func TestHTTPHealthErrorsOnClientError(t *testing.T) {
 	_, reqs, cleanup := testSetupHTTPBasicServer(http.StatusBadRequest, "")
 	defer cleanup()
 
-	c := NewHTTP(1*time.Millisecond, hclog.NewNullLogger())
+	c := NewHTTP(1*time.Millisecond, clients.NewTestLogger(t))
 
 	err := c.HealthCheckHTTP("http://127.0.0.2:19091", []int{200}, 10*time.Millisecond)
 	assert.Error(t, err)

@@ -49,7 +49,7 @@ type K8sCluster struct {
 }
 
 const k3sBaseImage = "shipyardrun/k3s"
-const k3sBaseVersion = "v1.26.3"
+const k3sBaseVersion = "v1.27.4"
 
 func (k *K8sCluster) Process() error {
 	if k.APIPort == 0 {
@@ -85,6 +85,15 @@ func (k *K8sCluster) Process() error {
 						k.Networks[i].AssignedAddress = a.AssignedAddress
 						k.Networks[i].Name = a.Name
 						break
+					}
+				}
+			}
+
+			// add the image id from state
+			for x, img := range k.CopyImages {
+				for _, sImg := range kstate.CopyImages {
+					if img.Name == sImg.Name && img.Username == sImg.Username {
+						k.CopyImages[x].ID = sImg.ID
 					}
 				}
 			}

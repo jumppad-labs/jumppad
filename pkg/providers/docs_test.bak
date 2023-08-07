@@ -27,7 +27,7 @@ func setupDocs(t *testing.T) (*Docs, *clients.MockContainerTasks) {
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, nil)
 	md.On("RemoveContainer", mock.Anything, true).Return(nil)
 
-	d := NewDocs(cc, md, hclog.NewNullLogger())
+	d := NewDocs(cc, md, clients.NewTestLogger(t))
 
 	dh := os.Getenv("DOCKER_HOST")
 	os.Unsetenv("DOCKER_HOST")

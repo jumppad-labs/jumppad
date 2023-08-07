@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,7 +26,7 @@ func TestCertCAProcessSetsAbsoluteValues(t *testing.T) {
 }
 
 func TestCertCALoadsValuesFromState(t *testing.T) {
-	setupState(t, `
+	testutils.SetupState(t, `
 {
   "blueprint": null,
   "resources": [
@@ -51,8 +52,8 @@ func TestCertCALoadsValuesFromState(t *testing.T) {
 	err := ca.Process()
 	require.NoError(t, err)
 
-	require.Equal(t, "mine.key", ca.KeyPath)
-	require.Equal(t, "mine.cert", ca.CertPath)
+	require.Equal(t, "mine.key", ca.PrivateKey.Filename)
+	require.Equal(t, "mine.cert", ca.Cert.Filename)
 }
 
 func TestCertLeafProcessSetsAbsoluteValues(t *testing.T) {
@@ -75,7 +76,7 @@ func TestCertLeafProcessSetsAbsoluteValues(t *testing.T) {
 }
 
 func TestCertLeafLoadsValuesFromState(t *testing.T) {
-	setupState(t, `
+	testutils.SetupState(t, `
 {
   "blueprint": null,
   "resources": [
@@ -101,6 +102,6 @@ func TestCertLeafLoadsValuesFromState(t *testing.T) {
 	err := ca.Process()
 	require.NoError(t, err)
 
-	require.Equal(t, "mine.key", ca.KeyPath)
-	require.Equal(t, "mine.cert", ca.CertPath)
+	require.Equal(t, "mine.key", ca.PrivateKey.Filename)
+	require.Equal(t, "mine.cert", ca.Cert.Filename)
 }

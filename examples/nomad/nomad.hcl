@@ -41,7 +41,7 @@ resource "nomad_job" "example_2" {
   paths = ["./app_config/example2.nomad"]
 
   health_check {
-    timeout    = "60s"
-    jobs = ["example_2"]
+    timeout = "60s"
+    jobs    = ["example_2"]
   }
 }

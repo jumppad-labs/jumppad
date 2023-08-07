@@ -10,6 +10,7 @@ type LocalExec struct {
 	// embedded type holding name, etc
 	types.ResourceMetadata `hcl:",remain"`
 
+	// Script []string `hcl:"script,optional" json:"script,omitempty"` // Script to execute
 	Command          []string          `hcl:"command,optional" json:"command,omitempty"`                     // Command to execute
 	WorkingDirectory string            `hcl:"working_directory,optional" json:"working_directory,omitempty"` // Working directory to execute commands
 	Daemon           bool              `hcl:"daemon,optional" json:"daemon,omitempty"`                       // Should the process run as a daemon

@@ -1,5 +1,14 @@
 # Change Log
 
+## version v0.7.0
+* Update K3s to 1.27.4
+* Update Nomad to 1.6.1
+
+## version v0.6.0
+* Add new `dev` command to watch the given config for changes and automatically
+  run `up`
+* Change behavior of `up` to destroy any resources not in the current config
+
 ## version v0.5.9
 * Changed health checks to move checks like kubernetes pods to specific resources
 * Added exec health check for containers

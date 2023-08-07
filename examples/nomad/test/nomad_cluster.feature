@@ -13,7 +13,6 @@ Feature: Nomad Cluster
       | resource.nomad_cluster.dev |
       | resource.container.consul                   |
     And a HTTP call to "http://localhost:18500/v1/status/leader" should result in status 200
-    And a HTTP call to "http://localhost:19090" should result in status 200
     And a HTTP call to "http://localhost:19091" should result in status 200
 
   @multi-node
@@ -28,5 +27,4 @@ Feature: Nomad Cluster
       | resource.nomad_cluster.dev                  |
       | resource.container.consul                   |
     And a HTTP call to "http://localhost:18500/v1/status/leader" should result in status 200
-    And a HTTP call to "http://localhost:19090" should result in status 200
     And a HTTP call to "http://localhost:19091" should result in status 200

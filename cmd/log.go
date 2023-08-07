@@ -13,7 +13,6 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/fatih/color"
-	"github.com/hashicorp/go-hclog"
 	hcltypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/spf13/cobra"
 
@@ -65,7 +64,7 @@ func getResources(cmd *cobra.Command, args []string, complete string) ([]string,
 
 func newLogCmdFunc(dc clients.Docker, stdout, stderr io.Writer) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		log := hclog.Default()
+		log := createLogger()
 		sigs := make(chan os.Signal, 1)
 		signal.Notify(sigs, os.Interrupt)
 		waitGroup := sync.WaitGroup{}
@@ -108,7 +107,7 @@ func newLogCmdFunc(dc clients.Docker, stdout, stderr io.Writer) func(cmd *cobra.
 
 			if err == nil {
 				waitGroup.Add(1)
-				go func(rc io.ReadCloser, name string, c color.Attribute, log hclog.Logger) {
+				go func(rc io.ReadCloser, name string, c color.Attribute, log clients.Logger) {
 					writeLogOutput(rc, stdout, stderr, name, c, log)
 					waitGroup.Done()
 				}(rc, r, getRandomColor(), log)
@@ -179,7 +178,7 @@ func getRandomColor() color.Attribute {
 	return termColors[rand.Intn(len(termColors)-1)]
 }
 
-func writeLogOutput(rc io.ReadCloser, stdout, stderr io.Writer, name string, c color.Attribute, log hclog.Logger) {
+func writeLogOutput(rc io.ReadCloser, stdout, stderr io.Writer, name string, c color.Attribute, log clients.Logger) {
 	hdr := make([]byte, 8)
 	colorWriter := color.New(c)
 

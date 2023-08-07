@@ -133,6 +133,7 @@ jobs:
           './examples/single_k3s_cluster',
           './examples/multiple_k3s_clusters',
           './examples/local_exec',
+          './examples/remote_exec',
           './examples/certificates',
         ]
 
@@ -168,97 +169,90 @@ jobs:
           tile: ${{ github.job_id }}
           description: "Functional tests for docker: ${{matrix.folder}}"
 
- # functional_test_podman:
- #   name: Functional Test Podman
- #   runs-on: ubuntu-latest
- #   needs: functional_test_docker
+  functional_test_podman:
+    name: Functional Test Podman
+    runs-on: ubuntu-latest
+    needs: functional_test_build
 
- #   strategy:
- #     max-parallel: 2
- #     fail-fast: false
- #     matrix:
- #       folder: [
- #         './examples/container',
- #         './examples/build',
- #         './examples/docs',
- #         './examples/single_k3s_cluster',
- #         './examples/nomad',
- #         './examples/local_exec',
- #       ]
+    strategy:
+      max-parallel: 2
+      fail-fast: false
+      matrix:
+        folder: [
+          './examples/container',
+         # './examples/build',
+         # './examples/docs',
+          './examples/single_k3s_cluster',
+          './examples/nomad',
+         # './examples/local_exec',
+        ]
 
- #   steps:
- #     - name: Download-Binaries
- #       uses: actions/download-artifact@v2
- #       with:
- #         name: test_binary
- #         path: /usr/local/bin
- #     
- #     - name: Make binary executable
- #       run: |
- #         sudo chmod +x /usr/local/bin/shipyard
+    steps:
+      - name: Download-Binaries
+        uses: actions/download-artifact@v2
+        with:
+          name: test_binary
+          path: /usr/local/bin
+      
+      - name: Make binary executable
+        run: |
+          sudo chmod +x /usr/local/bin/jumppad
 
- #     - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
- #     - name: Setup Go version
- #       uses: actions/setup-go@v1
- #       with:
- #         go-version: 1.19
- #     
- #     - name: Install dependencies for Podman tests
- #       run: |
- #         sudo apt install -y libbtrfs-dev pkg-config libgpgme-dev libdevmapper-dev podman dnsmasq
- #     
- #     - name: Setup DNSMasq default nameserver resolution
- #       run: |
- #         echo "disable resovld listening on 53"
- #         sudo /bin/bash -c 'echo "DNSStubListener=no" >> /etc/systemd/resolved.conf'
- #         sudo /bin/bash -c 'echo "DNS=8.8.8.8" >> /etc/systemd/resolved.conf'
- #         sudo systemctl restart systemd-resolved.service
+      - name: Setup Go version
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.19
+      
+      - name: Install dependencies for Podman tests
+        run: |
+          sudo mkdir -p /etc/apt/keyrings
 
- #         echo "configure dnsmasq"
- #         sudo /bin/bash -c 'echo "server=8.8.8.8" >> /etc/dnsmasq.conf'
- #         sudo /bin/bash -c 'echo "server=1.1.1.1" >> /etc/dnsmasq.conf'
- #         sudo systemctl restart dnsmasq
+          # Debian Testing/Bookworm
+          curl -fsSL https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/Debian_Testing/Release.key \
+            | gpg --dearmor \
+            | sudo tee /etc/apt/keyrings/devel_kubic_libcontainers_unstable.gpg > /dev/null
+          echo \
+            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/devel_kubic_libcontainers_unstable.gpg]\
+              https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/Debian_Testing/ /" \
+            | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:unstable.list > /dev/null
 
- #         sudo /bin/bash -c 'echo "127.0.0.1 ubuntu" >> /etc/hosts'
- #     
- #     - name: Setup Podman sock
- #       run: |
- #         sudo sed '/^SocketMode=.*/a SocketGroup=docker' -i /lib/systemd/system/podman.socket
- #         sudo chmod +x /run/podman
+          # Debian Unstable/Sid
+          curl -fsSL https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/Debian_Unstable/Release.key \
+            | gpg --dearmor \
+            | sudo tee /etc/apt/keyrings/devel_kubic_libcontainers_unstable.gpg > /dev/null
+          echo \
+            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/devel_kubic_libcontainers_unstable.gpg]\
+              https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/Debian_Unstable/ /" \
+            | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:unstable.list > /dev/null
 
- #         sudo systemctl enable podman.socket
- #         sudo systemctl enable podman.service
- #         sudo systemctl start podman.service
- #         sudo podman info
- #         
- #     - name: Setup Podman dnsname plugin
- #       run: |
- #         mkdir -p /usr/libexec/cni
- #         sudo cp /usr/local/bin/dnsname /usr/libexec/cni
- #     
- #     - name: Setup Podman registries for Docker.io
- #       run: |
- #         echo -e "[registries.search]\nregistries = ['docker.io']" | sudo tee /etc/containers/registries.conf
+          # Install Podman
+          sudo apt-get update
+          sudo apt-get -y upgrade
+          sudo apt-get -y install podman
 
- #     - name: Run tests Podman
- #       uses: nick-invision/retry@v2
- #       with:
- #         timeout_seconds: 600
- #         max_attempts: 3
- #         retry_on: error
- #         command: |
- #           export DOCKER_HOST=unix:///run/podman/podman.sock
- #           shipyard check
- #           shipyard test ${{matrix.folder}}
+          # Start the Podman sock
+          sudo nohup podman system service -t 0 > ./podman.log &
+          sleep 10
+          sudo chmod +x /run/podman
+          sudo chmod 777 /run/podman/podman.sock
+      
+      - name: Run tests
+        run: |
+          jumppad check
+          jumppad purge
+          jumppad test ${{matrix.folder}}
+        env:
+          DOCKER_HOST: "unix:///run/podman/podman.sock"
 
- #     - name: Send status to Discord
- #       uses: sarisia/actions-status-discord@v1
- #       if: always()
- #       with:
- #         webhook: ${{ secrets.DISCORD_WEBHOOK }}
- #         tile: ${{ github.job_id }}
- #         description: "Functional tests for ${{matrix.folder}}"
+      - name: Send status to Discord
+        uses: sarisia/actions-status-discord@v1
+        if: always()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          tile: ${{ github.job_id }}
+          description: "Functional tests for ${{matrix.folder}}"
 
   build_dev:
     name: Build Dev Version

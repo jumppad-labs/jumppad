@@ -6,18 +6,18 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/go-hclog"
+	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	cp "github.com/otiai10/copy"
 	"golang.org/x/xerrors"
 )
 
 type Copy struct {
-	log    hclog.Logger
+	log    clients.Logger
 	config *resources.Copy
 }
 
-func NewCopy(co *resources.Copy, l hclog.Logger) *Copy {
+func NewCopy(co *resources.Copy, l clients.Logger) *Copy {
 	return &Copy{l, co}
 }
 
@@ -109,7 +109,13 @@ func (c *Copy) Lookup() ([]string, error) {
 }
 
 func (c *Copy) Refresh() error {
-	c.log.Info("Refresh Copied files", "ref", c.config.Name)
+	c.log.Debug("Refresh Copied files", "ref", c.config.Name)
 
 	return nil
+}
+
+func (c *Copy) Changed() (bool, error) {
+	c.log.Debug("Checking changes", "ref", c.config.Name)
+
+	return false, nil
 }

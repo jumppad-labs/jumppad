@@ -3,7 +3,6 @@ package providers
 import (
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
@@ -15,11 +14,11 @@ type Helm struct {
 	kubeClient   clients.Kubernetes
 	helmClient   clients.Helm
 	getterClient clients.Getter
-	log          hclog.Logger
+	log          clients.Logger
 }
 
 // NewHelm creates a new Helm provider
-func NewHelm(c *resources.Helm, kc clients.Kubernetes, hc clients.Helm, g clients.Getter, l hclog.Logger) *Helm {
+func NewHelm(c *resources.Helm, kc clients.Kubernetes, hc clients.Helm, g clients.Getter, l clients.Logger) *Helm {
 	return &Helm{c, kc, hc, g, l}
 }
 
@@ -174,9 +173,15 @@ func (h *Helm) Lookup() ([]string, error) {
 }
 
 func (c *Helm) Refresh() error {
-	c.log.Info("Refresh Helm Chart", "ref", c.config.Name)
+	c.log.Debug("Refresh Helm Chart", "ref", c.config.Name)
 
 	return nil
+}
+
+func (c *Helm) Changed() (bool, error) {
+	c.log.Debug("Checking changes", "ref", c.config.Name)
+
+	return false, nil
 }
 
 func (h *Helm) getKubeConfigPath() (string, error) {

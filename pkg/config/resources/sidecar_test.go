@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -28,7 +29,7 @@ func TestSidecarProcessSetsAbsolute(t *testing.T) {
 }
 
 func TestSidecarLoadsValuesFromState(t *testing.T) {
-	setupState(t, `
+	testutils.SetupState(t, `
 {
   "blueprint": null,
   "resources": [
@@ -52,5 +53,5 @@ func TestSidecarLoadsValuesFromState(t *testing.T) {
 	err := docs.Process()
 	require.NoError(t, err)
 
-	require.Equal(t, "fqdn.mine", docs.FQDN)
+	require.Equal(t, "fqdn.mine", docs.FQRN)
 }
