@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
-	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	clients "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/stretchr/testify/mock"
 	assert "github.com/stretchr/testify/require"
@@ -39,7 +39,7 @@ func TestBuildListsImagesAndErrorWhenError(t *testing.T) {
 	cc := config.NewContainer("test")
 	cc.Build = &config.Build{Context: "./context", Tag: "latest"}
 
-	dt := NewDockerTasks(md, nil, &TarGz{}, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, nil, &TarGz{}, clients.NewTestLogger(t))
 
 	_, err := dt.BuildContainer(cc, false)
 
@@ -50,7 +50,7 @@ func TestBuildListsImagesAndDoesNotBuildWhenExists(t *testing.T) {
 	cc := config.NewContainer("test")
 	cc.Build = &config.Build{Context: "./context", Tag: "latest"}
 
-	dt := NewDockerTasks(md, nil, &TarGz{}, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, nil, &TarGz{}, clients.NewTestLogger(t))
 
 	in, err := dt.BuildContainer(cc, false)
 
@@ -66,7 +66,7 @@ func TestBuildListsImagesAndBuildsWhenNotExists(t *testing.T) {
 	cc := config.NewContainer("test")
 	cc.Build = &config.Build{Context: "./context", Tag: "latest"}
 
-	dt := NewDockerTasks(md, nil, &TarGz{}, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, nil, &TarGz{}, clients.NewTestLogger(t))
 
 	in, err := dt.BuildContainer(cc, false)
 
@@ -85,7 +85,7 @@ func TestBuildListsImagesAndBuildsWhenNotExistsCustomDockerfile(t *testing.T) {
 	cc := config.NewContainer("test")
 	cc.Build = &config.Build{Context: "./context", File: "./Dockerfile-test", Tag: "latest"}
 
-	dt := NewDockerTasks(md, nil, &TarGz{}, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, nil, &TarGz{}, clients.NewTestLogger(t))
 
 	in, err := dt.BuildContainer(cc, false)
 

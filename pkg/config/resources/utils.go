@@ -5,11 +5,19 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 // ensureAbsolute ensure that the given path is either absolute or
 // if relative is converted to abasolute based on the path of the config
 func ensureAbsolute(path, file string) string {
+	// do not try to convert the docker sock address
+	// this could happen if someone mounts the docker sock on windows
+	if path == utils.GetDockerHost() {
+		return path
+	}
+
 	// if the file starts with a / and we are on windows
 	// we should treat this as absolute
 	if runtime.GOOS == "windows" && strings.HasPrefix(path, "/") {

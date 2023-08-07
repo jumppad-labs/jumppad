@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -28,7 +29,7 @@ func TestK8sClusterProcessSetsAbsolute(t *testing.T) {
 }
 
 func TestK8sClusterSetsOutputsFromState(t *testing.T) {
-	setupState(t, `
+	testutils.SetupState(t, `
 {
   "blueprint": null,
   "resources": [

@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
-	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	clients "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/stretchr/testify/assert"
@@ -31,7 +30,7 @@ func TestCopyFromContainerCopiesFile(t *testing.T) {
 		types.ContainerPathStat{},
 		nil,
 	)
-	dt := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, mic, &TarGz{}, clients.NewTestLogger(t))
 
 	tmpDir, _ := ioutil.TempDir("", "")
 	defer os.RemoveAll(tmpDir)
@@ -59,7 +58,7 @@ func TestCopyFromContainerReturnsErrorOnDockerError(t *testing.T) {
 		types.ContainerPathStat{},
 		fmt.Errorf("boom"),
 	)
-	dt := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, mic, &TarGz{}, clients.NewTestLogger(t))
 
 	err := dt.CopyFromContainer(id, src, "/new.hcl")
 	assert.Error(t, err)

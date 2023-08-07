@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
@@ -14,18 +13,21 @@ import (
 	assert "github.com/stretchr/testify/require"
 )
 
-func setupContainerTests(t *testing.T) (*resources.Container, *clients.MockContainerTasks, *mocks.MockHTTP) {
+func setupContainerTests(t *testing.T) (*resources.Container, *mocks.ContainerTasks, *mocks.MockHTTP) {
 	cc := &resources.Container{ResourceMetadata: types.ResourceMetadata{
 		Name: "tests",
 	}}
 
 	cc.Image = &resources.Image{Name: "consul"}
 
-	md := &clients.MockContainerTasks{}
+	md := &mocks.ContainerTasks{}
 	hc := &mocks.MockHTTP{}
 
 	// check pulls image before creating container
 	md.On("PullImage", *cc.Image, false).Once().Return(nil)
+
+	// fetches the id of the pulled image, this is used to detect changes
+	md.On("FindImageInLocalRegistry", *cc.Image).Once().Return("myimage", nil)
 
 	// check calls CreateContainer with the config
 	md.On("CreateContainer", cc).Once().Return("12345", nil)
@@ -39,7 +41,7 @@ func setupContainerTests(t *testing.T) (*resources.Container, *clients.MockConta
 func TestContainerCreatesSuccessfully(t *testing.T) {
 	cc, md, hc := setupContainerTests(t)
 
-	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
+	c := NewContainer(cc, md, hc, clients.NewTestLogger(t))
 
 	err := c.Create()
 	assert.NoError(t, err)
@@ -67,7 +69,7 @@ func TestContainerSidecarCreatesContainerSuccessfully(t *testing.T) {
 	cs.Resources = &resources.Resources{}
 	cs.MaxRestartCount = 10
 
-	c := NewContainerSidecar(cs, md, hc, hclog.NewNullLogger())
+	c := NewContainerSidecar(cs, md, hc, clients.NewTestLogger(t))
 	err := c.Create()
 	assert.NoError(t, err)
 
@@ -96,7 +98,7 @@ func TestContainerRunsHTTPChecks(t *testing.T) {
 		}},
 	}
 
-	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
+	c := NewContainer(cc, md, hc, clients.NewTestLogger(t))
 
 	hc.On("HealthCheckHTTP", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
@@ -115,7 +117,7 @@ func TestContainerRunsTCPChecks(t *testing.T) {
 		}},
 	}
 
-	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
+	c := NewContainer(cc, md, hc, clients.NewTestLogger(t))
 
 	hc.On("HealthCheckTCP", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
@@ -135,9 +137,9 @@ func TestContainerRunsExecChecksWithCommand(t *testing.T) {
 		}},
 	}
 
-	md.On("ExecuteCommand", "12345", command, mock.Anything, "/tmp", "", "", mock.Anything).Return(0, nil)
+	md.On("ExecuteCommand", "12345", command, mock.Anything, "/tmp", "", "", 30, mock.Anything).Return(0, nil)
 
-	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
+	c := NewContainer(cc, md, hc, clients.NewTestLogger(t))
 
 	err := c.Create()
 	assert.NoError(t, err)
@@ -157,9 +159,9 @@ func TestContainerRunsExecChecksWithScript(t *testing.T) {
 	}
 
 	md.On("CopyFileToContainer", "12345", mock.Anything, mock.Anything).Return(nil)
-	md.On("ExecuteCommand", "12345", []string{"sh", "/tmp/script.sh"}, mock.Anything, "/tmp", "", "", mock.Anything).Return(0, nil)
+	md.On("ExecuteCommand", "12345", []string{"sh", "/tmp/script.sh"}, mock.Anything, "/tmp", "", "", 30, mock.Anything).Return(0, nil)
 
-	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
+	c := NewContainer(cc, md, hc, clients.NewTestLogger(t))
 
 	err := c.Create()
 	assert.NoError(t, err)
@@ -169,7 +171,7 @@ func TestContainerRunsExecChecksWithScript(t *testing.T) {
 
 func TestContainerDoesNOTCreateWhenPullImageFail(t *testing.T) {
 	cc, md, hc := setupContainerTests(t)
-	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
+	c := NewContainer(cc, md, hc, clients.NewTestLogger(t))
 
 	// check pulls image before creating container and return an erro
 	removeOn(&md.Mock, "PullImage")
@@ -186,7 +188,7 @@ func TestContainerDoesNOTCreateWhenPullImageFail(t *testing.T) {
 func TestContainerDestroysCorrectlyWhenContainerExists(t *testing.T) {
 	cc, md, hc := setupContainerTests(t)
 	cc.Networks = []resources.NetworkAttachment{resources.NetworkAttachment{Name: "cloud"}}
-	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
+	c := NewContainer(cc, md, hc, clients.NewTestLogger(t))
 
 	md.On("FindContainerIDs", cc.FQRN).Return([]string{"abc"}, nil)
 	md.On("RemoveContainer", "abc", false).Return(nil)
@@ -199,7 +201,7 @@ func TestContainerDestroysCorrectlyWhenContainerExists(t *testing.T) {
 func TestContainerDoesNotDestroysWhenNotExists(t *testing.T) {
 	cc, md, hc := setupContainerTests(t)
 	cc.Networks = []resources.NetworkAttachment{resources.NetworkAttachment{Name: "cloud"}}
-	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
+	c := NewContainer(cc, md, hc, clients.NewTestLogger(t))
 
 	md.On("FindContainerIDs", cc.FQRN).Return(nil, nil)
 
@@ -211,7 +213,7 @@ func TestContainerDoesNotDestroysWhenNotExists(t *testing.T) {
 func TestContainerDoesNotDestroysWhenLookupError(t *testing.T) {
 	cc, md, hc := setupContainerTests(t)
 	cc.Networks = []resources.NetworkAttachment{resources.NetworkAttachment{Name: "cloud"}}
-	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
+	c := NewContainer(cc, md, hc, clients.NewTestLogger(t))
 
 	md.On("FindContainerIDs", cc.FQRN).Return(nil, fmt.Errorf("boom"))
 
@@ -223,26 +225,11 @@ func TestContainerDoesNotDestroysWhenLookupError(t *testing.T) {
 func TestContainerLooksupIDs(t *testing.T) {
 	cc, md, hc := setupContainerTests(t)
 	cc.Networks = []resources.NetworkAttachment{resources.NetworkAttachment{Name: "cloud"}}
-	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
+	c := NewContainer(cc, md, hc, clients.NewTestLogger(t))
 
 	md.On("FindContainerIDs", cc.FQRN).Return([]string{"abc"}, nil)
 
 	ids, err := c.Lookup()
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"abc"}, ids)
-}
-
-func TestContainerBuildsContainer(t *testing.T) {
-	cc, md, hc := setupContainerTests(t)
-	cc.Build = &resources.Build{Context: "./"}
-
-	md.On("BuildContainer", mock.Anything, mock.Anything).Return("testimage", nil)
-
-	c := NewContainer(cc, md, hc, hclog.NewNullLogger())
-
-	err := c.Create()
-	assert.NoError(t, err)
-
-	conf := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*resources.Container)
-	assert.Equal(t, "testimage", conf.Image.Name)
 }

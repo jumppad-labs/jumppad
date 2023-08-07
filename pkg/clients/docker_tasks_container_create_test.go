@@ -13,7 +13,6 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
-	"github.com/hashicorp/go-hclog"
 	clients "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
@@ -127,7 +126,7 @@ func setupContainerMocks() (*clients.MockDocker, *clients.ImageLog) {
 }
 
 func setupContainer(t *testing.T, cc *config.Container, md *clients.MockDocker, mic *clients.ImageLog) error {
-	p := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())
+	p := NewDockerTasks(md, mic, &TarGz{}, clients.NewTestLogger(t))
 
 	// create the container
 	_, err := p.CreateContainer(cc)

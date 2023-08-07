@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/docker/docker/pkg/ioutils"
-	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/hclconfig"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
@@ -44,16 +43,16 @@ func setupTestsBase(t *testing.T, returnVals map[string]error, state string) (*E
 	cl := &clients.Clients{}
 	e := &EngineImpl{
 		clients:     cl,
-		log:         hclog.NewNullLogger(),
+		log:         clients.NewTestLogger(t),
 		getProvider: generateProviderMock(p, returnVals),
 	}
 
-	setupState(t, state)
+	testutils.SetupState(t, state)
 
 	return e, p
 }
 
-func setupState(t *testing.T, state string) {
+func testutils.SetupState(t *testing.T, state string) {
 	// set the home folder to a tmpFolder for the tests
 	dir, err := ioutils.TempDir("", "")
 	if err != nil {
@@ -117,7 +116,7 @@ func testLoadState(t *testing.T, e *EngineImpl) *hclconfig.Config {
 }
 
 func TestNewCreatesClients(t *testing.T) {
-	e, err := New(hclog.NewNullLogger())
+	e, err := New(clients.NewTestLogger(t))
 	assert.NoError(t, err)
 
 	cl := e.GetClients()

@@ -3,22 +3,20 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/cmd/view"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
-func newDevCmd(e jumppad.Engine, cc clients.Connector, l hclog.Logger) *cobra.Command {
+func newDevCmd() *cobra.Command {
 	var variables []string
 	var variablesFile string
 	var interval string
+	var ttyFlag bool
 
 	devCmd := &cobra.Command{
 		Use:   "dev",
@@ -28,36 +26,56 @@ func newDevCmd(e jumppad.Engine, cc clients.Connector, l hclog.Logger) *cobra.Co
 		jumppad dev ./
 `,
 		Args:         cobra.ArbitraryArgs,
-		RunE:         newDevCmdFunc(e, cc, l, &variables, &variablesFile, &interval),
+		RunE:         newDevCmdFunc(&variables, &variablesFile, &interval, &ttyFlag),
 		SilenceUsage: true,
 	}
 
 	devCmd.Flags().StringSliceVarP(&variables, "var", "", nil, "Allows setting variables from the command line, variables are specified as a key and value, e.g --var key=value. Can be specified multiple times")
 	devCmd.Flags().StringVarP(&variablesFile, "vars-file", "", "", "Load variables from a location other than *.vars files in the blueprint folder. E.g --vars-file=./file.vars")
 	devCmd.Flags().StringVarP(&interval, "interval", "", "5s", "Interval to check for changes. E.g. --interval=5s")
+	devCmd.Flags().BoolVarP(&ttyFlag, "disable-tty", "", false, "Enable/disable output to TTY")
 
 	return devCmd
 }
 
-func newDevCmdFunc(e jumppad.Engine, cc clients.Connector, l hclog.Logger, variables *[]string, variablesFile, interval *string) func(cmd *cobra.Command, args []string) error {
+func newDevCmdFunc(variables *[]string, variablesFile, interval *string, ttyFlag *bool) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
+		// create the output view
+		var v view.View
+		var err error
+		if *ttyFlag {
+			v, err = view.NewLogView()
+			if err != nil {
+				return fmt.Errorf("unable to create output view: %s", err)
+			}
+		} else {
+			v, err = view.NewTTYView()
+			if err != nil {
+				return fmt.Errorf("unable to create output view: %s", err)
+			}
+		}
+
+		engine, _ = createEngine(v.Logger())
+		engineClients = engine.GetClients()
+
 		// create the shipyard and sub folders in the users home directory
 		utils.CreateFolders()
 
 		d, err := time.ParseDuration(*interval)
 		if err != nil {
-			return fmt.Errorf("invalid duration %s, please specify a duration using go syntax, e.g. 5s, 1m")
+			return fmt.Errorf("invalid duration %s, please specify a duration using go syntax, e.g. 5s, 1m", *interval)
 		}
 
-		dst := ""
+		// set the source
+		src := ""
 		if len(args) == 1 {
-			dst = args[0]
+			src = args[0]
 		} else {
-			dst = "./"
+			src = "./"
 		}
 
-		if dst == "." {
-			dst = "./"
+		if src == "." {
+			src = "./"
 		}
 
 		// parse the vars into a map
@@ -79,72 +97,70 @@ func newDevCmdFunc(e jumppad.Engine, cc clients.Connector, l hclog.Logger, varia
 		}
 
 		// create the certificates for the connector
-		if cb, err := cc.GetLocalCertBundle(utils.CertsDir("")); err != nil || cb == nil {
+		if cb, err := engineClients.Connector.GetLocalCertBundle(utils.CertsDir("")); err != nil || cb == nil {
 			// generate certs
-			l.Debug("Generating TLS Certificates for Ingress", "path", utils.CertsDir(""))
-			_, err := cc.GenerateLocalCertBundle(utils.CertsDir(""))
+			v.Logger().Debug("Generating TLS Certificates for Ingress", "path", utils.CertsDir(""))
+
+			_, err := engineClients.Connector.GenerateLocalCertBundle(utils.CertsDir(""))
 			if err != nil {
 				return fmt.Errorf("unable to generate connector certificates: %s", err)
 			}
 		}
 
 		// start the connector
-		if !cc.IsRunning() {
-			cb, err := cc.GetLocalCertBundle(utils.CertsDir(""))
+		if !engineClients.Connector.IsRunning() {
+			cb, err := engineClients.Connector.GetLocalCertBundle(utils.CertsDir(""))
 			if err != nil {
 				return fmt.Errorf("unable to get certificates to secure ingress: %s", err)
 			}
 
-			l.Debug("Starting API server")
+			v.Logger().Debug("Starting API server")
 
-			err = cc.Start(cb)
+			err = engineClients.Connector.Start(cb)
 			if err != nil {
 				return fmt.Errorf("unable to start API server: %s", err)
 			}
 		}
 
-		c := make(chan os.Signal)
-		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-		go func() {
-			<-c
-			os.Exit(0)
-		}()
+		// start the
+		go doUpdates(v, engine, src, vars, *variablesFile, d)
 
-		for {
-			cmd.Println("Checking for changes...")
-
-			new, changed, removed, err := e.Diff(dst, vars, *variablesFile)
-			if err != nil {
-				cmd.PrintErr(err)
-			}
-
-			if len(new) > 0 || len(changed) > 0 || len(removed) > 0 {
-				cmd.Printf("Changes detected, resources to add %d, resources changed %d, resources to delete %d, running up\n", len(new), len(changed), len(removed))
-
-				// update status every 30s to let people know we are still running
-				statusUpdate := time.NewTicker(15 * time.Second)
-				startTime := time.Now()
-
-				go func() {
-					for range statusUpdate.C {
-						elapsedTime := time.Since(startTime).Seconds()
-						logger.Info(fmt.Sprintf("Please wait, still creating resources [Elapsed Time: %f]", elapsedTime))
-					}
-				}()
-
-				_, err := e.ApplyWithVariables(dst, vars, *variablesFile)
-				if err != nil {
-					return err
-				}
-
-				// kill the timer
-				statusUpdate.Stop()
-			}
-
-			cmd.Println("")
-			time.Sleep(d)
+		// Show the view
+		err = v.Display()
+		if err != nil {
+			return err
 		}
 
 		return nil
+	}
+}
+
+func doUpdates(v view.View, e jumppad.Engine, source string, variables map[string]string, variableFile string, interval time.Duration) {
+	v.UpdateStatus("Checking for changes...", false)
+
+	for {
+		time.Sleep(interval)
+
+		new, changed, removed, _, err := e.Diff(source, variables, variableFile)
+		if err != nil {
+			v.Logger().Error(err.Error())
+		}
+
+		if len(new) > 0 || len(changed) > 0 || len(removed) > 0 {
+			v.UpdateStatus(
+				fmt.Sprintf(
+					"Applying changes, %d resources to add, %d resources changed, %d resources to delete, running up",
+					len(new),
+					len(changed),
+					len(removed),
+				), true)
+
+			_, err := e.ApplyWithVariables(source, variables, variableFile)
+			if err != nil {
+				v.Logger().Error(err.Error())
+			}
+
+			v.UpdateStatus("Checking for changes...", false)
+		}
 	}
 }

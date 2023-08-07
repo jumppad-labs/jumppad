@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
-
 	"github.com/jumppad-labs/hclconfig"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
@@ -28,24 +26,24 @@ import (
 //go:generate mockery --name Engine --filename engine.go
 type Engine interface {
 	GetClients() *clients.Clients
-	Apply(string) ([]types.Resource, error)
+	Apply(string) (*hclconfig.Config, error)
 
 	// ApplyWithVariables applies a configuration file or directory containing
 	// configuration. Optionally the user can provide a map of variables which the configuration
 	// uses and / or a file containing variables.
-	ApplyWithVariables(path string, variables map[string]string, variablesFile string) ([]types.Resource, error)
-	ParseConfig(string) ([]types.Resource, error)
-	ParseConfigWithVariables(string, map[string]string, string) ([]types.Resource, error)
+	ApplyWithVariables(path string, variables map[string]string, variablesFile string) (*hclconfig.Config, error)
+	ParseConfig(string) (*hclconfig.Config, error)
+	ParseConfigWithVariables(string, map[string]string, string) (*hclconfig.Config, error)
 	Destroy() error
 	Config() *hclconfig.Config
-	Diff(path string, variables map[string]string, variablesFile string) (new []types.Resource, changed []types.Resource, removed []types.Resource, err error)
+	Diff(path string, variables map[string]string, variablesFile string) (new []types.Resource, changed []types.Resource, removed []types.Resource, cfg *hclconfig.Config, err error)
 }
 
 // EngineImpl is responsible for creating and destroying resources
 type EngineImpl struct {
 	clients     *clients.Clients
 	config      *hclconfig.Config
-	log         hclog.Logger
+	log         clients.Logger
 	getProvider getProviderFunc
 }
 
@@ -54,7 +52,7 @@ type EngineImpl struct {
 type getProviderFunc func(c types.Resource, cl *clients.Clients) providers.Provider
 
 // GenerateClients creates the various clients for creating and destroying resources
-func GenerateClients(l hclog.Logger) (*clients.Clients, error) {
+func GenerateClients(l clients.Logger) (*clients.Clients, error) {
 	dc, err := clients.NewDocker()
 	if err != nil {
 		return nil, err
@@ -101,14 +99,14 @@ func GenerateClients(l hclog.Logger) (*clients.Clients, error) {
 }
 
 // New creates a new shipyard engine
-func New(l hclog.Logger) (Engine, error) {
+func New(l clients.Logger) (Engine, error) {
 	var err error
 	e := &EngineImpl{}
 	e.log = l
 	e.getProvider = generateProviderImpl
 
 	// Set the standard writer to our logger as the DAG uses the standard library log.
-	log.SetOutput(l.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Trace}))
+	log.SetOutput(l.StandardWriter())
 
 	// create the clients
 	cl, err := GenerateClients(l)
@@ -134,14 +132,14 @@ func (e *EngineImpl) Config() *hclconfig.Config {
 // ParseConfig parses the given Shipyard files and creating the resource types but does
 // not apply or destroy the resources.
 // This function can be used to check the validity of a configuration without making changes
-func (e *EngineImpl) ParseConfig(path string) ([]types.Resource, error) {
+func (e *EngineImpl) ParseConfig(path string) (*hclconfig.Config, error) {
 	return e.ParseConfigWithVariables(path, nil, "")
 }
 
 // ParseConfigWithVariables parses the given Shipyard files and creating the resource types but does
 // not apply or destroy the resources.
 // This function can be used to check the validity of a configuration without making changes
-func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]string, variablesFile string) ([]types.Resource, error) {
+func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]string, variablesFile string) (*hclconfig.Config, error) {
 	// abs paths
 	var err error
 	path, err = filepath.Abs(path)
@@ -165,21 +163,24 @@ func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]strin
 		return nil
 	})
 
-	return e.config.Resources, err
+	return e.config, err
 }
 
-func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFile string) (new []types.Resource, changed []types.Resource, removed []types.Resource, err error) {
-
+func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFile string) (
+	new []types.Resource, changed []types.Resource, removed []types.Resource, config *hclconfig.Config, err error,
+) {
 	// load the stack
 	past, _ := resources.LoadState()
 
 	// Parse the config to check it is valid
 	res, err := e.ParseConfigWithVariables(path, variables, variablesFile)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
-	for _, r := range res {
+	unchanged := []types.Resource{}
+
+	for _, r := range res.Resources {
 		// does the resource exist
 		cr, err := past.FindResource(r.Metadata().ID)
 
@@ -196,6 +197,8 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 			changed = append(changed, r)
 			continue
 		}
+
+		unchanged = append(unchanged, r)
 	}
 
 	// check if there are resources in the state that are no longer
@@ -207,7 +210,7 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 		}
 
 		found := false
-		for _, r2 := range res {
+		for _, r2 := range res.Resources {
 			if r.Metadata().ID == r2.Metadata().ID {
 				found = true
 				break
@@ -219,16 +222,37 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 		}
 	}
 
-	return new, changed, removed, err
+	// loop through the remaining resources and call changed on the provider
+	// to see if any internal properties that have changed
+	for _, r := range unchanged {
+		// call changed on when not disabled
+		if !r.Metadata().Disabled {
+			p := e.getProvider(r, e.clients)
+			if p == nil {
+				return nil, nil, nil, nil, fmt.Errorf("unable to create provider for resource Name: %s, Type: %s. Please check the provider is registered in providers.go", r.Metadata().Name, r.Metadata().Type)
+			}
+
+			c, err := p.Changed()
+			if err != nil {
+				return nil, nil, nil, nil, fmt.Errorf("unable to determine if resource has changed Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
+			}
+
+			if c {
+				changed = append(changed, r)
+			}
+		}
+	}
+
+	return new, changed, removed, res, err
 }
 
 // Apply the configuration and create or destroy the resources
-func (e *EngineImpl) Apply(path string) ([]types.Resource, error) {
+func (e *EngineImpl) Apply(path string) (*hclconfig.Config, error) {
 	return e.ApplyWithVariables(path, nil, "")
 }
 
 // ApplyWithVariables applies the current config creating the resources
-func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, variablesFile string) ([]types.Resource, error) {
+func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, variablesFile string) (*hclconfig.Config, error) {
 	// abs paths
 	var err error
 	path, err = filepath.Abs(path)
@@ -246,8 +270,7 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 	}
 
 	// get a diff of resources
-
-	_, _, removed, err := e.Diff(path, vars, variablesFile)
+	_, _, removed, _, err := e.Diff(path, vars, variablesFile)
 	if err != nil {
 		return nil, err
 	}
@@ -325,19 +348,7 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 		e.log.Info("Unable to save state", "error", stateErr)
 	}
 
-	return e.config.Resources, processErr
-}
-
-// checks if a string exists in an array if not it appends and returns a new
-// copy
-func appendIfNotContains(existing []string, s string) []string {
-	for _, v := range existing {
-		if v == s {
-			return existing
-		}
-	}
-
-	return append(existing, s)
+	return e.config, processErr
 }
 
 // Destroy the resources defined by the state
@@ -590,7 +601,7 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 
 			// reload the networks
 			np := e.getProvider(ic, e.clients)
-			np.Create()
+			np.Refresh()
 		} else {
 			e.log.Error("Unable to find Image Cache", "error", err)
 		}
@@ -627,4 +638,16 @@ func (e *EngineImpl) destroyCallback(r types.Resource) error {
 	e.config.RemoveResource(r)
 
 	return nil
+}
+
+// checks if a string exists in an array if not it appends and returns a new
+// copy
+func appendIfNotContains(existing []string, s string) []string {
+	for _, v := range existing {
+		if v == s {
+			return existing
+		}
+	}
+
+	return append(existing, s)
 }

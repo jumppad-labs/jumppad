@@ -8,11 +8,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
 	"golang.org/x/xerrors"
 )
 
 // Nomad defines an interface for a Nomad client
+//
+//go:generate mockery --name Nomad --filename nomad.go
 type Nomad interface {
 	// SetConfig for the client, path is a valid Nomad JSON config file
 	SetConfig(address string, port, nodes int) error
@@ -35,7 +36,7 @@ type Nomad interface {
 // NomadImpl is an implementation of the Nomad interface
 type NomadImpl struct {
 	httpClient  HTTP
-	l           hclog.Logger
+	l           Logger
 	backoff     time.Duration
 	address     string
 	port        int
@@ -43,7 +44,7 @@ type NomadImpl struct {
 }
 
 // NewNomad creates a new Nomad client
-func NewNomad(c HTTP, backoff time.Duration, l hclog.Logger) Nomad {
+func NewNomad(c HTTP, backoff time.Duration, l Logger) Nomad {
 	return &NomadImpl{httpClient: c, l: l, backoff: backoff}
 }
 
@@ -103,6 +104,7 @@ func (n *NomadImpl) HealthCheckAPI(timeout time.Duration) error {
 				}
 
 				var driversHealthy = true
+				var dockerDetected = false
 				for k, v := range drivers {
 					driver, ok := v.(map[string]interface{})
 					if !ok {
@@ -119,13 +121,21 @@ func (n *NomadImpl) HealthCheckAPI(timeout time.Duration) error {
 						continue
 					}
 
+					// we need to make a special case to check the docker driver is
+					// present as if the nomad server starts before docker then the
+					// presence of docker will not be detected
+					if k == "docker" {
+						dockerDetected = true
+					}
+
 					n.l.Debug("Driver status", "node", nodeName, "driver", k, "healthy", healthy)
 					if !healthy {
 						driversHealthy = false
 					}
+
 				}
 
-				if nodeStatus == "ready" && nodeEligable == "eligible" && driversHealthy {
+				if nodeStatus == "ready" && nodeEligable == "eligible" && driversHealthy && dockerDetected {
 					readyCount++
 				}
 			}

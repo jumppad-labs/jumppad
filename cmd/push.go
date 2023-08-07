@@ -5,7 +5,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/providers"
@@ -14,7 +13,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func newPushCmd(ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTTP, nc clients.Nomad, l hclog.Logger) *cobra.Command {
+func newPushCmd(ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTTP, nc clients.Nomad, l clients.Logger) *cobra.Command {
 	var force bool
 
 	pushCmd := &cobra.Command{
@@ -71,7 +70,7 @@ func newPushCmd(ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTT
 	return pushCmd
 }
 
-func pushK8sCluster(image string, c *resources.K8sCluster, ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTTP, log hclog.Logger, force bool) error {
+func pushK8sCluster(image string, c *resources.K8sCluster, ct clients.ContainerTasks, kc clients.Kubernetes, ht clients.HTTP, log clients.Logger, force bool) error {
 	cl := providers.NewK8sCluster(c, ct, kc, ht, nil, log)
 
 	// get the id of the cluster
@@ -91,21 +90,15 @@ func pushK8sCluster(image string, c *resources.K8sCluster, ct clients.ContainerT
 	return nil
 }
 
-func pushNomadCluster(image string, c *resources.NomadCluster, ct clients.ContainerTasks, ht clients.Nomad, log hclog.Logger, force bool) error {
+func pushNomadCluster(image string, c *resources.NomadCluster, ct clients.ContainerTasks, ht clients.Nomad, log clients.Logger, force bool) error {
 	cl := providers.NewNomadCluster(c, ct, ht, nil, log)
 
 	// get the id of the cluster
-	ids, err := cl.Lookup()
-	if err != nil {
-		return xerrors.Errorf("Error getting id for cluster")
-	}
 
-	for _, id := range ids {
-		log.Info("Pushing to container", "id", id, "image", image)
-		err = cl.ImportLocalDockerImages(utils.ImageVolumeName, id, []resources.Image{resources.Image{Name: strings.Trim(image, " ")}}, force)
-		if err != nil {
-			return xerrors.Errorf("Error pushing image: %w ", err)
-		}
+	log.Info("Pushing to container", "ref", c.ID, "image", image)
+	err := cl.ImportLocalDockerImages([]resources.Image{resources.Image{Name: strings.Trim(image, " ")}}, force)
+	if err != nil {
+		return xerrors.Errorf("Error pushing image: %w ", err)
 	}
 
 	return nil

@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/hclconfig/types"
 	gvm "github.com/shipyard-run/version-manager"
 
@@ -23,7 +22,7 @@ import (
 	markdown "github.com/MichaelMure/go-term-markdown"
 )
 
-func newRunCmd(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, vm gvm.Versions, cc clients.Connector, l hclog.Logger) *cobra.Command {
+func newRunCmd(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, vm gvm.Versions, cc clients.Connector, l clients.Logger) *cobra.Command {
 	var noOpen bool
 	var force bool
 	var y bool
@@ -58,12 +57,12 @@ func newRunCmd(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clients.
 	return runCmd
 }
 
-func newRunCmdFunc(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, vm gvm.Versions, cc clients.Connector, noOpen *bool, force *bool, runVersion *string, autoApprove *bool, variables *[]string, variablesFile *string, l hclog.Logger) func(cmd *cobra.Command, args []string) error {
+func newRunCmdFunc(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, vm gvm.Versions, cc clients.Connector, noOpen *bool, force *bool, runVersion *string, autoApprove *bool, variables *[]string, variablesFile *string, l clients.Logger) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		// create the shipyard and sub folders in the users home directory
 		utils.CreateFolders()
 
-		if *force == true {
+		if *force {
 			bp.SetForce(true)
 			e.GetClients().ContainerTasks.SetForcePull(true)
 		}
@@ -89,7 +88,7 @@ func newRunCmdFunc(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clie
 		// check the variables file exists
 		if variablesFile != nil && *variablesFile != "" {
 			if _, err := os.Stat(*variablesFile); err != nil {
-				return fmt.Errorf("Variables file %s, does not exist", *variablesFile)
+				return fmt.Errorf("variables file %s, does not exist", *variablesFile)
 			}
 		} else {
 			vf := ""
@@ -102,7 +101,7 @@ func newRunCmdFunc(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clie
 			l.Debug("Generating TLS Certificates for Ingress", "path", utils.CertsDir(""))
 			_, err := cc.GenerateLocalCertBundle(utils.CertsDir(""))
 			if err != nil {
-				return fmt.Errorf("Unable to generate connector certificates: %s", err)
+				return fmt.Errorf("unable to generate connector certificates: %s", err)
 			}
 		}
 
@@ -110,14 +109,14 @@ func newRunCmdFunc(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clie
 		if !cc.IsRunning() {
 			cb, err := cc.GetLocalCertBundle(utils.CertsDir(""))
 			if err != nil {
-				return fmt.Errorf("Unable to get certificates to secure ingress: %s", err)
+				return fmt.Errorf("unable to get certificates to secure ingress: %s", err)
 			}
 
 			l.Debug("Starting API server")
 
 			err = cc.Start(cb)
 			if err != nil {
-				return fmt.Errorf("Unable to start API server: %s", err)
+				return fmt.Errorf("unable to start API server: %s", err)
 			}
 		}
 
@@ -140,7 +139,7 @@ func newRunCmdFunc(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clie
 				// fetch the remote server from github
 				err := bp.Get(dst, utils.GetBlueprintLocalFolder(dst))
 				if err != nil {
-					return fmt.Errorf("Unable to retrieve blueprint: %s", err)
+					return fmt.Errorf("unable to retrieve blueprint: %s", err)
 				}
 
 				dst = utils.GetBlueprintLocalFolder(dst)
@@ -175,7 +174,7 @@ func newRunCmdFunc(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clie
 			browserList := []string{}
 			checkDuration := 30 * time.Second
 
-			for _, r := range res {
+			for _, r := range res.Resources {
 				switch r.Metadata().Type {
 				case resources.TypeContainer:
 					c := r.(*resources.Container)

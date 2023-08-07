@@ -71,7 +71,7 @@ func TestClusterNomadErrorsWhenUnableToLookupIDs(t *testing.T) {
 	md := &clients.MockContainerTasks{}
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
-	p := NewNomadCluster(clusterNomadConfig, md, nil, hclog.NewNullLogger())
+	p := NewNomadCluster(clusterNomadConfig, md, nil, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -81,7 +81,7 @@ func TestClusterNomadErrorsWhenClusterExists(t *testing.T) {
 	md := &clients.MockContainerTasks{}
 	md.On("FindContainerIDs", "server."+clusterNomadConfig.Name, mock.Anything).Return([]string{"abc"}, nil)
 
-	p := NewNomadCluster(clusterNomadConfig, md, nil, hclog.NewNullLogger())
+	p := NewNomadCluster(clusterNomadConfig, md, nil, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -93,7 +93,7 @@ func TestClusterNomadErrorsWhenWorkerNodesExist(t *testing.T) {
 	removeOn(&md.Mock, "FindContainerIDs")
 	md.On("FindContainerIDs", "1.client."+clusterNomadConfig.Name, mock.Anything).Return([]string{"abc"}, nil)
 
-	p := NewNomadCluster(cc, md, nil, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, nil, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -102,7 +102,7 @@ func TestClusterNomadErrorsWhenWorkerNodesExist(t *testing.T) {
 func TestClusterNomadPullsImage(t *testing.T) {
 	cc, md, mh := setupNomadClusterMocks(t)
 
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -113,7 +113,7 @@ func TestClusterNomadPullsImageWithDefault(t *testing.T) {
 	cc, md, mh := setupNomadClusterMocks(t)
 	cc.Version = "" // reset the version
 
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -123,7 +123,7 @@ func TestClusterNomadPullsImageWithDefault(t *testing.T) {
 func TestClusterNomadCreatesANewVolume(t *testing.T) {
 	cc, md, mh := setupNomadClusterMocks(t)
 
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -136,7 +136,7 @@ func TestClusterNomadFailsWhenUnableToCreatesANewVolume(t *testing.T) {
 	removeOn(&md.Mock, "CreateVolume")
 	md.On("CreateVolume", mock.Anything, mock.Anything).Return("", fmt.Errorf("boom"))
 
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -148,7 +148,7 @@ func TestClusterNomadCreatesAServer(t *testing.T) {
 
 	cc.Volumes = []config.Volume{config.Volume{Source: "./files", Destination: "/files"}}
 
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -201,7 +201,7 @@ func TestClusterNomadCreatesClientNodes(t *testing.T) {
 
 	cc.Volumes = []config.Volume{config.Volume{Source: "./files", Destination: "/files"}}
 
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -215,7 +215,7 @@ func TestClusterNomadCreatesClientNodesWithCorrectDetails(t *testing.T) {
 
 	cc.Volumes = []config.Volume{config.Volume{Source: "./files", Destination: "/files"}}
 
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -252,7 +252,7 @@ func TestClusterNomadSetsNodeCountInConfig(t *testing.T) {
 	cc, md, mh := setupNomadClusterMocks(t)
 	cc.ClientNodes = 10
 
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -264,7 +264,7 @@ func TestClusterNomadSetsNodeCountInConfig(t *testing.T) {
 func TestClusterNomadHealthChecksAPI(t *testing.T) {
 	cc, md, mh := setupNomadClusterMocks(t)
 
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 	startTimeout = 10 * time.Millisecond // reset the startTimeout, do not want to wait 120s
 
 	err := p.Create()
@@ -279,7 +279,7 @@ func TestClusterNomadErrorsIfHealthFails(t *testing.T) {
 	removeOn(&mh.Mock, "HealthCheckAPI")
 	mh.On("HealthCheckAPI", mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 	startTimeout = 10 * time.Millisecond // reset the startTimeout, do not want to wait 120s
 
 	err := p.Create()
@@ -289,7 +289,7 @@ func TestClusterNomadErrorsIfHealthFails(t *testing.T) {
 func TestClusterNomadImportDockerImagesDoesNothingWhenNameEmpty(t *testing.T) {
 	cc, md, mh := setupNomadClusterMocks(t)
 	cc.Images[0].Name = ""
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -301,7 +301,7 @@ func TestClusterNomadImportDockerImagesDoesNothingWhenNameEmpty(t *testing.T) {
 func TestClusterNomadImportDockerImagesPullsImages(t *testing.T) {
 	cc, md, mh := setupNomadClusterMocks(t)
 
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -313,7 +313,7 @@ func TestClusterNomadImportDockerImagesPullsImages(t *testing.T) {
 func TestClusterNomadImportDockerCopiesImages(t *testing.T) {
 	cc, md, mh := setupNomadClusterMocks(t)
 
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -325,7 +325,7 @@ func TestClusterNomadImportDockerCopyImageFailReturnsError(t *testing.T) {
 	removeOn(&md.Mock, "CopyLocalDockerImagesToVolume")
 	md.On("CopyLocalDockerImagesToVolume", mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -335,7 +335,7 @@ func TestClusterNomadImportDockerRunsExecCommand(t *testing.T) {
 	//TODO implement the docker import command
 	cc, md, mh := setupNomadClusterMocks(t)
 
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -350,7 +350,7 @@ func TestClusterNomadImportDockerExecFailReturnsError(t *testing.T) {
 	removeOn(&md.Mock, "ExecuteCommand")
 	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -361,7 +361,7 @@ func TestClusterNomadSetsEnvironmentOnServerAndClient(t *testing.T) {
 	cc.Version = ""
 	cc.ClientNodes = 1
 
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -386,7 +386,7 @@ func TestClusterNomadDoesNotSetProxyEnvironmentWithWrongVersion(t *testing.T) {
 	cc.Version = "v0.11.7"
 	cc.ClientNodes = 1
 
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
 	err := p.Create()
 	assert.NoError(t, err)
@@ -403,7 +403,7 @@ func TestClusterNomadDestroyGetsIDs(t *testing.T) {
 	cc, md, mh := setupNomadClusterMocks(t)
 	cc.ClientNodes = 3
 
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
 	err := p.Destroy()
 	assert.NoError(t, err)
@@ -418,7 +418,7 @@ func TestClusterNomadDestroyWithFindIDErrorReturnsError(t *testing.T) {
 	removeOn(&md.Mock, "FindContainerIDs")
 	md.On("FindContainerIDs", "server."+clusterNomadConfig.Name, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
 	err := p.Destroy()
 	assert.Error(t, err)
@@ -431,7 +431,7 @@ func TestClusterNomadDestroyWithFindIDClientNodeErrorReturnsError(t *testing.T) 
 	md.On("FindContainerIDs", "server."+clusterNomadConfig.Name, mock.Anything).Return(nil, nil)
 	md.On("FindContainerIDs", "1.client."+clusterNomadConfig.Name, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
 	err := p.Destroy()
 	assert.Error(t, err)
@@ -442,7 +442,7 @@ func TestClusterNomadDestroyWithNoIDReturns(t *testing.T) {
 	removeOn(&md.Mock, "FindContainerIDs")
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, nil)
 
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
 	err := p.Destroy()
 	assert.NoError(t, err)
@@ -455,7 +455,7 @@ func TestClusterNomadDestroyRemovesContainer(t *testing.T) {
 	removeOn(&md.Mock, "FindContainerIDs")
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"found"}, nil)
 
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
 	err := p.Destroy()
 	assert.NoError(t, err)
@@ -469,7 +469,7 @@ func TestClusterNomadDestroyRemovesConfig(t *testing.T) {
 
 	_, dir := utils.GetClusterConfig(string(cc.Info().Type) + "." + cc.Info().Name)
 
-	p := NewNomadCluster(cc, md, mh, hclog.NewNullLogger())
+	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
 	err := p.Destroy()
 	assert.NoError(t, err)

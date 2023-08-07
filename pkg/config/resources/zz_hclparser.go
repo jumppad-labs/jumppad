@@ -19,6 +19,7 @@ func SetupHCLConfig(callback hclconfig.ProcessCallback, variables map[string]str
 	// Register the types
 	p.RegisterType(TypeBlueprint, &Blueprint{})
 	p.RegisterType(TypeBook, &Book{})
+	p.RegisterType(TypeBuild, &Build{})
 	p.RegisterType(TypeCertificateCA, &CertificateCA{})
 	p.RegisterType(TypeCertificateLeaf, &CertificateLeaf{})
 	p.RegisterType(TypeChapter, &Chapter{})

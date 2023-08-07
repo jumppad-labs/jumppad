@@ -28,9 +28,6 @@ func newDestroyCmd(cc clients.Connector) *cobra.Command {
 			// clean up the library folder
 			os.RemoveAll(utils.GetLibraryFolder("", os.ModePerm))
 
-			// remove the certs
-			os.RemoveAll(utils.CertsDir(""))
-
 			// shutdown ingress when we destroy all resources
 			if cc.IsRunning() {
 				err = cc.Stop()

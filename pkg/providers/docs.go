@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 
-	hclog "github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
@@ -14,7 +13,7 @@ import (
 )
 
 const docsImageName = "ghcr.io/jumppad-labs/docs"
-const docsVersion = "v0.0.3"
+const docsVersion = "v0.1.0"
 
 type DocsConfig struct {
 	DefaultPath string `json:"defaultPath"`
@@ -24,11 +23,11 @@ type DocsConfig struct {
 type Docs struct {
 	config *resources.Docs
 	client clients.ContainerTasks
-	log    hclog.Logger
+	log    clients.Logger
 }
 
 // NewDocs creates a new Docs provider
-func NewDocs(c *resources.Docs, cc clients.ContainerTasks, l hclog.Logger) *Docs {
+func NewDocs(c *resources.Docs, cc clients.ContainerTasks, l clients.Logger) *Docs {
 	return &Docs{c, cc, l}
 }
 
@@ -80,10 +79,9 @@ func (i *Docs) Lookup() ([]string, error) {
 }
 
 func (d *Docs) Refresh() error {
-	d.log.Info("Refresh Docs", "ref", d.config.Name)
+	d.log.Debug("Refresh Docs", "ref", d.config.Name)
 
 	configPath := utils.GetLibraryFolder("config", 0775)
-	checksPath := utils.GetLibraryFolder("checks", 0775)
 
 	indices := []resources.IndexBook{}
 	docsConfig := DocsConfig{}
@@ -125,12 +123,13 @@ func (d *Docs) Refresh() error {
 		return err
 	}
 
-	err = d.writeChecks(checksPath)
-	if err != nil {
-		return err
-	}
-
 	return nil
+}
+
+func (c *Docs) Changed() (bool, error) {
+	c.log.Debug("Checking changes", "ref", c.config.Name)
+
+	return false, nil
 }
 
 func (d *Docs) createDocsContainer() error {
@@ -180,7 +179,6 @@ func (d *Docs) createDocsContainer() error {
 
 	configPath := utils.GetLibraryFolder("config", 0775)
 	contentPath := utils.GetLibraryFolder("content", 0775)
-	checksPath := utils.GetLibraryFolder("checks", 0775)
 
 	indices := []resources.IndexBook{}
 	docsConfig := DocsConfig{}
@@ -194,7 +192,7 @@ func (d *Docs) createDocsContainer() error {
 		b := br.(*resources.Book)
 
 		bookPath := filepath.Join(contentPath, b.Name)
-		destinationPath := filepath.Join("/content", b.Name)
+		destinationPath := fmt.Sprintf("/content/%s", b.Name)
 		cc.Volumes = append(
 			cc.Volumes,
 			resources.Volume{
@@ -217,7 +215,7 @@ func (d *Docs) createDocsContainer() error {
 	docsConfigPath := filepath.Join(configPath, "jumppad.config.js")
 	d.writeConfig(docsConfigPath, &docsConfig)
 
-	docsConfigDestination := filepath.Join("/jumppad", "jumppad.config.mjs")
+	docsConfigDestination := "/jumppad/jumppad.config.mjs"
 	cc.Volumes = append(
 		cc.Volumes,
 		resources.Volume{
@@ -232,7 +230,7 @@ func (d *Docs) createDocsContainer() error {
 		return err
 	}
 
-	navigationDestination := filepath.Join("/config", "navigation.jsx")
+	navigationDestination := "/config/navigation.jsx"
 	cc.Volumes = append(
 		cc.Volumes,
 		resources.Volume{
@@ -247,7 +245,7 @@ func (d *Docs) createDocsContainer() error {
 		return err
 	}
 
-	progressDestination := filepath.Join("/config", "progress.jsx")
+	progressDestination := "/config/progress.jsx"
 	cc.Volumes = append(
 		cc.Volumes,
 		resources.Volume{
@@ -255,11 +253,6 @@ func (d *Docs) createDocsContainer() error {
 			Destination: progressDestination,
 		},
 	)
-
-	err = d.writeChecks(checksPath)
-	if err != nil {
-		return err
-	}
 
 	// set the FQDN
 	fqdn := utils.FQDN(d.config.Name, d.config.Module, d.config.Type)
@@ -318,29 +311,6 @@ func (i *Docs) writeProgress(progressPath string) error {
 	err = os.WriteFile(progressPath, []byte(progressJSX), 0755)
 	if err != nil {
 		return fmt.Errorf("Unable to write progress to disk at %s", progressPath)
-	}
-
-	return nil
-}
-
-func (i *Docs) writeChecks(checksPath string) error {
-	tasks, _ := i.config.ParentConfig.FindResourcesByType(resources.TypeTask)
-
-	checks := []resources.Validation{}
-	for _, tr := range tasks {
-		task := tr.(*resources.Task)
-		checks = append(checks, task.Validation)
-	}
-
-	checksJSON, err := json.MarshalIndent(checks, "", " ")
-	if err != nil {
-		return err
-	}
-
-	checksDestination := filepath.Join(checksPath, "checks.json")
-	err = os.WriteFile(checksDestination, []byte(checksJSON), 0755)
-	if err != nil {
-		return fmt.Errorf("Unable to write checks configuration to disk at %s", checksDestination)
 	}
 
 	return nil

@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
-	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
@@ -36,11 +35,11 @@ type K8sCluster struct {
 	kubeClient clients.Kubernetes
 	httpClient clients.HTTP
 	connector  clients.Connector
-	log        hclog.Logger
+	log        clients.Logger
 }
 
 // NewK8sCluster creates a new Kubernetes cluster provider
-func NewK8sCluster(c *resources.K8sCluster, cc clients.ContainerTasks, kc clients.Kubernetes, hc clients.HTTP, co clients.Connector, l hclog.Logger) *K8sCluster {
+func NewK8sCluster(c *resources.K8sCluster, cc clients.ContainerTasks, kc clients.Kubernetes, hc clients.HTTP, co clients.Connector, l clients.Logger) *K8sCluster {
 	return &K8sCluster{c, cc, kc, hc, co, l}
 }
 
@@ -60,15 +59,18 @@ func (c *K8sCluster) Lookup() ([]string, error) {
 }
 
 func (c *K8sCluster) Refresh() error {
-	c.log.Info("Refresh Kubernetes Cluster", "ref", c.config.Name)
+	c.log.Debug("Refresh Kubernetes Cluster", "ref", c.config.Name)
 
 	return nil
 }
 
-func (c *K8sCluster) createK3s() error {
-	// create a named log
-	c.log = c.log.Named(c.config.Name)
+func (c *K8sCluster) Changed() (bool, error) {
+	c.log.Debug("Checking changes Leaf Certificate", "ref", c.config.Name)
 
+	return false, nil
+}
+
+func (c *K8sCluster) createK3s() error {
 	c.log.Info("Creating Cluster", "ref", c.config.ID)
 
 	// check the cluster does not already exist
@@ -314,7 +316,7 @@ func (c *K8sCluster) createK3s() error {
 		}
 
 		// copy the logs to the output
-		io.Copy(c.log.StandardWriter(&hclog.StandardLoggerOptions{}), lr)
+		io.Copy(c.log.StandardWriter(), lr)
 
 		return xerrors.Errorf("timeout waiting for Kubernetes default pods: %w", err)
 	}
@@ -540,7 +542,7 @@ func (c *K8sCluster) ImportLocalDockerImages(name string, id string, images []re
 	for _, i := range imagesFile {
 		// execute the command to import the image
 		// write any command output to the logger
-		_, err = c.client.ExecuteCommand(id, []string{"ctr", "image", "import", i}, nil, "/", "", "", 300, c.log.StandardWriter(&hclog.StandardLoggerOptions{ForceLevel: hclog.Debug}))
+		_, err = c.client.ExecuteCommand(id, []string{"ctr", "image", "import", i}, nil, "/", "", "", 300, c.log.StandardWriter())
 		if err != nil {
 			return err
 		}

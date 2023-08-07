@@ -10,10 +10,10 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/connector/http"
 	"github.com/jumppad-labs/connector/protos/shipyard"
 	"github.com/jumppad-labs/connector/remote"
+	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/server"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
@@ -38,8 +38,7 @@ func newConnectorRunCommand() *cobra.Command {
 		Args:  cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			lo := hclog.LoggerOptions{}
-			lo.Level = hclog.LevelFromString(logLevel)
+			l := createLogger()
 
 			if logFile != "" {
 				// create a new log file
@@ -53,13 +52,11 @@ func newConnectorRunCommand() *cobra.Command {
 				}
 				defer f.Close()
 
-				lo.Output = f // set the logger to use file output
+				l.SetOutput(f) // set the logger to use file output
 			}
 
-			l := hclog.New(&lo)
-
 			grpcServer := grpc.NewServer()
-			s := remote.New(l.Named("grpc_server"), nil, nil, nil)
+			s := remote.New(clients.LoggerAsHCLogger(l), nil, nil, nil)
 
 			// do we need to set up the server to use TLS?
 			if pathCertServer != "" && pathKeyServer != "" && pathCertRoot != "" {
@@ -87,7 +84,7 @@ func newConnectorRunCommand() *cobra.Command {
 				})
 
 				grpcServer = grpc.NewServer(grpc.Creds(creds))
-				s = remote.New(l.Named("grpc_server"), certPool, &certificate, nil)
+				s = remote.New(clients.LoggerAsHCLogger(l), certPool, &certificate, nil)
 			}
 
 			shipyard.RegisterRemoteConnectionServer(grpcServer, s)
@@ -105,7 +102,7 @@ func newConnectorRunCommand() *cobra.Command {
 
 			// start the http server in the background
 			l.Info("Starting HTTP server", "bind_addr", httpBindAddr)
-			httpS := http.NewLocalServer(pathCertRoot, pathCertServer, pathKeyServer, grpcBindAddr, httpBindAddr, l)
+			httpS := http.NewLocalServer(pathCertRoot, pathCertServer, pathKeyServer, grpcBindAddr, httpBindAddr, clients.LoggerAsHCLogger(l))
 
 			err = httpS.Serve()
 			l.Info("Started")
@@ -117,7 +114,7 @@ func newConnectorRunCommand() *cobra.Command {
 			// start the API server
 			// we should look at merging the connector server and the API server
 			l.Info("Starting API server", "bind_addr", apiBindAddr)
-			api := server.New(apiBindAddr, l.Named("api_server"))
+			api := server.New(apiBindAddr, l)
 			go api.Start()
 
 			c := make(chan os.Signal, 1)

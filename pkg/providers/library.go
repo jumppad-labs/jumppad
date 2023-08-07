@@ -7,17 +7,17 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/go-hclog"
+	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 type Book struct {
 	config *resources.Book
-	log    hclog.Logger
+	log    clients.Logger
 }
 
-func NewBook(b *resources.Book, l hclog.Logger) *Book {
+func NewBook(b *resources.Book, l clients.Logger) *Book {
 	return &Book{b, l}
 }
 
@@ -53,7 +53,7 @@ func (b *Book) Create() error {
 
 			page := resources.IndexPage{
 				Title: p.Title,
-				URI:   filepath.Join("/", b.config.Name, c.Name, p.Name),
+				URI:   fmt.Sprintf("/%s/%s/%s", b.config.Name, c.Name, p.Name),
 			}
 
 			chapter.Pages = append(chapter.Pages, page)
@@ -76,7 +76,7 @@ func (b *Book) Lookup() ([]string, error) {
 }
 
 func (b *Book) Refresh() error {
-	b.log.Info("Refresh Book", "ref", b.config.Name)
+	b.log.Debug("Refresh Book", "ref", b.config.Name)
 
 	libraryPath := utils.GetLibraryFolder("", 0775)
 	bookPath := filepath.Join(libraryPath, "content", b.config.Name)
@@ -100,6 +100,12 @@ func (b *Book) Refresh() error {
 	}
 
 	return nil
+}
+
+func (c *Book) Changed() (bool, error) {
+	c.log.Debug("Checking changes", "ref", c.config.Name)
+
+	return false, nil
 }
 
 func (b *Book) writePage(chapterPath string, page resources.Page) error {
@@ -135,10 +141,10 @@ func (b *Book) writePage(chapterPath string, page resources.Page) error {
 
 type Chapter struct {
 	config *resources.Chapter
-	log    hclog.Logger
+	log    clients.Logger
 }
 
-func NewChapter(c *resources.Chapter, l hclog.Logger) *Chapter {
+func NewChapter(c *resources.Chapter, l clients.Logger) *Chapter {
 	return &Chapter{c, l}
 }
 
@@ -168,4 +174,10 @@ func (c *Chapter) Lookup() ([]string, error) {
 
 func (c *Chapter) Refresh() error {
 	return nil
+}
+
+func (c *Chapter) Changed() (bool, error) {
+	c.log.Debug("Checking changes", "ref", c.config.Name)
+
+	return false, nil
 }

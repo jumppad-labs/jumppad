@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -37,7 +38,7 @@ func TestNomadClusterProcessSetsAbsolute(t *testing.T) {
 }
 
 func TestNomadClusterSetsOutputsFromState(t *testing.T) {
-	setupState(t, `
+	testutils.SetupState(t, `
 {
   "blueprint": null,
   "resources": [

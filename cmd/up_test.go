@@ -11,10 +11,10 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
-	clientmocks "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/config"
-	"github.com/jumppad-labs/jumppad/pkg/jumppad"
-	"github.com/jumppad-labs/jumppad/pkg/jumppad/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	enginemocks "github.com/jumppad-labs/jumppad/pkg/jumppad/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	gvm "github.com/shipyard-run/version-manager"
 	"github.com/spf13/cobra"
@@ -23,29 +23,29 @@ import (
 )
 
 type runMocks struct {
-	engine    *mocks.Engine
-	getter    *clientmocks.Getter
-	http      *clientmocks.MockHTTP
-	system    *clientmocks.System
+	engine    *enginemocks.Engine
+	getter    *mocks.Getter
+	http      *mocks.HTTP
+	system    *mocks.System
 	vm        *gvm.MockVersions
 	connector *clients.ConnectorMock
 }
 
 func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
-	mockHTTP := &clientmocks.MockHTTP{}
+	mockHTTP := &mocks.HTTP{}
 	mockHTTP.On("HealthCheckHTTP", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	mockGetter := &clientmocks.Getter{}
+	mockGetter := &mocks.Getter{}
 	mockGetter.On("Get", mock.Anything, mock.Anything).Return(nil)
 	mockGetter.On("SetForce", mock.Anything)
 
-	mockSystem := &clientmocks.System{}
+	mockSystem := &mocks.System{}
 	mockSystem.On("OpenBrowser", mock.Anything).Return(nil)
 	mockSystem.On("Preflight").Return(nil)
 	mockSystem.On("PromptInput", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("")
 	mockSystem.On("CheckVersion", mock.Anything).Return("", false)
 
-	mockTasks := &clients.MockContainerTasks{}
+	mockTasks := &mocks.ContainerTasks{}
 	mockTasks.On("SetForcePull", mock.Anything)
 
 	mockConnector := &clients.ConnectorMock{}
@@ -67,7 +67,7 @@ func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
 		nil,
 	)
 
-	clients := &jumppad.Clients{
+	clients := &clients.Clients{
 		HTTP:           mockHTTP,
 		Getter:         mockGetter,
 		Browser:        mockSystem,
@@ -75,30 +75,21 @@ func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
 		Connector:      mockConnector,
 	}
 
-	mockEngine := &mocks.Engine{}
+	mockEngine := &enginemocks.Engine{}
 	mockEngine.On("ParseConfigWithVariables", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mockEngine.On("ApplyWithVariables", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 	mockEngine.On("GetClients", mock.Anything).Return(clients)
 	mockEngine.On("ResourceCountForType", mock.Anything).Return(0)
 
-	bp := config.Blueprint{BrowserWindows: []string{"http://localhost", "http://localhost2"}}
-
-	if timeout != "" {
-		bp.HealthCheckTimeout = timeout
-	}
+	bp := resources.Blueprint{}
 
 	mockEngine.On("Blueprint").Return(&bp)
-
-	vm := &gvm.MockVersions{}
-	vm.On("ListInstalledVersions", mock.Anything).Return(nil, nil)
-	vm.On("GetLatestReleaseURL", mock.Anything).Return("v1.0.0", "http://download.com", nil)
 
 	rm := &runMocks{
 		engine:    mockEngine,
 		getter:    mockGetter,
 		http:      mockHTTP,
 		system:    mockSystem,
-		vm:        vm,
 		connector: mockConnector,
 	}
 

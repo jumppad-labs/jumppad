@@ -20,14 +20,9 @@ func TestContainerProcessSetsAbsolute(t *testing.T) {
 				Destination: "./",
 			},
 		},
-		Build: &Build{
-			DockerFile: "./Dockerfile",
-			Context:    "./",
-		},
 	}
 
 	c.Process()
 
 	require.Equal(t, wd, c.Volumes[0].Source)
-	require.Equal(t, wd, c.Build.Context)
 }

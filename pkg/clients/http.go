@@ -7,11 +7,11 @@ import (
 	"net"
 	"net/http"
 	"time"
-
-	"github.com/hashicorp/go-hclog"
 )
 
 // HTTP defines an interface for a HTTP client
+
+//go:generate mockery --name HTTP --filename http.go
 type HTTP interface {
 	// HealthCheckHTTP makes a HTTP GET request to the given URI and
 	// if a successful status []codes is returned the method returns a nil error.
@@ -31,10 +31,10 @@ type HTTP interface {
 type HTTPImpl struct {
 	backoff time.Duration
 	httpc   *http.Client
-	l       hclog.Logger
+	l       Logger
 }
 
-func NewHTTP(backoff time.Duration, l hclog.Logger) HTTP {
+func NewHTTP(backoff time.Duration, l Logger) HTTP {
 	httpc := &http.Client{}
 	httpc.Transport = http.DefaultTransport.(*http.Transport).Clone()
 	httpc.Transport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
@@ -73,10 +73,17 @@ func (h *HTTPImpl) HealthCheckHTTP(address, method string, headers map[string][]
 		resp, err := h.httpc.Do(rq)
 		if err == nil && assertResponseCode(codes, resp.StatusCode) {
 			h.l.Debug("HTTP health check complete", "address", address)
+
 			return nil
 		}
 
+		status := 0
+		if err == nil {
+			status = resp.StatusCode
+		}
+
 		// back off
+		h.l.Debug("HTTP health check failed, retrying", "address", address, "response", status, "error", err)
 		time.Sleep(h.backoff)
 	}
 }

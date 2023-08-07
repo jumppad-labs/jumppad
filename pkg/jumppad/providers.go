@@ -10,14 +10,18 @@ import (
 // generateProviderImpl returns providers grouped together in order of execution
 func generateProviderImpl(c types.Resource, cc *clients.Clients) providers.Provider {
 	switch c.Metadata().Type {
-	case types.TypeVariable:
-		return providers.NewNull(c.Metadata(), cc.Logger)
 	case resources.TypeBlueprint:
 		return providers.NewNull(c.Metadata(), cc.Logger)
+	case resources.TypeBook:
+		return providers.NewBook(c.(*resources.Book), cc.Logger)
+	case resources.TypeBuild:
+		return providers.NewBuild(c.(*resources.Build), cc.ContainerTasks, cc.Logger)
 	case resources.TypeCertificateCA:
 		return providers.NewCertificateCA(c.(*resources.CertificateCA), cc.Logger)
 	case resources.TypeCertificateLeaf:
 		return providers.NewCertificateLeaf(c.(*resources.CertificateLeaf), cc.Logger)
+	case resources.TypeChapter:
+		return providers.NewChapter(c.(*resources.Chapter), cc.Logger)
 	case resources.TypeContainer:
 		return providers.NewContainer(c.(*resources.Container), cc.ContainerTasks, cc.HTTP, cc.Logger)
 	case resources.TypeCopy:
@@ -62,12 +66,10 @@ func generateProviderImpl(c types.Resource, cc *clients.Clients) providers.Provi
 		return providers.NewContainerSidecar(c.(*resources.Sidecar), cc.ContainerTasks, cc.HTTP, cc.Logger)
 	case resources.TypeTemplate:
 		return providers.NewTemplate(c.(*resources.Template), cc.Logger)
-	case resources.TypeBook:
-		return providers.NewBook(c.(*resources.Book), cc.Logger)
-	case resources.TypeChapter:
-		return providers.NewChapter(c.(*resources.Chapter), cc.Logger)
 	case resources.TypeTask:
 		return providers.NewTask(c.(*resources.Task), cc.Logger)
+	case types.TypeVariable:
+		return providers.NewNull(c.Metadata(), cc.Logger)
 	}
 
 	return nil

@@ -3,13 +3,13 @@ package server
 import (
 	"encoding/json"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"runtime"
 
 	"github.com/creack/pty"
-
-	"github.com/gofiber/websocket/v2"
+	"github.com/gorilla/websocket"
 )
 
 type windowSize struct {
@@ -19,12 +19,35 @@ type windowSize struct {
 	Y    uint16
 }
 
-func (a *API) terminalWebsocket(c *websocket.Conn) {
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true // Accepting all requests
+	},
+}
 
-	workdir := c.Query("workdir", "/")
-	user := c.Query("user", "root")
-	target := c.Query("target", "local")
-	shell := c.Query("shell", "")
+func (a *API) terminal(w http.ResponseWriter, r *http.Request) {
+	workdir := "/"
+	if r.URL.Query().Has("workdir") {
+		workdir = r.URL.Query().Get("workdir")
+	}
+
+	user := "root"
+	if r.URL.Query().Has("workdir") {
+		user = r.URL.Query().Get("user")
+	}
+
+	target := "local"
+	if r.URL.Query().Has("workdir") {
+		target = r.URL.Query().Get("target")
+	}
+
+	shell := "/bin/sh"
+	if r.URL.Query().Has("workdir") {
+		shell = r.URL.Query().Get("shell")
+	}
+
+	// Upgrade to websockets
+	connection, _ := upgrader.Upgrade(w, r, nil)
 
 	var cmd *exec.Cmd
 	if target == "local" {
@@ -45,16 +68,16 @@ func (a *API) terminalWebsocket(c *websocket.Conn) {
 
 	tty, err := pty.Start(cmd)
 	if err != nil {
-		_ = c.WriteMessage(websocket.TextMessage, []byte(err.Error()))
-
+		connection.WriteMessage(websocket.TextMessage, []byte(err.Error()))
 		a.log.Error("Unable to start pty/cmd", "error", err)
 		return
 	}
+
 	defer func() {
 		cmd.Process.Kill()
 		cmd.Process.Wait()
 		tty.Close()
-		c.Close()
+		connection.Close()
 	}()
 
 	go func() {
@@ -68,17 +91,17 @@ func (a *API) terminalWebsocket(c *websocket.Conn) {
 			buf := make([]byte, 1024)
 			read, err := tty.Read(buf)
 			if err != nil {
-				_ = c.WriteMessage(websocket.TextMessage, []byte(err.Error()))
+				_ = connection.WriteMessage(websocket.TextMessage, []byte(err.Error()))
 
 				a.log.Error("Unable to read from pty/cmd", "error", err)
 				return
 			}
-			_ = c.WriteMessage(websocket.BinaryMessage, buf[:read])
+			_ = connection.WriteMessage(websocket.BinaryMessage, buf[:read])
 		}
 	}()
 
 	for {
-		_, reader, err := c.NextReader()
+		_, reader, err := connection.NextReader()
 		if err != nil {
 			a.log.Error("Unable to grab next reader", "error", err)
 			return
@@ -88,7 +111,7 @@ func (a *API) terminalWebsocket(c *websocket.Conn) {
 		read, err := reader.Read(dataTypeBuf)
 		if err != nil {
 			a.log.Error("Unable to read message type from reader", "error", err)
-			_ = c.WriteMessage(websocket.TextMessage, []byte("Unable to read message type from reader"))
+			_ = connection.WriteMessage(websocket.TextMessage, []byte("Unable to read message type from reader"))
 			return
 		}
 
@@ -108,7 +131,7 @@ func (a *API) terminalWebsocket(c *websocket.Conn) {
 			resizeMessage := windowSize{}
 			err := decoder.Decode(&resizeMessage)
 			if err != nil {
-				_ = c.WriteMessage(websocket.TextMessage, []byte("Error decoding resize message: "+err.Error()))
+				_ = connection.WriteMessage(websocket.TextMessage, []byte("Error decoding resize message: "+err.Error()))
 				continue
 			}
 

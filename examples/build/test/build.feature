@@ -1,12 +1,26 @@
-Feature: Docker Container
-  In order to test Shipyard can build containers
+Feature: Build Docker Images
+  In order to test Shipyard can build images
   I should apply a blueprint which defines a simple container setup
   and test the resources are created correctly
 
-Scenario: Single Container from Local Blueprint
-  Given I have a running blueprint
+Scenario: Build Image and Create Docker Container
+  Given the following jumppad variables are set
+    | key               | value                 |
+    | container_enabled | true                  |
+    | nomad_enabled     | false                 |
+  And I have a running blueprint
+  Then the following resources should be running
+    | name                                       |
+    | module.container.resource.container.app  |
+  And a HTTP call to "http://app.container.container.jumppad.dev:9090/" should result in status 200
+
+Scenario: Build Image and Load to Nomad Cluster
+  Given the following jumppad variables are set
+    | key               | value                 |
+    | container_enabled | false                 |
+    | nomad_enabled     | true                  |
+  And I have a running blueprint
   Then the following resources should be running
     | name                      |
-    | resource.container.build  |
-  And the info "{.NetworkSettings.Ports['9090/tcp'][0].HostPort}" for the running container "resource.container.build" should equal "9090"
-  And a HTTP call to "http://build.container.jumppad.dev:9090/" should result in status 200
+    | module.nomad.resource.nomad_cluster.dev  |
+  And a HTTP call to "http://build.container.jumppad.dev:19090/" should result in status 200

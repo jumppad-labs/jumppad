@@ -54,7 +54,7 @@ type NomadCluster struct {
 }
 
 const nomadBaseImage = "shipyardrun/nomad"
-const nomadBaseVersion = "1.4.0"
+const nomadBaseVersion = "1.6.1"
 
 func (n *NomadCluster) Process() error {
 	if n.Image == nil {
@@ -93,6 +93,18 @@ func (n *NomadCluster) Process() error {
 			n.ClientFQRN = kstate.ClientFQRN
 			n.APIPort = kstate.APIPort
 			n.ConnectorPort = kstate.ConnectorPort
+
+			// add the image ids from the state, this allows the tracking of
+			// pushed images so that they can be automatically updated
+
+			// add the image id from state
+			for x, img := range n.CopyImages {
+				for _, sImg := range kstate.CopyImages {
+					if img.Name == sImg.Name && img.Username == sImg.Username {
+						n.CopyImages[x].ID = sImg.ID
+					}
+				}
+			}
 		}
 	}
 

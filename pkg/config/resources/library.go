@@ -3,18 +3,18 @@ package resources
 import "github.com/jumppad-labs/hclconfig/types"
 
 type IndexBook struct {
-	Title    string         `json:"title"`
-	Chapters []IndexChapter `json:"chapters"`
+	Title    string         `hcl:"title,optional" json:"title"`
+	Chapters []IndexChapter `hcl:"chapters,optional" json:"chapters"`
 }
 
 type IndexChapter struct {
-	Title string      `json:"title,omitempty"`
-	Pages []IndexPage `json:"pages"`
+	Title string      `hcl:"title,optional" json:"title,omitempty"`
+	Pages []IndexPage `hcl:"pages,optional" json:"pages"`
 }
 
 type IndexPage struct {
-	Title string `json:"title"`
-	URI   string `json:"uri"`
+	Title string `hcl:"title,optional" json:"title"`
+	URI   string `hcl:"uri,optional" json:"uri"`
 }
 
 const TypeBook string = "book"

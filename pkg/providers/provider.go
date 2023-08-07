@@ -12,6 +12,9 @@ type Provider interface {
 	// Refresh is called when a resource is created and 'up' is run
 	Refresh() error
 
+	// Changed returns if a resource has changed since the last run
+	Changed() (bool, error)
+
 	// Lookup is a utility to determine the existence of a resource
 	Lookup() ([]string, error)
 }

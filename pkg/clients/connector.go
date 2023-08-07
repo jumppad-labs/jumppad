@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/jumppad-labs/connector/crypto"
 	"github.com/jumppad-labs/connector/protos/shipyard"
@@ -218,27 +219,38 @@ func (c *ConnectorImpl) GetLocalCertBundle(dir string) (*CertBundle, error) {
 	// test to see if files exist
 	f1, err := os.Open(cb.RootCertPath)
 	if os.IsNotExist(err) {
-		return nil, fmt.Errorf("Unable to find root certificate")
+		return nil, fmt.Errorf("unable to find root certificate")
 	}
 	defer f1.Close()
 
 	f2, err := os.Open(cb.RootKeyPath)
 	if os.IsNotExist(err) {
-		return nil, fmt.Errorf("Unable to find root key")
+		return nil, fmt.Errorf("unable to find root key")
 	}
 	defer f2.Close()
 
 	f3, err := os.Open(cb.LeafCertPath)
 	if os.IsNotExist(err) {
-		return nil, fmt.Errorf("Unable to find leaf certificate")
+		return nil, fmt.Errorf("unable to find leaf certificate")
 	}
 	defer f3.Close()
 
 	f4, err := os.Open(cb.LeafKeyPath)
 	if os.IsNotExist(err) {
-		return nil, fmt.Errorf("Unable to find leaf key")
+		return nil, fmt.Errorf("unable to find leaf key")
 	}
 	defer f4.Close()
+
+	// check that the certificate still has 24hrs left on it
+	leaf := &crypto.X509{}
+	err = leaf.ReadFile(cb.LeafCertPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if time.Until(leaf.NotAfter) < 24*time.Hour {
+		return nil, fmt.Errorf("leaf certificate expires in under 24 hours")
+	}
 
 	return cb, nil
 }

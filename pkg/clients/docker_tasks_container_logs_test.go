@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
-	"github.com/hashicorp/go-hclog"
 	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	clients "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -25,7 +25,7 @@ func TestContainerLogsCalled(t *testing.T) {
 
 	mic := &mocks.ImageLog{}
 
-	dt := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())
+	dt := NewDockerTasks(md, mic, &TarGz{}, clients.NewTestLogger(t))
 
 	rc, err := dt.ContainerLogs("123", true, true)
 	assert.NotNil(t, rc)

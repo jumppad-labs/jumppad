@@ -3,32 +3,32 @@ package resources
 import "github.com/jumppad-labs/hclconfig/types"
 
 type Progress struct {
-	ID            string              `json:"id"`
-	Prerequisites []string            `json:"prerequisites"`
-	Conditions    []ProgressCondition `json:"conditions"`
-	Status        string              `json:"status"`
+	ID            string              `hcl:"id,optional" json:"id"`
+	Prerequisites []string            `hcl:"prerequisite,optional" json:"prerequisites"`
+	Conditions    []ProgressCondition `hcl:"condition,block" json:"conditions"`
+	Status        string              `hcl:"status,optional" json:"status"`
 }
 
 type ProgressCondition struct {
-	ID          string `json:"id"`
-	Description string `json:"description"`
-	Status      string `json:"status"`
+	ID          string `hcl:"id,optional" json:"id"`
+	Description string `hcl:"description,optional" json:"description"`
+	Status      string `hcl:"status,optional" json:"status"`
 }
 
 type Validation struct {
-	ID         string                `json:"id"`
-	Conditions []ValidationCondition `json:"conditions"`
+	ID         string                `hcl:"id,optional" json:"id"`
+	Conditions []ValidationCondition `hcl:"condition,block" json:"conditions"`
 }
 
 type ValidationCondition struct {
-	ID               string `json:"id"`
-	Check            string `json:"check"`
-	Solve            string `json:"solve,omitempty"`
-	FailureMessage   string `json:"failure_message"`
-	SuccessMessage   string `json:"success_message,omitempty"`
-	Target           string `json:"target,omitempty"`
-	User             string `json:"user,omitempty"`
-	WorkingDirectory string `json:"working_directory,omitempty"`
+	ID               string `hcl:"id,optional" json:"id"`
+	Check            string `hcl:"check,optional" json:"check"`
+	Solve            string `hcl:"solve,optional" json:"solve"`
+	FailureMessage   string `hcl:"failure_message,optional" json:"failure_message"`
+	SuccessMessage   string `hcl:"success_message,optional" json:"success_message,omitempty"`
+	Target           string `hcl:"target,optional" json:"target,omitempty"`
+	User             string `hcl:"user,optional" json:"user,omitempty"`
+	WorkingDirectory string `hcl:"working_directory,optional" json:"working_directory,omitempty"`
 }
 
 const TypeTask string = "task"

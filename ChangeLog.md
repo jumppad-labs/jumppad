@@ -1,5 +1,9 @@
 # Change Log
 
+## version v0.7.0
+* Update K3s to 1.27.4
+* Update Nomad to 1.6.1
+
 ## version v0.6.0
 * Add new `dev` command to watch the given config for changes and automatically
   run `up`

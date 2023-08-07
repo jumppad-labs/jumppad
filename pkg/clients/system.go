@@ -11,8 +11,6 @@ import (
 	"runtime"
 	"strings"
 	"time"
-
-	"github.com/hashicorp/go-hclog"
 )
 
 const (
@@ -218,16 +216,14 @@ func checkPodman() error {
 	return nil
 }
 
-func createLogger() hclog.Logger {
-
-	opts := &hclog.LoggerOptions{Color: hclog.AutoColor}
+func createLogger() Logger {
 
 	// set the log level
 	if lev := os.Getenv("LOG_LEVEL"); lev != "" {
-		opts.Level = hclog.LevelFromString(lev)
+		NewLogger(os.Stdout, lev)
 	}
 
-	return hclog.New(opts)
+	return NewLogger(os.Stdout, LogLevelInfo)
 }
 
 func checkGit() error {

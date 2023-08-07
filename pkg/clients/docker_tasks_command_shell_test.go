@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
-	"github.com/hashicorp/go-hclog"
 	clients "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -32,7 +31,7 @@ func setupShellMocks() (*DockerTasks, *clients.MockDocker) {
 	mic := &clients.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
 
-	p := NewDockerTasks(md, mic, &TarGz{}, hclog.NewNullLogger())
+	p := NewDockerTasks(md, mic, &TarGz{}, clients.NewTestLogger(t))
 
 	return p, md
 }

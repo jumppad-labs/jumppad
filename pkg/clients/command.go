@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/shipyard-run/gohup"
 )
 
@@ -31,11 +30,11 @@ type Command interface {
 // Command executes local commands
 type CommandImpl struct {
 	timeout time.Duration
-	log     hclog.Logger
+	log     Logger
 }
 
 // NewCommand creates a new command with the given logger and maximum command time
-func NewCommand(maxCommandTime time.Duration, l hclog.Logger) Command {
+func NewCommand(maxCommandTime time.Duration, l Logger) Command {
 	return &CommandImpl{maxCommandTime, l}
 }
 
