@@ -55,8 +55,7 @@ func newDevCmdFunc(variables *[]string, variablesFile, interval *string, ttyFlag
 			}
 		}
 
-		engine, _ = createEngine(v.Logger())
-		engineClients = engine.GetClients()
+		engine, _, _ = createEngine(v.Logger())
 
 		// create the shipyard and sub folders in the users home directory
 		utils.CreateFolders()

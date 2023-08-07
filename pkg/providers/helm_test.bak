@@ -105,7 +105,7 @@ func TestHelmCreateSetsConfig(t *testing.T) {
 
 func TestHelmCreateConfigSetFailReturnsError(t *testing.T) {
 	_, kc, _, _, p := setupHelm()
-	removeOn(&kc.Mock, "SetConfig")
+	testutils.RemoveOn(&kc.Mock, "SetConfig")
 	kc.On("SetConfig", mock.Anything).Return(fmt.Errorf("boom"))
 
 	err := p.Create()
@@ -159,7 +159,7 @@ func TestHelmCreateCallCreateFailRetries(t *testing.T) {
 	hm, _, _, _, p := setupHelm()
 	p.config.Retry = 2
 
-	removeOn(&hm.Mock, "Create")
+	testutils.RemoveOn(&hm.Mock, "Create")
 	hm.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, true, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Once().Return(fmt.Errorf("boom"))
 	hm.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, true, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Once().Return(nil)
 
@@ -171,7 +171,7 @@ func TestHelmCreateCallCreateFailRetries(t *testing.T) {
 func TestHelmCreateCallCreateFailReturnsError(t *testing.T) {
 	hm, _, _, _, p := setupHelm()
 
-	removeOn(&hm.Mock, "Create")
+	testutils.RemoveOn(&hm.Mock, "Create")
 	hm.On("Create", mock.Anything, mock.Anything, mock.Anything, mock.Anything, true, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
 	err := p.Create()
@@ -200,7 +200,7 @@ func TestHelmHealthChecksPodswhenSet(t *testing.T) {
 func TestHelmCreateHealthCheckPodsFailReturnsError(t *testing.T) {
 	_, kc, _, _, p := setupHelm()
 	p.config.HealthCheck = &config.HealthCheck{Timeout: "1s", Pods: []string{"consul=release"}}
-	removeOn(&kc.Mock, "HealthCheckPods")
+	testutils.RemoveOn(&kc.Mock, "HealthCheckPods")
 	kc.On("HealthCheckPods", mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
 	err := p.Create()
@@ -225,7 +225,7 @@ func TestHelmDestroyCallsDestroyWithDefaultNamespace(t *testing.T) {
 func TestHelmDestroyWithErrorSwallowsError(t *testing.T) {
 	hm, _, _, _, p := setupHelm()
 	p.config.Namespace = "custom"
-	removeOn(&hm.Mock, "Destroy")
+	testutils.RemoveOn(&hm.Mock, "Destroy")
 	hm.On("Destroy", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
 	err := p.Destroy()

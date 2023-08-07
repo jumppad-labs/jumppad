@@ -9,6 +9,7 @@ import (
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -134,7 +135,7 @@ func (c *Docs) Changed() (bool, error) {
 
 func (d *Docs) createDocsContainer() error {
 	// create the container config
-	cc := &resources.Container{
+	cc := &container.Container{
 		ResourceMetadata: types.ResourceMetadata{
 			Name:   d.config.Name,
 			Type:   d.config.Type,

@@ -45,7 +45,7 @@ func TestDocsPullsDocsContainer(t *testing.T) {
 	err := d.Create()
 	assert.NoError(t, err)
 
-	params := getCalls(&md.Mock, "PullImage")[0].Arguments[0].(config.Image)
+	params := testutils.GetCalls(&md.Mock, "PullImage")[0].Arguments[0].(config.Image)
 	assert.Equal(t, params.Name, docsImageName+":"+docsVersion)
 }
 
@@ -55,7 +55,7 @@ func TestDocsMountsMarkdown(t *testing.T) {
 	err := d.Create()
 	assert.NoError(t, err)
 
-	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
 
 	// check the config file has been generated
 	// this will be the second volume
@@ -69,7 +69,7 @@ func TestDocsGeneratesDocusaurusConfig(t *testing.T) {
 	err := d.Create()
 	assert.NoError(t, err)
 
-	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
 
 	// check the config file has been generated
 	// this will be the second volume
@@ -91,7 +91,7 @@ func TestDocsSetsDocsPorts(t *testing.T) {
 	err := d.Create()
 	assert.NoError(t, err)
 
-	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
 
 	// main port
 	assert.Equal(t, "80", params.Ports[0].Local)
@@ -111,7 +111,7 @@ func TestDocsSetsDocsPortsWithCustomReload(t *testing.T) {
 	err := d.Create()
 	assert.NoError(t, err)
 
-	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
 
 	// main port
 	assert.Equal(t, "80", params.Ports[0].Local)
@@ -130,7 +130,7 @@ func TestDocsSetsTerminalPorts(t *testing.T) {
 	err := d.Create()
 	assert.NoError(t, err)
 
-	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
 
 	// main port
 	localIP, _ := utils.GetLocalIPAndHostname()
@@ -140,7 +140,7 @@ func TestDocsSetsTerminalPorts(t *testing.T) {
 
 func TestDestroyRemovesContainers(t *testing.T) {
 	d, md := setupDocs(t)
-	removeOn(&md.Mock, "FindContainerIDs")
+	testutils.RemoveOn(&md.Mock, "FindContainerIDs")
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
 
 	err := d.Create()

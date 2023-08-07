@@ -14,7 +14,11 @@ import (
 	gvm "github.com/shipyard-run/version-manager"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients"
+	cclients "github.com/jumppad-labs/jumppad/pkg/clients/container"
+	"github.com/jumppad-labs/jumppad/pkg/clients/system"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/blueprint"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
@@ -22,7 +26,7 @@ import (
 	markdown "github.com/MichaelMure/go-term-markdown"
 )
 
-func newRunCmd(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, vm gvm.Versions, cc clients.Connector, l clients.Logger) *cobra.Command {
+func newRunCmd(e jumppad.Engine, dt cclients.ContainerTasks, bp clients.Getter, hc clients.HTTP, bc system.System, vm gvm.Versions, cc clients.Connector, l clients.Logger) *cobra.Command {
 	var noOpen bool
 	var force bool
 	var y bool
@@ -45,7 +49,7 @@ func newRunCmd(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clients.
   jumppad up github.com/jumppad-labs/blueprints/kubernetes-vault
 	`,
 		Args:         cobra.ArbitraryArgs,
-		RunE:         newRunCmdFunc(e, bp, hc, bc, vm, cc, &noOpen, &force, &runVersion, &y, &variables, &variablesFile, l),
+		RunE:         newRunCmdFunc(e, dt, bp, hc, bc, vm, cc, &noOpen, &force, &runVersion, &y, &variables, &variablesFile, l),
 		SilenceUsage: true,
 	}
 
@@ -57,14 +61,14 @@ func newRunCmd(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clients.
 	return runCmd
 }
 
-func newRunCmdFunc(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, vm gvm.Versions, cc clients.Connector, noOpen *bool, force *bool, runVersion *string, autoApprove *bool, variables *[]string, variablesFile *string, l clients.Logger) func(cmd *cobra.Command, args []string) error {
+func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp clients.Getter, hc clients.HTTP, bc system.System, vm gvm.Versions, cc clients.Connector, noOpen *bool, force *bool, runVersion *string, autoApprove *bool, variables *[]string, variablesFile *string, l clients.Logger) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		// create the shipyard and sub folders in the users home directory
 		utils.CreateFolders()
 
 		if *force {
 			bp.SetForce(true)
-			e.GetClients().ContainerTasks.SetForcePull(true)
+			dt.SetForcePull(true)
 		}
 
 		// parse the vars into a map
@@ -176,8 +180,8 @@ func newRunCmdFunc(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clie
 
 			for _, r := range res.Resources {
 				switch r.Metadata().Type {
-				case resources.TypeContainer:
-					c := r.(*resources.Container)
+				case container.TypeContainer:
+					c := r.(*container.Container)
 					for _, p := range c.Ports {
 						if p.Host != "" && p.OpenInBrowser != "" {
 							browserList = append(browserList, buildBrowserPath(r.Metadata().Name, p.Host, r.Metadata().Type, p.OpenInBrowser))
@@ -235,25 +239,25 @@ func newRunCmdFunc(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clie
 		statusUpdate.Stop()
 
 		// if we have a blueprint show the header
-		var blueprint *resources.Blueprint
-		bps, _ := e.Config().FindResourcesByType(resources.TypeBlueprint)
+		var b *blueprint.Blueprint
+		bps, _ := e.Config().FindResourcesByType(blueprint.TypeBlueprint)
 		for _, bp := range bps {
 			// pick the first blueprint in the root
 			if bp.Metadata().Module == "" {
-				blueprint = bp.(*resources.Blueprint)
+				b = bp.(*blueprint.Blueprint)
 				break
 			}
 		}
 
-		if blueprint != nil {
+		if b != nil {
 			cmd.Println("")
 			cmd.Println("########################################################")
 			cmd.Println("")
-			cmd.Println("Title", blueprint.Title)
-			cmd.Println("Author", blueprint.Author)
+			cmd.Println("Title", b.Title)
+			cmd.Println("Author", b.Author)
 
 			// parse the body as markdown and print
-			intro := markdown.Render(blueprint.Description, 80, 0)
+			intro := markdown.Render(b.Description, 80, 0)
 
 			cmd.Println("")
 			cmd.Print(string(intro))

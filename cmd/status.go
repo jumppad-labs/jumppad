@@ -7,6 +7,7 @@ import (
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad/constants"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
@@ -108,9 +109,9 @@ var statusCmd = &cobra.Command{
 						}
 					case resources.TypeK8sCluster:
 						fmt.Printf("%-13s %-50s %s\n", status, r.Metadata().ID, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, "", r.Metadata().Type)))
-					case resources.TypeContainer:
+					case container.TypeContainer:
 						fallthrough
-					case resources.TypeSidecar:
+					case container.TypeSidecar:
 						fallthrough
 					case resources.TypeImageCache:
 						fmt.Printf("%-13s %-50s %s\n", status, r.Metadata().ID, "")

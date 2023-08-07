@@ -1,6 +1,8 @@
 package providers
 
 // Provider defines an interface to be implemented by providers
+//
+//go:generate mockery --name Provider --filename provider.go
 type Provider interface {
 	// Create is called when a resource does not exist or creation has previously
 	// failed and 'up' is run

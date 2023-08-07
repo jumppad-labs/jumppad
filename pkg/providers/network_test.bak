@@ -34,7 +34,7 @@ func TestLookupReturnsID(t *testing.T) {
 	c.Subnet = "10.1.2.0/24"
 
 	md, p := setupNetworkTests(c)
-	removeOn(&md.Mock, "NetworkList")
+	testutils.RemoveOn(&md.Mock, "NetworkList")
 	md.On("NetworkList", mock.Anything, mock.Anything).Return([]types.NetworkResource{
 		types.NetworkResource{
 			ID: "testnet",
@@ -54,7 +54,7 @@ func TestLookupFailReturnsError(t *testing.T) {
 	c.Subnet = "10.1.2.0/24"
 
 	md, p := setupNetworkTests(c)
-	removeOn(&md.Mock, "NetworkList")
+	testutils.RemoveOn(&md.Mock, "NetworkList")
 	md.On("NetworkList", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
 	_, err := p.Lookup()
@@ -88,8 +88,8 @@ func TestNetworkCreatesNatWhenNoBridge(t *testing.T) {
 
 	md, p := setupNetworkTests(c)
 
-	removeOn(&md.Mock, "NetworkList")
-	removeOn(&md.Mock, "NetworkCreate")
+	testutils.RemoveOn(&md.Mock, "NetworkList")
+	testutils.RemoveOn(&md.Mock, "NetworkCreate")
 	md.On("NetworkList", mock.Anything, mock.Anything).Return(nil, nil)
 	md.On("NetworkCreate", mock.Anything, mock.Anything, mock.Anything).Once().Return(nil, fmt.Errorf("boom"))
 	md.On("NetworkCreate", mock.Anything, mock.Anything, mock.Anything).Once().Return(nil, nil)
@@ -108,7 +108,7 @@ func TestNetworkDoesNOTCreateWhenExists(t *testing.T) {
 	c.Subnet = "10.1.2.0/24"
 
 	md, p := setupNetworkTests(c)
-	removeOn(&md.Mock, "NetworkList")
+	testutils.RemoveOn(&md.Mock, "NetworkList")
 	md.On("NetworkList", mock.Anything, mock.Anything).Return([]types.NetworkResource{
 		types.NetworkResource{
 			ID: "testnet",
@@ -128,7 +128,7 @@ func TestCreateWithCorrectNameAndDifferentSubnetReturnsError(t *testing.T) {
 	c.Subnet = "10.1.2.0/16"
 
 	md, p := setupNetworkTests(c)
-	removeOn(&md.Mock, "NetworkList")
+	testutils.RemoveOn(&md.Mock, "NetworkList")
 	md.On("NetworkList", mock.Anything, mock.Anything).Return([]types.NetworkResource{
 		types.NetworkResource{
 			ID: "testnet",
@@ -147,7 +147,7 @@ func TestCreateWithOverlappingSubnetReturnsError(t *testing.T) {
 	c.Subnet = "10.2.3.0/16"
 
 	md, p := setupNetworkTests(c)
-	removeOn(&md.Mock, "NetworkList")
+	testutils.RemoveOn(&md.Mock, "NetworkList")
 	md.On("NetworkList", mock.Anything, mock.Anything).Return([]types.NetworkResource{
 		types.NetworkResource{
 			ID: "abc",

@@ -74,7 +74,7 @@ func TestHealthCheckFailReturnsError(t *testing.T) {
 
 func TestCreateSetupErrorReturnsError(t *testing.T) {
 	mk, p := setupK8sConfig()
-	removeOn(&mk.Mock, "SetConfig")
+	testutils.RemoveOn(&mk.Mock, "SetConfig")
 	mk.On("SetConfig", mock.Anything).Return(fmt.Errorf("boom"))
 
 	err := p.Create()
@@ -100,7 +100,7 @@ func TestDestroysCorrectly(t *testing.T) {
 
 func TestDestroySetupErrorReturnsError(t *testing.T) {
 	mk, p := setupK8sConfig()
-	removeOn(&mk.Mock, "SetConfig")
+	testutils.RemoveOn(&mk.Mock, "SetConfig")
 	mk.On("SetConfig", mock.Anything).Return(fmt.Errorf("boom"))
 
 	err := p.Destroy()

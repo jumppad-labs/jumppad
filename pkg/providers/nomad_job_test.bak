@@ -49,7 +49,7 @@ func TestNomadJobUnableToLoadConfigReturnsError(t *testing.T) {
 	jc, mh := setupNomadJobMocks()
 	jc.Config.Resources = jc.Config.Resources[1:]
 
-	removeOn(&mh.Mock, "SetConfig")
+	testutils.RemoveOn(&mh.Mock, "SetConfig")
 	mh.On("SetConfig", mock.Anything).Return(fmt.Errorf("boom"))
 
 	p := NewNomadJob(jc, mh, clients.NewTestLogger(t))
@@ -60,7 +60,7 @@ func TestNomadJobUnableToLoadConfigReturnsError(t *testing.T) {
 
 func TestNomadJobCreateReturnsError(t *testing.T) {
 	jc, mh := setupNomadJobMocks()
-	removeOn(&mh.Mock, "Create")
+	testutils.RemoveOn(&mh.Mock, "Create")
 	mh.On("Create", mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
 	p := NewNomadJob(jc, mh, clients.NewTestLogger(t))

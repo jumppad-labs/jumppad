@@ -11,18 +11,19 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/docker/docker/pkg/ioutils"
 	"github.com/jumppad-labs/hclconfig"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad/constants"
-	"github.com/jumppad-labs/jumppad/pkg/providers"
+	emocks "github.com/jumppad-labs/jumppad/pkg/jumppad/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/providers/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	"github.com/jumppad-labs/jumppad/testutils"
 
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	assert "github.com/stretchr/testify/require"
 )
 
 var lock = sync.Mutex{}
@@ -40,63 +41,17 @@ func setupTestsBase(t *testing.T, returnVals map[string]error, state string) (*E
 
 	p := &[]*mocks.MockProvider{}
 
-	cl := &clients.Clients{}
+	pm := &emocks.Providers{}
+	pm.On("GetProvider", mock.Anything)
+
 	e := &EngineImpl{
-		clients:     cl,
-		log:         clients.NewTestLogger(t),
-		getProvider: generateProviderMock(p, returnVals),
+		log:       clients.NewTestLogger(t),
+		providers: pm,
 	}
 
 	testutils.SetupState(t, state)
 
 	return e, p
-}
-
-func testutils.SetupState(t *testing.T, state string) {
-	// set the home folder to a tmpFolder for the tests
-	dir, err := ioutils.TempDir("", "")
-	if err != nil {
-		panic(err)
-	}
-
-	home := os.Getenv(utils.HomeEnvName())
-	os.Setenv(utils.HomeEnvName(), dir)
-
-	// write the state file
-	if state != "" {
-		os.MkdirAll(utils.StateDir(), os.ModePerm)
-		f, err := os.Create(utils.StatePath())
-		if err != nil {
-			panic(err)
-		}
-		defer f.Close()
-		_, err = f.WriteString(state)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	t.Cleanup(func() {
-		os.Setenv(utils.HomeEnvName(), home)
-		os.RemoveAll(dir)
-	})
-}
-
-func generateProviderMock(mp *[]*mocks.MockProvider, returnVals map[string]error) getProviderFunc {
-	return func(c types.Resource, cc *clients.Clients) providers.Provider {
-		lock.Lock()
-		defer lock.Unlock()
-
-		m := mocks.New(c)
-
-		val := returnVals[c.Metadata().Name]
-		m.On("Create").Return(val)
-		m.On("Destroy").Return(val)
-		m.On("Refresh").Return(val)
-
-		*mp = append(*mp, m)
-		return m
-	}
 }
 
 func getTestFiles(tests string) string {
@@ -113,23 +68,6 @@ func testLoadState(t *testing.T, e *EngineImpl) *hclconfig.Config {
 	require.NoError(t, err)
 
 	return c
-}
-
-func TestNewCreatesClients(t *testing.T) {
-	e, err := New(clients.NewTestLogger(t))
-	assert.NoError(t, err)
-
-	cl := e.GetClients()
-
-	assert.NotNil(t, cl.Kubernetes)
-	assert.NotNil(t, cl.Helm)
-	assert.NotNil(t, cl.Command)
-	assert.NotNil(t, cl.HTTP)
-	assert.NotNil(t, cl.Nomad)
-	assert.NotNil(t, cl.Getter)
-	assert.NotNil(t, cl.Browser)
-	assert.NotNil(t, cl.ImageLog)
-	assert.NotNil(t, cl.Connector)
 }
 
 func TestApplyWithSingleFile(t *testing.T) {
@@ -184,7 +122,7 @@ func TestApplyWithSingleFileAndVariables(t *testing.T) {
 	require.Equal(t, "consul_addr", (*mp)[5].Config().Metadata().Name)
 
 	// check the variable has overridden the image
-	cont := (*mp)[4].Config().(*resources.Container)
+	cont := (*mp)[4].Config().(*container.Container)
 	require.Equal(t, "consul:1.8.1", cont.Image.Name)
 }
 
@@ -465,7 +403,7 @@ func TestParseWithVariables(t *testing.T) {
 
 	c, err := e.config.FindResource("resource.container.consul")
 	require.NoError(t, err)
-	require.Equal(t, "consul:1.8.1", c.(*resources.Container).Image.Name)
+	require.Equal(t, "consul:1.8.1", c.(*container.Container).Image.Name)
 }
 
 func testAssertMethodCalled(t *testing.T, p *[]*mocks.MockProvider, method string, n int, resource ...types.Resource) {

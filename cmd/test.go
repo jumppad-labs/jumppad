@@ -26,6 +26,7 @@ import (
 	hcltypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
@@ -44,7 +45,7 @@ var output = bytes.NewBufferString("")
 var commandOutput = bytes.NewBufferString("")
 var commandExitCode = 0
 
-func newTestCmd(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clients.System, l clients.Logger) *cobra.Command {
+func newTestCmd() *cobra.Command {
 	var testFolder string
 	var force bool
 	var dontDestroy bool
@@ -59,7 +60,7 @@ func newTestCmd(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clients
 		Long:                  `Run functional tests for the blueprint, this command will start the jumppad blueprint `,
 		DisableFlagsInUseLine: true,
 		Args:                  cobra.ArbitraryArgs,
-		RunE:                  newTestCmdFunc(e, bp, hc, bc, testFolder, &force, &purge, &variables, &variablesFile, &tags, &dontDestroy, l),
+		RunE:                  newTestCmdFunc(testFolder, &force, &purge, &variables, &variablesFile, &tags, &dontDestroy),
 	}
 
 	testCmd.Flags().StringVarP(&testFolder, "test-folder", "", "", "Specify the folder containing the functional tests.")
@@ -74,10 +75,6 @@ func newTestCmd(e jumppad.Engine, bp clients.Getter, hc clients.HTTP, bc clients
 }
 
 func newTestCmdFunc(
-	e jumppad.Engine,
-	bp clients.Getter,
-	hc clients.HTTP,
-	bc clients.System,
 	testFolder string,
 	force *bool,
 	purge *bool,
@@ -85,10 +82,21 @@ func newTestCmdFunc(
 	variablesFile *string,
 	tags *string,
 	dontDestroy *bool,
-	l clients.Logger) func(cmd *cobra.Command, args []string) error {
+) func(cmd *cobra.Command, args []string) error {
 
 	return func(cmd *cobra.Command, args []string) error {
-		tr := CucumberRunner{cmd, args, e, bp, hc, bc, testFolder, "", "", force, purge, l, *variables, nil, *variablesFile, *tags, dontDestroy}
+		tr := CucumberRunner{
+			cmd:           cmd,
+			args:          args,
+			testFolder:    testFolder,
+			force:         force,
+			purge:         purge,
+			baseVariables: *variables,
+			variablesFile: *variablesFile,
+			tags:          *tags,
+			dontDestroy:   dontDestroy,
+		}
+
 		tr.start()
 
 		return nil
@@ -100,9 +108,7 @@ type CucumberRunner struct {
 	cmd           *cobra.Command
 	args          []string
 	e             jumppad.Engine
-	bp            clients.Getter
-	hc            clients.HTTP
-	bc            clients.System
+	cli           *jumppad.Clients
 	testFolder    string
 	testPath      string
 	basePath      string
@@ -152,6 +158,8 @@ func (cr *CucumberRunner) start() {
 }
 
 func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
+	cr.e, cr.cli, _ = createEngine(cr.l)
+
 	ctx.BeforeScenario(func(gs *godog.Scenario) {
 		// ensure the variables are not carried over from a previous scenario
 		envVars = map[string]string{}
@@ -159,11 +167,9 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 		commandExitCode = 0
 		cr.variables = cr.baseVariables
 
-		cr.e, _ = createEngine(cr.l)
-
 		// do we need to pure the cache
 		if *cr.purge {
-			pc := newPurgeCmdFunc(cr.e.GetClients().Docker, cr.e.GetClients().ImageLog, cr.e.GetClients().Logger)
+			pc := newPurgeCmdFunc(cr.cli.Docker, cr.cli.ImageLog, cr.cli.Logger)
 			pc(cr.cmd, cr.args)
 		}
 	})
@@ -189,7 +195,7 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 			return
 		}
 
-		dest := newDestroyCmd(cr.e.GetClients().Connector)
+		dest := newDestroyCmd(cr.cli.Connector)
 		dest.SetArgs([]string{})
 		dest.Execute()
 	})
@@ -238,7 +244,7 @@ func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
 
 	logger := createLogger()
 
-	engine, vm := createEngine(logger)
+	engine, cli, vm := createEngine(logger)
 
 	cr.e = engine
 	cr.l = logger
@@ -249,11 +255,12 @@ func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
 	// re-use the run command
 	rc := newRunCmdFunc(
 		engine,
-		engine.GetClients().Getter,
-		engine.GetClients().HTTP,
-		engine.GetClients().Browser,
+		cli.ContainerTasks,
+		cli.Getter,
+		cli.HTTP,
+		cli.Browser,
 		vm,
-		engine.GetClients().Connector,
+		cli.Connector,
 		&noOpen,
 		cr.force,
 		&version,
@@ -302,10 +309,10 @@ func getLookupAddress(resourceName string) (string, string, int, error) {
 	case resources.TypeNomadCluster:
 		cl := res.(*resources.NomadCluster)
 		return cl.ServerFQRN, res.Metadata().Type, cl.ClientNodes + 1, nil
-	case resources.TypeContainer:
-		return res.(*resources.Container).FQRN, res.Metadata().Type, 1, nil
-	case resources.TypeSidecar:
-		return res.(*resources.Sidecar).FQRN, res.Metadata().Type, 1, nil
+	case container.TypeContainer:
+		return res.(*container.Container).FQRN, res.Metadata().Type, 1, nil
+	case container.TypeSidecar:
+		return res.(*container.Sidecar).FQRN, res.Metadata().Type, 1, nil
 	case resources.TypeDocs:
 		return res.(*resources.Docs).FQRN, res.Metadata().Type, 1, nil
 	default:
@@ -360,7 +367,7 @@ func (cr *CucumberRunner) thereShouldBeAResourceRunningCalled(id string) error {
 		args.Add("name", id)
 		opts := types.ContainerListOptions{Filters: args, All: true}
 
-		cl, err := cr.e.GetClients().Docker.ContainerList(context.Background(), opts)
+		cl, err := cr.cli.Docker.ContainerList(context.Background(), opts)
 		if err != nil {
 			return err
 		}
@@ -390,7 +397,7 @@ func (cr *CucumberRunner) thereShouldBeAResourceRunningCalled(id string) error {
 func (cr *CucumberRunner) thereShouldBe1NetworkCalled(arg1 string) error {
 	args := filters.NewArgs()
 	args.Add("name", arg1)
-	n, err := cr.e.GetClients().Docker.NetworkList(context.Background(), types.NetworkListOptions{Filters: args})
+	n, err := cr.cli.Docker.NetworkList(context.Background(), types.NetworkListOptions{Filters: args})
 
 	if err != nil {
 		return err
@@ -698,7 +705,7 @@ func (cr *CucumberRunner) getJSONPath(path, resource string) (string, error) {
 	}
 
 	id := utils.FQDN(fqdn.Resource, fqdn.Module, fqdn.Type)
-	ci, err := cr.e.GetClients().Docker.ContainerInspect(context.Background(), id)
+	ci, err := cr.cli.Docker.ContainerInspect(context.Background(), id)
 	if err != nil {
 		return "", err
 	}

@@ -22,6 +22,7 @@ type CommandConfig struct {
 	Timeout          time.Duration
 }
 
+//go:generate mockery --name Command --filename command.go
 type Command interface {
 	Execute(config CommandConfig) (int, error)
 	Kill(pid int) error

@@ -57,7 +57,7 @@ func TestExecLocalExecutesCommandAndSetsPid(t *testing.T) {
 func TestExecLocalExecuteFailsReturnsError(t *testing.T) {
 	c, mc := testLocalExecSetupMocks()
 
-	removeOn(&mc.Mock, "Execute")
+	testutils.RemoveOn(&mc.Mock, "Execute")
 	mc.On("Execute", mock.Anything, mock.Anything).Return(0, fmt.Errorf("boom"))
 
 	p := NewExecLocal(c, mc, hclog.Default())

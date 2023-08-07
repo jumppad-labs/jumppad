@@ -9,6 +9,9 @@ var NameContainsInvalidCharactersError = fmt.Errorf("Name contains invalid chara
 // ImageVolumeName is the name of the volume which stores the images for clusters
 const ImageVolumeName string = "images"
 
+// BuildImagePrefix is the default prefix added to any image built by jumppad
+const BuildImagePrefix = "jumppad.dev/localcache"
+
 // Name of the Cache resource
 const CacheResourceName string = "docker-cache"
 

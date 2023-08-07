@@ -63,7 +63,7 @@ func TestRemoteExecPullsImageWhenNoTarget(t *testing.T) {
 
 func TestRemoteExecPullsImageReturnsErrorWhenError(t *testing.T) {
 	trex, _, md := testRemoteExecSetupMocks()
-	removeOn(&md.Mock, "PullImage")
+	testutils.RemoveOn(&md.Mock, "PullImage")
 	md.On("PullImage", mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
 	p := NewRemoteExec(trex, md, clients.NewTestLogger(t))
@@ -83,7 +83,7 @@ func TestRemoteExecCreatesContainerWhenNoTarget(t *testing.T) {
 
 func TestRemoteExecCreatesContainerFailsReturnError(t *testing.T) {
 	trex, _, md := testRemoteExecSetupMocks()
-	removeOn(&md.Mock, "CreateContainer")
+	testutils.RemoveOn(&md.Mock, "CreateContainer")
 	md.On("CreateContainer", mock.Anything).Return("", fmt.Errorf("boom"))
 
 	p := NewRemoteExec(trex, md, clients.NewTestLogger(t))
@@ -105,7 +105,7 @@ func TestRemoteExecWithTargetLooksupID(t *testing.T) {
 func TestRemoteExecWithTargetLooksupIDNotFoundReturnsError(t *testing.T) {
 	trex, _, md := testRemoteExecSetupMocks()
 	trex.Target = "container.test"
-	removeOn(&md.Mock, "FindContainerIDs")
+	testutils.RemoveOn(&md.Mock, "FindContainerIDs")
 	md.On("FindContainerIDs", "test", config.TypeContainer).Return([]string{}, nil)
 	p := NewRemoteExec(trex, md, clients.NewTestLogger(t))
 
@@ -121,7 +121,7 @@ func TestRemoteExecExecutesCommand(t *testing.T) {
 	assert.NoError(t, err)
 	md.AssertCalled(t, "ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 
-	args := getCalls(&md.Mock, "ExecuteCommand")[0].Arguments
+	args := testutils.GetCalls(&md.Mock, "ExecuteCommand")[0].Arguments
 	params := args[1].([]string)
 	env := args[2].([]string)
 	wd := args[3].(string)
@@ -143,8 +143,8 @@ func TestRemoteExecRunsAsUserWhenSpecified(t *testing.T) {
 	err := p.Create()
 	assert.NoError(t, err)
 
-	user := getCalls(&md.Mock, "ExecuteCommand")[0].Arguments[4].(string)
-	group := getCalls(&md.Mock, "ExecuteCommand")[0].Arguments[5].(string)
+	user := testutils.GetCalls(&md.Mock, "ExecuteCommand")[0].Arguments[4].(string)
+	group := testutils.GetCalls(&md.Mock, "ExecuteCommand")[0].Arguments[5].(string)
 
 	assert.Equal(t, "1010", user)
 	assert.Equal(t, "1011", group)
@@ -152,7 +152,7 @@ func TestRemoteExecRunsAsUserWhenSpecified(t *testing.T) {
 
 func TestRemoteExecExecutesCommandFailReturnsError(t *testing.T) {
 	trex, _, md := testRemoteExecSetupMocks()
-	removeOn(&md.Mock, "ExecuteCommand")
+	testutils.RemoveOn(&md.Mock, "ExecuteCommand")
 	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
 	p := NewRemoteExec(trex, md, clients.NewTestLogger(t))
@@ -173,7 +173,7 @@ func TestRemoteExecRemovesContainer(t *testing.T) {
 /*
 	func TestRemoteExecRemoveContainerFailReturnsError(t *testing.T) {
 		trex, _, md := testRemoteExecSetupMocks()
-		removeOn(&md.Mock, "RemoveContainer")
+		testutils.RemoveOn(&md.Mock, "RemoveContainer")
 		md.On("RemoveContainer", "1234").Return(fmt.Errorf("boom"))
 
 		p := NewRemoteExec(trex, md, clients.NewTestLogger(t))

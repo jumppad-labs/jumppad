@@ -8,14 +8,12 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/jumppad-labs/hclconfig"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad/constants"
-	"github.com/jumppad-labs/jumppad/pkg/providers"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -25,7 +23,6 @@ import (
 //
 //go:generate mockery --name Engine --filename engine.go
 type Engine interface {
-	GetClients() *clients.Clients
 	Apply(string) (*hclconfig.Config, error)
 
 	// ApplyWithVariables applies a configuration file or directory containing
@@ -41,87 +38,21 @@ type Engine interface {
 
 // EngineImpl is responsible for creating and destroying resources
 type EngineImpl struct {
-	clients     *clients.Clients
-	config      *hclconfig.Config
-	log         clients.Logger
-	getProvider getProviderFunc
-}
-
-// defines a function which is used for generating providers
-// enables the replacement in tests to inject mocks
-type getProviderFunc func(c types.Resource, cl *clients.Clients) providers.Provider
-
-// GenerateClients creates the various clients for creating and destroying resources
-func GenerateClients(l clients.Logger) (*clients.Clients, error) {
-	dc, err := clients.NewDocker()
-	if err != nil {
-		return nil, err
-	}
-
-	kc := clients.NewKubernetes(60*time.Second, l)
-
-	hec := clients.NewHelm(l)
-
-	ec := clients.NewCommand(30*time.Second, l)
-
-	hc := clients.NewHTTP(1*time.Second, l)
-
-	nc := clients.NewNomad(hc, 1*time.Second, l)
-
-	bp := clients.NewGetter(false)
-
-	bc := &clients.SystemImpl{}
-
-	il := clients.NewImageFileLog(utils.ImageCacheLog())
-
-	tgz := &clients.TarGz{}
-
-	ct := clients.NewDockerTasks(dc, il, tgz, l)
-
-	co := clients.DefaultConnectorOptions()
-	cc := clients.NewConnector(co)
-
-	return &clients.Clients{
-		ContainerTasks: ct,
-		Docker:         dc,
-		Kubernetes:     kc,
-		Helm:           hec,
-		Command:        ec,
-		HTTP:           hc,
-		Nomad:          nc,
-		Logger:         l,
-		Getter:         bp,
-		Browser:        bc,
-		ImageLog:       il,
-		Connector:      cc,
-		TarGz:          tgz,
-	}, nil
+	providers Providers
+	log       clients.Logger
+	config    *hclconfig.Config
 }
 
 // New creates a new shipyard engine
-func New(l clients.Logger) (Engine, error) {
-	var err error
+func New(p Providers, l clients.Logger) (Engine, error) {
 	e := &EngineImpl{}
 	e.log = l
-	e.getProvider = generateProviderImpl
+	e.providers = p
 
 	// Set the standard writer to our logger as the DAG uses the standard library log.
 	log.SetOutput(l.StandardWriter())
 
-	// create the clients
-	cl, err := GenerateClients(l)
-	if err != nil {
-		return nil, err
-	}
-
-	e.clients = cl
-
 	return e, nil
-}
-
-// GetClients returns the clients from the engine
-func (e *EngineImpl) GetClients() *clients.Clients {
-	return e.clients
 }
 
 // Config returns the parsed config
@@ -227,7 +158,7 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 	for _, r := range unchanged {
 		// call changed on when not disabled
 		if !r.Metadata().Disabled {
-			p := e.getProvider(r, e.clients)
+			p := e.providers.GetProvider(r)
 			if p == nil {
 				return nil, nil, nil, nil, fmt.Errorf("unable to create provider for resource Name: %s, Type: %s. Please check the provider is registered in providers.go", r.Metadata().Name, r.Metadata().Type)
 			}
@@ -297,7 +228,7 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 
 		e.log.Debug("Creating new Image Cache", "id", cache.ID)
 
-		p := e.getProvider(cache, e.clients)
+		p := e.providers.GetProvider(cache)
 		if p == nil {
 			// this should never happen
 			panic(err)
@@ -326,7 +257,7 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 	for _, r := range removed {
 		e.log.Debug("removing", "id", r.Metadata().ID)
 
-		p := e.getProvider(r, e.clients)
+		p := e.providers.GetProvider(r)
 		if p == nil {
 			processErr = fmt.Errorf("unable to create provider for resource Name: %s, Type: %s. Please check the provider is registered in providers.go", r.Metadata().Name, r.Metadata().Type)
 			continue
@@ -461,7 +392,7 @@ func (e *EngineImpl) destroyDisabledResources() error {
 		if r.Metadata().Disabled &&
 			r.Metadata().Properties[constants.PropertyStatus] == constants.StatusCreated {
 
-			p := e.getProvider(r, e.clients)
+			p := e.providers.GetProvider(r)
 			if p == nil {
 				r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
 				return fmt.Errorf("unable to create provider for resource Name: %s, Type: %s. Please check the provider is registered in providers.go", r.Metadata().Name, r.Metadata().Type)
@@ -533,7 +464,7 @@ func (e *EngineImpl) appendModuleAndVariableResources(c *hclconfig.Config) error
 }
 
 func (e *EngineImpl) createCallback(r types.Resource) error {
-	p := e.getProvider(r, e.clients)
+	p := e.providers.GetProvider(r)
 	if p == nil {
 		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
 		return fmt.Errorf("unable to create provider for resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
@@ -600,7 +531,7 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 			ic.Metadata().DependsOn = appendIfNotContains(ic.Metadata().DependsOn, r.Metadata().ID)
 
 			// reload the networks
-			np := e.getProvider(ic, e.clients)
+			np := e.providers.GetProvider(ic)
 			np.Refresh()
 		} else {
 			e.log.Error("Unable to find Image Cache", "error", err)
@@ -621,7 +552,7 @@ func (e *EngineImpl) destroyCallback(r types.Resource) error {
 		return nil
 	}
 
-	p := e.getProvider(r, e.clients)
+	p := e.providers.GetProvider(r)
 
 	if p == nil {
 		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed

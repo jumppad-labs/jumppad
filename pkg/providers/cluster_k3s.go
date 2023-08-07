@@ -15,9 +15,10 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
-	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
+	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"golang.org/x/xerrors"
 )
@@ -31,7 +32,7 @@ var startTimeout = (300 * time.Second)
 // K8sCluster defines a provider which can create Kubernetes clusters
 type K8sCluster struct {
 	config     *resources.K8sCluster
-	client     clients.ContainerTasks
+	client     container.ContainerTasks
 	kubeClient clients.Kubernetes
 	httpClient clients.HTTP
 	connector  clients.Connector
@@ -39,7 +40,7 @@ type K8sCluster struct {
 }
 
 // NewK8sCluster creates a new Kubernetes cluster provider
-func NewK8sCluster(c *resources.K8sCluster, cc clients.ContainerTasks, kc clients.Kubernetes, hc clients.HTTP, co clients.Connector, l clients.Logger) *K8sCluster {
+func NewK8sCluster(c *resources.K8sCluster, cc container.ContainerTasks, kc clients.Kubernetes, hc clients.HTTP, co clients.Connector, l clients.Logger) *K8sCluster {
 	return &K8sCluster{c, cc, kc, hc, co, l}
 }
 
@@ -97,23 +98,18 @@ func (c *K8sCluster) createK3s() error {
 
 	// create the server
 	name := fmt.Sprintf("server.%s", c.config.Name)
-	cc := &resources.Container{
-		ResourceMetadata: types.ResourceMetadata{
-			Name:   name,
-			Type:   c.config.Type,
-			Module: c.config.Module,
-		},
-	}
+	fqrn := utils.FQDN(name, c.config.Module, c.config.Type)
 
-	cc.ParentConfig = c.config.Metadata().ParentConfig
+	cc := &ctypes.Container{}
+	cc.Name = fqrn
 
 	cc.Image = c.config.Image
 	cc.Networks = c.config.Networks
 	cc.Privileged = true // k3s must run Privlidged
 
 	// set the volume mount for the images
-	cc.Volumes = []resources.Volume{
-		resources.Volume{
+	cc.Volumes = []ctypes.Volume{
+		ctypes.Volume{
 			Source:      volID,
 			Destination: "/cache",
 			Type:        "volume",
@@ -190,7 +186,7 @@ func (c *K8sCluster) createK3s() error {
 	// snapshotter must be set to native or the container will not start
 	snapShotter := "native"
 
-	if c.client.EngineInfo().StorageDriver == clients.StorageDriverOverlay || c.client.EngineInfo().StorageDriver == clients.StorageDriverOverlay2 {
+	if c.client.EngineInfo().StorageDriver == container.StorageDriverOverlay || c.client.EngineInfo().StorageDriver == clients.StorageDriverOverlay2 {
 		snapShotter = "overlayfs"
 	}
 
@@ -515,7 +511,7 @@ func (c *K8sCluster) deployConnector(grpcPort, httpPort int) error {
 }
 
 // ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
-func (c *K8sCluster) ImportLocalDockerImages(name string, id string, images []resources.Image, force bool) error {
+func (c *K8sCluster) ImportLocalDockerImages(name string, id string, images []ctypes.Image, force bool) error {
 	imgs := []string{}
 
 	for _, i := range images {

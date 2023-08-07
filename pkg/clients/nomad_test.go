@@ -12,6 +12,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	clients "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/mock"
 	assert "github.com/stretchr/testify/require"
 )
@@ -67,7 +68,7 @@ func TestNomadCreateValidatesConfig(t *testing.T) {
 func TestNomadCreateValidateErrorReturnsError(t *testing.T) {
 	fp, _, mh := setupNomadTests(t)
 
-	removeOn(&mh.Mock, "Do")
+	testutils.RemoveOn(&mh.Mock, "Do")
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("Boom"))
 
 	c := NewNomad(mh, 1*time.Millisecond, clients.NewTestLogger(t))
@@ -80,7 +81,7 @@ func TestNomadCreateValidateErrorReturnsError(t *testing.T) {
 func TestNomadCreateValidateNot200ReturnsError(t *testing.T) {
 	fp, _, mh := setupNomadTests(t)
 
-	removeOn(&mh.Mock, "Do")
+	testutils.RemoveOn(&mh.Mock, "Do")
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusInternalServerError}, nil)
 
 	c := NewNomad(mh, 1*time.Millisecond, clients.NewTestLogger(t))
@@ -93,7 +94,7 @@ func TestNomadCreateValidateNot200ReturnsError(t *testing.T) {
 func TestNomadCreateValidateInvalidReturnsError(t *testing.T) {
 	fp, _, mh := setupNomadTests(t)
 
-	removeOn(&mh.Mock, "Do")
+	testutils.RemoveOn(&mh.Mock, "Do")
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusBadRequest,
@@ -123,7 +124,7 @@ func TestNomadCreateSubmitsJob(t *testing.T) {
 func TestNomadCreateSubmitErrorReturnsError(t *testing.T) {
 	fp, _, mh := setupNomadTests(t)
 
-	removeOn(&mh.Mock, "Do")
+	testutils.RemoveOn(&mh.Mock, "Do")
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusOK,
@@ -144,7 +145,7 @@ func TestNomadCreateSubmitErrorReturnsError(t *testing.T) {
 func TestNomadCreateSubmitNot200ReturnsError(t *testing.T) {
 	fp, _, mh := setupNomadTests(t)
 
-	removeOn(&mh.Mock, "Do")
+	testutils.RemoveOn(&mh.Mock, "Do")
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusOK,
@@ -183,7 +184,7 @@ func TestNomadStopValidatesConfig(t *testing.T) {
 func TestNomadStopValidateErrorReturnsError(t *testing.T) {
 	fp, _, mh := setupNomadTests(t)
 
-	removeOn(&mh.Mock, "Do")
+	testutils.RemoveOn(&mh.Mock, "Do")
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("Boom"))
 
 	c := NewNomad(mh, 1*time.Millisecond, clients.NewTestLogger(t))
@@ -208,7 +209,7 @@ func TestNomadStopStopsJob(t *testing.T) {
 func TestNomadStopErrorReturnsError(t *testing.T) {
 	fp, _, mh := setupNomadTests(t)
 
-	removeOn(&mh.Mock, "Do")
+	testutils.RemoveOn(&mh.Mock, "Do")
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusOK,
@@ -228,7 +229,7 @@ func TestNomadStopErrorReturnsError(t *testing.T) {
 func TestNomadStopNoStatus200ReturnsError(t *testing.T) {
 	fp, _, mh := setupNomadTests(t)
 
-	removeOn(&mh.Mock, "Do")
+	testutils.RemoveOn(&mh.Mock, "Do")
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusOK,
@@ -249,7 +250,7 @@ func TestNomadStopNoStatus200ReturnsError(t *testing.T) {
 func TestNomadJobStatusReturnsNoErrorOnRunning(t *testing.T) {
 	fp, _, mh := setupNomadTests(t)
 
-	removeOn(&mh.Mock, "Do")
+	testutils.RemoveOn(&mh.Mock, "Do")
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusOK,
@@ -270,7 +271,7 @@ func TestNomadJobStatusReturnsNoErrorOnRunning(t *testing.T) {
 func TestNomadJobStatusReturnsErrorWhenPending(t *testing.T) {
 	fp, _, mh := setupNomadTests(t)
 
-	removeOn(&mh.Mock, "Do")
+	testutils.RemoveOn(&mh.Mock, "Do")
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusOK,
@@ -291,7 +292,7 @@ func TestNomadJobStatusReturnsErrorWhenPending(t *testing.T) {
 func TestNomadHealthCallsAPI(t *testing.T) {
 	fp, _, mh := setupNomadTests(t)
 
-	removeOn(&mh.Mock, "Do")
+	testutils.RemoveOn(&mh.Mock, "Do")
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusOK,
@@ -310,7 +311,7 @@ func TestNomadHealthCallsAPI(t *testing.T) {
 func TestNomadHealthWithNotReadyNodeRetries(t *testing.T) {
 	fp, _, mh := setupNomadTests(t)
 
-	removeOn(&mh.Mock, "Do")
+	testutils.RemoveOn(&mh.Mock, "Do")
 
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
@@ -339,7 +340,7 @@ func TestNomadHealthWithNotReadyNodeRetries(t *testing.T) {
 func TestNomadHealthWithNotReadyDockerRetries(t *testing.T) {
 	fp, _, mh := setupNomadTests(t)
 
-	removeOn(&mh.Mock, "Do")
+	testutils.RemoveOn(&mh.Mock, "Do")
 
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
@@ -369,7 +370,7 @@ func TestNomadHealthWithNotReadyDockerRetries(t *testing.T) {
 func TestNomadHealthErrorsOnClientError(t *testing.T) {
 	fp, _, mh := setupNomadTests(t)
 
-	removeOn(&mh.Mock, "Do")
+	testutils.RemoveOn(&mh.Mock, "Do")
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		nil,
 		fmt.Errorf("boom"),
@@ -385,7 +386,7 @@ func TestNomadHealthErrorsOnClientError(t *testing.T) {
 func TestNomadEndpointsErrorWhenUnableToGetJobs(t *testing.T) {
 	fp, _, mh := setupNomadTests(t)
 
-	removeOn(&mh.Mock, "Do")
+	testutils.RemoveOn(&mh.Mock, "Do")
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusBadRequest,
@@ -403,7 +404,7 @@ func TestNomadEndpointsErrorWhenUnableToGetJobs(t *testing.T) {
 func TestNomadEndpointsReturnsTwoEndpoints(t *testing.T) {
 	fp, _, mh := setupNomadTests(t)
 
-	removeOn(&mh.Mock, "Do")
+	testutils.RemoveOn(&mh.Mock, "Do")
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusBadRequest,
@@ -442,7 +443,7 @@ func TestNomadEndpointsReturnsTwoEndpoints(t *testing.T) {
 func TestNomadEndpointsReturnsRunningEndpoints(t *testing.T) {
 	fp, _, mh := setupNomadTests(t)
 
-	removeOn(&mh.Mock, "Do")
+	testutils.RemoveOn(&mh.Mock, "Do")
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusBadRequest,
@@ -471,7 +472,7 @@ func TestNomadEndpointsReturnsRunningEndpoints(t *testing.T) {
 func TestNomadEndpointsReturnsConnectEndpoints(t *testing.T) {
 	fp, _, mh := setupNomadTests(t)
 
-	removeOn(&mh.Mock, "Do")
+	testutils.RemoveOn(&mh.Mock, "Do")
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusBadRequest,

@@ -6,6 +6,7 @@ import (
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"golang.org/x/xerrors"
 )
@@ -51,9 +52,9 @@ func (c *RemoteExec) Create() error {
 			fallthrough
 		case resources.TypeNomadCluster:
 			fallthrough
-		case resources.TypeSidecar:
+		case container.TypeSidecar:
 			fallthrough
-		case resources.TypeContainer:
+		case container.TypeContainer:
 			fqdn := utils.FQDN(target.Metadata().Name, target.Metadata().Module, target.Metadata().Type)
 			ids, err := c.client.FindContainerIDs(fqdn)
 
@@ -128,7 +129,7 @@ func (c *RemoteExec) Changed() (bool, error) {
 func (c *RemoteExec) createRemoteExecContainer() (string, error) {
 	// generate the ID for the new container based on the clock time and a string
 
-	cc := &resources.Container{
+	cc := &container.Container{
 		ResourceMetadata: types.ResourceMetadata{
 			Name:   fmt.Sprintf("%s.remote_exec", c.config.Name),
 			Type:   c.config.Type,

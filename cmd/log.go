@@ -17,12 +17,14 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	ct "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
-func newLogCmd(engine jumppad.Engine, dc clients.Docker, stdout, stderr io.Writer) *cobra.Command {
+func newLogCmd(engine jumppad.Engine, dc container.Docker, stdout, stderr io.Writer) *cobra.Command {
 	logCmd := &cobra.Command{
 		Use:     "logs [resource]",
 		Short:   "Tails logs for running jumppad resources",
@@ -62,7 +64,7 @@ func getResources(cmd *cobra.Command, args []string, complete string) ([]string,
 	return loggable, cobra.ShellCompDirectiveNoFileComp
 }
 
-func newLogCmdFunc(dc clients.Docker, stdout, stderr io.Writer) func(cmd *cobra.Command, args []string) error {
+func newLogCmdFunc(dc container.Docker, stdout, stderr io.Writer) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		log := createLogger()
 		sigs := make(chan os.Signal, 1)
@@ -153,7 +155,7 @@ func getFQDNForResource(r hcltypes.Resource) []string {
 	fqdns := []string{}
 
 	switch r.Metadata().Type {
-	case resources.TypeContainer:
+	case ct.TypeContainer:
 		fqdns = append(fqdns, utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type))
 	case resources.TypeK8sCluster:
 		fqdns = append(fqdns, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type)))
@@ -165,7 +167,7 @@ func getFQDNForResource(r hcltypes.Resource) []string {
 		for n := 0; n < nomad.ClientNodes; n++ {
 			fqdns = append(fqdns, fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type)))
 		}
-	case resources.TypeSidecar:
+	case ct.TypeSidecar:
 		fallthrough
 	case resources.TypeImageCache:
 		fqdns = append(fqdns, utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type))

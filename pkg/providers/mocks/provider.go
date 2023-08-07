@@ -24,6 +24,11 @@ func (m *MockProvider) Destroy() error {
 	return args.Error(0)
 }
 
+func (m *MockProvider) Changed() (bool, error) {
+	args := m.Called()
+	return args.Bool(0), args.Error(1)
+}
+
 func (m *MockProvider) Refresh() error {
 	args := m.Called()
 	return args.Error(0)

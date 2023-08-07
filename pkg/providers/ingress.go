@@ -5,6 +5,8 @@ import (
 	"net"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/connector"
+	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"golang.org/x/xerrors"
@@ -13,16 +15,16 @@ import (
 // Ingress defines a provider for handling connection ingress for a cluster
 type Ingress struct {
 	config    *resources.Ingress
-	client    clients.ContainerTasks
-	connector clients.Connector
+	client    container.ContainerTasks
+	connector connector.Connector
 	log       clients.Logger
 }
 
 // NewIngress creates a new ingress provider
 func NewIngress(
 	c *resources.Ingress,
-	cc clients.ContainerTasks,
-	co clients.Connector,
+	cc container.ContainerTasks,
+	co connector.Connector,
 	l clients.Logger) *Ingress {
 
 	return &Ingress{c, cc, co, l}

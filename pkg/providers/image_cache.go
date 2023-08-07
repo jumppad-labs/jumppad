@@ -8,6 +8,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"golang.org/x/xerrors"
 )
@@ -112,7 +113,7 @@ func (c *ImageCache) createImageCache(networks []string) (string, error) {
 	}
 
 	// create the container
-	cc := &resources.Container{}
+	cc := &container.Container{}
 	cc.Name = c.config.Name
 	cc.Type = c.config.Type
 	cc.Image = &resources.Image{Name: cacheImage}

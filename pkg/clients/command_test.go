@@ -5,12 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
 )
 
 func setupExecute(t *testing.T) Command {
-	return NewCommand(3*time.Second, hclog.Default())
+	return NewCommand(3*time.Second, NewTestLogger(t))
 }
 
 func TestExecuteForgroundWithBasicParams(t *testing.T) {

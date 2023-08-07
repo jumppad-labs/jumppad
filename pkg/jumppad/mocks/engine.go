@@ -4,7 +4,6 @@ package mocks
 
 import (
 	hclconfig "github.com/jumppad-labs/hclconfig"
-	clients "github.com/jumppad-labs/jumppad/pkg/clients"
 
 	mock "github.com/stretchr/testify/mock"
 
@@ -149,22 +148,6 @@ func (_m *Engine) Diff(path string, variables map[string]string, variablesFile s
 	}
 
 	return r0, r1, r2, r3, r4
-}
-
-// GetClients provides a mock function with given fields:
-func (_m *Engine) GetClients() *clients.Clients {
-	ret := _m.Called()
-
-	var r0 *clients.Clients
-	if rf, ok := ret.Get(0).(func() *clients.Clients); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*clients.Clients)
-		}
-	}
-
-	return r0
 }
 
 // ParseConfig provides a mock function with given fields: _a0

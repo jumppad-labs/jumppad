@@ -23,7 +23,7 @@ var rootCmd = &cobra.Command{
 
 var engine jumppad.Engine
 var logger clients.Logger
-var engineClients *clients.Clients
+var engineClients *jumppad.Clients
 
 var version string // set by build process
 var date string    // set by build process
@@ -35,15 +35,14 @@ func init() {
 
 	// setup dependencies
 	logger = createLogger()
-	engine, vm = createEngine(logger)
-	engineClients = engine.GetClients()
+	engine, engineClients, vm = createEngine(logger)
 
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(outputCmd)
 	rootCmd.AddCommand(newDevCmd())
 	rootCmd.AddCommand(newEnvCmd(engine))
-	rootCmd.AddCommand(newRunCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, vm, engineClients.Connector, logger))
-	rootCmd.AddCommand(newTestCmd(engine, engineClients.Getter, engineClients.HTTP, engineClients.Browser, logger))
+	rootCmd.AddCommand(newRunCmd(engine, engineClients.ContainerTasks, engineClients.Getter, engineClients.HTTP, engineClients.Browser, vm, engineClients.Connector, logger))
+	rootCmd.AddCommand(newTestCmd())
 	rootCmd.AddCommand(newDestroyCmd(engineClients.Connector))
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(newPurgeCmd(engineClients.Docker, engineClients.ImageLog, logger))
@@ -64,8 +63,15 @@ func init() {
 	generateCmd.AddCommand(newGenerateReadmeCommand(engine))
 }
 
-func createEngine(l clients.Logger) (jumppad.Engine, gvm.Versions) {
-	engine, err := jumppad.New(l)
+func createEngine(l clients.Logger) (jumppad.Engine, *jumppad.Clients, gvm.Versions) {
+	engineClients, err := jumppad.GenerateClients(l)
+	if err != nil {
+		return nil, nil, nil
+	}
+
+	providers := jumppad.NewProviders(engineClients)
+
+	engine, err := jumppad.New(providers, l)
 	if err != nil {
 		panic(err)
 	}
@@ -104,7 +110,7 @@ func createEngine(l clients.Logger) (jumppad.Engine, gvm.Versions) {
 
 	vm := gvm.New(o)
 
-	return engine, vm
+	return engine, engineClients, vm
 }
 
 func createLogger() clients.Logger {

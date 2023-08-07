@@ -9,6 +9,7 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"golang.org/x/xerrors"
 )
@@ -16,12 +17,12 @@ import (
 // Network is a provider for creating docker networks
 type Network struct {
 	config *resources.Network
-	client clients.Docker
+	client container.Docker
 	log    clients.Logger
 }
 
 // NewNetwork creates a new network with the given config and Docker client
-func NewNetwork(co *resources.Network, cl clients.Docker, l clients.Logger) *Network {
+func NewNetwork(co *resources.Network, cl container.Docker, l clients.Logger) *Network {
 	return &Network{co, cl, l}
 }
 

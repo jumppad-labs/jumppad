@@ -90,7 +90,7 @@ func TestIngressK8sTargetConfiguresCommand(t *testing.T) {
 	err := p.Create()
 	assert.NoError(t, err)
 
-	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
 	// ensure the proxy is type k8s
 	assert.Equal(t, "--proxy-type", params.Command[0])
 	assert.Equal(t, "kubernetes", params.Command[1])
@@ -112,14 +112,14 @@ func TestIngressK8sTargetConfiguresKubeConfig(t *testing.T) {
 	err := p.Create()
 	assert.NoError(t, err)
 
-	container := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	container := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
 
 	// check the env var for the kubeconfig is set
 	assert.Equal(t, "/kubeconfig-docker.yaml", container.Environment[0].Value)
 
 	// check that the kubeconfig has been copied to the container
 	_, _, kubeConfigPath := utils.CreateKubeConfigPath("test")
-	params := getCalls(&md.Mock, "CopyFileToContainer")[0].Arguments
+	params := testutils.GetCalls(&md.Mock, "CopyFileToContainer")[0].Arguments
 	assert.Equal(t, "ingress", params[0])
 	assert.Equal(t, params[1], kubeConfigPath)
 	assert.Equal(t, "/", params[2])
@@ -135,7 +135,7 @@ func TestIngressK8sTargetWithNamespaceConfiguresCommand(t *testing.T) {
 	err := p.Create()
 	assert.NoError(t, err)
 
-	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
 
 	// namespace should be same as custom
 	assert.Equal(t, "mine", params.Command[3])
@@ -151,7 +151,7 @@ func TestIngressK8sTargetWithServiceConfiguresCommand(t *testing.T) {
 	err := p.Create()
 	assert.NoError(t, err)
 
-	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
 
 	// namespace should be same as custom
 	assert.Equal(t, "svc/myservice", params.Command[5])
@@ -168,7 +168,7 @@ func TestIngressK8sTargetWithPodConfiguresCommand(t *testing.T) {
 	err := p.Create()
 	assert.NoError(t, err)
 
-	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
 
 	// namespace should be same as custom
 	assert.Equal(t, "mypod", params.Command[5])
@@ -185,7 +185,7 @@ func TestIngressK8sTargetWithDeploymentConfiguresCommand(t *testing.T) {
 	err := p.Create()
 	assert.NoError(t, err)
 
-	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
 
 	// namespace should be same as custom
 	assert.Equal(t, "deployment/mydeployment", params.Command[5])
@@ -200,7 +200,7 @@ func TestIngressContainerTargetConfiguresCommand(t *testing.T) {
 	err := p.Create()
 	assert.NoError(t, err)
 
-	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
 
 	assert.Equal(t, "--service-name", params.Command[0])
 	assert.Equal(t, "test.container.shipyard.run", params.Command[1])
@@ -215,7 +215,7 @@ func TestIngressContainerAddsPorts(t *testing.T) {
 	err := p.Create()
 	assert.NoError(t, err)
 
-	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
 	assert.Equal(t, "--ports", params.Command[2])
 	assert.Equal(t, "8080:8081", params.Command[3])
 
@@ -230,7 +230,7 @@ func TestIngressContainerFailReturnsError(t *testing.T) {
 	md, c := testIngressCreateMocks()
 	tc, _ := c.FindResource("container_ingress.web-http")
 
-	removeOn(&md.Mock, "CreateContainer")
+	testutils.RemoveOn(&md.Mock, "CreateContainer")
 	md.On("CreateContainer", mock.Anything).Return("", fmt.Errorf("boom"))
 	p := NewContainerIngress(tc.(*config.ContainerIngress), md, clients.NewTestLogger(t))
 
@@ -242,7 +242,7 @@ func TestIngressK8sTargetDestroysContainer(t *testing.T) {
 	md, c := testIngressCreateMocks()
 	tc, _ := c.FindResource("ingress.web-http")
 
-	removeOn(&md.Mock, "FindContainerIDs")
+	testutils.RemoveOn(&md.Mock, "FindContainerIDs")
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"ingress"}, nil)
 	p := NewLegacyIngress(tc.(*config.LegacyIngress), md, clients.NewTestLogger(t))
 
@@ -261,7 +261,7 @@ func TestIngressNomadTargetConfiguresNomadConfig(t *testing.T) {
 	err := p.Create()
 	assert.NoError(t, err)
 
-	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
 
 	// check the volume mount is set
 	_, path := utils.GetClusterConfig(string(config.TypeNomadCluster) + "." + "test")
@@ -278,7 +278,7 @@ func TestIngressNomadTargetConfiguresCommand(t *testing.T) {
 	err := p.Create()
 	assert.NoError(t, err)
 
-	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
 	// ensure the proxy is type k8s
 	assert.Equal(t, "--proxy-type", params.Command[0])
 	assert.Equal(t, "nomad", params.Command[1])
@@ -300,7 +300,7 @@ func TestIngressNomadAddsPorts(t *testing.T) {
 	err := p.Create()
 	assert.NoError(t, err)
 
-	params := getCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
 	assert.Equal(t, "--ports", params.Command[6])
 	assert.Equal(t, "8080:http", params.Command[7])
 
