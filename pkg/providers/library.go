@@ -78,26 +78,8 @@ func (b *Book) Lookup() ([]string, error) {
 func (b *Book) Refresh() error {
 	b.log.Debug("Refresh Book", "ref", b.config.Name)
 
-	libraryPath := utils.GetLibraryFolder("", 0775)
-	bookPath := filepath.Join(libraryPath, "content", b.config.Name)
-
-	for _, bc := range b.config.Chapters {
-		cr, err := b.config.ParentConfig.FindResource(bc)
-		if err != nil {
-			return err
-		}
-
-		c := cr.(*resources.Chapter)
-
-		chapterPath := filepath.Join(bookPath, c.Name)
-
-		for _, p := range c.Pages {
-			err = b.writePage(chapterPath, p)
-			if err != nil {
-				return err
-			}
-		}
-	}
+	b.Destroy()
+	b.Create()
 
 	return nil
 }
