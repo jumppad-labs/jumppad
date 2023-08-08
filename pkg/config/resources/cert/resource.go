@@ -1,4 +1,4 @@
-package resources
+package cert
 
 import (
 	"github.com/jumppad-labs/hclconfig/types"

@@ -1,4 +1,4 @@
-package providers
+package cert
 
 import (
 	"fmt"
@@ -11,35 +11,32 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setupCACert(t *testing.T) (*resources.CertificateCA, *CertificateCA) {
+func setupCACert(t *testing.T) (*CertificateCA, *CAProvider) {
 	dir := t.TempDir()
 
-	ca := &resources.CertificateCA{ResourceMetadata: types.ResourceMetadata{Name: "test"}}
+	ca := &CertificateCA{ResourceMetadata: types.ResourceMetadata{Name: "test"}}
 	ca.Output = dir
 
-	p := NewCertificateCA(ca, clients.NewTestLogger(t))
+	p := NewCAProvider(ca, clients.NewTestLogger(t))
 
 	return ca, p
 }
 
-func setupLeafCert(t *testing.T) (*resources.CertificateLeaf, *CertificateLeaf) {
+func setupLeafCert(t *testing.T) (*CertificateLeaf, *LeafProvider) {
 	dir := t.TempDir()
-
-	ca := &resources.CertificateCA{ResourceMetadata: types.ResourceMetadata{Name: "test"}}
-	ca.Output = dir
-	p := NewCertificateCA(ca, clients.NewTestLogger(t))
+	ca, p := setupCACert(t)
 
 	err := p.Create()
 	require.NoError(t, err)
 
-	cl := &resources.CertificateLeaf{ResourceMetadata: types.ResourceMetadata{Name: "test"}}
+	cl := &CertificateLeaf{ResourceMetadata: types.ResourceMetadata{Name: "test"}}
 	cl.Output = dir
 	cl.IPAddresses = []string{"127.0.0.1"}
 	cl.DNSNames = []string{"localhost"}
 	cl.CACert = ca.Cert.Path
 	cl.CAKey = ca.PrivateKey.Path
 
-	pl := NewCertificateLeaf(cl, clients.NewTestLogger(t))
+	pl := NewLeafProvider(cl, clients.NewTestLogger(t))
 
 	return cl, pl
 }

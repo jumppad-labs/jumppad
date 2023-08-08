@@ -1,4 +1,4 @@
-package providers
+package cert
 
 import (
 	"crypto/x509"
@@ -20,25 +20,25 @@ import (
 	"golang.org/x/xerrors"
 )
 
-type CertificateCA struct {
-	config *resources.CertificateCA
+type CAProvider struct {
+	config *CertificateCA
 	log    clients.Logger
 }
 
-type CertificateLeaf struct {
-	config *resources.CertificateLeaf
+type LeafProvider struct {
+	config *CertificateLeaf
 	log    clients.Logger
 }
 
-func NewCertificateCA(co *resources.CertificateCA, l clients.Logger) *CertificateCA {
-	return &CertificateCA{co, l}
+func NewCAProvider(co *CertificateCA, l clients.Logger) *CAProvider {
+	return &CAProvider{co, l}
 }
 
-func NewCertificateLeaf(co *resources.CertificateLeaf, l clients.Logger) *CertificateLeaf {
-	return &CertificateLeaf{co, l}
+func NewLeafProvider(co *CertificateLeaf, l clients.Logger) *LeafProvider {
+	return &LeafProvider{co, l}
 }
 
-func (c *CertificateCA) Create() error {
+func (c *CAProvider) Create() error {
 	c.log.Info("Creating CA Certificate", "ref", c.config.Name)
 
 	directory := strings.Replace(c.config.Module, ".", "_", -1)
@@ -87,28 +87,28 @@ func (c *CertificateCA) Create() error {
 	}
 
 	// set the outputs
-	c.config.Cert = &resources.File{
+	c.config.Cert = &File{
 		Path:      certificateFile,
 		Directory: directory,
 		Filename:  fmt.Sprintf("%s.cert", c.config.Name),
 		Contents:  ca.String(),
 	}
 
-	c.config.PrivateKey = &resources.File{
+	c.config.PrivateKey = &File{
 		Path:      keyFile,
 		Directory: directory,
 		Filename:  fmt.Sprintf("%s.key", c.config.Name),
 		Contents:  k.Private.String(),
 	}
 
-	c.config.PublicKeyPEM = &resources.File{
+	c.config.PublicKeyPEM = &File{
 		Path:      publicKeyFile,
 		Directory: directory,
 		Filename:  fmt.Sprintf("%s.pub", c.config.Name),
 		Contents:  k.Public.String(),
 	}
 
-	c.config.PublicKeySSH = &resources.File{
+	c.config.PublicKeySSH = &File{
 		Path:      publicSSHFile,
 		Directory: directory,
 		Filename:  fmt.Sprintf("%s.ssh", c.config.Name),
@@ -118,29 +118,29 @@ func (c *CertificateCA) Create() error {
 	return nil
 }
 
-func (c *CertificateCA) Destroy() error {
+func (c *CAProvider) Destroy() error {
 	c.log.Info("Destroy CA Certificate", "ref", c.config.Name)
 
 	return destroy(c.config.Module, c.config.Name, c.config.Output, c.log)
 }
 
-func (c *CertificateCA) Lookup() ([]string, error) {
+func (c *CAProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (c *CertificateCA) Refresh() error {
+func (c *CAProvider) Refresh() error {
 	c.log.Debug("Refresh CA Certificate", "ref", c.config.Name)
 
 	return nil
 }
 
-func (c *CertificateCA) Changed() (bool, error) {
+func (c *CAProvider) Changed() (bool, error) {
 	c.log.Debug("Checking changes Leaf Certificate", "ref", c.config.Name)
 
 	return false, nil
 }
 
-func (c *CertificateLeaf) Create() error {
+func (c *LeafProvider) Create() error {
 	c.log.Info("Creating Leaf Certificate", "ref", c.config.Name)
 
 	directory := strings.Replace(c.config.Module, ".", "_", -1)
@@ -203,28 +203,28 @@ func (c *CertificateLeaf) Create() error {
 	}
 
 	// set the outputs
-	c.config.PublicKeySSH = &resources.File{
+	c.config.PublicKeySSH = &File{
 		Path:      pubsshFile,
 		Directory: directory,
 		Filename:  fmt.Sprintf("%s-leaf.ssh", c.config.Name),
 		Contents:  ssh,
 	}
 
-	c.config.PublicKeyPEM = &resources.File{
+	c.config.PublicKeyPEM = &File{
 		Path:      pubkeyFile,
 		Directory: directory,
 		Filename:  fmt.Sprintf("%s-leaf.pub", c.config.Name),
 		Contents:  k.Public.String(),
 	}
 
-	c.config.Cert = &resources.File{
+	c.config.Cert = &File{
 		Path:      certFile,
 		Directory: directory,
 		Filename:  fmt.Sprintf("%s-leaf.cert", c.config.Name),
 		Contents:  lc.String(),
 	}
 
-	c.config.PrivateKey = &resources.File{
+	c.config.PrivateKey = &File{
 		Path:      keyFile,
 		Directory: directory,
 		Filename:  fmt.Sprintf("%s-leaf.key", c.config.Name),
@@ -234,23 +234,23 @@ func (c *CertificateLeaf) Create() error {
 	return err
 }
 
-func (c *CertificateLeaf) Destroy() error {
+func (c *LeafProvider) Destroy() error {
 	c.log.Info("Destroy Leaf Certificate", "ref", c.config.Name)
 
 	return destroy(c.config.Module, fmt.Sprintf("%s-leaf", c.config.Name), c.config.Output, c.log)
 }
 
-func (c *CertificateLeaf) Lookup() ([]string, error) {
+func (c *LeafProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (c *CertificateLeaf) Refresh() error {
+func (c *LeafProvider) Refresh() error {
 	c.log.Debug("Refresh Leaf Certificate", "ref", c.config.Name)
 
 	return nil
 }
 
-func (c *CertificateLeaf) Changed() (bool, error) {
+func (c *LeafProvider) Changed() (bool, error) {
 	c.log.Debug("Checking changes Leaf Certificate", "ref", c.config.Name)
 
 	return false, nil

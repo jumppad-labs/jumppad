@@ -1,4 +1,4 @@
-package providers
+package copy
 
 import (
 	"io/fs"
@@ -7,18 +7,17 @@ import (
 	"strings"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	cp "github.com/otiai10/copy"
 	"golang.org/x/xerrors"
 )
 
-type Copy struct {
+type Provider struct {
 	log    clients.Logger
-	config *resources.Copy
+	config *Copy
 }
 
-func NewCopy(co *resources.Copy, l clients.Logger) *Copy {
-	return &Copy{l, co}
+func NewProvider(co *Copy, l clients.Logger) *Provider {
+	return &Provider{l, co}
 }
 
 func (c *Copy) Create() error {

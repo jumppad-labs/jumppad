@@ -1,4 +1,4 @@
-package providers
+package copy
 
 import (
 	"io/ioutil"
