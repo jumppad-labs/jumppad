@@ -6,9 +6,12 @@ import (
 	"os"
 	"path/filepath"
 
+	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -20,23 +23,36 @@ type DocsConfig struct {
 }
 
 // Docs defines a provider for creating documentation containers
-type Provider struct {
+type DocsProvider struct {
 	config *Docs
 	client container.ContainerTasks
-	log    clients.Logger
+	log    logger.Logger
 }
 
-// NewDocs creates a new Docs provider
-func NewDocs(c *Docs, cc container.ContainerTasks, l clients.Logger) *Provider {
-	return &Provider{c, cc, l}
+func (p *DocsProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+	c, ok := cfg.(*Docs)
+	if !ok {
+		return fmt.Errorf("unable to initialize Docs provider, resource is not of type Docs")
+	}
+
+	cli, err := clients.GenerateClients(l)
+	if err != nil {
+		return err
+	}
+
+	p.config = c
+	p.client = cli.ContainerTasks
+	p.log = l
+
+	return nil
 }
 
 // Create a new documentation container
-func (i *Provider) Create() error {
-	i.log.Info("Creating Documentation", "ref", i.config.ID)
+func (p *DocsProvider) Create() error {
+	p.log.Info("Creating Documentation", "ref", p.config.ID)
 
 	// create the documentation container
-	err := i.createDocsContainer()
+	err := p.createDocsContainer()
 	if err != nil {
 		return err
 	}
@@ -45,17 +61,17 @@ func (i *Provider) Create() error {
 }
 
 // Destroy the documentation container
-func (i *Provider) Destroy() error {
-	i.log.Info("Destroy Documentation", "ref", i.config.Name)
+func (p *DocsProvider) Destroy() error {
+	p.log.Info("Destroy Documentation", "ref", p.config.ID)
 
 	// remove the docs
-	ids, err := i.client.FindContainerIDs(i.config.FQRN)
+	ids, err := p.client.FindContainerIDs(p.config.FQRN)
 	if err != nil {
 		return err
 	}
 
 	for _, id := range ids {
-		err := i.client.RemoveContainer(id, true)
+		err := p.client.RemoveContainer(id, true)
 		if err != nil {
 			return err
 		}
@@ -65,51 +81,44 @@ func (i *Provider) Destroy() error {
 }
 
 // Lookup the ID of the documentation container
-func (i *Provider) Lookup() ([]string, error) {
-	return c.client.FindContainerIDs(c.config.FQRN)
+func (p *DocsProvider) Lookup() ([]string, error) {
+	return p.client.FindContainerIDs(p.config.FQRN)
 }
 
-func (d *Provider) Refresh() error {
-	d.log.Debug("Refresh Docs", "ref", d.config.Name)
+func (p *DocsProvider) Refresh() error {
+	p.log.Debug("Refresh Docs", "ref", p.config.ID)
 
 	configPath := utils.GetLibraryFolder("config", 0775)
 
-	indices := []IndexBook{}
+	indices := []Index{}
 	docsConfig := DocsConfig{}
 
-	for index, book := range d.config.Content {
-		br, err := d.config.ParentConfig.FindResource(book)
-		if err != nil {
-			return err
-		}
-
-		b := br.(*resources.Book)
-
+	for index, book := range p.config.Content {
 		if index == 0 {
-			if len(b.Index.Chapters) > 0 {
-				if len(b.Index.Chapters[0].Pages) > 0 {
-					docsConfig.DefaultPath = b.Index.Chapters[0].Pages[0].URI
+			if len(book.Index.Chapters) > 0 {
+				if len(book.Index.Chapters[0].Pages) > 0 {
+					docsConfig.DefaultPath = book.Index.Chapters[0].Pages[0].URI
 				}
 			}
 		}
 
-		indices = append(indices, b.Index)
+		indices = append(indices, book.Index)
 	}
 
 	docsConfigPath := filepath.Join(configPath, "jumppad.config.js")
-	err := d.writeConfig(docsConfigPath, &docsConfig)
+	err := p.writeConfig(docsConfigPath, &docsConfig)
 	if err != nil {
 		return err
 	}
 
 	navigationPath := filepath.Join(configPath, "navigation.jsx")
-	err = d.writeNavigation(navigationPath, indices)
+	err = p.writeNavigation(navigationPath, indices)
 	if err != nil {
 		return err
 	}
 
 	progressPath := filepath.Join(configPath, "progress.jsx")
-	err = d.writeProgress(progressPath)
+	err = p.writeProgress(progressPath)
 	if err != nil {
 		return err
 	}
@@ -117,37 +126,37 @@ func (d *Provider) Refresh() error {
 	return nil
 }
 
-func (c *Provider) Changed() (bool, error) {
-	c.log.Debug("Checking changes", "ref", c.config.Name)
+func (p *DocsProvider) Changed() (bool, error) {
+	p.log.Debug("Checking changes", "ref", p.config.ID)
 
 	return false, nil
 }
 
-func (d *Provider) createDocsContainer() error {
+func (p *DocsProvider) createDocsContainer() error {
 	// set the FQDN
-	fqdn := utils.FQDN(d.config.Name, d.config.Module, d.config.Type)
-	d.config.FQRN = fqdn
+	fqdn := utils.FQDN(p.config.Name, p.config.Module, p.config.Type)
+	p.config.FQRN = fqdn
 
 	// create the container config
 	cc := &types.Container{
 		Name: fqdn,
 	}
 
-	cc.Networks = d.config.Networks
+	cc.Networks = p.config.Networks
 
 	cc.Image = &types.Image{Name: fmt.Sprintf("%s:%s", docsImageName, docsVersion)}
 
 	// if image is set override defaults
-	if d.config.Image != nil {
-		cc.Image = types.Image{
-			Name:     d.config.Image,
-			Username: d.config.Image.Username,
-			Password: d.config.Image.Password,
+	if p.config.Image != nil {
+		cc.Image = &ctypes.Image{
+			Name:     p.config.Image.Name,
+			Username: p.config.Image.Username,
+			Password: p.config.Image.Password,
 		}
 	}
 
 	// pull the docker image
-	err := d.client.PullImage(*cc.Image, false)
+	err := p.client.PullImage(*cc.Image, false)
 	if err != nil {
 		return err
 	}
@@ -157,7 +166,7 @@ func (d *Provider) createDocsContainer() error {
 		{
 			Local:  "80",
 			Remote: "80",
-			Host:   fmt.Sprintf("%d", d.config.Port),
+			Host:   fmt.Sprintf("%d", p.config.Port),
 		},
 	}
 
@@ -172,85 +181,75 @@ func (d *Provider) createDocsContainer() error {
 	configPath := utils.GetLibraryFolder("config", 0775)
 	contentPath := utils.GetLibraryFolder("content", 0775)
 
-	indices := []resources.IndexBook{}
+	indices := []Index{}
 	docsConfig := DocsConfig{}
 
-	for index, book := range d.config.Content {
-		br, err := d.config.ParentConfig.FindResource(book)
-		if err != nil {
-			return err
-		}
-
-		b := br.(*resources.Book)
-
-		bookPath := filepath.Join(contentPath, b.Name)
-		destinationPath := fmt.Sprintf("/content/%s", b.Name)
+	for i, book := range p.config.Content {
+		bookPath := filepath.Join(contentPath, book.Name)
+		destinationPath := fmt.Sprintf("/content/%s", book.Name)
 		cc.Volumes = append(
 			cc.Volumes,
-			resources.Volume{
+			ctypes.Volume{
 				Source:      bookPath,
 				Destination: destinationPath,
 			},
 		)
 
-		if index == 0 {
-			if len(b.Index.Chapters) > 0 {
-				if len(b.Index.Chapters[0].Pages) > 0 {
-					docsConfig.DefaultPath = b.Index.Chapters[0].Pages[0].URI
+		if i == 0 {
+			if len(book.Index.Chapters) > 0 {
+				if len(book.Index.Chapters[0].Pages) > 0 {
+					docsConfig.DefaultPath = book.Index.Chapters[0].Pages[0].URI
 				}
 			}
 		}
 
-		indices = append(indices, b.Index)
+		indices = append(indices, book.Index)
 	}
 
 	docsConfigPath := filepath.Join(configPath, "jumppad.config.js")
-	d.writeConfig(docsConfigPath, &docsConfig)
+	p.writeConfig(docsConfigPath, &docsConfig)
 
-	docsConfigDestination := "/jumppad/jumppad.config.mjs"
 	cc.Volumes = append(
 		cc.Volumes,
 		types.Volume{
 			Source:      docsConfigPath,
-			Destination: docsConfigDestination,
+			Destination: "/jumppad/jumppad.config.mjs",
 		},
 	)
 
 	navigationPath := filepath.Join(configPath, "navigation.jsx")
-	err = d.writeNavigation(navigationPath, indices)
+	err = p.writeNavigation(navigationPath, indices)
 	if err != nil {
 		return err
 	}
 
-	navigationDestination := "/config/navigation.jsx"
 	cc.Volumes = append(
 		cc.Volumes,
-		resources.Volume{
+		ctypes.Volume{
 			Source:      navigationPath,
-			Destination: navigationDestination,
+			Destination: "/config/navigation.jsx",
 		},
 	)
 
 	progressPath := filepath.Join(configPath, "progress.jsx")
-	err = d.writeProgress(progressPath)
+	err = p.writeProgress(progressPath)
 	if err != nil {
 		return err
 	}
 
-	progressDestination := "/config/progress.jsx"
 	cc.Volumes = append(
 		cc.Volumes,
-		resources.Volume{
+		ctypes.Volume{
 			Source:      progressPath,
-			Destination: progressDestination,
+			Destination: "/config/progress.jsx",
 		},
 	)
 
-	_, err = d.client.CreateContainer(cc)
+	_, err = p.client.CreateContainer(cc)
 	return err
 }
 
-func (i *Docs) writeConfig(configPath string, config *DocsConfig) error {
+func (p *DocsProvider) writeConfig(configPath string, config *DocsConfig) error {
 	configJSON, err := json.MarshalIndent(config, "", " ")
 	if err != nil {
 		return err
@@ -265,7 +264,7 @@ func (i *Docs) writeConfig(configPath string, config *DocsConfig) error {
 	return nil
 }
 
-func (i *Docs) writeNavigation(navigationPath string, indices []resources.IndexBook) error {
+func (p *DocsProvider) writeNavigation(navigationPath string, indices []Index) error {
 	navigationJSON, err := json.MarshalIndent(indices, "", " ")
 	if err != nil {
 		return err
@@ -281,13 +280,16 @@ func (i *Docs) writeNavigation(navigationPath string, indices []resources.IndexB
 }
 
 // Add optional task progress
-func (i *Docs) writeProgress(progressPath string) error {
-	tasks, _ := i.config.ParentConfig.FindResourcesByType(resources.TypeTask)
-
-	progress := []resources.Progress{}
-	for _, tr := range tasks {
-		task := tr.(*resources.Task)
-		progress = append(progress, task.Progress)
+func (p *DocsProvider) writeProgress(progressPath string) error {
+	progress := []Progress{}
+	for _, book := range p.config.Content {
+		for _, chapter := range book.Chapters {
+			for _, page := range chapter.Pages {
+				for _, task := range page.Tasks {
+					progress = append(progress, task.Progress)
+				}
+			}
+		}
 	}
 
 	progressJSON, err := json.MarshalIndent(progress, "", " ")

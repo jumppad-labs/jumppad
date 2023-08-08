@@ -1,9 +1,11 @@
-package resources
+package nomad
 
 import (
 	"fmt"
 
 	"github.com/jumppad-labs/hclconfig/types"
+	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -15,22 +17,22 @@ type NomadCluster struct {
 	// embedded type holding name, etc
 	types.ResourceMetadata `hcl:",remain"`
 
-	Networks      []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
-	Image         *Image              `hcl:"image,block" json:"images,omitempty"`     // optional image to use for the cluster
-	ClientNodes   int                 `hcl:"client_nodes,optional" json:"client_nodes,omitempty"`
-	Environment   map[string]string   `hcl:"environment,optional" json:"environment,omitempty"`
-	ServerConfig  string              `hcl:"server_config,optional" json:"server_config,omitempty"`
-	ClientConfig  string              `hcl:"client_config,optional" json:"client_config,omitempty"`
-	ConsulConfig  string              `hcl:"consul_config,optional" json:"consul_config,omitempty"`
-	Volumes       []Volume            `hcl:"volume,block" json:"volumes,omitempty"`                     // volumes to attach to the cluster
-	OpenInBrowser bool                `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"` // open the UI in the browser after creation
+	Networks      []ctypes.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
+	Image         *ctypes.Image              `hcl:"image,block" json:"images,omitempty"`     // optional image to use for the cluster
+	ClientNodes   int                        `hcl:"client_nodes,optional" json:"client_nodes,omitempty"`
+	Environment   map[string]string          `hcl:"environment,optional" json:"environment,omitempty"`
+	ServerConfig  string                     `hcl:"server_config,optional" json:"server_config,omitempty"`
+	ClientConfig  string                     `hcl:"client_config,optional" json:"client_config,omitempty"`
+	ConsulConfig  string                     `hcl:"consul_config,optional" json:"consul_config,omitempty"`
+	Volumes       []ctypes.Volume            `hcl:"volume,block" json:"volumes,omitempty"`                     // volumes to attach to the cluster
+	OpenInBrowser bool                       `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"` // open the UI in the browser after creation
 
 	// Images that will be copied from the local docker cache to the cluster
-	CopyImages []Image `hcl:"copy_image,block" json:"copy_images,omitempty"`
+	CopyImages []ctypes.Image `hcl:"copy_image,block" json:"copy_images,omitempty"`
 
 	// Additional ports to expose on the nomad sever node
-	Ports      []Port      `hcl:"port,block" json:"ports,omitempty"`             // ports to expose
-	PortRanges []PortRange `hcl:"port_range,block" json:"port_ranges,omitempty"` // range of ports to expose
+	Ports      []ctypes.Port      `hcl:"port,block" json:"ports,omitempty"`             // ports to expose
+	PortRanges []ctypes.PortRange `hcl:"port_range,block" json:"port_ranges,omitempty"` // range of ports to expose
 
 	// Output Parameters
 
@@ -59,7 +61,7 @@ const nomadBaseVersion = "1.6.1"
 
 func (n *NomadCluster) Process() error {
 	if n.Image == nil {
-		n.Image = &Image{Name: fmt.Sprintf("%s:%s", nomadBaseImage, nomadBaseVersion)}
+		n.Image = &ctypes.Image{Name: fmt.Sprintf("%s:%s", nomadBaseImage, nomadBaseVersion)}
 	}
 
 	if n.ServerConfig != "" {
@@ -82,25 +84,25 @@ func (n *NomadCluster) Process() error {
 
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
-	c, err := LoadState()
+	c, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
 		r, _ := c.FindResource(n.ID)
 		if r != nil {
-			kstate := r.(*NomadCluster)
-			n.ExternalIP = kstate.ExternalIP
-			n.ConfigDir = kstate.ConfigDir
-			n.ServerFQRN = kstate.ServerFQRN
-			n.ClientFQRN = kstate.ClientFQRN
-			n.APIPort = kstate.APIPort
-			n.ConnectorPort = kstate.ConnectorPort
+			state := r.(*NomadCluster)
+			n.ExternalIP = state.ExternalIP
+			n.ConfigDir = state.ConfigDir
+			n.ServerFQRN = state.ServerFQRN
+			n.ClientFQRN = state.ClientFQRN
+			n.APIPort = state.APIPort
+			n.ConnectorPort = state.ConnectorPort
 
 			// add the image ids from the state, this allows the tracking of
 			// pushed images so that they can be automatically updated
 
 			// add the image id from state
 			for x, img := range n.CopyImages {
-				for _, sImg := range kstate.CopyImages {
+				for _, sImg := range state.CopyImages {
 					if img.Name == sImg.Name && img.Username == sImg.Username {
 						n.CopyImages[x].ID = sImg.ID
 					}

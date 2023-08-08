@@ -2,40 +2,42 @@ package providers
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
+	htypes "github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 )
 
 // Null is a noop provider
-type Null struct {
+type NullProvider struct {
 	config types.Resource
-	log    clients.Logger
+	log    logger.Logger
 }
 
-// NewNull creates a null noop provider
-func NewNull(c types.Resource, l clients.Logger) *Null {
-	return &Null{c, l}
-}
+func (p *NullProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+	p.config = cfg
+	p.log = l
 
-func (n *Null) Create() error {
-	n.log.Info(fmt.Sprintf("Creating %s", strings.Title(string(n.config.Metadata().Type))), "ref", n.config.Metadata().Name)
 	return nil
 }
 
-func (n *Null) Destroy() error {
+func (p *NullProvider) Create() error {
+	p.log.Info(fmt.Sprintf("Creating %s", p.config.Metadata().Type), "ref", p.config.Metadata().ID)
 	return nil
 }
 
-func (n *Null) Lookup() ([]string, error) {
+func (p *NullProvider) Destroy() error {
+	return nil
+}
+
+func (p *NullProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (n *Null) Refresh() error {
+func (p *NullProvider) Refresh() error {
 	return nil
 }
 
-func (c *Null) Changed() (bool, error) {
+func (p *NullProvider) Changed() (bool, error) {
 	return false, nil
 }

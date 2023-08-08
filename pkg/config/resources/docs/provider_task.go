@@ -1,51 +1,58 @@
-package providers
+package docs
 
 import (
 	"fmt"
-	"strings"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	htypes "github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 )
 
-type Task struct {
-	config *resources.Task
-	log    clients.Logger
+type TaskProvider struct {
+	config *Task
+	log    logger.Logger
 }
 
-func NewTask(t *resources.Task, l clients.Logger) *Task {
-	return &Task{t, l}
+func (p *TaskProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+	c, ok := cfg.(*Task)
+	if !ok {
+		return fmt.Errorf("unable to initialize Task provider, resource is not of type Task")
+	}
+
+	p.config = c
+	p.log = l
+
+	return nil
 }
 
-func (t *Task) Create() error {
-	t.log.Info(fmt.Sprintf("Creating %s", strings.Title(string(t.config.Metadata().Type))), "ref", t.config.Metadata().Name)
+func (p *TaskProvider) Create() error {
+	p.log.Info(fmt.Sprintf("Creating %s", p.config.Type), "ref", p.config.ID)
 
-	progress := resources.Progress{
-		ID:            t.config.ID,
-		Prerequisites: t.config.Prerequisites,
+	progress := Progress{
+		ID:            p.config.ID,
+		Prerequisites: p.config.Prerequisites,
 		Status:        "locked",
 	}
 
-	if len(t.config.Prerequisites) == 0 {
+	if len(p.config.Prerequisites) == 0 {
 		progress.Status = "unlocked"
 		progress.Prerequisites = []string{}
 	}
 
-	validation := resources.Validation{
-		ID: t.config.ID,
+	validation := Validation{
+		ID: p.config.ID,
 	}
 
-	for _, c := range t.config.Conditions {
-		progress.Conditions = append(progress.Conditions, resources.ProgressCondition{
+	for _, c := range p.config.Conditions {
+		progress.Conditions = append(progress.Conditions, ProgressCondition{
 			ID:          c.Name,
 			Description: c.Description,
 			Status:      "",
 		})
 
-		validation.Conditions = append(validation.Conditions, resources.ValidationCondition{
+		validation.Conditions = append(validation.Conditions, ValidationCondition{
 			ID:               c.Name,
-			Check:            fmt.Sprintf("/validation/%s/%s.check", t.config.ID, c.Name),
-			Solve:            fmt.Sprintf("/validation/%s/%s.solve", t.config.ID, c.Name),
+			Check:            fmt.Sprintf("/validation/%s/%s.check", p.config.ID, c.Name),
+			Solve:            fmt.Sprintf("/validation/%s/%s.solve", p.config.ID, c.Name),
 			FailureMessage:   c.FailureMessage,
 			SuccessMessage:   c.SuccessMessage,
 			Target:           c.Target,
@@ -54,24 +61,24 @@ func (t *Task) Create() error {
 		})
 	}
 
-	t.config.Progress = progress
-	t.config.Validation = validation
+	p.config.Progress = progress
+	p.config.Validation = validation
 
 	return nil
 }
 
-func (t *Task) Destroy() error {
+func (p *TaskProvider) Destroy() error {
 	return nil
 }
 
-func (t *Task) Lookup() ([]string, error) {
+func (p *TaskProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (t *Task) Refresh() error {
+func (p *TaskProvider) Refresh() error {
 	return nil
 }
 
-func (t *Task) Changed() (bool, error) {
+func (p *TaskProvider) Changed() (bool, error) {
 	return false, nil
 }

@@ -1,68 +1,76 @@
-package providers
+package nomad
 
 import (
 	"fmt"
 	"os"
 	"time"
 
+	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"golang.org/x/xerrors"
 )
 
 // NomadJob is a provider which enabled the creation and destruction
 // of Nomad jobs
-type NomadJob struct {
-	config *resources.NomadJob
+type NomadJobProvider struct {
+	config *NomadJob
 	client clients.Nomad
-	log    clients.Logger
+	log    logger.Logger
 }
 
-// NewNomadJob creates a provider which can create and destroy Nomad jobs
-func NewNomadJob(c *resources.NomadJob, hc clients.Nomad, l clients.Logger) *NomadJob {
-	return &NomadJob{c, hc, l}
-}
-
-// Create the Nomad jobs defined by the config
-func (n *NomadJob) Create() error {
-	n.log.Info("Create Nomad Job", "ref", n.config.Name, "files", n.config.Paths)
-
-	// find the cluster
-	cc, err := n.config.ParentConfig.FindResource(n.config.Cluster)
+func (p *NomadJobProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+	cli, err := clients.GenerateClients(l)
 	if err != nil {
 		return err
 	}
 
-	nomadCluster := cc.(*resources.NomadCluster)
+	c, ok := cfg.(*NomadJob)
+	if !ok {
+		return fmt.Errorf("unable to initialize NomadJob provider, resource is not of type NomadJob")
+	}
+
+	p.config = c
+	p.client = cli.Nomad
+	p.log = l
+
+	return nil
+}
+
+// Create the Nomad jobs defined by the config
+func (p *NomadJobProvider) Create() error {
+	p.log.Info("Create Nomad Job", "ref", p.config.ID, "files", p.config.Paths)
+
+	nomadCluster := p.config.Cluster
 
 	// load the config
-	n.client.SetConfig(fmt.Sprintf("http://%s", nomadCluster.ExternalIP), nomadCluster.APIPort, nomadCluster.ClientNodes)
+	p.client.SetConfig(fmt.Sprintf("http://%s", nomadCluster.ExternalIP), nomadCluster.APIPort, nomadCluster.ClientNodes)
 
-	err = n.client.Create(n.config.Paths)
+	err := p.client.Create(p.config.Paths)
 	if err != nil {
 		return xerrors.Errorf("Unable to create Nomad jobs: %w", err)
 	}
 
 	// if health check defined wait for jobs
-	if n.config.HealthCheck != nil {
+	if p.config.HealthCheck != nil {
 		st := time.Now()
-		dur, err := time.ParseDuration(n.config.HealthCheck.Timeout)
+		dur, err := time.ParseDuration(p.config.HealthCheck.Timeout)
 		if err != nil {
 			return err
 		}
 
-		for _, j := range n.config.HealthCheck.Jobs {
+		for _, j := range p.config.HealthCheck.Jobs {
 			for {
 				if time.Since(st) >= dur {
 					return xerrors.Errorf("timeout waiting for job '%s' to start", j)
 				}
 
-				n.log.Debug("Checking health for", "ref", n.config.Name, "job", j)
+				p.log.Debug("Checking health for", "ref", p.config.ID, "job", j)
 
-				s, err := n.client.JobRunning(j)
+				s, err := p.client.JobRunning(j)
 				if err == nil && s == true {
-					n.log.Debug("Health passed for", "ref", n.config.Name, "job", j)
+					p.log.Debug("Health passed for", "ref", p.config.ID, "job", j)
 					break
 				}
 
@@ -73,33 +81,28 @@ func (n *NomadJob) Create() error {
 	}
 
 	// set the checksums
-	cs, err := n.generateChecksums()
+	cs, err := p.generateChecksums()
 	if err != nil {
 		return xerrors.Errorf("unable to generate checksums: %w", err)
 	}
 
-	n.config.JobChecksums = cs
+	p.config.JobChecksums = cs
 
 	return nil
 }
 
 // Destroy the Nomad jobs defined by the config
-func (n *NomadJob) Destroy() error {
-	n.log.Info("Destroy Nomad Job", "ref", n.config.Name)
+func (p *NomadJobProvider) Destroy() error {
+	p.log.Info("Destroy Nomad Job", "ref", p.config.ID)
 
-	cc, err := n.config.ParentConfig.FindResource(n.config.Cluster)
-	if err != nil {
-		return err
-	}
-
-	nomadCluster := cc.(*resources.NomadCluster)
+	nomadCluster := p.config.Cluster
 
 	// load the config
-	n.client.SetConfig(fmt.Sprintf("http://%s", nomadCluster.ExternalIP), nomadCluster.APIPort, nomadCluster.ClientNodes)
+	p.client.SetConfig(fmt.Sprintf("http://%s", nomadCluster.ExternalIP), nomadCluster.APIPort, nomadCluster.ClientNodes)
 
-	err = n.client.Stop(n.config.Paths)
+	err := p.client.Stop(p.config.Paths)
 	if err != nil {
-		n.log.Error("Unable to destroy Nomad job", "error", err)
+		p.log.Error("Unable to destroy Nomad job", "error", err)
 		return nil
 	}
 
@@ -107,12 +110,12 @@ func (n *NomadJob) Destroy() error {
 }
 
 // Lookup the Nomad jobs defined by the config
-func (n *NomadJob) Lookup() ([]string, error) {
+func (p *NomadJobProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (n *NomadJob) Refresh() error {
-	cp, err := n.getChangedPaths()
+func (p *NomadJobProvider) Refresh() error {
+	cp, err := p.getChangedPaths()
 	if err != nil {
 		return err
 	}
@@ -121,24 +124,24 @@ func (n *NomadJob) Refresh() error {
 		return nil
 	}
 
-	n.log.Info("Refresh Nomad Jobs", "ref", n.config.ID, "paths", cp)
+	p.log.Info("Refresh Nomad Jobs", "ref", p.config.ID, "paths", cp)
 
-	err = n.Destroy()
+	err = p.Destroy()
 	if err != nil {
 		return err
 	}
 
-	return n.Create()
+	return p.Create()
 }
 
-func (n *NomadJob) Changed() (bool, error) {
-	cp, err := n.getChangedPaths()
+func (p *NomadJobProvider) Changed() (bool, error) {
+	cp, err := p.getChangedPaths()
 	if err != nil {
 		return false, err
 	}
 
 	if len(cp) > 0 {
-		n.log.Debug("Nomad jobs changed, needs refresh", "ref", n.config.ID)
+		p.log.Debug("Nomad jobs changed, needs refresh", "ref", p.config.ID)
 		return true, nil
 	}
 
@@ -146,10 +149,10 @@ func (n *NomadJob) Changed() (bool, error) {
 }
 
 // generateChecksums generates a sha256 checksum for each of the the paths
-func (n *NomadJob) generateChecksums() ([]string, error) {
+func (p *NomadJobProvider) generateChecksums() ([]string, error) {
 	checksums := []string{}
 
-	for _, p := range n.config.Paths {
+	for _, p := range p.config.Paths {
 		f, err := os.Open(p)
 		if err != nil {
 			return nil, err
@@ -180,24 +183,24 @@ func (n *NomadJob) generateChecksums() ([]string, error) {
 
 // getChangedPaths returns the paths that have changed since the nomad jobs
 // were last applied
-func (n *NomadJob) getChangedPaths() ([]string, error) {
+func (p *NomadJobProvider) getChangedPaths() ([]string, error) {
 	// get the checksums
-	cs, err := n.generateChecksums()
+	cs, err := p.generateChecksums()
 	if err != nil {
 		return nil, err
 	}
 
 	// if we have more checksums than previous assume everything has changed
-	if len(n.config.JobChecksums) != len(cs) {
-		return n.config.Paths, nil
+	if len(p.config.JobChecksums) != len(cs) {
+		return p.config.Paths, nil
 	}
 
 	// compare the checksums
 	diff := []string{}
-	for i, c := range n.config.JobChecksums {
+	for i, c := range p.config.JobChecksums {
 
 		if c != cs[i] {
-			diff = append(diff, n.config.Paths[i])
+			diff = append(diff, p.config.Paths[i])
 		}
 	}
 

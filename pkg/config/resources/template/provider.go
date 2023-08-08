@@ -1,4 +1,4 @@
-package providers
+package template
 
 import (
 	"fmt"
@@ -6,21 +6,16 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	htypes "github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/mailgun/raymond/v2"
 	"github.com/zclconf/go-cty/cty"
 )
 
 // Template provider allows parsing and output of file based templates
-type Template struct {
-	config *resources.Template
-	log    clients.Logger
-}
-
-// NewTemplate creates a new Local Exec provider
-func NewTemplate(c *resources.Template, l clients.Logger) *Template {
-	return &Template{c, l}
+type TemplateProvider struct {
+	config *Template
+	log    logger.Logger
 }
 
 // parseVars converts a map[string]cty.Value into map[string]interface
@@ -69,33 +64,45 @@ func castVar(v cty.Value) interface{} {
 	return nil
 }
 
+func (p *TemplateProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+	c, ok := cfg.(*Template)
+	if !ok {
+		return fmt.Errorf("unable to initialize Template provider, resource is not of type Template")
+	}
+
+	p.config = c
+	p.log = l
+
+	return nil
+}
+
 // Create a new template
-func (c *Template) Create() error {
-	c.log.Info("Generating template", "ref", c.config.ID, "output", c.config.Destination)
-	c.log.Debug("Template content", "ref", c.config.ID, "source", c.config.Source)
+func (p *TemplateProvider) Create() error {
+	p.log.Info("Generating template", "ref", p.config.ID, "output", p.config.Destination)
+	p.log.Debug("Template content", "ref", p.config.ID, "source", p.config.Source)
 
 	// check the template is valid
-	if c.config.Source == "" {
+	if p.config.Source == "" {
 		return fmt.Errorf("template source empty")
 	}
 
-	if c.config.Variables == nil {
+	if p.config.Variables == nil {
 		// no variables just write the file
-		f, err := os.Create(c.config.Destination)
+		f, err := os.Create(p.config.Destination)
 		if err != nil {
 			return fmt.Errorf("unable to create destination file for template: %s", err)
 		}
 		defer f.Close()
 
-		c.log.Debug("Template output", "ref", c.config.Name, "destination", c.config.Source)
-		_, err = f.WriteString(c.config.Source)
+		p.log.Debug("Template output", "ref", p.config.ID, "destination", p.config.Source)
+		_, err = f.WriteString(p.config.Source)
 
 		return err
 	}
 
-	vars := parseVars(c.config.Variables)
+	vars := parseVars(p.config.Variables)
 
-	tmpl, err := raymond.Parse(c.config.Source)
+	tmpl, err := raymond.Parse(p.config.Source)
 	if err != nil {
 		return fmt.Errorf("error parsing template: %s", err)
 	}
@@ -114,19 +121,19 @@ func (c *Template) Create() error {
 		return fmt.Errorf("error processing template: %s", err)
 	}
 
-	if fi, _ := os.Stat(c.config.Destination); fi != nil {
-		err = os.RemoveAll(c.config.Destination)
+	if fi, _ := os.Stat(p.config.Destination); fi != nil {
+		err = os.RemoveAll(p.config.Destination)
 		if err != nil {
 			return fmt.Errorf("unable to delete destination file: %s", err)
 		}
 	}
 
-	err = os.MkdirAll(filepath.Dir(c.config.Destination), os.ModePerm)
+	err = os.MkdirAll(filepath.Dir(p.config.Destination), os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("unable to create destination directory for template: %s", err)
 	}
 
-	f, err := os.Create(c.config.Destination)
+	f, err := os.Create(p.config.Destination)
 	if err != nil {
 		return fmt.Errorf("unable to create destination file for template: %s", err)
 	}
@@ -134,18 +141,18 @@ func (c *Template) Create() error {
 
 	f.WriteString(result)
 
-	c.log.Debug("Template output", "ref", c.config.Name, "destination", c.config.Destination, "result", result)
+	p.log.Debug("Template output", "ref", p.config.ID, "destination", p.config.Destination, "result", result)
 
 	return nil
 }
 
-func (c *Template) Destroy() error {
-	if _, err := os.Stat(c.config.Destination); !os.IsNotExist(err) {
-		err := os.RemoveAll(c.config.Destination)
+func (p *TemplateProvider) Destroy() error {
+	if _, err := os.Stat(p.config.Destination); !os.IsNotExist(err) {
+		err := os.RemoveAll(p.config.Destination)
 		if err != nil {
-			c.log.Warn("Unable to delete template file",
-				"ref", c.config.Name,
-				"destination", c.config.Destination,
+			p.log.Warn("Unable to delete template file",
+				"ref", p.config.Name,
+				"destination", p.config.Destination,
 				"error", err)
 		}
 	}
@@ -154,19 +161,19 @@ func (c *Template) Destroy() error {
 }
 
 // Lookup satisfies the interface method but is not implemented by Template
-func (c *Template) Lookup() ([]string, error) {
+func (p *TemplateProvider) Lookup() ([]string, error) {
 	return []string{}, nil
 }
 
 // Refresh causes the template to be destroyed and recreated
-func (c *Template) Refresh() error {
-	c.log.Debug("Refresh Template", "ref", c.config.ID)
+func (p *TemplateProvider) Refresh() error {
+	p.log.Debug("Refresh Template", "ref", p.config.ID)
 
-	c.Destroy()
-	return c.Create()
+	p.Destroy()
+	return p.Create()
 }
 
-func (c *Template) Changed() (bool, error) {
+func (p *TemplateProvider) Changed() (bool, error) {
 
 	return false, nil
 }

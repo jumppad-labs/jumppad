@@ -1,7 +1,9 @@
-package resources
+package nomad
 
 import (
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/config"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/healthcheck"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -14,13 +16,13 @@ type NomadJob struct {
 	types.ResourceMetadata `hcl:",remain"`
 
 	// Cluster is the name of the cluster to apply configuration to
-	Cluster string `hcl:"cluster" json:"cluster"`
+	Cluster NomadCluster `hcl:"cluster" json:"cluster"`
 
 	// Path of a file or directory of Job files to apply
 	Paths []string `hcl:"paths" validator:"filepath" json:"paths"`
 
 	// HealthCheck defines a health check for the resource
-	HealthCheck *HealthCheckNomad `hcl:"health_check,block" json:"health_check,omitempty"`
+	HealthCheck *healthcheck.HealthCheckNomad `hcl:"health_check,block" json:"health_check,omitempty"`
 
 	// output
 
@@ -34,13 +36,13 @@ func (n *NomadJob) Process() error {
 		n.Paths[i] = utils.EnsureAbsolute(p, n.File)
 	}
 
-	cfg, err := LoadState()
+	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
 		r, _ := cfg.FindResource(n.ID)
 		if r != nil {
-			kstate := r.(*NomadJob)
-			n.JobChecksums = kstate.JobChecksums
+			state := r.(*NomadJob)
+			n.JobChecksums = state.JobChecksums
 		}
 	}
 

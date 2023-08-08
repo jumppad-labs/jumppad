@@ -2,7 +2,8 @@ package docs
 
 import (
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 )
 
 // TypeDocs is the resource string for a Docs resource
@@ -13,11 +14,11 @@ const TypeDocs string = "docs"
 type Docs struct {
 	types.ResourceMetadata `hcl:",remain"`
 
-	Networks []container.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
+	Networks []ctypes.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
-	Image *container.Image `hcl:"image,block" json:"image,omitempty"` // image to use for the container
+	Image *ctypes.Image `hcl:"image,block" json:"image,omitempty"` // image to use for the container
 
-	Content []string `hcl:"content" json:"content"`
+	Content []Book `hcl:"content" json:"content"`
 
 	Port          int  `hcl:"port,optional" json:"port"`
 	OpenInBrowser bool `hcl:"open_in_browser,optional" json:"open_in_browser"` // When a host port is defined open the location in a browser
@@ -37,7 +38,7 @@ func (d *Docs) Process() error {
 
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
-	cfg, err := LoadState()
+	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
 		r, _ := cfg.FindResource(d.ID)

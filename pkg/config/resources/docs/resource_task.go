@@ -1,6 +1,9 @@
-package resources
+package docs
 
-import "github.com/jumppad-labs/hclconfig/types"
+import (
+	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/config"
+)
 
 type Progress struct {
 	ID            string              `hcl:"id,optional" json:"id"`
@@ -47,14 +50,14 @@ type Task struct {
 func (t *Task) Process() error {
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
-	cfg, err := LoadState()
+	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
 		r, _ := cfg.FindResource(t.ID)
 		if r != nil {
-			kstate := r.(*Task)
-			t.Progress = kstate.Progress
-			t.Validation = kstate.Validation
+			state := r.(*Task)
+			t.Progress = state.Progress
+			t.Validation = state.Validation
 		}
 	}
 

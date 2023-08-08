@@ -1,98 +1,91 @@
-package providers
+package docs
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	htypes "github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
-type Book struct {
-	config *resources.Book
-	log    clients.Logger
+type BookProvider struct {
+	config *Book
+	log    logger.Logger
 }
 
-func NewBook(b *resources.Book, l clients.Logger) *Book {
-	return &Book{b, l}
+func (p *BookProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+	c, ok := cfg.(*Book)
+	if !ok {
+		return fmt.Errorf("unable to initialize Book provider, resource is not of type Book")
+	}
+
+	p.config = c
+	p.log = l
+
+	return nil
 }
 
-func (b *Book) Create() error {
-	b.log.Info(fmt.Sprintf("Creating %s", strings.Title(string(b.config.Metadata().Type))), "ref", b.config.Metadata().Name)
+func (b *BookProvider) Create() error {
+	b.log.Info(fmt.Sprintf("Creating %s", b.config.Type), "ref", b.config.Name)
 
-	book := resources.IndexBook{
+	index := Index{
 		Title: b.config.Title,
 	}
 
 	libraryPath := utils.GetLibraryFolder("", 0775)
 	bookPath := filepath.Join(libraryPath, "content", b.config.Name)
 
-	for _, bc := range b.config.Chapters {
-		cr, err := b.config.ParentConfig.FindResource(bc)
-		if err != nil {
-			return fmt.Errorf("Unable to create book %s, could not find chapter %s", b.config.Metadata().Name, bc)
+	for _, chapter := range b.config.Chapters {
+		chapterPath := filepath.Join(bookPath, chapter.Name)
+
+		ic := IndexChapter{
+			Title: chapter.Title,
 		}
 
-		c := cr.(*resources.Chapter)
-
-		chapterPath := filepath.Join(bookPath, c.Name)
-
-		chapter := resources.IndexChapter{
-			Title: c.Title,
-		}
-
-		for _, p := range c.Pages {
-			err = b.writePage(chapterPath, p)
+		for _, page := range chapter.Pages {
+			err := b.writePage(chapterPath, page)
 			if err != nil {
 				return err
 			}
 
-			page := resources.IndexPage{
-				Title: p.Title,
-				URI:   fmt.Sprintf("/%s/%s/%s", b.config.Name, c.Name, p.Name),
+			ip := IndexPage{
+				Title: page.Title,
+				URI:   fmt.Sprintf("/%s/%s/%s", b.config.Name, chapter.Name, page.Name),
 			}
 
-			chapter.Pages = append(chapter.Pages, page)
+			ic.Pages = append(ic.Pages, ip)
 		}
 
-		book.Chapters = append(book.Chapters, chapter)
+		index.Chapters = append(index.Chapters, ic)
 	}
 
-	b.config.Index = book
+	b.config.Index = index
 
 	return nil
 }
 
-func (b *Book) Destroy() error {
+func (p *BookProvider) Destroy() error {
 	return nil
 }
 
-func (b *Book) Lookup() ([]string, error) {
+func (p *BookProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (b *Book) Refresh() error {
-	b.log.Debug("Refresh Book", "ref", b.config.Name)
+func (p *BookProvider) Refresh() error {
+	p.log.Debug("Refresh Book", "ref", p.config.ID)
 
 	libraryPath := utils.GetLibraryFolder("", 0775)
-	bookPath := filepath.Join(libraryPath, "content", b.config.Name)
+	bookPath := filepath.Join(libraryPath, "content", p.config.Name)
 
-	for _, bc := range b.config.Chapters {
-		cr, err := b.config.ParentConfig.FindResource(bc)
-		if err != nil {
-			return err
-		}
+	for _, chapter := range p.config.Chapters {
+		chapterPath := filepath.Join(bookPath, chapter.Name)
 
-		c := cr.(*resources.Chapter)
-
-		chapterPath := filepath.Join(bookPath, c.Name)
-
-		for _, p := range c.Pages {
-			err = b.writePage(chapterPath, p)
+		for _, page := range chapter.Pages {
+			err := p.writePage(chapterPath, page)
 			if err != nil {
 				return err
 			}
@@ -102,13 +95,13 @@ func (b *Book) Refresh() error {
 	return nil
 }
 
-func (c *Book) Changed() (bool, error) {
-	c.log.Debug("Checking changes", "ref", c.config.Name)
+func (p *BookProvider) Changed() (bool, error) {
+	p.log.Debug("Checking changes", "ref", p.config.ID)
 
 	return false, nil
 }
 
-func (b *Book) writePage(chapterPath string, page resources.Page) error {
+func (p *BookProvider) writePage(chapterPath string, page Page) error {
 	os.MkdirAll(chapterPath, 0755)
 	os.Chmod(chapterPath, 0755)
 
@@ -137,47 +130,4 @@ func (b *Book) writePage(chapterPath string, page resources.Page) error {
 	}
 
 	return nil
-}
-
-type Chapter struct {
-	config *resources.Chapter
-	log    clients.Logger
-}
-
-func NewChapter(c *resources.Chapter, l clients.Logger) *Chapter {
-	return &Chapter{c, l}
-}
-
-func (c *Chapter) Create() error {
-	c.log.Info(fmt.Sprintf("Creating %s", strings.Title(string(c.config.Metadata().Type))), "ref", c.config.Metadata().Name)
-
-	tasks := []string{}
-
-	for _, p := range c.config.Pages {
-		for _, task := range p.Tasks {
-			tasks = append(tasks, task)
-		}
-	}
-
-	c.config.Tasks = tasks
-
-	return nil
-}
-
-func (c *Chapter) Destroy() error {
-	return nil
-}
-
-func (c *Chapter) Lookup() ([]string, error) {
-	return nil, nil
-}
-
-func (c *Chapter) Refresh() error {
-	return nil
-}
-
-func (c *Chapter) Changed() (bool, error) {
-	c.log.Debug("Checking changes", "ref", c.config.Name)
-
-	return false, nil
 }
