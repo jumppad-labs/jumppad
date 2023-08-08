@@ -1,6 +1,9 @@
 package resources
 
-import "github.com/jumppad-labs/hclconfig/types"
+import (
+	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/config"
+)
 
 type IndexBook struct {
 	Title    string         `hcl:"title,optional" json:"title"`
@@ -62,7 +65,7 @@ type Chapter struct {
 func (c *Chapter) Process() error {
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
-	cfg, err := LoadState()
+	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
 		r, _ := cfg.FindResource(c.ID)

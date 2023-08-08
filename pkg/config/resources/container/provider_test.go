@@ -9,6 +9,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
 	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	cmocks "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/healthcheck"
 	"github.com/jumppad-labs/jumppad/testutils"
@@ -44,7 +45,7 @@ func setupContainerTests(t *testing.T) (*Container, *mocks.ContainerTasks, *cmoc
 func TestContainerCreatesSuccessfully(t *testing.T) {
 	cc, md, hc := setupContainerTests(t)
 
-	c := NewContainerProvider(cc, md, hc, clients.NewTestLogger(t))
+	c := NewContainerProvider(cc, md, hc, logger.NewTestLogger(t))
 
 	err := c.Create()
 	assert.NoError(t, err)

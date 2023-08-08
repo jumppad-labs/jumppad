@@ -2,6 +2,7 @@ package cert
 
 import (
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -37,7 +38,7 @@ func (c *CertificateCA) Process() error {
 
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
-	cfg, err := LoadState()
+	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
 		r, _ := cfg.FindResource(c.ID)
@@ -92,7 +93,7 @@ func (c *CertificateLeaf) Process() error {
 
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
-	cfg, err := LoadState()
+	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
 		r, _ := cfg.FindResource(c.ID)

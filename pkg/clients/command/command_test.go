@@ -1,17 +1,17 @@
-package clients
+package command
 
 import (
 	"runtime"
 	"testing"
 	"time"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/command/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/stretchr/testify/assert"
 )
 
 func setupExecute(t *testing.T) Command {
-	return NewCommand(3*time.Second, clients.NewTestLogger(t))
+	return NewCommand(3*time.Second, logger.NewTestLogger(t))
 }
 
 func TestExecuteForgroundWithBasicParams(t *testing.T) {

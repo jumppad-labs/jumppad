@@ -6,8 +6,7 @@ import (
 	"testing"
 
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,7 +16,7 @@ func setupCACert(t *testing.T) (*CertificateCA, *CAProvider) {
 	ca := &CertificateCA{ResourceMetadata: types.ResourceMetadata{Name: "test"}}
 	ca.Output = dir
 
-	p := NewCAProvider(ca, clients.NewTestLogger(t))
+	p := NewCAProvider(ca, logger.NewTestLogger(t))
 
 	return ca, p
 }
@@ -36,7 +35,7 @@ func setupLeafCert(t *testing.T) (*CertificateLeaf, *LeafProvider) {
 	cl.CACert = ca.Cert.Path
 	cl.CAKey = ca.PrivateKey.Path
 
-	pl := NewLeafProvider(cl, clients.NewTestLogger(t))
+	pl := NewLeafProvider(cl, logger.NewTestLogger(t))
 
 	return cl, pl
 }

@@ -2,7 +2,7 @@ package build
 
 import (
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -33,7 +33,7 @@ type BuildContainer struct {
 func (b *Build) Process() error {
 	b.Container.Context = utils.EnsureAbsolute(b.Container.Context, b.File)
 
-	cfg, err := resources.LoadState()
+	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
 		r, _ := cfg.FindResource(b.ID)

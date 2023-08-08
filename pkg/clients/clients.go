@@ -1,11 +1,12 @@
-package jumppad
+package clients
 
 import (
 	"time"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/command"
 	"github.com/jumppad-labs/jumppad/pkg/clients/connector"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/clients/system"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
@@ -13,43 +14,43 @@ import (
 type Clients struct {
 	Docker         container.Docker
 	ContainerTasks container.ContainerTasks
-	Kubernetes     clients.Kubernetes
-	Helm           clients.Helm
-	HTTP           clients.HTTP
-	Nomad          clients.Nomad
-	Command        clients.Command
-	Logger         clients.Logger
-	Getter         clients.Getter
+	Kubernetes     Kubernetes
+	Helm           Helm
+	HTTP           HTTP
+	Nomad          Nomad
+	Command        command.Command
+	Logger         logger.Logger
+	Getter         Getter
 	Browser        system.System
-	ImageLog       clients.ImageLog
+	ImageLog       ImageLog
 	Connector      connector.Connector
-	TarGz          *clients.TarGz
+	TarGz          *TarGz
 }
 
 // GenerateClients creates the various clients for creating and destroying resources
-func GenerateClients(l clients.Logger) (*Clients, error) {
+func GenerateClients(l logger.Logger) (*Clients, error) {
 	dc, err := container.NewDocker()
 	if err != nil {
 		return nil, err
 	}
 
-	kc := clients.NewKubernetes(60*time.Second, l)
+	kc := NewKubernetes(60*time.Second, l)
 
-	hec := clients.NewHelm(l)
+	hec := NewHelm(l)
 
-	ec := clients.NewCommand(30*time.Second, l)
+	ec := command.NewCommand(30*time.Second, l)
 
-	hc := clients.NewHTTP(1*time.Second, l)
+	hc := NewHTTP(1*time.Second, l)
 
-	nc := clients.NewNomad(hc, 1*time.Second, l)
+	nc := NewNomad(hc, 1*time.Second, l)
 
-	bp := clients.NewGetter(false)
+	bp := NewGetter(false)
 
 	bc := &system.SystemImpl{}
 
-	il := clients.NewImageFileLog(utils.ImageCacheLog())
+	il := NewImageFileLog(utils.ImageCacheLog())
 
-	tgz := &clients.TarGz{}
+	tgz := &TarGz{}
 
 	ct := container.NewDockerTasks(dc, il, tgz, l)
 

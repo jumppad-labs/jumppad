@@ -1,4 +1,4 @@
-package state
+package config
 
 import (
 	"fmt"
@@ -15,7 +15,7 @@ func LoadState() (*hclconfig.Config, error) {
 		return hclconfig.NewConfig(), fmt.Errorf("unable to read state file: %s", err)
 	}
 
-	p := SetupHCLConfig(nil, nil, nil)
+	p := NewParser(nil, nil, nil)
 	c, err := p.UnmarshalJSON(d)
 	if err != nil {
 		return hclconfig.NewConfig(), fmt.Errorf("unable to unmarshal state file: %s", err)

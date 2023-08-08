@@ -1,4 +1,4 @@
-package providers
+package exec
 
 import (
 	"fmt"
@@ -13,15 +13,15 @@ import (
 
 // ExecRemote provider allows the execution of arbitrary commands on an existing target or
 // can create a new container before running
-type RemoteExec struct {
-	config *resources.RemoteExec
-	client clients.ContainerTasks
+type RemoteProvider struct {
+	config *RemoteExec
+	client container.ContainerTasks
 	log    clients.Logger
 }
 
 // NewRemoteExec creates a new Exec provider
-func NewRemoteExec(c *resources.RemoteExec, ex clients.ContainerTasks, l clients.Logger) *RemoteExec {
-	return &RemoteExec{c, ex, l}
+func NewRemoteProvider(c *RemoteExec, ex clients.ContainerTasks, l clients.Logger) *RemoteProvider {
+	return &RemoteProvider{c, ex, l}
 }
 
 // Create a new execution instance

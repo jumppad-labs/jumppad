@@ -7,9 +7,11 @@ import (
 	"path"
 	"time"
 
+	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -19,53 +21,71 @@ type Provider struct {
 	sidecar    *Sidecar
 	client     container.ContainerTasks
 	httpClient clients.HTTP
-	log        clients.Logger
+	log        logger.Logger
 }
 
-// NewContainer creates a new container with the given config and Docker client
-func NewContainerProvider(co *Container, cl container.ContainerTasks, hc clients.HTTP, l clients.Logger) *Provider {
-	return &Provider{config: co, client: cl, httpClient: hc, log: l}
-}
+func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
+	cli, err := clients.GenerateClients(l)
+	if err != nil {
+		return err
+	}
 
-func NewSidecarProvider(cs *Sidecar, cl container.ContainerTasks, hc clients.HTTP, l clients.Logger) *Provider {
-	co := &Container{}
-	co.ResourceMetadata = cs.ResourceMetadata
-	co.FQRN = cs.FQRN
+	p.config = c
+	p.client = cli.ContainerTasks
+	p.httpClient = cli.HTTP
+	p.log = l
 
-	co.Networks = []NetworkAttachment{NetworkAttachment{ID: cs.Target}}
-	co.Volumes = cs.Volumes
-	co.Command = cs.Command
-	co.Entrypoint = cs.Entrypoint
-	co.Environment = cs.Environment
-	co.HealthCheck = cs.HealthCheck
-	co.Image = &cs.Image
-	co.Privileged = cs.Privileged
-	co.Resources = cs.Resources
-	co.MaxRestartCount = cs.MaxRestartCount
+	cs, sok := cfg.(*Sidecar)
+	if sok {
+		co := &Container{}
+		co.ResourceMetadata = cs.ResourceMetadata
+		co.FQRN = cs.FQRN
 
-	return &Provider{config: co, client: cl, httpClient: hc, log: l, sidecar: cs}
+		co.Networks = []NetworkAttachment{NetworkAttachment{ID: cs.Target}}
+		co.Volumes = cs.Volumes
+		co.Command = cs.Command
+		co.Entrypoint = cs.Entrypoint
+		co.Environment = cs.Environment
+		co.HealthCheck = cs.HealthCheck
+		co.Image = &cs.Image
+		co.Privileged = cs.Privileged
+		co.Resources = cs.Resources
+		co.MaxRestartCount = cs.MaxRestartCount
+
+		p.sidecar = cs
+		p.config = co
+		return nil
+	}
+
+	c, cok := cfg.(*Container)
+	if cok {
+		p.config = c
+		return nil
+	}
+
+	return fmt.Errorf("unable to initialize Container provider, resource is not of type Container or Sidecar")
 }
 
 // Create implements provider method and creates a Docker container with the given config
-func (c *Provider) Create() error {
-	c.log.Info("Creating Container", "ref", c.config.ID)
+func (p *Provider) Create() error {
+	p.log.Info("Creating Container", "ref", p.config.ID)
 
-	err := c.internalCreate(c.sidecar != nil)
+	err := p.internalCreate(p.sidecar != nil)
 	if err != nil {
 		return err
 	}
 
 	// we need to set the fqdn on the original object
-	if c.sidecar != nil {
-		c.sidecar.FQRN = c.config.FQRN
+	if p.sidecar != nil {
+		p.sidecar.FQRN = p.config.FQRN
 	}
 
 	return nil
 }
 
 // Lookup the ID based on the config
-func (c *Provider) Lookup() ([]string, error) {
-	return c.client.FindContainerIDs(c.config.FQRN)
+func (p *Provider) Lookup() ([]string, error) {
+	return p.client.FindContainerIDs(p.config.FQRN)
 }
 
 func (c *Provider) Refresh() error {

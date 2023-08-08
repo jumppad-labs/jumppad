@@ -1,4 +1,4 @@
-package providers
+package docs
 
 import (
 	"encoding/json"
@@ -6,10 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+	"github.com/jumppad-labs/jumppad/pkg/clients/container"
+	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -21,20 +20,20 @@ type DocsConfig struct {
 }
 
 // Docs defines a provider for creating documentation containers
-type Docs struct {
-	config *resources.Docs
-	client clients.ContainerTasks
+type Provider struct {
+	config *Docs
+	client container.ContainerTasks
 	log    clients.Logger
 }
 
 // NewDocs creates a new Docs provider
-func NewDocs(c *resources.Docs, cc clients.ContainerTasks, l clients.Logger) *Docs {
-	return &Docs{c, cc, l}
+func NewDocs(c *Docs, cc container.ContainerTasks, l clients.Logger) *Provider {
+	return &Provider{c, cc, l}
 }
 
 // Create a new documentation container
-func (i *Docs) Create() error {
-	i.log.Info("Creating Documentation", "ref", i.config.Name)
+func (i *Provider) Create() error {
+	i.log.Info("Creating Documentation", "ref", i.config.ID)
 
 	// create the documentation container
 	err := i.createDocsContainer()
@@ -46,7 +45,7 @@ func (i *Docs) Create() error {
 }
 
 // Destroy the documentation container
-func (i *Docs) Destroy() error {
+func (i *Provider) Destroy() error {
 	i.log.Info("Destroy Documentation", "ref", i.config.Name)
 
 	// remove the docs
@@ -66,25 +65,16 @@ func (i *Docs) Destroy() error {
 }
 
 // Lookup the ID of the documentation container
-func (i *Docs) Lookup() ([]string, error) {
-	/*
-		cc := &config.Container{
-			Name:       i.config.Name,
-			NetworkRef: i.config.WANRef,
-		}
-
-		p := NewContainer(cc, i.client, i.log.With("parent_ref", i.config.Name))
-	*/
-
-	return []string{}, nil
+func (i *Provider) Lookup() ([]string, error) {
+	return c.client.FindContainerIDs(c.config.FQRN)
 }
 
-func (d *Docs) Refresh() error {
+func (d *Provider) Refresh() error {
 	d.log.Debug("Refresh Docs", "ref", d.config.Name)
 
 	configPath := utils.GetLibraryFolder("config", 0775)
 
-	indices := []resources.IndexBook{}
+	indices := []IndexBook{}
 	docsConfig := DocsConfig{}
 
 	for index, book := range d.config.Content {
@@ -127,30 +117,33 @@ func (d *Docs) Refresh() error {
 	return nil
 }
 
-func (c *Docs) Changed() (bool, error) {
+func (c *Provider) Changed() (bool, error) {
 	c.log.Debug("Checking changes", "ref", c.config.Name)
 
 	return false, nil
 }
 
-func (d *Docs) createDocsContainer() error {
+func (d *Provider) createDocsContainer() error {
+	// set the FQDN
+	fqdn := utils.FQDN(d.config.Name, d.config.Module, d.config.Type)
+	d.config.FQRN = fqdn
+
 	// create the container config
-	cc := &container.Container{
-		ResourceMetadata: types.ResourceMetadata{
-			Name:   d.config.Name,
-			Type:   d.config.Type,
-			Module: d.config.Module,
-		},
+	cc := &types.Container{
+		Name: fqdn,
 	}
-	cc.ParentConfig = d.config.Metadata().ParentConfig
 
 	cc.Networks = d.config.Networks
 
-	cc.Image = &resources.Image{Name: fmt.Sprintf("%s:%s", docsImageName, docsVersion)}
+	cc.Image = &types.Image{Name: fmt.Sprintf("%s:%s", docsImageName, docsVersion)}
 
 	// if image is set override defaults
 	if d.config.Image != nil {
-		cc.Image = d.config.Image
+		cc.Image = types.Image{
+			Name:     d.config.Image,
+			Username: d.config.Image.Username,
+			Password: d.config.Image.Password,
+		}
 	}
 
 	// pull the docker image
@@ -159,10 +152,8 @@ func (d *Docs) createDocsContainer() error {
 		return err
 	}
 
-	cc.Volumes = []resources.Volume{}
-
 	// add the ports
-	cc.Ports = []resources.Port{
+	cc.Ports = []types.Port{
 		{
 			Local:  "80",
 			Remote: "80",
@@ -219,7 +210,7 @@ func (d *Docs) createDocsContainer() error {
 	docsConfigDestination := "/jumppad/jumppad.config.mjs"
 	cc.Volumes = append(
 		cc.Volumes,
-		resources.Volume{
+		types.Volume{
 			Source:      docsConfigPath,
 			Destination: docsConfigDestination,
 		},
@@ -254,10 +245,6 @@ func (d *Docs) createDocsContainer() error {
 			Destination: progressDestination,
 		},
 	)
-
-	// set the FQDN
-	fqdn := utils.FQDN(d.config.Name, d.config.Module, d.config.Type)
-	d.config.FQRN = fqdn
 
 	_, err = d.client.CreateContainer(cc)
 	return err

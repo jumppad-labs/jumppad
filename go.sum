@@ -1091,6 +1091,8 @@ github.com/jumppad-labs/go-cty v0.0.0-20230804061424-9e985cb751f6 h1:1ADItCWr5pr
 github.com/jumppad-labs/go-cty v0.0.0-20230804061424-9e985cb751f6/go.mod h1:YKQzy/7pZ7iq2jNFzy5go57xdxdWoLLpaEp4u238AE0=
 github.com/jumppad-labs/hclconfig v0.9.1 h1:HYdWHectKA0zqGnan2KoXILyUqbh/aHhRvQYdwEfyYg=
 github.com/jumppad-labs/hclconfig v0.9.1/go.mod h1:83aZDG0wN974RwHobs8E4xDI/QMARSg+TjIKbHBcEb0=
+github.com/jumppad-labs/hclconfig v0.10.0 h1:V7YbXabFyl/Cinh73n0rwghSPvTYOMEafvsIe46T+zc=
+github.com/jumppad-labs/hclconfig v0.10.0/go.mod h1:83aZDG0wN974RwHobs8E4xDI/QMARSg+TjIKbHBcEb0=
 github.com/jumppad-labs/log v0.0.0-20230711151418-55bbc87954b7 h1:jxF+Sxei1/7c7tLcV3Juu+rCIAhBv2jdicokriFohYE=
 github.com/jumppad-labs/log v0.0.0-20230711151418-55bbc87954b7/go.mod h1:ZApwwzDbbETVTIRTk7724yQRJAXIktt98yGVMMaa3y8=
 github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0/go.mod h1:1NbS8ALrpOvjt0rHPNLyCIeMtbizbir8U//inJ+zuB8=

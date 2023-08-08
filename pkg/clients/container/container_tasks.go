@@ -98,6 +98,8 @@ type ContainerTasks interface {
 	DetachNetwork(network, containerid string) error
 	// ListNetworks lists the networks a container is attached to
 	ListNetworks(id string) []types.NetworkAttachment
+	// FindNetwork returns a network using the unique resource id
+	FindNetwork(id string) (types.NetworkAttachment, error)
 
 	// CreateShell in the running container and attach
 	CreateShell(id string, command []string, stdin io.ReadCloser, stdout io.Writer, stderr io.Writer) error

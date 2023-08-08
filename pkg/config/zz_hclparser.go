@@ -1,15 +1,34 @@
-package util
+package config
 
 import (
 	"os"
 
 	"github.com/jumppad-labs/hclconfig"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/blueprint"
+	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
+// registeredTypes is a static list of types that can be used by the parser
+// it is the responsibility of the type to register itself with the parser
+var registeredTypes map[string]types.Resource
+
+// registeredProvider is a static list of providers that can be used by the parser
+// it is the responsibility of the type to register itself with the parser
+var registeredProviders map[types.Resource]Provider
+
+// RegisterResource allows a resource to register itself with the parser
+func RegisterResource(name string, r types.Resource, p Provider) {
+	if r != nil {
+		registeredTypes[name] = r
+	}
+
+	if p != nil {
+		registeredProviders[r] = p
+	}
+}
+
 // setupHCLConfig configures the HCLConfig package and registers the custom types
-func SetupHCLConfig(callback hclconfig.ProcessCallback, variables map[string]string, variablesFiles []string) *hclconfig.Parser {
+func NewParser(callback hclconfig.ProcessCallback, variables map[string]string, variablesFiles []string) *hclconfig.Parser {
 	cfg := hclconfig.DefaultOptions()
 	cfg.ParseCallback = callback
 	cfg.Variables = variables
@@ -18,33 +37,9 @@ func SetupHCLConfig(callback hclconfig.ProcessCallback, variables map[string]str
 	p := hclconfig.NewParser(cfg)
 
 	// Register the types
-	p.RegisterType(blueprint.TypeBlueprint, &blueprint.Blueprint{})
-	p.RegisterType(resources.TypeBook, &resources.Book{})
-	p.RegisterType(resources.TypeBuild, &Build{})
-	p.RegisterType(resources.TypeCertificateCA, &CertificateCA{})
-	p.RegisterType(resources.TypeCertificateLeaf, &CertificateLeaf{})
-	p.RegisterType(resources.TypeChapter, &Chapter{})
-	p.RegisterType(resources.TypeContainer, &Container{})
-	p.RegisterType(resources.TypeCopy, &Copy{})
-	p.RegisterType(resources.TypeDocs, &Docs{})
-	p.RegisterType(resources.TypeRemoteExec, &RemoteExec{})
-	p.RegisterType(resources.TypeHelm, &Helm{})
-	p.RegisterType(resources.TypeImageCache, &ImageCache{})
-	p.RegisterType(resources.TypeIngress, &Ingress{})
-	p.RegisterType(resources.TypeK8sCluster, &K8sCluster{})
-	p.RegisterType(resources.TypeK8sConfig, &K8sConfig{})
-	p.RegisterType(resources.TypeLocalExec, &LocalExec{})
-	p.RegisterType(resources.TypeNetwork, &Network{})
-	p.RegisterType(resources.TypeNomadCluster, &NomadCluster{})
-	p.RegisterType(resources.TypeNomadJob, &NomadJob{})
-	p.RegisterType(resources.TypeRandomNumber, &RandomNumber{})
-	p.RegisterType(resources.TypeRandomID, &RandomID{})
-	p.RegisterType(resources.TypeRandomPassword, &RandomPassword{})
-	p.RegisterType(resources.TypeRandomUUID, &RandomUUID{})
-	p.RegisterType(resources.TypeRandomCreature, &RandomCreature{})
-	p.RegisterType(resources.TypeSidecar, &Sidecar{})
-	p.RegisterType(resources.TypeTask, &Task{})
-	p.RegisterType(resources.TypeTemplate, &Template{})
+	for k, v := range registeredTypes {
+		p.RegisterType(k, v)
+	}
 
 	// Register the custom functions
 	p.RegisterFunction("jumppad", customHCLFuncJumppad)

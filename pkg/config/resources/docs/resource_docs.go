@@ -1,4 +1,4 @@
-package resources
+package docs
 
 import (
 	"github.com/jumppad-labs/hclconfig/types"

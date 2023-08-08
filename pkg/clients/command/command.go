@@ -1,4 +1,4 @@
-package clients
+package command
 
 import (
 	"fmt"
@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/command/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/shipyard-run/gohup"
 )
 
@@ -27,7 +27,7 @@ type CommandImpl struct {
 }
 
 // NewCommand creates a new command with the given logger and maximum command time
-func NewCommand(maxCommandTime time.Duration, l clients.Logger) Command {
+func NewCommand(maxCommandTime time.Duration, l logger.Logger) Command {
 	return &CommandImpl{maxCommandTime, l}
 }
 

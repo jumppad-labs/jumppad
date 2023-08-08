@@ -12,8 +12,8 @@ import (
 	"strings"
 
 	"github.com/jumppad-labs/connector/crypto"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	htypes "github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/pkg/errors"
 	"github.com/sethvargo/go-retry"
 	"golang.org/x/crypto/ssh"
@@ -22,40 +22,54 @@ import (
 
 type CAProvider struct {
 	config *CertificateCA
-	log    clients.Logger
+	log    logger.Logger
 }
 
 type LeafProvider struct {
 	config *CertificateLeaf
-	log    clients.Logger
+	log    logger.Logger
 }
 
-func NewCAProvider(co *CertificateCA, l clients.Logger) *CAProvider {
-	return &CAProvider{co, l}
+func (p *CAProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+	c, ok := cfg.(*CertificateCA)
+	if !ok {
+		return fmt.Errorf("unable to initialize CA provider, resource is not of type CertificateCA")
+	}
+
+	p.config = c
+	p.log = l
+	return nil
 }
 
-func NewLeafProvider(co *CertificateLeaf, l clients.Logger) *LeafProvider {
-	return &LeafProvider{co, l}
+func (p *LeafProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+	c, ok := cfg.(*CertificateLeaf)
+	if !ok {
+		return fmt.Errorf("unable to initialize Leaf provider, resource is not of type CertificateLeaf")
+	}
+
+	p.config = c
+	p.log = l
+	return nil
 }
 
-func (c *CAProvider) Create() error {
-	c.log.Info("Creating CA Certificate", "ref", c.config.Name)
+func (p *CAProvider) Create() error {
+	p.log.Info("Creating CA Certificate", "ref", p.config.ID)
 
-	directory := strings.Replace(c.config.Module, ".", "_", -1)
-	directory = path.Join(c.config.Output, directory)
+	directory := strings.Replace(p.config.Module, ".", "_", -1)
+	directory = path.Join(p.config.Output, directory)
 	os.MkdirAll(directory, os.ModePerm)
 
-	keyFile := path.Join(directory, fmt.Sprintf("%s.key", c.config.Name))
-	publicKeyFile := path.Join(directory, fmt.Sprintf("%s.pub", c.config.Name))
-	publicSSHFile := path.Join(directory, fmt.Sprintf("%s.ssh", c.config.Name))
-	certificateFile := path.Join(directory, fmt.Sprintf("%s.cert", c.config.Name))
+	keyFile := path.Join(directory, fmt.Sprintf("%s.key", p.config.Name))
+	publicKeyFile := path.Join(directory, fmt.Sprintf("%s.pub", p.config.Name))
+	publicSSHFile := path.Join(directory, fmt.Sprintf("%s.ssh", p.config.Name))
+	certificateFile := path.Join(directory, fmt.Sprintf("%s.cert", p.config.Name))
 
 	k, err := crypto.GenerateKeyPair()
 	if err != nil {
 		return err
 	}
 
-	ca, err := crypto.GenerateCA(c.config.Name, k.Private)
+	ca, err := crypto.GenerateCA(p.config.Name, k.Private)
 	if err != nil {
 		return err
 	}
@@ -87,81 +101,81 @@ func (c *CAProvider) Create() error {
 	}
 
 	// set the outputs
-	c.config.Cert = &File{
+	p.config.Cert = &File{
 		Path:      certificateFile,
 		Directory: directory,
-		Filename:  fmt.Sprintf("%s.cert", c.config.Name),
+		Filename:  fmt.Sprintf("%s.cert", p.config.Name),
 		Contents:  ca.String(),
 	}
 
-	c.config.PrivateKey = &File{
+	p.config.PrivateKey = &File{
 		Path:      keyFile,
 		Directory: directory,
-		Filename:  fmt.Sprintf("%s.key", c.config.Name),
+		Filename:  fmt.Sprintf("%s.key", p.config.Name),
 		Contents:  k.Private.String(),
 	}
 
-	c.config.PublicKeyPEM = &File{
+	p.config.PublicKeyPEM = &File{
 		Path:      publicKeyFile,
 		Directory: directory,
-		Filename:  fmt.Sprintf("%s.pub", c.config.Name),
+		Filename:  fmt.Sprintf("%s.pub", p.config.Name),
 		Contents:  k.Public.String(),
 	}
 
-	c.config.PublicKeySSH = &File{
+	p.config.PublicKeySSH = &File{
 		Path:      publicSSHFile,
 		Directory: directory,
-		Filename:  fmt.Sprintf("%s.ssh", c.config.Name),
+		Filename:  fmt.Sprintf("%s.ssh", p.config.Name),
 		Contents:  ssh,
 	}
 
 	return nil
 }
 
-func (c *CAProvider) Destroy() error {
-	c.log.Info("Destroy CA Certificate", "ref", c.config.Name)
+func (p *CAProvider) Destroy() error {
+	p.log.Info("Destroy CA Certificate", "ref", p.config.ID)
 
-	return destroy(c.config.Module, c.config.Name, c.config.Output, c.log)
+	return destroy(p.config.Module, p.config.Name, p.config.Output, p.log)
 }
 
-func (c *CAProvider) Lookup() ([]string, error) {
+func (p *CAProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (c *CAProvider) Refresh() error {
-	c.log.Debug("Refresh CA Certificate", "ref", c.config.Name)
+func (p *CAProvider) Refresh() error {
+	p.log.Debug("Refresh CA Certificate", "ref", p.config.ID)
 
 	return nil
 }
 
-func (c *CAProvider) Changed() (bool, error) {
-	c.log.Debug("Checking changes Leaf Certificate", "ref", c.config.Name)
+func (p *CAProvider) Changed() (bool, error) {
+	p.log.Debug("Checking changes Leaf Certificate", "ref", p.config.Name)
 
 	return false, nil
 }
 
-func (c *LeafProvider) Create() error {
-	c.log.Info("Creating Leaf Certificate", "ref", c.config.Name)
+func (p *LeafProvider) Create() error {
+	p.log.Info("Creating Leaf Certificate", "ref", p.config.ID)
 
-	directory := strings.Replace(c.config.Module, ".", "_", -1)
-	directory = path.Join(c.config.Output, directory)
+	directory := strings.Replace(p.config.Module, ".", "_", -1)
+	directory = path.Join(p.config.Output, directory)
 	os.MkdirAll(directory, os.ModePerm)
 
-	keyFile := path.Join(directory, fmt.Sprintf("%s-leaf.key", c.config.Name))
-	pubkeyFile := path.Join(directory, fmt.Sprintf("%s-leaf.pub", c.config.Name))
-	pubsshFile := path.Join(directory, fmt.Sprintf("%s-leaf.ssh", c.config.Name))
-	certFile := path.Join(directory, fmt.Sprintf("%s-leaf.cert", c.config.Name))
+	keyFile := path.Join(directory, fmt.Sprintf("%s-leaf.key", p.config.Name))
+	pubkeyFile := path.Join(directory, fmt.Sprintf("%s-leaf.pub", p.config.Name))
+	pubsshFile := path.Join(directory, fmt.Sprintf("%s-leaf.ssh", p.config.Name))
+	certFile := path.Join(directory, fmt.Sprintf("%s-leaf.cert", p.config.Name))
 
 	ca := &crypto.X509{}
-	err := ca.ReadFile(c.config.CACert)
+	err := ca.ReadFile(p.config.CACert)
 	if err != nil {
-		return retry.RetryableError(xerrors.Errorf("Unable to read root certificate %s: %w", c.config.CACert, err))
+		return retry.RetryableError(xerrors.Errorf("Unable to read root certificate %s: %w", p.config.CACert, err))
 	}
 
 	rk := crypto.NewKeyPair()
-	err = rk.Private.ReadFile(c.config.CAKey)
+	err = rk.Private.ReadFile(p.config.CAKey)
 	if err != nil {
-		return retry.RetryableError(xerrors.Errorf("Unable to read root key %s: %w", c.config.CAKey, err))
+		return retry.RetryableError(xerrors.Errorf("Unable to read root key %s: %w", p.config.CAKey, err))
 	}
 
 	k, err := crypto.GenerateKeyPair()
@@ -169,7 +183,7 @@ func (c *LeafProvider) Create() error {
 		return err
 	}
 
-	lc, err := crypto.GenerateLeaf(c.config.Name, c.config.IPAddresses, c.config.DNSNames, ca, rk.Private, k.Private)
+	lc, err := crypto.GenerateLeaf(p.config.Name, p.config.IPAddresses, p.config.DNSNames, ca, rk.Private, k.Private)
 	if err != nil {
 		return err
 	}
@@ -203,60 +217,60 @@ func (c *LeafProvider) Create() error {
 	}
 
 	// set the outputs
-	c.config.PublicKeySSH = &File{
+	p.config.PublicKeySSH = &File{
 		Path:      pubsshFile,
 		Directory: directory,
-		Filename:  fmt.Sprintf("%s-leaf.ssh", c.config.Name),
+		Filename:  fmt.Sprintf("%s-leaf.ssh", p.config.Name),
 		Contents:  ssh,
 	}
 
-	c.config.PublicKeyPEM = &File{
+	p.config.PublicKeyPEM = &File{
 		Path:      pubkeyFile,
 		Directory: directory,
-		Filename:  fmt.Sprintf("%s-leaf.pub", c.config.Name),
+		Filename:  fmt.Sprintf("%s-leaf.pub", p.config.Name),
 		Contents:  k.Public.String(),
 	}
 
-	c.config.Cert = &File{
+	p.config.Cert = &File{
 		Path:      certFile,
 		Directory: directory,
-		Filename:  fmt.Sprintf("%s-leaf.cert", c.config.Name),
+		Filename:  fmt.Sprintf("%s-leaf.cert", p.config.Name),
 		Contents:  lc.String(),
 	}
 
-	c.config.PrivateKey = &File{
+	p.config.PrivateKey = &File{
 		Path:      keyFile,
 		Directory: directory,
-		Filename:  fmt.Sprintf("%s-leaf.key", c.config.Name),
+		Filename:  fmt.Sprintf("%s-leaf.key", p.config.Name),
 		Contents:  k.Private.String(),
 	}
 
 	return err
 }
 
-func (c *LeafProvider) Destroy() error {
-	c.log.Info("Destroy Leaf Certificate", "ref", c.config.Name)
+func (p *LeafProvider) Destroy() error {
+	p.log.Info("Destroy Leaf Certificate", "ref", p.config.Name)
 
-	return destroy(c.config.Module, fmt.Sprintf("%s-leaf", c.config.Name), c.config.Output, c.log)
+	return destroy(p.config.Module, fmt.Sprintf("%s-leaf", p.config.Name), p.config.Output, p.log)
 }
 
-func (c *LeafProvider) Lookup() ([]string, error) {
+func (p *LeafProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (c *LeafProvider) Refresh() error {
-	c.log.Debug("Refresh Leaf Certificate", "ref", c.config.Name)
+func (p *LeafProvider) Refresh() error {
+	p.log.Debug("Refresh Leaf Certificate", "ref", p.config.Name)
 
 	return nil
 }
 
-func (c *LeafProvider) Changed() (bool, error) {
-	c.log.Debug("Checking changes Leaf Certificate", "ref", c.config.Name)
+func (p *LeafProvider) Changed() (bool, error) {
+	p.log.Debug("Checking changes Leaf Certificate", "ref", p.config.Name)
 
 	return false, nil
 }
 
-func destroy(module, name, output string, log clients.Logger) error {
+func destroy(module, name, output string, log logger.Logger) error {
 	keyFile := path.Join(output, fmt.Sprintf("%s.key", name))
 	pubkeyFile := path.Join(output, fmt.Sprintf("%s.pub", name))
 	pubsshFile := path.Join(output, fmt.Sprintf("%s.ssh", name))

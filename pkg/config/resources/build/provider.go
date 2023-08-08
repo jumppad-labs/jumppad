@@ -3,9 +3,11 @@ package build
 import (
 	"fmt"
 
+	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"golang.org/x/mod/sumdb/dirhash"
 	"golang.org/x/xerrors"
@@ -15,12 +17,26 @@ import (
 type Provider struct {
 	config *Build
 	client container.ContainerTasks
-	log    clients.Logger
+	log    logger.Logger
 }
 
 // NewBuild creates a null noop provider
-func NewProvider(cfg *Build, cli container.ContainerTasks, l clients.Logger) *Provider {
-	return &Provider{cfg, cli, l}
+func (b *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
+	c, ok := cfg.(*Build)
+	if !ok {
+		return fmt.Errorf("unable to initialize Build provider, resource is not of type Build")
+	}
+
+	cli, err := clients.GenerateClients(l)
+	if err != nil {
+		return err
+	}
+
+	b.config = c
+	b.client = cli.ContainerTasks
+	b.log = l
+
+	return nil
 }
 
 func (b *Provider) Create() error {

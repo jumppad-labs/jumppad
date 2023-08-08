@@ -1,9 +1,19 @@
-package providers
+package config
+
+import (
+	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+)
 
 // Provider defines an interface to be implemented by providers
 //
 //go:generate mockery --name Provider --filename provider.go
 type Provider interface {
+	// Init is called when the provider is created, it is passed a logger that
+	// can be used for any logging purposes. Any other clients must be created
+	// by the provider
+	Init(types.Resource, logger.Logger) error
+
 	// Create is called when a resource does not exist or creation has previously
 	// failed and 'up' is run
 	Create() error

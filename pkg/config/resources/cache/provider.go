@@ -1,47 +1,62 @@
-package providers
+package cache
 
 import (
 	"fmt"
 	"math/rand"
 	"path/filepath"
 
-	"github.com/docker/docker/api/types"
+	dtypes "github.com/docker/docker/api/types"
+	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+	"github.com/jumppad-labs/jumppad/pkg/clients/container"
+	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"golang.org/x/xerrors"
 )
 
 const cacheImage = "shipyardrun/docker-registry-proxy:0.6.3"
 
-type ImageCache struct {
-	config     *resources.ImageCache
-	client     clients.ContainerTasks
+type Provider struct {
+	config     *ImageCache
+	client     container.ContainerTasks
 	httpClient clients.HTTP
-	log        clients.Logger
+	log        logger.Logger
 }
 
-// NewContainer creates a new container with the given config and Docker client
-func NewImageCache(co *resources.ImageCache, cl clients.ContainerTasks, hc clients.HTTP, l clients.Logger) *ImageCache {
+func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
+	c, ok := cfg.(*ImageCache)
+	if !ok {
+		return fmt.Errorf("unable to initialize ImageCache provider, resource is not of type ImageCache")
+	}
 
-	return &ImageCache{co, cl, hc, l}
+	cli, err := clients.GenerateClients(l)
+	if err != nil {
+		return err
+	}
+
+	p.config = c
+	p.client = cli.ContainerTasks
+	p.httpClient = cli.HTTP
+	p.log = l
+
+	return nil
 }
 
-func (c *ImageCache) Create() error {
-	c.log.Info("Creating ImageCache", "ref", c.config.Name)
+func (p *Provider) Create() error {
+	p.log.Info("Creating ImageCache", "ref", p.config.ID)
 
 	// check the cache does not already exist
-	ids, err := c.Lookup()
+	ids, err := p.Lookup()
 	if err != nil {
 		return err
 	}
 
 	// get a list of dependent networks for the resource
-	dependentNetworks := c.findDependentNetworks()
+	dependentNetworks := p.findDependentNetworks()
 
 	if len(ids) == 0 {
-		_, err := c.createImageCache(dependentNetworks)
+		_, err := p.createImageCache(dependentNetworks)
 		if err != nil {
 			return err
 		}
@@ -50,17 +65,17 @@ func (c *ImageCache) Create() error {
 	return nil
 }
 
-func (c *ImageCache) Destroy() error {
-	c.log.Info("Destroy ImageCache", "ref", c.config.Name)
+func (p *Provider) Destroy() error {
+	p.log.Info("Destroy ImageCache", "ref", p.config.ID)
 
-	ids, err := c.Lookup()
+	ids, err := p.Lookup()
 	if err != nil {
 		return err
 	}
 
 	if len(ids) > 0 {
 		for _, id := range ids {
-			c.client.RemoveContainer(id, true)
+			p.client.RemoveContainer(id, true)
 		}
 	}
 
@@ -70,29 +85,31 @@ func (c *ImageCache) Destroy() error {
 // Refresh is called whenever any Network resources are added or removed in Shipyard
 // this is because we need to ensure that the cache is attached to all networks so that
 // it can work with any clusters that may be on those networks.
-func (c *ImageCache) Refresh() error {
-	c.log.Debug("Refresh Image Cache", "ref", c.config.Name)
+func (p *Provider) Refresh() error {
+	p.log.Debug("Refresh Image Cache", "ref", p.config.ID)
 
 	// get a list of dependent networks for the resource
-	dependentNetworks := c.findDependentNetworks()
+	dependentNetworks := p.findDependentNetworks()
 
-	return c.reConfigureNetworks(dependentNetworks)
+	return p.reConfigureNetworks(dependentNetworks)
 }
 
-func (c *ImageCache) Lookup() ([]string, error) {
-	return c.client.FindContainerIDs(utils.FQDN(c.config.Name, c.config.Module, c.config.Type))
+func (p *Provider) Lookup() ([]string, error) {
+	return p.client.FindContainerIDs(utils.FQDN(p.config.Name, p.config.Module, p.config.Type))
 }
 
-func (c *ImageCache) Changed() (bool, error) {
-	c.log.Debug("Checking changes", "ref", c.config.Name)
+func (p *Provider) Changed() (bool, error) {
+	p.log.Debug("Checking changes", "ref", p.config.ID)
 
 	return false, nil
 }
 
-func (c *ImageCache) createImageCache(networks []string) (string, error) {
+func (p *Provider) createImageCache(networks []string) (string, error) {
+	fqdn := utils.FQDN(p.config.Name, p.config.Module, p.config.Type)
+
 	// Create the volume to store the cache
 	// if this volume exists it will not be recreated
-	volID, err := c.client.CreateVolume("images")
+	volID, err := p.client.CreateVolume("images")
 	if err != nil {
 		return "", err
 	}
@@ -101,25 +118,24 @@ func (c *ImageCache) createImageCache(networks []string) (string, error) {
 	cert := filepath.Join(utils.CertsDir(""), "root.cert")
 	key := filepath.Join(utils.CertsDir(""), "root.key")
 
-	_, err = c.client.CopyFilesToVolume(volID, []string{cert, key}, "/ca", true)
+	_, err = p.client.CopyFilesToVolume(volID, []string{cert, key}, "/ca", true)
 	if err != nil {
 		return "", xerrors.Errorf("unable to copy certificates for image cache: %w", err)
 	}
 
 	// pull the container image
-	err = c.client.PullImage(resources.Image{Name: cacheImage}, false)
+	err = p.client.PullImage(types.Image{Name: cacheImage}, false)
 	if err != nil {
 		return "", err
 	}
 
 	// create the container
-	cc := &container.Container{}
-	cc.Name = c.config.Name
-	cc.Type = c.config.Type
-	cc.Image = &resources.Image{Name: cacheImage}
+	cc := &types.Container{}
+	cc.Name = fqdn
+	cc.Image = &types.Image{Name: cacheImage}
 
-	cc.Volumes = []resources.Volume{
-		resources.Volume{
+	cc.Volumes = []types.Volume{
+		types.Volume{
 			Source:      utils.FQDNVolumeName("images"),
 			Destination: "/cache",
 			Type:        "volume",
@@ -136,8 +152,8 @@ func (c *ImageCache) createImageCache(networks []string) (string, error) {
 	}
 
 	// expose the docker proxy port on a random port num
-	cc.Ports = []resources.Port{
-		resources.Port{
+	cc.Ports = []types.Port{
+		types.Port{
 			Local:    "3128",
 			Host:     fmt.Sprintf("%d", rand.Intn(3000)+31000),
 			Protocol: "tcp",
@@ -145,30 +161,26 @@ func (c *ImageCache) createImageCache(networks []string) (string, error) {
 	}
 
 	// add the networks
-	cc.Networks = []resources.NetworkAttachment{}
+	cc.Networks = []types.NetworkAttachment{}
 	for _, n := range networks {
-		cc.Networks = append(cc.Networks, resources.NetworkAttachment{ID: n})
+		cc.Networks = append(cc.Networks, types.NetworkAttachment{ID: n})
 	}
 
-	cc.ParentConfig = c.config.ParentConfig
-
-	return c.client.CreateContainer(cc)
+	return p.client.CreateContainer(cc)
 }
 
-func (c *ImageCache) findDependentNetworks() []string {
+func (p *Provider) findDependentNetworks() []string {
 	nets := []string{}
 
-	for _, n := range c.config.DependsOn {
-		target, err := c.config.ParentConfig.FindResource(n)
+	for _, n := range p.config.DependsOn {
+		target, err := p.client.FindNetwork(n)
 		if err != nil {
 			// ignore this network
-			c.log.Warn("A network ImageCache depends on does not exist", "name", n, "error", err)
+			p.log.Warn("A network ImageCache depends on does not exist", "name", n, "error", err)
 			continue
 		}
 
-		if target.Metadata().Type == resources.TypeNetwork {
-			nets = append(nets, target.Metadata().Name)
-		}
+		nets = append(nets, target.Name)
 	}
 
 	return nets
@@ -177,24 +189,24 @@ func (c *ImageCache) findDependentNetworks() []string {
 // reConfigureNetworks updates the network attachments for the cache ensuring that it is
 // attached to new networks that may have been added since the first run. And removed
 // from any networks that may have been removed since the first run
-func (c *ImageCache) reConfigureNetworks(dependentNetworks []string) error {
+func (p *Provider) reConfigureNetworks(dependentNetworks []string) error {
 	currentNetworks := []string{}
 	added := []string{}
 
 	// get the container id
-	ids, err := c.Lookup()
+	ids, err := p.Lookup()
 	if err != nil {
 		return err
 	}
 
 	// get a list of the current networks the container is attached to
-	info, err := c.client.ContainerInfo(ids[0])
+	info, err := p.client.ContainerInfo(ids[0])
 	if err != nil {
 		return xerrors.Errorf("unable to remove container from the default network: %w", err)
 	}
 
 	// flatten the docker object into a simple slice
-	for k, _ := range info.(types.ContainerJSON).NetworkSettings.Networks {
+	for k, _ := range info.(dtypes.ContainerJSON).NetworkSettings.Networks {
 		currentNetworks = append(currentNetworks, k)
 	}
 
@@ -202,12 +214,12 @@ func (c *ImageCache) reConfigureNetworks(dependentNetworks []string) error {
 	for _, n := range dependentNetworks {
 		// only add the network if it does not already exist
 		if !contains(currentNetworks, n) {
-			err = c.client.AttachNetwork(n, ids[0], nil, "")
+			err = p.client.AttachNetwork(n, ids[0], nil, "")
 			if err != nil {
 				return fmt.Errorf("unable to attach cache to network: %s", err)
 			}
 
-			c.config.Networks = append(c.config.Networks, n)
+			p.config.Networks = append(p.config.Networks, n)
 		}
 
 		added = append(added, n)
@@ -216,11 +228,11 @@ func (c *ImageCache) reConfigureNetworks(dependentNetworks []string) error {
 	// now remove any extra networks that are no longer required
 	for _, n := range currentNetworks {
 		if !contains(added, n) {
-			c.log.Debug("Detaching container from network", "ref", c.config.Name, "id", ids[0], "network", n)
+			p.log.Debug("Detaching container from network", "ref", p.config.ID, "id", ids[0], "network", n)
 
-			err := c.client.DetachNetwork(n, ids[0])
+			err := p.client.DetachNetwork(n, ids[0])
 			if err != nil {
-				c.log.Warn("Unable to detach network", "ref", c.config.Name, "network", n)
+				p.log.Warn("Unable to detach network", "ref", p.config.ID, "network", n)
 			}
 		}
 	}
