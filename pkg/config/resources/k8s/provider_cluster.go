@@ -1,4 +1,4 @@
-package providers
+package k8s
 
 import (
 	"bytes"
@@ -15,10 +15,12 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
+	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/connector"
+	cclient "github.com/jumppad-labs/jumppad/pkg/clients/container"
 	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"golang.org/x/xerrors"
 )
@@ -30,82 +32,98 @@ var startTimeout = (300 * time.Second)
 //var startTimeout = (60 * time.Second)
 
 // K8sCluster defines a provider which can create Kubernetes clusters
-type K8sCluster struct {
-	config     *resources.K8sCluster
-	client     container.ContainerTasks
+type ClusterProvider struct {
+	config     *K8sCluster
+	client     cclient.ContainerTasks
 	kubeClient clients.Kubernetes
 	httpClient clients.HTTP
-	connector  clients.Connector
-	log        clients.Logger
+	connector  connector.Connector
+	log        logger.Logger
 }
 
-// NewK8sCluster creates a new Kubernetes cluster provider
-func NewK8sCluster(c *resources.K8sCluster, cc container.ContainerTasks, kc clients.Kubernetes, hc clients.HTTP, co clients.Connector, l clients.Logger) *K8sCluster {
-	return &K8sCluster{c, cc, kc, hc, co, l}
-}
+func (p *ClusterProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+	c, ok := cfg.(*K8sCluster)
+	if !ok {
+		return fmt.Errorf("unable to initialize Kubernetes cluster provider, resource is not of type K8sCluster")
+	}
 
-// Create implements interface method to create a cluster of the specified type
-func (c *K8sCluster) Create() error {
-	return c.createK3s()
-}
+	cli, err := clients.GenerateClients(l)
+	if err != nil {
+		return err
+	}
 
-// Destroy implements interface method to destroy a cluster
-func (c *K8sCluster) Destroy() error {
-	return c.destroyK3s()
-}
-
-// Lookup the a clusters current state
-func (c *K8sCluster) Lookup() ([]string, error) {
-	return c.client.FindContainerIDs(utils.FQDN(fmt.Sprintf("server.%s", c.config.Name), c.config.Module, c.config.Type))
-}
-
-func (c *K8sCluster) Refresh() error {
-	c.log.Debug("Refresh Kubernetes Cluster", "ref", c.config.Name)
+	p.config = c
+	p.client = cli.ContainerTasks
+	p.kubeClient = cli.Kubernetes
+	p.httpClient = cli.HTTP
+	p.connector = cli.Connector
+	p.log = l
 
 	return nil
 }
 
-func (c *K8sCluster) Changed() (bool, error) {
-	c.log.Debug("Checking changes Leaf Certificate", "ref", c.config.Name)
+// Create implements interface method to create a cluster of the specified type
+func (p *ClusterProvider) Create() error {
+	return p.createK3s()
+}
+
+// Destroy implements interface method to destroy a cluster
+func (p *ClusterProvider) Destroy() error {
+	return p.destroyK3s()
+}
+
+// Lookup the a clusters current state
+func (p *ClusterProvider) Lookup() ([]string, error) {
+	return p.client.FindContainerIDs(utils.FQDN(fmt.Sprintf("server.%s", p.config.Name), p.config.Module, p.config.Type))
+}
+
+func (p *ClusterProvider) Refresh() error {
+	p.log.Debug("Refresh Kubernetes Cluster", "ref", p.config.Name)
+
+	return nil
+}
+
+func (p *ClusterProvider) Changed() (bool, error) {
+	p.log.Debug("Checking changes Leaf Certificate", "ref", p.config.Name)
 
 	return false, nil
 }
 
-func (c *K8sCluster) createK3s() error {
-	c.log.Info("Creating Cluster", "ref", c.config.ID)
+func (p *ClusterProvider) createK3s() error {
+	p.log.Info("Creating Cluster", "ref", p.config.ID)
 
 	// check the cluster does not already exist
-	ids, err := c.Lookup()
+	ids, err := p.Lookup()
 	if err != nil {
 		return err
 	}
 
 	if len(ids) > 0 {
-		return ErrClusterExists
+		return fmt.Errorf("error, cluster exists")
 	}
 
 	// pull the container image
-	err = c.client.PullImage(*c.config.Image, false)
+	err = p.client.PullImage(*p.config.Image, false)
 	if err != nil {
 		return err
 	}
 
 	// create the volume for the cluster
-	volID, err := c.client.CreateVolume("images")
+	volID, err := p.client.CreateVolume("images")
 	if err != nil {
 		return err
 	}
 
 	// create the server
-	name := fmt.Sprintf("server.%s", c.config.Name)
-	fqrn := utils.FQDN(name, c.config.Module, c.config.Type)
+	name := fmt.Sprintf("server.%s", p.config.Name)
+	fqrn := utils.FQDN(name, p.config.Module, p.config.Type)
 
 	cc := &ctypes.Container{}
 	cc.Name = fqrn
 
-	cc.Image = c.config.Image
-	cc.Networks = c.config.Networks
-	cc.Privileged = true // k3s must run Privlidged
+	cc.Image = p.config.Image
+	cc.Networks = p.config.Networks
+	cc.Privileged = true // k3s must run Privileged
 
 	// set the volume mount for the images
 	cc.Volumes = []ctypes.Volume{
@@ -117,7 +135,7 @@ func (c *K8sCluster) createK3s() error {
 	}
 
 	// if there are any custom volumes to mount
-	for _, v := range c.config.Volumes {
+	for _, v := range p.config.Volumes {
 		cc.Volumes = append(cc.Volumes, v)
 	}
 
@@ -137,7 +155,7 @@ func (c *K8sCluster) createK3s() error {
 
 	// get the version from the image so we can calculate parameters
 	version := "v99"
-	vParts := strings.Split(c.config.Image.Name, ":")
+	vParts := strings.Split(p.config.Image.Name, ":")
 	if len(vParts) == 2 && vParts[1] != "latest" {
 		version = vParts[1]
 	}
@@ -155,15 +173,14 @@ func (c *K8sCluster) createK3s() error {
 		}
 
 		// add the netmask from the network to the proxy bypass
-		networkSubmasks :=
-			[]string{}
-		for _, n := range c.config.Networks {
-			net, err := c.config.ParentConfig.FindResource(n.ID)
+		networkSubmasks := []string{}
+		for _, n := range p.config.Networks {
+			net, err := p.client.FindNetwork(n)
 			if err != nil {
 				return fmt.Errorf("Network not found: %w", err)
 			}
 
-			networkSubmasks = append(networkSubmasks, net.(*resources.Network).Subnet)
+			networkSubmasks = append(networkSubmasks, net.Subnet)
 		}
 
 		proxyBypass := utils.ProxyBypass + "," + strings.Join(networkSubmasks, ",")
@@ -180,13 +197,13 @@ func (c *K8sCluster) createK3s() error {
 	}
 
 	// set the Connector server port to a random number
-	c.config.ConnectorPort = rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
+	p.config.ConnectorPort = rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
 
 	// determine the snapshotter, if a storage driver other than overlay is used then
 	// snapshotter must be set to native or the container will not start
 	snapShotter := "native"
 
-	if c.client.EngineInfo().StorageDriver == container.StorageDriverOverlay || c.client.EngineInfo().StorageDriver == clients.StorageDriverOverlay2 {
+	if p.client.EngineInfo().StorageDriver == ctypes.StorageDriverOverlay || p.client.EngineInfo().StorageDriver == ctypes.StorageDriverOverlay2 {
 		snapShotter = "overlayfs"
 	}
 
@@ -210,15 +227,15 @@ func (c *K8sCluster) createK3s() error {
 	}
 
 	// create the server address
-	FQDN := fmt.Sprintf("server.%s", utils.FQDN(c.config.Name, c.config.Module, c.config.Type))
-	c.config.FQRN = FQDN
+	FQDN := fmt.Sprintf("server.%s", utils.FQDN(p.config.Name, p.config.Module, p.config.Type))
+	p.config.FQRN = FQDN
 
 	// Set the default startup args
 	// Also set netfilter settings to fix behaviour introduced in Linux Kernel 5.12
 	// https://k3d.io/faq/faq/#solved-nodes-fail-to-start-or-get-stuck-in-notready-state-with-log-nf_conntrack_max-permission-denied
 	args := []string{
 		"server",
-		fmt.Sprintf("--https-listen-port=%d", c.config.APIPort),
+		fmt.Sprintf("--https-listen-port=%d", p.config.APIPort),
 		"--kube-proxy-arg=conntrack-max-per-core=0",
 		disableArgs,
 		fmt.Sprintf("--snapshotter=%s", snapShotter),
@@ -227,58 +244,58 @@ func (c *K8sCluster) createK3s() error {
 	}
 
 	// expose the API server and Connector ports
-	cc.Ports = []resources.Port{
-		resources.Port{
-			Local:    fmt.Sprintf("%d", c.config.APIPort),
-			Host:     fmt.Sprintf("%d", c.config.APIPort),
+	cc.Ports = []ctypes.Port{
+		ctypes.Port{
+			Local:    fmt.Sprintf("%d", p.config.APIPort),
+			Host:     fmt.Sprintf("%d", p.config.APIPort),
 			Protocol: "tcp",
 		},
-		resources.Port{
-			Local:    fmt.Sprintf("%d", c.config.ConnectorPort),
-			Host:     fmt.Sprintf("%d", c.config.ConnectorPort),
+		ctypes.Port{
+			Local:    fmt.Sprintf("%d", p.config.ConnectorPort),
+			Host:     fmt.Sprintf("%d", p.config.ConnectorPort),
 			Protocol: "tcp",
 		},
-		resources.Port{
-			Local:    fmt.Sprintf("%d", c.config.ConnectorPort+1),
-			Host:     fmt.Sprintf("%d", c.config.ConnectorPort+1),
+		ctypes.Port{
+			Local:    fmt.Sprintf("%d", p.config.ConnectorPort+1),
+			Host:     fmt.Sprintf("%d", p.config.ConnectorPort+1),
 			Protocol: "tcp",
 		},
 	}
 
-	cc.PortRanges = c.config.PortRanges
-	cc.Ports = append(cc.Ports, c.config.Ports...)
+	cc.PortRanges = p.config.PortRanges
+	cc.Ports = append(cc.Ports, p.config.Ports...)
 
 	cc.Command = args
 
-	id, err := c.client.CreateContainer(cc)
+	id, err := p.client.CreateContainer(cc)
 	if err != nil {
 		return err
 	}
 
 	// wait for the server to start
-	err = c.waitForStart(id)
+	err = p.waitForStart(id)
 	if err != nil {
 		return err
 	}
 
 	// get the assigned ip addresses for the container
 	// and set that to the config
-	dc := c.client.ListNetworks(id)
+	dc := p.client.ListNetworks(id)
 	for _, n := range dc {
-		for i, net := range c.config.Networks {
+		for i, net := range p.config.Networks {
 			if net.ID == n.ID {
 				// set the assigned address and name
-				c.config.Networks[i].AssignedAddress = n.AssignedAddress
-				c.config.Networks[i].Name = n.Name
+				p.config.Networks[i].AssignedAddress = n.IPAddress
+				p.config.Networks[i].Name = n.Name
 			}
 		}
 	}
 
 	// set the external IP
-	c.config.ExternalIP = utils.GetDockerIP()
+	p.config.ExternalIP = utils.GetDockerIP()
 
 	// get the Kubernetes config file and drop it in a temp folder
-	kc, err := c.copyKubeConfig(id)
+	kc, err := p.copyKubeConfig(id)
 	if err != nil {
 		return xerrors.Errorf("unable to copy Kubernetes config: %w", err)
 	}
@@ -286,52 +303,52 @@ func (c *K8sCluster) createK3s() error {
 	// replace the server location in the kubeconfig file
 	// and write to $HOME/.shipyard/config/[clustername]/kubeconfig.yml
 	// we need to do this as Shipyard might be using a remote Docker engine
-	config, err := c.createLocalKubeConfig(kc)
+	config, err := p.createLocalKubeConfig(kc)
 	if err != nil {
 		return xerrors.Errorf("unable to create local Kubernetes config: %w", err)
 	}
 
-	c.config.KubeConfig = config
+	p.config.KubeConfig = config
 
 	// wait for all the default pods like core DNS to start running
 	// before progressing
 	// we might also need to wait for the api services to become ready
 	// this could be done with the folowing command kubectl get apiservice
-	c.kubeClient, err = c.kubeClient.SetConfig(config)
+	p.kubeClient, err = p.kubeClient.SetConfig(config)
 	if err != nil {
 		return err
 	}
 
 	// ensure essential pods have started before announcing the resource is available
-	err = c.kubeClient.HealthCheckPods([]string{"app=local-path-provisioner", "k8s-app=kube-dns"}, startTimeout)
+	err = p.kubeClient.HealthCheckPods([]string{"app=local-path-provisioner", "k8s-app=kube-dns"}, startTimeout)
 	if err != nil {
 		// fetch the logs from the container before exit
-		lr, lerr := c.client.ContainerLogs(id, true, true)
+		lr, lerr := p.client.ContainerLogs(id, true, true)
 		if lerr != nil {
-			c.log.Error("unable to get logs from container", "error", lerr)
+			p.log.Error("unable to get logs from container", "error", lerr)
 		}
 
 		// copy the logs to the output
-		io.Copy(c.log.StandardWriter(), lr)
+		io.Copy(p.log.StandardWriter(), lr)
 
 		return xerrors.Errorf("timeout waiting for Kubernetes default pods: %w", err)
 	}
 
 	// import the images to the servers container d instance
 	// importing images means that k3s does not need to pull from a remote docker hub
-	if c.config.CopyImages != nil && len(c.config.CopyImages) > 0 {
-		err := c.ImportLocalDockerImages(utils.ImageVolumeName, id, c.config.CopyImages, false)
+	if p.config.CopyImages != nil && len(p.config.CopyImages) > 0 {
+		err := p.ImportLocalDockerImages(utils.ImageVolumeName, id, p.config.CopyImages, false)
 		if err != nil {
 			return xerrors.Errorf("unable to importing Docker images: %w", err)
 		}
 	}
 
 	// start the connectorService
-	c.log.Debug("Deploying connector")
-	return c.deployConnector(c.config.ConnectorPort, c.config.ConnectorPort+1)
+	p.log.Debug("Deploying connector")
+	return p.deployConnector(p.config.ConnectorPort, p.config.ConnectorPort+1)
 }
 
-func (c *K8sCluster) waitForStart(id string) error {
+func (p *ClusterProvider) waitForStart(id string) error {
 	start := time.Now()
 
 	for {
@@ -342,7 +359,7 @@ func (c *K8sCluster) waitForStart(id string) error {
 		}
 
 		// scan container logs for a line that tells us that the required services are up and running
-		out, err := c.client.ContainerLogs(id, true, true)
+		out, err := p.client.ContainerLogs(id, true, true)
 		if err != nil {
 			out.Close()
 			return fmt.Errorf("unable to get docker logs for %s\n%+v", id, err)
@@ -364,12 +381,12 @@ func (c *K8sCluster) waitForStart(id string) error {
 	return nil
 }
 
-func (c *K8sCluster) copyKubeConfig(id string) (string, error) {
+func (p *ClusterProvider) copyKubeConfig(id string) (string, error) {
 	// create destination kubeconfig file paths
-	_, kubePath, _ := utils.CreateKubeConfigPath(c.config.Name)
+	_, kubePath, _ := utils.CreateKubeConfigPath(p.config.Name)
 
 	// get kubeconfig file from container and read contents
-	err := c.client.CopyFromContainer(id, "/output/kubeconfig.yaml", kubePath)
+	err := p.client.CopyFromContainer(id, "/output/kubeconfig.yaml", kubePath)
 	if err != nil {
 		return "", err
 	}
@@ -377,11 +394,11 @@ func (c *K8sCluster) copyKubeConfig(id string) (string, error) {
 	return kubePath, nil
 }
 
-func (c *K8sCluster) createLocalKubeConfig(kubeconfig string) (string, error) {
+func (p *ClusterProvider) createLocalKubeConfig(kubeconfig string) (string, error) {
 	ip := utils.GetDockerIP()
-	_, kubePath, _ := utils.CreateKubeConfigPath(c.config.Name)
+	_, kubePath, _ := utils.CreateKubeConfigPath(p.config.Name)
 
-	err := c.changeServerAddressInK8sConfig(
+	err := p.changeServerAddressInK8sConfig(
 		fmt.Sprintf("https://%s", ip),
 		kubeconfig,
 		kubePath,
@@ -393,7 +410,7 @@ func (c *K8sCluster) createLocalKubeConfig(kubeconfig string) (string, error) {
 	return kubePath, nil
 }
 
-func (c *K8sCluster) changeServerAddressInK8sConfig(addr, origFile, newFile string) error {
+func (p *ClusterProvider) changeServerAddressInK8sConfig(addr, origFile, newFile string) error {
 	// read the config into a string
 	f, err := os.OpenFile(origFile, os.O_RDONLY, 0666)
 	if err != nil {
@@ -427,16 +444,16 @@ func (c *K8sCluster) changeServerAddressInK8sConfig(addr, origFile, newFile stri
 
 // deployConnector deploys the connector service to the cluster
 // once it has started
-func (c *K8sCluster) deployConnector(grpcPort, httpPort int) error {
+func (p *ClusterProvider) deployConnector(grpcPort, httpPort int) error {
 	// generate the certificates for the service
-	cb, err := c.connector.GetLocalCertBundle(utils.CertsDir(""))
+	cb, err := p.connector.GetLocalCertBundle(utils.CertsDir(""))
 	if err != nil {
 		return fmt.Errorf("unable to fetch root certificates for ingress: %s", err)
 	}
 
 	// generate the leaf certificates ensuring that we add
 	// the ip address for the docker hosts as this might not be local
-	lf, err := c.connector.GenerateLeafCert(
+	lf, err := p.connector.GenerateLeafCert(
 		cb.RootKeyPath,
 		cb.RootCertPath,
 		[]string{
@@ -462,21 +479,21 @@ func (c *K8sCluster) deployConnector(grpcPort, httpPort int) error {
 	files := []string{}
 
 	files = append(files, path.Join(dir, "namespace.yaml"))
-	c.log.Debug("Writing namespace config", "file", files[0])
+	p.log.Debug("Writing namespace config", "file", files[0])
 	err = writeConnectorNamespace(files[0])
 	if err != nil {
 		return fmt.Errorf("unable to create namespace for connector: %s", err)
 	}
 
 	files = append(files, path.Join(dir, "secret.yaml"))
-	c.log.Debug("Writing secret config", "file", files[1])
+	p.log.Debug("Writing secret config", "file", files[1])
 	writeConnectorK8sSecret(files[1], lf.RootCertPath, lf.LeafKeyPath, lf.LeafCertPath)
 	if err != nil {
 		return fmt.Errorf("unable to create secret for connector: %s", err)
 	}
 
 	files = append(files, path.Join(dir, "rbac.yaml"))
-	c.log.Debug("Writing RBAC config", "file", files[2])
+	p.log.Debug("Writing RBAC config", "file", files[2])
 	writeConnectorRBAC(files[2])
 	if err != nil {
 		return fmt.Errorf("unable to create RBAC for connector: %s", err)
@@ -489,20 +506,20 @@ func (c *K8sCluster) deployConnector(grpcPort, httpPort int) error {
 	}
 
 	files = append(files, path.Join(dir, "deployment.yaml"))
-	c.log.Debug("Writing deployment config", "file", files[3])
+	p.log.Debug("Writing deployment config", "file", files[3])
 	writeConnectorDeployment(files[3], grpcPort, httpPort, ll)
 	if err != nil {
 		return fmt.Errorf("unable to create deployment for connector: %s", err)
 	}
 
 	// deploy the application config
-	err = c.kubeClient.Apply(files, true)
+	err = p.kubeClient.Apply(files, true)
 	if err != nil {
 		return fmt.Errorf("unable to apply configuration: %s", err)
 	}
 
 	// wait for it to start
-	c.kubeClient.HealthCheckPods([]string{"app=connector"}, 60*time.Second)
+	p.kubeClient.HealthCheckPods([]string{"app=connector"}, 60*time.Second)
 	if err != nil {
 		return fmt.Errorf("timeout waiting for connector to start: %s", err)
 	}
@@ -511,7 +528,7 @@ func (c *K8sCluster) deployConnector(grpcPort, httpPort int) error {
 }
 
 // ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
-func (c *K8sCluster) ImportLocalDockerImages(name string, id string, images []ctypes.Image, force bool) error {
+func (p *ClusterProvider) ImportLocalDockerImages(name string, id string, images []ctypes.Image, force bool) error {
 	imgs := []string{}
 
 	for _, i := range images {
@@ -520,7 +537,7 @@ func (c *K8sCluster) ImportLocalDockerImages(name string, id string, images []ct
 			continue
 		}
 
-		err := c.client.PullImage(i, false)
+		err := p.client.PullImage(i, false)
 		if err != nil {
 			return err
 		}
@@ -530,7 +547,7 @@ func (c *K8sCluster) ImportLocalDockerImages(name string, id string, images []ct
 
 	// import to volume
 	vn := utils.FQDNVolumeName(name)
-	imagesFile, err := c.client.CopyLocalDockerImagesToVolume(imgs, vn, force)
+	imagesFile, err := p.client.CopyLocalDockerImagesToVolume(imgs, vn, force)
 	if err != nil {
 		return err
 	}
@@ -538,7 +555,7 @@ func (c *K8sCluster) ImportLocalDockerImages(name string, id string, images []ct
 	for _, i := range imagesFile {
 		// execute the command to import the image
 		// write any command output to the logger
-		_, err = c.client.ExecuteCommand(id, []string{"ctr", "image", "import", i}, nil, "/", "", "", 300, c.log.StandardWriter())
+		_, err = p.client.ExecuteCommand(id, []string{"ctr", "image", "import", i}, nil, "/", "", "", 300, c.log.StandardWriter())
 		if err != nil {
 			return err
 		}
@@ -547,22 +564,22 @@ func (c *K8sCluster) ImportLocalDockerImages(name string, id string, images []ct
 	return nil
 }
 
-func (c *K8sCluster) destroyK3s() error {
-	c.log.Info("Destroy Cluster", "ref", c.config.Name)
+func (p *ClusterProvider) destroyK3s() error {
+	p.log.Info("Destroy Cluster", "ref", p.config.Name)
 
-	ids, err := c.Lookup()
+	ids, err := p.Lookup()
 	if err != nil {
 		return err
 	}
 
 	for _, i := range ids {
-		err := c.client.RemoveContainer(i, false)
+		err := p.client.RemoveContainer(i, false)
 		if err != nil {
 			return err
 		}
 	}
 
-	_, kubePath, _ := utils.CreateKubeConfigPath(c.config.Name)
+	_, kubePath, _ := utils.CreateKubeConfigPath(p.config.Name)
 	os.RemoveAll(kubePath)
 
 	return nil

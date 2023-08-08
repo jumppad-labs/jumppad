@@ -1,83 +1,98 @@
-package providers
+package helm
 
 import (
+	"fmt"
 	"time"
 
+	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"golang.org/x/xerrors"
 )
 
-type Helm struct {
-	config       *resources.Helm
+type Provider struct {
+	config       *Helm
 	kubeClient   clients.Kubernetes
 	helmClient   clients.Helm
 	getterClient clients.Getter
-	log          clients.Logger
+	log          logger.Logger
 }
 
-// NewHelm creates a new Helm provider
-func NewHelm(c *resources.Helm, kc clients.Kubernetes, hc clients.Helm, g clients.Getter, l clients.Logger) *Helm {
-	return &Helm{c, kc, hc, g, l}
-}
+func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
+	h, ok := cfg.(*Helm)
 
-// Create implements the provider Create method
-func (h *Helm) Create() error {
-	h.log.Info("Creating Helm chart", "ref", h.config.ID)
+	if !ok {
+		return fmt.Errorf("unable to initialize Helm provider, resource is not of type Helm")
+	}
 
-	// get the target cluster
-	kcPath, err := h.getKubeConfigPath()
+	p.config = h
+
+	cli, err := clients.GenerateClients(l)
 	if err != nil {
 		return err
 	}
 
+	p.config = c
+	p.kubeClient = cli.Kubernetes
+	p.helmClient = cli.Helm
+	p.getterClient = cli.Getter
+	p.log = l
+
+	return nil
+}
+
+// Create implements the provider Create method
+func (p *Provider) Create() error {
+	p.log.Info("Creating Helm chart", "ref", p.config.ID)
+
 	// if the namespace is null set to default
-	if h.config.Namespace == "" {
-		h.config.Namespace = "default"
+	if p.config.Namespace == "" {
+		p.config.Namespace = "default"
 	}
 
 	// is this chart ot be loaded from a repository?
-	if h.config.Repository != nil {
-		h.log.Debug("Updating Helm chart repository", "name", h.config.Repository.Name, "url", h.config.Repository.URL)
+	if p.config.Repository != nil {
+		p.log.Debug("Updating Helm chart repository", "name", p.config.Repository.Name, "url", p.config.Repository.URL)
 
-		err := h.helmClient.UpsertChartRepository(h.config.Repository.Name, h.config.Repository.URL)
+		err := p.helmClient.UpsertChartRepository(p.config.Repository.Name, p.config.Repository.URL)
 		if err != nil {
 			return xerrors.Errorf("unable to initialize chart repository: %w", err)
 		}
 	}
 
 	// is the source a helm repo which should be downloaded?
-	if !utils.IsLocalFolder(h.config.Chart) && h.config.Repository == nil {
-		h.log.Debug("Fetching remote Helm chart", "ref", h.config.Name, "chart", h.config.Chart)
+	if !utils.IsLocalFolder(p.config.Chart) && p.config.Repository == nil {
+		p.log.Debug("Fetching remote Helm chart", "ref", p.config.Name, "chart", p.config.Chart)
 
-		helmFolder := utils.GetHelmLocalFolder(h.config.Chart)
+		helmFolder := utils.GetHelmLocalFolder(p.config.Chart)
 
-		err := h.getterClient.Get(h.config.Chart, helmFolder)
+		err := p.getterClient.Get(p.config.Chart, helmFolder)
 		if err != nil {
 			return xerrors.Errorf("Unable to download remote chart: %w", err)
 		}
 
 		// set the config to the local path
-		h.config.Chart = helmFolder
+		p.config.Chart = helmFolder
 	}
 
 	// set the KubeConfig for the kubernetes client
 	// this is used by the health checks
-	h.log.Debug("Using Kubernetes config", "ref", h.config.ID, "path", kcPath)
-	h.kubeClient, err = h.kubeClient.SetConfig(kcPath)
+	var err error
+	p.log.Debug("Using Kubernetes config", "ref", p.config.ID, "path", p.config.K8sConfig)
+	p.kubeClient, err = p.kubeClient.SetConfig(p.config.K8sConfig)
 	if err != nil {
 		return xerrors.Errorf("unable to create Kubernetes client: %w", err)
 	}
 
 	// sanitize the chart name
-	newName, _ := utils.ReplaceNonURIChars(h.config.Name)
+	newName, _ := utils.ReplaceNonURIChars(p.config.Name)
 
 	failCount := 0
 
 	to := time.Duration(300 * time.Second)
-	if h.config.Timeout != "" {
-		to, err = time.ParseDuration(h.config.Timeout)
+	if p.config.Timeout != "" {
+		to, err = time.ParseDuration(p.config.Timeout)
 		if err != nil {
 			return xerrors.Errorf("unable to parse timeout duration: %w", err)
 		}
@@ -89,16 +104,16 @@ func (h *Helm) Create() error {
 
 	go func() {
 		for {
-			err = h.helmClient.Create(
-				kcPath,
+			err = p.helmClient.Create(
+				p.config.K8sConfig,
 				newName,
-				h.config.Namespace,
-				h.config.CreateNamespace,
-				h.config.SkipCRDs,
-				h.config.Chart,
-				h.config.Version,
-				h.config.Values,
-				h.config.ValuesString)
+				p.config.Namespace,
+				p.config.CreateNamespace,
+				p.config.SkipCRDs,
+				p.config.Chart,
+				p.config.Version,
+				p.config.Values,
+				p.config.ValuesString)
 
 			if err == nil {
 				doneChan <- struct{}{}
@@ -107,10 +122,10 @@ func (h *Helm) Create() error {
 
 			failCount++
 
-			if failCount >= h.config.Retry {
+			if failCount >= p.config.Retry {
 				errChan <- err
 			} else {
-				h.log.Debug("Chart apply failed, retrying", "error", err)
+				p.log.Debug("Chart apply failed, retrying", "error", err)
 				time.Sleep(5 * time.Second)
 			}
 		}
@@ -122,17 +137,17 @@ func (h *Helm) Create() error {
 	case createErr := <-errChan:
 		return createErr
 	case <-doneChan:
-		h.log.Debug("Helm chart applied", "ref", h.config.Name)
+		p.log.Debug("Helm chart applied", "ref", p.config.Name)
 	}
 
 	// we can now health check the install
-	if h.config.HealthCheck != nil && len(h.config.HealthCheck.Pods) > 0 {
-		to, err := time.ParseDuration(h.config.HealthCheck.Timeout)
+	if p.config.HealthCheck != nil && len(p.config.HealthCheck.Pods) > 0 {
+		to, err := time.ParseDuration(p.config.HealthCheck.Timeout)
 		if err != nil {
 			return xerrors.Errorf("unable to parse health check duration: %w", err)
 		}
 
-		err = h.kubeClient.HealthCheckPods(h.config.HealthCheck.Pods, to)
+		err = p.kubeClient.HealthCheckPods(p.config.HealthCheck.Pods, to)
 		if err != nil {
 			return xerrors.Errorf("health check failed after helm chart setup: %w", err)
 		}
@@ -142,53 +157,40 @@ func (h *Helm) Create() error {
 }
 
 // Destroy implements the provider Destroy method
-func (h *Helm) Destroy() error {
-	h.log.Info("Destroy Helm chart", "ref", h.config.Name)
-	kcPath, err := h.getKubeConfigPath()
-	if err != nil {
-		return err
-	}
+func (p *Provider) Destroy() error {
+	p.log.Info("Destroy Helm chart", "ref", p.config.ID)
 
 	// if the namespace is null set to default
-	if h.config.Namespace == "" {
-		h.config.Namespace = "default"
+	if p.config.Namespace == "" {
+		p.config.Namespace = "default"
 	}
 
 	// sanitize the chart name
-	newName, _ := utils.ReplaceNonURIChars(h.config.Name)
+	newName, _ := utils.ReplaceNonURIChars(p.config.Name)
 
 	// get the target cluster
-	h.helmClient.Destroy(kcPath, newName, h.config.Namespace)
+	err := p.helmClient.Destroy(p.config.K8sConfig, newName, p.config.Namespace)
 
 	if err != nil {
-		h.log.Debug("There was a problem destroying Helm chart, logging message but ignoring error", "ref", h.config.Name, "error", err)
+		p.log.Debug("There was a problem destroying Helm chart, logging message but ignoring error", "ref", p.config.ID, "error", err)
 	}
 
 	return nil
 }
 
 // Lookup implements the provider Lookup method
-func (h *Helm) Lookup() ([]string, error) {
+func (p *Provider) Lookup() ([]string, error) {
 	return []string{}, nil
 }
 
-func (c *Helm) Refresh() error {
-	c.log.Debug("Refresh Helm Chart", "ref", c.config.Name)
+func (p *Provider) Refresh() error {
+	p.log.Debug("Refresh Helm Chart", "ref", p.config.Name)
 
 	return nil
 }
 
-func (c *Helm) Changed() (bool, error) {
-	c.log.Debug("Checking changes", "ref", c.config.Name)
+func (p *Provider) Changed() (bool, error) {
+	p.log.Debug("Checking changes", "ref", p.config.Name)
 
 	return false, nil
-}
-
-func (h *Helm) getKubeConfigPath() (string, error) {
-	target, err := h.config.ParentConfig.FindResource(h.config.Cluster)
-	if err != nil {
-		return "", xerrors.Errorf("Unable to find cluster: %w", err)
-	}
-
-	return target.(*resources.K8sCluster).KubeConfig, nil
 }

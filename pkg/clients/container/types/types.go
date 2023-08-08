@@ -33,6 +33,7 @@ type NetworkAttachment struct {
 	Name        string
 	IPAddress   string
 	Aliases     []string
+	Subnet      string
 	IsContainer bool // is the network attachment a container or normal network
 }
 

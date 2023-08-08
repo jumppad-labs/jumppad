@@ -1,4 +1,4 @@
-package providers
+package network
 
 import (
 	"context"
@@ -8,47 +8,61 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
+	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"golang.org/x/xerrors"
 )
 
 // Network is a provider for creating docker networks
-type Network struct {
-	config *resources.Network
+type Provider struct {
+	config *Network
 	client container.Docker
-	log    clients.Logger
+	log    logger.Logger
 }
 
-// NewNetwork creates a new network with the given config and Docker client
-func NewNetwork(co *resources.Network, cl container.Docker, l clients.Logger) *Network {
-	return &Network{co, cl, l}
+func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
+	c, ok := cfg.(*Network)
+	if !ok {
+		return fmt.Errorf("unable to initialize Network provider, resource is not of type Network")
+	}
+
+	cli, err := clients.GenerateClients(l)
+	if err != nil {
+		return err
+	}
+
+	p.config = c
+	p.client = cli.Docker
+	p.log = l
+
+	return nil
 }
 
 // Create implements the provider interface method for creating new networks
-func (n *Network) Create() error {
-	n.log.Info("Creating Network", "ref", n.config.ID)
+func (p *Provider) Create() error {
+	p.log.Info("Creating Network", "ref", p.config.ID)
 
 	// validate the subnet
-	_, cidr, err := net.ParseCIDR(n.config.Subnet)
+	_, cidr, err := net.ParseCIDR(p.config.Subnet)
 	if err != nil {
-		return fmt.Errorf("Unable to create network %s, invalid subnet %s", n.config.Name, n.config.Subnet)
+		return fmt.Errorf("Unable to create network %s, invalid subnet %s", p.config.Name, p.config.Subnet)
 	}
 
 	// get all the networks
-	nets, err := n.getNetworks("")
+	nets, err := p.getNetworks("")
 	if err != nil {
 		return fmt.Errorf("unable to list existing networks: %s. If you are using podman, ensure that the default 'podman' network exists", err)
 	}
 
 	// is the network name and subnet equal to one which already exists
 	for _, ne := range nets {
-		if ne.Name == n.config.Name {
+		if ne.Name == p.config.Name {
 			for _, ci := range ne.IPAM.Config {
 				// check that the returned networks subnet matches the existing networks subnet
-				if ci.Subnet != n.config.Subnet {
-					n.log.Debug("Network already exists, skip creation", "ref", n.config.ID)
+				if ci.Subnet != p.config.Subnet {
+					p.log.Debug("Network already exists, skip creation", "ref", p.config.ID)
 					return nil
 				}
 			}
@@ -65,18 +79,18 @@ func (n *Network) Create() error {
 			}
 
 			if cidr.Contains(cidr2.IP) || cidr2.Contains(cidr.IP) {
-				return fmt.Errorf("Unable to create network %s, Network %s already exists with an overlapping subnet %s. Either remove the network '%s' or change the subnet for your network", n.config.Name, ne.Name, ci.Subnet, ne.Name)
+				return fmt.Errorf("Unable to create network %s, Network %s already exists with an overlapping subnet %s. Either remove the network '%s' or change the subnet for your network", p.config.Name, ne.Name, ci.Subnet, ne.Name)
 			}
 		}
 	}
 
 	// check the network drivers, if bridge is available use bridge, else use nat
-	n.log.Debug("Attempting to create using bridge plugin", "ref", n.config.Name)
-	err = n.createWithDriver("bridge")
+	p.log.Debug("Attempting to create using bridge plugin", "ref", p.config.Name)
+	err = p.createWithDriver("bridge")
 	if err != nil {
-		n.log.Debug("Unable to create using bridge, fall back to use nat plugin", "ref", n.config.Name)
+		p.log.Debug("Unable to create using bridge, fall back to use nat plugin", "ref", p.config.Name)
 		// fall back to nat
-		err = n.createWithDriver("nat")
+		err = p.createWithDriver("nat")
 		if err != nil {
 			return err
 		}
@@ -86,25 +100,25 @@ func (n *Network) Create() error {
 }
 
 // Destroy implements the provider interface method for destroying networks
-func (n *Network) Destroy() error {
-	n.log.Info("Destroy Network", "ref", n.config.Name)
+func (p *Provider) Destroy() error {
+	p.log.Info("Destroy Network", "ref", p.config.Name)
 
 	// check network exists if so remove
-	ids, err := n.Lookup()
+	ids, err := p.Lookup()
 	if err != nil {
 		return xerrors.Errorf("Unable to list networks: %w", err)
 	}
 
 	if len(ids) == 1 {
-		return n.client.NetworkRemove(context.Background(), n.config.Name)
+		return p.client.NetworkRemove(context.Background(), p.config.Name)
 	}
 
 	return nil
 }
 
 // Lookup the ID for a network
-func (n *Network) Lookup() ([]string, error) {
-	nets, err := n.getNetworks(n.config.Name)
+func (p *Provider) Lookup() ([]string, error) {
+	nets, err := p.getNetworks(p.config.Name)
 
 	if err != nil {
 		return nil, err
@@ -118,19 +132,19 @@ func (n *Network) Lookup() ([]string, error) {
 	return ids, nil
 }
 
-func (c *Network) Refresh() error {
-	c.log.Debug("Refresh Network", "ref", c.config.Name)
+func (p *Provider) Refresh() error {
+	p.log.Debug("Refresh Network", "ref", p.config.ID)
 
 	return nil
 }
 
-func (c *Network) Changed() (bool, error) {
-	c.log.Debug("Checking changes", "ref", c.config.Name)
+func (p *Provider) Changed() (bool, error) {
+	p.log.Debug("Checking changes", "ref", p.config.ID)
 
 	return false, nil
 }
 
-func (n *Network) createWithDriver(driver string) error {
+func (p *Provider) createWithDriver(driver string) error {
 	opts := types.NetworkCreate{
 		CheckDuplicate: true,
 		Driver:         driver,
@@ -138,24 +152,24 @@ func (n *Network) createWithDriver(driver string) error {
 			Driver: "default",
 			Config: []network.IPAMConfig{
 				network.IPAMConfig{
-					Subnet: n.config.Subnet,
+					Subnet: p.config.Subnet,
 				},
 			},
 		},
 		Labels: map[string]string{
 			"created_by": "shipyard",
-			"id":         n.config.ID,
+			"id":         p.config.ID,
 		},
 		Attachable: true,
 	}
 
-	_, err := n.client.NetworkCreate(context.Background(), n.config.Name, opts)
+	_, err := p.client.NetworkCreate(context.Background(), p.config.Name, opts)
 
 	return err
 }
 
-func (n *Network) getNetworks(name string) ([]types.NetworkResource, error) {
+func (p *Provider) getNetworks(name string) ([]types.NetworkResource, error) {
 	args := filters.NewArgs()
 	args.Add("name", name)
-	return n.client.NetworkList(context.Background(), types.NetworkListOptions{Filters: args})
+	return p.client.NetworkList(context.Background(), types.NetworkListOptions{Filters: args})
 }

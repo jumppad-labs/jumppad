@@ -1,47 +1,61 @@
-package providers
+package k8s
 
 import (
+	"fmt"
 	"time"
 
+	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"golang.org/x/xerrors"
 )
 
-type K8sConfig struct {
-	config *resources.K8sConfig
+type ConfigProvider struct {
+	config *K8sConfig
 	client clients.Kubernetes
-	log    clients.Logger
+	log    logger.Logger
 }
 
-// NewK8sConfig creates a provider which can create and destroy kubernetes configuration
-func NewK8sConfig(c *resources.K8sConfig, kc clients.Kubernetes, l clients.Logger) *K8sConfig {
-	return &K8sConfig{c, kc, l}
-}
+func (p *ConfigProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+	c, ok := cfg.(*K8sConfig)
+	if !ok {
+		return fmt.Errorf("unable to initialize Config provider, resource is not of type K8sConfig")
+	}
 
-// Create the Kubernetes resources defined by the config
-func (c *K8sConfig) Create() error {
-	c.log.Info("Applying Kubernetes configuration", "ref", c.config.Name, "config", c.config.Paths)
-
-	err := c.setup()
+	cli, err := clients.GenerateClients(l)
 	if err != nil {
 		return err
 	}
 
-	err = c.client.Apply(c.config.Paths, c.config.WaitUntilReady)
+	p.config = c
+	p.client = cli.Kubernetes
+	p.log = l
+
+	return nil
+}
+
+// Create the Kubernetes resources defined by the config
+func (p *ConfigProvider) Create() error {
+	p.log.Info("Applying Kubernetes configuration", "ref", p.config.Name, "config", p.config.Paths)
+
+	err := p.setup()
+	if err != nil {
+		return err
+	}
+
+	err = p.client.Apply(p.config.Paths, p.config.WaitUntilReady)
 	if err != nil {
 		return err
 	}
 
 	// run any health checks
-	if c.config.HealthCheck != nil && len(c.config.HealthCheck.Pods) > 0 {
-		to, err := time.ParseDuration(c.config.HealthCheck.Timeout)
+	if p.config.HealthCheck != nil && len(p.config.HealthCheck.Pods) > 0 {
+		to, err := time.ParseDuration(p.config.HealthCheck.Timeout)
 		if err != nil {
 			return xerrors.Errorf("unable to parse healthcheck duration: %w", err)
 		}
 
-		err = c.client.HealthCheckPods(c.config.HealthCheck.Pods, to)
+		err = p.client.HealthCheckPods(p.config.HealthCheck.Pods, to)
 		if err != nil {
 			return xerrors.Errorf("healthcheck failed after helm chart setup: %w", err)
 		}
@@ -51,46 +65,41 @@ func (c *K8sConfig) Create() error {
 }
 
 // Destroy the Kubernetes resources defined by the config
-func (c *K8sConfig) Destroy() error {
-	c.log.Info("Destroy Kubernetes configuration", "ref", c.config.Name, "config", c.config.Paths)
+func (p *ConfigProvider) Destroy() error {
+	p.log.Info("Destroy Kubernetes configuration", "ref", p.config.ID, "config", p.config.Paths)
 
-	err := c.setup()
+	err := p.setup()
 	if err != nil {
 		return err
 	}
 
-	err = c.client.Delete(c.config.Paths)
+	err = p.client.Delete(p.config.Paths)
 	if err != nil {
-		c.log.Debug("There was a problem destroying Kubernetes config, logging message but ignoring error", "ref", c.config.Name, "error", err)
+		p.log.Debug("There was a problem destroying Kubernetes config, logging message but ignoring error", "ref", p.config.ID, "error", err)
 	}
 	return nil
 }
 
 // Lookup the Kubernetes resources defined by the config
-func (c *K8sConfig) Lookup() ([]string, error) {
+func (p *ConfigProvider) Lookup() ([]string, error) {
 	return []string{}, nil
 }
 
-func (c *K8sConfig) Refresh() error {
-	c.log.Debug("Refresh Kubernetes configuration", "ref", c.config.Name)
+func (p *ConfigProvider) Refresh() error {
+	p.log.Debug("Refresh Kubernetes configuration", "ref", p.config.ID)
 
 	return nil
 }
 
-func (c *K8sConfig) Changed() (bool, error) {
-	c.log.Debug("Checking changes", "ref", c.config.Name)
+func (p *ConfigProvider) Changed() (bool, error) {
+	p.log.Debug("Checking changes", "ref", p.config.ID)
 
 	return false, nil
 }
 
-func (c *K8sConfig) setup() error {
-	cluster, err := c.config.ParentConfig.FindResource(c.config.Cluster)
-	if err != nil {
-		return xerrors.Errorf("Unable to find associated cluster: %w", cluster)
-	}
-
-	_, destPath, _ := utils.CreateKubeConfigPath(cluster.Metadata().Name)
-	c.client, err = c.client.SetConfig(destPath)
+func (p *ConfigProvider) setup() error {
+	var err error
+	p.client, err = p.client.SetConfig(p.config.Cluster.KubeConfig)
 	if err != nil {
 		return xerrors.Errorf("unable to create Kubernetes client: %w", err)
 	}

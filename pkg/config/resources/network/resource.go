@@ -1,4 +1,4 @@
-package resources
+package network
 
 import "github.com/jumppad-labs/hclconfig/types"
 

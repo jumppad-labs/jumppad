@@ -1,7 +1,8 @@
-package resources
+package k8s
 
 import (
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/healthcheck"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -12,15 +13,15 @@ const TypeK8sConfig string = "k8s_config"
 type K8sConfig struct {
 	types.ResourceMetadata `hcl:",remain"`
 
-	// Cluster is the name of the cluster to apply configuration to
-	Cluster string `hcl:"cluster" json:"cluster"`
+	Cluster K8sCluster `hcl:"cluster" json:"cluster"`
+
 	// Path of a file or directory of Kubernetes config files to apply
 	Paths []string `hcl:"paths" validator:"filepath" json:"paths"`
 	// WaitUntilReady when set to true waits until all resources have been created and are in a "Running" state
 	WaitUntilReady bool `hcl:"wait_until_ready" json:"wait_until_ready"`
 
 	// HealthCheck defines a health check for the resource
-	HealthCheck *HealthCheckKubernetes `hcl:"health_check,block" json:"health_check,omitempty"`
+	HealthCheck *healthcheck.HealthCheckKubernetes `hcl:"health_check,block" json:"health_check,omitempty"`
 }
 
 func (k *K8sConfig) Process() error {

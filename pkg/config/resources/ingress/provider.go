@@ -1,93 +1,91 @@
-package providers
+package ingress
 
 import (
 	"fmt"
 	"net"
 
+	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/connector"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"golang.org/x/xerrors"
 )
 
 // Ingress defines a provider for handling connection ingress for a cluster
-type Ingress struct {
-	config    *resources.Ingress
+type Provider struct {
+	config    *Ingress
 	client    container.ContainerTasks
 	connector connector.Connector
-	log       clients.Logger
+	log       logger.Logger
 }
 
-// NewIngress creates a new ingress provider
-func NewIngress(
-	c *resources.Ingress,
-	cc container.ContainerTasks,
-	co connector.Connector,
-	l clients.Logger) *Ingress {
+func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
+	c, ok := cfg.(*Ingress)
+	if !ok {
+		return fmt.Errorf("unable to initialize Ingress provider, resource is not of type Ingress")
+	}
 
-	return &Ingress{c, cc, co, l}
+	cli, err := clients.GenerateClients(l)
+	if err != nil {
+		return err
+	}
+
+	p.config = c
+	p.client = cli.ContainerTasks
+	p.connector = cli.Connector
+	p.log = l
+
+	return nil
 }
 
-func (c *Ingress) Create() error {
-	c.log.Info("Create Ingress", "ref", c.config.ID)
+func (p *Provider) Create() error {
+	p.log.Info("Create Ingress", "ref", p.config.ID)
 
-	return c.exposeRemote()
-	//if c.config.Destination.Driver == "local" {
-	//}
-
-	//if c.config.Destination.Driver == "k8s" {
-	//	return c.exposeK8sRemote()
-	//}
+	return p.exposeRemote()
 }
 
 // Destroy satisfies the interface method but is not implemented by LocalExec
-func (c *Ingress) Destroy() error {
-	c.log.Info("Destroy Ingress", "ref", c.config.ID, "id", c.config.IngressID)
+func (p *Provider) Destroy() error {
+	p.log.Info("Destroy Ingress", "ref", p.config.ID, "id", p.config.IngressID)
 
-	err := c.connector.RemoveService(c.config.IngressID)
+	err := p.connector.RemoveService(p.config.IngressID)
 	if err != nil {
 		// fail silently as this should not stop us from destroying the
 		// other resources
-		c.log.Warn("Unable to remove local ingress", "ref", c.config.Name, "id", c.config.IngressID, "error", err)
+		p.log.Warn("Unable to remove local ingress", "ref", p.config.Name, "id", p.config.IngressID, "error", err)
 	}
 
 	return nil
 }
 
 // Lookup satisfies the interface method but is not implemented by LocalExec
-func (c *Ingress) Lookup() ([]string, error) {
-	c.log.Debug("Lookup Ingress", "ref", c.config.ID, "id", c.config.IngressID)
+func (p *Provider) Lookup() ([]string, error) {
+	p.log.Debug("Lookup Ingress", "ref", p.config.ID, "id", p.config.IngressID)
 
 	return []string{}, nil
 }
 
-func (c *Ingress) Refresh() error {
-	c.log.Debug("Refresh Ingress", "ref", c.config.Name)
+func (p *Provider) Refresh() error {
+	p.log.Debug("Refresh Ingress", "ref", p.config.ID)
 
 	return nil
 }
 
-func (c *Ingress) Changed() (bool, error) {
-	c.log.Debug("Checking changes", "ref", c.config.Name)
+func (p *Provider) Changed() (bool, error) {
+	p.log.Debug("Checking changes", "ref", p.config.ID)
 
 	return false, nil
 }
 
-func (c *Ingress) exposeRemote() error {
-	// get the target
-	r, err := c.config.ParentConfig.FindResource(c.config.Target.ID)
-	if err != nil {
-		return err
-	}
-
+func (p *Provider) exposeRemote() error {
 	// check if the port is in use, if so, return an immediate error
-	c.log.Debug("Checking if port is available", "port", c.config.Port)
-	tc, err := net.Dial("tcp", fmt.Sprintf("0.0.0.0:%d", c.config.Port))
+	p.log.Debug("Checking if port is available", "port", p.config.Port)
+	tc, err := net.Dial("tcp", fmt.Sprintf("0.0.0.0:%d", p.config.Port))
 	if err == nil {
-		c.log.Debug("Port in use", "port", c.config.Port)
-		return fmt.Errorf("unable to create ingress port %d in use", c.config.Port)
+		p.log.Debug("Port in use", "port", p.config.Port)
+		return fmt.Errorf("unable to create ingress port %d in use", p.config.Port)
 	}
 
 	if tc != nil {
@@ -99,55 +97,53 @@ func (c *Ingress) exposeRemote() error {
 
 	// destination address depends on the type of the cluster
 	destAddr := ""
-	port := fmt.Sprintf("%d", c.config.Target.Port)
+	port := fmt.Sprintf("%d", p.config.Target.Port)
 
-	if c.config.Target.NamedPort != "" {
-		port = c.config.Target.NamedPort
+	if p.config.Target.NamedPort != "" {
+		port = p.config.Target.NamedPort
 	}
 
-	switch r.Metadata().Type {
-	case resources.TypeK8sCluster:
+	if p.config.Target.Kubernetes != nil {
 		destAddr = fmt.Sprintf(
 			"%s.%s.svc:%s",
-			c.config.Target.Config["service"],
-			c.config.Target.Config["namespace"],
+			p.config.Target.Config["service"],
+			p.config.Target.Config["namespace"],
 			port,
 		)
 
-		k8s := r.(*resources.K8sCluster)
-		connectorAddress = fmt.Sprintf("%s:%d", k8s.ExternalIP, k8s.ConnectorPort)
+		connectorAddress = fmt.Sprintf("%s:%d", p.config.Target.Kubernetes.ExternalIP, p.config.Target.Kubernetes.ConnectorPort)
+	}
 
-	case resources.TypeNomadCluster:
+	if p.config.Target.Nomad != nil {
 		destAddr = fmt.Sprintf(
 			"%s.%s.%s:%s",
-			c.config.Target.Config["job"],
-			c.config.Target.Config["group"],
-			c.config.Target.Config["task"],
+			p.config.Target.Config["job"],
+			p.config.Target.Config["group"],
+			p.config.Target.Config["task"],
 			port,
 		)
 
-		n3d := r.(*resources.NomadCluster)
-		connectorAddress = fmt.Sprintf("%s:%d", n3d.ExternalIP, n3d.ConnectorPort)
+		connectorAddress = fmt.Sprintf("%s:%d", p.config.Target.Nomad.ExternalIP, p.config.Target.Nomad.ConnectorPort)
 	}
 
 	// sanitize the name to make it uri format
-	serviceName, err := utils.ReplaceNonURIChars(c.config.Name)
+	serviceName, err := utils.ReplaceNonURIChars(p.config.Name)
 	if err != nil {
-		return xerrors.Errorf("unable to replace non URI characters in service name %s :%w", c.config.Name, err)
+		return xerrors.Errorf("unable to replace non URI characters in service name %s :%w", p.config.Name, err)
 	}
 
 	// send the request
-	c.log.Debug(
+	p.log.Debug(
 		"Calling connector to expose local service",
 		"name", serviceName,
-		"local_port", c.config.Port,
+		"local_port", p.config.Port,
 		"connector_addr", connectorAddress,
 		"remote_addr", destAddr,
 	)
 
-	id, err := c.connector.ExposeService(
+	id, err := p.connector.ExposeService(
 		serviceName,
-		c.config.Port,
+		p.config.Port,
 		connectorAddress,
 		destAddr,
 		"remote",
@@ -157,11 +153,11 @@ func (c *Ingress) exposeRemote() error {
 		return xerrors.Errorf("unable to expose remote service on cluster :%w", err)
 	}
 
-	addr := fmt.Sprintf("%s:%d", utils.GetDockerIP(), c.config.Port)
-	c.log.Debug("Successfully exposed service", "id", id, "dest", destAddr, "addr", addr)
+	addr := fmt.Sprintf("%s:%d", utils.GetDockerIP(), p.config.Port)
+	p.log.Debug("Successfully exposed service", "id", id, "dest", destAddr, "addr", addr)
 
-	c.config.IngressID = id
-	c.config.Address = addr
+	p.config.IngressID = id
+	p.config.Address = addr
 
 	return nil
 }

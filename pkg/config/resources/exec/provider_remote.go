@@ -3,10 +3,12 @@ package exec
 import (
 	"fmt"
 
-	"github.com/jumppad-labs/hclconfig/types"
+	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+	cclient "github.com/jumppad-labs/jumppad/pkg/clients/container"
+	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"golang.org/x/xerrors"
 )
@@ -15,88 +17,83 @@ import (
 // can create a new container before running
 type RemoteProvider struct {
 	config *RemoteExec
-	client container.ContainerTasks
-	log    clients.Logger
+	client cclient.ContainerTasks
+	log    logger.Logger
 }
 
-// NewRemoteExec creates a new Exec provider
-func NewRemoteProvider(c *RemoteExec, ex clients.ContainerTasks, l clients.Logger) *RemoteProvider {
-	return &RemoteProvider{c, ex, l}
+func (p *RemoteProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+	c, ok := cfg.(*RemoteExec)
+	if !ok {
+		return fmt.Errorf("unable to initialize ImageCache provider, resource is not of type ImageCache")
+	}
+
+	cli, err := clients.GenerateClients(l)
+	if err != nil {
+		return err
+	}
+
+	p.config = c
+	p.client = cli.ContainerTasks
+	p.log = l
+
+	return nil
 }
 
 // Create a new execution instance
-func (c *RemoteExec) Create() error {
-	c.log.Info("Remote executing script", "ref", c.config.ID)
+func (p *RemoteProvider) Create() error {
+	p.log.Info("Remote executing script", "ref", p.config.ID)
 
 	// execution target id
 	targetID := ""
 
-	if c.config.Target == "" {
+	if p.config.Target == "" {
 		// Not using existing target create new container
-		id, err := c.createRemoteExecContainer()
+		id, err := p.createRemoteExecContainer()
 		if err != nil {
-			return xerrors.Errorf("unable to create container for exec_remote.%s: %w", c.config.Name, err)
+			return xerrors.Errorf("unable to create container for exec_remote.%s: %w", p.config.Name, err)
 		}
 
 		targetID = id
 	} else {
-		// Fetch the id for the target
-		target, err := c.config.ParentConfig.FindResource(c.config.Target)
+		ids, err := c.client.FindContainerIDs(p.config.Target)
 		if err != nil {
-			// this should never happen
-			return xerrors.Errorf("unable to find target %s: %w", c.config.Target, err)
+			return xerrors.Errorf("unable to find remote exec target: %w", err)
 		}
 
-		switch target.Metadata().Type {
-		case resources.TypeK8sCluster:
-			fallthrough
-		case resources.TypeNomadCluster:
-			fallthrough
-		case container.TypeSidecar:
-			fallthrough
-		case container.TypeContainer:
-			fqdn := utils.FQDN(target.Metadata().Name, target.Metadata().Module, target.Metadata().Type)
-			ids, err := c.client.FindContainerIDs(fqdn)
-
-			if err != nil {
-				return xerrors.Errorf("unable to find remote exec target: %w", err)
-			}
-
-			if len(ids) != 1 {
-				return xerrors.Errorf("unable to find remote exec target %s", fqdn)
-			}
-
-			targetID = ids[0]
+		if len(ids) != 1 {
+			return xerrors.Errorf("unable to find remote exec target %s", fqdn)
 		}
+
+		targetID = ids[0]
 	}
 
 	// execute the script in the container
-	script := c.config.Script
+	script := p.config.Script
 
 	// build the environment variables
 	envs := []string{}
 
-	for k, v := range c.config.Environment {
+	for k, v := range p.config.Environment {
 		envs = append(envs, fmt.Sprintf("%s=%s", k, v))
 	}
 
 	user := ""
 	group := ""
 
-	if c.config.RunAs != nil {
-		user = c.config.RunAs.User
-		group = c.config.RunAs.Group
+	if p.config.RunAs != nil {
+		user = p.config.RunAs.User
+		group = p.config.RunAs.Group
 	}
 
-	_, err := c.client.ExecuteScript(targetID, script, envs, c.config.WorkingDirectory, user, group, 300, c.log.StandardWriter())
+	_, err := p.client.ExecuteScript(targetID, script, envs, p.config.WorkingDirectory, user, group, 300, p.log.StandardWriter())
 	if err != nil {
-		c.log.Error("Error executing command", "ref", c.config.Name, "image", c.config.Image, "script", c.config.Script)
+		p.log.Error("Error executing command", "ref", p.config.Name, "image", p.config.Image, "script", p.config.Script)
 		err = xerrors.Errorf("Unable to execute command: in remote container: %w", err)
 	}
 
 	// destroy the container if we created one
-	if c.config.Target == "" {
-		c.client.RemoveContainer(targetID, true)
+	if p.config.Target == "" {
+		p.client.RemoveContainer(targetID, true)
 	}
 
 	return err
@@ -104,58 +101,72 @@ func (c *RemoteExec) Create() error {
 
 // Destroy satisfies the interface requirements but is not used as the
 // resource is not persistent
-func (c *RemoteExec) Destroy() error {
+func (p *RemoteProvider) Destroy() error {
 	return nil
 }
 
 // Lookup satisfies the interface requirements but is not used
 // as the resource is not persistent
-func (c *RemoteExec) Lookup() ([]string, error) {
+func (p *RemoteProvider) Lookup() ([]string, error) {
 	return []string{}, nil
 }
 
-func (c *RemoteExec) Refresh() error {
-	c.log.Debug("Refresh Remote Exec", "ref", c.config.Name)
+func (p *RemoteProvider) Refresh() error {
+	p.log.Debug("Refresh Remote Exec", "ref", p.config.ID)
 
 	return nil
 }
 
-func (c *RemoteExec) Changed() (bool, error) {
-	c.log.Debug("Checking changes", "ref", c.config.Name)
+func (p *RemoteProvider) Changed() (bool, error) {
+	p.log.Debug("Checking changes", "ref", p.config.Name)
 
 	return false, nil
 }
 
-func (c *RemoteExec) createRemoteExecContainer() (string, error) {
+func (p *RemoteProvider) createRemoteExecContainer() (string, error) {
 	// generate the ID for the new container based on the clock time and a string
+	fqdn := utils.FQDN(p.config.Name, p.config.Type, p.config.Module)
 
-	cc := &container.Container{
-		ResourceMetadata: types.ResourceMetadata{
-			Name:   fmt.Sprintf("%s.remote_exec", c.config.Name),
-			Type:   c.config.Type,
-			Module: c.config.Module,
-		},
+	new := ctypes.Container{
+		Name:        fqdn,
+		Image:       &ctypes.Image{Name: p.config.Image.Name, Username: p.config.Image.Username, Password: p.config.Image.Password},
+		Environment: p.config.Environment,
 	}
 
-	cc.ParentConfig = c.config.Metadata().ParentConfig
+	for _, v := range p.config.Networks {
+		new.Networks = append(new.Networks, types.NetworkAttachment{
+			ID:        v.ID,
+			Name:      v.Name,
+			IPAddress: v.IPAddress,
+			Aliases:   v.Aliases,
+		})
+	}
 
-	cc.Networks = c.config.Networks
-	cc.Image = c.config.Image
-	cc.Entrypoint = []string{}
-	cc.Command = []string{"tail", "-f", "/dev/null"} // ensure container does not immediately exit
-	cc.Volumes = c.config.Volumes
+	for _, v := range p.config.Volumes {
+		new.Volumes = append(new.Volumes, types.Volume{
+			Source:                      v.Source,
+			Destination:                 v.Destination,
+			Type:                        v.Type,
+			ReadOnly:                    v.ReadOnly,
+			BindPropagation:             v.BindPropagation,
+			BindPropagationNonRecursive: v.BindPropagationNonRecursive,
+		})
+	}
+
+	new.Entrypoint = []string{}
+	new.Command = []string{"tail", "-f", "/dev/null"} // ensure container does not immediately exit
 
 	// pull any images needed for this container
-	err := c.client.PullImage(*cc.Image, false)
+	err := p.client.PullImage(*new.Image, false)
 	if err != nil {
-		c.log.Error("Error pulling container image", "ref", cc.Name, "image", cc.Image.Name)
+		p.log.Error("Error pulling container image", "ref", p.config.ID, "image", new.Image.Name)
 
 		return "", err
 	}
 
-	id, err := c.client.CreateContainer(cc)
+	id, err := p.client.CreateContainer(new)
 	if err != nil {
-		c.log.Error("Error creating container for remote exec", "ref", c.config.Name, "image", c.config.Image, "networks", c.config.Networks, "volumes", c.config.Volumes)
+		p.log.Error("Error creating container for remote exec", "ref", p.config.Name, "image", p.config.Image, "networks", p.config.Networks, "volumes", p.config.Volumes)
 		return "", err
 	}
 

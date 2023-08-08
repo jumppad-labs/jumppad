@@ -1,7 +1,9 @@
-package resources
+package helm
 
 import (
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/healthcheck"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/k8s"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -14,7 +16,7 @@ type Helm struct {
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 
-	Cluster string `hcl:"cluster" json:"cluster"`
+	Cluster k8s.K8sCluster `hcl:"cluster" json:"cluster"`
 
 	// Optional HelmRepository, if specified will try to download the chart from the give repository
 	Repository *HelmRepository `hcl:"repository,block" json:"repository"`
@@ -44,7 +46,7 @@ type Helm struct {
 	Timeout string `hcl:"timeout,optional" json:"timeout"`
 
 	// Define health checks for the pods deployed by the chart
-	HealthCheck *HealthCheckKubernetes `hcl:"health_check,block" json:"health_check,omitempty"`
+	HealthCheck *healthcheck.HealthCheckKubernetes `hcl:"health_check,block" json:"health_check,omitempty"`
 }
 
 type HelmRepository struct {

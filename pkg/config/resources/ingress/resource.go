@@ -1,9 +1,12 @@
-package resources
+package ingress
 
 import (
 	"fmt"
 
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/config"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/k8s"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/nomad"
 )
 
 // TypeIngress is the resource string for the type
@@ -33,8 +36,8 @@ type Ingress struct {
 
 // Traffic defines either a source or a destination block for ingress traffic
 type TrafficTarget struct {
-	// ID of the resource that the ingress is linked to
-	ID string `hcl:"id" json:"id"`
+	Kubernetes *k8s.K8sCluster     `hcl:"kubernetes" json:"kubernetes,omitempty"`
+	Nomad      *nomad.NomadCluster `hcl:"nomad" json:"nomad,omitempty"`
 
 	Port      int    `hcl:"port,optional" json:"port,omitempty"`
 	NamedPort string `hcl:"named_port,optional" json:"named_port,omitempty"`
@@ -58,7 +61,7 @@ func (i *Ingress) Process() error {
 
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
-	c, err := LoadState()
+	c, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
 		r, _ := c.FindResource(i.ID)

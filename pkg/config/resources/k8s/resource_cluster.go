@@ -1,9 +1,11 @@
-package resources
+package k8s
 
 import (
 	"fmt"
 
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/config"
+	ctypes "github.com/jumppad-labs/jumppad/pkg/config/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -15,17 +17,17 @@ type K8sCluster struct {
 	// embedded type holding name, etc.
 	types.ResourceMetadata `hcl:",remain"`
 
-	Networks []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
+	Networks []ctypes.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
-	Image   *Image   `hcl:"image,block" json:"images,omitempty"` // optional image to use when creating the cluster
-	Nodes   int      `hcl:"nodes,optional" json:"nodes,omitempty"`
-	Volumes []Volume `hcl:"volume,block" json:"volumes,omitempty"` // volumes to attach to the cluster
+	Image   *ctypes.Image   `hcl:"image,block" json:"images,omitempty"` // optional image to use when creating the cluster
+	Nodes   int             `hcl:"nodes,optional" json:"nodes,omitempty"`
+	Volumes []ctypes.Volume `hcl:"volume,block" json:"volumes,omitempty"` // volumes to attach to the cluster
 
 	// Images that will be copied from the local docker cache to the cluster
-	CopyImages []Image `hcl:"copy_image,block" json:"copy_images,omitempty"`
+	CopyImages []ctypes.Image `hcl:"copy_image,block" json:"copy_images,omitempty"`
 
-	Ports      []Port      `hcl:"port,block" json:"ports,omitempty"`             // ports to expose
-	PortRanges []PortRange `hcl:"port_range,block" json:"port_ranges,omitempty"` // range of ports to expose
+	Ports      []ctypes.Port      `hcl:"port,block" json:"ports,omitempty"`             // ports to expose
+	PortRanges []ctypes.PortRange `hcl:"port_range,block" json:"port_ranges,omitempty"` // range of ports to expose
 
 	Environment map[string]string `hcl:"environment,optional" json:"environment,omitempty"` // environment variables to set when starting the container
 
@@ -58,7 +60,7 @@ func (k *K8sCluster) Process() error {
 	}
 
 	if k.Image == nil {
-		k.Image = &Image{Name: fmt.Sprintf("%s:%s", k3sBaseImage, k3sBaseVersion)}
+		k.Image = &ctypes.Image{Name: fmt.Sprintf("%s:%s", k3sBaseImage, k3sBaseVersion)}
 	}
 
 	for i, v := range k.Volumes {
@@ -67,7 +69,7 @@ func (k *K8sCluster) Process() error {
 
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
-	c, err := LoadState()
+	c, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
 		r, _ := c.FindResource(k.ID)

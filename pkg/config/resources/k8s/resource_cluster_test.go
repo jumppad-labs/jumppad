@@ -1,10 +1,11 @@
-package resources
+package k8s
 
 import (
 	"os"
 	"testing"
 
 	"github.com/jumppad-labs/hclconfig/types"
+	ctypes "github.com/jumppad-labs/jumppad/pkg/config/container/types"
 	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -15,7 +16,7 @@ func TestK8sClusterProcessSetsAbsolute(t *testing.T) {
 
 	c := &K8sCluster{
 		ResourceMetadata: types.ResourceMetadata{File: "./"},
-		Volumes: []Volume{
+		Volumes: []ctypes.Volume{
 			{
 				Source:      "./",
 				Destination: "./",
@@ -54,8 +55,8 @@ func TestK8sClusterSetsOutputsFromState(t *testing.T) {
 		ResourceMetadata: types.ResourceMetadata{
 			ID: "resource.k8s_cluster.test",
 		},
-		Networks: []NetworkAttachment{
-			NetworkAttachment{},
+		Networks: []ctypes.NetworkAttachment{
+			ctypes.NetworkAttachment{},
 		},
 	}
 

@@ -1,4 +1,4 @@
-package resources
+package ingress
 
 import (
 	"testing"
