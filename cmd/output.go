@@ -8,7 +8,7 @@ import (
 
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/spf13/cobra"
 )
 
@@ -19,7 +19,7 @@ var outputCmd = &cobra.Command{
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		// load the stack
-		cfg, err := resources.LoadState()
+		cfg, err := config.LoadState()
 		if err != nil {
 			cmd.Println("Error: Unable to load state, ", err)
 			os.Exit(1)

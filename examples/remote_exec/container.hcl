@@ -17,7 +17,7 @@ resource "container" "alpine" {
 }
 
 resource "remote_exec" "in_container" {
-  target = resource.container.alpine.id
+  target = resource.container.alpine
 
   script = <<-EOF
   #/bin/sh -e

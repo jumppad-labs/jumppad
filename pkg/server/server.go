@@ -9,16 +9,16 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 )
 
 type API struct {
 	server *http.Server
-	log    clients.Logger
+	log    logger.Logger
 }
 
 // New creates a new server
-func New(addr string, l clients.Logger) *API {
+func New(addr string, l logger.Logger) *API {
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)

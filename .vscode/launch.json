@@ -36,10 +36,26 @@
       },
       "args": [
         "up",
-        "--var='client_nodes=4'",
-        "./examples/nomad",
-      ]
-    },    {
+        "${input:blueprint}",
+      ],
+      "runOptions": { "reevaluateOnRerun": false}
+    },
+    {
+      "name": "Debug - Dev",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}",
+      "env": {
+        "LOG_LEVEL": "debug"
+      },
+      "args": [
+        "dev",
+        "${input:blueprint}",
+      ],
+      "runOptions": { "reevaluateOnRerun": false}
+    }, 
+    {
       "name": "Debug - Down",
       "type": "go",
       "request": "launch",
@@ -78,8 +94,24 @@
       },
       "args": [
         "test",
-        "./examples/build",
-      ]
+        "${input:blueprint}",
+      ],
+      "runOptions": { "reevaluateOnRerun": false}
+    }
+  ],
+  "inputs": [
+    {
+      "id": "blueprint",
+      "type": "command",
+      "command": "extension.commandvariable.file.pickFile",
+      "args": {
+        "include": "*/*",
+        "exclude": "**/.vscode",
+        "display": "fileName",
+        "description": "Blueprint to use",
+        "showDirs": true,
+        "fromFolder": { "fixed": "${workspaceFolder}/examples/" }
+      }
     }
   ]
 }

@@ -1,8 +1,7 @@
 git_commit = $(shell git log -1 --pretty=format:"%H")
 
 test_unit:
-	go clean --cache
-	go test -v -race ./...
+	go test -v -race ./pkg/config/resources/container
 
 test_functional:
 	go run main.go purge

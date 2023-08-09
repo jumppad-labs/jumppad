@@ -6,11 +6,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 )
 
 type LogView struct {
-	logger           clients.Logger
+	logger           logger.Logger
 	statusMessage    string
 	statusTimer      bool
 	statusTimerStart time.Time
@@ -18,7 +18,7 @@ type LogView struct {
 
 func NewLogView() (*LogView, error) {
 	c := &LogView{}
-	c.logger = clients.NewLogger(os.Stdout, clients.LogLevelDebug)
+	c.logger = logger.NewLogger(os.Stdout, logger.LogLevelDebug)
 
 	return c, nil
 }
@@ -40,7 +40,7 @@ func (c *LogView) Display() error {
 }
 
 // Logger returns the logger used by the view
-func (c *LogView) Logger() clients.Logger {
+func (c *LogView) Logger() logger.Logger {
 	return c.logger
 }
 

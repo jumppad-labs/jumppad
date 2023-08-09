@@ -2,8 +2,9 @@ package view
 
 import (
 	"fmt"
+	"os"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -16,7 +17,7 @@ var statuses = []string{
 
 type TTYView struct {
 	program      *tea.Program
-	logger       clients.Logger
+	logger       logger.Logger
 	initialModel model
 }
 
@@ -26,10 +27,17 @@ func NewTTYView() (*TTYView, error) {
 
 	mw := &messageWriter{}
 
-	c.logger = clients.NewTTYLogger(mw, clients.LogLevelInfo)
+	level, present := os.LookupEnv("LOG_LEVEL")
+	if !present {
+		level = logger.LogLevelInfo
+	}
+
+	c.logger = logger.NewTTYLogger(mw, level)
+	c.logger.SetLevel(level)
+
 	c.initialModel.logger = c.logger
 
-	c.program = tea.NewProgram(c.initialModel, tea.WithAltScreen())
+	c.program = tea.NewProgram(c.initialModel, tea.WithAltScreen(), tea.WithMouseAllMotion())
 
 	// once the program has been created set a reference to the writer so that
 	// log lines get directed to bubbletea
@@ -48,7 +56,7 @@ func (c *TTYView) Display() error {
 }
 
 // Logger returns the logger used by the view
-func (c *TTYView) Logger() clients.Logger {
+func (c *TTYView) Logger() logger.Logger {
 	return c.logger
 }
 

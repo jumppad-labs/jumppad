@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/muesli/reflow/wordwrap"
 )
 
@@ -30,7 +30,7 @@ type model struct {
 	statusbar StatusModel
 	messages  []string
 	follow    bool
-	logger    clients.Logger
+	logger    logger.Logger
 }
 
 type KeyMap struct {
@@ -96,23 +96,30 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.MouseMsg:
 		switch msg.Type {
+		case tea.MouseWheelDown:
+			fallthrough
 		case tea.MouseWheelUp:
 			m.follow = false
-		case tea.MouseWheelDown:
-			// noop for now
+
+			var cmd tea.Cmd
+			m.viewport, cmd = m.viewport.Update(msg)
+
+			return m, cmd
 		}
 
 	case tea.KeyMsg:
 		switch {
+		case key.Matches(msg, DefaultKeyMap.Filter):
+			m.follow = true
 		case key.Matches(msg, DefaultKeyMap.Up):
 			m.follow = false
 		case key.Matches(msg, DefaultKeyMap.Down):
 			// noop
 		case key.Matches(msg, DefaultKeyMap.Level):
 			if m.logger.IsDebug() {
-				m.logger.SetLevel(clients.LogLevelInfo)
+				m.logger.SetLevel(logger.LogLevelInfo)
 			} else {
-				m.logger.SetLevel(clients.LogLevelDebug)
+				m.logger.SetLevel(logger.LogLevelDebug)
 			}
 
 		case key.Matches(msg, DefaultKeyMap.Quit):
@@ -191,7 +198,20 @@ func (m model) headerView() string {
 }
 
 func (m model) footerView() string {
-	line := lipgloss.NewStyle().Foreground(lipgloss.Color("37")).Render(strings.Repeat("─", m.width-m.left))
+	level := "debug"
+	if m.logger.IsDebug() {
+		level = "info"
+	}
+
+	follow := ", [f] follow logs "
+
+	if m.follow {
+		follow = " "
+	}
+
+	keys := lipgloss.NewStyle().Foreground(lipgloss.Color("37")).Render(fmt.Sprintf("── [l] toggle log level %s, [mouse wheel up/down] scroll logs%s", level, follow))
+	line := lipgloss.NewStyle().Foreground(lipgloss.Color("37")).Render(strings.Repeat("─", m.width-m.left-len(keys)))
+	line = lipgloss.JoinHorizontal(lipgloss.Left, keys, line)
 
 	return lipgloss.JoinVertical(lipgloss.Top, line, m.statusbar.View())
 }

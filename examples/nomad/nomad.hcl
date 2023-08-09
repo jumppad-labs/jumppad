@@ -36,7 +36,7 @@ resource "nomad_cluster" "dev" {
 }
 
 resource "nomad_job" "example_2" {
-  cluster = resource.nomad_cluster.dev.id
+  cluster = resource.nomad_cluster.dev
 
   paths = ["./app_config/example2.nomad"]
 

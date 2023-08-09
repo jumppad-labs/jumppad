@@ -1,3 +1,3 @@
-resource "network" "onprem" {
-  subnet = "10.6.0.0/16"
+resource "network" "consul" {
+  subnet = "10.8.0.0/16"
 }

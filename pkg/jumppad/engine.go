@@ -8,14 +8,14 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/jumppad-labs/hclconfig"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/jumppad-labs/jumppad/pkg/config"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/cache"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/network"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad/constants"
-	"github.com/jumppad-labs/jumppad/pkg/providers"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -25,7 +25,6 @@ import (
 //
 //go:generate mockery --name Engine --filename engine.go
 type Engine interface {
-	GetClients() *clients.Clients
 	Apply(string) (*hclconfig.Config, error)
 
 	// ApplyWithVariables applies a configuration file or directory containing
@@ -41,87 +40,21 @@ type Engine interface {
 
 // EngineImpl is responsible for creating and destroying resources
 type EngineImpl struct {
-	clients     *clients.Clients
-	config      *hclconfig.Config
-	log         clients.Logger
-	getProvider getProviderFunc
-}
-
-// defines a function which is used for generating providers
-// enables the replacement in tests to inject mocks
-type getProviderFunc func(c types.Resource, cl *clients.Clients) providers.Provider
-
-// GenerateClients creates the various clients for creating and destroying resources
-func GenerateClients(l clients.Logger) (*clients.Clients, error) {
-	dc, err := clients.NewDocker()
-	if err != nil {
-		return nil, err
-	}
-
-	kc := clients.NewKubernetes(60*time.Second, l)
-
-	hec := clients.NewHelm(l)
-
-	ec := clients.NewCommand(30*time.Second, l)
-
-	hc := clients.NewHTTP(1*time.Second, l)
-
-	nc := clients.NewNomad(hc, 1*time.Second, l)
-
-	bp := clients.NewGetter(false)
-
-	bc := &clients.SystemImpl{}
-
-	il := clients.NewImageFileLog(utils.ImageCacheLog())
-
-	tgz := &clients.TarGz{}
-
-	ct := clients.NewDockerTasks(dc, il, tgz, l)
-
-	co := clients.DefaultConnectorOptions()
-	cc := clients.NewConnector(co)
-
-	return &clients.Clients{
-		ContainerTasks: ct,
-		Docker:         dc,
-		Kubernetes:     kc,
-		Helm:           hec,
-		Command:        ec,
-		HTTP:           hc,
-		Nomad:          nc,
-		Logger:         l,
-		Getter:         bp,
-		Browser:        bc,
-		ImageLog:       il,
-		Connector:      cc,
-		TarGz:          tgz,
-	}, nil
+	providers config.Providers
+	log       logger.Logger
+	config    *hclconfig.Config
 }
 
 // New creates a new shipyard engine
-func New(l clients.Logger) (Engine, error) {
-	var err error
+func New(p config.Providers, l logger.Logger) (Engine, error) {
 	e := &EngineImpl{}
 	e.log = l
-	e.getProvider = generateProviderImpl
+	e.providers = p
 
 	// Set the standard writer to our logger as the DAG uses the standard library log.
 	log.SetOutput(l.StandardWriter())
 
-	// create the clients
-	cl, err := GenerateClients(l)
-	if err != nil {
-		return nil, err
-	}
-
-	e.clients = cl
-
 	return e, nil
-}
-
-// GetClients returns the clients from the engine
-func (e *EngineImpl) GetClients() *clients.Clients {
-	return e.clients
 }
 
 // Config returns the parsed config
@@ -147,7 +80,7 @@ func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]strin
 		return nil, err
 	}
 
-	e.log.Info("Parsing configuration", "path", path)
+	e.log.Debug("Parsing configuration", "path", path)
 
 	if variablesFile != "" {
 		variablesFile, err = filepath.Abs(variablesFile)
@@ -167,10 +100,14 @@ func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]strin
 }
 
 func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFile string) (
-	new []types.Resource, changed []types.Resource, removed []types.Resource, config *hclconfig.Config, err error,
-) {
+	[]types.Resource, []types.Resource, []types.Resource, *hclconfig.Config, error) {
+
+	var new []types.Resource
+	var changed []types.Resource
+	var removed []types.Resource
+
 	// load the stack
-	past, _ := resources.LoadState()
+	past, _ := config.LoadState()
 
 	// Parse the config to check it is valid
 	res, err := e.ParseConfigWithVariables(path, variables, variablesFile)
@@ -192,7 +129,7 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 		}
 
 		// check if the resource has changed
-		if cr.Metadata().Checksum != r.Metadata().Checksum {
+		if cr.Metadata().Checksum.Parsed != r.Metadata().Checksum.Parsed {
 			// resource has changes rebuild
 			changed = append(changed, r)
 			continue
@@ -205,7 +142,7 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 	// in the config
 	for _, r := range past.Resources {
 		// if this is the image cache continue as this is always added
-		if r.Metadata().Type == resources.TypeImageCache {
+		if r.Metadata().Type == cache.TypeImageCache {
 			continue
 		}
 
@@ -227,7 +164,7 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 	for _, r := range unchanged {
 		// call changed on when not disabled
 		if !r.Metadata().Disabled {
-			p := e.getProvider(r, e.clients)
+			p := e.providers.GetProvider(r)
 			if p == nil {
 				return nil, nil, nil, nil, fmt.Errorf("unable to create provider for resource Name: %s, Type: %s. Please check the provider is registered in providers.go", r.Metadata().Name, r.Metadata().Type)
 			}
@@ -276,7 +213,7 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 	}
 
 	// load the state
-	c, err := resources.LoadState()
+	c, err := config.LoadState()
 	if err != nil {
 		e.log.Debug("unable to load state", "error", err)
 	}
@@ -284,12 +221,12 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 	e.config = c
 
 	// check to see we already have an image cache
-	_, err = e.config.FindResourcesByType(resources.TypeImageCache)
+	_, err = e.config.FindResourcesByType(cache.TypeImageCache)
 	if err != nil {
-		cache := &resources.ImageCache{
+		cache := &cache.ImageCache{
 			ResourceMetadata: types.ResourceMetadata{
 				Name:       "default",
-				Type:       resources.TypeImageCache,
+				Type:       cache.TypeImageCache,
 				ID:         "resource.image_cache.default",
 				Properties: map[string]interface{}{},
 			},
@@ -297,10 +234,10 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 
 		e.log.Debug("Creating new Image Cache", "id", cache.ID)
 
-		p := e.getProvider(cache, e.clients)
+		p := e.providers.GetProvider(cache)
 		if p == nil {
 			// this should never happen
-			panic(err)
+			panic("Unable to find provider for Image Cache, Nic assured me that you should never see this message. Sorry, the monkey has broken something again")
 		}
 
 		// create the cache
@@ -315,7 +252,7 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 		e.config.AppendResource(cache)
 
 		// save the state
-		resources.SaveState(e.config)
+		config.SaveState(e.config)
 	}
 
 	// finally we can process and create resources
@@ -326,7 +263,7 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 	for _, r := range removed {
 		e.log.Debug("removing", "id", r.Metadata().ID)
 
-		p := e.getProvider(r, e.clients)
+		p := e.providers.GetProvider(r)
 		if p == nil {
 			processErr = fmt.Errorf("unable to create provider for resource Name: %s, Type: %s. Please check the provider is registered in providers.go", r.Metadata().Name, r.Metadata().Type)
 			continue
@@ -343,7 +280,7 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 	}
 
 	// save the state regardless of error
-	stateErr := resources.SaveState(e.config)
+	stateErr := config.SaveState(e.config)
 	if stateErr != nil {
 		e.log.Info("Unable to save state", "error", stateErr)
 	}
@@ -356,7 +293,7 @@ func (e *EngineImpl) Destroy() error {
 	e.log.Info("Destroying resources")
 
 	// load the state
-	c, err := resources.LoadState()
+	c, err := config.LoadState()
 	if err != nil {
 		e.log.Debug("State file does not exist")
 	}
@@ -407,7 +344,7 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 		variablesFiles = append(variablesFiles, variablesFile)
 	}
 
-	hclParser := resources.SetupHCLConfig(callback, variables, variablesFiles)
+	hclParser := config.NewParser(callback, variables, variablesFiles)
 
 	if utils.IsHCLFile(path) {
 		// ParseFile processes the HCL, builds a graph of resources then calls
@@ -461,7 +398,7 @@ func (e *EngineImpl) destroyDisabledResources() error {
 		if r.Metadata().Disabled &&
 			r.Metadata().Properties[constants.PropertyStatus] == constants.StatusCreated {
 
-			p := e.getProvider(r, e.clients)
+			p := e.providers.GetProvider(r)
 			if p == nil {
 				r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
 				return fmt.Errorf("unable to create provider for resource Name: %s, Type: %s. Please check the provider is registered in providers.go", r.Metadata().Name, r.Metadata().Type)
@@ -533,7 +470,7 @@ func (e *EngineImpl) appendModuleAndVariableResources(c *hclconfig.Config) error
 }
 
 func (e *EngineImpl) createCallback(r types.Resource) error {
-	p := e.getProvider(r, e.clients)
+	p := e.providers.GetProvider(r)
 	if p == nil {
 		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
 		return fmt.Errorf("unable to create provider for resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
@@ -592,7 +529,7 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 
 	// did we just create a network, if so we need to attach the image cache
 	// to the network and set the dependency
-	if r.Metadata().Type == resources.TypeNetwork && r.Metadata().Properties[constants.PropertyStatus] == constants.StatusCreated {
+	if r.Metadata().Type == network.TypeNetwork && r.Metadata().Properties[constants.PropertyStatus] == constants.StatusCreated {
 		// get the image cache
 		ic, err := e.config.FindResource("resource.image_cache.default")
 		if err == nil {
@@ -600,7 +537,7 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 			ic.Metadata().DependsOn = appendIfNotContains(ic.Metadata().DependsOn, r.Metadata().ID)
 
 			// reload the networks
-			np := e.getProvider(ic, e.clients)
+			np := e.providers.GetProvider(ic)
 			np.Refresh()
 		} else {
 			e.log.Error("Unable to find Image Cache", "error", err)
@@ -621,7 +558,7 @@ func (e *EngineImpl) destroyCallback(r types.Resource) error {
 		return nil
 	}
 
-	p := e.getProvider(r, e.clients)
+	p := e.providers.GetProvider(r)
 
 	if p == nil {
 		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed

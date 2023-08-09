@@ -3,13 +3,12 @@ package cmd
 import (
 	"os"
 
-	"github.com/hashicorp/go-hclog"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/connector"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
-func newDestroyCmd(cc clients.Connector) *cobra.Command {
+func newDestroyCmd(cc connector.Connector) *cobra.Command {
 	return &cobra.Command{
 		Use:     "down",
 		Short:   "Remove all resources in the current state",
@@ -17,8 +16,10 @@ func newDestroyCmd(cc clients.Connector) *cobra.Command {
 		Example: `jumppad down`,
 		Run: func(cmd *cobra.Command, args []string) {
 			err := engine.Destroy()
+			logger := createLogger()
+
 			if err != nil {
-				hclog.Default().Error("Unable to destroy stack", "error", err)
+				logger.Error("Unable to destroy stack", "error", err)
 				return
 			}
 
@@ -32,7 +33,7 @@ func newDestroyCmd(cc clients.Connector) *cobra.Command {
 			if cc.IsRunning() {
 				err = cc.Stop()
 				if err != nil {
-					hclog.Default().Error("Unable to stop ingress", "error", err)
+					logger.Error("Unable to destroy stack", "error", err)
 				}
 			}
 		},
