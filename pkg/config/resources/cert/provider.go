@@ -15,7 +15,9 @@ import (
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/pkg/errors"
+	"github.com/sethvargo/go-retry"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/xerrors"
 )
 
 type CAProvider struct {
@@ -159,93 +161,91 @@ func (p *LeafProvider) Create() error {
 	directory = path.Join(p.config.Output, directory)
 	os.MkdirAll(directory, os.ModePerm)
 
-	//keyFile := path.Join(directory, fmt.Sprintf("%s-leaf.key", p.config.Name))
-	//pubkeyFile := path.Join(directory, fmt.Sprintf("%s-leaf.pub", p.config.Name))
-	//pubsshFile := path.Join(directory, fmt.Sprintf("%s-leaf.ssh", p.config.Name))
-	//certFile := path.Join(directory, fmt.Sprintf("%s-leaf.cert", p.config.Name))
+	keyFile := path.Join(directory, fmt.Sprintf("%s-leaf.key", p.config.Name))
+	pubkeyFile := path.Join(directory, fmt.Sprintf("%s-leaf.pub", p.config.Name))
+	pubsshFile := path.Join(directory, fmt.Sprintf("%s-leaf.ssh", p.config.Name))
+	certFile := path.Join(directory, fmt.Sprintf("%s-leaf.cert", p.config.Name))
 
-	//ca := &crypto.X509{}
-	//err := ca.ReadFile(p.config.CACert)
-	//if err != nil {
-	//	return retry.RetryableError(xerrors.Errorf("Unable to read root certificate %s: %w", p.config.CACert, err))
-	//}
+	ca := &crypto.X509{}
+	err := ca.ReadFile(p.config.CACert)
+	if err != nil {
+		return retry.RetryableError(xerrors.Errorf("Unable to read root certificate %s: %w", p.config.CACert, err))
+	}
 
-	return nil
+	rk := crypto.NewKeyPair()
+	err = rk.Private.ReadFile(p.config.CAKey)
+	if err != nil {
+		return retry.RetryableError(xerrors.Errorf("Unable to read root key %s: %w", p.config.CAKey, err))
+	}
 
-	//rk := crypto.NewKeyPair()
-	//err = rk.Private.ReadFile(p.config.CAKey)
-	//if err != nil {
-	//	return retry.RetryableError(xerrors.Errorf("Unable to read root key %s: %w", p.config.CAKey, err))
-	//}
+	k, err := crypto.GenerateKeyPair()
+	if err != nil {
+		return err
+	}
 
-	//k, err := crypto.GenerateKeyPair()
-	//if err != nil {
-	//	return err
-	//}
+	lc, err := crypto.GenerateLeaf(p.config.Name, p.config.IPAddresses, p.config.DNSNames, ca, rk.Private, k.Private)
+	if err != nil {
+		return err
+	}
 
-	//lc, err := crypto.GenerateLeaf(p.config.Name, p.config.IPAddresses, p.config.DNSNames, ca, rk.Private, k.Private)
-	//if err != nil {
-	//	return err
-	//}
+	// output the public ssh key
+	ssh, err := publicPEMtoOpenSSH(k.Public.PEMBlock())
+	if err != nil {
+		return err
+	}
 
-	//// output the public ssh key
-	//ssh, err := publicPEMtoOpenSSH(k.Public.PEMBlock())
-	//if err != nil {
-	//	return err
-	//}
+	// Save the certificate
+	err = lc.WriteFile(certFile)
+	if err != nil {
+		return err
+	}
 
-	//// Save the certificate
-	//err = lc.WriteFile(certFile)
-	//if err != nil {
-	//	return err
-	//}
+	// Save the keys
+	err = k.Private.WriteFile(keyFile)
+	if err != nil {
+		return err
+	}
 
-	//// Save the keys
-	//err = k.Private.WriteFile(keyFile)
-	//if err != nil {
-	//	return err
-	//}
+	err = k.Public.WriteFile(pubkeyFile)
+	if err != nil {
+		return err
+	}
 
-	//err = k.Public.WriteFile(pubkeyFile)
-	//if err != nil {
-	//	return err
-	//}
+	err = ioutil.WriteFile(pubsshFile, []byte(ssh), os.ModePerm)
+	if err != nil {
+		return err
+	}
 
-	//err = ioutil.WriteFile(pubsshFile, []byte(ssh), os.ModePerm)
-	//if err != nil {
-	//	return err
-	//}
+	// set the outputs
+	p.config.PublicKeySSH = File{
+		Path:      pubsshFile,
+		Directory: directory,
+		Filename:  fmt.Sprintf("%s-leaf.ssh", p.config.Name),
+		Contents:  ssh,
+	}
 
-	//// set the outputs
-	//p.config.PublicKeySSH = &File{
-	//	Path:      pubsshFile,
-	//	Directory: directory,
-	//	Filename:  fmt.Sprintf("%s-leaf.ssh", p.config.Name),
-	//	Contents:  ssh,
-	//}
+	p.config.PublicKeyPEM = File{
+		Path:      pubkeyFile,
+		Directory: directory,
+		Filename:  fmt.Sprintf("%s-leaf.pub", p.config.Name),
+		Contents:  k.Public.String(),
+	}
 
-	//p.config.PublicKeyPEM = &File{
-	//	Path:      pubkeyFile,
-	//	Directory: directory,
-	//	Filename:  fmt.Sprintf("%s-leaf.pub", p.config.Name),
-	//	Contents:  k.Public.String(),
-	//}
+	p.config.Cert = File{
+		Path:      certFile,
+		Directory: directory,
+		Filename:  fmt.Sprintf("%s-leaf.cert", p.config.Name),
+		Contents:  lc.String(),
+	}
 
-	//p.config.Cert = &File{
-	//	Path:      certFile,
-	//	Directory: directory,
-	//	Filename:  fmt.Sprintf("%s-leaf.cert", p.config.Name),
-	//	Contents:  lc.String(),
-	//}
+	p.config.PrivateKey = File{
+		Path:      keyFile,
+		Directory: directory,
+		Filename:  fmt.Sprintf("%s-leaf.key", p.config.Name),
+		Contents:  k.Private.String(),
+	}
 
-	//p.config.PrivateKey = &File{
-	//	Path:      keyFile,
-	//	Directory: directory,
-	//	Filename:  fmt.Sprintf("%s-leaf.key", p.config.Name),
-	//	Contents:  k.Private.String(),
-	//}
-
-	//return err
+	return err
 }
 
 func (p *LeafProvider) Destroy() error {
