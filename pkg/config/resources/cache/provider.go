@@ -136,7 +136,7 @@ func (p *Provider) createImageCache(networks []string) (string, error) {
 	cc.Image = &types.Image{Name: cacheImage}
 
 	cc.Volumes = []types.Volume{
-		types.Volume{
+		{
 			Source:      utils.FQDNVolumeName("images"),
 			Destination: "/cache",
 			Type:        "volume",
@@ -154,7 +154,7 @@ func (p *Provider) createImageCache(networks []string) (string, error) {
 
 	// expose the docker proxy port on a random port num
 	cc.Ports = []types.Port{
-		types.Port{
+		{
 			Local:    "3128",
 			Host:     fmt.Sprintf("%d", rand.Intn(3000)+31000),
 			Protocol: "tcp",
@@ -207,7 +207,7 @@ func (p *Provider) reConfigureNetworks(dependentNetworks []string) error {
 	}
 
 	// flatten the docker object into a simple slice
-	for k, _ := range info.(dtypes.ContainerJSON).NetworkSettings.Networks {
+	for k := range info.(dtypes.ContainerJSON).NetworkSettings.Networks {
 		currentNetworks = append(currentNetworks, k)
 	}
 

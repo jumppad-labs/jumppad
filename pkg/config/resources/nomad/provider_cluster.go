@@ -389,12 +389,12 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 
 	// set the volume mount for the images and the config
 	cc.Volumes = []ctypes.Volume{
-		ctypes.Volume{
+		{
 			Source:      volumeID,
 			Destination: "/cache",
 			Type:        "volume",
 		},
-		ctypes.Volume{
+		{
 			Source:      serverConfigPath,
 			Destination: "/etc/nomad.d/config.hcl",
 			Type:        "bind",
@@ -443,17 +443,17 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 
 	// expose the API server port
 	cc.Ports = []ctypes.Port{
-		ctypes.Port{
+		{
 			Local:    "4646",
 			Host:     fmt.Sprintf("%d", p.config.APIPort),
 			Protocol: "tcp",
 		},
-		ctypes.Port{
+		{
 			Local:    fmt.Sprintf("%d", p.config.ConnectorPort),
 			Host:     fmt.Sprintf("%d", p.config.ConnectorPort),
 			Protocol: "tcp",
 		},
-		ctypes.Port{
+		{
 			Local:    fmt.Sprintf("%d", p.config.ConnectorPort+1),
 			Host:     fmt.Sprintf("%d", p.config.ConnectorPort+1),
 			Protocol: "tcp",
@@ -503,12 +503,12 @@ func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID 
 
 	// set the volume mount for the images and the config
 	cc.Volumes = []ctypes.Volume{
-		ctypes.Volume{
+		{
 			Source:      volumeID,
 			Destination: "/cache",
 			Type:        "volume",
 		},
-		ctypes.Volume{
+		{
 			Source:      clientConfigPath,
 			Destination: "/etc/nomad.d/config.hcl",
 			Type:        "bind",
@@ -564,7 +564,7 @@ func (p *ClusterProvider) appendProxyEnv(cc *ctypes.Container) error {
 	for _, n := range p.config.Networks {
 		net, err := p.client.FindNetwork(n.ID)
 		if err != nil {
-			return fmt.Errorf("Network not found: %w", err)
+			return fmt.Errorf("network not found: %w", err)
 		}
 
 		networkSubmasks = append(networkSubmasks, net.Subnet)
@@ -665,7 +665,7 @@ func (p *ClusterProvider) deployConnector() error {
 			break
 		}
 
-		lastError = fmt.Errorf("Connector not healthy")
+		lastError = fmt.Errorf("connector not healthy")
 	}
 
 	return lastError

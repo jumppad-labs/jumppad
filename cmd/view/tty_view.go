@@ -2,6 +2,7 @@ package view
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 
@@ -26,7 +27,12 @@ func NewTTYView() (*TTYView, error) {
 
 	mw := &messageWriter{}
 
-	c.logger = logger.NewTTYLogger(mw, logger.LogLevelInfo)
+	level, present := os.LookupEnv("LOG_LEVEL")
+	if !present {
+		level = logger.LogLevelInfo
+	}
+
+	c.logger = logger.NewTTYLogger(mw, level)
 	c.initialModel.logger = c.logger
 
 	c.program = tea.NewProgram(c.initialModel, tea.WithAltScreen())

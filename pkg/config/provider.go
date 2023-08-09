@@ -54,11 +54,13 @@ func NewProviders(c *clients.Clients) Providers {
 
 func (p *ProvidersImpl) GetProvider(r types.Resource) Provider {
 	// find the type
-	if t, ok := registeredProviders[r]; ok {
+	if t, ok := registeredProviders[r.Metadata().Type]; ok {
 		ptr := reflect.New(reflect.TypeOf(t).Elem())
 
 		prov := ptr.Interface().(Provider)
 		prov.Init(r, p.clients.Logger)
+
+		return prov
 	}
 
 	return nil

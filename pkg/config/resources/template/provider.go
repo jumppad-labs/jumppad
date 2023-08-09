@@ -174,6 +174,5 @@ func (p *TemplateProvider) Refresh() error {
 }
 
 func (p *TemplateProvider) Changed() (bool, error) {
-
 	return false, nil
 }

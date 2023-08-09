@@ -1,4 +1,4 @@
-package providers
+package null
 
 import (
 	"fmt"
@@ -9,35 +9,35 @@ import (
 )
 
 // Null is a noop provider
-type NullProvider struct {
+type Provider struct {
 	config types.Resource
 	log    logger.Logger
 }
 
-func (p *NullProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
 	p.config = cfg
 	p.log = l
 
 	return nil
 }
 
-func (p *NullProvider) Create() error {
+func (p *Provider) Create() error {
 	p.log.Info(fmt.Sprintf("Creating %s", p.config.Metadata().Type), "ref", p.config.Metadata().ID)
 	return nil
 }
 
-func (p *NullProvider) Destroy() error {
+func (p *Provider) Destroy() error {
 	return nil
 }
 
-func (p *NullProvider) Lookup() ([]string, error) {
+func (p *Provider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (p *NullProvider) Refresh() error {
+func (p *Provider) Refresh() error {
 	return nil
 }
 
-func (p *NullProvider) Changed() (bool, error) {
+func (p *Provider) Changed() (bool, error) {
 	return false, nil
 }

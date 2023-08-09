@@ -15,13 +15,13 @@ import (
 
 // NomadJob is a provider which enabled the creation and destruction
 // of Nomad jobs
-type NomadJobProvider struct {
+type JobProvider struct {
 	config *NomadJob
 	client nomad.Nomad
 	log    logger.Logger
 }
 
-func (p *NomadJobProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *JobProvider) Init(cfg htypes.Resource, l logger.Logger) error {
 	cli, err := clients.GenerateClients(l)
 	if err != nil {
 		return err
@@ -40,7 +40,7 @@ func (p *NomadJobProvider) Init(cfg htypes.Resource, l logger.Logger) error {
 }
 
 // Create the Nomad jobs defined by the config
-func (p *NomadJobProvider) Create() error {
+func (p *JobProvider) Create() error {
 	p.log.Info("Create Nomad Job", "ref", p.config.ID, "files", p.config.Paths)
 
 	nomadCluster := p.config.Cluster
@@ -70,7 +70,7 @@ func (p *NomadJobProvider) Create() error {
 				p.log.Debug("Checking health for", "ref", p.config.ID, "job", j)
 
 				s, err := p.client.JobRunning(j)
-				if err == nil && s == true {
+				if err == nil && s {
 					p.log.Debug("Health passed for", "ref", p.config.ID, "job", j)
 					break
 				}
@@ -93,7 +93,7 @@ func (p *NomadJobProvider) Create() error {
 }
 
 // Destroy the Nomad jobs defined by the config
-func (p *NomadJobProvider) Destroy() error {
+func (p *JobProvider) Destroy() error {
 	p.log.Info("Destroy Nomad Job", "ref", p.config.ID)
 
 	nomadCluster := p.config.Cluster
@@ -111,11 +111,11 @@ func (p *NomadJobProvider) Destroy() error {
 }
 
 // Lookup the Nomad jobs defined by the config
-func (p *NomadJobProvider) Lookup() ([]string, error) {
+func (p *JobProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (p *NomadJobProvider) Refresh() error {
+func (p *JobProvider) Refresh() error {
 	cp, err := p.getChangedPaths()
 	if err != nil {
 		return err
@@ -135,7 +135,7 @@ func (p *NomadJobProvider) Refresh() error {
 	return p.Create()
 }
 
-func (p *NomadJobProvider) Changed() (bool, error) {
+func (p *JobProvider) Changed() (bool, error) {
 	cp, err := p.getChangedPaths()
 	if err != nil {
 		return false, err
@@ -150,7 +150,7 @@ func (p *NomadJobProvider) Changed() (bool, error) {
 }
 
 // generateChecksums generates a sha256 checksum for each of the the paths
-func (p *NomadJobProvider) generateChecksums() ([]string, error) {
+func (p *JobProvider) generateChecksums() ([]string, error) {
 	checksums := []string{}
 
 	for _, p := range p.config.Paths {
@@ -184,7 +184,7 @@ func (p *NomadJobProvider) generateChecksums() ([]string, error) {
 
 // getChangedPaths returns the paths that have changed since the nomad jobs
 // were last applied
-func (p *NomadJobProvider) getChangedPaths() ([]string, error) {
+func (p *JobProvider) getChangedPaths() ([]string, error) {
 	// get the checksums
 	cs, err := p.generateChecksums()
 	if err != nil {

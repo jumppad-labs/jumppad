@@ -118,7 +118,7 @@ resource "container" "consul" {
 }
 
 resource "sidecar" "envoy" {
-  target = resource.container.consul.id
+  target = resource.container.consul
 
   image {
     name = "envoyproxy/envoy:v${variable.envoy_version}"

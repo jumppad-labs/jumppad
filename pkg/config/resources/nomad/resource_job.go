@@ -27,7 +27,7 @@ type NomadJob struct {
 	// output
 
 	// JobChecksums stores a checksum of the files or paths
-	JobChecksums []string `hcl:"job_checksums,optional" json:"job_checksums",omitempty"`
+	JobChecksums []string `hcl:"job_checksums,optional" json:"job_checksums,omitempty"`
 }
 
 func (n *NomadJob) Process() error {

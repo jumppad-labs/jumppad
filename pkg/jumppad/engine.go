@@ -237,7 +237,7 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 		p := e.providers.GetProvider(cache)
 		if p == nil {
 			// this should never happen
-			panic(err)
+			panic("Unable to find provider for Image Cache, Nic assured me that you should never see this message. Sorry, the monkey has broken something again")
 		}
 
 		// create the cache

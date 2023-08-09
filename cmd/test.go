@@ -34,6 +34,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/nomad"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	gvm "github.com/shipyard-run/version-manager"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/util/jsonpath"
 )
@@ -114,6 +115,7 @@ type CucumberRunner struct {
 	args          []string
 	e             jumppad.Engine
 	cli           *clients.Clients
+	vm            gvm.Versions
 	testFolder    string
 	testPath      string
 	basePath      string
@@ -163,14 +165,21 @@ func (cr *CucumberRunner) start() {
 }
 
 func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
-	cr.e, cr.cli, _ = createEngine(cr.l)
-
 	ctx.BeforeScenario(func(gs *godog.Scenario) {
 		// ensure the variables are not carried over from a previous scenario
 		envVars = map[string]string{}
 		commandOutput = bytes.NewBufferString("")
 		commandExitCode = 0
 		cr.variables = cr.baseVariables
+
+		logger := createLogger()
+
+		engine, cli, vm := createEngine(logger)
+
+		cr.e = engine
+		cr.l = logger
+		cr.cli = cli
+		cr.vm = vm
 
 		// do we need to pure the cache
 		if *cr.purge {
@@ -247,25 +256,18 @@ func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
 
 	args = []string{absPath}
 
-	logger := createLogger()
-
-	engine, cli, vm := createEngine(logger)
-
-	cr.e = engine
-	cr.l = logger
-
 	noOpen := true
 	approve := true
 
 	// re-use the run command
 	rc := newRunCmdFunc(
 		engine,
-		cli.ContainerTasks,
-		cli.Getter,
-		cli.HTTP,
-		cli.Browser,
-		vm,
-		cli.Connector,
+		cr.cli.ContainerTasks,
+		cr.cli.Getter,
+		cr.cli.HTTP,
+		cr.cli.Browser,
+		cr.vm,
+		cr.cli.Connector,
 		&noOpen,
 		cr.force,
 		&version,
@@ -280,7 +282,7 @@ func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
 		cr.cmd.SetOut(output)
 		cr.cmd.SetErr(output)
 	} else {
-		logger.Debug("Running test with", "variables", cr.variables)
+		cr.l.Debug("Running test with", "variables", cr.variables)
 	}
 
 	err := rc(cr.cmd, args)

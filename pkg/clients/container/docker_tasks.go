@@ -320,7 +320,12 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 
 		// attach the custom networks
 		for _, n := range c.Networks {
-			err = d.AttachNetwork(n.ID, cont.ID, n.Aliases, n.IPAddress)
+			net, err := d.FindNetwork(n.ID)
+			if err != nil {
+				return "", err
+			}
+
+			err = d.AttachNetwork(net.Name, cont.ID, n.Aliases, n.IPAddress)
 
 			if err != nil {
 				// if we fail to connect to the network roll back the container
@@ -606,7 +611,7 @@ func (d *DockerTasks) CreateVolume(name string) (string, error) {
 	vn := utils.FQDNVolumeName(name)
 
 	// By default Docker will wildcard searches, use regex to return the absolute
-	args := volume.ListOptions{}
+	args := volume.ListOptions{Filters: filters.NewArgs()}
 	args.Filters.Add("name", vn)
 
 	ops, err := d.c.VolumeList(context.Background(), args)
@@ -1237,7 +1242,7 @@ func (d *DockerTasks) FindNetwork(id string) (dtypes.NetworkAttachment, error) {
 		}
 	}
 
-	return dtypes.NetworkAttachment{}, nil
+	return dtypes.NetworkAttachment{}, fmt.Errorf("a network with the label id:%s, was not found", id)
 }
 
 // publishedPorts defines a Docker published port

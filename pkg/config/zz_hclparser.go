@@ -14,11 +14,11 @@ var registeredTypes map[string]types.Resource
 
 // registeredProvider is a static list of providers that can be used by the parser
 // it is the responsibility of the type to register itself with the parser
-var registeredProviders map[types.Resource]Provider
+var registeredProviders map[string]Provider
 
 func init() {
 	registeredTypes = map[string]types.Resource{}
-	registeredProviders = map[types.Resource]Provider{}
+	registeredProviders = map[string]Provider{}
 }
 
 // RegisterResource allows a resource to register itself with the parser
@@ -28,7 +28,7 @@ func RegisterResource(name string, r types.Resource, p Provider) {
 	}
 
 	if p != nil {
-		registeredProviders[r] = p
+		registeredProviders[name] = p
 	}
 }
 

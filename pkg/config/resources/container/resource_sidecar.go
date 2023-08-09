@@ -15,7 +15,7 @@ type Sidecar struct {
 	// embedded type holding name, etc
 	types.ResourceMetadata `hcl:",remain"`
 
-	Target string `hcl:"target" json:"target"`
+	Target Container `hcl:"target" json:"target"`
 
 	Image       Image             `hcl:"image,block" json:"image"`                          // image to use for the container
 	Entrypoint  []string          `hcl:"entrypoint,optional" json:"entrypoint,omitempty"`   // entrypoint to use when starting the container
@@ -59,6 +59,9 @@ func (c *Sidecar) Process() error {
 		if r != nil {
 			kstate := r.(*Sidecar)
 			c.FQRN = kstate.FQRN
+
+			// add the image id from state
+			c.Image.ID = kstate.Image.ID
 		}
 	}
 

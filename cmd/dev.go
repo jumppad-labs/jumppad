@@ -135,6 +135,16 @@ func newDevCmdFunc(variables *[]string, variablesFile, interval *string, ttyFlag
 }
 
 func doUpdates(v view.View, e jumppad.Engine, source string, variables map[string]string, variableFile string, interval time.Duration) {
+	v.Logger().Debug("P_Init: Checking cmd-line parameters....................")
+	v.Logger().Debug("V_Init: Allocate screens................................")
+	v.Logger().Debug("M_LoadDefaults: Load system defaults....................")
+	v.Logger().Debug("Z_Init: Init zone memory allocation daemon..............")
+	v.Logger().Debug("DPMI Memory: 8xa11000, 8x800000 allocated...............")
+	v.Logger().Debug("W_Init: Init WADfiles...................................")
+	v.Logger().Debug("W_Init: adding doom1.wad................................")
+	v.Logger().Debug("W_Init: shareware version...............................")
+	v.Logger().Debug("startskill: 2 deathmatch: 0 startepisode: 1")
+
 	v.UpdateStatus("Checking for changes...", false)
 
 	for {

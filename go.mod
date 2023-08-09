@@ -22,13 +22,13 @@ require (
 	github.com/go-chi/cors v1.2.1
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.4.2
-	github.com/gosuri/uitable v0.0.4
 	github.com/hashicorp/go-getter v1.7.0
 	github.com/hashicorp/go-hclog v1.1.0
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	github.com/jumppad-labs/connector v0.3.0
 	github.com/jumppad-labs/hclconfig v0.10.0
+	github.com/kr/pretty v0.3.0
 	github.com/mailgun/raymond/v2 v2.0.48
 	github.com/moby/sys/signal v0.7.0
 	github.com/moby/term v0.5.0
@@ -125,6 +125,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.7.0 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
+	github.com/gosuri/uitable v0.0.4 // indirect
 	github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7 // indirect
 	github.com/guillermo/go.procstat v0.0.0-20131123175440-34c2813d2e7f // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -146,7 +147,7 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.15.11 // indirect
-	github.com/kr/pretty v0.3.0 // indirect
+	github.com/kr/text v0.2.0 // indirect
 	github.com/kyokomi/emoji/v2 v2.2.8 // indirect
 	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
 	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
@@ -183,6 +184,7 @@ require (
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/rogpeppe/go-internal v1.6.1 // indirect
 	github.com/rubenv/sql-migrate v0.0.0-20210614095031-55d5740dbbcc // indirect
 	github.com/russross/blackfriday v1.6.0 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
