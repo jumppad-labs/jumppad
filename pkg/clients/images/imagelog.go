@@ -1,4 +1,4 @@
-package clients
+package images
 
 import (
 	"bufio"
@@ -11,6 +11,8 @@ import (
 const ImageTypeDocker string = "Docker"
 
 // ImageLog logs machine images to make cleanup possible
+//
+//go:generate mockery --name ImageLog --filename imagelog.go
 type ImageLog interface {
 	Log(string, string) error
 	Read(string) ([]string, error)

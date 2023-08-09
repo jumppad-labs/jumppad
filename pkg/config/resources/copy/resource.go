@@ -2,6 +2,7 @@ package copy
 
 import (
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -28,7 +29,7 @@ func (t *Copy) Process() error {
 	t.Source = utils.EnsureAbsolute(t.Source, t.File)
 	t.Destination = utils.EnsureAbsolute(t.Destination, t.File)
 
-	cfg, err := LoadState()
+	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
 		r, _ := cfg.FindResource(t.ID)

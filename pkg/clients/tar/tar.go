@@ -1,4 +1,4 @@
-package clients
+package tar
 
 import (
 	"archive/tar"

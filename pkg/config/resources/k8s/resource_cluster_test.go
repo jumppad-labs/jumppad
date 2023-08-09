@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/jumppad-labs/hclconfig/types"
-	ctypes "github.com/jumppad-labs/jumppad/pkg/config/container/types"
+	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -70,6 +70,6 @@ func TestK8sClusterSetsOutputsFromState(t *testing.T) {
 	require.Equal(t, "fqdn.mine.com", c.FQRN)
 
 	// check the netwok
-	require.Equal(t, "10.5.0.2", c.Networks[0].AssignedAddress)
+	require.Equal(t, "10.5.0.2", c.Networks[0].IPAddress)
 	require.Equal(t, "cloud", c.Networks[0].Name)
 }

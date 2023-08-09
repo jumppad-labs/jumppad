@@ -5,9 +5,10 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
-	cmocks "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	imocks "github.com/jumppad-labs/jumppad/pkg/clients/images/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/jumppad-labs/jumppad/pkg/clients/tar"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -16,8 +17,8 @@ func setupRemoveTests(t *testing.T) (*DockerTasks, *mocks.Docker) {
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 
-	mic := &cmocks.ImageLog{}
-	dt := NewDockerTasks(md, mic, &clients.TarGz{}, clients.NewTestLogger(t))
+	mic := &imocks.ImageLog{}
+	dt := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
 
 	return dt, md
 }

@@ -11,8 +11,10 @@ import (
 
 	"github.com/jumppad-labs/hclconfig"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/jumppad-labs/jumppad/pkg/config"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/cache"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/network"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad/constants"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
@@ -38,13 +40,13 @@ type Engine interface {
 
 // EngineImpl is responsible for creating and destroying resources
 type EngineImpl struct {
-	providers Providers
-	log       clients.Logger
+	providers config.Providers
+	log       logger.Logger
 	config    *hclconfig.Config
 }
 
 // New creates a new shipyard engine
-func New(p Providers, l clients.Logger) (Engine, error) {
+func New(p config.Providers, l logger.Logger) (Engine, error) {
 	e := &EngineImpl{}
 	e.log = l
 	e.providers = p
@@ -98,10 +100,14 @@ func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]strin
 }
 
 func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFile string) (
-	new []types.Resource, changed []types.Resource, removed []types.Resource, config *hclconfig.Config, err error,
-) {
+	[]types.Resource, []types.Resource, []types.Resource, *hclconfig.Config, error) {
+
+	var new []types.Resource
+	var changed []types.Resource
+	var removed []types.Resource
+
 	// load the stack
-	past, _ := resources.LoadState()
+	past, _ := config.LoadState()
 
 	// Parse the config to check it is valid
 	res, err := e.ParseConfigWithVariables(path, variables, variablesFile)
@@ -123,7 +129,7 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 		}
 
 		// check if the resource has changed
-		if cr.Metadata().Checksum != r.Metadata().Checksum {
+		if cr.Metadata().Checksum.Parsed != r.Metadata().Checksum.Parsed {
 			// resource has changes rebuild
 			changed = append(changed, r)
 			continue
@@ -136,7 +142,7 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 	// in the config
 	for _, r := range past.Resources {
 		// if this is the image cache continue as this is always added
-		if r.Metadata().Type == resources.TypeImageCache {
+		if r.Metadata().Type == cache.TypeImageCache {
 			continue
 		}
 
@@ -207,7 +213,7 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 	}
 
 	// load the state
-	c, err := resources.LoadState()
+	c, err := config.LoadState()
 	if err != nil {
 		e.log.Debug("unable to load state", "error", err)
 	}
@@ -215,12 +221,12 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 	e.config = c
 
 	// check to see we already have an image cache
-	_, err = e.config.FindResourcesByType(resources.TypeImageCache)
+	_, err = e.config.FindResourcesByType(cache.TypeImageCache)
 	if err != nil {
-		cache := &resources.ImageCache{
+		cache := &cache.ImageCache{
 			ResourceMetadata: types.ResourceMetadata{
 				Name:       "default",
-				Type:       resources.TypeImageCache,
+				Type:       cache.TypeImageCache,
 				ID:         "resource.image_cache.default",
 				Properties: map[string]interface{}{},
 			},
@@ -246,7 +252,7 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 		e.config.AppendResource(cache)
 
 		// save the state
-		resources.SaveState(e.config)
+		config.SaveState(e.config)
 	}
 
 	// finally we can process and create resources
@@ -274,7 +280,7 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 	}
 
 	// save the state regardless of error
-	stateErr := resources.SaveState(e.config)
+	stateErr := config.SaveState(e.config)
 	if stateErr != nil {
 		e.log.Info("Unable to save state", "error", stateErr)
 	}
@@ -287,7 +293,7 @@ func (e *EngineImpl) Destroy() error {
 	e.log.Info("Destroying resources")
 
 	// load the state
-	c, err := resources.LoadState()
+	c, err := config.LoadState()
 	if err != nil {
 		e.log.Debug("State file does not exist")
 	}
@@ -338,7 +344,7 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 		variablesFiles = append(variablesFiles, variablesFile)
 	}
 
-	hclParser := resources.SetupHCLConfig(callback, variables, variablesFiles)
+	hclParser := config.NewParser(callback, variables, variablesFiles)
 
 	if utils.IsHCLFile(path) {
 		// ParseFile processes the HCL, builds a graph of resources then calls
@@ -523,7 +529,7 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 
 	// did we just create a network, if so we need to attach the image cache
 	// to the network and set the dependency
-	if r.Metadata().Type == resources.TypeNetwork && r.Metadata().Properties[constants.PropertyStatus] == constants.StatusCreated {
+	if r.Metadata().Type == network.TypeNetwork && r.Metadata().Properties[constants.PropertyStatus] == constants.StatusCreated {
 		// get the image cache
 		ic, err := e.config.FindResource("resource.image_cache.default")
 		if err == nil {

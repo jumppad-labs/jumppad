@@ -7,9 +7,11 @@ import (
 	"os"
 
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/clients/images"
+	"github.com/jumppad-labs/jumppad/pkg/clients/tar"
+	"github.com/jumppad-labs/jumppad/pkg/config"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/docs"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -46,7 +48,7 @@ func (a *API) validation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	state, err := resources.LoadState()
+	state, err := config.LoadState()
 	if err != nil {
 		a.log.Error("could not load state", "error", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
@@ -62,7 +64,7 @@ func (a *API) validation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task := res.(*resources.Task)
+	task := res.(*docs.Task)
 
 	var target string
 	var message string
@@ -109,8 +111,8 @@ func (a *API) validation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	il := clients.NewImageFileLog(utils.ImageCacheLog())
-	tz := &clients.TarGz{}
+	il := images.NewImageFileLog(utils.ImageCacheLog())
+	tz := &tar.TarGz{}
 	ct := container.NewDockerTasks(dc, il, tz, a.log)
 
 	id, err := ct.FindContainerIDs(target)

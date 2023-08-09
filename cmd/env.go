@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/spf13/cobra"
 )
@@ -43,7 +43,7 @@ func newEnvCmd(e jumppad.Engine) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			// load the stack
-			c, err := resources.LoadState()
+			c, err := config.LoadState()
 			if err != nil {
 				cmd.Println("Error: Unable to load state, ", err)
 				os.Exit(1)

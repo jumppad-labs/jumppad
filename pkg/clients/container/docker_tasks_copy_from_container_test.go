@@ -8,9 +8,10 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
-	cmocks "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	imocks "github.com/jumppad-labs/jumppad/pkg/clients/images/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/jumppad-labs/jumppad/pkg/clients/tar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -25,13 +26,13 @@ func TestCopyFromContainerCopiesFile(t *testing.T) {
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 
-	mic := &cmocks.ImageLog{}
+	mic := &imocks.ImageLog{}
 	md.On("CopyFromContainer", mock.Anything, id, src).Return(
 		ioutil.NopCloser(bytes.NewBufferString(fileContent)),
 		types.ContainerPathStat{},
 		nil,
 	)
-	dt := NewDockerTasks(md, mic, &clients.TarGz{}, clients.NewTestLogger(t))
+	dt := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
 
 	tmpDir, _ := ioutil.TempDir("", "")
 	defer os.RemoveAll(tmpDir)
@@ -53,13 +54,13 @@ func TestCopyFromContainerReturnsErrorOnDockerError(t *testing.T) {
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 
-	mic := &cmocks.ImageLog{}
+	mic := &imocks.ImageLog{}
 	md.On("CopyFromContainer", mock.Anything, id, src).Return(
 		nil,
 		types.ContainerPathStat{},
 		fmt.Errorf("boom"),
 	)
-	dt := NewDockerTasks(md, mic, &clients.TarGz{}, clients.NewTestLogger(t))
+	dt := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
 
 	err := dt.CopyFromContainer(id, src, "/new.hcl")
 	assert.Error(t, err)

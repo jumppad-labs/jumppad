@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/healthcheck"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
@@ -67,6 +67,8 @@ type NetworkAttachment struct {
 	AssignedAddress string `hcl:"assigned_address,optional" json:"assigned_address,omitempty"`
 }
 
+type NetworkAttachments []NetworkAttachment
+
 // Resources allows the setting of resource constraints for the Container
 type Resources struct {
 	CPU    int   `hcl:"cpu,optional" json:"cpu,omitempty"`         // cpu limit for the container where 1 CPU = 1000
@@ -83,6 +85,8 @@ type Volume struct {
 	BindPropagation             string `hcl:"bind_propagation,optional" json:"bind_propagation,omitempty"`                             // propagation mode for bind mounts [shared, private, slave, rslave, rprivate]
 	BindPropagationNonRecursive bool   `hcl:"bind_propagation_non_recursive,optional" json:"bind_propagation_non_recursive,omitempty"` // recursive bind mount, default true
 }
+
+type Volumes []Volume
 
 func (c *Container) Process() error {
 	// process volumes
@@ -102,7 +106,7 @@ func (c *Container) Process() error {
 
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
-	cfg, err := resources.LoadState()
+	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
 		r, _ := cfg.FindResource(c.ID)

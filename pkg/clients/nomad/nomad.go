@@ -1,4 +1,4 @@
-package clients
+package nomad
 
 import (
 	"bytes"
@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	chttp "github.com/jumppad-labs/jumppad/pkg/clients/http"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"golang.org/x/xerrors"
 )
 
@@ -35,8 +37,8 @@ type Nomad interface {
 
 // NomadImpl is an implementation of the Nomad interface
 type NomadImpl struct {
-	httpClient  HTTP
-	l           Logger
+	httpClient  chttp.HTTP
+	l           logger.Logger
 	backoff     time.Duration
 	address     string
 	port        int
@@ -44,7 +46,7 @@ type NomadImpl struct {
 }
 
 // NewNomad creates a new Nomad client
-func NewNomad(c HTTP, backoff time.Duration, l Logger) Nomad {
+func NewNomad(c chttp.HTTP, backoff time.Duration, l logger.Logger) Nomad {
 	return &NomadImpl{httpClient: c, l: l, backoff: backoff}
 }
 

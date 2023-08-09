@@ -14,10 +14,12 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/go-connections/nat"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
 	dtypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	cmocks "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/images"
+	imocks "github.com/jumppad-labs/jumppad/pkg/clients/images/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/jumppad-labs/jumppad/pkg/clients/tar"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/mohae/deepcopy"
@@ -76,7 +78,7 @@ var containerConfig = &dtypes.Container{
 	},
 }
 
-func createContainerConfig() (*dtypes.Container, *mocks.Docker, *cmocks.ImageLog) {
+func createContainerConfig() (*dtypes.Container, *mocks.Docker, *imocks.ImageLog) {
 	cc := deepcopy.Copy(containerConfig).(*dtypes.Container)
 	cc2 := deepcopy.Copy(containerConfig).(*dtypes.Container)
 
@@ -87,7 +89,7 @@ func createContainerConfig() (*dtypes.Container, *mocks.Docker, *cmocks.ImageLog
 	return cc, mc, mic
 }
 
-func setupContainerMocks() (*mocks.Docker, *cmocks.ImageLog) {
+func setupContainerMocks() (*mocks.Docker, *imocks.ImageLog) {
 	md := &mocks.Docker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 	md.On("ContainerInspect", mock.Anything, mock.Anything).Return(types.ContainerJSON{NetworkSettings: &types.NetworkSettings{Networks: map[string]*network.EndpointSettings{"bridge": nil}}}, nil)
@@ -110,14 +112,14 @@ func setupContainerMocks() (*mocks.Docker, *cmocks.ImageLog) {
 
 	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 
-	mic := &cmocks.ImageLog{}
+	mic := &imocks.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
 
 	return md, mic
 }
 
-func setupContainer(t *testing.T, cc *dtypes.Container, md *mocks.Docker, mic clients.ImageLog) error {
-	p := NewDockerTasks(md, mic, &clients.TarGz{}, clients.NewTestLogger(t))
+func setupContainer(t *testing.T, cc *dtypes.Container, md *mocks.Docker, mic images.ImageLog) error {
+	p := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
 
 	// create the container
 	_, err := p.CreateContainer(cc)

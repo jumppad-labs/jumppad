@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/muesli/reflow/wordwrap"
 )
 
@@ -30,7 +30,7 @@ type model struct {
 	statusbar StatusModel
 	messages  []string
 	follow    bool
-	logger    clients.Logger
+	logger    logger.Logger
 }
 
 type KeyMap struct {
@@ -110,9 +110,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// noop
 		case key.Matches(msg, DefaultKeyMap.Level):
 			if m.logger.IsDebug() {
-				m.logger.SetLevel(clients.LogLevelInfo)
+				m.logger.SetLevel(logger.LogLevelInfo)
 			} else {
-				m.logger.SetLevel(clients.LogLevelDebug)
+				m.logger.SetLevel(logger.LogLevelDebug)
 			}
 
 		case key.Matches(msg, DefaultKeyMap.Quit):

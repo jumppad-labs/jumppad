@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 )
 
 const (
@@ -32,7 +32,7 @@ type System interface {
 
 // SystemImpl is a concrete implementation of the System interface
 type SystemImpl struct {
-	logger clients.Logger
+	logger logger.Logger
 }
 
 // OpenBrowser opens a URI in a new browser window

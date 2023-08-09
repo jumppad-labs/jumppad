@@ -13,7 +13,8 @@ import (
 
 	"github.com/jumppad-labs/hclconfig"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad/constants"
@@ -45,7 +46,7 @@ func setupTestsBase(t *testing.T, returnVals map[string]error, state string) (*E
 	pm.On("GetProvider", mock.Anything)
 
 	e := &EngineImpl{
-		log:       clients.NewTestLogger(t),
+		log:       logger.NewTestLogger(t),
 		providers: pm,
 	}
 
@@ -64,7 +65,7 @@ func getTestFiles(tests string) string {
 }
 
 func testLoadState(t *testing.T, e *EngineImpl) *hclconfig.Config {
-	c, err := resources.LoadState()
+	c, err := config.LoadState()
 	require.NoError(t, err)
 
 	return c

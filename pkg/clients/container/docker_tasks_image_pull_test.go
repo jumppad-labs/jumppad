@@ -8,16 +8,17 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
 	dtypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	cmocks "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	imocks "github.com/jumppad-labs/jumppad/pkg/clients/images/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/jumppad-labs/jumppad/pkg/clients/tar"
 	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-func setupImagePullMocks() (*mocks.Docker, *cmocks.ImageLog) {
+func setupImagePullMocks() (*mocks.Docker, *imocks.ImageLog) {
 	md := &mocks.Docker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
@@ -27,14 +28,14 @@ func setupImagePullMocks() (*mocks.Docker, *cmocks.ImageLog) {
 		nil,
 	)
 
-	mic := &cmocks.ImageLog{}
+	mic := &imocks.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
 	mic.On("Read", mock.Anything, mock.Anything).Return([]string{}, nil)
 
 	return md, mic
 }
 
-func createImagePullConfig() (dtypes.Image, *mocks.Docker, *cmocks.ImageLog) {
+func createImagePullConfig() (dtypes.Image, *mocks.Docker, *imocks.ImageLog) {
 	ic := dtypes.Image{
 		Name: "consul:1.6.1",
 	}
@@ -43,8 +44,8 @@ func createImagePullConfig() (dtypes.Image, *mocks.Docker, *cmocks.ImageLog) {
 	return ic, mk, mic
 }
 
-func setupImagePull(t *testing.T, cc dtypes.Image, md *mocks.Docker, mic *cmocks.ImageLog, force bool) {
-	p := NewDockerTasks(md, mic, &clients.TarGz{}, clients.NewTestLogger(t))
+func setupImagePull(t *testing.T, cc dtypes.Image, md *mocks.Docker, mic *imocks.ImageLog, force bool) {
+	p := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
 
 	// create the container
 	err := p.PullImage(cc, force)

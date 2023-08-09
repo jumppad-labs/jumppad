@@ -6,25 +6,32 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/command"
 	"github.com/jumppad-labs/jumppad/pkg/clients/connector"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
+	"github.com/jumppad-labs/jumppad/pkg/clients/getter"
+	"github.com/jumppad-labs/jumppad/pkg/clients/helm"
+	"github.com/jumppad-labs/jumppad/pkg/clients/http"
+	"github.com/jumppad-labs/jumppad/pkg/clients/images"
+	"github.com/jumppad-labs/jumppad/pkg/clients/k8s"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/jumppad-labs/jumppad/pkg/clients/nomad"
 	"github.com/jumppad-labs/jumppad/pkg/clients/system"
+	"github.com/jumppad-labs/jumppad/pkg/clients/tar"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 type Clients struct {
 	Docker         container.Docker
 	ContainerTasks container.ContainerTasks
-	Kubernetes     Kubernetes
-	Helm           Helm
-	HTTP           HTTP
-	Nomad          Nomad
+	Kubernetes     k8s.Kubernetes
+	Helm           helm.Helm
+	HTTP           http.HTTP
+	Nomad          nomad.Nomad
 	Command        command.Command
 	Logger         logger.Logger
-	Getter         Getter
+	Getter         getter.Getter
 	Browser        system.System
-	ImageLog       ImageLog
+	ImageLog       images.ImageLog
 	Connector      connector.Connector
-	TarGz          *TarGz
+	TarGz          *tar.TarGz
 }
 
 // GenerateClients creates the various clients for creating and destroying resources
@@ -34,23 +41,23 @@ func GenerateClients(l logger.Logger) (*Clients, error) {
 		return nil, err
 	}
 
-	kc := NewKubernetes(60*time.Second, l)
+	kc := k8s.NewKubernetes(60*time.Second, l)
 
-	hec := NewHelm(l)
+	hec := helm.NewHelm(l)
 
 	ec := command.NewCommand(30*time.Second, l)
 
-	hc := NewHTTP(1*time.Second, l)
+	hc := http.NewHTTP(1*time.Second, l)
 
-	nc := NewNomad(hc, 1*time.Second, l)
+	nc := nomad.NewNomad(hc, 1*time.Second, l)
 
-	bp := NewGetter(false)
+	bp := getter.NewGetter(false)
 
 	bc := &system.SystemImpl{}
 
-	il := NewImageFileLog(utils.ImageCacheLog())
+	il := images.NewImageFileLog(utils.ImageCacheLog())
 
-	tgz := &TarGz{}
+	tgz := &tar.TarGz{}
 
 	ct := container.NewDockerTasks(dc, il, tgz, l)
 

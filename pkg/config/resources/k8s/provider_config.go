@@ -6,13 +6,14 @@ import (
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/k8s"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"golang.org/x/xerrors"
 )
 
 type ConfigProvider struct {
 	config *K8sConfig
-	client clients.Kubernetes
+	client k8s.Kubernetes
 	log    logger.Logger
 }
 

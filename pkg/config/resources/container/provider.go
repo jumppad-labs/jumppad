@@ -11,6 +11,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/http"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
@@ -20,7 +21,7 @@ type Provider struct {
 	config     *Container
 	sidecar    *Sidecar
 	client     container.ContainerTasks
-	httpClient clients.HTTP
+	httpClient http.HTTP
 	log        logger.Logger
 }
 
@@ -30,7 +31,6 @@ func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
 		return err
 	}
 
-	p.config = c
 	p.client = cli.ContainerTasks
 	p.httpClient = cli.HTTP
 	p.log = l

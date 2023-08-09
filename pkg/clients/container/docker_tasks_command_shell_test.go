@@ -8,9 +8,10 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
-	cmocks "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	imocks "github.com/jumppad-labs/jumppad/pkg/clients/images/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/jumppad-labs/jumppad/pkg/clients/tar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -30,10 +31,10 @@ func setupShellMocks(t *testing.T) (*DockerTasks, *mocks.Docker) {
 
 	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 
-	mic := &cmocks.ImageLog{}
+	mic := &imocks.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
 
-	p := NewDockerTasks(md, mic, &clients.TarGz{}, clients.NewTestLogger(t))
+	p := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
 
 	return p, md
 }

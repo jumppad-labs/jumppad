@@ -25,8 +25,13 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	hcltypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/docs"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/k8s"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/network"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/nomad"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
@@ -108,13 +113,13 @@ type CucumberRunner struct {
 	cmd           *cobra.Command
 	args          []string
 	e             jumppad.Engine
-	cli           *jumppad.Clients
+	cli           *clients.Clients
 	testFolder    string
 	testPath      string
 	basePath      string
 	force         *bool
 	purge         *bool
-	l             clients.Logger
+	l             logger.Logger
 	baseVariables []string
 	variables     []string
 	variablesFile string
@@ -291,7 +296,7 @@ func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
 // Returns the docker container id for the main container and in the instance
 // of clusters the number of nodes
 func getLookupAddress(resourceName string) (string, string, int, error) {
-	c, err := resources.LoadState()
+	c, err := config.LoadState()
 	if err != nil {
 		return "", "", 0, fmt.Errorf("unable to load state")
 	}
@@ -302,19 +307,19 @@ func getLookupAddress(resourceName string) (string, string, int, error) {
 	}
 
 	switch res.Metadata().Type {
-	case resources.TypeNetwork:
+	case network.TypeNetwork:
 		return res.Metadata().Name, res.Metadata().Type, 1, nil
-	case resources.TypeK8sCluster:
-		return res.(*resources.K8sCluster).FQRN, res.Metadata().Type, 1, nil
-	case resources.TypeNomadCluster:
-		cl := res.(*resources.NomadCluster)
+	case k8s.TypeK8sCluster:
+		return res.(*k8s.K8sCluster).FQRN, res.Metadata().Type, 1, nil
+	case nomad.TypeNomadCluster:
+		cl := res.(*nomad.NomadCluster)
 		return cl.ServerFQRN, res.Metadata().Type, cl.ClientNodes + 1, nil
 	case container.TypeContainer:
 		return res.(*container.Container).FQRN, res.Metadata().Type, 1, nil
 	case container.TypeSidecar:
 		return res.(*container.Sidecar).FQRN, res.Metadata().Type, 1, nil
-	case resources.TypeDocs:
-		return res.(*resources.Docs).FQRN, res.Metadata().Type, 1, nil
+	case docs.TypeDocs:
+		return res.(*docs.Docs).FQRN, res.Metadata().Type, 1, nil
 	default:
 		return "", "", 0, fmt.Errorf("resource type %s is not supported", res.Metadata().Type)
 	}
@@ -340,7 +345,7 @@ func (cr *CucumberRunner) theFollowingResourcesShouldBeRunning(arg1 *godog.Table
 		// resources, for example, nomad clusters may have multiple nodes
 		// kubernetes clusters the name is prefixed with server
 
-		if typ == resources.TypeNetwork {
+		if typ == network.TypeNetwork {
 			err := cr.thereShouldBe1NetworkCalled(addr)
 			if err != nil {
 				return err

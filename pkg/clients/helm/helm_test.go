@@ -1,9 +1,10 @@
-package clients
+package helm
 
 import (
 	"os"
 	"testing"
 
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,7 +16,7 @@ func TestUpsertChartRepository(t *testing.T) {
 		os.RemoveAll(dir)
 	})
 
-	hc := NewHelm(NewTestLogger(t))
+	hc := NewHelm(logger.NewTestLogger(t))
 	err := hc.UpsertChartRepository("hashicorp", "https://helm.releases.hashicorp.com")
 	require.NoError(t, err)
 }

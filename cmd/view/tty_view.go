@@ -3,7 +3,7 @@ package view
 import (
 	"fmt"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -16,7 +16,7 @@ var statuses = []string{
 
 type TTYView struct {
 	program      *tea.Program
-	logger       clients.Logger
+	logger       logger.Logger
 	initialModel model
 }
 
@@ -26,7 +26,7 @@ func NewTTYView() (*TTYView, error) {
 
 	mw := &messageWriter{}
 
-	c.logger = clients.NewTTYLogger(mw, clients.LogLevelInfo)
+	c.logger = logger.NewTTYLogger(mw, logger.LogLevelInfo)
 	c.initialModel.logger = c.logger
 
 	c.program = tea.NewProgram(c.initialModel, tea.WithAltScreen())
@@ -48,7 +48,7 @@ func (c *TTYView) Display() error {
 }
 
 // Logger returns the logger used by the view
-func (c *TTYView) Logger() clients.Logger {
+func (c *TTYView) Logger() logger.Logger {
 	return c.logger
 }
 

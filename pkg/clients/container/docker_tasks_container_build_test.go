@@ -7,9 +7,10 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
 	dtypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/jumppad-labs/jumppad/pkg/clients/tar"
 	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/mock"
 	assert "github.com/stretchr/testify/require"
@@ -30,7 +31,7 @@ func testBuildSetup(t *testing.T) (*mocks.Docker, *DockerTasks) {
 
 	mk.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 
-	dt := NewDockerTasks(mk, nil, &clients.TarGz{}, clients.NewTestLogger(t))
+	dt := NewDockerTasks(mk, nil, &tar.TarGz{}, logger.NewTestLogger(t))
 
 	return mk, dt
 }

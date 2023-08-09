@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/jumppad-labs/hclconfig/types"
-	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
+	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -17,22 +17,22 @@ type NomadCluster struct {
 	// embedded type holding name, etc
 	types.ResourceMetadata `hcl:",remain"`
 
-	Networks      []ctypes.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
-	Image         *ctypes.Image              `hcl:"image,block" json:"images,omitempty"`     // optional image to use for the cluster
-	ClientNodes   int                        `hcl:"client_nodes,optional" json:"client_nodes,omitempty"`
-	Environment   map[string]string          `hcl:"environment,optional" json:"environment,omitempty"`
-	ServerConfig  string                     `hcl:"server_config,optional" json:"server_config,omitempty"`
-	ClientConfig  string                     `hcl:"client_config,optional" json:"client_config,omitempty"`
-	ConsulConfig  string                     `hcl:"consul_config,optional" json:"consul_config,omitempty"`
-	Volumes       []ctypes.Volume            `hcl:"volume,block" json:"volumes,omitempty"`                     // volumes to attach to the cluster
-	OpenInBrowser bool                       `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"` // open the UI in the browser after creation
+	Networks      ctypes.NetworkAttachments `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
+	Image         *ctypes.Image             `hcl:"image,block" json:"images,omitempty"`     // optional image to use for the cluster
+	ClientNodes   int                       `hcl:"client_nodes,optional" json:"client_nodes,omitempty"`
+	Environment   map[string]string         `hcl:"environment,optional" json:"environment,omitempty"`
+	ServerConfig  string                    `hcl:"server_config,optional" json:"server_config,omitempty"`
+	ClientConfig  string                    `hcl:"client_config,optional" json:"client_config,omitempty"`
+	ConsulConfig  string                    `hcl:"consul_config,optional" json:"consul_config,omitempty"`
+	Volumes       ctypes.Volumes            `hcl:"volume,block" json:"volumes,omitempty"`                     // volumes to attach to the cluster
+	OpenInBrowser bool                      `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"` // open the UI in the browser after creation
 
 	// Images that will be copied from the local docker cache to the cluster
-	CopyImages []ctypes.Image `hcl:"copy_image,block" json:"copy_images,omitempty"`
+	CopyImages ctypes.Images `hcl:"copy_image,block" json:"copy_images,omitempty"`
 
 	// Additional ports to expose on the nomad sever node
-	Ports      []ctypes.Port      `hcl:"port,block" json:"ports,omitempty"`             // ports to expose
-	PortRanges []ctypes.PortRange `hcl:"port_range,block" json:"port_ranges,omitempty"` // range of ports to expose
+	Ports      ctypes.Ports      `hcl:"port,block" json:"ports,omitempty"`             // ports to expose
+	PortRanges ctypes.PortRanges `hcl:"port_range,block" json:"port_ranges,omitempty"` // range of ports to expose
 
 	// Output Parameters
 

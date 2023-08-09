@@ -7,9 +7,10 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
-	cmocks "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	imocks "github.com/jumppad-labs/jumppad/pkg/clients/images/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/jumppad-labs/jumppad/pkg/clients/tar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -24,9 +25,9 @@ func TestContainerLogsCalled(t *testing.T) {
 
 	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 
-	mic := &cmocks.ImageLog{}
+	mic := &imocks.ImageLog{}
 
-	dt := NewDockerTasks(md, mic, &clients.TarGz{}, clients.NewTestLogger(t))
+	dt := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
 
 	rc, err := dt.ContainerLogs("123", true, true)
 	assert.NotNil(t, rc)

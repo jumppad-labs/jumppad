@@ -55,13 +55,13 @@ func (p *RemoteProvider) Create() error {
 
 		targetID = id
 	} else {
-		ids, err := c.client.FindContainerIDs(p.config.Target)
+		ids, err := p.client.FindContainerIDs(p.config.Target)
 		if err != nil {
 			return xerrors.Errorf("unable to find remote exec target: %w", err)
 		}
 
 		if len(ids) != 1 {
-			return xerrors.Errorf("unable to find remote exec target %s", fqdn)
+			return xerrors.Errorf("unable to find remote exec target %s", p.config.Target)
 		}
 
 		targetID = ids[0]
@@ -164,7 +164,7 @@ func (p *RemoteProvider) createRemoteExecContainer() (string, error) {
 		return "", err
 	}
 
-	id, err := p.client.CreateContainer(new)
+	id, err := p.client.CreateContainer(&new)
 	if err != nil {
 		p.log.Error("Error creating container for remote exec", "ref", p.config.Name, "image", p.config.Image, "networks", p.config.Networks, "volumes", p.config.Volumes)
 		return "", err

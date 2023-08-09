@@ -8,15 +8,16 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
-	cmocks "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	imocks "github.com/jumppad-labs/jumppad/pkg/clients/images/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/jumppad-labs/jumppad/pkg/clients/tar"
 	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-func testExecCommandSetup(t *testing.T) (*DockerTasks, *mocks.Docker, *cmocks.ImageLog) {
+func testExecCommandSetup(t *testing.T) (*DockerTasks, *mocks.Docker, *imocks.ImageLog) {
 	// we need to add the stream index (stdout) as the first byte for the hijacker
 	writerOutput := []byte("log output")
 	writerOutput = append([]byte{1}, writerOutput...)
@@ -37,9 +38,9 @@ func testExecCommandSetup(t *testing.T) (*DockerTasks, *mocks.Docker, *cmocks.Im
 	mk.On("ContainerExecStart", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	mk.On("ContainerExecInspect", mock.Anything, mock.Anything, mock.Anything).Return(types.ContainerExecInspect{Running: false, ExitCode: 0}, nil)
 
-	il := &cmocks.ImageLog{}
+	il := &imocks.ImageLog{}
 
-	dt := NewDockerTasks(mk, il, &clients.TarGz{}, clients.NewTestLogger(t))
+	dt := NewDockerTasks(mk, il, &tar.TarGz{}, logger.NewTestLogger(t))
 	return dt, mk, il
 }
 

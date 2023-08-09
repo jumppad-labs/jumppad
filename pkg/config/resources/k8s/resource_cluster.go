@@ -5,7 +5,7 @@ import (
 
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
-	ctypes "github.com/jumppad-labs/jumppad/pkg/config/container/types"
+	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -85,7 +85,7 @@ func (k *K8sCluster) Process() error {
 			for _, a := range kstate.Networks {
 				for i, m := range k.Networks {
 					if m.ID == a.ID {
-						k.Networks[i].AssignedAddress = a.AssignedAddress
+						k.Networks[i].IPAddress = a.IPAddress
 						k.Networks[i].Name = a.Name
 						break
 					}

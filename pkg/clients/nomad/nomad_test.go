@@ -1,4 +1,4 @@
-package clients
+package nomad
 
 import (
 	"bytes"
@@ -9,7 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/http/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/mock"
@@ -38,7 +39,7 @@ func setupNomadTests(t *testing.T) (Nomad, string, *mocks.HTTP) {
 		nil,
 	)
 
-	c := NewNomad(mh, 1*time.Millisecond, NewTestLogger(t))
+	c := NewNomad(mh, 1*time.Millisecond, logger.NewTestLogger(t))
 	c.SetConfig("local", 4646, 1)
 
 	return c, tmpDir, mh

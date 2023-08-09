@@ -23,7 +23,7 @@ type Command interface {
 // Command executes local commands
 type CommandImpl struct {
 	timeout time.Duration
-	log     clients.Logger
+	log     logger.Logger
 }
 
 // NewCommand creates a new command with the given logger and maximum command time

@@ -1,4 +1,4 @@
-package clients
+package k8s
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"golang.org/x/xerrors"
 	"helm.sh/helm/v3/pkg/kube"
 	v1 "k8s.io/api/core/v1"
@@ -34,11 +35,11 @@ type KubernetesImpl struct {
 	client     corev1.CoreV1Interface
 	configPath string
 	timeout    time.Duration
-	l          Logger
+	l          logger.Logger
 }
 
 // NewKubernetes creates a new client for interacting with Kubernetes clusters
-func NewKubernetes(t time.Duration, l Logger) Kubernetes {
+func NewKubernetes(t time.Duration, l logger.Logger) Kubernetes {
 	return &KubernetesImpl{timeout: t, l: l}
 }
 

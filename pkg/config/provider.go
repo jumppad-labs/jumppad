@@ -1,7 +1,10 @@
 package config
 
 import (
+	"reflect"
+
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 )
 
@@ -35,4 +38,28 @@ type Provider interface {
 type ConfigWrapper struct {
 	Type  string
 	Value interface{}
+}
+
+type Providers interface {
+	GetProvider(c types.Resource) Provider
+}
+
+type ProvidersImpl struct {
+	clients *clients.Clients
+}
+
+func NewProviders(c *clients.Clients) Providers {
+	return &ProvidersImpl{c}
+}
+
+func (p *ProvidersImpl) GetProvider(r types.Resource) Provider {
+	// find the type
+	if t, ok := registeredProviders[r]; ok {
+		ptr := reflect.New(reflect.TypeOf(t).Elem())
+
+		prov := ptr.Interface().(Provider)
+		prov.Init(r, p.clients.Logger)
+	}
+
+	return nil
 }

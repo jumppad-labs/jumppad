@@ -13,13 +13,17 @@ import (
 	"github.com/jumppad-labs/hclconfig/types"
 	gvm "github.com/shipyard-run/version-manager"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/connector"
 	cclients "github.com/jumppad-labs/jumppad/pkg/clients/container"
+	"github.com/jumppad-labs/jumppad/pkg/clients/getter"
+	"github.com/jumppad-labs/jumppad/pkg/clients/http"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/clients/system"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/blueprint"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/docs"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/ingress"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/nomad"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
@@ -27,7 +31,7 @@ import (
 	markdown "github.com/MichaelMure/go-term-markdown"
 )
 
-func newRunCmd(e jumppad.Engine, dt cclients.ContainerTasks, bp clients.Getter, hc clients.HTTP, bc system.System, vm gvm.Versions, cc connector.Connector, l clients.Logger) *cobra.Command {
+func newRunCmd(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Getter, hc http.HTTP, bc system.System, vm gvm.Versions, cc connector.Connector, l logger.Logger) *cobra.Command {
 	var noOpen bool
 	var force bool
 	var y bool
@@ -62,7 +66,7 @@ func newRunCmd(e jumppad.Engine, dt cclients.ContainerTasks, bp clients.Getter, 
 	return runCmd
 }
 
-func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp clients.Getter, hc clients.HTTP, bc system.System, vm gvm.Versions, cc connector.Connector, noOpen *bool, force *bool, runVersion *string, autoApprove *bool, variables *[]string, variablesFile *string, l clients.Logger) func(cmd *cobra.Command, args []string) error {
+func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Getter, hc http.HTTP, bc system.System, vm gvm.Versions, cc connector.Connector, noOpen *bool, force *bool, runVersion *string, autoApprove *bool, variables *[]string, variablesFile *string, l logger.Logger) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		// create the shipyard and sub folders in the users home directory
 		utils.CreateFolders()
@@ -164,7 +168,7 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp clients.Gett
 		go func() {
 			for range statusUpdate.C {
 				elapsedTime := time.Since(startTime).Seconds()
-				logger.Info(fmt.Sprintf("Please wait, still creating resources [Elapsed Time: %f]", elapsedTime))
+				l.Info(fmt.Sprintf("Please wait, still creating resources [Elapsed Time: %f]", elapsedTime))
 			}
 		}()
 
@@ -188,19 +192,19 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp clients.Gett
 							browserList = append(browserList, buildBrowserPath(r.Metadata().Name, p.Host, r.Metadata().Type, p.OpenInBrowser))
 						}
 					}
-				case resources.TypeIngress:
-					c := r.(*resources.Ingress)
+				case ingress.TypeIngress:
+					c := r.(*ingress.Ingress)
 					if c.OpenInBrowser != "" {
 						browserList = append(browserList, buildBrowserPath(r.Metadata().Name, fmt.Sprintf("%d", c.Port), r.Metadata().Type, c.OpenInBrowser))
 					}
-				case resources.TypeNomadCluster:
-					c := r.(*resources.NomadCluster)
+				case nomad.TypeNomadCluster:
+					c := r.(*nomad.NomadCluster)
 					if c.OpenInBrowser {
 						// get the API port
 						browserList = append(browserList, buildBrowserPath("server."+r.Metadata().Name, fmt.Sprintf("%d", c.APIPort), r.Metadata().Type, "/"))
 					}
-				case resources.TypeDocs:
-					c := r.(*resources.Docs)
+				case docs.TypeDocs:
+					c := r.(*docs.Docs)
 					if c.OpenInBrowser {
 						port := strconv.Itoa(c.Port)
 						if port == "0" {

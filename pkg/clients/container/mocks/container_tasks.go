@@ -414,6 +414,30 @@ func (_m *ContainerTasks) FindImagesInLocalRegistry(filter string) ([]string, er
 	return r0, r1
 }
 
+// FindNetwork provides a mock function with given fields: id
+func (_m *ContainerTasks) FindNetwork(id string) (types.NetworkAttachment, error) {
+	ret := _m.Called(id)
+
+	var r0 types.NetworkAttachment
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string) (types.NetworkAttachment, error)); ok {
+		return rf(id)
+	}
+	if rf, ok := ret.Get(0).(func(string) types.NetworkAttachment); ok {
+		r0 = rf(id)
+	} else {
+		r0 = ret.Get(0).(types.NetworkAttachment)
+	}
+
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ListNetworks provides a mock function with given fields: id
 func (_m *ContainerTasks) ListNetworks(id string) []types.NetworkAttachment {
 	ret := _m.Called(id)

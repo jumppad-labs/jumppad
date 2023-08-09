@@ -10,6 +10,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/http"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"golang.org/x/xerrors"
@@ -20,7 +21,7 @@ const cacheImage = "shipyardrun/docker-registry-proxy:0.6.3"
 type Provider struct {
 	config     *ImageCache
 	client     container.ContainerTasks
-	httpClient clients.HTTP
+	httpClient http.HTTP
 	log        logger.Logger
 }
 

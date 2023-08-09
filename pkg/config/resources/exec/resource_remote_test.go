@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/jumppad-labs/hclconfig/types"
+	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,7 +15,7 @@ func TestRemoteExecProcessSetsAbsolute(t *testing.T) {
 
 	c := &RemoteExec{
 		ResourceMetadata: types.ResourceMetadata{File: "./"},
-		Volumes: []Volume{
+		Volumes: []ctypes.Volume{
 			{
 				Source:      "./",
 				Destination: "./",

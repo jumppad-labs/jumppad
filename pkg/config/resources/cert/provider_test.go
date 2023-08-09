@@ -16,7 +16,7 @@ func setupCACert(t *testing.T) (*CertificateCA, *CAProvider) {
 	ca := &CertificateCA{ResourceMetadata: types.ResourceMetadata{Name: "test"}}
 	ca.Output = dir
 
-	p := NewCAProvider(ca, logger.NewTestLogger(t))
+	p := &CAProvider{ca, logger.NewTestLogger(t)}
 
 	return ca, p
 }
@@ -35,7 +35,7 @@ func setupLeafCert(t *testing.T) (*CertificateLeaf, *LeafProvider) {
 	cl.CACert = ca.Cert.Path
 	cl.CAKey = ca.PrivateKey.Path
 
-	pl := NewLeafProvider(cl, logger.NewTestLogger(t))
+	pl := &LeafProvider{cl, logger.NewTestLogger(t)}
 
 	return cl, pl
 }

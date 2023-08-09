@@ -20,6 +20,8 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/connector"
 	cclient "github.com/jumppad-labs/jumppad/pkg/clients/container"
 	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/http"
+	"github.com/jumppad-labs/jumppad/pkg/clients/k8s"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"golang.org/x/xerrors"
@@ -35,8 +37,8 @@ var startTimeout = (300 * time.Second)
 type ClusterProvider struct {
 	config     *K8sCluster
 	client     cclient.ContainerTasks
-	kubeClient clients.Kubernetes
-	httpClient clients.HTTP
+	kubeClient k8s.Kubernetes
+	httpClient http.HTTP
 	connector  connector.Connector
 	log        logger.Logger
 }
@@ -102,8 +104,9 @@ func (p *ClusterProvider) createK3s() error {
 		return fmt.Errorf("error, cluster exists")
 	}
 
+	img := ctypes.Image{Name: p.config.Image.Name, Username: p.config.Image.Username, Password: p.config.Image.Password}
 	// pull the container image
-	err = p.client.PullImage(*p.config.Image, false)
+	err = p.client.PullImage(img, false)
 	if err != nil {
 		return err
 	}
@@ -121,9 +124,17 @@ func (p *ClusterProvider) createK3s() error {
 	cc := &ctypes.Container{}
 	cc.Name = fqrn
 
-	cc.Image = p.config.Image
-	cc.Networks = p.config.Networks
+	cc.Image = &img
 	cc.Privileged = true // k3s must run Privileged
+
+	for _, v := range p.config.Networks {
+		cc.Networks = append(cc.Networks, ctypes.NetworkAttachment{
+			ID:        v.ID,
+			Name:      v.Name,
+			IPAddress: v.IPAddress,
+			Aliases:   v.Aliases,
+		})
+	}
 
 	// set the volume mount for the images
 	cc.Volumes = []ctypes.Volume{
@@ -136,7 +147,14 @@ func (p *ClusterProvider) createK3s() error {
 
 	// if there are any custom volumes to mount
 	for _, v := range p.config.Volumes {
-		cc.Volumes = append(cc.Volumes, v)
+		cc.Volumes = append(cc.Volumes, ctypes.Volume{
+			Source:                      v.Source,
+			Destination:                 v.Destination,
+			Type:                        v.Type,
+			ReadOnly:                    v.ReadOnly,
+			BindPropagation:             v.BindPropagation,
+			BindPropagationNonRecursive: v.BindPropagationNonRecursive,
+		})
 	}
 
 	// Add any custom environment variables
@@ -175,7 +193,7 @@ func (p *ClusterProvider) createK3s() error {
 		// add the netmask from the network to the proxy bypass
 		networkSubmasks := []string{}
 		for _, n := range p.config.Networks {
-			net, err := p.client.FindNetwork(n)
+			net, err := p.client.FindNetwork(n.ID)
 			if err != nil {
 				return fmt.Errorf("Network not found: %w", err)
 			}
@@ -192,7 +210,7 @@ func (p *ClusterProvider) createK3s() error {
 	}
 
 	// add any custom environment variables
-	for k, v := range c.config.Environment {
+	for k, v := range p.config.Environment {
 		cc.Environment[k] = v
 	}
 
@@ -262,8 +280,23 @@ func (p *ClusterProvider) createK3s() error {
 		},
 	}
 
-	cc.PortRanges = p.config.PortRanges
-	cc.Ports = append(cc.Ports, p.config.Ports...)
+	for _, pr := range p.config.PortRanges {
+		cc.PortRanges = append(cc.PortRanges, ctypes.PortRange{
+			Range:      pr.Range,
+			EnableHost: pr.EnableHost,
+			Protocol:   pr.Protocol,
+		})
+	}
+
+	for _, p := range p.config.Ports {
+		cc.Ports = append(cc.Ports, ctypes.Port{
+			Local:         p.Local,
+			Remote:        p.Remote,
+			Host:          p.Host,
+			Protocol:      p.Protocol,
+			OpenInBrowser: p.OpenInBrowser,
+		})
+	}
 
 	cc.Command = args
 
@@ -285,7 +318,7 @@ func (p *ClusterProvider) createK3s() error {
 		for i, net := range p.config.Networks {
 			if net.ID == n.ID {
 				// set the assigned address and name
-				p.config.Networks[i].AssignedAddress = n.IPAddress
+				p.config.Networks[i].IPAddress = n.IPAddress
 				p.config.Networks[i].Name = n.Name
 			}
 		}
@@ -336,8 +369,18 @@ func (p *ClusterProvider) createK3s() error {
 
 	// import the images to the servers container d instance
 	// importing images means that k3s does not need to pull from a remote docker hub
-	if p.config.CopyImages != nil && len(p.config.CopyImages) > 0 {
-		err := p.ImportLocalDockerImages(utils.ImageVolumeName, id, p.config.CopyImages, false)
+	if len(p.config.CopyImages) > 0 {
+		imgs := []ctypes.Image{}
+		for _, i := range p.config.CopyImages {
+			imgs = append(imgs, ctypes.Image{
+				Name:     i.Name,
+				Username: i.Username,
+				Password: i.Password,
+			})
+
+		}
+
+		err := p.ImportLocalDockerImages(utils.ImageVolumeName, id, imgs, false)
 		if err != nil {
 			return xerrors.Errorf("unable to importing Docker images: %w", err)
 		}
@@ -461,7 +504,7 @@ func (p *ClusterProvider) deployConnector(grpcPort, httpPort int) error {
 			fmt.Sprintf("%s:%d", utils.GetDockerIP(), grpcPort),
 		},
 		[]string{utils.GetDockerIP()},
-		utils.CertsDir(c.config.Name),
+		utils.CertsDir(p.config.Name),
 	)
 
 	if err != nil {
@@ -555,7 +598,7 @@ func (p *ClusterProvider) ImportLocalDockerImages(name string, id string, images
 	for _, i := range imagesFile {
 		// execute the command to import the image
 		// write any command output to the logger
-		_, err = p.client.ExecuteCommand(id, []string{"ctr", "image", "import", i}, nil, "/", "", "", 300, c.log.StandardWriter())
+		_, err = p.client.ExecuteCommand(id, []string{"ctr", "image", "import", i}, nil, "/", "", "", 300, p.log.StandardWriter())
 		if err != nil {
 			return err
 		}

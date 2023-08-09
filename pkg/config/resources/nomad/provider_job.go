@@ -8,6 +8,7 @@ import (
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/jumppad-labs/jumppad/pkg/clients/nomad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"golang.org/x/xerrors"
 )
@@ -16,7 +17,7 @@ import (
 // of Nomad jobs
 type NomadJobProvider struct {
 	config *NomadJob
-	client clients.Nomad
+	client nomad.Nomad
 	log    logger.Logger
 }
 

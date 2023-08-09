@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/jumppad-labs/hclconfig/types"
+	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +22,7 @@ func TestNomadClusterProcessSetsAbsolute(t *testing.T) {
 		ClientConfig: "./client_config.hcl",
 		ConsulConfig: "./consul_config.hcl",
 
-		Volumes: []Volume{
+		Volumes: []ctypes.Volume{
 			{
 				Source:      "./",
 				Destination: "./",

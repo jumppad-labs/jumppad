@@ -9,15 +9,15 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
 	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	hmocks "github.com/jumppad-labs/jumppad/pkg/clients/http/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	cmocks "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/healthcheck"
 	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/mock"
 	assert "github.com/stretchr/testify/require"
 )
 
-func setupContainerTests(t *testing.T) (*Container, *mocks.ContainerTasks, *cmocks.HTTP) {
+func setupContainerTests(t *testing.T) (*Container, *mocks.ContainerTasks, *hmocks.HTTP) {
 	cc := &Container{ResourceMetadata: types.ResourceMetadata{
 		Name: "tests",
 	}}
@@ -25,7 +25,7 @@ func setupContainerTests(t *testing.T) (*Container, *mocks.ContainerTasks, *cmoc
 	cc.Image = &Image{Name: "consul"}
 
 	md := &mocks.ContainerTasks{}
-	hc := &cmocks.HTTP{}
+	hc := &hmocks.HTTP{}
 
 	// check pulls image before creating container
 	md.On("PullImage", *cc.Image, false).Once().Return(nil)
@@ -45,7 +45,7 @@ func setupContainerTests(t *testing.T) (*Container, *mocks.ContainerTasks, *cmoc
 func TestContainerCreatesSuccessfully(t *testing.T) {
 	cc, md, hc := setupContainerTests(t)
 
-	c := NewContainerProvider(cc, md, hc, logger.NewTestLogger(t))
+	c := Provider{cc, nil, md, hc, logger.NewTestLogger(t)}
 
 	err := c.Create()
 	assert.NoError(t, err)
@@ -73,7 +73,7 @@ func TestContainerSidecarCreatesContainerSuccessfully(t *testing.T) {
 	cs.Resources = &Resources{}
 	cs.MaxRestartCount = 10
 
-	c := NewSidecarProvider(cs, md, hc, clients.NewTestLogger(t))
+	c := Provider(cs, md, hc, clients.NewTestLogger(t))
 	err := c.Create()
 	assert.NoError(t, err)
 

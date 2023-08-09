@@ -1,6 +1,6 @@
 package view
 
-import "github.com/jumppad-labs/jumppad/pkg/clients"
+import "github.com/jumppad-labs/jumppad/pkg/clients/logger"
 
 type View interface {
 
@@ -8,7 +8,7 @@ type View interface {
 	Display() error
 
 	// Logger returns the logger used by the view
-	Logger() clients.Logger
+	Logger() logger.Logger
 
 	// UpdateStatus shows the current status message, if withTimer is set
 	// the elapsed time that the the status has been shown for will also

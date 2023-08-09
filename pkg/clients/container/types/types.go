@@ -73,6 +73,7 @@ type PortRange struct {
 // Image defines a docker image which will be pushed to the clusters Docker
 // registry
 type Image struct {
+	ID   string
 	Name string
 	// Username is the Docker registry user to use for private repositories
 	Username string

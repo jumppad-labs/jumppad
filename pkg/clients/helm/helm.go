@@ -1,4 +1,4 @@
-package clients
+package helm
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"path"
 	"sync"
 
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/pkg/errors"
 	"golang.org/x/xerrors"
@@ -41,14 +42,14 @@ type Helm interface {
 }
 
 type HelmImpl struct {
-	log        Logger
+	log        logger.Logger
 	repoPath   string
 	cachePath  string
 	dataPath   string
 	configPath string
 }
 
-func NewHelm(l Logger) Helm {
+func NewHelm(l logger.Logger) Helm {
 	helmCachePath := path.Join(utils.GetHelmLocalFolder(""), "cache")
 	helmRepoConfig := path.Join(utils.GetHelmLocalFolder(""), "repo")
 

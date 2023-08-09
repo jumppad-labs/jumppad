@@ -6,8 +6,11 @@ import (
 
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/config"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/cache"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/k8s"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/nomad"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad/constants"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
@@ -41,7 +44,7 @@ var statusCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		// load the resources from state
 
-		cfg, err := resources.LoadState()
+		cfg, err := config.LoadState()
 		if err != nil {
 			fmt.Printf("Unable to read state file")
 			os.Exit(1)
@@ -99,21 +102,21 @@ var statusCmd = &cobra.Command{
 					}
 
 					switch r.Metadata().Type {
-					case resources.TypeNomadCluster:
+					case nomad.TypeNomadCluster:
 						fmt.Printf("%-13s %-50s %s\n", status, r.Metadata().ID, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, "", string(r.Metadata().Type))))
 
 						// add the client nodes
-						nomad := r.(*resources.NomadCluster)
+						nomad := r.(*nomad.NomadCluster)
 						for n := 0; n < nomad.ClientNodes; n++ {
 							fmt.Printf("%-13s %-50s %s\n", "", "", fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Metadata().Name, "", r.Metadata().Type)))
 						}
-					case resources.TypeK8sCluster:
+					case k8s.TypeK8sCluster:
 						fmt.Printf("%-13s %-50s %s\n", status, r.Metadata().ID, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, "", r.Metadata().Type)))
 					case container.TypeContainer:
 						fallthrough
 					case container.TypeSidecar:
 						fallthrough
-					case resources.TypeImageCache:
+					case cache.TypeImageCache:
 						fmt.Printf("%-13s %-50s %s\n", status, r.Metadata().ID, "")
 					default:
 						fmt.Printf("%-13s %-50s %s\n", status, r.Metadata().ID, "")

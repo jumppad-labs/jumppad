@@ -13,9 +13,10 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/volume"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
-	cmocks "github.com/jumppad-labs/jumppad/pkg/clients/mocks"
+	imocks "github.com/jumppad-labs/jumppad/pkg/clients/images/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/jumppad-labs/jumppad/pkg/clients/tar"
 	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -83,10 +84,10 @@ func testSetupCopyLocal(t *testing.T) (*DockerTasks, *mocks.Docker) {
 	mk.On("VolumeList", mock.Anything, mock.Anything).
 		Return(volume.ListResponse{Volumes: []*volume.Volume{&volume.Volume{}}})
 
-	mic := &cmocks.ImageLog{}
+	mic := &imocks.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
 
-	dt := NewDockerTasks(mk, mic, &clients.TarGz{}, clients.NewTestLogger(t))
+	dt := NewDockerTasks(mk, mic, &tar.TarGz{}, logger.NewTestLogger(t))
 
 	return dt, mk
 }

@@ -28,7 +28,7 @@ func setupCopy(t *testing.T) (*config.Copy, *Copy) {
 	cc.Source = inDir
 	cc.Destination = outDir
 
-	p := NewCopy(cc, hclog.New(&clients.LoggerOptions{Level: hclog.Debug}))
+	p := NewCopy(cc, hclog.New(&logger.LoggerOptions{Level: hclog.Debug}))
 
 	return cc, p
 }

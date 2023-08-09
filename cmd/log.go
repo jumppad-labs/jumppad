@@ -16,10 +16,13 @@ import (
 	hcltypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/spf13/cobra"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/jumppad-labs/jumppad/pkg/config"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/cache"
 	ct "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/k8s"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/nomad"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
@@ -74,7 +77,7 @@ func newLogCmdFunc(dc container.Docker, stdout, stderr io.Writer) func(cmd *cobr
 		var loggable []string
 
 		if len(args) == 1 {
-			cfg, err := resources.LoadState()
+			cfg, err := config.LoadState()
 			if err != nil {
 				return fmt.Errorf("Unable to read state file")
 			}
@@ -109,7 +112,7 @@ func newLogCmdFunc(dc container.Docker, stdout, stderr io.Writer) func(cmd *cobr
 
 			if err == nil {
 				waitGroup.Add(1)
-				go func(rc io.ReadCloser, name string, c color.Attribute, log clients.Logger) {
+				go func(rc io.ReadCloser, name string, c color.Attribute, log logger.Logger) {
 					writeLogOutput(rc, stdout, stderr, name, c, log)
 					waitGroup.Done()
 				}(rc, r, getRandomColor(), log)
@@ -135,7 +138,7 @@ func newLogCmdFunc(dc container.Docker, stdout, stderr io.Writer) func(cmd *cobr
 // if this methods returns and error, it will get returned as shell-completion data
 // otherwise fmt.println() gets lost
 func getLoggable() ([]string, error) {
-	cfg, err := resources.LoadState()
+	cfg, err := config.LoadState()
 	if err != nil {
 		return nil, fmt.Errorf("Unable to read state file")
 	}
@@ -157,19 +160,19 @@ func getFQDNForResource(r hcltypes.Resource) []string {
 	switch r.Metadata().Type {
 	case ct.TypeContainer:
 		fqdns = append(fqdns, utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type))
-	case resources.TypeK8sCluster:
+	case k8s.TypeK8sCluster:
 		fqdns = append(fqdns, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type)))
-	case resources.TypeNomadCluster:
+	case nomad.TypeNomadCluster:
 		fqdns = append(fqdns, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type)))
 
 		// add the client nodes
-		nomad := r.(*resources.NomadCluster)
+		nomad := r.(*nomad.NomadCluster)
 		for n := 0; n < nomad.ClientNodes; n++ {
 			fqdns = append(fqdns, fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type)))
 		}
 	case ct.TypeSidecar:
 		fallthrough
-	case resources.TypeImageCache:
+	case cache.TypeImageCache:
 		fqdns = append(fqdns, utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type))
 	}
 
@@ -180,7 +183,7 @@ func getRandomColor() color.Attribute {
 	return termColors[rand.Intn(len(termColors)-1)]
 }
 
-func writeLogOutput(rc io.ReadCloser, stdout, stderr io.Writer, name string, c color.Attribute, log clients.Logger) {
+func writeLogOutput(rc io.ReadCloser, stdout, stderr io.Writer, name string, c color.Attribute, log logger.Logger) {
 	hdr := make([]byte, 8)
 	colorWriter := color.New(c)
 

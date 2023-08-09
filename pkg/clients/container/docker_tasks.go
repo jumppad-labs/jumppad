@@ -25,9 +25,11 @@ import (
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/go-connections/nat"
-	mainClients "github.com/jumppad-labs/jumppad/pkg/clients"
 	dtypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/images"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/clients/streams"
+	ctar "github.com/jumppad-labs/jumppad/pkg/clients/tar"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/moby/sys/signal"
 	"github.com/moby/term"
@@ -52,14 +54,14 @@ type DockerTasks struct {
 	engineType    string
 	storageDriver string
 	c             Docker
-	il            mainClients.ImageLog
-	l             mainClients.Logger
-	tg            *mainClients.TarGz
+	il            images.ImageLog
+	l             logger.Logger
+	tg            *ctar.TarGz
 	force         bool
 }
 
 // NewDockerTasks creates a DockerTasks with the given Docker client
-func NewDockerTasks(c Docker, il mainClients.ImageLog, tg *mainClients.TarGz, l mainClients.Logger) *DockerTasks {
+func NewDockerTasks(c Docker, il images.ImageLog, tg *ctar.TarGz, l logger.Logger) *DockerTasks {
 
 	// Set the engine type, Docker, Podman
 	ver, err := c.ServerVersion(context.Background())
@@ -458,7 +460,7 @@ func (d *DockerTasks) PullImage(image dtypes.Image, force bool) error {
 	}
 
 	// update the image log
-	err = d.il.Log(in, mainClients.ImageTypeDocker)
+	err = d.il.Log(in, images.ImageTypeDocker)
 	if err != nil {
 		d.l.Error("Unable to add image name to cache", "error", err)
 	}
@@ -578,7 +580,7 @@ func (d *DockerTasks) BuildContainer(config *dtypes.Build, force bool) (string, 
 	}
 
 	var buf bytes.Buffer
-	d.tg.Compress(&buf, &mainClients.TarGzOptions{OmitRoot: true}, config.Context)
+	d.tg.Compress(&buf, &ctar.TarGzOptions{OmitRoot: true}, config.Context)
 
 	resp, err := d.c.ImageBuild(context.Background(), &buf, buildOpts)
 	if err != nil {
@@ -1216,6 +1218,26 @@ func (d *DockerTasks) DetachNetwork(network, containerID string) error {
 	//time.Sleep(1000 * time.Millisecond)
 
 	return err
+}
+
+// FindNetwork returns a network using the unique resource id
+func (d *DockerTasks) FindNetwork(id string) (dtypes.NetworkAttachment, error) {
+	nets, err := d.c.NetworkList(context.Background(), types.NetworkListOptions{})
+	if err != nil {
+		return dtypes.NetworkAttachment{}, err
+	}
+
+	for _, n := range nets {
+		if n.Labels["id"] == id {
+			return dtypes.NetworkAttachment{
+				ID:     n.ID,
+				Name:   n.Name,
+				Subnet: n.IPAM.Config[0].Subnet,
+			}, nil
+		}
+	}
+
+	return dtypes.NetworkAttachment{}, nil
 }
 
 // publishedPorts defines a Docker published port

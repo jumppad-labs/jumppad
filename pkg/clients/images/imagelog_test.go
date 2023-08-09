@@ -1,4 +1,4 @@
-package clients
+package images
 
 import (
 	"io/ioutil"

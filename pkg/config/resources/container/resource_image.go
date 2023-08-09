@@ -16,3 +16,5 @@ type Image struct {
 	// multiple times also shares the same ID.
 	ID string `hcl:"id,optional" json:"id,omitempty"`
 }
+
+type Images []Image

@@ -16,6 +16,11 @@ var registeredTypes map[string]types.Resource
 // it is the responsibility of the type to register itself with the parser
 var registeredProviders map[types.Resource]Provider
 
+func init() {
+	registeredTypes = map[string]types.Resource{}
+	registeredProviders = map[types.Resource]Provider{}
+}
+
 // RegisterResource allows a resource to register itself with the parser
 func RegisterResource(name string, r types.Resource, p Provider) {
 	if r != nil {

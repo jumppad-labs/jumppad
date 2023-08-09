@@ -7,6 +7,8 @@ import (
 	gvm "github.com/shipyard-run/version-manager"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 
@@ -22,8 +24,8 @@ var rootCmd = &cobra.Command{
 }
 
 var engine jumppad.Engine
-var logger clients.Logger
-var engineClients *jumppad.Clients
+var l logger.Logger
+var engineClients *clients.Clients
 
 var version string // set by build process
 var date string    // set by build process
@@ -34,22 +36,22 @@ func init() {
 	var vm gvm.Versions
 
 	// setup dependencies
-	logger = createLogger()
-	engine, engineClients, vm = createEngine(logger)
+	l = createLogger()
+	engine, engineClients, vm = createEngine(l)
 
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(outputCmd)
 	rootCmd.AddCommand(newDevCmd())
 	rootCmd.AddCommand(newEnvCmd(engine))
-	rootCmd.AddCommand(newRunCmd(engine, engineClients.ContainerTasks, engineClients.Getter, engineClients.HTTP, engineClients.Browser, vm, engineClients.Connector, logger))
+	rootCmd.AddCommand(newRunCmd(engine, engineClients.ContainerTasks, engineClients.Getter, engineClients.HTTP, engineClients.Browser, vm, engineClients.Connector, l))
 	rootCmd.AddCommand(newTestCmd())
 	rootCmd.AddCommand(newDestroyCmd(engineClients.Connector))
 	rootCmd.AddCommand(statusCmd)
-	rootCmd.AddCommand(newPurgeCmd(engineClients.Docker, engineClients.ImageLog, logger))
+	rootCmd.AddCommand(newPurgeCmd(engineClients.Docker, engineClients.ImageLog, l))
 	rootCmd.AddCommand(taintCmd)
 	rootCmd.AddCommand(newVersionCmd(vm))
 	rootCmd.AddCommand(uninstallCmd)
-	rootCmd.AddCommand(newPushCmd(engineClients.ContainerTasks, engineClients.Kubernetes, engineClients.HTTP, engineClients.Nomad, logger))
+	rootCmd.AddCommand(newPushCmd(engineClients.ContainerTasks, engineClients.Kubernetes, engineClients.HTTP, engineClients.Nomad, l))
 	rootCmd.AddCommand(newLogCmd(engine, engineClients.Docker, os.Stdout, os.Stderr), completionCmd)
 
 	// add the server commands
@@ -63,13 +65,13 @@ func init() {
 	generateCmd.AddCommand(newGenerateReadmeCommand(engine))
 }
 
-func createEngine(l clients.Logger) (jumppad.Engine, *jumppad.Clients, gvm.Versions) {
-	engineClients, err := jumppad.GenerateClients(l)
+func createEngine(l logger.Logger) (jumppad.Engine, *clients.Clients, gvm.Versions) {
+	engineClients, err := clients.GenerateClients(l)
 	if err != nil {
 		return nil, nil, nil
 	}
 
-	providers := jumppad.NewProviders(engineClients)
+	providers := config.NewProviders(engineClients)
 
 	engine, err := jumppad.New(providers, l)
 	if err != nil {
@@ -113,13 +115,13 @@ func createEngine(l clients.Logger) (jumppad.Engine, *jumppad.Clients, gvm.Versi
 	return engine, engineClients, vm
 }
 
-func createLogger() clients.Logger {
+func createLogger() logger.Logger {
 	// set the log level
 	if lev := os.Getenv("LOG_LEVEL"); lev != "" {
-		return clients.NewLogger(os.Stdout, lev)
+		return logger.NewLogger(os.Stdout, lev)
 	}
 
-	return clients.NewLogger(os.Stdout, clients.LogLevelInfo)
+	return logger.NewLogger(os.Stdout, logger.LogLevelInfo)
 }
 
 // Execute the root command

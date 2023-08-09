@@ -1,4 +1,4 @@
-package clients
+package http
 
 import (
 	"bytes"
@@ -7,6 +7,8 @@ import (
 	"net"
 	"net/http"
 	"time"
+
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 )
 
 // HTTP defines an interface for a HTTP client
@@ -31,10 +33,10 @@ type HTTP interface {
 type HTTPImpl struct {
 	backoff time.Duration
 	httpc   *http.Client
-	l       Logger
+	l       logger.Logger
 }
 
-func NewHTTP(backoff time.Duration, l Logger) HTTP {
+func NewHTTP(backoff time.Duration, l logger.Logger) HTTP {
 	httpc := &http.Client{}
 	httpc.Transport = http.DefaultTransport.(*http.Transport).Clone()
 	httpc.Transport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}

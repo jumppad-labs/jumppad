@@ -6,6 +6,9 @@ import (
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/getter"
+	"github.com/jumppad-labs/jumppad/pkg/clients/helm"
+	"github.com/jumppad-labs/jumppad/pkg/clients/k8s"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"golang.org/x/xerrors"
@@ -13,9 +16,9 @@ import (
 
 type Provider struct {
 	config       *Helm
-	kubeClient   clients.Kubernetes
-	helmClient   clients.Helm
-	getterClient clients.Getter
+	kubeClient   k8s.Kubernetes
+	helmClient   helm.Helm
+	getterClient getter.Getter
 	log          logger.Logger
 }
 
@@ -33,7 +36,7 @@ func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
 		return err
 	}
 
-	p.config = c
+	p.config = h
 	p.kubeClient = cli.Kubernetes
 	p.helmClient = cli.Helm
 	p.getterClient = cli.Getter
@@ -79,8 +82,8 @@ func (p *Provider) Create() error {
 	// set the KubeConfig for the kubernetes client
 	// this is used by the health checks
 	var err error
-	p.log.Debug("Using Kubernetes config", "ref", p.config.ID, "path", p.config.K8sConfig)
-	p.kubeClient, err = p.kubeClient.SetConfig(p.config.K8sConfig)
+	p.log.Debug("Using Kubernetes config", "ref", p.config.ID, "path", p.config.Cluster.KubeConfig)
+	p.kubeClient, err = p.kubeClient.SetConfig(p.config.Cluster.KubeConfig)
 	if err != nil {
 		return xerrors.Errorf("unable to create Kubernetes client: %w", err)
 	}
@@ -105,7 +108,7 @@ func (p *Provider) Create() error {
 	go func() {
 		for {
 			err = p.helmClient.Create(
-				p.config.K8sConfig,
+				p.config.Cluster.KubeConfig,
 				newName,
 				p.config.Namespace,
 				p.config.CreateNamespace,
@@ -169,7 +172,7 @@ func (p *Provider) Destroy() error {
 	newName, _ := utils.ReplaceNonURIChars(p.config.Name)
 
 	// get the target cluster
-	err := p.helmClient.Destroy(p.config.K8sConfig, newName, p.config.Namespace)
+	err := p.helmClient.Destroy(p.config.Cluster.KubeConfig, newName, p.config.Namespace)
 
 	if err != nil {
 		p.log.Debug("There was a problem destroying Helm chart, logging message but ignoring error", "ref", p.config.ID, "error", err)

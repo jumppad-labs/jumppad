@@ -8,14 +8,19 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
-	"github.com/jumppad-labs/jumppad/pkg/providers"
+	"github.com/jumppad-labs/jumppad/pkg/clients/http"
+	ck8s "github.com/jumppad-labs/jumppad/pkg/clients/k8s"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	cnomad "github.com/jumppad-labs/jumppad/pkg/clients/nomad"
+	"github.com/jumppad-labs/jumppad/pkg/config"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/k8s"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/nomad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 )
 
-func newPushCmd(ct container.ContainerTasks, kc clients.Kubernetes, ht clients.HTTP, nc clients.Nomad, l clients.Logger) *cobra.Command {
+func newPushCmd(ct container.ContainerTasks, kc ck8s.Kubernetes, ht http.HTTP, nc cnomad.Nomad, l logger.Logger) *cobra.Command {
 	var force bool
 
 	pushCmd := &cobra.Command{
@@ -45,7 +50,7 @@ func newPushCmd(ct container.ContainerTasks, kc clients.Kubernetes, ht clients.H
 				return xerrors.Errorf("Invalid resource type, only resources type nomad_cluster and k8s_cluster are supported")
 			}
 
-			c, err := resources.LoadState()
+			c, err := config.LoadState()
 			if err != nil {
 				cmd.Println("Error: Unable to load state, ", err)
 				os.Exit(1)
@@ -57,10 +62,10 @@ func newPushCmd(ct container.ContainerTasks, kc clients.Kubernetes, ht clients.H
 			}
 
 			switch r.Metadata().Type {
-			case resources.TypeK8sCluster:
-				return pushK8sCluster(image, r.(*resources.K8sCluster), ct, kc, ht, l, true)
-			case resources.TypeNomadCluster:
-				return pushNomadCluster(image, r.(*resources.NomadCluster), ct, nc, l, true)
+			case k8s.TypeK8sCluster:
+				return pushK8sCluster(image, r.(*k8s.K8sCluster), ct, kc, ht, l, true)
+			case nomad.TypeNomadCluster:
+				return pushNomadCluster(image, r.(*nomad.NomadCluster), ct, nc, l, true)
 			}
 
 			return nil
@@ -72,8 +77,10 @@ func newPushCmd(ct container.ContainerTasks, kc clients.Kubernetes, ht clients.H
 	return pushCmd
 }
 
-func pushK8sCluster(image string, c *resources.K8sCluster, ct container.ContainerTasks, kc clients.Kubernetes, ht clients.HTTP, log clients.Logger, force bool) error {
-	cl := providers.NewK8sCluster(c, ct, kc, ht, nil, log)
+func pushK8sCluster(image string, c *k8s.K8sCluster, ct container.ContainerTasks, kc ck8s.Kubernetes, ht http.HTTP, log logger.Logger, force bool) error {
+	cli, _ := clients.GenerateClients(log)
+	p := config.NewProviders(cli)
+	cl := p.GetProvider(c).(*k8s.ClusterProvider)
 
 	// get the id of the cluster
 	ids, err := cl.Lookup()
@@ -92,8 +99,10 @@ func pushK8sCluster(image string, c *resources.K8sCluster, ct container.Containe
 	return nil
 }
 
-func pushNomadCluster(image string, c *resources.NomadCluster, ct container.ContainerTasks, ht clients.Nomad, log clients.Logger, force bool) error {
-	cl := providers.NewNomadCluster(c, ct, ht, nil, log)
+func pushNomadCluster(image string, c *nomad.NomadCluster, ct container.ContainerTasks, ht cnomad.Nomad, log logger.Logger, force bool) error {
+	cli, _ := clients.GenerateClients(log)
+	p := config.NewProviders(cli)
+	cl := p.GetProvider(c).(*nomad.ClusterProvider)
 
 	// get the id of the cluster
 

@@ -56,7 +56,7 @@ func (b *Provider) Create() error {
 	)
 
 	force := false
-	if hash != b.config.Checksum {
+	if hash != b.config.BuildChecksum {
 		force = true
 	}
 

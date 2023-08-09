@@ -2,7 +2,7 @@ package exec
 
 import (
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/state"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 )
 
 // TypeExecLocal is the resource string for a LocalExec resource
@@ -29,7 +29,7 @@ type LocalExec struct {
 func (e *LocalExec) Process() error {
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
-	cfg, err := state.LoadState()
+	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
 		r, _ := cfg.FindResource(e.ID)

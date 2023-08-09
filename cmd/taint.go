@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad/constants"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
@@ -25,7 +25,7 @@ var taintCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		cfg, err := resources.LoadState()
+		cfg, err := config.LoadState()
 		if err != nil {
 			fmt.Println("Unable to load statefile, do you have a running blueprint?")
 			os.Exit(1)
