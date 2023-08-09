@@ -7,7 +7,7 @@ Scenario: Single Container from Local Blueprint
   Given I have a running blueprint
   Then the following resources should be running
     | name                                            |
-    | resource.network.onprem                         |
+    | resource.network.consul                         |
     | resource.container.consul                       |
     | resource.sidecar.envoy                          |
   And the info "{.NetworkSettings.Ports['8501/tcp']}" for the running container "resource.container.consul" should exist
@@ -21,7 +21,7 @@ Scenario: Single Container from Local Blueprint with multiple runs
   And I have a running blueprint
   Then the following resources should be running
     | name                                            |
-    | resource.network.onprem                         |
+    | resource.network.consul                         |
     | resource.container.consul                       |
     | resource.sidecar.envoy                          |
   And a HTTP call to "http://consul.container.shipyard.run:8500/v1/status/leader" should result in status 200
