@@ -19,22 +19,22 @@ type CertificateCA struct {
 	// output parameters
 
 	// Key is the value related to the certificate key
-	PrivateKey *File `hcl:"private_key,block" json:"private_key"`
+	PrivateKey File `hcl:"private_key,optional" json:"private_key"`
 
 	// Key is the value related to the certificate key
-	PublicKeyPEM *File `hcl:"public_key_pem,block" json:"public_key_pem"`
-	PublicKeySSH *File `hcl:"public_key_ssh,block" json:"public_key_ssh"`
+	PublicKeyPEM File `hcl:"public_key_pem,optional" json:"public_key_pem"`
+	PublicKeySSH File `hcl:"public_key_ssh,optional" json:"public_key_ssh"`
 
 	// Cert is the value related to the certificate
-	Cert *File `hcl:"certificate,block" json:"certificate"`
+	Cert File `hcl:"certificate,optional" json:"certificate"`
 }
 
 func (c *CertificateCA) Process() error {
 	c.Output = utils.EnsureAbsolute(c.Output, c.File)
-	c.PrivateKey = &File{}
-	c.PublicKeySSH = &File{}
-	c.PublicKeyPEM = &File{}
-	c.Cert = &File{}
+	c.PrivateKey = File{}
+	c.PublicKeySSH = File{}
+	c.PublicKeyPEM = File{}
+	c.Cert = File{}
 
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
@@ -72,24 +72,24 @@ type CertificateLeaf struct {
 	// output parameters
 
 	// Key is the value related to the certificate key
-	PrivateKey *File `hcl:"private_key,block" json:"private_key"`
+	PrivateKey File `hcl:"private_key,optional" json:"private_key"`
 
 	// Key is the value related to the certificate key
-	PublicKeyPEM *File `hcl:"public_key_pem,block" json:"public_key_pem"`
-	PublicKeySSH *File `hcl:"public_key_ssh,block" json:"public_key_ssh"`
+	PublicKeyPEM File `hcl:"public_key_pem,optional" json:"public_key_pem"`
+	PublicKeySSH File `hcl:"public_key_ssh,optional" json:"public_key_ssh"`
 
 	// Cert is the value related to the certificate
-	Cert *File `hcl:"certificate,block" json:"certificate"`
+	Cert File `hcl:"certificate,optional" json:"certificate"`
 }
 
 func (c *CertificateLeaf) Process() error {
 	c.CACert = utils.EnsureAbsolute(c.CACert, c.File)
-	c.CAKey = utils.EnsureAbsolute(c.CAKey, c.File)
+	//c.CAKey = utils.EnsureAbsolute(c.CAKey, c.File)
 	c.Output = utils.EnsureAbsolute(c.Output, c.File)
-	c.PrivateKey = &File{}
-	c.PublicKeySSH = &File{}
-	c.PublicKeyPEM = &File{}
-	c.Cert = &File{}
+	c.PrivateKey = File{}
+	c.PublicKeySSH = File{}
+	c.PublicKeyPEM = File{}
+	c.Cert = File{}
 
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
