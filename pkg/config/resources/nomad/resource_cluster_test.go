@@ -67,8 +67,8 @@ func TestNomadClusterSetsOutputsFromState(t *testing.T) {
 	c.Process()
 
 	require.Equal(t, "127.0.0.1", c.ExternalIP)
-	require.Equal(t, "server.something.something", c.ServerFQRN)
-	require.Equal(t, []string{"1.client.something.something", "2.client.something.something"}, c.ClientFQRN)
+	require.Equal(t, "server.something.something", c.ServerContainerName)
+	require.Equal(t, []string{"1.client.something.something", "2.client.something.something"}, c.ClientContainerName)
 	require.Equal(t, 123, c.APIPort)
 	require.Equal(t, 124, c.ConnectorPort)
 	require.Equal(t, "abc/123", c.ConfigDir)

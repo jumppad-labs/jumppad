@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/jumppad-labs/hclconfig/types"
-	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -18,8 +18,8 @@ type RemoteExec struct {
 	Networks []ctypes.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
 	// Either Image or Target must be specified
-	Image  *ctypes.Image `hcl:"image,block" json:"image,omitempty"`      // Create a new container and exec
-	Target string        `hcl:"target,optional" json:"target,omitempty"` // Attach to a running target and exec
+	Image  *ctypes.Image     `hcl:"image,block" json:"image,omitempty"`      // Create a new container and exec
+	Target *ctypes.Container `hcl:"target,optional" json:"target,omitempty"` // Attach to a running target and exec
 
 	// Either Script or Command must be specified
 	Script           string `hcl:"script,optional" json:"script,omitempty"`                       // Path to a script to execute

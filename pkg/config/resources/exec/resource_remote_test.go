@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/jumppad-labs/hclconfig/types"
-	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/stretchr/testify/require"
 )
 

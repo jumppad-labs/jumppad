@@ -65,7 +65,7 @@ func (p *DocsProvider) Destroy() error {
 	p.log.Info("Destroy Documentation", "ref", p.config.ID)
 
 	// remove the docs
-	ids, err := p.client.FindContainerIDs(p.config.FQRN)
+	ids, err := p.client.FindContainerIDs(p.config.ContainerName)
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func (p *DocsProvider) Destroy() error {
 
 // Lookup the ID of the documentation container
 func (p *DocsProvider) Lookup() ([]string, error) {
-	return p.client.FindContainerIDs(p.config.FQRN)
+	return p.client.FindContainerIDs(p.config.ContainerName)
 }
 
 func (p *DocsProvider) Refresh() error {
@@ -135,7 +135,7 @@ func (p *DocsProvider) Changed() (bool, error) {
 func (p *DocsProvider) createDocsContainer() error {
 	// set the FQDN
 	fqdn := utils.FQDN(p.config.Name, p.config.Module, p.config.Type)
-	p.config.FQRN = fqdn
+	p.config.ContainerName = fqdn
 
 	// create the container config
 	cc := &types.Container{

@@ -59,13 +59,7 @@ func (p *Provider) Create() error {
 	// is the network name and subnet equal to one which already exists
 	for _, ne := range nets {
 		if ne.Name == p.config.Name {
-			for _, ci := range ne.IPAM.Config {
-				// check that the returned networks subnet matches the existing networks subnet
-				if ci.Subnet != p.config.Subnet {
-					p.log.Debug("Network already exists, skip creation", "ref", p.config.ID)
-					return nil
-				}
-			}
+			return fmt.Errorf("a Network already exists with the name: %s ref:%s", p.config.Name, p.config.ID)
 		}
 	}
 
@@ -79,7 +73,7 @@ func (p *Provider) Create() error {
 			}
 
 			if cidr.Contains(cidr2.IP) || cidr2.Contains(cidr.IP) {
-				return fmt.Errorf("Unable to create network %s, Network %s already exists with an overlapping subnet %s. Either remove the network '%s' or change the subnet for your network", p.config.Name, ne.Name, ci.Subnet, ne.Name)
+				return fmt.Errorf("unable to create network %s, Network %s already exists with an overlapping subnet %s. Either remove the network '%s' or change the subnet for your network", p.config.Name, ne.Name, ci.Subnet, ne.Name)
 			}
 		}
 	}
@@ -88,7 +82,7 @@ func (p *Provider) Create() error {
 	p.log.Debug("Attempting to create using bridge plugin", "ref", p.config.Name)
 	err = p.createWithDriver("bridge")
 	if err != nil {
-		p.log.Debug("Unable to create using bridge, fall back to use nat plugin", "ref", p.config.Name)
+		p.log.Debug("Unable to create using bridge, fall back to use nat plugin", "ref", p.config.Name, "error", err)
 		// fall back to nat
 		err = p.createWithDriver("nat")
 		if err != nil {
@@ -151,13 +145,13 @@ func (p *Provider) createWithDriver(driver string) error {
 		IPAM: &network.IPAM{
 			Driver: "default",
 			Config: []network.IPAMConfig{
-				network.IPAMConfig{
+				{
 					Subnet: p.config.Subnet,
 				},
 			},
 		},
 		Labels: map[string]string{
-			"created_by": "shipyard",
+			"created_by": "jumppad",
 			"id":         p.config.ID,
 		},
 		Attachable: true,

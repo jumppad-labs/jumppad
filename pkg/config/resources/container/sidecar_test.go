@@ -53,5 +53,5 @@ func TestSidecarLoadsValuesFromState(t *testing.T) {
 	err := docs.Process()
 	require.NoError(t, err)
 
-	require.Equal(t, "fqdn.mine", docs.FQRN)
+	require.Equal(t, "fqdn.mine", docs.ContainerName)
 }

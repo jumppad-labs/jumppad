@@ -9,6 +9,8 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/connector"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/k8s"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/nomad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"golang.org/x/xerrors"
 )
@@ -92,9 +94,6 @@ func (p *Provider) exposeRemote() error {
 		tc.Close()
 	}
 
-	// address of the remote connector
-	connectorAddress := ""
-
 	// destination address depends on the type of the cluster
 	destAddr := ""
 	port := fmt.Sprintf("%d", p.config.Target.Port)
@@ -103,7 +102,8 @@ func (p *Provider) exposeRemote() error {
 		port = p.config.Target.NamedPort
 	}
 
-	if p.config.Target.Kubernetes != nil {
+	switch p.config.Target.Resource.Type {
+	case k8s.TypeK8sCluster:
 		destAddr = fmt.Sprintf(
 			"%s.%s.svc:%s",
 			p.config.Target.Config["service"],
@@ -111,10 +111,7 @@ func (p *Provider) exposeRemote() error {
 			port,
 		)
 
-		connectorAddress = fmt.Sprintf("%s:%d", p.config.Target.Kubernetes.ExternalIP, p.config.Target.Kubernetes.ConnectorPort)
-	}
-
-	if p.config.Target.Nomad != nil {
+	case nomad.TypeNomadCluster:
 		destAddr = fmt.Sprintf(
 			"%s.%s.%s:%s",
 			p.config.Target.Config["job"],
@@ -122,9 +119,12 @@ func (p *Provider) exposeRemote() error {
 			p.config.Target.Config["task"],
 			port,
 		)
-
-		connectorAddress = fmt.Sprintf("%s:%d", p.config.Target.Nomad.ExternalIP, p.config.Target.Nomad.ConnectorPort)
+	default:
+		return fmt.Errorf("target type must be either a Kubernetes or a Nomad cluster")
 	}
+
+	// address of the remote connector
+	connectorAddress := fmt.Sprintf("%s:%d", p.config.Target.Resource.ExternalIP, p.config.Target.Resource.ConnectorPort)
 
 	// sanitize the name to make it uri format
 	serviceName, err := utils.ReplaceNonURIChars(p.config.Name)

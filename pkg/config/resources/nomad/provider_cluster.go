@@ -70,7 +70,7 @@ func (p *ClusterProvider) Destroy() error {
 func (p *ClusterProvider) Lookup() ([]string, error) {
 	ids := []string{}
 
-	id, err := p.client.FindContainerIDs(p.config.ServerFQRN)
+	id, err := p.client.FindContainerIDs(p.config.ServerContainerName)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (p *ClusterProvider) Lookup() ([]string, error) {
 	ids = append(ids, id...)
 
 	// find the clients
-	for _, id := range p.config.ClientFQRN {
+	for _, id := range p.config.ClientContainerName {
 		id, err := p.client.FindContainerIDs(id)
 		if err != nil {
 			return nil, err
@@ -95,15 +95,15 @@ func (p *ClusterProvider) Lookup() ([]string, error) {
 func (p *ClusterProvider) Refresh() error {
 	p.log.Debug("Refresh Nomad Cluster", "ref", p.config.ID)
 
-	p.log.Debug("Checking health of server node", "ref", p.config.ID, "server", p.config.ServerFQRN)
+	p.log.Debug("Checking health of server node", "ref", p.config.ID, "server", p.config.ServerContainerName)
 
-	ids, _ := p.client.FindContainerIDs(p.config.ServerFQRN)
+	ids, _ := p.client.FindContainerIDs(p.config.ServerContainerName)
 	if len(ids) == 1 {
-		p.log.Debug("Server node exists", "ref", p.config.ID, "server", p.config.ServerFQRN, "id", ids[0])
+		p.log.Debug("Server node exists", "ref", p.config.ID, "server", p.config.ServerContainerName, "id", ids[0])
 	}
 
 	// find any nodes that have crashed or have been deleted
-	for _, cl := range p.config.ClientFQRN {
+	for _, cl := range p.config.ClientContainerName {
 		p.log.Debug("Checking health of client nodes", "ref", p.config.ID, "client", cl)
 
 		ids, _ := p.client.FindContainerIDs(cl)
@@ -112,18 +112,18 @@ func (p *ClusterProvider) Refresh() error {
 		} else {
 			p.log.Debug("Client node does not exist", "ref", p.config.ID, "client", cl)
 			// recreate the node
-			p.config.ClientFQRN = removeElement(p.config.ClientFQRN, cl)
+			p.config.ClientContainerName = removeElement(p.config.ClientContainerName, cl)
 		}
 	}
 
 	// Has the number of clients nodes changed and are we scaling down?
-	if p.config.ClientNodes < len(p.config.ClientFQRN) {
+	if p.config.ClientNodes < len(p.config.ClientContainerName) {
 		// calculate the number of nodes that should be removed
-		removeCount := len(p.config.ClientFQRN) - p.config.ClientNodes
-		p.log.Info("Scaling cluster down", "ref", p.config.ID, "current_scale", len(p.config.ClientFQRN), "new_scale", p.config.ClientNodes, "removing", removeCount)
+		removeCount := len(p.config.ClientContainerName) - p.config.ClientNodes
+		p.log.Info("Scaling cluster down", "ref", p.config.ID, "current_scale", len(p.config.ClientContainerName), "new_scale", p.config.ClientNodes, "removing", removeCount)
 
 		// add the nodes to the remove list
-		nodesToRemove := p.config.ClientFQRN[:removeCount]
+		nodesToRemove := p.config.ClientContainerName[:removeCount]
 
 		wg := sync.WaitGroup{}
 		wg.Add(len(nodesToRemove))
@@ -140,7 +140,7 @@ func (p *ClusterProvider) Refresh() error {
 				}
 			}(n)
 
-			p.config.ClientFQRN = removeElement(p.config.ClientFQRN, n)
+			p.config.ClientContainerName = removeElement(p.config.ClientContainerName, n)
 		}
 
 		wg.Wait()
@@ -155,21 +155,21 @@ func (p *ClusterProvider) Refresh() error {
 	}
 
 	// do we need to scale the cluster up
-	if p.config.ClientNodes > len(p.config.ClientFQRN) {
+	if p.config.ClientNodes > len(p.config.ClientContainerName) {
 		// need to scale up
-		p.log.Info("Scaling cluster up", "ref", p.config.ID, "current_scale", len(p.config.ClientFQRN), "new_scale", p.config.ClientNodes)
+		p.log.Info("Scaling cluster up", "ref", p.config.ID, "current_scale", len(p.config.ClientContainerName), "new_scale", p.config.ClientNodes)
 
-		for i := len(p.config.ClientFQRN); i < p.config.ClientNodes; i++ {
+		for i := len(p.config.ClientContainerName); i < p.config.ClientNodes; i++ {
 			id := utils.FQDN(fmt.Sprintf("%s.client.%s", randomID(), p.config.Name), p.config.Module, p.config.Type)
 
 			p.log.Debug("Create client node", "ref", p.config.ID, "client", id)
 
-			fqdn, _, err := p.createClientNode(randomID(), p.config.Image.Name, utils.ImageVolumeName, p.config.ServerFQRN)
+			fqdn, _, err := p.createClientNode(randomID(), p.config.Image.Name, utils.ImageVolumeName, p.config.ServerContainerName)
 			if err != nil {
 				return fmt.Errorf(`unable to recreate client node "%s", %s`, id, err)
 			}
 
-			p.config.ClientFQRN = append(p.config.ClientFQRN, fqdn)
+			p.config.ClientContainerName = append(p.config.ClientContainerName, fqdn)
 
 			p.log.Debug("Successfully created client node", "ref", p.config.ID, "client", fqdn)
 		}
@@ -288,7 +288,7 @@ func (p *ClusterProvider) createNomad() error {
 	}
 
 	name := fmt.Sprintf("server.%s", p.config.Name)
-	p.config.ServerFQRN = utils.FQDN(name, p.config.Module, p.config.Type)
+	p.config.ServerContainerName = utils.FQDN(name, p.config.Module, p.config.Type)
 
 	cMutex := sync.Mutex{}
 	clientFQDN := []string{}
@@ -310,13 +310,13 @@ func (p *ClusterProvider) createNomad() error {
 			cMutex.Unlock()
 
 			clWait.Done()
-		}(randomID(), p.config.Image.Name, volID, p.config.ServerFQRN)
+		}(randomID(), p.config.Image.Name, volID, p.config.ServerContainerName)
 	}
 
 	clWait.Wait()
 
 	// set the client ids
-	p.config.ClientFQRN = clientFQDN
+	p.config.ClientContainerName = clientFQDN
 
 	if clientError != nil {
 		return xerrors.Errorf("Unable to create client nodes: %w", clientError)
@@ -735,9 +735,9 @@ func (p *ClusterProvider) destroyNomad() error {
 
 	// destroy the clients
 	wg := sync.WaitGroup{}
-	wg.Add(len(p.config.ClientFQRN))
+	wg.Add(len(p.config.ClientContainerName))
 
-	for _, cl := range p.config.ClientFQRN {
+	for _, cl := range p.config.ClientContainerName {
 		go func(name string) {
 			defer wg.Done()
 
@@ -751,7 +751,7 @@ func (p *ClusterProvider) destroyNomad() error {
 	wg.Wait()
 
 	// destroy the server
-	err := p.destroyNode(p.config.ServerFQRN)
+	err := p.destroyNode(p.config.ServerContainerName)
 	if err != nil {
 		return err
 	}

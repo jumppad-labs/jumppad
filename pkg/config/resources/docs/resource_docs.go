@@ -25,9 +25,9 @@ type Docs struct {
 
 	// Output parameters
 
-	// FQRN is the fully qualified resource name for the container, this can be used
+	// ContainerName is the fully qualified resource name for the container, this can be used
 	// to access the container from other sources
-	FQRN string `hcl:"fqdn,optional" json:"fqdn,omitempty"`
+	ContainerName string `hcl:"fqdn,optional" json:"fqdn,omitempty"`
 }
 
 func (d *Docs) Process() error {
@@ -44,7 +44,7 @@ func (d *Docs) Process() error {
 		r, _ := cfg.FindResource(d.ID)
 		if r != nil {
 			kstate := r.(*Docs)
-			d.FQRN = kstate.FQRN
+			d.ContainerName = kstate.ContainerName
 		}
 	}
 

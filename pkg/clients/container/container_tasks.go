@@ -56,8 +56,8 @@ type ContainerTasks interface {
 	// If the force parameter is set then PullImage will pull regardless of the image already
 	// being cached locally.
 	PullImage(image types.Image, force bool) error
-	// FindContainerIDs returns the Container IDs for the given identifier
-	FindContainerIDs(fqdn string) ([]string, error)
+	// FindContainerIDs returns the Container IDs for the given container name
+	FindContainerIDs(containerName string) ([]string, error)
 	// RemoveImage removes the image with the given id from the local registry
 	RemoveImage(id string) error
 	// ContainerLogs attaches to the container and streams the logs to the returned

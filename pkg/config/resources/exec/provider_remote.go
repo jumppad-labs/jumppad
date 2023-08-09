@@ -46,7 +46,7 @@ func (p *RemoteProvider) Create() error {
 	// execution target id
 	targetID := ""
 
-	if p.config.Target == "" {
+	if p.config.Target == nil {
 		// Not using existing target create new container
 		id, err := p.createRemoteExecContainer()
 		if err != nil {
@@ -55,7 +55,7 @@ func (p *RemoteProvider) Create() error {
 
 		targetID = id
 	} else {
-		ids, err := p.client.FindContainerIDs(p.config.Target)
+		ids, err := p.client.FindContainerIDs(p.config.Target.ContainerName)
 		if err != nil {
 			return xerrors.Errorf("unable to find remote exec target: %w", err)
 		}
@@ -92,7 +92,7 @@ func (p *RemoteProvider) Create() error {
 	}
 
 	// destroy the container if we created one
-	if p.config.Target == "" {
+	if p.config.Target == nil {
 		p.client.RemoveContainer(targetID, true)
 	}
 

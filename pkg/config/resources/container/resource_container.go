@@ -40,9 +40,9 @@ type Container struct {
 
 	// Output parameters
 
-	// FQRN is the fully qualified domain name for the container, this can be used
+	// ContainerName is the fully qualified domain name for the container, this can be used
 	// to access the container from other sources
-	FQRN string `hcl:"fqrn,optional" json:"fqrn,omitempty"`
+	ContainerName string `hcl:"container_name,optional" json:"container_name,omitempty"`
 }
 
 type User struct {
@@ -112,7 +112,7 @@ func (c *Container) Process() error {
 		r, _ := cfg.FindResource(c.ID)
 		if r != nil {
 			kstate := r.(*Container)
-			c.FQRN = kstate.FQRN
+			c.ContainerName = kstate.ContainerName
 
 			// add the image id from state
 			c.Image.ID = kstate.Image.ID

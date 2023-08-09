@@ -312,16 +312,16 @@ func getLookupAddress(resourceName string) (string, string, int, error) {
 	case network.TypeNetwork:
 		return res.Metadata().Name, res.Metadata().Type, 1, nil
 	case k8s.TypeK8sCluster:
-		return res.(*k8s.K8sCluster).FQRN, res.Metadata().Type, 1, nil
+		return res.(*k8s.K8sCluster).ContainerName, res.Metadata().Type, 1, nil
 	case nomad.TypeNomadCluster:
 		cl := res.(*nomad.NomadCluster)
-		return cl.ServerFQRN, res.Metadata().Type, cl.ClientNodes + 1, nil
+		return cl.ServerContainerName, res.Metadata().Type, cl.ClientNodes + 1, nil
 	case container.TypeContainer:
-		return res.(*container.Container).FQRN, res.Metadata().Type, 1, nil
+		return res.(*container.Container).ContainerName, res.Metadata().Type, 1, nil
 	case container.TypeSidecar:
-		return res.(*container.Sidecar).FQRN, res.Metadata().Type, 1, nil
+		return res.(*container.Sidecar).ContainerName, res.Metadata().Type, 1, nil
 	case docs.TypeDocs:
-		return res.(*docs.Docs).FQRN, res.Metadata().Type, 1, nil
+		return res.(*docs.Docs).ContainerName, res.Metadata().Type, 1, nil
 	default:
 		return "", "", 0, fmt.Errorf("resource type %s is not supported", res.Metadata().Type)
 	}

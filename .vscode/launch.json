@@ -37,7 +37,8 @@
       "args": [
         "up",
         "${input:blueprint}",
-      ]
+      ],
+      "runOptions": { "reevaluateOnRerun": false}
     },
     {
       "name": "Debug - Dev",
@@ -51,7 +52,8 @@
       "args": [
         "dev",
         "${input:blueprint}",
-      ]
+      ],
+      "runOptions": { "reevaluateOnRerun": false}
     }, 
     {
       "name": "Debug - Down",
@@ -93,7 +95,8 @@
       "args": [
         "test",
         "${input:blueprint}",
-      ]
+      ],
+      "runOptions": { "reevaluateOnRerun": false}
     }
   ],
   "inputs": [

@@ -67,7 +67,7 @@ func TestK8sClusterSetsOutputsFromState(t *testing.T) {
 	require.Equal(t, 123, c.APIPort)
 	require.Equal(t, 124, c.ConnectorPort)
 	require.Equal(t, "./mine.yaml", c.KubeConfig)
-	require.Equal(t, "fqdn.mine.com", c.FQRN)
+	require.Equal(t, "fqdn.mine.com", c.ContainerName)
 
 	// check the netwok
 	require.Equal(t, "10.5.0.2", c.Networks[0].IPAddress)

@@ -44,7 +44,7 @@ type K8sCluster struct {
 
 	// Fully qualified domain name for the container, this address can be
 	// used to reference the container within docker and from other containers
-	FQRN string `hcl:"fqrn,optional" json:"fqrn,omitempty"`
+	ContainerName string `hcl:"container_name,optional" json:"container_name,omitempty"`
 
 	// ExternalIP is the ip address of the cluster, this generally resolves
 	// to the docker ip
@@ -76,7 +76,7 @@ func (k *K8sCluster) Process() error {
 		if r != nil {
 			kstate := r.(*K8sCluster)
 			k.KubeConfig = kstate.KubeConfig
-			k.FQRN = kstate.FQRN
+			k.ContainerName = kstate.ContainerName
 			k.APIPort = kstate.APIPort
 			k.ConnectorPort = kstate.ConnectorPort
 			k.ExternalIP = kstate.ExternalIP

@@ -46,10 +46,10 @@ type NomadCluster struct {
 	ConfigDir string `hcl:"config_dir,optional" json:"config_dir,omitempty"`
 
 	// The fully qualified docker address for the server
-	ServerFQRN string `hcl:"server_fqrn,optional" json:"server_fqrn,omitempty"`
+	ServerContainerName string `hcl:"server_container_name,optional" json:"server_container_name,omitempty"`
 
 	// The fully qualified docker address for the client nodes
-	ClientFQRN []string `hcl:"client_fqrn,optional" json:"client_fqrn,omitempty"`
+	ClientContainerName []string `hcl:"client_container_name,optional" json:"client_container_name,omitempty"`
 
 	// ExternalIP is the ip address of the cluster, this generally resolves
 	// to the docker ip
@@ -92,8 +92,8 @@ func (n *NomadCluster) Process() error {
 			state := r.(*NomadCluster)
 			n.ExternalIP = state.ExternalIP
 			n.ConfigDir = state.ConfigDir
-			n.ServerFQRN = state.ServerFQRN
-			n.ClientFQRN = state.ClientFQRN
+			n.ServerContainerName = state.ServerContainerName
+			n.ClientContainerName = state.ClientContainerName
 			n.APIPort = state.APIPort
 			n.ConnectorPort = state.ConnectorPort
 

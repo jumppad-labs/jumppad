@@ -1,6 +1,10 @@
 package network
 
-import "github.com/jumppad-labs/hclconfig/types"
+import (
+	"fmt"
+
+	"github.com/jumppad-labs/hclconfig/types"
+)
 
 // TypeNetwork is the string resource type for Network resources
 const TypeNetwork string = "network"
@@ -11,6 +15,22 @@ type Network struct {
 	types.ResourceMetadata `hcl:",remain"`
 
 	Subnet string `hcl:"subnet" json:"subnet"`
+}
+
+func (c *Network) Parse(conf types.Findable) error {
+	// do any other networks with this name exist?
+	nets, err := conf.FindResourcesByType(TypeNetwork)
+	if err != nil {
+		return err
+	}
+
+	for _, n := range nets {
+		if n.Metadata().Name == c.Name && n.Metadata().ID != c.ID {
+			return fmt.Errorf("a network named '%s' is already defined by the resource '%s'", c.Name, n.Metadata().ID)
+		}
+	}
+
+	return nil
 }
 
 func (c *Network) Process() error {

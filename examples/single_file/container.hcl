@@ -2,6 +2,10 @@ variable "version" {
   default = "consul:1.6.1"
 }
 
+variable "port_range" {
+  default = "8500-8502"
+}
+
 resource "network" "onprem" {
   subnet = "10.6.0.0/16"
 }
@@ -41,7 +45,7 @@ resource "container" "consul" {
   }
 
   port_range {
-    range       = "8500-8502"
+    range       = variable.port_range
     enable_host = true
   }
 

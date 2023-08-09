@@ -2,7 +2,7 @@ resource "ingress" "fake_service_2" {
   port = 19091
 
   target {
-    id         = resource.nomad_cluster.dev.id
+    resource   = resource.nomad_cluster.dev
     named_port = "http"
 
     config = {

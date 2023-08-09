@@ -5,8 +5,6 @@ import (
 
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/k8s"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/nomad"
 )
 
 // TypeIngress is the resource string for the type
@@ -34,10 +32,16 @@ type Ingress struct {
 	Address string `hcl:"address,optional" json:"address,omitempty"`
 }
 
+type TargetConfig struct {
+	Name          string `hcl:"name,optional" json:"name,omitempty"`
+	Type          string `hcl:"type,optional" json:"type,omitempty"`
+	ExternalIP    string `hcl:"external_ip,optional" json:"external_ip,omitempty"`
+	ConnectorPort int    `hcl:"connector_port,optional" json:"connector_port,omitempty"`
+}
+
 // Traffic defines either a source or a destination block for ingress traffic
 type TrafficTarget struct {
-	Kubernetes *k8s.K8sCluster     `hcl:"kubernetes" json:"kubernetes,omitempty"`
-	Nomad      *nomad.NomadCluster `hcl:"nomad" json:"nomad,omitempty"`
+	Resource TargetConfig `hcl:"resource" json:"resource,omitempty"`
 
 	Port      int    `hcl:"port,optional" json:"port,omitempty"`
 	NamedPort string `hcl:"named_port,optional" json:"named_port,omitempty"`

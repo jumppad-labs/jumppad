@@ -39,9 +39,9 @@ func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
 	if sok {
 		co := &Container{}
 		co.ResourceMetadata = cs.ResourceMetadata
-		co.FQRN = cs.FQRN
+		co.ContainerName = cs.ContainerName
 
-		co.Networks = []NetworkAttachment{{ID: cs.Target.FQRN}}
+		co.Networks = []NetworkAttachment{{ID: cs.Target.ContainerName}}
 		co.Volumes = cs.Volumes
 		co.Command = cs.Command
 		co.Entrypoint = cs.Entrypoint
@@ -77,7 +77,7 @@ func (p *Provider) Create() error {
 
 	// we need to set the fqdn on the original object
 	if p.sidecar != nil {
-		p.sidecar.FQRN = p.config.FQRN
+		p.sidecar.ContainerName = p.config.ContainerName
 	}
 
 	return nil
@@ -85,7 +85,7 @@ func (p *Provider) Create() error {
 
 // Lookup the ID based on the config
 func (p *Provider) Lookup() ([]string, error) {
-	return p.client.FindContainerIDs(p.config.FQRN)
+	return p.client.FindContainerIDs(p.config.ContainerName)
 }
 
 func (c *Provider) Refresh() error {
@@ -135,7 +135,7 @@ func (c *Provider) Changed() (bool, error) {
 func (c *Provider) internalCreate(sidecar bool) error {
 	// set the fqdn
 	fqdn := utils.FQDN(c.config.Name, c.config.Module, c.config.Type)
-	c.config.FQRN = fqdn
+	c.config.ContainerName = fqdn
 
 	if c.config.Image == nil {
 		return fmt.Errorf("need to specify an image")

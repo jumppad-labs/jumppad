@@ -193,7 +193,7 @@ func TestContainerDestroysCorrectlyWhenContainerExists(t *testing.T) {
 	cc.Networks = []NetworkAttachment{NetworkAttachment{Name: "cloud"}}
 	c := NewContainerProvider(cc, md, hc, clients.NewTestLogger(t))
 
-	md.On("FindContainerIDs", cc.FQRN).Return([]string{"abc"}, nil)
+	md.On("FindContainerIDs", cc.ContainerName).Return([]string{"abc"}, nil)
 	md.On("RemoveContainer", "abc", false).Return(nil)
 	md.On("DetachNetwork", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
@@ -206,7 +206,7 @@ func TestContainerDoesNotDestroysWhenNotExists(t *testing.T) {
 	cc.Networks = []NetworkAttachment{NetworkAttachment{Name: "cloud"}}
 	c := NewContainerProvider(cc, md, hc, clients.NewTestLogger(t))
 
-	md.On("FindContainerIDs", cc.FQRN).Return(nil, nil)
+	md.On("FindContainerIDs", cc.ContainerName).Return(nil, nil)
 
 	err := c.Destroy()
 	assert.NoError(t, err)
@@ -218,7 +218,7 @@ func TestContainerDoesNotDestroysWhenLookupError(t *testing.T) {
 	cc.Networks = []NetworkAttachment{NetworkAttachment{Name: "cloud"}}
 	c := NewContainerProvider(cc, md, hc, clients.NewTestLogger(t))
 
-	md.On("FindContainerIDs", cc.FQRN).Return(nil, fmt.Errorf("boom"))
+	md.On("FindContainerIDs", cc.ContainerName).Return(nil, fmt.Errorf("boom"))
 
 	err := c.Destroy()
 	assert.Error(t, err)
@@ -230,7 +230,7 @@ func TestContainerLooksupIDs(t *testing.T) {
 	cc.Networks = []NetworkAttachment{NetworkAttachment{Name: "cloud"}}
 	c := NewContainerProvider(cc, md, hc, clients.NewTestLogger(t))
 
-	md.On("FindContainerIDs", cc.FQRN).Return([]string{"abc"}, nil)
+	md.On("FindContainerIDs", cc.ContainerName).Return([]string{"abc"}, nil)
 
 	ids, err := c.Lookup()
 	assert.NoError(t, err)
