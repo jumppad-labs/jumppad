@@ -33,9 +33,11 @@ func NewTTYView() (*TTYView, error) {
 	}
 
 	c.logger = logger.NewTTYLogger(mw, level)
+	c.logger.SetLevel(level)
+
 	c.initialModel.logger = c.logger
 
-	c.program = tea.NewProgram(c.initialModel, tea.WithAltScreen())
+	c.program = tea.NewProgram(c.initialModel, tea.WithAltScreen(), tea.WithMouseAllMotion())
 
 	// once the program has been created set a reference to the writer so that
 	// log lines get directed to bubbletea

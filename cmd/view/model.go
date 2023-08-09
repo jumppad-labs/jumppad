@@ -96,14 +96,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.MouseMsg:
 		switch msg.Type {
+		case tea.MouseWheelDown:
+			fallthrough
 		case tea.MouseWheelUp:
 			m.follow = false
-		case tea.MouseWheelDown:
-			// noop for now
+
+			var cmd tea.Cmd
+			m.viewport, cmd = m.viewport.Update(msg)
+
+			return m, cmd
 		}
 
 	case tea.KeyMsg:
 		switch {
+		case key.Matches(msg, DefaultKeyMap.Filter):
+			m.follow = true
 		case key.Matches(msg, DefaultKeyMap.Up):
 			m.follow = false
 		case key.Matches(msg, DefaultKeyMap.Down):
@@ -191,7 +198,20 @@ func (m model) headerView() string {
 }
 
 func (m model) footerView() string {
-	line := lipgloss.NewStyle().Foreground(lipgloss.Color("37")).Render(strings.Repeat("─", m.width-m.left))
+	level := "debug"
+	if m.logger.IsDebug() {
+		level = "info"
+	}
+
+	follow := ", [f] follow logs "
+
+	if m.follow {
+		follow = " "
+	}
+
+	keys := lipgloss.NewStyle().Foreground(lipgloss.Color("37")).Render(fmt.Sprintf("── [l] toggle log level %s, [mouse wheel up/down] scroll logs%s", level, follow))
+	line := lipgloss.NewStyle().Foreground(lipgloss.Color("37")).Render(strings.Repeat("─", m.width-m.left-len(keys)))
+	line = lipgloss.JoinHorizontal(lipgloss.Left, keys, line)
 
 	return lipgloss.JoinVertical(lipgloss.Top, line, m.statusbar.View())
 }

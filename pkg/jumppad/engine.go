@@ -80,7 +80,7 @@ func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]strin
 		return nil, err
 	}
 
-	e.log.Info("Parsing configuration", "path", path)
+	e.log.Debug("Parsing configuration", "path", path)
 
 	if variablesFile != "" {
 		variablesFile, err = filepath.Abs(variablesFile)
