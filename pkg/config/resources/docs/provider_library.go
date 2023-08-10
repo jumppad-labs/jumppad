@@ -117,7 +117,7 @@ func (p *BookProvider) writePage(chapterPath string, page Page) error {
 
 		if len(match) > 0 {
 			taskID := result["id"]
-			resourceID := fmt.Sprintf("<Task id=\"%s\">", page.Tasks[taskID])
+			resourceID := fmt.Sprintf("<Task id=\"%s\">", page.Tasks[taskID].ID)
 			page.Content = r.ReplaceAllString(page.Content, resourceID)
 		}
 	}
@@ -126,7 +126,7 @@ func (p *BookProvider) writePage(chapterPath string, page Page) error {
 	pagePath := filepath.Join(chapterPath, pageFile)
 	err := os.WriteFile(pagePath, []byte(page.Content), 0755)
 	if err != nil {
-		return fmt.Errorf("Unable to write page %s to disk at %s", page.Name, pagePath)
+		return fmt.Errorf("unable to write page %s to disk at %s", page.Name, pagePath)
 	}
 
 	return nil

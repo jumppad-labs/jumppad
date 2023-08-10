@@ -22,9 +22,9 @@ jobs:
           go version
           go get -v -t ./...
 
-      #- name: Unit Test
-      #  run: |
-      #    go test -v -race -coverprofile=coverage.txt -covermode=atomic -short ./...
+      - name: Unit Test
+        run: |
+          go test -v -race ./pkg/jumppad
 
       #- name: Upload Code Coverage
       #  uses: codecov/codecov-action@v1
@@ -672,49 +672,29 @@ jobs:
         git commit -m "Update version to ${{ needs.tag.outputs.new_tag }}"
         git push
 
-  choco:
-    name: Update Chocolatey repository
-    runs-on: windows-latest
+  winget:
+    name: Publish to WinGet
     needs:
       - github_release
       - tag
+    runs-on: windows-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          repository: 'jumppad-labs/choco'
+    - uses: isaacrlevin/winget-publish-action@1.0
+      with:
+        publish-type: "Update"
+        user: "jumppad"
+        package: "jumppad"
+        version: ${{ needs.tag.outputs.new_version }}
+        url: "https://github.com/jumppad-labs/jumppad/releases/download/v${{ needs.tag.outputs.new_version }}/jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip"
+        token: '${{ secrets.GH_TOKEN }}'
 
-      - name: Install dependencies
-        run: |
-          choco install checksum -y
-          choco install wget -y
-
-      - name: Replace checksum
-        run: |
-          wget "https://github.com/jumppad-labs/jumppad/releases/download/v${{ needs.tag.outputs.new_version }}/jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip"
-          powershell -Command "(gc tools/chocolateyinstall.ps1) -replace '__checksum__', '$(checksum -t sha256 -f jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip)' | Out-File -encoding ASCII tools/chocolateyinstall.ps1"
-
-      - name: Replace version
-        run: |
-          powershell -Command "(gc jumppad.nuspec) -replace '__version__', '${{ needs.tag.outputs.new_version }}' | Out-File -encoding ASCII jumppad.nuspec"
-          powershell -Command "(gc tools/chocolateyinstall.ps1) -replace '__version__', '${{ needs.tag.outputs.new_version }}' | Out-File -encoding ASCII tools\chocolateyinstall.ps1"
-
-      - name: Choco login
-        run: choco apikey -k ${{ secrets.CHOCO_API_KEY }} -s https://push.chocolatey.org/
-
-      - name: Choco build
-        run: choco pack
-
-      - name: Choco push
-        run: choco push -f
-
-      - name: Send status to Discord
-        uses: sarisia/actions-status-discord@v1
-        if: always()
-        with:
-          tile: ${{ github.job_id }}
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          description: "Push new version ${{ needs.tag.outputs.new_version }} to Chocolatey"
+    - name: Send status to Discord
+      uses: sarisia/actions-status-discord@v1
+      if: always()
+      with:
+        tile: ${{ github.job_id }}
+        webhook: ${{ secrets.DISCORD_WEBHOOK }}
+        description: "Push new version ${{ needs.tag.outputs.new_version }} to Winget"
 
   apt:
     name: Update fury.io Apt repository

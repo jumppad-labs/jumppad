@@ -9,12 +9,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-var statuses = []string{
-	"idle",
-	"checking for changes",
-	"applying changes",
-}
-
 type TTYView struct {
 	program      *tea.Program
 	logger       logger.Logger
