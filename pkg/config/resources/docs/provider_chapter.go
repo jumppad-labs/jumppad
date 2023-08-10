@@ -26,17 +26,6 @@ func (p *ChapterProvider) Init(cfg htypes.Resource, l logger.Logger) error {
 
 func (p *ChapterProvider) Create() error {
 	p.log.Info(fmt.Sprintf("Creating %s", p.config.Type), "ref", p.config.ID)
-
-	tasks := []Task{}
-
-	for _, page := range p.config.Pages {
-		for _, task := range page.Tasks {
-			tasks = append(tasks, task)
-		}
-	}
-
-	p.config.Tasks = tasks
-
 	return nil
 }
 

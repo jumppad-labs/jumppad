@@ -2,8 +2,8 @@ package docs
 
 import (
 	"github.com/jumppad-labs/hclconfig/types"
-	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
+	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 )
 
 // TypeDocs is the resource string for a Docs resource
@@ -14,7 +14,7 @@ const TypeDocs string = "docs"
 type Docs struct {
 	types.ResourceMetadata `hcl:",remain"`
 
-	Networks []ctypes.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
+	Networks ctypes.NetworkAttachments `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
 	Image *ctypes.Image `hcl:"image,block" json:"image,omitempty"` // image to use for the container
 
@@ -23,11 +23,20 @@ type Docs struct {
 	Port          int  `hcl:"port,optional" json:"port"`
 	OpenInBrowser bool `hcl:"open_in_browser,optional" json:"open_in_browser"` // When a host port is defined open the location in a browser
 
+	Logo   Logo   `hcl:"logo,block" json:"logo,omitempty"`
+	Assets string `hcl:"assets,optional" json:"assets,omitempty"`
+
 	// Output parameters
 
 	// ContainerName is the fully qualified resource name for the container, this can be used
 	// to access the container from other sources
 	ContainerName string `hcl:"fqdn,optional" json:"fqdn,omitempty"`
+}
+
+type Logo struct {
+	URL    string `hcl:"url" json:"url"`
+	Width  int    `hcl:"width" json:"width"`
+	Height int    `hcl:"height" json:"height"`
 }
 
 func (d *Docs) Process() error {
