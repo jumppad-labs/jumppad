@@ -50,7 +50,7 @@ resource "template" "app_job" {
 }
 
 resource "nomad_job" "app" {
-  cluster = resource.nomad_cluster.dev.id
+  cluster = resource.nomad_cluster.dev
 
   paths = [resource.template.app_job.destination]
 }
@@ -59,7 +59,7 @@ resource "ingress" "app" {
   port = 19090
 
   target {
-    id         = resource.nomad_cluster.dev.id
+    resource   = resource.nomad_cluster.dev
     named_port = "http"
 
     config = {

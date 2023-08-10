@@ -13,7 +13,7 @@ Scenario: Single Container with jumppad Variables
   And I have a running blueprint
   Then the following resources should be running
     | name                                       |
-    | resource.network.onprem                    |
+    | resource.network.consul                    |
     | resource.container.consul                  |
     | resource.sidecar.envoy                     |
   And the info "{.Config.Env}" for the running container "resource.container.consul" should contain "something=set by test"

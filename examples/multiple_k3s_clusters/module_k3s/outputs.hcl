@@ -1,5 +1,5 @@
 output "k8s_port" {
-  value = resource.random_number.port.value
+  value = resource.random_number.api_port.value
 }
 
 output "consul_http_addr" {

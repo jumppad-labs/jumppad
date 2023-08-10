@@ -13,7 +13,7 @@ import (
 	"github.com/jumppad-labs/connector/http"
 	"github.com/jumppad-labs/connector/protos/shipyard"
 	"github.com/jumppad-labs/connector/remote"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/server"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
@@ -56,7 +56,7 @@ func newConnectorRunCommand() *cobra.Command {
 			}
 
 			grpcServer := grpc.NewServer()
-			s := remote.New(clients.LoggerAsHCLogger(l), nil, nil, nil)
+			s := remote.New(logger.LoggerAsHCLogger(l), nil, nil, nil)
 
 			// do we need to set up the server to use TLS?
 			if pathCertServer != "" && pathKeyServer != "" && pathCertRoot != "" {
@@ -84,7 +84,7 @@ func newConnectorRunCommand() *cobra.Command {
 				})
 
 				grpcServer = grpc.NewServer(grpc.Creds(creds))
-				s = remote.New(clients.LoggerAsHCLogger(l), certPool, &certificate, nil)
+				s = remote.New(logger.LoggerAsHCLogger(l), certPool, &certificate, nil)
 			}
 
 			shipyard.RegisterRemoteConnectionServer(grpcServer, s)
@@ -102,7 +102,7 @@ func newConnectorRunCommand() *cobra.Command {
 
 			// start the http server in the background
 			l.Info("Starting HTTP server", "bind_addr", httpBindAddr)
-			httpS := http.NewLocalServer(pathCertRoot, pathCertServer, pathKeyServer, grpcBindAddr, httpBindAddr, clients.LoggerAsHCLogger(l))
+			httpS := http.NewLocalServer(pathCertRoot, pathCertServer, pathKeyServer, grpcBindAddr, httpBindAddr, logger.LoggerAsHCLogger(l))
 
 			err = httpS.Serve()
 			l.Info("Started")

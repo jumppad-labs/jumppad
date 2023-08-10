@@ -66,8 +66,8 @@ resource "container" "consul" {
   }
 
   network {
-    id         = resource.network.onprem.id
-    ip_address = "10.6.0.200" // optional
+    id         = resource.network.consul.id
+    ip_address = "10.8.0.200" // optional
     aliases    = ["myalias"]
   }
 
@@ -118,7 +118,7 @@ resource "container" "consul" {
 }
 
 resource "sidecar" "envoy" {
-  target = resource.container.consul.id
+  target = resource.container.consul
 
   image {
     name = "envoyproxy/envoy:v${variable.envoy_version}"

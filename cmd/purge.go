@@ -8,12 +8,14 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/container"
+	"github.com/jumppad-labs/jumppad/pkg/clients/images"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
-func newPurgeCmd(dt clients.Docker, il clients.ImageLog, l clients.Logger) *cobra.Command {
+func newPurgeCmd(dt container.Docker, il images.ImageLog, l logger.Logger) *cobra.Command {
 	purgeCmd := &cobra.Command{
 		Use:   "purge",
 		Short: "Purges Docker images, Helm charts, and Blueprints downloaded by jumppad",
@@ -29,9 +31,9 @@ func newPurgeCmd(dt clients.Docker, il clients.ImageLog, l clients.Logger) *cobr
 	return purgeCmd
 }
 
-func newPurgeCmdFunc(dt clients.Docker, il clients.ImageLog, l clients.Logger) func(cmd *cobra.Command, args []string) error {
+func newPurgeCmdFunc(dt container.Docker, il images.ImageLog, l logger.Logger) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		images, _ := il.Read(clients.ImageTypeDocker)
+		images, _ := il.Read(images.ImageTypeDocker)
 
 		bHasError := false
 

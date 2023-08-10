@@ -22,6 +22,7 @@ type StatusModel struct {
 	message     string
 	showSpinner bool
 	startTime   time.Time
+	logLevel    string
 }
 
 func NewStatus() StatusModel {

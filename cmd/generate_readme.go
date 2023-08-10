@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/blueprint"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/spf13/cobra"
 )
@@ -32,33 +32,33 @@ func newGenerateReadmeCommand(e jumppad.Engine) *cobra.Command {
 			}
 
 			// find a blueprint
-			var blueprint *resources.Blueprint
-			bps, _ := e.Config().FindResourcesByType(resources.TypeBlueprint)
+			var br *blueprint.Blueprint
+			bps, _ := e.Config().FindResourcesByType(blueprint.TypeBlueprint)
 			for _, bp := range bps {
 				// pick the first blueprint in the root
 				if bp.Metadata().Module == "" {
-					blueprint = bp.(*resources.Blueprint)
+					br = bp.(*blueprint.Blueprint)
 					break
 				}
 			}
 
-			if blueprint == nil {
+			if br == nil {
 				return nil
 			}
 
 			// print the title
-			cmd.Printf("# %s\n", blueprint.Title)
+			cmd.Printf("# %s\n", br.Title)
 			cmd.Println("")
 
 			// print the authors
 			cmd.Println("| <!-- -->    | <!-- -->    |")
 			cmd.Println("| ---- |  ----------- |")
-			cmd.Printf("| Author | %s |\n", blueprint.Author)
-			cmd.Printf("| Slug | %s |\n", blueprint.Slug)
+			cmd.Printf("| Author | %s |\n", br.Author)
+			cmd.Printf("| Slug | %s |\n", br.Slug)
 			cmd.Println("")
 
 			cmd.Println("## Description")
-			cmd.Println(blueprint.Description)
+			cmd.Println(br.Description)
 
 			variables := []*types.Variable{}
 			os, _ := e.Config().FindResourcesByType(types.TypeVariable)

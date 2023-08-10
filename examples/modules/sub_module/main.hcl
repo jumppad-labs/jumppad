@@ -1,7 +1,13 @@
+variable "version" {
+  default = ""
+}
+
+
 module "consul" {
   source = "../../single_file"
 
   variables = {
-    version = "consul:from-mod"
+    version    = "consul:${variable.version}"
+    port_range = "18502-18504"
   }
 }

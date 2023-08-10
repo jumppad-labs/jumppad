@@ -1,5 +1,5 @@
 resource "helm" "consul" {
-  cluster = resource.k8s_cluster.k3s.id
+  cluster = resource.k8s_cluster.k3s
 
   # When no repositroy is specified, either a local path or go getter URL
 
@@ -25,7 +25,7 @@ resource "helm" "consul" {
 }
 
 resource "helm" "vault" {
-  cluster = resource.k8s_cluster.k3s.id
+  cluster = resource.k8s_cluster.k3s
 
   repository {
     name = resource.helm.consul.repository.name // this also forces a dependency to be created

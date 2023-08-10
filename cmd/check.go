@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/system"
 	"github.com/spf13/cobra"
 )
 
@@ -14,7 +14,7 @@ var checkCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Do Stuff Here
-		s := clients.SystemImpl{}
+		s := system.SystemImpl{}
 		o, _ := s.Preflight()
 
 		fmt.Println("")
