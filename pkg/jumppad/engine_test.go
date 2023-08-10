@@ -2,11 +2,7 @@ package jumppad
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
-	"os"
-	"path"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -15,11 +11,10 @@ import (
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/config"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	"github.com/jumppad-labs/jumppad/pkg/config/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/cache"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad/constants"
-	emocks "github.com/jumppad-labs/jumppad/pkg/jumppad/mocks"
-	"github.com/jumppad-labs/jumppad/pkg/providers/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/jumppad-labs/jumppad/testutils"
 
@@ -29,39 +24,30 @@ import (
 
 var lock = sync.Mutex{}
 
-func setupTests(t *testing.T, returnVals map[string]error) (*EngineImpl, *[]*mocks.MockProvider) {
+func setupTests(t *testing.T, returnVals map[string]error) (*EngineImpl, *mocks.Providers) {
 	return setupTestsBase(t, returnVals, "")
 }
 
-func setupTestsWithState(t *testing.T, returnVals map[string]error, state string) (*EngineImpl, *[]*mocks.MockProvider) {
+func setupTestsWithState(t *testing.T, returnVals map[string]error, state string) (*EngineImpl, *mocks.Providers) {
 	return setupTestsBase(t, returnVals, state)
 }
 
-func setupTestsBase(t *testing.T, returnVals map[string]error, state string) (*EngineImpl, *[]*mocks.MockProvider) {
-	log.SetOutput(ioutil.Discard)
+func setupTestsBase(t *testing.T, returnVals map[string]error, state string) (*EngineImpl, *mocks.Providers) {
+	l := logger.NewTestLogger(t)
 
-	p := &[]*mocks.MockProvider{}
+	log.SetOutput(l.StandardWriter())
 
-	pm := &emocks.Providers{}
+	pm := mocks.NewProviders(returnVals)
 	pm.On("GetProvider", mock.Anything)
 
 	e := &EngineImpl{
-		log:       logger.NewTestLogger(t),
+		log:       l,
 		providers: pm,
 	}
 
 	testutils.SetupState(t, state)
 
-	return e, p
-}
-
-func getTestFiles(tests string) string {
-	e, err := os.Executable()
-	if err != nil {
-		panic(err)
-	}
-	path := path.Dir(e)
-	return filepath.Join(path, "/examples", tests)
+	return e, pm
 }
 
 func testLoadState(t *testing.T, e *EngineImpl) *hclconfig.Config {
@@ -71,13 +57,24 @@ func testLoadState(t *testing.T, e *EngineImpl) *hclconfig.Config {
 	return c
 }
 
+func getResourceFromMock(mp *mocks.Providers, index int) types.Resource {
+	p := mp.Providers[index]
+	r := testutils.GetCalls(&p.Mock, "Init")[0].Arguments[0]
+
+	return r.(types.Resource)
+}
+
+func getMetaFromMock(mp *mocks.Providers, index int) types.ResourceMetadata {
+	return *getResourceFromMock(mp, index).Metadata()
+}
+
 func TestApplyWithSingleFile(t *testing.T) {
 	e, mp := setupTests(t, nil)
 
 	_, err := e.Apply("../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
-	require.Len(t, e.config.Resources, 5)
+	require.Len(t, e.config.Resources, 7) // 6 resources in the file plus the image cache
 
 	// Because of the DAG both network and template are top level resources
 	require.ElementsMatch(t,
@@ -88,15 +85,15 @@ func TestApplyWithSingleFile(t *testing.T) {
 			"consul_config",
 		},
 		[]string{
-			(*mp)[0].Config().Metadata().Name,
-			(*mp)[1].Config().Metadata().Name,
-			(*mp)[2].Config().Metadata().Name,
-			(*mp)[3].Config().Metadata().Name,
+			getMetaFromMock(mp, 0).Name,
+			getMetaFromMock(mp, 1).Name,
+			getMetaFromMock(mp, 2).Name,
+			getMetaFromMock(mp, 3).Name,
 		},
 	)
 
-	require.Equal(t, "consul", (*mp)[4].Config().Metadata().Name)
-	require.Equal(t, "consul_addr", (*mp)[5].Config().Metadata().Name)
+	require.Equal(t, "consul", getMetaFromMock(mp, 4).Name)
+	require.Equal(t, "consul_addr", getMetaFromMock(mp, 5).Name)
 }
 
 func TestApplyAddsImageCache(t *testing.T) {
@@ -105,7 +102,7 @@ func TestApplyAddsImageCache(t *testing.T) {
 	_, err := e.Apply("../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
-	dc := e.ResourceCountForType(resources.TypeImageCache)
+	dc := e.ResourceCountForType(cache.TypeImageCache)
 	require.Equal(t, 1, dc)
 }
 
@@ -114,16 +111,16 @@ func TestApplyWithSingleFileAndVariables(t *testing.T) {
 
 	_, err := e.ApplyWithVariables("../../examples/single_file/container.hcl", nil, "../../examples/single_file/default.vars")
 	require.NoError(t, err)
-	require.Len(t, e.config.Resources, 5)
+	require.Len(t, e.config.Resources, 7) // 6 resources in the file plus the image cache
 
 	// then the container should be created
-	require.Equal(t, "consul", (*mp)[4].Config().Metadata().Name)
+	require.Equal(t, "consul", getMetaFromMock(mp, 4).Name)
 
 	// finally the provider for the image cache should be updated
-	require.Equal(t, "consul_addr", (*mp)[5].Config().Metadata().Name)
+	require.Equal(t, "consul_addr", getMetaFromMock(mp, 5).Name)
 
 	// check the variable has overridden the image
-	cont := (*mp)[4].Config().(*container.Container)
+	cont := getResourceFromMock(mp, 4).(*container.Container)
 	require.Equal(t, "consul:1.8.1", cont.Image.Name)
 }
 
@@ -134,13 +131,13 @@ func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
 	require.NoError(t, err)
 
 	// should have call create for each resource in the config
-	// and twice for ImageCache that is manually added.
-	// the provider for image cache is called once for the initial creation
-	// and once for each network
-	rc := len(e.config.Resources) + 1
+	// and once for ImageCache that is manually added.
+	// for every network that is created refresh is called on the image cache
+	rc := len(e.config.Resources)
 	testAssertMethodCalled(t, mp, "Create", rc)
+	testAssertMethodCalled(t, mp, "Refresh", 1)
 
-	// the state should also contain 10 resources
+	// the state should also contain 11 resources
 	sf := testLoadState(t, e)
 	require.Equal(t, 11, sf.ResourceCount())
 }
@@ -152,7 +149,24 @@ func TestApplyDoesNotCallsProviderCreateWhenInState(t *testing.T) {
 	require.NoError(t, err)
 
 	// should only be called for resources that are not in the state
-	testAssertMethodCalled(t, mp, "Create", 4)
+	testAssertMethodCalled(t, mp, "Create", 3)
+
+	// the state should also contain 7 resources
+	sf := testLoadState(t, e)
+	require.Equal(t, 7, sf.ResourceCount())
+}
+
+func TestApplyRemovesItemsInStateWhenNotInFiles(t *testing.T) {
+	e, mp := setupTestsWithState(t, nil, existingState)
+
+	_, err := e.Apply("../../examples/single_file")
+	require.NoError(t, err)
+
+	// should only be called for resources that are not in the state
+	testAssertMethodCalled(t, mp, "Create", 3)
+
+	// should remove items not in files
+	testAssertMethodCalled(t, mp, "Destroy", 2)
 
 	// the state should also contain 7 resources
 	sf := testLoadState(t, e)
@@ -162,18 +176,18 @@ func TestApplyDoesNotCallsProviderCreateWhenInState(t *testing.T) {
 func TestApplyNotCallsProviderCreateForDisabledResources(t *testing.T) {
 	e, mp := setupTests(t, nil)
 
-	// contains 2 resources one is disabled
+	// contains 3 resources one is disabled
 	_, err := e.Apply("../../examples/disabled")
 	require.NoError(t, err)
 
-	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Create", 2) // ImageCache is always created
+	// should have call create for non disabled resources
+	testAssertMethodCalled(t, mp, "Create", 3) // ImageCache is always created
 
 	// disabled resources should still be added to the state
 	sf := testLoadState(t, e)
 
-	// should contain 2 from the config plus the image cache
-	require.Equal(t, 3, sf.ResourceCount())
+	// should contain 3 from the config plus the image cache
+	require.Equal(t, 4, sf.ResourceCount())
 
 	// the resource should be in the state but there should be no status
 	r, err := sf.FindResource("resource.container.consul_disabled")
@@ -194,7 +208,7 @@ func TestApplyShouldNotAddDuplicateDisabledResources(t *testing.T) {
 	// disabled resources should still be added to the state
 	sf := testLoadState(t, e)
 
-	// should contain 2 from the config plus the image cache
+	// should contain 3 from the config plus the image cache
 	// should not duplicate the disabled container as this already exists in the
 	// state
 	require.Equal(t, 4, sf.ResourceCount())
@@ -211,10 +225,10 @@ func TestApplySetsCreatedStatusForEachResource(t *testing.T) {
 	_, err := e.Apply("../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
-	require.Equal(t, 5, e.config.ResourceCount())
+	require.Equal(t, 7, e.config.ResourceCount())
 
 	// should only call create and destroy for the cache as this is pending update
-	testAssertMethodCalled(t, mp, "Create", 6) // ImageCache is always created
+	testAssertMethodCalled(t, mp, "Create", 5) // ImageCache is always created
 
 	sf := testLoadState(t, e)
 
@@ -268,7 +282,7 @@ func TestApplyCallsProviderDestroyAndCreateForFailedResources(t *testing.T) {
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1)
-	testAssertMethodCalled(t, mp, "Create", 6) // ImageCache is always created
+	testAssertMethodCalled(t, mp, "Create", 5) // ImageCache is always created
 }
 
 func TestApplyCallsProviderDestroyForTaintedResources(t *testing.T) {
@@ -279,7 +293,7 @@ func TestApplyCallsProviderDestroyForTaintedResources(t *testing.T) {
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1)
-	testAssertMethodCalled(t, mp, "Create", 6) // ImageCache is always created
+	testAssertMethodCalled(t, mp, "Create", 5) // ImageCache is always created
 }
 
 func TestApplyCallsProviderDestroyForDisabledResources(t *testing.T) {
@@ -287,7 +301,7 @@ func TestApplyCallsProviderDestroyForDisabledResources(t *testing.T) {
 	// destroyed
 	e, mp := setupTestsWithState(t, nil, disabledAndCreatedState)
 
-	_, err := e.Apply(".")
+	_, err := e.Apply("../../examples/disabled/config.hcl")
 	require.NoError(t, err)
 
 	// get the disabled resource
@@ -309,21 +323,20 @@ func TestApplyCallsProviderRefreshForCreatedResources(t *testing.T) {
 	_, err := e.Apply("../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
-	// should only call one time as there is only one item in the state
+	// should only call twice as there is only one item in the state
 	// that is in the config
-	testAssertMethodCalled(t, mp, "Refresh", 1)
+	// should also be called for the image cache as there is a new network
+	testAssertMethodCalled(t, mp, "Refresh", 2)
 }
 
 func TestApplyCallsProviderRefreshWithErrorHaltsExecution(t *testing.T) {
-	e, mp := setupTestsWithState(t, map[string]error{"consul_config": fmt.Errorf("boom")}, existingState)
+	e, mp := setupTestsWithState(t, map[string]error{"consul_config": fmt.Errorf("boom")}, singleFileState)
 
 	_, err := e.Apply("../../examples/single_file/container.hcl")
 	require.Error(t, err)
 
-	// should only call one time as there is only one item in the state
-	// that is in the config
-	testAssertMethodCalled(t, mp, "Refresh", 1)
-	testAssertMethodCalled(t, mp, "Create", 2)
+	testAssertMethodCalled(t, mp, "Refresh", 3)
+	testAssertMethodCalled(t, mp, "Create", 0)
 }
 
 func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
@@ -383,7 +396,7 @@ func TestParseConfig(t *testing.T) {
 	r, err := e.ParseConfig("../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
-	require.Len(t, r, 4)
+	require.Len(t, r.Resources, 6)
 
 	// should not have crated any providers
 	testAssertMethodCalled(t, mp, "Create", 0)
@@ -396,7 +409,7 @@ func TestParseWithVariables(t *testing.T) {
 	r, err := e.ParseConfigWithVariables("../../examples/single_file/container.hcl", nil, "../../examples/single_file/default.vars")
 	require.NoError(t, err)
 
-	require.Len(t, r, 4)
+	require.Len(t, r.Resources, 6)
 
 	// should not have crated any providers
 	testAssertMethodCalled(t, mp, "Create", 0)
@@ -407,21 +420,26 @@ func TestParseWithVariables(t *testing.T) {
 	require.Equal(t, "consul:1.8.1", c.(*container.Container).Image.Name)
 }
 
-func testAssertMethodCalled(t *testing.T, p *[]*mocks.MockProvider, method string, n int, resource ...types.Resource) {
+func testAssertMethodCalled(t *testing.T, p *mocks.Providers, method string, n int, resource ...types.Resource) {
+	if len(resource) > 1 {
+		panic("testAssertMethodCalled only expects 0 or 1 resources")
+	}
+
 	callCount := 0
 
 	calls := map[string][]string{}
 
-	for _, pm := range *p {
-		// are we trying to filter on a specific resource
+	for i, pm := range p.Providers {
+		r := getResourceFromMock(p, i)
+		// are we trying to filter on a specific resources
 		if len(resource) == 1 {
-			if resource[0] != pm.Config() {
+			if resource[0] != r {
 				continue
 			}
 		}
 
 		for _, c := range pm.Calls {
-			calls[pm.Config().Metadata().Name] = append(calls[pm.Config().Metadata().Name], c.Method)
+			calls[r.Metadata().Name] = append(calls[r.Metadata().Name], c.Method)
 
 			if c.Method == method {
 				callCount++
@@ -493,6 +511,9 @@ var existingState = `
       "properties": {
 				"status": "created"
 			},
+			"image": {
+				"name": "test"
+			},
       "type": "container"
 	},
 	{
@@ -501,6 +522,52 @@ var existingState = `
 				"status": "created"
 			},
       "type": "template"
+	}
+  ]
+}
+`
+
+var singleFileState = `
+{
+  "resources": [
+	{
+      "name": "onprem",
+      "properties": {
+				"status": "created"
+			},
+      "subnet": "10.15.0.0/16",
+      "type": "network"
+	},
+	{
+      "name": "default",
+      "properties": {
+				"status": "created"
+			},
+      "type": "image_cache"
+	},
+	{
+      "name": "consul",
+      "properties": {
+				"status": "created"
+			},
+      "type": "container",
+			"image": {
+				"name": "test"
+			}
+	},
+	{
+      "name": "consul_config",
+      "properties": {
+				"status": "created"
+			},
+      "type": "template"
+	},
+	{
+      "name": "consul_addr",
+      "properties": {
+				"status": "created"
+			},
+      "type": "output"
 	}
   ]
 }
@@ -593,12 +660,26 @@ var disabledAndCreatedState = `
       "type": "network"
 	},
 	{
-		 "disabled": true,
+		 "disabled": false,
       "name": "consul_disabled",
       "properties": {
 				"status": "created"
 			},
-      "type": "container"
+      "type": "container",
+			"image": {
+				"name": "test"
+			}	
+	},
+	{
+		 "disabled": false,
+      "name": "consul_enabled",
+      "properties": {
+				"status": "created"
+			},
+      "type": "container",
+			"image": {
+				"name": "test"
+			}
 	}
   ]
 }

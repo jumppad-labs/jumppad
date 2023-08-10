@@ -1,3 +1,7 @@
+resource "network" "dc1_enabled" {
+  subnet = "10.15.0.0/16"
+}
+
 resource "container" "consul_enabled" {
   image {
     name = "consul:0.12.1"

@@ -35,8 +35,6 @@ func (c *LogView) Display() error {
 
 		time.Sleep(1 * time.Second)
 	}
-
-	return nil
 }
 
 // Logger returns the logger used by the view
