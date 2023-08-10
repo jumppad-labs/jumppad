@@ -86,9 +86,12 @@ func (b *BookProvider) Create() error {
 			}
 
 			// capture the title of the page
+			title := slug
 			titleRegex, _ := regexp.Compile("^#(?P<title>.*)$>")
 			titleMatch := titleRegex.FindStringSubmatch(content)
-			title := titleMatch[1]
+			if len(titleMatch) > 0 {
+				title = titleMatch[1]
+			}
 
 			ip := IndexPage{
 				Title: title,

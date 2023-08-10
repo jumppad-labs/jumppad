@@ -25,6 +25,7 @@ func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
 	}
 
 	p.config = c
+	p.log = l
 
 	return nil
 }

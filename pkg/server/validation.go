@@ -72,7 +72,12 @@ func (a *API) validation(w http.ResponseWriter, r *http.Request) {
 
 	for _, c := range task.Conditions {
 		if c.Name == req.Condition {
-			fqrn, err := types.ParseFQRN(c.Target)
+			defaultTarget := task.Config.Target
+			if c.Target != "" {
+				defaultTarget = c.Target
+			}
+
+			fqrn, err := types.ParseFQRN(defaultTarget)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				json.NewEncoder(w).Encode(err.Error())
