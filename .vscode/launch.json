@@ -41,6 +41,21 @@
       "runOptions": { "reevaluateOnRerun": false}
     },
     {
+      "name": "Debug - Up2",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}",
+      "env": {
+        "LOG_LEVEL": "debug"
+      },
+      "args": [
+        "up",
+        "../terraform-workshop",
+      ],
+      "runOptions": { "reevaluateOnRerun": false}
+    },
+    {
       "name": "Debug - Dev",
       "type": "go",
       "request": "launch",
