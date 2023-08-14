@@ -23,7 +23,7 @@ type Docs struct {
 	Port          int  `hcl:"port,optional" json:"port"`
 	OpenInBrowser bool `hcl:"open_in_browser,optional" json:"open_in_browser"` // When a host port is defined open the location in a browser
 
-	Logo   Logo   `hcl:"logo,block" json:"logo,omitempty"`
+	Logo   Logo   `hcl:"logo,optional" json:"logo,omitempty"`
 	Assets string `hcl:"assets,optional" json:"assets,omitempty"`
 
 	// Output parameters

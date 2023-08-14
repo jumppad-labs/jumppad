@@ -12,6 +12,7 @@ type Task struct {
 	Prerequisites []string    `hcl:"prerequisites,optional" json:"prerequisites"`
 	Config        Config      `hcl:"config,block" json:"config,omitempty"`
 	Conditions    []Condition `hcl:"condition,block" json:"conditions"`
+	Status        string      `hcl:"status,optional" json:"status"`
 }
 
 type Condition struct {
@@ -24,6 +25,7 @@ type Condition struct {
 	Target           string `hcl:"target,optional" json:"target,omitempty"`
 	User             string `hcl:"user,optional" json:"user,omitempty"`
 	WorkingDirectory string `hcl:"working_directory,optional" json:"working_directory,omitempty"`
+	Status           string `hcl:"status,optional" json:"status"`
 }
 
 type Config struct {

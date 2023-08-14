@@ -31,7 +31,7 @@ func init() {
 	config.RegisterResource(container.TypeSidecar, &container.Sidecar{}, &container.Provider{})
 	config.RegisterResource(copy.TypeCopy, &copy.Copy{}, &copy.Provider{})
 	config.RegisterResource(docs.TypeDocs, &docs.Docs{}, &docs.DocsProvider{})
-	config.RegisterResource(docs.TypeChapter, &docs.Chapter{}, &null.Provider{})
+	config.RegisterResource(docs.TypeChapter, &docs.Chapter{}, &docs.ChapterProvider{})
 	config.RegisterResource(docs.TypeTask, &docs.Task{}, &null.Provider{})
 	config.RegisterResource(docs.TypeBook, &docs.Book{}, &docs.BookProvider{})
 	config.RegisterResource(exec.TypeLocalExec, &exec.LocalExec{}, &exec.LocalProvider{})

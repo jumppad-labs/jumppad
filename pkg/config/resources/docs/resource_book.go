@@ -5,21 +5,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/config"
 )
 
-type Index struct {
-	Title    string         `hcl:"title,optional" json:"title"`
-	Chapters []IndexChapter `hcl:"chapters,optional" json:"chapters"`
-}
-
-type IndexChapter struct {
-	Title string      `hcl:"title,optional" json:"title,omitempty"`
-	Pages []IndexPage `hcl:"pages,optional" json:"pages"`
-}
-
-type IndexPage struct {
-	Title string `hcl:"title,optional" json:"title"`
-	URI   string `hcl:"uri,optional" json:"uri"`
-}
-
 const TypeBook string = "book"
 
 type Book struct {
@@ -29,7 +14,12 @@ type Book struct {
 	Chapters []Chapter `hcl:"chapters" json:"chapters"`
 
 	// Output parameters
-	Index Index `hcl:"index,optional" json:"index"`
+	Index BookIndex `hcl:"index,optional" json:"index"`
+}
+
+type BookIndex struct {
+	Title    string         `hcl:"title,optional" json:"title"`
+	Chapters []ChapterIndex `hcl:"chapters,optional" json:"chapters"`
 }
 
 func (b *Book) Process() error {
