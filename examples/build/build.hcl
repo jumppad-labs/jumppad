@@ -11,6 +11,16 @@ resource "build" "app" {
     dockerfile = "Dockerfile"
     context    = "./src"
   }
+
+  output {
+    source      = "/bin/app"
+    destination = "${data("output_file")}/app"
+  }
+
+  output {
+    source      = "/bin"
+    destination = "${data("output_dir")}/bin"
+  }
 }
 
 resource "network" "onprem" {

@@ -93,12 +93,18 @@ func (tg *TarGz) Compress(buf io.Writer, options *TarGzOptions, src ...string) e
 	return nil
 }
 
-func (tg *TarGz) Uncompress(src io.Reader, dst string) error {
-	// ungzip
-	zr, err := gzip.NewReader(src)
-	if err != nil {
-		return err
+func (tg *TarGz) Uncompress(src io.Reader, gziped bool, dst string) error {
+	var zr io.Reader = src
+	var err error
+
+	if gziped {
+		// ungzip
+		zr, err = gzip.NewReader(src)
+		if err != nil {
+			return err
+		}
 	}
+
 	// untar
 	tr := tar.NewReader(zr)
 

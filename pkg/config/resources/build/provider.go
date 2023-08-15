@@ -76,6 +76,12 @@ func (b *Provider) Create() error {
 	b.config.Image = name
 	b.config.BuildChecksum = hash
 
+	// do we need to copy any files?
+	err = b.copyOutputs()
+	if err != nil {
+		return xerrors.Errorf("unable to copy files from build container: %w", err)
+	}
+
 	// clean up the previous builds only leaving the last 3
 	ids, err := b.client.FindImagesInLocalRegistry(fmt.Sprintf("jumppad.dev/localcache/%s", b.config.Name))
 	if err != nil {
@@ -148,4 +154,41 @@ func (b *Provider) hasChanged() (bool, error) {
 	}
 
 	return false, nil
+}
+
+func (b *Provider) copyOutputs() error {
+	if len(b.config.Outputs) < 1 {
+		return nil
+	}
+
+	// start an instance of the container
+	c := types.Container{
+		Image: &types.Image{
+			Name: b.config.Image,
+		},
+		Entrypoint: []string{},
+		Command:    []string{"tail", "-f", "/dev/null"},
+	}
+
+	b.log.Debug("Creating container to copy files", "ref", b.config.ID, "name", b.config.Image)
+	id, err := b.client.CreateContainer(&c)
+	if err != nil {
+		return err
+	}
+
+	// always remove the temp container
+	defer func() {
+		b.log.Debug("Remove copy container", "ref", b.config.ID, "name", b.config.Image)
+		b.client.RemoveContainer(id, true)
+	}()
+
+	for _, copy := range b.config.Outputs {
+		b.log.Debug("Copy file from container", "ref", b.config.ID, "source", copy.Source, "destination", copy.Destination)
+		err := b.client.CopyFromContainer(id, copy.Source, copy.Destination)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
