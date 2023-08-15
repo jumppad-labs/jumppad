@@ -1413,8 +1413,8 @@ func (d *DockerTasks) saveImageToTempFile(image, filename string) (string, error
 
 func copyDir(src string, dest string) error {
 
-	if dest[:len(src)] == src {
-		return fmt.Errorf("Cannot copy a folder into the folder itself!")
+	if dest == src {
+		return fmt.Errorf("cannot copy a folder into the folder itself!")
 	}
 
 	f, err := os.Open(src)
