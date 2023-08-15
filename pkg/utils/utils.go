@@ -523,6 +523,19 @@ func HashFile(file string) (string, error) {
 	return "h1:" + base64.StdEncoding.EncodeToString(hf.Sum(nil)), nil
 }
 
+// HashString returns a sha256 hash of the given string
+func HashString(content string) (string, error) {
+	r := bytes.NewReader([]byte(content))
+
+	hf := sha256.New()
+	_, err := io.Copy(hf, r)
+	if err != nil {
+		return "", err
+	}
+
+	return "h1:" + base64.StdEncoding.EncodeToString(hf.Sum(nil)), nil
+}
+
 func incIP(ip net.IP) net.IP {
 	// allocate a new IP
 	newIp := make(net.IP, len(ip))

@@ -8,6 +8,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/cache"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/cert"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/copy"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/docs"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/exec"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/helm"
@@ -28,9 +29,10 @@ func init() {
 	config.RegisterResource(cert.TypeCertificateLeaf, &cert.CertificateLeaf{}, &cert.LeafProvider{})
 	config.RegisterResource(container.TypeContainer, &container.Container{}, &container.Provider{})
 	config.RegisterResource(container.TypeSidecar, &container.Sidecar{}, &container.Provider{})
+	config.RegisterResource(copy.TypeCopy, &copy.Copy{}, &copy.Provider{})
 	config.RegisterResource(docs.TypeDocs, &docs.Docs{}, &docs.DocsProvider{})
 	config.RegisterResource(docs.TypeChapter, &docs.Chapter{}, &docs.ChapterProvider{})
-	config.RegisterResource(docs.TypeTask, &docs.Task{}, &docs.TaskProvider{})
+	config.RegisterResource(docs.TypeTask, &docs.Task{}, &null.Provider{})
 	config.RegisterResource(docs.TypeBook, &docs.Book{}, &docs.BookProvider{})
 	config.RegisterResource(exec.TypeLocalExec, &exec.LocalExec{}, &exec.LocalProvider{})
 	config.RegisterResource(exec.TypeRemoteExec, &exec.RemoteExec{}, &exec.RemoteProvider{})

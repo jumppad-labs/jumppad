@@ -209,7 +209,7 @@ func (m model) footerView() string {
 		follow = " "
 	}
 
-	keys := lipgloss.NewStyle().Foreground(lipgloss.Color("37")).Render(fmt.Sprintf("── [l] toggle log level %s, [mouse wheel up/down] scroll logs%s", level, follow))
+	keys := lipgloss.NewStyle().Foreground(lipgloss.Color("37")).Render(fmt.Sprintf("── [l] change log level to %s, [mouse wheel up/down] scroll logs%s", level, follow))
 	line := lipgloss.NewStyle().Foreground(lipgloss.Color("37")).Render(strings.Repeat("─", m.width-m.left-len(keys)))
 	line = lipgloss.JoinHorizontal(lipgloss.Left, keys, line)
 

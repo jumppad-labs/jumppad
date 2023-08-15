@@ -10,16 +10,53 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 const docsImageName = "ghcr.io/jumppad-labs/docs"
-const docsVersion = "v0.1.0"
+const docsVersion = "v0.3.0"
 
 type DocsConfig struct {
 	DefaultPath string `json:"defaultPath"`
+	Logo        Logo   `json:"logo"`
+}
+
+type State struct {
+	Index struct {
+		Title    string `json:"title"`
+		Chapters []struct {
+			Title string `json:"title,omitempty"`
+			Pages []struct {
+				Title string `json:"title"`
+				URI   string `json:"uri"`
+			} `json:"pages"`
+		} `json:"chapters"`
+	} `json:"index"`
+
+	Progress []struct {
+		ID            string   `json:"id"`
+		Prerequisites []string `json:"prerequisites"`
+		Conditions    []struct {
+			ID          string `json:"id"`
+			Description string `json:"description"`
+			Status      string `json:"status"`
+		} `json:"conditions"`
+		Status string `json:"status"`
+	} `json:"progress"`
+}
+
+type Progress struct {
+	ID            string              `json:"id"`
+	Prerequisites []string            `json:"prerequisites"`
+	Conditions    []ProgressCondition `json:"conditions"`
+	Status        string              `json:"status"`
+}
+
+type ProgressCondition struct {
+	ID          string `json:"id"`
+	Description string `json:"description"`
+	Status      string `json:"status"`
 }
 
 // Docs defines a provider for creating documentation containers
@@ -88,42 +125,67 @@ func (p *DocsProvider) Lookup() ([]string, error) {
 func (p *DocsProvider) Refresh() error {
 	p.log.Debug("Refresh Docs", "ref", p.config.ID)
 
+	// refresh content on disk
 	configPath := utils.GetLibraryFolder("config", 0775)
 
-	indices := []Index{}
-	docsConfig := DocsConfig{}
-
-	for index, book := range p.config.Content {
-		if index == 0 {
-			if len(book.Index.Chapters) > 0 {
-				if len(book.Index.Chapters[0].Pages) > 0 {
-					docsConfig.DefaultPath = book.Index.Chapters[0].Pages[0].URI
-				}
-			}
-		}
-
-		indices = append(indices, book.Index)
-	}
-
-	docsConfigPath := filepath.Join(configPath, "jumppad.config.js")
-	err := p.writeConfig(docsConfigPath, &docsConfig)
+	// jumppad.config.js
+	frontendConfigPath := filepath.Join(configPath, "jumppad.config.js")
+	err := p.writeConfig(frontendConfigPath)
 	if err != nil {
 		return err
 	}
 
+	// navigation.jsx
 	navigationPath := filepath.Join(configPath, "navigation.jsx")
-	err = p.writeNavigation(navigationPath, indices)
+	err = p.writeNavigation(navigationPath)
 	if err != nil {
 		return err
 	}
 
+	// progress.jsx
 	progressPath := filepath.Join(configPath, "progress.jsx")
 	err = p.writeProgress(progressPath)
 	if err != nil {
 		return err
 	}
 
+	// /content
+	contentPath := utils.GetLibraryFolder("content", 0775)
+
+	for _, book := range p.config.Content {
+		bookPath := filepath.Join(contentPath, book.Name)
+
+		for _, chapter := range book.Chapters {
+			chapterPath := filepath.Join(bookPath, chapter.Name)
+			os.MkdirAll(chapterPath, 0755)
+			os.Chmod(chapterPath, 0755)
+
+			for _, page := range chapter.Pages {
+				pageFile := fmt.Sprintf("%s.mdx", page.Name)
+				pagePath := filepath.Join(chapterPath, pageFile)
+				err := os.WriteFile(pagePath, []byte(page.Content), 0755)
+				if err != nil {
+					return fmt.Errorf("unable to write page %s to disk at %s", page.Name, pagePath)
+				}
+			}
+		}
+	}
+
 	return nil
+}
+
+func (p *DocsProvider) getDefaultPage() string {
+	if len(p.config.Content) > 0 {
+		book := p.config.Content[0]
+		if len(book.Index.Chapters) > 0 {
+			chapter := book.Index.Chapters[0]
+			if len(chapter.Pages) > 0 {
+				page := chapter.Pages[0]
+				return page.URI
+			}
+		}
+	}
+	return "/"
 }
 
 func (p *DocsProvider) Changed() (bool, error) {
@@ -142,13 +204,13 @@ func (p *DocsProvider) createDocsContainer() error {
 		Name: fqdn,
 	}
 
-	cc.Networks = p.config.Networks
+	cc.Networks = p.config.Networks.ToClientNetworkAttachments()
 
 	cc.Image = &types.Image{Name: fmt.Sprintf("%s:%s", docsImageName, docsVersion)}
 
 	// if image is set override defaults
 	if p.config.Image != nil {
-		cc.Image = &ctypes.Image{
+		cc.Image = &types.Image{
 			Name:     p.config.Image.Name,
 			Username: p.config.Image.Username,
 			Password: p.config.Image.Password,
@@ -178,59 +240,48 @@ func (p *DocsProvider) createDocsContainer() error {
 		"TERMINAL_SERVER_PORT": "30003",
 	}
 
-	configPath := utils.GetLibraryFolder("config", 0775)
+	// ~/.jumppad/library/content
 	contentPath := utils.GetLibraryFolder("content", 0775)
 
-	indices := []Index{}
-	docsConfig := DocsConfig{}
-
-	for i, book := range p.config.Content {
+	for _, book := range p.config.Content {
 		bookPath := filepath.Join(contentPath, book.Name)
-		destinationPath := fmt.Sprintf("/content/%s", book.Name)
-		cc.Volumes = append(
-			cc.Volumes,
-			ctypes.Volume{
-				Source:      bookPath,
-				Destination: destinationPath,
-			},
-		)
 
-		if i == 0 {
-			if len(book.Index.Chapters) > 0 {
-				if len(book.Index.Chapters[0].Pages) > 0 {
-					docsConfig.DefaultPath = book.Index.Chapters[0].Pages[0].URI
+		for _, chapter := range book.Chapters {
+			chapterPath := filepath.Join(bookPath, chapter.Name)
+			os.MkdirAll(chapterPath, 0755)
+			os.Chmod(chapterPath, 0755)
+
+			for _, page := range chapter.Pages {
+				pageFile := fmt.Sprintf("%s.mdx", page.Name)
+				pagePath := filepath.Join(chapterPath, pageFile)
+				err := os.WriteFile(pagePath, []byte(page.Content), 0755)
+				if err != nil {
+					return fmt.Errorf("unable to write page %s to disk at %s", page.Name, pagePath)
 				}
 			}
 		}
-
-		indices = append(indices, book.Index)
 	}
 
-	docsConfigPath := filepath.Join(configPath, "jumppad.config.js")
-	p.writeConfig(docsConfigPath, &docsConfig)
-
+	// mount the content
 	cc.Volumes = append(
 		cc.Volumes,
 		types.Volume{
-			Source:      docsConfigPath,
-			Destination: "/jumppad/jumppad.config.mjs",
+			Source:      contentPath,
+			Destination: "/jumppad/src/pages/docs",
 		},
 	)
 
+	// ~/.jumppad/library/config
+	configPath := utils.GetLibraryFolder("config", 0775)
+
+	// write the navigation
 	navigationPath := filepath.Join(configPath, "navigation.jsx")
-	err = p.writeNavigation(navigationPath, indices)
+	err = p.writeNavigation(navigationPath)
 	if err != nil {
 		return err
 	}
 
-	cc.Volumes = append(
-		cc.Volumes,
-		ctypes.Volume{
-			Source:      navigationPath,
-			Destination: "/config/navigation.jsx",
-		},
-	)
-
+	// write the progress
 	progressPath := filepath.Join(configPath, "progress.jsx")
 	err = p.writeProgress(progressPath)
 	if err != nil {
@@ -239,55 +290,69 @@ func (p *DocsProvider) createDocsContainer() error {
 
 	cc.Volumes = append(
 		cc.Volumes,
-		ctypes.Volume{
-			Source:      progressPath,
-			Destination: "/config/progress.jsx",
+		types.Volume{
+			Source:      configPath,
+			Destination: "/jumppad/src/config",
 		},
 	)
+
+	// write the frontend config
+	frontendConfigPath := filepath.Join(utils.GetLibraryFolder("", 0775), "jumppad.config.js")
+	err = p.writeConfig(frontendConfigPath)
+	if err != nil {
+		return err
+	}
+
+	cc.Volumes = append(
+		cc.Volumes,
+		types.Volume{
+			Source:      frontendConfigPath,
+			Destination: "/jumppad/jumppad.config.mjs",
+		},
+	)
+
+	// mount the assets
+	if p.config.Assets != "" {
+		assetsDestination := "/jumppad/public/assets"
+		cc.Volumes = append(
+			cc.Volumes,
+			types.Volume{
+				Source:      p.config.Assets,
+				Destination: assetsDestination,
+			},
+		)
+	}
 
 	_, err = p.client.CreateContainer(cc)
 	return err
 }
 
-func (p *DocsProvider) writeConfig(configPath string, config *DocsConfig) error {
-	configJSON, err := json.MarshalIndent(config, "", " ")
-	if err != nil {
-		return err
-	}
-
-	configJS := fmt.Sprintf("export const jumppad = %s", configJSON)
-	err = os.WriteFile(configPath, []byte(configJS), 0755)
-	if err != nil {
-		return fmt.Errorf("Unable to write config to disk at %s", configPath)
-	}
-
-	return nil
-}
-
-func (p *DocsProvider) writeNavigation(navigationPath string, indices []Index) error {
-	navigationJSON, err := json.MarshalIndent(indices, "", " ")
-	if err != nil {
-		return err
-	}
-
-	navigationJSX := fmt.Sprintf("export const navigation = %s", navigationJSON)
-	err = os.WriteFile(navigationPath, []byte(navigationJSX), 0755)
-	if err != nil {
-		return fmt.Errorf("Unable to write navigation to disk at %s", navigationPath)
-	}
-
-	return nil
-}
-
-// Add optional task progress
-func (p *DocsProvider) writeProgress(progressPath string) error {
+func (p *DocsProvider) writeProgress(path string) error {
 	progress := []Progress{}
+
 	for _, book := range p.config.Content {
+		// add progress
 		for _, chapter := range book.Chapters {
-			for _, page := range chapter.Pages {
-				for _, task := range page.Tasks {
-					progress = append(progress, task.Progress)
+			for _, task := range chapter.Tasks {
+				p := Progress{
+					ID:            task.ID,
+					Prerequisites: task.Prerequisites,
+					Status:        "locked",
 				}
+
+				if len(task.Prerequisites) == 0 {
+					p.Status = "unlocked"
+				}
+
+				for _, condition := range task.Conditions {
+					p.Conditions = append(p.Conditions, ProgressCondition{
+						ID:          condition.Name,
+						Description: condition.Description,
+						Status:      "",
+					})
+				}
+
+				progress = append(progress, p)
 			}
 		}
 	}
@@ -297,10 +362,51 @@ func (p *DocsProvider) writeProgress(progressPath string) error {
 		return err
 	}
 
-	progressJSX := fmt.Sprintf("export const progress = %s", progressJSON)
-	err = os.WriteFile(progressPath, []byte(progressJSX), 0755)
+	content := fmt.Sprintf(`export const progress = %s`, progressJSON)
+	err = os.WriteFile(path, []byte(content), 0755)
 	if err != nil {
-		return fmt.Errorf("Unable to write progress to disk at %s", progressPath)
+		return fmt.Errorf("unable to write progress to disk at %s", path)
+	}
+
+	return nil
+}
+
+func (p *DocsProvider) writeNavigation(path string) error {
+	indices := []BookIndex{}
+	for _, book := range p.config.Content {
+		indices = append(indices, book.Index)
+	}
+
+	indexJSON, err := json.MarshalIndent(indices, "", " ")
+	if err != nil {
+		return err
+	}
+
+	content := fmt.Sprintf(`export const navigation = %s`, indexJSON)
+	err = os.WriteFile(path, []byte(content), 0755)
+	if err != nil {
+		return fmt.Errorf("unable to write navigation to disk at %s", path)
+	}
+
+	return nil
+}
+
+func (p *DocsProvider) writeConfig(configPath string) error {
+	config := DocsConfig{
+		Logo:        p.config.Logo,
+		DefaultPath: p.getDefaultPage(),
+	}
+
+	configJSON, err := json.MarshalIndent(config, "", " ")
+	if err != nil {
+		return err
+	}
+
+	configJS := fmt.Sprintf("export const jumppad = %s", configJSON)
+
+	err = os.WriteFile(configPath, []byte(configJS), 0755)
+	if err != nil {
+		return fmt.Errorf("unable to write config to disk at %s", configPath)
 	}
 
 	return nil

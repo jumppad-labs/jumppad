@@ -47,7 +47,7 @@ func New(addr string, l logger.Logger) *API {
 	}
 
 	router.Get("/terminal", api.terminal)
-	router.Post("/validate", api.validation)
+	router.Post("/validate/{task}/{action}", api.validation)
 
 	return api
 }

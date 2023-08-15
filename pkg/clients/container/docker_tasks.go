@@ -663,22 +663,50 @@ func (d *DockerTasks) CopyFromContainer(id, src, dst string) error {
 	}
 	defer reader.Close()
 
-	readBytes, err := ioutil.ReadAll(reader)
+	// untar the file to a temporary folder
+	dir, err := os.MkdirTemp(os.TempDir(), "")
 	if err != nil {
-		return fmt.Errorf("unable to read file '%s' from container '%s': %w", src, id, err)
+		return fmt.Errorf("unable to create temporary directory, %s", err)
 	}
 
-	// write to file, skipping the first 512 bytes which contain file metadata
-	// and trimming any NULL characters
-	trimBytes := bytes.Trim(readBytes[512:], "\x00")
+	// clean up the temp dir
+	defer os.RemoveAll(dir)
 
-	file, err := os.Create(dst)
-	if err != nil {
-		return fmt.Errorf("unable to create destination file '%s' when copying file '%s' from container '%s': %w", dst, src, id, err)
+	// make sure the destination does not exist
+	if _, err := os.Stat(dst); err == nil {
+		err = os.RemoveAll(dst)
+		if err != nil {
+			return fmt.Errorf("unable to remove destination file or directory: %s", err)
+		}
 	}
 
-	defer file.Close()
-	file.Write(trimBytes)
+	err = d.tg.Uncompress(reader, false, dir)
+	if err != nil {
+		return fmt.Errorf("unable to extract tar file: %s", err)
+	}
+
+	// copy the source temp to the destination
+
+	// the source file or folder name is the last part of the src
+	filename := path.Base(src)
+	tmpPath := path.Join(dir, filename)
+
+	// if tmpPath is a directory copy the directory
+	i, _ := os.Stat(tmpPath)
+	if i.IsDir() {
+		err = copyDir(tmpPath, dst)
+		if err != nil {
+			return fmt.Errorf("unable to copy temporary files to destination %s", err)
+		}
+
+		return nil
+	}
+
+	// else just copy the file
+	_, err = copy(tmpPath, dst)
+	if err != nil {
+		return fmt.Errorf("unable to copy temporary files to destination %s", err)
+	}
 
 	return nil
 }
@@ -1381,4 +1409,90 @@ func (d *DockerTasks) saveImageToTempFile(image, filename string) (string, error
 	}
 
 	return tmpFileName, nil
+}
+
+func copyDir(src string, dest string) error {
+
+	if dest == src {
+		return fmt.Errorf("cannot copy a folder into the folder itself!")
+	}
+
+	f, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+
+	file, err := f.Stat()
+	if err != nil {
+		return err
+	}
+	if !file.IsDir() {
+		return fmt.Errorf("Source " + file.Name() + " is not a directory!")
+	}
+
+	err = os.Mkdir(dest, 0755)
+	if err != nil {
+		return err
+	}
+
+	files, err := ioutil.ReadDir(src)
+	if err != nil {
+		return err
+	}
+
+	for _, f := range files {
+
+		if f.IsDir() {
+
+			err = copyDir(src+"/"+f.Name(), dest+"/"+f.Name())
+			if err != nil {
+				return err
+			}
+
+		}
+
+		if !f.IsDir() {
+
+			content, err := ioutil.ReadFile(src + "/" + f.Name())
+			if err != nil {
+				return err
+
+			}
+
+			err = ioutil.WriteFile(dest+"/"+f.Name(), content, 0755)
+			if err != nil {
+				return err
+
+			}
+
+		}
+
+	}
+
+	return nil
+}
+
+func copy(src, dst string) (int64, error) {
+	sourceFileStat, err := os.Stat(src)
+	if err != nil {
+		return 0, err
+	}
+
+	if !sourceFileStat.Mode().IsRegular() {
+		return 0, fmt.Errorf("%s is not a regular file", src)
+	}
+
+	source, err := os.Open(src)
+	if err != nil {
+		return 0, err
+	}
+	defer source.Close()
+
+	destination, err := os.Create(dst)
+	if err != nil {
+		return 0, err
+	}
+	defer destination.Close()
+	nBytes, err := io.Copy(destination, source)
+	return nBytes, err
 }
