@@ -13,8 +13,9 @@ resource "book" "terraform_basics" {
 }
 
 resource "chapter" "introduction" {
+  title = "Introduction"
+
   page "introduction" {
-    title   = "Introduction"
-    content = ""
+    content = "Somet content"
   }
 }
