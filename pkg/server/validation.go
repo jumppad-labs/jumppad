@@ -171,7 +171,14 @@ func (a *API) validation(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if status == "" {
-			status = "completed"
+			if action == "solve" {
+				status = "skipped"
+			} else {
+				status = "completed"
+			}
+
+			// TODO: account for more states?
+
 			completed++
 		}
 
@@ -183,7 +190,11 @@ func (a *API) validation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(conditions) == completed {
-		status = "completed"
+		if action == "solve" {
+			status = "skipped"
+		} else {
+			status = "completed"
+		}
 	}
 
 	w.WriteHeader(http.StatusOK)
