@@ -193,8 +193,7 @@ func (m model) viewportView() string {
 
 func (m model) headerView() string {
 	title := "Jumppad Dev Mode"
-	line := lipgloss.NewStyle().Foreground(lipgloss.Color("37")).Render(strings.Repeat("─", m.width-m.left))
-	return lipgloss.JoinVertical(lipgloss.Top, title, line)
+	return lipgloss.JoinVertical(lipgloss.Top, title, "")
 }
 
 func (m model) footerView() string {
@@ -209,11 +208,8 @@ func (m model) footerView() string {
 		follow = " "
 	}
 
-	keys := lipgloss.NewStyle().Foreground(lipgloss.Color("37")).Render(fmt.Sprintf("── [l] change log level to %s, [mouse wheel up/down] scroll logs%s", level, follow))
-	line := lipgloss.NewStyle().Foreground(lipgloss.Color("37")).Render(strings.Repeat("─", m.width-m.left-len(keys)))
-	line = lipgloss.JoinHorizontal(lipgloss.Left, keys, line)
-
-	return lipgloss.JoinVertical(lipgloss.Top, line, m.statusbar.View())
+	keys := lipgloss.NewStyle().Foreground(lipgloss.Color("37")).Render(fmt.Sprintf("[l] change log level to %s, [mouse wheel up/down] scroll logs%s", level, follow))
+	return lipgloss.JoinVertical(lipgloss.Top, keys, m.statusbar.View())
 }
 
 // tick ensures that there are regular heartbeats for components that need them
