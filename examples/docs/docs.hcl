@@ -16,6 +16,6 @@ resource "chapter" "introduction" {
   title = "Introduction"
 
   page "introduction" {
-    content = "Somet content"
+    content = "Some content"
   }
 }
