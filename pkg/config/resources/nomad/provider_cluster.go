@@ -549,6 +549,17 @@ func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID 
 	}
 
 	cid, err := p.client.CreateContainer(cc)
+
+	// add the name of the network, we only have the id
+	for i, n := range p.config.Networks {
+		net, err := p.client.FindNetwork(n.ID)
+		if err != nil {
+			return "", "", err
+		}
+
+		p.config.Networks[i].Name = net.Name
+	}
+
 	return fqrn, cid, err
 }
 

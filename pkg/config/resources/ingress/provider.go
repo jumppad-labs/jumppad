@@ -45,6 +45,10 @@ func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
 func (p *Provider) Create() error {
 	p.log.Info("Create Ingress", "ref", p.config.ID)
 
+	if p.config.ExposeLocal {
+		return p.exposeLocal()
+	}
+
 	return p.exposeRemote()
 }
 
@@ -81,6 +85,47 @@ func (p *Provider) Changed() (bool, error) {
 	return false, nil
 }
 
+func (p *Provider) exposeLocal() error {
+	// validate the name
+	if p.config.Target.Config["service"] == "connector" {
+		return fmt.Errorf("unable to expose local service, Service name 'connector' is a reserved name")
+	}
+
+	cd, err := p.getConnectorDetails()
+	if err != nil {
+		return nil
+	}
+
+	// send the request
+	p.log.Debug(
+		"Calling connector to expose local service",
+		"name", cd.serviceName,
+		"local_port", p.config.Port,
+		"connector_addr", cd.connectorAddress,
+		"remote_addr", cd.destinationAddress,
+	)
+
+	id, err := p.connector.ExposeService(
+		cd.serviceName,
+		p.config.Port,
+		cd.connectorAddress,
+		cd.destinationAddress,
+		"local",
+	)
+
+	if err != nil {
+		return xerrors.Errorf("unable to expose remote service on cluster :%w", err)
+	}
+
+	addr := fmt.Sprintf("%s:%d", utils.GetDockerIP(), p.config.Port)
+	p.log.Debug("Successfully exposed service", "id", id, "dest", cd.destinationAddress, "addr", addr)
+
+	p.config.IngressID = id
+	p.config.Address = addr
+
+	return nil
+}
+
 func (p *Provider) exposeRemote() error {
 	// check if the port is in use, if so, return an immediate error
 	p.log.Debug("Checking if port is available", "port", p.config.Port)
@@ -93,6 +138,49 @@ func (p *Provider) exposeRemote() error {
 	if tc != nil {
 		tc.Close()
 	}
+
+	cd, err := p.getConnectorDetails()
+	if err != nil {
+		return nil
+	}
+
+	// send the request
+	p.log.Debug(
+		"Calling connector to expose remote service",
+		"name", cd.serviceName,
+		"local_port", p.config.Port,
+		"connector_addr", cd.connectorAddress,
+		"remote_addr", cd.destinationAddress,
+	)
+
+	id, err := p.connector.ExposeService(
+		cd.serviceName,
+		p.config.Port,
+		cd.connectorAddress,
+		cd.destinationAddress,
+		"remote",
+	)
+
+	if err != nil {
+		return xerrors.Errorf("unable to expose remote service on cluster :%w", err)
+	}
+
+	addr := fmt.Sprintf("%s:%d", utils.GetDockerIP(), p.config.Port)
+	p.log.Debug("Successfully exposed service", "id", id, "dest", cd.destinationAddress, "addr", addr)
+
+	p.config.IngressID = id
+	p.config.Address = addr
+
+	return nil
+}
+
+type connectorDetails struct {
+	serviceName        string
+	destinationAddress string
+	connectorAddress   string
+}
+
+func (p *Provider) getConnectorDetails() (*connectorDetails, error) {
 
 	// destination address depends on the type of the cluster
 	destAddr := ""
@@ -120,7 +208,17 @@ func (p *Provider) exposeRemote() error {
 			port,
 		)
 	default:
-		return fmt.Errorf("target type must be either a Kubernetes or a Nomad cluster")
+		return nil, fmt.Errorf("target type must be either a Kubernetes or a Nomad cluster")
+	}
+
+	// if exposing a local service set the namespace
+	// and ensure the address is the local app
+	if p.config.ExposeLocal {
+		p.config.Target.Config["namespace"] = "jumppad"
+		destAddr = fmt.Sprintf(
+			"localhost:%s",
+			port,
+		)
 	}
 
 	// address of the remote connector
@@ -129,37 +227,10 @@ func (p *Provider) exposeRemote() error {
 	// sanitize the name to make it uri format
 	serviceName, err := utils.ReplaceNonURIChars(p.config.Name)
 	if err != nil {
-		return xerrors.Errorf("unable to replace non URI characters in service name %s :%w", p.config.Name, err)
+		return nil, xerrors.Errorf("unable to replace non URI characters in service name %s :%w", p.config.Name, err)
 	}
 
-	// send the request
-	p.log.Debug(
-		"Calling connector to expose local service",
-		"name", serviceName,
-		"local_port", p.config.Port,
-		"connector_addr", connectorAddress,
-		"remote_addr", destAddr,
-	)
-
-	id, err := p.connector.ExposeService(
-		serviceName,
-		p.config.Port,
-		connectorAddress,
-		destAddr,
-		"remote",
-	)
-
-	if err != nil {
-		return xerrors.Errorf("unable to expose remote service on cluster :%w", err)
-	}
-
-	addr := fmt.Sprintf("%s:%d", utils.GetDockerIP(), p.config.Port)
-	p.log.Debug("Successfully exposed service", "id", id, "dest", destAddr, "addr", addr)
-
-	p.config.IngressID = id
-	p.config.Address = addr
-
-	return nil
+	return &connectorDetails{serviceName, destAddr, connectorAddress}, nil
 }
 
 // exposeK8sRemote exposes a remote kubernetes service to the local machine

@@ -678,14 +678,14 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: connector
-  namespace: shipyard
+  namespace: jumppad
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: connector
-  namespace: shipyard
+  namespace: jumppad
 spec:
   type: NodePort
   selector:
@@ -705,7 +705,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: connector-deployment
-  namespace: shipyard
+  namespace: jumppad
   labels:
     app: connector
 spec:
@@ -735,6 +735,7 @@ spec:
 					"--root-cert-path=/etc/connector/tls/root.crt",
 					"--server-cert-path=/etc/connector/tls/tls.crt",
 					"--server-key-path=/etc/connector/tls/tls.key",
+					"--namespace=jumppad",
           "--log-level=%s",
           "--integration=kubernetes"
         ]
@@ -753,7 +754,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: service-creator
-  namespace: shipyard
+  namespace: jumppad
 rules:
 - apiGroups: [""]
   resources: ["services", "endpoints", "pods"]
@@ -765,11 +766,11 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: service-creator-global
-  namespace: shipyard
+  namespace: jumppad
 subjects:
   - kind: ServiceAccount
     name: connector
-    namespace: shipyard
+    namespace: jumppad
 roleRef:
   kind: ClusterRole
   name: service-creator
@@ -780,7 +781,7 @@ var connectorNamespace = `
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: shipyard
+  name: jumppad
 `
 
 var connectorSecret = `
@@ -792,5 +793,5 @@ data:
 kind: Secret
 metadata:
   name: connector-certs
-  namespace: shipyard
+  namespace: jumppad
 `

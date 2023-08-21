@@ -23,3 +23,11 @@ resource "container" "app" {
     id = variable.network
   }
 }
+
+output "local_address" {
+  value = "localhost"
+}
+
+output "local_port" {
+  value = 9090
+}

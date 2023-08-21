@@ -6,6 +6,10 @@ variable "nomad_enabled" {
   default = true
 }
 
+variable "kubernetes_enabled" {
+  default = true
+}
+
 resource "build" "app" {
   container {
     dockerfile = "Dockerfile"
@@ -45,4 +49,38 @@ module "nomad" {
     image   = resource.build.app.image
     network = resource.network.onprem.id
   }
+}
+
+module "kubernetes" {
+  disabled = !variable.kubernetes_enabled
+  source   = "./kubernetes"
+
+  variables = {
+    image   = resource.build.app.image
+    network = resource.network.onprem.id
+  }
+}
+
+// exposes a local service running at port 9090
+// and creates a kubernetes service fake-service.jumppad.svc:9090
+resource "ingress" "local_app_to_k8s" {
+  disabled = !variable.kubernetes_enabled
+
+  port         = module.container.output.local_port
+  expose_local = true
+
+  target {
+    resource = module.kubernetes.output.cluster
+    port     = 9090
+
+    config = {
+      service = "fake-service"
+    }
+  }
+}
+
+output "KUBECONFIG" {
+  disabled = !variable.kubernetes_enabled
+
+  value = module.kubernetes.output.kubeconfig
 }

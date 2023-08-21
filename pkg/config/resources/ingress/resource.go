@@ -17,6 +17,10 @@ type Ingress struct {
 	// local port to expose the service on
 	Port int `hcl:"port" json:"port"`
 
+	// Are we exposing a local serve to the target
+	// if
+	ExposeLocal bool `hcl:"expose_local,optional" json:"expose_local"`
+
 	// details for the destination service
 	Target TrafficTarget `hcl:"target,block" json:"target"`
 

@@ -108,6 +108,11 @@ func (n *NomadCluster) Process() error {
 					}
 				}
 			}
+
+			// the network name is set
+			for x, net := range state.Networks {
+				n.Networks[x] = net
+			}
 		}
 	}
 
