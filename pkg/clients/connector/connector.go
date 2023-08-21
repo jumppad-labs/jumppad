@@ -15,6 +15,7 @@ import (
 	"github.com/jumppad-labs/connector/crypto"
 	"github.com/jumppad-labs/connector/protos/shipyard"
 	"github.com/jumppad-labs/jumppad/pkg/clients/connector/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/getter"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/shipyard-run/gohup"
 	"google.golang.org/grpc"
@@ -43,6 +44,13 @@ type Connector interface {
 	// if any of the required files do not exist an error and a nil
 	// CertBundle will be returned
 	GetLocalCertBundle(dir string) (*types.CertBundle, error)
+
+	// Fetches the local.jumppad.dev certificate bundle from the cert
+	// directory.
+	// If any of the required files do not exist or if the certificate
+	// has expired jumppad downloads a new copy
+	// CertBundle will be returned
+	GetTLSCertBundle(dir string) (*types.CertBundle, error)
 
 	// Generates a Leaf certificate for securing a connector
 	GenerateLeafCert(
@@ -249,6 +257,63 @@ func (c *ConnectorImpl) GetLocalCertBundle(dir string) (*types.CertBundle, error
 	}
 
 	return cb, nil
+}
+
+func (c *ConnectorImpl) GetTLSCertBundle(dir string) (*types.CertBundle, error) {
+	cb := &types.CertBundle{
+		RootCertPath: filepath.Join(dir, "cert.pem"),
+		RootKeyPath:  filepath.Join(dir, "key.pem"),
+	}
+
+	f1, err := os.Open(cb.RootCertPath)
+	if os.IsNotExist(err) {
+		err := c.downloadLocalCerts(dir)
+		if err != nil {
+			return nil, fmt.Errorf("unable to find root certificate: %s", err)
+		}
+	}
+	defer f1.Close()
+
+	f2, err := os.Open(cb.RootKeyPath)
+	if os.IsNotExist(err) {
+		err := c.downloadLocalCerts(dir)
+		if err != nil {
+			return nil, fmt.Errorf("unable to find root certificate: %s", err)
+		}
+	}
+	defer f2.Close()
+
+	// check that the certificate still has 10days left on it
+	ca := &crypto.X509{}
+	err = ca.ReadFile(cb.RootCertPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if time.Until(ca.NotAfter) < 240*time.Hour {
+		err := c.downloadLocalCerts(dir)
+		if err != nil {
+			return nil, fmt.Errorf("unable to find root certificate: %s", err)
+		}
+	}
+
+	return nil, nil
+}
+
+func (c *ConnectorImpl) downloadLocalCerts(dir string) error {
+	g := getter.NewGetter(false)
+
+	err := g.Get(utils.JumppadLocalCert, path.Join(dir, "cert.pem"))
+	if err != nil {
+		return fmt.Errorf("unable to download certificate: %s", err)
+	}
+
+	err = g.Get(utils.JumppadLocalKey, path.Join(dir, "key.pem"))
+	if err != nil {
+		return fmt.Errorf("unable to download key: %s", err)
+	}
+
+	return nil
 }
 
 // GenerateLeafCert generates a x509 leaf certificate with the given details

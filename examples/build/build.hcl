@@ -46,3 +46,29 @@ module "nomad" {
     network = resource.network.onprem.id
   }
 }
+
+// expose the local app via https
+//ingress "local_build" {
+//  // enable https for the application
+//  // at app.local.jumppad.dev
+//  https {
+//    host = "app"
+//  }
+//
+//  target {
+//    id = module.container.output.app_id
+//  }
+//}
+//
+//ingress "local_app_in_nomad" {
+//  // enable 
+//  // at app.local.jumppad.dev
+//  https {
+//    host = "app"
+//  }
+//
+//  target {
+//    id = module.container.output.app_id
+//  }
+//
+//}

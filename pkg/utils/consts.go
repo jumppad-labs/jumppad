@@ -23,3 +23,6 @@ const ProxyBypass string = "localhost,127.0.0.1,cluster.local,jumppad.dev,svc,co
 
 const MaxRandomPort = 32767
 const MinRandomPort = 30000
+
+const JumppadLocalCert = "https://jumppad.dev/certificates/cert.pem"
+const JumppadLocalKey = "https://jumppad.dev/certificates/key.pem"
