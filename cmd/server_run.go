@@ -28,6 +28,8 @@ func newConnectorRunCommand() *cobra.Command {
 	var pathCertRoot string
 	var pathCertServer string
 	var pathKeyServer string
+	var pathCertAPI string
+	var pathKeyAPI string
 	var logLevel string
 	var logFile string
 
@@ -115,7 +117,7 @@ func newConnectorRunCommand() *cobra.Command {
 			// we should look at merging the connector server and the API server
 			l.Info("Starting API server", "bind_addr", apiBindAddr)
 			api := server.New(apiBindAddr, l)
-			go api.Start()
+			go api.Start(pathCertAPI, pathKeyAPI)
 
 			c := make(chan os.Signal, 1)
 			signal.Notify(c, os.Interrupt)
@@ -137,6 +139,8 @@ func newConnectorRunCommand() *cobra.Command {
 	connectorRunCmd.Flags().StringVarP(&pathCertRoot, "root-cert-path", "", "", "Path for the PEM encoded TLS root certificate")
 	connectorRunCmd.Flags().StringVarP(&pathCertServer, "server-cert-path", "", "", "Path for the servers PEM encoded TLS certificate")
 	connectorRunCmd.Flags().StringVarP(&pathKeyServer, "server-key-path", "", "", "Path for the servers PEM encoded Private Key")
+	connectorRunCmd.Flags().StringVarP(&pathCertAPI, "api-cert-path", "", "", "Path for the servers PEM encoded TLS certificate")
+	connectorRunCmd.Flags().StringVarP(&pathKeyAPI, "api-key-path", "", "", "Path for the servers PEM encoded Private Key")
 	connectorRunCmd.Flags().StringVarP(&logLevel, "log-level", "", "info", "Log output level [debug, trace, info]")
 	connectorRunCmd.Flags().StringVarP(&logFile, "log-file", "", "./connector.log", "Log file for connector logs")
 

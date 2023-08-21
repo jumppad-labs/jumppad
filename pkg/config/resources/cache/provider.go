@@ -116,8 +116,8 @@ func (p *Provider) createImageCache(networks []string) (string, error) {
 	}
 
 	// copy the ca and key
-	cert := filepath.Join(utils.CertsDir(""), "root.cert")
-	key := filepath.Join(utils.CertsDir(""), "root.key")
+	cert := filepath.Join(utils.CertsDir("connector"), "root.cert")
+	key := filepath.Join(utils.CertsDir("connector"), "root.key")
 
 	_, err = p.client.CopyFilesToVolume(volID, []string{cert, key}, "/ca", true)
 	if err != nil {

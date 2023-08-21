@@ -28,7 +28,7 @@ import (
 //go:generate mockery --name Connector --filename connector.go
 type Connector interface {
 	// Start the Connector, returns an error on failure
-	Start(*types.CertBundle) error
+	Start(*types.CertBundle, *types.CertBundle) error
 	// Stop the Connector, returns an error on failure
 	Stop() error
 	// IsRunning returns true when the Connector is running
@@ -101,7 +101,7 @@ func DefaultConnectorOptions() ConnectorOptions {
 	co.BinaryPath = utils.GetShipyardBinaryPath()
 	co.GrpcBind = ":30001"
 	co.HTTPBind = ":30002"
-	co.APIBind = ":30003"
+	co.APIBind = ":443" // by default bind to standard tls
 	co.LogLevel = "info"
 	co.PidFile = utils.GetConnectorPIDFile()
 
@@ -114,7 +114,7 @@ func NewConnector(opts ConnectorOptions) Connector {
 }
 
 // Start the Connector, returns an error on failure
-func (c *ConnectorImpl) Start(cb *types.CertBundle) error {
+func (c *ConnectorImpl) Start(grpc *types.CertBundle, api *types.CertBundle) error {
 	// get the log level from the environment variable
 	ll := os.Getenv("LOG_LEVEL")
 	if ll == "" {
@@ -127,9 +127,11 @@ func (c *ConnectorImpl) Start(cb *types.CertBundle) error {
 		"--grpc-bind", c.options.GrpcBind,
 		"--http-bind", c.options.HTTPBind,
 		"--api-bind", c.options.APIBind,
-		"--root-cert-path", cb.RootCertPath,
-		"--server-cert-path", cb.LeafCertPath,
-		"--server-key-path", cb.LeafKeyPath,
+		"--root-cert-path", grpc.RootCertPath,
+		"--server-cert-path", grpc.LeafCertPath,
+		"--server-key-path", grpc.LeafKeyPath,
+		"--api-cert-path", api.LeafCertPath,
+		"--api-key-path", api.LeafKeyPath,
 		"--log-level", ll,
 	}
 
@@ -272,7 +274,7 @@ func (c *ConnectorImpl) GetTLSCertBundle(dir string) (*types.CertBundle, error) 
 			return nil, fmt.Errorf("unable to find root certificate: %s", err)
 		}
 	}
-	defer f1.Close()
+	f1.Close()
 
 	f2, err := os.Open(cb.RootKeyPath)
 	if os.IsNotExist(err) {
@@ -281,13 +283,13 @@ func (c *ConnectorImpl) GetTLSCertBundle(dir string) (*types.CertBundle, error) 
 			return nil, fmt.Errorf("unable to find root certificate: %s", err)
 		}
 	}
-	defer f2.Close()
+	f2.Close()
 
 	// check that the certificate still has 10days left on it
 	ca := &crypto.X509{}
 	err = ca.ReadFile(cb.RootCertPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to check expiry on tls cert: %s", err)
 	}
 
 	if time.Until(ca.NotAfter) < 240*time.Hour {
@@ -297,21 +299,32 @@ func (c *ConnectorImpl) GetTLSCertBundle(dir string) (*types.CertBundle, error) 
 		}
 	}
 
-	return nil, nil
+	return cb, nil
 }
 
 func (c *ConnectorImpl) downloadLocalCerts(dir string) error {
 	g := getter.NewGetter(false)
 
-	err := g.Get(utils.JumppadLocalCert, path.Join(dir, "cert.pem"))
+	// down load the certs to a temp folder
+	tmpDir, err := os.MkdirTemp("", "")
+	if err != nil {
+		return fmt.Errorf("unable to create temporary directory:%s", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	err = g.Get(utils.JumppadLocalCert, path.Join(tmpDir, "cert.pem"))
 	if err != nil {
 		return fmt.Errorf("unable to download certificate: %s", err)
 	}
 
-	err = g.Get(utils.JumppadLocalKey, path.Join(dir, "key.pem"))
+	err = g.Get(utils.JumppadLocalKey, path.Join(tmpDir, "key.pem"))
 	if err != nil {
 		return fmt.Errorf("unable to download key: %s", err)
 	}
+
+	// copy the files to the correct location
+	utils.CopyFile(path.Join(tmpDir, "cert.pem", "cert.pem"), path.Join(dir, "cert.pem"))
+	utils.CopyFile(path.Join(tmpDir, "key.pem", "key.pem"), path.Join(dir, "key.pem"))
 
 	return nil
 }
@@ -386,15 +399,15 @@ func (c *ConnectorImpl) ExposeService(
 	direction string,
 ) (string, error) {
 
-	dir := utils.CertsDir("")
+	dir := utils.CertsDir("connector")
 	cb, err := c.GetLocalCertBundle(dir)
 	if err != nil {
-		return "", fmt.Errorf("Unable to find certificate at location: %s, error: %s", dir, err)
+		return "", fmt.Errorf("unable to find certificate at location: %s, error: %s", dir, err)
 	}
 
 	cl, err := getClient(cb, c.options.GrpcBind)
 	if err != nil {
-		return "", fmt.Errorf("Unable to create grpc client: %s", err)
+		return "", fmt.Errorf("unable to create grpc client: %s", err)
 	}
 
 	t := shipyard.ServiceType_LOCAL
@@ -421,7 +434,7 @@ func (c *ConnectorImpl) ExposeService(
 
 // RemoveService removes a previously exposed service
 func (c *ConnectorImpl) RemoveService(id string) error {
-	cb, err := c.GetLocalCertBundle(utils.CertsDir(""))
+	cb, err := c.GetLocalCertBundle(utils.CertsDir("connector"))
 	if err != nil {
 		return err
 	}
@@ -444,7 +457,7 @@ func (c *ConnectorImpl) RemoveService(id string) error {
 
 // ListServices lists all active services
 func (c *ConnectorImpl) ListServices() ([]*shipyard.Service, error) {
-	cb, err := c.GetLocalCertBundle(utils.CertsDir(""))
+	cb, err := c.GetLocalCertBundle(utils.CertsDir("connector"))
 	if err != nil {
 		return nil, err
 	}

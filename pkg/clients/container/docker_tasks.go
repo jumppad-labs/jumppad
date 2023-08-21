@@ -694,7 +694,7 @@ func (d *DockerTasks) CopyFromContainer(id, src, dst string) error {
 	// if tmpPath is a directory copy the directory
 	i, _ := os.Stat(tmpPath)
 	if i.IsDir() {
-		err = copyDir(tmpPath, dst)
+		err = utils.CopyDir(tmpPath, dst)
 		if err != nil {
 			return fmt.Errorf("unable to copy temporary files to destination %s", err)
 		}
@@ -703,7 +703,7 @@ func (d *DockerTasks) CopyFromContainer(id, src, dst string) error {
 	}
 
 	// else just copy the file
-	_, err = copy(tmpPath, dst)
+	_, err = utils.CopyFile(tmpPath, dst)
 	if err != nil {
 		return fmt.Errorf("unable to copy temporary files to destination %s", err)
 	}
@@ -1409,90 +1409,4 @@ func (d *DockerTasks) saveImageToTempFile(image, filename string) (string, error
 	}
 
 	return tmpFileName, nil
-}
-
-func copyDir(src string, dest string) error {
-
-	if dest == src {
-		return fmt.Errorf("cannot copy a folder into the folder itself!")
-	}
-
-	f, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-
-	file, err := f.Stat()
-	if err != nil {
-		return err
-	}
-	if !file.IsDir() {
-		return fmt.Errorf("Source " + file.Name() + " is not a directory!")
-	}
-
-	err = os.Mkdir(dest, 0755)
-	if err != nil {
-		return err
-	}
-
-	files, err := ioutil.ReadDir(src)
-	if err != nil {
-		return err
-	}
-
-	for _, f := range files {
-
-		if f.IsDir() {
-
-			err = copyDir(src+"/"+f.Name(), dest+"/"+f.Name())
-			if err != nil {
-				return err
-			}
-
-		}
-
-		if !f.IsDir() {
-
-			content, err := ioutil.ReadFile(src + "/" + f.Name())
-			if err != nil {
-				return err
-
-			}
-
-			err = ioutil.WriteFile(dest+"/"+f.Name(), content, 0755)
-			if err != nil {
-				return err
-
-			}
-
-		}
-
-	}
-
-	return nil
-}
-
-func copy(src, dst string) (int64, error) {
-	sourceFileStat, err := os.Stat(src)
-	if err != nil {
-		return 0, err
-	}
-
-	if !sourceFileStat.Mode().IsRegular() {
-		return 0, fmt.Errorf("%s is not a regular file", src)
-	}
-
-	source, err := os.Open(src)
-	if err != nil {
-		return 0, err
-	}
-	defer source.Close()
-
-	destination, err := os.Create(dst)
-	if err != nil {
-		return 0, err
-	}
-	defer destination.Close()
-	nBytes, err := io.Copy(destination, source)
-	return nBytes, err
 }

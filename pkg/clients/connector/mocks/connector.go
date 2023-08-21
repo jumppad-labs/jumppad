@@ -115,6 +115,32 @@ func (_m *Connector) GetLocalCertBundle(dir string) (*types.CertBundle, error) {
 	return r0, r1
 }
 
+// GetTLSCertBundle provides a mock function with given fields: dir
+func (_m *Connector) GetTLSCertBundle(dir string) (*types.CertBundle, error) {
+	ret := _m.Called(dir)
+
+	var r0 *types.CertBundle
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string) (*types.CertBundle, error)); ok {
+		return rf(dir)
+	}
+	if rf, ok := ret.Get(0).(func(string) *types.CertBundle); ok {
+		r0 = rf(dir)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*types.CertBundle)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(dir)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // IsRunning provides a mock function with given fields:
 func (_m *Connector) IsRunning() bool {
 	ret := _m.Called()
@@ -169,13 +195,13 @@ func (_m *Connector) RemoveService(id string) error {
 	return r0
 }
 
-// Start provides a mock function with given fields: _a0
-func (_m *Connector) Start(_a0 *types.CertBundle) error {
-	ret := _m.Called(_a0)
+// Start provides a mock function with given fields: _a0, _a1
+func (_m *Connector) Start(_a0 *types.CertBundle, _a1 *types.CertBundle) error {
+	ret := _m.Called(_a0, _a1)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*types.CertBundle) error); ok {
-		r0 = rf(_a0)
+	if rf, ok := ret.Get(0).(func(*types.CertBundle, *types.CertBundle) error); ok {
+		r0 = rf(_a0, _a1)
 	} else {
 		r0 = ret.Error(0)
 	}

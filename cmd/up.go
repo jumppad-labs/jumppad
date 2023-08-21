@@ -105,35 +105,28 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 		}
 
 		// create the certificates for the connector
-		if cb, err := cc.GetLocalCertBundle(utils.CertsDir("connector")); err != nil || cb == nil {
+		cb, err := cc.GetLocalCertBundle(utils.CertsDir("connector"))
+		if err != nil || cb == nil {
 			// generate certs
-			l.Debug("Generating TLS Certificates for Ingress", "path", utils.CertsDir(""))
-			_, err := cc.GenerateLocalCertBundle(utils.CertsDir("connector"))
+			l.Debug("Generating TLS Certificates for Ingress", "path", utils.CertsDir("connector"))
+			cb, err = cc.GenerateLocalCertBundle(utils.CertsDir("connector"))
 			if err != nil {
 				return fmt.Errorf("unable to generate connector certificates: %s", err)
 			}
 		}
 
 		// create the certificates for the local api
-		if cb, err := cc.GetLocalCertBundle(utils.CertsDir("local")); err != nil || cb == nil {
-			// generate certs
-			l.Debug("Fetching TLS Certificates for API server", "path", utils.CertsDir(""))
-			_, err := cc.GenerateLocalCertBundle(utils.CertsDir("local"))
-			if err != nil {
-				return fmt.Errorf("unable to fetch api certificates: %s", err)
-			}
+		l.Debug("Fetching TLS Certificates for API server", "path", utils.CertsDir("local"))
+		lb, err := cc.GetTLSCertBundle(utils.CertsDir("local"))
+		if err != nil {
+			return fmt.Errorf("unable to fetch api certificates: %s", err)
 		}
 
 		// start the connector
 		if !cc.IsRunning() {
-			cb, err := cc.GetLocalCertBundle(utils.CertsDir("connector"))
-			if err != nil {
-				return fmt.Errorf("unable to get certificates to secure ingress: %s", err)
-			}
-
 			l.Debug("Starting API server")
 
-			err = cc.Start(cb)
+			err = cc.Start(cb, lb)
 			if err != nil {
 				return fmt.Errorf("unable to start API server: %s", err)
 			}

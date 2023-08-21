@@ -554,7 +554,7 @@ func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID 
 
 func (p *ClusterProvider) appendProxyEnv(cc *ctypes.Container) error {
 	// load the CA from a file
-	ca, err := ioutil.ReadFile(filepath.Join(utils.CertsDir(""), "/root.cert"))
+	ca, err := ioutil.ReadFile(filepath.Join(utils.CertsDir("connector"), "/root.cert"))
 	if err != nil {
 		return fmt.Errorf("unable to read root CA for proxy: %s", err)
 	}
@@ -585,7 +585,7 @@ func (p *ClusterProvider) deployConnector() error {
 
 	// generate the certificates
 	// generate the certificates for the service
-	cb, err := p.connector.GetLocalCertBundle(utils.CertsDir(""))
+	cb, err := p.connector.GetLocalCertBundle(utils.CertsDir("connector"))
 	if err != nil {
 		return fmt.Errorf("unable to fetch root certificates for ingress: %s", err)
 	}

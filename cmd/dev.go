@@ -96,26 +96,29 @@ func newDevCmdFunc(variables *[]string, variablesFile, interval *string, ttyFlag
 		}
 
 		// create the certificates for the connector
-		if cb, err := engineClients.Connector.GetLocalCertBundle(utils.CertsDir("")); err != nil || cb == nil {
+		cb, err := engineClients.Connector.GetLocalCertBundle(utils.CertsDir("connector"))
+		if err != nil || cb == nil {
 			// generate certs
-			v.Logger().Debug("Generating TLS Certificates for Ingress", "path", utils.CertsDir(""))
+			v.Logger().Debug("Generating TLS Certificates for Ingress", "path", utils.CertsDir("connector"))
 
-			_, err := engineClients.Connector.GenerateLocalCertBundle(utils.CertsDir(""))
+			_, err := engineClients.Connector.GenerateLocalCertBundle(utils.CertsDir("connector"))
 			if err != nil {
 				return fmt.Errorf("unable to generate connector certificates: %s", err)
 			}
 		}
 
+		// create the certificates for the local api
+		l.Debug("Fetching TLS Certificates for API server", "path", utils.CertsDir("local"))
+		lb, err := engineClients.Connector.GetTLSCertBundle(utils.CertsDir("local"))
+		if err != nil {
+			return fmt.Errorf("unable to fetch api certificates: %s", err)
+		}
+
 		// start the connector
 		if !engineClients.Connector.IsRunning() {
-			cb, err := engineClients.Connector.GetLocalCertBundle(utils.CertsDir(""))
-			if err != nil {
-				return fmt.Errorf("unable to get certificates to secure ingress: %s", err)
-			}
-
 			v.Logger().Debug("Starting API server")
 
-			err = engineClients.Connector.Start(cb)
+			err = engineClients.Connector.Start(cb, lb)
 			if err != nil {
 				return fmt.Errorf("unable to start API server: %s", err)
 			}

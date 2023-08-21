@@ -185,7 +185,7 @@ func (p *ClusterProvider) createK3s() error {
 
 	if sv.Check(v) {
 		// load the CA from a file
-		ca, err := ioutil.ReadFile(filepath.Join(utils.CertsDir(""), "/root.cert"))
+		ca, err := ioutil.ReadFile(filepath.Join(utils.CertsDir("connector"), "/root.cert"))
 		if err != nil {
 			return fmt.Errorf("unable to read root CA for proxy: %s", err)
 		}
@@ -489,7 +489,7 @@ func (p *ClusterProvider) changeServerAddressInK8sConfig(addr, origFile, newFile
 // once it has started
 func (p *ClusterProvider) deployConnector(grpcPort, httpPort int) error {
 	// generate the certificates for the service
-	cb, err := p.connector.GetLocalCertBundle(utils.CertsDir(""))
+	cb, err := p.connector.GetLocalCertBundle(utils.CertsDir("connector"))
 	if err != nil {
 		return fmt.Errorf("unable to fetch root certificates for ingress: %s", err)
 	}

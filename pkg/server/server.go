@@ -46,6 +46,7 @@ func New(addr string, l logger.Logger) *API {
 		log:    l,
 	}
 
+	router.HandleFunc("/", api.catchAll)
 	router.Get("/terminal", api.terminal)
 	router.Post("/validate/{task}/{action}", api.validation)
 
@@ -53,11 +54,11 @@ func New(addr string, l logger.Logger) *API {
 }
 
 // Start the API server
-func (a *API) Start() {
+func (a *API) Start(tlsCert, tlsKey string) {
 	a.log.Debug("Starting API server")
 
 	// // Start the server
-	err := a.server.ListenAndServe()
+	err := a.server.ListenAndServeTLS(tlsCert, tlsKey)
 	if err != nil && err != http.ErrServerClosed {
 		a.log.Error("Listen exit with", "error", err)
 	}
