@@ -1,5 +1,10 @@
 # Change Log
 
+## version v0.5.41
+* Add automatic push for build images to Kubernetes 
+* Add automatic refresh for Kubernetes jobs 
+* Add ability to expose local services to kubernetes clusters
+
 ## version v0.5.40
 * Update docs to implement new structure
 * Add `copy` capability to build resources

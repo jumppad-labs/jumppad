@@ -10,6 +10,19 @@ variable "kubernetes_enabled" {
   default = true
 }
 
+// use a random ingress by default
+variable "container_ingress_port" {
+  default = 0
+}
+
+variable "nomad_ingress_port" {
+  default = 0
+}
+
+variable "kubernetes_ingress_port" {
+  default = 0
+}
+
 resource "build" "app" {
   container {
     dockerfile = "Dockerfile"
@@ -36,8 +49,9 @@ module "container" {
   source   = "./container"
 
   variables = {
-    image   = resource.build.app.image
-    network = resource.network.onprem.id
+    image        = resource.build.app.image
+    network      = resource.network.onprem.id
+    ingress_port = variable.container_ingress_port
   }
 }
 
@@ -46,8 +60,9 @@ module "nomad" {
   source   = "./nomad"
 
   variables = {
-    image   = resource.build.app.image
-    network = resource.network.onprem.id
+    image        = resource.build.app.image
+    network      = resource.network.onprem.id
+    ingress_port = variable.nomad_ingress_port
   }
 }
 
@@ -56,31 +71,34 @@ module "kubernetes" {
   source   = "./kubernetes"
 
   variables = {
-    image   = resource.build.app.image
-    network = resource.network.onprem.id
+    image          = resource.build.app.image
+    network        = resource.network.onprem.id
+    ingress_port   = variable.kubernetes_ingress_port
+    container_port = module.container.output.local_port
   }
 }
 
-// exposes a local service running at port 9090
-// and creates a kubernetes service fake-service.jumppad.svc:9090
-resource "ingress" "local_app_to_k8s" {
-  disabled = !variable.kubernetes_enabled
-
-  port         = module.container.output.local_port
-  expose_local = true
-
-  target {
-    resource = module.kubernetes.output.cluster
-    port     = 9090
-
-    config = {
-      service = "fake-service"
-    }
-  }
-}
 
 output "KUBECONFIG" {
   disabled = !variable.kubernetes_enabled
 
   value = module.kubernetes.output.kubeconfig
+}
+
+output "container_app" {
+  disabled = !variable.container_enabled
+
+  value = "http://${module.container.output.local_address}:${module.container.output.local_port}"
+}
+
+output "nomad_app" {
+  disabled = !variable.nomad_enabled
+
+  value = "http://${module.nomad.output.local_address}:${module.nomad.output.local_port}"
+}
+
+output "kubernetes_app" {
+  disabled = !variable.kubernetes_enabled
+
+  value = "http://${module.kubernetes.output.local_address}:${module.kubernetes.output.local_port}"
 }
