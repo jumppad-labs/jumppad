@@ -15,7 +15,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/k8s"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/nomad"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
 )
@@ -90,7 +89,7 @@ func pushK8sCluster(image string, c *k8s.K8sCluster, ct container.ContainerTasks
 
 	for _, id := range ids {
 		log.Info("Pushing to container", "id", id, "image", image)
-		err = cl.ImportLocalDockerImages(utils.ImageVolumeName, id, []types.Image{types.Image{Name: strings.Trim(image, " ")}}, force)
+		err = cl.ImportLocalDockerImages([]types.Image{types.Image{Name: strings.Trim(image, " ")}}, force)
 		if err != nil {
 			return xerrors.Errorf("Error pushing image: %w ", err)
 		}
