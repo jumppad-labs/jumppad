@@ -91,25 +91,54 @@ func (p *Provider) exposeLocal() error {
 		return fmt.Errorf("unable to expose local service, Service name 'connector' is a reserved name")
 	}
 
-	cd, err := p.getConnectorDetails()
-	if err != nil {
-		return nil
+	// set the namespace
+	p.config.Target.Config["namespace"] = "jumppad"
+
+	remoteAddr := ""
+
+	port := fmt.Sprintf("%d", p.config.Target.Port)
+
+	if p.config.Target.NamedPort != "" {
+		port = p.config.Target.NamedPort
 	}
+
+	switch p.config.Target.Resource.Type {
+	case k8s.TypeK8sCluster:
+		remoteAddr = fmt.Sprintf(
+			"%s.%s.svc:%s",
+			p.config.Target.Config["service"],
+			p.config.Target.Config["namespace"],
+			port,
+		)
+	case nomad.TypeNomadCluster:
+		remoteAddr = fmt.Sprintf(
+			"%s.%s.%s:%s",
+			p.config.Target.Config["job"],
+			p.config.Target.Config["group"],
+			p.config.Target.Config["task"],
+			port,
+		)
+	default:
+		return fmt.Errorf("target type must be either a Kubernetes or a Nomad cluster")
+	}
+
+	// address of the remote connector
+	connectorAddress := fmt.Sprintf("%s:%d", p.config.Target.Resource.ExternalIP, p.config.Target.Resource.ConnectorPort)
 
 	// send the request
 	p.log.Debug(
 		"Calling connector to expose local service",
-		"name", cd.serviceName,
-		"local_port", p.config.Port,
-		"connector_addr", cd.connectorAddress,
-		"remote_addr", cd.destinationAddress,
+		"name", p.config.Target.Config["service"],
+		"local_port", p.config.Target.Port,
+		"connector_addr", connectorAddress,
+		"remote_addr", fmt.Sprintf("localhost:%d", p.config.Port),
 	)
 
 	id, err := p.connector.ExposeService(
-		cd.serviceName,
-		p.config.Port,
-		cd.connectorAddress,
-		cd.destinationAddress,
+		p.config.Target.Config["service"],
+		p.config.Target.Port,
+		connectorAddress,
+		fmt.Sprintf("localhost:%d", p.config.Port),
 		"local",
 	)
 
@@ -118,10 +147,11 @@ func (p *Provider) exposeLocal() error {
 	}
 
 	addr := fmt.Sprintf("%s:%d", utils.GetDockerIP(), p.config.Port)
-	p.log.Debug("Successfully exposed service", "id", id, "dest", cd.destinationAddress, "addr", addr)
+	p.log.Debug("Successfully exposed service", "id", id, "dest", remoteAddr, "addr", addr)
 
 	p.config.IngressID = id
-	p.config.Address = addr
+	p.config.LocalAddress = addr
+	p.config.RemoteAddress = remoteAddr
 
 	return nil
 }
@@ -139,51 +169,8 @@ func (p *Provider) exposeRemote() error {
 		tc.Close()
 	}
 
-	cd, err := p.getConnectorDetails()
-	if err != nil {
-		return nil
-	}
-
-	// send the request
-	p.log.Debug(
-		"Calling connector to expose remote service",
-		"name", cd.serviceName,
-		"local_port", p.config.Port,
-		"connector_addr", cd.connectorAddress,
-		"remote_addr", cd.destinationAddress,
-	)
-
-	id, err := p.connector.ExposeService(
-		cd.serviceName,
-		p.config.Port,
-		cd.connectorAddress,
-		cd.destinationAddress,
-		"remote",
-	)
-
-	if err != nil {
-		return xerrors.Errorf("unable to expose remote service on cluster :%w", err)
-	}
-
-	addr := fmt.Sprintf("%s:%d", utils.GetDockerIP(), p.config.Port)
-	p.log.Debug("Successfully exposed service", "id", id, "dest", cd.destinationAddress, "addr", addr)
-
-	p.config.IngressID = id
-	p.config.Address = addr
-
-	return nil
-}
-
-type connectorDetails struct {
-	serviceName        string
-	destinationAddress string
-	connectorAddress   string
-}
-
-func (p *Provider) getConnectorDetails() (*connectorDetails, error) {
-
-	// destination address depends on the type of the cluster
 	destAddr := ""
+
 	port := fmt.Sprintf("%d", p.config.Target.Port)
 
 	if p.config.Target.NamedPort != "" {
@@ -198,7 +185,6 @@ func (p *Provider) getConnectorDetails() (*connectorDetails, error) {
 			p.config.Target.Config["namespace"],
 			port,
 		)
-
 	case nomad.TypeNomadCluster:
 		destAddr = fmt.Sprintf(
 			"%s.%s.%s:%s",
@@ -208,29 +194,48 @@ func (p *Provider) getConnectorDetails() (*connectorDetails, error) {
 			port,
 		)
 	default:
-		return nil, fmt.Errorf("target type must be either a Kubernetes or a Nomad cluster")
-	}
-
-	// if exposing a local service set the namespace
-	// and ensure the address is the local app
-	if p.config.ExposeLocal {
-		p.config.Target.Config["namespace"] = "jumppad"
-		destAddr = fmt.Sprintf(
-			"localhost:%s",
-			port,
-		)
+		return fmt.Errorf("target type must be either a Kubernetes or a Nomad cluster")
 	}
 
 	// address of the remote connector
 	connectorAddress := fmt.Sprintf("%s:%d", p.config.Target.Resource.ExternalIP, p.config.Target.Resource.ConnectorPort)
 
-	// sanitize the name to make it uri format
-	serviceName, err := utils.ReplaceNonURIChars(p.config.Name)
+	// send the request
+	p.log.Debug(
+		"Calling connector to expose remote service",
+		"name", p.config.Target.Config["service"],
+		"local_port", p.config.Port,
+		"connector_addr", connectorAddress,
+		"remote_addr", destAddr,
+	)
+
+	id, err := p.connector.ExposeService(
+		p.config.Target.Config["service"],
+		p.config.Port,
+		connectorAddress,
+		destAddr,
+		"remote",
+	)
+
 	if err != nil {
-		return nil, xerrors.Errorf("unable to replace non URI characters in service name %s :%w", p.config.Name, err)
+		return xerrors.Errorf("unable to expose remote service on cluster :%w", err)
 	}
 
-	return &connectorDetails{serviceName, destAddr, connectorAddress}, nil
+	addr := fmt.Sprintf("%s:%d", utils.GetDockerIP(), p.config.Port)
+	p.log.Debug("Successfully exposed service", "id", id, "dest", destAddr, "addr", addr)
+
+	p.config.IngressID = id
+	p.config.LocalAddress = addr
+	p.config.RemoteAddress = destAddr
+
+	return nil
+}
+
+type connectorDetails struct {
+	serviceName        string
+	destinationAddress string
+	sourceAddress      string
+	connectorAddress   string
 }
 
 // exposeK8sRemote exposes a remote kubernetes service to the local machine

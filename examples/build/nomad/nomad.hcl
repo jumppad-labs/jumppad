@@ -6,6 +6,19 @@ variable "network" {
   default = ""
 }
 
+variable "ingress_port" {
+  default = 0
+}
+
+variable "default_port" {
+  default = 19090
+}
+
+resource "random_number" "port" {
+  minimum = 10000
+  maximum = 20000
+}
+
 resource "nomad_cluster" "dev" {
   client_nodes = 2
 
@@ -56,7 +69,7 @@ resource "nomad_job" "app" {
 }
 
 resource "ingress" "app" {
-  port = 19090
+  port = variable.ingress_port == 0 ? resource.random_number.port.value : variable.default_port
 
   target {
     resource   = resource.nomad_cluster.dev
@@ -68,4 +81,13 @@ resource "ingress" "app" {
       task  = "app"
     }
   }
+}
+
+
+output "local_address" {
+  value = "localhost"
+}
+
+output "local_port" {
+  value = variable.ingress_port == 0 ? resource.random_number.port.value : variable.default_port
 }
