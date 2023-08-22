@@ -82,13 +82,148 @@ func (p *ClusterProvider) Lookup() ([]string, error) {
 func (p *ClusterProvider) Refresh() error {
 	p.log.Debug("Refresh Kubernetes Cluster", "ref", p.config.Name)
 
+	ci, err := p.getChangedImages()
+	if err != nil {
+		return err
+	}
+
+	if len(ci) > 0 {
+		p.log.Info("Copied images changed, pushing new copy to the cluster", "ref", p.config.ID)
+		err := p.ImportLocalDockerImages(ci, false)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (p *ClusterProvider) Changed() (bool, error) {
 	p.log.Debug("Checking changes Leaf Certificate", "ref", p.config.Name)
 
+	// check to see if the any of the copied images have changed
+	i, err := p.getChangedImages()
+	if err != nil {
+		return false, err
+	}
+
+	if len(i) > 0 {
+		return true, nil
+	}
+
 	return false, nil
+}
+
+// ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
+func (p *ClusterProvider) ImportLocalDockerImages(images []ctypes.Image, force bool) error {
+	id, err := p.Lookup()
+	if err != nil {
+		return err
+	}
+
+	imgs := []string{}
+
+	for _, i := range images {
+		// do nothing when the image name is empty
+		if i.Name == "" {
+			continue
+		}
+
+		err := p.client.PullImage(i, false)
+		if err != nil {
+			return err
+		}
+
+		imgs = append(imgs, i.Name)
+	}
+
+	// import to volume
+	vn := utils.FQDNVolumeName(utils.ImageVolumeName)
+	imagesFile, err := p.client.CopyLocalDockerImagesToVolume(imgs, vn, force)
+	if err != nil {
+		return err
+	}
+
+	for _, i := range imagesFile {
+		p.log.Debug("Importing docker image", "ref", p.config.ID, "image", i)
+
+		// execute the command to import the image
+		// write any command output to the logger
+		_, err = p.client.ExecuteCommand(id[0], []string{"ctr", "image", "import", i}, nil, "/", "", "", 300, p.log.StandardWriter())
+		if err != nil {
+			return err
+		}
+	}
+
+	// prune the build images
+	p.pruneBuildImages()
+
+	// update the config with the image ids
+	p.updateCopyImageIDs()
+
+	return nil
+}
+
+func (p *ClusterProvider) pruneBuildImages() error {
+	ids, err := p.Lookup()
+	if err != nil {
+		return err
+	}
+
+	// build a list of current images, we do not want to prune these
+	filter := []string{}
+	for _, i := range p.config.CopyImages {
+		if strings.HasPrefix(i.Name, utils.BuildImagePrefix) {
+			filter = append(filter, fmt.Sprintf("grep -v %s", i.Name))
+		}
+	}
+
+	filters := strings.Join(filter, "| ")
+	filters = strings.TrimSuffix(filters, "| ")
+
+	command := fmt.Sprintf("ctr image rm $(ctr images ls name~=jumppad.dev/localcache/* -q | %s)", filters)
+
+	p.log.Debug("Prune build images from nomad node", "id", ids[0], "command", command)
+	output := bytes.NewBufferString("")
+	_, _ = p.client.ExecuteCommand(ids[0], []string{"sh", "-c", command}, nil, "", "", "", 30, output)
+
+	p.log.Debug("output", "result", output.String())
+	return nil
+}
+
+func (p *ClusterProvider) updateCopyImageIDs() error {
+	for n, i := range p.config.CopyImages {
+		id, err := p.client.FindImageInLocalRegistry(i.ToClientImage())
+		if err != nil {
+			return err
+		}
+
+		p.config.CopyImages[n].ID = id
+	}
+
+	return nil
+}
+
+func (p *ClusterProvider) getChangedImages() ([]ctypes.Image, error) {
+	changed := []ctypes.Image{}
+
+	for _, i := range p.config.CopyImages {
+		// has the image id changed
+		id, err := p.client.FindImageInLocalRegistry(i.ToClientImage())
+		if err != nil {
+			p.log.Error("Unable to lookup image in local registry", "ref", p.config.ID, "error", err)
+			return nil, err
+		}
+
+		// check that the current registry id for the image is the same
+		// as the image that was used to create this container
+		if id != i.ID {
+			p.log.Debug("Container image changed, needs refresh", "ref", p.config.Name, "image", i.Name)
+			changed = append(changed, i.ToClientImage())
+		}
+	}
+
+	return changed, nil
 }
 
 func (p *ClusterProvider) createK3s() error {
@@ -380,7 +515,7 @@ func (p *ClusterProvider) createK3s() error {
 
 		}
 
-		err := p.ImportLocalDockerImages(utils.ImageVolumeName, id, imgs, false)
+		err := p.ImportLocalDockerImages(imgs, false)
 		if err != nil {
 			return xerrors.Errorf("unable to importing Docker images: %w", err)
 		}
@@ -565,43 +700,6 @@ func (p *ClusterProvider) deployConnector(grpcPort, httpPort int) error {
 	p.kubeClient.HealthCheckPods([]string{"app=connector"}, 60*time.Second)
 	if err != nil {
 		return fmt.Errorf("timeout waiting for connector to start: %s", err)
-	}
-
-	return nil
-}
-
-// ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
-func (p *ClusterProvider) ImportLocalDockerImages(name string, id string, images []ctypes.Image, force bool) error {
-	imgs := []string{}
-
-	for _, i := range images {
-		// do nothing when the image name is empty
-		if i.Name == "" {
-			continue
-		}
-
-		err := p.client.PullImage(i, false)
-		if err != nil {
-			return err
-		}
-
-		imgs = append(imgs, i.Name)
-	}
-
-	// import to volume
-	vn := utils.FQDNVolumeName(name)
-	imagesFile, err := p.client.CopyLocalDockerImagesToVolume(imgs, vn, force)
-	if err != nil {
-		return err
-	}
-
-	for _, i := range imagesFile {
-		// execute the command to import the image
-		// write any command output to the logger
-		_, err = p.client.ExecuteCommand(id, []string{"ctr", "image", "import", i}, nil, "/", "", "", 300, p.log.StandardWriter())
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil

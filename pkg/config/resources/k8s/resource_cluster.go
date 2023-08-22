@@ -100,6 +100,11 @@ func (k *K8sCluster) Process() error {
 					}
 				}
 			}
+
+			// the network name is set
+			for x, net := range kstate.Networks {
+				k.Networks[x] = net
+			}
 		}
 	}
 
