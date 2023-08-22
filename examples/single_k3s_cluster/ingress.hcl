@@ -41,9 +41,9 @@ resource "ingress" "vault_http" {
 }
 
 output "CONSUL_HTTP_ADDR" {
-  value = resource.ingress.consul_http.address
+  value = resource.ingress.consul_http.local_address
 }
 
 output "VAULT_ADDR" {
-  value = resource.ingress.vault_http.address
+  value = resource.ingress.vault_http.local_address
 }
