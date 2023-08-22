@@ -2,12 +2,14 @@ package k8s
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/k8s"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"golang.org/x/xerrors"
 )
 
@@ -61,6 +63,14 @@ func (p *ConfigProvider) Create() error {
 			return xerrors.Errorf("healthcheck failed after helm chart setup: %w", err)
 		}
 	}
+	
+	// set the checksums
+	cs, err := p.generateChecksums()
+	if err != nil {
+		return xerrors.Errorf("unable to generate checksums: %w", err)
+	}
+
+	p.config.JobChecksums = cs
 
 	return nil
 }
@@ -87,14 +97,35 @@ func (p *ConfigProvider) Lookup() ([]string, error) {
 }
 
 func (p *ConfigProvider) Refresh() error {
-	p.log.Debug("Refresh Kubernetes configuration", "ref", p.config.ID)
+	cp, err := p.getChangedPaths()
+	if err != nil {
+		return err
+	}
 
-	return nil
+	if len(cp) < 1 {
+		return nil
+	}
+
+	p.log.Info("Refresh Kubernetes config", "ref", p.config.ID, "paths", cp)
+
+	err = p.Destroy()
+	if err != nil {
+		return err
+	}
+
+	return p.Create()
 }
 
 func (p *ConfigProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.ID)
+	cp, err := p.getChangedPaths()
+	if err != nil {
+		return false, err
+	}
 
+	if len(cp) > 0 {
+		p.log.Debug("Kubernetes jobs changed, needs refresh", "ref", p.config.ID)
+		return true, nil
+	}
 	return false, nil
 }
 
@@ -106,4 +137,63 @@ func (p *ConfigProvider) setup() error {
 	}
 
 	return nil
+}
+
+// generateChecksums generates a sha256 checksum for each of the the paths
+func (p *ConfigProvider) generateChecksums() ([]string, error) {
+	checksums := []string{}
+
+	for _, p := range p.config.Paths {
+		f, err := os.Open(p)
+		if err != nil {
+			return nil, err
+		}
+
+		fi, err := f.Stat()
+		if err != nil {
+			return nil, err
+		}
+
+		var hash string
+
+		if fi.IsDir() {
+			hash, err = utils.HashDir(p)
+		} else {
+			hash, err = utils.HashFile(p)
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		checksums = append(checksums, hash)
+	}
+
+	return checksums, nil
+}
+
+// getChangedPaths returns the paths that have changed since the nomad jobs
+// were last applied
+func (p *ConfigProvider) getChangedPaths() ([]string, error) {
+	// get the checksums
+	cs, err := p.generateChecksums()
+	if err != nil {
+		return nil, err
+	}
+
+	// if we have more checksums than previous assume everything has changed
+	if len(p.config.JobChecksums) != len(cs) {
+		return p.config.Paths, nil
+	}
+
+	// compare the checksums
+	diff := []string{}
+	for i, c := range p.config.JobChecksums {
+
+		if c != cs[i] {
+			diff = append(diff, p.config.Paths[i])
+		}
+	}
+
+	return diff, nil
 }

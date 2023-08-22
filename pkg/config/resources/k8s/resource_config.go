@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/healthcheck"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
@@ -22,12 +23,27 @@ type K8sConfig struct {
 
 	// HealthCheck defines a health check for the resource
 	HealthCheck *healthcheck.HealthCheckKubernetes `hcl:"health_check,block" json:"health_check,omitempty"`
+
+	// output
+
+	// JobChecksums stores a checksum of the files or paths
+	JobChecksums []string `hcl:"job_checksums,optional" json:"job_checksums,omitempty"`
 }
 
 func (k *K8sConfig) Process() error {
 	// make all the paths absolute
 	for i, p := range k.Paths {
 		k.Paths[i] = utils.EnsureAbsolute(p, k.File)
+	}
+
+	cfg, err := config.LoadState()
+	if err == nil {
+		// try and find the resource in the state
+		r, _ := cfg.FindResource(k.ID)
+		if r != nil {
+			state := r.(*K8sConfig)
+			k.JobChecksums = state.JobChecksums
+		}
 	}
 
 	return nil

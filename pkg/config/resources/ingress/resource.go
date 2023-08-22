@@ -5,6 +5,7 @@ import (
 
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 // TypeIngress is the resource string for the type
@@ -17,6 +18,10 @@ type Ingress struct {
 	// local port to expose the service on
 	Port int `hcl:"port" json:"port"`
 
+	// Are we exposing a local serve to the target
+	// if
+	ExposeLocal bool `hcl:"expose_local,optional" json:"expose_local"`
+
 	// details for the destination service
 	Target TrafficTarget `hcl:"target,block" json:"target"`
 
@@ -28,8 +33,13 @@ type Ingress struct {
 	// IngressId stores the ID of the created connector service
 	IngressID string `hcl:"ingress_id,optional" json:"ingress_id,omitempty"`
 
-	// Address is the fully qualified uri for accessing the resource
-	Address string `hcl:"address,optional" json:"address,omitempty"`
+	// LocalAddress is the fully qualified uri for accessing the resource from
+	// the local machine
+	LocalAddress string `hcl:"local_address,optional" json:"local_address,omitempty"`
+
+	// RemoteAddress is the fully qualified uri for accessing the resource
+	// in the remote machine
+	RemoteAddress string `hcl:"remote_address,optional" json:"remote_address,omitempty"`
 }
 
 type TargetConfig struct {
@@ -63,6 +73,14 @@ func (i *Ingress) Process() error {
 			"ports 60000 and 60001 are reserved for internal use", i.Port)
 	}
 
+	sn, _ := utils.ReplaceNonURIChars(i.Target.Config["service"])
+	// if service is not set, use the name of the ingress
+	if i.Target.Config["service"] == "" {
+		sn, _ = utils.ReplaceNonURIChars(i.Name)
+	}
+
+	i.Target.Config["service"] = sn
+
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
 	c, err := config.LoadState()
@@ -72,7 +90,8 @@ func (i *Ingress) Process() error {
 		if r != nil {
 			kstate := r.(*Ingress)
 			i.IngressID = kstate.IngressID
-			i.Address = kstate.Address
+			i.LocalAddress = kstate.LocalAddress
+			i.RemoteAddress = kstate.RemoteAddress
 		}
 	}
 

@@ -198,6 +198,81 @@ func (p *ClusterProvider) Refresh() error {
 	return nil
 }
 
+func (p *ClusterProvider) Changed() (bool, error) {
+	p.log.Debug("Checking changes", "ref", p.config.ID)
+
+	// check to see if the any of the copied images have changed
+	i, err := p.getChangedImages()
+	if err != nil {
+		return false, err
+	}
+
+	if len(i) > 0 {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+// ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
+func (p *ClusterProvider) ImportLocalDockerImages(images []ctypes.Image, force bool) error {
+	ids, err := p.Lookup()
+	if err != nil {
+		return err
+	}
+
+	imgs := []string{}
+	for _, i := range images {
+		// ignore when the name is empty
+		if i.Name == "" {
+			continue
+		}
+
+		err := p.client.PullImage(i, false)
+		if err != nil {
+			return err
+		}
+
+		imgs = append(imgs, i.Name)
+	}
+
+	// import to volume
+	vn := utils.FQDNVolumeName(utils.ImageVolumeName)
+	imagesFile, err := p.client.CopyLocalDockerImagesToVolume(imgs, vn, force)
+	if err != nil {
+		return err
+	}
+
+	clWait := sync.WaitGroup{}
+	clWait.Add(len(ids))
+
+	for _, id := range ids {
+		go func(ref, id string, images []string) {
+			// execute the command to import the image
+			// write any command output to the logger
+			for _, i := range images {
+				p.log.Debug("Importing docker images", "ref", p.config.ID, "id", id, "image", i)
+				_, err = p.client.ExecuteCommand(id, []string{"docker", "load", "-i", i}, nil, "/", "", "", 300, p.log.StandardWriter())
+				if err != nil {
+					p.log.Error("Unable to import docker images", "error", err)
+				}
+			}
+			clWait.Done()
+		}(p.config.ID, id, imagesFile)
+	}
+
+	// wait until all images have been imported
+	clWait.Wait()
+
+	// prune the build images
+	p.pruneBuildImages()
+
+	// update the config with the image ids
+	p.updateCopyImageIDs()
+
+	return nil
+}
+
 // PruneBuildImages removes any images
 func (p *ClusterProvider) pruneBuildImages() error {
 	ids, err := p.Lookup()
@@ -217,22 +292,6 @@ func (p *ClusterProvider) pruneBuildImages() error {
 	}
 
 	return nil
-}
-
-func (p *ClusterProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.ID)
-
-	// check to see if the any of the copied images have changed
-	i, err := p.getChangedImages()
-	if err != nil {
-		return false, err
-	}
-
-	if len(i) > 0 {
-		return true, nil
-	}
-
-	return false, nil
 }
 
 func (p *ClusterProvider) createNomad() error {
@@ -549,6 +608,17 @@ func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID 
 	}
 
 	cid, err := p.client.CreateContainer(cc)
+
+	// add the name of the network, we only have the id
+	for i, n := range p.config.Networks {
+		net, err := p.client.FindNetwork(n.ID)
+		if err != nil {
+			return "", "", err
+		}
+
+		p.config.Networks[i].Name = net.Name
+	}
+
 	return fqrn, cid, err
 }
 
@@ -669,65 +739,6 @@ func (p *ClusterProvider) deployConnector() error {
 	}
 
 	return lastError
-}
-
-// ImportLocalDockerImages fetches Docker images stored on the local client and imports them into the cluster
-func (p *ClusterProvider) ImportLocalDockerImages(images []ctypes.Image, force bool) error {
-	ids, err := p.Lookup()
-	if err != nil {
-		return err
-	}
-
-	imgs := []string{}
-	for _, i := range images {
-		// ignore when the name is empty
-		if i.Name == "" {
-			continue
-		}
-
-		err := p.client.PullImage(i, false)
-		if err != nil {
-			return err
-		}
-
-		imgs = append(imgs, i.Name)
-	}
-
-	// import to volume
-	vn := utils.FQDNVolumeName(utils.ImageVolumeName)
-	imagesFile, err := p.client.CopyLocalDockerImagesToVolume(imgs, vn, force)
-	if err != nil {
-		return err
-	}
-
-	clWait := sync.WaitGroup{}
-	clWait.Add(len(ids))
-
-	for _, id := range ids {
-		go func(ref, id string, images []string) {
-			p.log.Debug("Importing docker images", "ref", p.config.ID, "id", id)
-			// execute the command to import the image
-			// write any command output to the logger
-			for _, i := range images {
-				_, err = p.client.ExecuteCommand(id, []string{"docker", "load", "-i", i}, nil, "/", "", "", 300, p.log.StandardWriter())
-				if err != nil {
-					p.log.Error("Unable to import docker images", "error", err)
-				}
-			}
-			clWait.Done()
-		}(p.config.ID, id, imagesFile)
-	}
-
-	// wait until all images have been imported
-	clWait.Wait()
-
-	// prune the build images
-	p.pruneBuildImages()
-
-	// update the config with the image ids
-	p.updateCopyImageIDs()
-
-	return nil
 }
 
 func (p *ClusterProvider) destroyNomad() error {
