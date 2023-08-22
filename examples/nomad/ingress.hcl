@@ -14,5 +14,5 @@ resource "ingress" "fake_service_2" {
 }
 
 output "fake_service_addr" {
-  value = resource.ingress.fake_service_2.address
+  value = resource.ingress.fake_service_2.local_address
 }
