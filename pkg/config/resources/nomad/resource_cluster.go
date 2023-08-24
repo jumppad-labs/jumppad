@@ -27,6 +27,8 @@ type NomadCluster struct {
 	Volumes       ctypes.Volumes            `hcl:"volume,block" json:"volumes,omitempty"`                     // volumes to attach to the cluster
 	OpenInBrowser bool                      `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"` // open the UI in the browser after creation
 
+	Datacenter string `hcl:"datacenter,optional" json:"datacenter"` // Nomad datacenter, defaults dc1
+
 	// Images that will be copied from the local docker cache to the cluster
 	CopyImages ctypes.Images `hcl:"copy_image,block" json:"copy_images,omitempty"`
 
@@ -74,6 +76,10 @@ func (n *NomadCluster) Process() error {
 
 	if n.ConsulConfig != "" {
 		n.ConsulConfig = utils.EnsureAbsolute(n.ConsulConfig, n.File)
+	}
+
+	if n.Datacenter == "" {
+		n.Datacenter = "dc1"
 	}
 
 	// Process volumes

@@ -21,6 +21,8 @@ resource "nomad_cluster" "dev" {
   client_config = resource.template.nomad_config.destination
   consul_config = "./consul_config/agent.hcl"
 
+  datacenter = variable.datacenter
+
   network {
     id = resource.network.cloud.id
   }
@@ -35,10 +37,20 @@ resource "nomad_cluster" "dev" {
   }
 }
 
+resource "template" "example_2" {
+  source = file("./app_config/example2.nomad")
+
+  variables = {
+    datacenter = variable.datacenter
+  }
+
+  destination = "${data("jobs")}/example2.nomad"
+}
+
 resource "nomad_job" "example_2" {
   cluster = resource.nomad_cluster.dev
 
-  paths = ["./app_config/example2.nomad"]
+  paths = [resource.template.example_2.destination]
 
   health_check {
     timeout = "60s"
