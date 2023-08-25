@@ -423,7 +423,7 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 	}
 
 	// generate the server config
-	sc := dataDir + "\n" + fmt.Sprintf(serverConfig, cpu)
+	sc := dataDir + "\n" + fmt.Sprintf(serverConfig, p.config.Datacenter, cpu)
 
 	// write the nomad config to a file
 	os.MkdirAll(p.config.ConfigDir, os.ModePerm)
@@ -540,7 +540,7 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 // returns the fqdn, docker id, and an error if unsuccessful
 func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID string) (string, string, error) {
 	// generate the client config
-	sc := dataDir + "\n" + fmt.Sprintf(clientConfig, serverID)
+	sc := dataDir + "\n" + fmt.Sprintf(clientConfig, p.config.Datacenter, serverID)
 
 	// write the default config to a file
 	clientConfigPath := path.Join(p.config.ConfigDir, "client_config.hcl")
@@ -697,6 +697,7 @@ func (p *ClusterProvider) deployConnector() error {
 
 	config := fmt.Sprintf(
 		nomadConnectorDeployment,
+		p.config.Datacenter,
 		p.config.ConnectorPort,
 		p.config.ConnectorPort+1,
 		string(cert),
@@ -864,7 +865,7 @@ func randomID() string {
 
 var nomadConnectorDeployment = `
 job "connector" {
-  datacenters = ["dc1"]
+  datacenters = ["%s"]
   type        = "service"
 
 
@@ -986,6 +987,8 @@ data_dir = "/var/lib/nomad"
 `
 
 const serverConfig = `
+datacenter = "%s"
+
 server {
   enabled = true
   bootstrap_expect = 1
@@ -1007,6 +1010,8 @@ plugin "raw_exec" {
 `
 
 const clientConfig = `
+datacenter = "%s"
+
 client {
 	enabled = true
 

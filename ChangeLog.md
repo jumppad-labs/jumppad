@@ -1,5 +1,9 @@
 # Change Log
 
+## version v0.5.43
+* Add ability to set datacenter for Nomad clusters
+* Fix permissions to use octet value when using data_with_permissions
+
 ## version v0.5.41
 * Add automatic push for build images to Kubernetes 
 * Add automatic refresh for Kubernetes jobs 

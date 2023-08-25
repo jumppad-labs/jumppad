@@ -1,7 +1,9 @@
 package config
 
 import (
+	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/jumppad-labs/hclconfig"
 	"github.com/jumppad-labs/hclconfig/types"
@@ -70,7 +72,15 @@ func customHCLFuncDockerHost() (string, error) {
 }
 
 func customHCLFuncDataFolderWithPermissions(name string, permissions int) (string, error) {
-	perms := os.FileMode(permissions)
+	if permissions > 0 && permissions < 778 {
+		return "", fmt.Errorf("permissions must be a three digit number less than 777")
+	}
+
+	// convert the permissions to an octal e.g. 777 to 0777
+	strInt := fmt.Sprintf("0%d", permissions)
+	oInt, _ := strconv.ParseInt(strInt, 8, 64)
+
+	perms := os.FileMode(oInt)
 	return utils.GetDataFolder(name, perms), nil
 }
 
