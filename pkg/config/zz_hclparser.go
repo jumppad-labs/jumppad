@@ -72,6 +72,10 @@ func customHCLFuncDockerHost() (string, error) {
 }
 
 func customHCLFuncDataFolderWithPermissions(name string, permissions int) (string, error) {
+	if permissions > 0 && permissions < 778 {
+		return "", fmt.Errorf("permissions must be a three digit number less than 777")
+	}
+
 	// convert the permissions to an octal e.g. 777 to 0777
 	strInt := fmt.Sprintf("0%d", permissions)
 	oInt, _ := strconv.ParseInt(strInt, 8, 64)
