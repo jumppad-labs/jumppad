@@ -25,6 +25,7 @@ require (
 	github.com/hashicorp/go-getter v1.7.0
 	github.com/hashicorp/go-hclog v1.1.0
 	github.com/hashicorp/go-uuid v1.0.2
+	github.com/hashicorp/hcl/v2 v2.17.0
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	github.com/jumppad-labs/connector v0.3.0
 	github.com/jumppad-labs/hclconfig v0.15.1
@@ -42,7 +43,7 @@ require (
 	github.com/shipyard-run/version-manager v0.0.5
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
-	github.com/zclconf/go-cty v1.12.0
+	github.com/zclconf/go-cty v1.13.0
 	golang.org/x/crypto v0.9.0
 	golang.org/x/mod v0.9.0
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2

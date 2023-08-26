@@ -3,3 +3,4 @@ bin/
 dist/
 .vscode
 .envrc
+examples/terraform/workspace/.terraform*

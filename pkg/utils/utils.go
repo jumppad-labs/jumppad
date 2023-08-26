@@ -303,6 +303,17 @@ func GetLibraryFolder(p string, perms os.FileMode) string {
 	return data
 }
 
+// GetTerraformFolder creates the terraform directory used by the application
+func GetTerraformFolder(p string, perms os.FileMode) string {
+	data := filepath.Join(JumppadHome(), "terraform", p)
+
+	// create the folder if it does not exist
+	os.MkdirAll(data, perms)
+	os.Chmod(data, perms)
+
+	return data
+}
+
 // GetDockerHost returns the location of the Docker API depending on the platform
 func GetDockerHost() string {
 	if dh := os.Getenv("DOCKER_HOST"); dh != "" {

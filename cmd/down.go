@@ -26,9 +26,6 @@ func newDestroyCmd(cc connector.Connector) *cobra.Command {
 			// clean up the data folder
 			os.RemoveAll(utils.GetDataFolder("", os.ModePerm))
 
-			// clean up the library folder
-			os.RemoveAll(utils.GetLibraryFolder("", os.ModePerm))
-
 			// shutdown ingress when we destroy all resources
 			if cc.IsRunning() {
 				err = cc.Stop()
