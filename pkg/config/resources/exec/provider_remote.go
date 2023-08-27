@@ -149,6 +149,7 @@ func (p *RemoteProvider) createRemoteExecContainer() (string, error) {
 			ReadOnly:                    v.ReadOnly,
 			BindPropagation:             v.BindPropagation,
 			BindPropagationNonRecursive: v.BindPropagationNonRecursive,
+			SelinuxRelabel:              v.SelinuxRelabel,
 		})
 	}
 
