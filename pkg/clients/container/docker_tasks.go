@@ -125,8 +125,10 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 	}
 
 	// create the container config
+	hostname, domain, _ := strings.Cut(c.Name, ".")
 	dc := &container.Config{
-		Hostname:     c.Name,
+		Hostname:     hostname,
+		Domainname:   domain,
 		Image:        c.Image.Name,
 		Env:          env,
 		Cmd:          c.Command,
