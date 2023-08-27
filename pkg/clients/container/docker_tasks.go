@@ -232,26 +232,35 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 			bindOptions = &mount.BindOptions{Propagation: bp, NonRecursive: vc.BindPropagationNonRecursive}
 		}
 
-		// Volumes in podman are mounted read only by default, we need to add the :z parameter to
-		// ensure that the correct selinux flags are set so that we can write to these volumes
-		if t == mount.TypeVolume {
-			readOnly := ""
-			if vc.ReadOnly {
-				readOnly = ":ro"
-			}
-
-			volumes = append(volumes, fmt.Sprintf("%s:%s:z%s", vc.Source, vc.Destination, readOnly))
-			continue
+		if vc.SelinuxRelabel != "" && vc.BindPropagationNonRecursive {
+			return "", xerrors.Errorf("Cannot apply selinux relabeling and non-recursive bind mounts with docker.")
 		}
 
-		// create the mount
-		mounts = append(mounts, mount.Mount{
-			Type:        t,
-			Source:      vc.Source,
-			Target:      vc.Destination,
-			ReadOnly:    vc.ReadOnly,
-			BindOptions: bindOptions,
-		})
+		// Cannot use mounts if selinux relabeling is requested
+		if t == mount.TypeBind && vc.SelinuxRelabel != "" {
+			options := make([]string, 0)
+			if vc.ReadOnly {
+				options = append(options, "ro")
+			}
+			if vc.BindPropagation != "" {
+				options = append(options, vc.BindPropagation)
+			}
+			if vc.SelinuxRelabel == "shared" {
+				options = append(options, "z")
+			} else if vc.SelinuxRelabel == "private" {
+				options = append(options, "Z")
+			}
+			volumes = append(volumes, fmt.Sprintf("%s:%s:%s", vc.Source, vc.Destination, strings.Join(options, ",")))
+		} else {
+			mounts = append(mounts, mount.Mount{
+				Type:        t,
+				Source:      vc.Source,
+				Target:      vc.Destination,
+				ReadOnly:    vc.ReadOnly,
+				BindOptions: bindOptions,
+			})
+		}
+
 	}
 
 	hc.Mounts = mounts

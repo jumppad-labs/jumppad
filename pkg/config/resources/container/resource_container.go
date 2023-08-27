@@ -84,6 +84,7 @@ type Volume struct {
 	ReadOnly                    bool   `hcl:"read_only,optional" json:"read_only,omitempty"`                                           // specify that the volume is mounted read only
 	BindPropagation             string `hcl:"bind_propagation,optional" json:"bind_propagation,omitempty"`                             // propagation mode for bind mounts [shared, private, slave, rslave, rprivate]
 	BindPropagationNonRecursive bool   `hcl:"bind_propagation_non_recursive,optional" json:"bind_propagation_non_recursive,omitempty"` // recursive bind mount, default true
+	SelinuxRelabel              string `hcl:"selinux_relabel,optional" json:"selinux_relabel,optional"`                                // selinux_relabeling ["", shared, private]
 }
 
 type Volumes []Volume
