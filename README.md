@@ -1,9 +1,9 @@
 # jumppad
 
-![build](https://github.com/jumppad-labs/jumppad/workflows/Build/badge.svg)  
+![build](https://github.com/jumppad-labs/jumppad/actions/workflows/build_and_deploy.yaml/badge.svg)  
 
-![release](https://github.com/jumppad-labs/jumppad/workflows/Release/badge.svg)  
-  
+![release](https://img.shields.io/github/v/release/jumppad-labs/jumppad.svg?style=flat)  
+
 [![codecov](https://codecov.io/gh/jumppad-labs/jumppad/branch/master/graph/badge.svg)](https://codecov.io/gh/jumppad-labs/jumppad)
 
 Jumppad is a tool for building modern cloud native development environments. Using the Jumppad configuration language you can create OCI containers, Nomad/Kubernetes clusters and more.
