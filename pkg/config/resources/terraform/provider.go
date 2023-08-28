@@ -2,11 +2,13 @@ package terraform
 
 import (
 	"encoding/json"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
 
+	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/jumppad-labs/hclconfig/convert"
 	htypes "github.com/jumppad-labs/hclconfig/types"
@@ -54,7 +56,9 @@ func (p *TerraformProvider) Create() error {
 	terraformPath := utils.GetTerraformFolder(p.config.Name, 0775)
 
 	err := p.generateVariables(terraformPath)
+	err := p.generateVariables(terraformPath)
 	if err != nil {
+		return fmt.Errorf("unable to generate variables file: %w", err)
 		return fmt.Errorf("unable to generate variables file: %w", err)
 	}
 
@@ -62,10 +66,14 @@ func (p *TerraformProvider) Create() error {
 	id, err := p.createContainer(terraformPath)
 	if err != nil {
 		return fmt.Errorf("unable to create container for terraform.%s: %w", p.config.Name, err)
+		return fmt.Errorf("unable to create container for terraform.%s: %w", p.config.Name, err)
 	}
 
 	err = p.terraformApply(id)
 	p.client.RemoveContainer(id, true)
+
+	outputPath := filepath.Join(terraformPath, "output.json")
+	err = p.generateOutput(outputPath)
 
 	if err != nil {
 		return fmt.Errorf("unable to apply terraform configuration: %w", err)
@@ -83,6 +91,7 @@ func (p *TerraformProvider) Destroy() error {
 
 	id, err := p.createContainer(terraformPath)
 	if err != nil {
+		return fmt.Errorf("unable to create container for terraform.%s: %w", p.config.Name, err)
 		return fmt.Errorf("unable to create container for terraform.%s: %w", p.config.Name, err)
 	}
 
@@ -107,6 +116,13 @@ func (p *TerraformProvider) Lookup() ([]string, error) {
 
 func (p *TerraformProvider) Refresh() error {
 	p.log.Debug("Refresh Terraform", "ref", p.config.ID)
+	return p.Create()
+}
+
+func (p *TerraformProvider) Changed() (bool, error) {
+	p.log.Debug("Checking changes", "ref", p.config.Name)
+	return false, nil
+}
 	return p.Create()
 }
 
@@ -251,6 +267,9 @@ func (p *TerraformProvider) terraformApply(id string) error {
 	terraform output \
 		-state=/var/lib/terraform/terraform.tfstate \
 		-json > /var/lib/terraform/output.json
+	terraform output \
+		-state=/var/lib/terraform/terraform.tfstate \
+		-json > /var/lib/terraform/output.json
 	`
 
 	_, err := p.client.ExecuteScript(id, script, envs, p.config.WorkingDirectory, "root", "", 300, p.log.StandardWriter())
@@ -271,6 +290,7 @@ func (p *TerraformProvider) terraformDestroy(id string) error {
 	}
 
 	script := `#!/bin/sh
+	terraform init
 	terraform init
 	terraform destroy \
 		-state=/var/lib/terraform/terraform.tfstate \
