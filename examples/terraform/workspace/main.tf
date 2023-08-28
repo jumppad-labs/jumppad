@@ -15,3 +15,7 @@ output "second" {
 output "third" {
   value = var.third
 }
+
+output "test" {
+  value = "testing123"
+}

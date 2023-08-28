@@ -38,7 +38,7 @@ func TestSidecarLoadsValuesFromState(t *testing.T) {
       "name": "test",
       "status": "created",
       "type": "sidecar",
-			"fqdn": "fqdn.mine"
+			"container_name": "fqdn.mine"
 	}
 	]
 }`)

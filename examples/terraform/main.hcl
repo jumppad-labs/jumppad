@@ -2,11 +2,33 @@ resource "network" "main" {
   subnet = "10.10.0.0/16"
 }
 
-resource "terraform" "test" {
+resource "container" "vault" {
+  image {
+    name = "vault:1.13.3"
+  }
+
+  network {
+    id = resource.network.main.id
+  }
+
+  port {
+    local = 8200
+    remote = 8200
+  }
+
+  environment = {
+    VAULT_DEV_ROOT_TOKEN_ID = "root"
+  }
+
+  privileged = true
+}
+
+resource "terraform" "configure_vault" {
   working_directory = "/terraform"
 
   environment = {
-    TF_VAR_DEFAULT_FOLDER = "/terraform_basics"
+    VAULT_TOKEN = "root"
+    VAULT_ADDR = "http://${resource.container.vault.container_name}:8200"
   }
 
   variables = {
@@ -31,4 +53,8 @@ resource "terraform" "test" {
     source = "workspace"
     destination = "/terraform"
   }
+}
+
+output "first" {
+  value = resource.terraform.configure_vault.output.first
 }

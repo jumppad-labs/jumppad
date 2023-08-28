@@ -1,10 +1,12 @@
 package terraform
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
@@ -13,7 +15,6 @@ import (
 	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"golang.org/x/xerrors"
 )
 
 const terraformImageName = "hashicorp/terraform"
@@ -51,29 +52,22 @@ func (p *TerraformProvider) Create() error {
 	// set state directory to jumppad home dir
 	terraformPath := utils.GetTerraformFolder(p.config.Name, 0775)
 
-	// generate tfvars file with the passed in variables
-	f := hclwrite.NewEmptyFile()
-	root := f.Body()
-
-	variables := p.config.Variables.AsValueMap()
-	for k, v := range variables {
-		root.SetAttributeValue(k, v)
-	}
-
-	variablesPath := filepath.Join(terraformPath, "terraform.tfvars")
-	err := os.WriteFile(variablesPath, f.Bytes(), 0755)
+	err := p.generateVariables(terraformPath)
 	if err != nil {
-		return fmt.Errorf("unable to write variables to disk at %s", variablesPath)
+		return fmt.Errorf("unable to generate variables file: %w", err)
 	}
 
 	// terraform init & terraform apply
 	id, err := p.createContainer(terraformPath)
 	if err != nil {
-		return xerrors.Errorf("unable to create container for terraform.%s: %w", p.config.Name, err)
+		return fmt.Errorf("unable to create container for terraform.%s: %w", p.config.Name, err)
 	}
 
 	err = p.terraformApply(id)
 	p.client.RemoveContainer(id, true)
+
+	outputPath := filepath.Join(terraformPath, "output.json")
+	err = p.generateOutput(outputPath)
 
 	return err
 }
@@ -86,7 +80,7 @@ func (p *TerraformProvider) Destroy() error {
 
 	id, err := p.createContainer(terraformPath)
 	if err != nil {
-		return xerrors.Errorf("unable to create container for terraform.%s: %w", p.config.Name, err)
+		return fmt.Errorf("unable to create container for terraform.%s: %w", p.config.Name, err)
 	}
 
 	err = p.terraformDestroy(id)
@@ -106,41 +100,79 @@ func (p *TerraformProvider) Lookup() ([]string, error) {
 
 func (p *TerraformProvider) Refresh() error {
 	p.log.Debug("Refresh Terraform", "ref", p.config.ID)
+	return p.Create()
+}
 
-	// set state directory to jumppad home dir
-	terraformPath := utils.GetTerraformFolder(p.config.Name, 0775)
+func (p *TerraformProvider) Changed() (bool, error) {
+	p.log.Debug("Checking changes", "ref", p.config.Name)
+	return false, nil
+}
 
-	// generate tfvars file with the passed in variables
+// generate tfvars file with the passed in variables
+func (p *TerraformProvider) generateVariables(path string) error {
 	f := hclwrite.NewEmptyFile()
 	root := f.Body()
 
-	variables := p.config.Variables.AsValueMap()
-	for k, v := range variables {
+	variables, diag := p.config.Variables.(*hcl.Attribute).Expr.Value(nil)
+	if diag.HasErrors() {
+		return fmt.Errorf(diag.Error())
+	}
+
+	for k, v := range variables.AsValueMap() {
 		root.SetAttributeValue(k, v)
 	}
 
-	variablesPath := filepath.Join(terraformPath, "terraform.tfvars")
+	variablesPath := filepath.Join(path, "terraform.tfvars")
 	err := os.WriteFile(variablesPath, f.Bytes(), 0755)
 	if err != nil {
 		return fmt.Errorf("unable to write variables to disk at %s", variablesPath)
 	}
 
-	// terraform init & terraform apply
-	id, err := p.createContainer(terraformPath)
-	if err != nil {
-		return xerrors.Errorf("unable to create container for terraform.%s: %w", p.config.Name, err)
-	}
-
-	err = p.terraformApply(id)
-	p.client.RemoveContainer(id, true)
-
-	return err
+	return nil
 }
 
-func (p *TerraformProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.Name)
+func (p *TerraformProvider) generateOutput(path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("unable to read terraform output: %w", err)
+	}
 
-	return false, nil
+	var output map[string]interface{}
+	err = json.Unmarshal(data, &output)
+	if err != nil {
+		return fmt.Errorf("unable to parse terraform output: %w", err)
+	}
+
+	p.config.Output = output
+
+	// values := map[string]cty.Value{}
+	// for k, v := range output {
+	// 	m := v.(map[string]interface{})
+	// 	value, err := convert.GoToCtyValue(m["value"])
+	// 	if err != nil {
+	// 		if reflect.TypeOf(m["type"]).Kind() == reflect.Slice {
+	// 			obj := map[string]cty.Value{}
+
+	// 			for l, w := range m["value"].(map[string]interface{}) {
+	// 				subvalue, err := convert.GoToCtyValue(w)
+	// 				if err != nil {
+	// 					p.log.Error("could not convert variable", "key", l, "value", w, "error", err)
+	// 					return err
+	// 				}
+
+	// 				obj[l] = subvalue
+	// 			}
+
+	// 			values[k] = cty.ObjectVal(obj)
+	// 		}
+	// 	} else {
+	// 		values[k] = value
+	// 	}
+	// }
+
+	// p.config.Output = cty.ObjectVal(values)
+
+	return nil
 }
 
 func (p *TerraformProvider) createContainer(path string) (string, error) {
@@ -212,6 +244,9 @@ func (p *TerraformProvider) terraformApply(id string) error {
 		-state=/var/lib/terraform/terraform.tfstate \
 		-var-file=/var/lib/terraform/terraform.tfvars \
 		-auto-approve
+	terraform output \
+		-state=/var/lib/terraform/terraform.tfstate \
+		-json > /var/lib/terraform/output.json
 	`
 
 	_, err := p.client.ExecuteScript(id, script, envs, p.config.WorkingDirectory, "root", "", 300, p.log.StandardWriter())
@@ -232,6 +267,7 @@ func (p *TerraformProvider) terraformDestroy(id string) error {
 	}
 
 	script := `#!/bin/sh
+	terraform init
 	terraform destroy \
 		-state=/var/lib/terraform/terraform.tfstate \
 		-var-file=/var/lib/terraform/terraform.tfvars \

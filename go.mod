@@ -28,7 +28,7 @@ require (
 	github.com/hashicorp/hcl/v2 v2.17.0
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	github.com/jumppad-labs/connector v0.3.0
-	github.com/jumppad-labs/hclconfig v0.15.1
+	github.com/jumppad-labs/hclconfig v0.15.2-0.20230828051535-c93cfd0ab138
 	github.com/mailgun/raymond/v2 v2.0.48
 	github.com/moby/sys/signal v0.7.0
 	github.com/moby/term v0.5.0
@@ -73,7 +73,6 @@ require (
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/agext/levenshtein v1.2.2 // indirect
 	github.com/alecthomas/chroma v0.7.1 // indirect
-	github.com/apparentlymart/go-textseg v1.0.0 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20200428143746-21a406dcc535 // indirect
 	github.com/aws/aws-sdk-go v1.44.122 // indirect
@@ -135,7 +134,6 @@ require (
 	github.com/hashicorp/go-safetemp v1.0.0 // indirect
 	github.com/hashicorp/go-version v1.6.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
-	github.com/hashicorp/hcl2 v0.0.0-20191002203319-fb75b3253c80 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
@@ -237,7 +235,7 @@ replace github.com/charmbracelet/log => github.com/jumppad-labs/log v0.0.0-20230
 
 replace github.com/zclconf/go-cty => github.com/jumppad-labs/go-cty v0.0.0-20230804061424-9e985cb751f6
 
-//replace github.com/jumppad-labs/hclconfig => ../../jumppad-labs/hclconfig/
+// replace github.com/jumppad-labs/hclconfig => ../../jumppad-labs/hclconfig/
 
 //replace github.com/jumppad-labs/connector => ../connector
 // hclconfig

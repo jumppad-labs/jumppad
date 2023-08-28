@@ -4,7 +4,6 @@ import (
 	"github.com/jumppad-labs/hclconfig/types"
 	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"github.com/zclconf/go-cty/cty"
 )
 
 // TypeTerraform is the resource string for a Terraform resource
@@ -20,7 +19,10 @@ type Terraform struct {
 
 	WorkingDirectory string            `hcl:"working_directory,optional" json:"working_directory,omitempty"` // Working directory to execute commands
 	Environment      map[string]string `hcl:"environment,optional" json:"environment,omitempty"`             // environment variables to set when starting the container
-	Variables        cty.Value         `hcl:"variables,optional" json:"variables,omitempty"`                 // variables to pass to terraform
+	Variables        interface{}       `hcl:"variables,optional" json:"-"`                                   // variables to pass to terraform
+
+	// Computed values
+	Output map[string]interface{} `hcl:"output,optional" json:"-"`
 }
 
 func (t *Terraform) Process() error {
