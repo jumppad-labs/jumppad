@@ -5,16 +5,18 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclwrite"
+	"github.com/jumppad-labs/hclconfig/convert"
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	cclient "github.com/jumppad-labs/jumppad/pkg/clients/container"
-	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	"github.com/zclconf/go-cty/cty"
 )
 
 const terraformImageName = "hashicorp/terraform"
@@ -66,6 +68,10 @@ func (p *TerraformProvider) Create() error {
 	err = p.terraformApply(id)
 	p.client.RemoveContainer(id, true)
 
+	if err != nil {
+		return fmt.Errorf("unable to apply terraform configuration: %w", err)
+	}
+
 	outputPath := filepath.Join(terraformPath, "output.json")
 	err = p.generateOutput(outputPath)
 
@@ -85,6 +91,10 @@ func (p *TerraformProvider) Destroy() error {
 
 	err = p.terraformDestroy(id)
 	p.client.RemoveContainer(id, true)
+
+	if err != nil {
+		return fmt.Errorf("unable to destroy terraform configuration: %w", err)
+	}
 
 	// clean up the terraform folder
 	err = os.RemoveAll(utils.GetTerraformFolder("", os.ModePerm))
@@ -143,34 +153,38 @@ func (p *TerraformProvider) generateOutput(path string) error {
 		return fmt.Errorf("unable to parse terraform output: %w", err)
 	}
 
-	p.config.Output = output
+	// p.config.Output = output
 
-	// values := map[string]cty.Value{}
-	// for k, v := range output {
-	// 	m := v.(map[string]interface{})
-	// 	value, err := convert.GoToCtyValue(m["value"])
-	// 	if err != nil {
-	// 		if reflect.TypeOf(m["type"]).Kind() == reflect.Slice {
-	// 			obj := map[string]cty.Value{}
+	p.log.Warn("output", "interface", output)
 
-	// 			for l, w := range m["value"].(map[string]interface{}) {
-	// 				subvalue, err := convert.GoToCtyValue(w)
-	// 				if err != nil {
-	// 					p.log.Error("could not convert variable", "key", l, "value", w, "error", err)
-	// 					return err
-	// 				}
+	values := map[string]cty.Value{}
+	for k, v := range output {
+		m := v.(map[string]interface{})
+		value, err := convert.GoToCtyValue(m["value"])
+		if err != nil {
+			if reflect.TypeOf(m["type"]).Kind() == reflect.Slice {
+				obj := map[string]cty.Value{}
 
-	// 				obj[l] = subvalue
-	// 			}
+				for l, w := range m["value"].(map[string]interface{}) {
+					subvalue, err := convert.GoToCtyValue(w)
+					if err != nil {
+						p.log.Error("could not convert variable", "key", l, "value", w, "error", err)
+						return err
+					}
 
-	// 			values[k] = cty.ObjectVal(obj)
-	// 		}
-	// 	} else {
-	// 		values[k] = value
-	// 	}
-	// }
+					obj[l] = subvalue
+				}
 
-	// p.config.Output = cty.ObjectVal(values)
+				values[k] = cty.ObjectVal(obj)
+			}
+		} else {
+			values[k] = value
+		}
+	}
+
+	p.log.Warn("output", "cty", cty.ObjectVal(values))
+
+	p.config.Output = cty.ObjectVal(values)
 
 	return nil
 }
@@ -187,7 +201,7 @@ func (p *TerraformProvider) createContainer(path string) (string, error) {
 	}
 
 	for _, v := range p.config.Networks {
-		tf.Networks = append(tf.Networks, types.NetworkAttachment{
+		tf.Networks = append(tf.Networks, ctypes.NetworkAttachment{
 			ID:        v.ID,
 			Name:      v.Name,
 			IPAddress: v.IPAddress,
@@ -196,7 +210,7 @@ func (p *TerraformProvider) createContainer(path string) (string, error) {
 	}
 
 	for _, v := range p.config.Volumes {
-		tf.Volumes = append(tf.Volumes, types.Volume{
+		tf.Volumes = append(tf.Volumes, ctypes.Volume{
 			Source:                      v.Source,
 			Destination:                 v.Destination,
 			Type:                        v.Type,
@@ -206,7 +220,7 @@ func (p *TerraformProvider) createContainer(path string) (string, error) {
 		})
 	}
 
-	tf.Volumes = append(tf.Volumes, types.Volume{
+	tf.Volumes = append(tf.Volumes, ctypes.Volume{
 		Source:      path,
 		Destination: "/var/lib/terraform",
 	})
@@ -252,7 +266,7 @@ func (p *TerraformProvider) terraformApply(id string) error {
 	_, err := p.client.ExecuteScript(id, script, envs, p.config.WorkingDirectory, "root", "", 300, p.log.StandardWriter())
 	if err != nil {
 		p.log.Error("Error executing terraform apply", "ref", p.config.Name)
-		err = fmt.Errorf("Unable to execute terraform apply: %w", err)
+		err = fmt.Errorf("unable to execute terraform apply: %w", err)
 		return err
 	}
 
@@ -276,7 +290,7 @@ func (p *TerraformProvider) terraformDestroy(id string) error {
 	_, err := p.client.ExecuteScript(id, script, envs, p.config.WorkingDirectory, "root", "", 300, p.log.StandardWriter())
 	if err != nil {
 		p.log.Error("Error executing terraform destroy", "ref", p.config.Name)
-		err = fmt.Errorf("Unable to execute terraform destroy: %w", err)
+		err = fmt.Errorf("unable to execute terraform destroy: %w", err)
 		return err
 	}
 

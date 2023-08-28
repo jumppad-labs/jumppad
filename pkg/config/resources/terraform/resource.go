@@ -4,6 +4,7 @@ import (
 	"github.com/jumppad-labs/hclconfig/types"
 	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	"github.com/zclconf/go-cty/cty"
 )
 
 // TypeTerraform is the resource string for a Terraform resource
@@ -22,7 +23,7 @@ type Terraform struct {
 	Variables        interface{}       `hcl:"variables,optional" json:"-"`                                   // variables to pass to terraform
 
 	// Computed values
-	Output map[string]interface{} `hcl:"output,optional" json:"-"`
+	Output cty.Value `hcl:"output,optional"` // value of the output
 }
 
 func (t *Terraform) Process() error {
