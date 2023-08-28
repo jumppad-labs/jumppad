@@ -26,6 +26,7 @@ type NomadCluster struct {
 	ConsulConfig  string                    `hcl:"consul_config,optional" json:"consul_config,omitempty"`
 	Volumes       ctypes.Volumes            `hcl:"volume,block" json:"volumes,omitempty"`                     // volumes to attach to the cluster
 	OpenInBrowser bool                      `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"` // open the UI in the browser after creation
+	ACLEnabled    bool                      `hcl:"acl,optional" json:"acl,omitempty"`
 
 	Datacenter string `hcl:"datacenter,optional" json:"datacenter"` // Nomad datacenter, defaults dc1
 
@@ -56,6 +57,9 @@ type NomadCluster struct {
 	// ExternalIP is the ip address of the cluster, this generally resolves
 	// to the docker ip
 	ExternalIP string `hcl:"external_ip,optional" json:"external_ip,omitempty"`
+
+	// ACL Token from bootstrapping if ACLs are enabled
+	ACLToken string `hcl:"acl_token,optional" json:"acl_token,omitempty"`
 }
 
 const nomadBaseImage = "shipyardrun/nomad"
@@ -102,6 +106,7 @@ func (n *NomadCluster) Process() error {
 			n.ClientContainerName = state.ClientContainerName
 			n.APIPort = state.APIPort
 			n.ConnectorPort = state.ConnectorPort
+			n.ACLToken = state.ACLToken
 
 			// add the image ids from the state, this allows the tracking of
 			// pushed images so that they can be automatically updated

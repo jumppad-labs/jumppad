@@ -145,8 +145,8 @@ func (p *ClusterProvider) Refresh() error {
 
 		wg.Wait()
 
-		p.nomadClient.SetConfig(fmt.Sprintf("http://%s", p.config.ExternalIP), p.config.APIPort, p.config.ClientNodes+1)
-		err := p.nomadClient.HealthCheckAPI(startTimeout)
+		p.nomadClient.SetConfig(fmt.Sprintf("http://%s", p.config.ExternalIP), p.config.APIPort, p.config.ClientNodes+1, p.config.ACLToken)
+		err := p.nomadClient.HealthCheckAPI(startTimeout, false)
 		if err != nil {
 			return err
 		}
@@ -174,8 +174,8 @@ func (p *ClusterProvider) Refresh() error {
 			p.log.Debug("Successfully created client node", "ref", p.config.ID, "client", fqdn)
 		}
 
-		p.nomadClient.SetConfig(fmt.Sprintf("http://%s", p.config.ExternalIP), p.config.APIPort, p.config.ClientNodes+1)
-		err := p.nomadClient.HealthCheckAPI(startTimeout)
+		p.nomadClient.SetConfig(fmt.Sprintf("http://%s", p.config.ExternalIP), p.config.APIPort, p.config.ClientNodes+1, p.config.ACLToken)
+		err := p.nomadClient.HealthCheckAPI(startTimeout, false)
 		if err != nil {
 			return err
 		}
@@ -391,8 +391,19 @@ func (p *ClusterProvider) createNomad() error {
 	}
 
 	// ensure all client nodes are up
-	p.nomadClient.SetConfig(fmt.Sprintf("http://%s", p.config.ExternalIP), p.config.APIPort, clientNodes)
-	err = p.nomadClient.HealthCheckAPI(startTimeout)
+	p.nomadClient.SetConfig(fmt.Sprintf("http://%s", p.config.ExternalIP), p.config.APIPort, clientNodes, p.config.ACLToken)
+	err = p.nomadClient.HealthCheckAPI(startTimeout, true)
+	if err != nil {
+		return err
+	}
+	if p.config.ACLEnabled {
+		acl_token, err := p.nomadClient.BootstrapACLs()
+		if err != nil {
+			return err
+		}
+		p.config.ACLToken = acl_token
+	}
+	err = p.nomadClient.HealthCheckAPI(startTimeout, false)
 	if err != nil {
 		return err
 	}
@@ -423,7 +434,7 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 	}
 
 	// generate the server config
-	sc := dataDir + "\n" + fmt.Sprintf(serverConfig, p.config.Datacenter, cpu)
+	sc := dataDir + "\n" + fmt.Sprintf(serverConfig, p.config.Datacenter, cpu, p.config.ACLEnabled)
 
 	// write the nomad config to a file
 	os.MkdirAll(p.config.ConfigDir, os.ModePerm)
@@ -540,7 +551,7 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 // returns the fqdn, docker id, and an error if unsuccessful
 func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID string) (string, string, error) {
 	// generate the client config
-	sc := dataDir + "\n" + fmt.Sprintf(clientConfig, p.config.Datacenter, serverID)
+	sc := dataDir + "\n" + fmt.Sprintf(clientConfig, p.config.Datacenter, serverID, p.config.ACLEnabled)
 
 	// write the default config to a file
 	clientConfigPath := path.Join(p.config.ConfigDir, "client_config.hcl")
@@ -1002,6 +1013,10 @@ client {
 	%s
 }
 
+acl {
+  enabled = %t
+}
+
 plugin "raw_exec" {
   config {
 		enabled = true
@@ -1018,6 +1033,10 @@ client {
 	server_join {
 		retry_join = ["%s"]
 	}
+}
+
+acl {
+  enabled = %t
 }
 
 plugin "raw_exec" {
