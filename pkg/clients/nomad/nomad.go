@@ -23,8 +23,8 @@ type Nomad interface {
 	Create(files []string) error
 	// Stop jobs in the provided files
 	Stop(files []string) error
-	// ParseJob in the given file and return a JSON blob representing the HCL job
-	ParseJob(file string) ([]byte, error)
+	// ParseJob in the given file and return a JSON blob representing the HCL job as well as the HCL
+	ParseJob(file string) ([]byte, string, error)
 	// JobRunning returns true if all allocations for a job are running
 	JobRunning(job string) (bool, error)
 	// HealthCheckAPI uses the Nomad API to check that all servers and nodes
@@ -159,7 +159,7 @@ func (n *NomadImpl) HealthCheckAPI(timeout time.Duration) error {
 func (n *NomadImpl) Create(files []string) error {
 	for _, f := range files {
 		// parse the job
-		jsonJob, err := n.ParseJob(f)
+		jsonJob, hcl, err := n.ParseJob(f)
 		if err != nil {
 			return err
 		}
@@ -168,7 +168,11 @@ func (n *NomadImpl) Create(files []string) error {
 		n.l.Debug("Submitting job to Nomad", "file", f, "address", addr)
 
 		// submit the job top the API
-		cr := fmt.Sprintf(`{"Job": %s}`, string(jsonJob))
+		hcl_str, err := json.Marshal(hcl)
+		if err != nil {
+			return err
+		}
+		cr := fmt.Sprintf(`{"Job": %s, "Submission": {"Source": %s, "Format": "hcl2", "VariableFlags": {}, "Variables": ""}}`, string(jsonJob), string(hcl_str))
 
 		r, err := http.NewRequest(http.MethodPost, addr, bytes.NewReader([]byte(cr)))
 		if err != nil {
@@ -220,11 +224,11 @@ func (n *NomadImpl) Stop(files []string) error {
 
 // ParseJob validates a HCL job file with the Nomad API and returns a slice of
 // bytes representing the JSON payload.
-func (n *NomadImpl) ParseJob(file string) ([]byte, error) {
+func (n *NomadImpl) ParseJob(file string) ([]byte, string, error) {
 	// load the file
 	d, err := ioutil.ReadFile(file)
 	if err != nil {
-		return nil, xerrors.Errorf("Unable to read file %s: %w", file, err)
+		return nil, "", xerrors.Errorf("Unable to read file %s: %w", file, err)
 	}
 
 	// build the request object
@@ -236,30 +240,30 @@ func (n *NomadImpl) ParseJob(file string) ([]byte, error) {
 	// validate the config with the Nomad API
 	r, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s:%d/v1/jobs/parse", n.address, n.port), bytes.NewReader(jobData))
 	if err != nil {
-		return nil, xerrors.Errorf("Unable to create http request: %w", err)
+		return nil, "", xerrors.Errorf("Unable to create http request: %w", err)
 	}
 
 	resp, err := n.httpClient.Do(r)
 	if err != nil {
-		return nil, xerrors.Errorf("Unable to validate job: %w", err)
+		return nil, "", xerrors.Errorf("Unable to validate job: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusBadRequest && resp.StatusCode != http.StatusOK {
-		return nil, xerrors.Errorf("Error validating job Nomad API returned an internal error")
+		return nil, "", xerrors.Errorf("Error validating job Nomad API returned an internal error")
 	}
 
 	defer resp.Body.Close()
 
 	jsonJob, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, xerrors.Errorf("Unable to read response from Nomad API: %w", err)
+		return nil, "", xerrors.Errorf("Unable to read response from Nomad API: %w", err)
 	}
 
 	if resp.StatusCode == http.StatusBadRequest {
-		return nil, xerrors.Errorf("Error validating job, job file contains errors: %s", jsonJob)
+		return nil, "", xerrors.Errorf("Error validating job, job file contains errors: %s", jsonJob)
 	}
 
-	return jsonJob, nil
+	return jsonJob, string(d), nil
 }
 
 // JobRunning returns true when all allocations for a job are running
@@ -419,7 +423,7 @@ func (n *NomadImpl) getJobAllocations(job string) ([]map[string]interface{}, err
 
 func (n *NomadImpl) getJobID(file string) (string, error) {
 	// parse the job
-	jsonJob, err := n.ParseJob(file)
+	jsonJob, _, err := n.ParseJob(file)
 	if err != nil {
 		return "", err
 	}
