@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
@@ -242,8 +243,11 @@ func (c *Provider) internalCreate(sidecar bool) error {
 	for _, n := range dc {
 		for i, net := range c.config.Networks {
 			if net.ID == n.ID {
+				// remove the netmask
+				ip,_,_ := strings.Cut(n.IPAddress, "/")
+
 				// set the assigned address and name
-				c.config.Networks[i].AssignedAddress = n.IPAddress
+				c.config.Networks[i].AssignedAddress = ip
 				c.config.Networks[i].Name = n.Name
 			}
 		}

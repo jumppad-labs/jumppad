@@ -30,10 +30,6 @@ resource "nomad_cluster" "dev" {
   client_config = resource.template.nomad_config.destination
   consul_config = resource.template.consul_config.destination
 
-  image {
-    name = "shipyardrun/nomad:1.6.1.dev"
-  }
-
   datacenter = variable.datacenter
 
   network {
