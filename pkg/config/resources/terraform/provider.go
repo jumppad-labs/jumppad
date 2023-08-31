@@ -153,10 +153,6 @@ func (p *TerraformProvider) generateOutput(path string) error {
 		return fmt.Errorf("unable to parse terraform output: %w", err)
 	}
 
-	// p.config.Output = output
-
-	p.log.Warn("output", "interface", output)
-
 	values := map[string]cty.Value{}
 	for k, v := range output {
 		m := v.(map[string]interface{})
@@ -181,8 +177,6 @@ func (p *TerraformProvider) generateOutput(path string) error {
 			values[k] = value
 		}
 	}
-
-	p.log.Warn("output", "cty", cty.ObjectVal(values))
 
 	p.config.Output = cty.ObjectVal(values)
 
