@@ -428,7 +428,7 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 	// write the nomad config to a file
 	os.MkdirAll(p.config.ConfigDir, os.ModePerm)
 	serverConfigPath := path.Join(p.config.ConfigDir, "server_config.hcl")
-	ioutil.WriteFile(serverConfigPath, []byte(sc), os.ModePerm)
+	os.WriteFile(serverConfigPath, []byte(sc), os.ModePerm)
 
 	// create the server
 	// since the server is just a container create the container config and provider
@@ -498,8 +498,6 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 		cc.Volumes = append(cc.Volumes, v.ToClientVolume())
 	}
 
-	cc.Environment = p.config.Environment
-
 	// expose the API server port
 	cc.Ports = []ctypes.Port{
 		{
@@ -522,7 +520,11 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 	cc.Ports = append(cc.Ports, p.config.Ports.ToClientPorts()...)
 	cc.PortRanges = append(cc.PortRanges, p.config.PortRanges.ToClientPortRanges()...)
 
-	cc.Environment = map[string]string{}
+	cc.Environment = p.config.Environment
+	if cc.Environment == nil {
+		cc.Environment = map[string]string{}
+	}
+
 	err := p.appendProxyEnv(cc)
 	if err != nil {
 		return "", err
@@ -544,7 +546,7 @@ func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID 
 
 	// write the default config to a file
 	clientConfigPath := path.Join(p.config.ConfigDir, "client_config.hcl")
-	ioutil.WriteFile(clientConfigPath, []byte(sc), os.ModePerm)
+	os.WriteFile(clientConfigPath, []byte(sc), os.ModePerm)
 
 	// create the server
 	// since the server is just a container create the container config and provider
@@ -624,7 +626,7 @@ func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID 
 
 func (p *ClusterProvider) appendProxyEnv(cc *ctypes.Container) error {
 	// load the CA from a file
-	ca, err := ioutil.ReadFile(filepath.Join(utils.CertsDir(""), "/root.cert"))
+	ca, err := os.ReadFile(filepath.Join(utils.CertsDir(""), "/root.cert"))
 	if err != nil {
 		return fmt.Errorf("unable to read root CA for proxy: %s", err)
 	}
@@ -640,10 +642,24 @@ func (p *ClusterProvider) appendProxyEnv(cc *ctypes.Container) error {
 		networkSubmasks = append(networkSubmasks, net.Subnet)
 	}
 
+	cc.Environment = p.config.Environment
+	if cc.Environment == nil {
+		cc.Environment = map[string]string{}
+	}
+
 	proxyBypass := utils.ProxyBypass + "," + strings.Join(networkSubmasks, ",")
 
-	cc.Environment["HTTP_PROXY"] = utils.HTTPProxyAddress()
-	cc.Environment["HTTPS_PROXY"] = utils.HTTPSProxyAddress()
+	if noProxy, ok := cc.Environment["NO_PROXY"]; ok {
+		proxyBypass += "," + noProxy
+	}
+
+	mirror := utils.HTTPProxyAddress()
+	if p.config.Cache != nil {
+		mirror = fmt.Sprintf("http://%s.image-cache.jumppad.dev:3128", p.config.Cache.ResourceMetadata.Name)
+	}
+
+	cc.Environment["HTTP_PROXY"] = mirror
+	cc.Environment["HTTPS_PROXY"] = mirror
 	cc.Environment["NO_PROXY"] = proxyBypass
 	cc.Environment["PROXY_CA"] = string(ca)
 

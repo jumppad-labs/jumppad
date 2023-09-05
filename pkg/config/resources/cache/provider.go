@@ -2,8 +2,10 @@ package cache
 
 import (
 	"fmt"
+	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"math/rand"
 	"path/filepath"
+	"strings"
 
 	dtypes "github.com/docker/docker/api/types"
 	htypes "github.com/jumppad-labs/hclconfig/types"
@@ -17,9 +19,11 @@ import (
 )
 
 const cacheImage = "shipyardrun/docker-registry-proxy:0.6.3"
+const defaultRegistries = "k8s.gcr.io gcr.io asia.gcr.io eu.gcr.io us.gcr.io quay.io ghcr.io docker.pkg.github.com"
 
 type Provider struct {
 	config     *ImageCache
+	registries []Registry
 	client     container.ContainerTasks
 	httpClient http.HTTP
 	log        logger.Logger
@@ -56,8 +60,26 @@ func (p *Provider) Create() error {
 	// get a list of dependent networks for the resource
 	dependentNetworks := p.findDependentNetworks()
 
+	var registries []string
+	var authRegistries []string
+
+	for _, reg := range p.config.Registries {
+		registries = append(registries, reg.Hostname)
+
+		if reg.Auth == nil {
+			continue
+		}
+
+		hostname := reg.Hostname
+		if len(reg.Auth.Hostname) > 0 {
+			hostname = reg.Auth.Hostname
+			registries = append(registries, reg.Auth.Hostname)
+		}
+		authRegistries = append(authRegistries, hostname+":::"+reg.Auth.Username+":::"+reg.Auth.Password)
+	}
+
 	if len(ids) == 0 {
-		_, err := p.createImageCache(dependentNetworks)
+		_, err := p.createImageCache(dependentNetworks, registries, authRegistries)
 		if err != nil {
 			return err
 		}
@@ -76,7 +98,10 @@ func (p *Provider) Destroy() error {
 
 	if len(ids) > 0 {
 		for _, id := range ids {
-			p.client.RemoveContainer(id, true)
+			err = p.client.RemoveContainer(id, true)
+			if err != nil {
+				p.log.Error(err.Error())
+			}
 		}
 	}
 
@@ -105,7 +130,7 @@ func (p *Provider) Changed() (bool, error) {
 	return false, nil
 }
 
-func (p *Provider) createImageCache(networks []string) (string, error) {
+func (p *Provider) createImageCache(networks []string, registries []string, authRegistries []string) (string, error) {
 	fqdn := utils.FQDN(p.config.Name, p.config.Module, p.config.Type)
 
 	// Create the volume to store the cache
@@ -144,12 +169,14 @@ func (p *Provider) createImageCache(networks []string) (string, error) {
 	}
 
 	cc.Environment = map[string]string{
-		"CA_KEY_FILE":           "/cache/ca/root.key",
-		"CA_CRT_FILE":           "/cache/ca/root.cert",
-		"DOCKER_MIRROR_CACHE":   "/cache/docker",
-		"ENABLE_MANIFEST_CACHE": "true",
-		"REGISTRIES":            "k8s.gcr.io gcr.io asia.gcr.io eu.gcr.io us.gcr.io quay.io ghcr.io docker.pkg.github.com",
-		"ALLOW_PUSH":            "true",
+		"CA_KEY_FILE":             "/cache/ca/root.key",
+		"CA_CRT_FILE":             "/cache/ca/root.cert",
+		"DOCKER_MIRROR_CACHE":     "/cache/docker",
+		"ENABLE_MANIFEST_CACHE":   "true",
+		"REGISTRIES":              defaultRegistries + " " + strings.Join(registries[:], " "),
+		"AUTH_REGISTRY_DELIMITER": ":::",
+		"AUTH_REGISTRIES":         strings.Join(authRegistries[:], " "),
+		"ALLOW_PUSH":              "true",
 	}
 
 	// expose the docker proxy port on a random port num
@@ -162,10 +189,7 @@ func (p *Provider) createImageCache(networks []string) (string, error) {
 	}
 
 	// add the networks
-	cc.Networks = []types.NetworkAttachment{}
-	for _, n := range networks {
-		cc.Networks = append(cc.Networks, types.NetworkAttachment{ID: n})
-	}
+	cc.Networks = p.config.Networks.ToClientNetworkAttachments()
 
 	return p.client.CreateContainer(cc)
 }
@@ -225,7 +249,7 @@ func (p *Provider) reConfigureNetworks(dependentNetworks []string) error {
 				return fmt.Errorf("unable to attach cache to network: %s", err)
 			}
 
-			p.config.Networks = append(p.config.Networks, n)
+			p.config.Networks = append(p.config.Networks, ctypes.NetworkAttachment{ID: n})
 		}
 
 		added = append(added, n)

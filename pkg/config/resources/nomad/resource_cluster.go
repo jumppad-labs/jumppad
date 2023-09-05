@@ -5,6 +5,7 @@ import (
 
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
+	itypes "github.com/jumppad-labs/jumppad/pkg/config/resources/cache"
 	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
@@ -56,6 +57,8 @@ type NomadCluster struct {
 	// ExternalIP is the ip address of the cluster, this generally resolves
 	// to the docker ip
 	ExternalIP string `hcl:"external_ip,optional" json:"external_ip,omitempty"`
+
+	Cache *itypes.ImageCache `hcl:"image_cache,optional" json:"image_cache,omitempty"`
 }
 
 const nomadBaseImage = "shipyardrun/nomad"
