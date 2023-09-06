@@ -278,6 +278,9 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 
 	// is this a priviledged container
 	hc.Privileged = c.Privileged
+	if c.Privileged {
+		hc.CgroupnsMode = "host"
+	}
 
 	// are we attaching the container to a sidecar network?
 	for _, n := range c.Networks {
