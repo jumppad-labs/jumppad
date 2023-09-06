@@ -188,8 +188,17 @@ func (p *Provider) createImageCache(networks []string, registries []string, auth
 		},
 	}
 
-	// add the networks
 	cc.Networks = p.config.Networks.ToClientNetworkAttachments()
+
+	// add the name of the network, we only have the id
+	for i, n := range p.config.Networks {
+		net, err := p.client.FindNetwork(n.ID)
+		if err != nil {
+			return "", err
+		}
+
+		p.config.Networks[i].Name = net.Name
+	}
 
 	return p.client.CreateContainer(cc)
 }
@@ -198,6 +207,10 @@ func (p *Provider) findDependentNetworks() []string {
 	nets := []string{}
 
 	for _, n := range p.config.DependsOn {
+		if strings.HasSuffix(n, ".id") {
+			// Ignore explicitly configured network dependencies
+			continue
+		}
 		target, err := p.client.FindNetwork(n)
 		if err != nil {
 			// ignore this network
