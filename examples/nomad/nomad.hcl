@@ -15,11 +15,20 @@ resource "template" "nomad_config" {
   destination = "${data("nomad-config")}/user_config.hcl"
 }
 
+resource "template" "consul_config" {
+  source = <<-EOF
+  datacenter = "dc1"
+  retry_join = ["${resource.container.consul.network.0.assigned_address}"]
+  EOF
+
+  destination = "${data("consul_config")}/config.hcl"
+}
+
 resource "nomad_cluster" "dev" {
   client_nodes = variable.client_nodes
 
   client_config = resource.template.nomad_config.destination
-  consul_config = "./consul_config/agent.hcl"
+  consul_config = resource.template.consul_config.destination
 
   datacenter = variable.datacenter
 

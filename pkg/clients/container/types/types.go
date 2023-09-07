@@ -52,6 +52,7 @@ type Volume struct {
 	ReadOnly                    bool
 	BindPropagation             string
 	BindPropagationNonRecursive bool
+	SelinuxRelabel              string
 }
 
 // Port is a port mapping
