@@ -10,7 +10,7 @@ type Task struct {
 	types.ResourceMetadata `hcl:",remain"`
 
 	Prerequisites []string    `hcl:"prerequisites,optional" json:"prerequisites"`
-	Config        Config      `hcl:"config,block" json:"config,omitempty"`
+	Config        *Config     `hcl:"config,block" json:"config,omitempty"`
 	Conditions    []Condition `hcl:"condition,block" json:"conditions"`
 	Status        string      `hcl:"status,optional" json:"status"`
 }
@@ -42,6 +42,10 @@ type Config struct {
 
 func (t *Task) Process() error {
 	// Set defaults
+	if t.Config == nil {
+		t.Config = &Config{}
+	}
+
 	if t.Config.Timeout == 0 {
 		t.Config.Timeout = 30
 	}
