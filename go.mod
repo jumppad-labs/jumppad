@@ -28,7 +28,7 @@ require (
 	github.com/hashicorp/hcl/v2 v2.17.0
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	github.com/jumppad-labs/connector v0.3.0
-	github.com/jumppad-labs/hclconfig v0.15.2-0.20230828051535-c93cfd0ab138
+	github.com/jumppad-labs/hclconfig v0.15.2-0.20230913065408-571028c58b25
 	github.com/mailgun/raymond/v2 v2.0.48
 	github.com/moby/sys/signal v0.7.0
 	github.com/moby/term v0.5.0
@@ -235,7 +235,7 @@ replace github.com/charmbracelet/log => github.com/jumppad-labs/log v0.0.0-20230
 
 replace github.com/zclconf/go-cty => github.com/jumppad-labs/go-cty v0.0.0-20230804061424-9e985cb751f6
 
-replace github.com/jumppad-labs/hclconfig => ../../jumppad-labs/hclconfig/
+//replace github.com/jumppad-labs/hclconfig => ../../jumppad-labs/hclconfig/
 
 //replace github.com/jumppad-labs/connector => ../connector
 // hclconfig
