@@ -87,7 +87,7 @@ func testSetupCopyLocal(t *testing.T) (*DockerTasks, *mocks.Docker) {
 	mic := &imocks.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
 
-	dt := NewDockerTasks(mk, mic, &tar.TarGz{}, logger.NewTestLogger(t))
+	dt, _ := NewDockerTasks(mk, mic, &tar.TarGz{}, logger.NewTestLogger(t))
 
 	return dt, mk
 }

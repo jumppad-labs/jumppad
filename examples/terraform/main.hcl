@@ -12,7 +12,7 @@ resource "container" "vault" {
   }
 
   port {
-    local = 8200
+    local  = 8200
     remote = 8200
   }
 
@@ -28,11 +28,11 @@ resource "terraform" "configure_vault" {
 
   environment = {
     VAULT_TOKEN = "root"
-    VAULT_ADDR = "http://${resource.container.vault.container_name}:8200"
+    VAULT_ADDR  = "http://${resource.container.vault.container_name}:8200"
   }
 
   variables = {
-    first = "first"
+    first  = "one"
     second = 2
     third = {
       x = 3
@@ -45,12 +45,12 @@ resource "terraform" "configure_vault" {
   }
 
   volume {
-    source = "${home()}/.terraform.d"
+    source      = "${home()}/.terraform.d"
     destination = "/root/.terraform.d,ro"
   }
 
   volume {
-    source = "workspace"
+    source      = "workspace"
     destination = "/terraform"
   }
 }

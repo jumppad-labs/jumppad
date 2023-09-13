@@ -21,7 +21,7 @@ func TestCreateVolumeDoesNothingWhenVolumeExists(t *testing.T) {
 	f.Add("name", "test.volume.shipyard.run")
 	md.On("VolumeList", mock.Anything, f).Return(volume.ListResponse{Volumes: []*volume.Volume{&volume.Volume{}}}, nil)
 
-	p := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
+	p, _ := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
 	_, err := p.CreateVolume("test")
 	assert.NoError(t, err)
 
@@ -30,7 +30,7 @@ func TestCreateVolumeDoesNothingWhenVolumeExists(t *testing.T) {
 
 func TestCreateVolumeReturnsErrorWhenVolumeListError(t *testing.T) {
 	_, md, mic := createContainerConfig()
-	p := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
+	p, _ := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
 
 	testutils.RemoveOn(&md.Mock, "VolumeList")
 	f := filters.NewArgs()
@@ -45,7 +45,7 @@ func TestCreateVolumeReturnsErrorWhenVolumeListError(t *testing.T) {
 
 func TestCreateVolumeCreatesSuccesfully(t *testing.T) {
 	_, md, mic := createContainerConfig()
-	p := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
+	p, _ := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
 
 	id, err := p.CreateVolume("test")
 	assert.NoError(t, err)
@@ -56,7 +56,7 @@ func TestCreateVolumeCreatesSuccesfully(t *testing.T) {
 
 func TestRemoveVolumeRemotesSuccesfully(t *testing.T) {
 	_, md, mic := createContainerConfig()
-	p := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
+	p, _ := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
 
 	err := p.RemoveVolume("test")
 	assert.NoError(t, err)

@@ -57,7 +57,7 @@ func TestTarWithRootFolder(t *testing.T) {
 	require.NoError(t, err)
 
 	// test the output
-	err = tg.Uncompress(buf, out)
+	err = tg.Uncompress(buf, true, out)
 	require.NoError(t, err)
 
 	require.FileExists(t, filepath.Join(out, "/in/test1.txt"))
@@ -82,7 +82,7 @@ func TestTarOmmitingRoot(t *testing.T) {
 	require.NoError(t, err)
 
 	// test the output
-	err = tg.Uncompress(buf, out)
+	err = tg.Uncompress(buf, true, out)
 	require.NoError(t, err)
 
 	require.FileExists(t, filepath.Join(out, "/test1.txt"))
@@ -106,7 +106,7 @@ func TestTarIndividualFiles(t *testing.T) {
 	require.NoError(t, err)
 
 	// test the output
-	err = tg.Uncompress(buf, out)
+	err = tg.Uncompress(buf, true, out)
 	require.NoError(t, err)
 
 	require.FileExists(t, filepath.Join(out, "/test1.txt"))
@@ -134,7 +134,7 @@ func TestTarDirAndIndividualFile(t *testing.T) {
 	require.NoError(t, err)
 
 	// test the output
-	err = tg.Uncompress(buf, out)
+	err = tg.Uncompress(buf, true, out)
 	require.NoError(t, err)
 
 	require.FileExists(t, filepath.Join(out, "/test1.txt"))

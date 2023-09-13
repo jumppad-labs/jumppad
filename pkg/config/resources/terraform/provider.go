@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"reflect"
 
-	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/jumppad-labs/hclconfig/convert"
 	htypes "github.com/jumppad-labs/hclconfig/types"
@@ -73,9 +72,7 @@ func (p *TerraformProvider) Create() error {
 	}
 
 	outputPath := filepath.Join(terraformPath, "output.json")
-	err = p.generateOutput(outputPath)
-
-	return err
+	return p.generateOutput(outputPath)
 }
 
 // Destroy the terraform container
@@ -123,12 +120,11 @@ func (p *TerraformProvider) generateVariables(path string) error {
 	f := hclwrite.NewEmptyFile()
 	root := f.Body()
 
-	variables, diag := p.config.Variables.(*hcl.Attribute).Expr.Value(nil)
-	if diag.HasErrors() {
-		return fmt.Errorf(diag.Error())
+	if !p.config.Variables.Type().IsObjectType() && !p.config.Variables.Type().IsMapType() && !p.config.Variables.Type().IsTupleType() {
+		return fmt.Errorf("error: variables is not a map")
 	}
 
-	for k, v := range variables.AsValueMap() {
+	for k, v := range p.config.Variables.AsValueMap() {
 		root.SetAttributeValue(k, v)
 	}
 

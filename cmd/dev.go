@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jumppad-labs/jumppad/cmd/view"
+	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
@@ -55,7 +56,11 @@ func newDevCmdFunc(variables *[]string, variablesFile, interval *string, ttyFlag
 			}
 		}
 
-		engine, _, _ = createEngine(v.Logger())
+		engineClients, _ := clients.GenerateClients(v.Logger())
+		engine, _, err := createEngine(v.Logger(), engineClients)
+		if err != nil {
+			return fmt.Errorf("unable to create engine: %s", err)
+		}
 
 		// create the shipyard and sub folders in the users home directory
 		utils.CreateFolders()

@@ -34,7 +34,7 @@ func setupShellMocks(t *testing.T) (*DockerTasks, *mocks.Docker) {
 	mic := &imocks.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
 
-	p := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
+	p, _ := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
 
 	return p, md
 }

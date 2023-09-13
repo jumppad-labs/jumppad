@@ -119,7 +119,7 @@ func setupContainerMocks() (*mocks.Docker, *imocks.ImageLog) {
 }
 
 func setupContainer(t *testing.T, cc *dtypes.Container, md *mocks.Docker, mic images.ImageLog) error {
-	p := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
+	p, _ := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
 
 	// create the container
 	_, err := p.CreateContainer(cc)

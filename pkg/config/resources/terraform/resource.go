@@ -20,7 +20,7 @@ type Terraform struct {
 
 	WorkingDirectory string            `hcl:"working_directory,optional" json:"working_directory,omitempty"` // Working directory to execute commands
 	Environment      map[string]string `hcl:"environment,optional" json:"environment,omitempty"`             // environment variables to set when starting the container
-	Variables        interface{}       `hcl:"variables,optional" json:"-"`                                   // variables to pass to terraform
+	Variables        cty.Value         `hcl:"variables,optional" json:"-"`                                   // variables to pass to terraform
 
 	// Computed values
 	Output cty.Value `hcl:"output,optional"` // value of the output
@@ -32,6 +32,8 @@ func (t *Terraform) Process() error {
 	for i, v := range t.Volumes {
 		t.Volumes[i].Source = utils.EnsureAbsolute(v.Source, t.File)
 	}
+
+	t.Output = cty.EmptyObjectVal
 
 	return nil
 }

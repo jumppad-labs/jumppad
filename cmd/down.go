@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 
+	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/connector"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
@@ -15,11 +16,19 @@ func newDestroyCmd(cc connector.Connector) *cobra.Command {
 		Long:    "Remove all resources in the current state",
 		Example: `jumppad down`,
 		Run: func(cmd *cobra.Command, args []string) {
-			err := engine.Destroy()
+			l := createLogger()
+			engineClients, _ := clients.GenerateClients(l)
+			engine, _, err := createEngine(l, engineClients)
+			if err != nil {
+				l.Error("Unable to create engine", "error", err)
+				return
+			}
+
+			err = engine.Destroy()
 			logger := createLogger()
 
 			if err != nil {
-				logger.Error("Unable to destroy stack", "error", err)
+				l.Error("Unable to destroy stack", "error", err)
 				return
 			}
 
@@ -30,7 +39,7 @@ func newDestroyCmd(cc connector.Connector) *cobra.Command {
 			if cc.IsRunning() {
 				err = cc.Stop()
 				if err != nil {
-					logger.Error("Unable to destroy stack", "error", err)
+					logger.Error("Unable to destroy jumppad daemon", "error", err)
 				}
 			}
 		},

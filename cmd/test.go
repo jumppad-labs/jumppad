@@ -174,7 +174,12 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 
 		logger := createLogger()
 
-		engine, cli, vm := createEngine(logger)
+		cli, _ := clients.GenerateClients(logger)
+		engine, vm, err := createEngine(logger, cli)
+		if err != nil {
+			fmt.Printf("Unable to setup tests: %s\n", err)
+			return
+		}
 
 		cr.e = engine
 		cr.l = logger
@@ -249,23 +254,21 @@ func (cr *CucumberRunner) iRunApplyAtPath(path string) error {
 func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
 	output = bytes.NewBufferString("")
 
-	args := []string{}
-
 	// if filepath is not absolute then it will be relative to args
 	absPath := filepath.Join(cr.basePath, fp)
 
-	args = []string{absPath}
+	args := []string{absPath}
 
 	noOpen := true
 	approve := true
 
 	// re-use the run command
 	rc := newRunCmdFunc(
-		engine,
+		cr.e,
 		cr.cli.ContainerTasks,
 		cr.cli.Getter,
 		cr.cli.HTTP,
-		cr.cli.Browser,
+		cr.cli.System,
 		cr.vm,
 		cr.cli.Connector,
 		&noOpen,
