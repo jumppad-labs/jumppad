@@ -13,6 +13,7 @@ resource "container" "vault" {
 
   port {
     local  = 8200
+    remote = 8200
   }
 
   environment = {

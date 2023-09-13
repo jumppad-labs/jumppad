@@ -69,7 +69,6 @@ func (a *API) executeScript(target string, script string, workdir string, user s
 	il := images.NewImageFileLog(utils.ImageCacheLog())
 	tz := &tar.TarGz{}
 	ct, err := container.NewDockerTasks(dc, il, tz, a.log)
-
 	if err != nil {
 		return 254, err.Error()
 	}

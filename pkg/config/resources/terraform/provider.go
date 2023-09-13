@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"reflect"
 
-	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/jumppad-labs/hclconfig/convert"
 	htypes "github.com/jumppad-labs/hclconfig/types"
