@@ -9,7 +9,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"golang.org/x/mod/sumdb/dirhash"
 	"golang.org/x/xerrors"
 )
 
@@ -41,7 +40,7 @@ func (b *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
 
 func (b *Provider) Create() error {
 	// calculate the hash
-	hash, err := dirhash.HashDir(b.config.Container.Context, "", dirhash.DefaultHash)
+	hash, err := utils.HashDir(b.config.Container.Context)
 	if err != nil {
 		return xerrors.Errorf("unable to hash directory: %w", err)
 	}

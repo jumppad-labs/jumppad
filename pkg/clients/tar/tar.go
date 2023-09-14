@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/facebookgo/symwalk"
 )
 
 type TarGzOptions struct {
@@ -45,7 +47,8 @@ func (tg *TarGz) Compress(buf io.Writer, options *TarGzOptions, src ...string) e
 		}
 
 		// walk through every file in the folder
-		filepath.Walk(path, func(file string, fi os.FileInfo, err error) error {
+		// Go's filepath walk does not represent symlinks
+		symwalk.Walk(path, func(file string, fi os.FileInfo, err error) error {
 			// generate tar header
 			header, err := tar.FileInfoHeader(fi, strings.Replace(file, topLevel, "", -1))
 			if err != nil {

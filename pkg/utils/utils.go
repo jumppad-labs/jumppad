@@ -17,7 +17,7 @@ import (
 	"strings"
 	"sync"
 
-	"golang.org/x/mod/sumdb/dirhash"
+	"github.com/jumppad-labs/jumppad/pkg/utils/dirhash"
 )
 
 // EnsureAbsolute ensure that the given path is either absolute or

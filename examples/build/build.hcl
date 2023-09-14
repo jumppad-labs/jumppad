@@ -3,11 +3,11 @@ variable "container_enabled" {
 }
 
 variable "nomad_enabled" {
-  default = true
+  default = false
 }
 
 variable "kubernetes_enabled" {
-  default = true
+  default = false
 }
 
 // use a random ingress by default
