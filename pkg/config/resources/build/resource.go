@@ -30,12 +30,13 @@ type Build struct {
 type BuildContainer struct {
 	DockerFile string            `hcl:"dockerfile,optional" json:"dockerfile,omitempty"` // Location of build file inside build context defaults to ./Dockerfile
 	Context    string            `hcl:"context" json:"context"`                          // Path to build context
+	Ignore     []string          `hcl:"ignore,optional" json:"ignore,omitempty"`         // Files to ignore in the build context, this is the same as .dockerignore
 	Args       map[string]string `hcl:"args,optional" json:"args,omitempty"`             // Build args to pass  to the container
 }
 
 type Output struct {
-	Source      string `hcl:"source" json"source"`           // Source file or directory in container
-	Destination string `hcl:"destination" json"destination"` // Destination for copied file or directory
+	Source      string `hcl:"source" json:"source"`           // Source file or directory in container
+	Destination string `hcl:"destination" json:"destination"` // Destination for copied file or directory
 }
 
 func (b *Build) Process() error {

@@ -17,7 +17,7 @@ import (
 	"strings"
 	"sync"
 
-	"golang.org/x/mod/sumdb/dirhash"
+	"github.com/jumppad-labs/jumppad/pkg/utils/dirhash"
 )
 
 // EnsureAbsolute ensure that the given path is either absolute or
@@ -501,8 +501,10 @@ func SubnetIPs(subnet string) ([]string, error) {
 }
 
 // HashDir generates a hash of the given directory
-func HashDir(dir string) (string, error) {
-	return dirhash.HashDir(dir, "", dirhash.DefaultHash)
+// optionally a list of arguments to be ignored can be passed
+// these arguments are expresed as a glob pattern
+func HashDir(dir string, ignore ...string) (string, error) {
+	return dirhash.HashDir(dir, "", dirhash.DefaultHash, ignore...)
 }
 
 // HashFile returns a sha256 hash of the given file

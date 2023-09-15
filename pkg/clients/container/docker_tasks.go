@@ -544,7 +544,7 @@ func (d *DockerTasks) RemoveImage(id string) error {
 
 func (d *DockerTasks) BuildContainer(config *dtypes.Build, force bool) (string, error) {
 	// get the checksum for the id
-	cs, err := utils.HashDir(config.Context)
+	cs, err := utils.HashDir(config.Context, config.Ignore...)
 	if err != nil {
 		return "", err
 	}
@@ -596,7 +596,7 @@ func (d *DockerTasks) BuildContainer(config *dtypes.Build, force bool) (string, 
 	}
 
 	var buf bytes.Buffer
-	d.tg.Compress(&buf, &ctar.TarGzOptions{OmitRoot: true}, config.Context)
+	d.tg.Compress(&buf, &ctar.TarGzOptions{OmitRoot: true}, []string{config.Context}, config.Ignore...)
 
 	resp, err := d.c.ImageBuild(context.Background(), &buf, buildOpts)
 	if err != nil {

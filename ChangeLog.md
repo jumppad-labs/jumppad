@@ -1,5 +1,10 @@
 # Change Log
 
+## version v0.5.47
+* Fix isuse where filepath.Walk does not respect symlinks
+* Add `ignore` parameter to `build` resource to allow ignoring of files and folders
+  for Docker builds.
+
 ## version v0.5.43
 * Add ability to set datacenter for Nomad clusters
 * Fix permissions to use octet value when using data_with_permissions
