@@ -1,3 +1,7 @@
+// This fle has been cloned and mofiied from the go source code
+// to allow for the use of a custom ignore list and to replace go's standard
+// file walker with the facebookgo/symwalk package
+
 // Copyright 2018 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
@@ -20,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/facebookgo/symwalk"
+	"github.com/ryanuber/go-glob"
 )
 
 // DefaultHash is the default hash function used in new go.sum entries.
@@ -69,8 +74,9 @@ func Hash1(files []string, open func(string) (io.ReadCloser, error)) (string, er
 // HashDir returns the hash of the local file system directory dir,
 // replacing the directory name itself with prefix in the file names
 // used in the hash function.
-func HashDir(dir, prefix string, hash Hash) (string, error) {
-	files, err := DirFiles(dir, prefix)
+// optionally a list of files to ignore can be provided as a globbed list
+func HashDir(dir, prefix string, hash Hash, ignore ...string) (string, error) {
+	files, err := DirFiles(dir, prefix, ignore...)
 	if err != nil {
 		return "", err
 	}
@@ -83,17 +89,41 @@ func HashDir(dir, prefix string, hash Hash) (string, error) {
 // DirFiles returns the list of files in the tree rooted at dir,
 // replacing the directory name dir with prefix in each name.
 // The resulting names always use forward slashes.
-func DirFiles(dir, prefix string) ([]string, error) {
+// A globbed list of files to ignore can be provided as a variadic argument
+func DirFiles(dir, prefix string, ignore ...string) ([]string, error) {
+	var ignoredDirectories []string
 	var files []string
 	dir = filepath.Clean(dir)
 	err := symwalk.Walk(dir, func(file string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
+
+		// check that the result is not in the ignore list
+		for _, i := range ignore {
+			ignore := glob.Glob(i, file)
+			if ignore {
+				// if we are ignoring a directory, we need to also ignore any children
+				// that are in this directory
+				if info.IsDir() {
+					ignoredDirectories = append(ignoredDirectories, file)
+				}
+
+				return nil
+			}
+		}
+
 		if info.IsDir() {
 			return nil
 		} else if file == dir {
 			return fmt.Errorf("%s is not a directory", dir)
+		}
+
+		// check that the file is not in the ignored directories
+		for _, i := range ignoredDirectories {
+			if strings.HasPrefix(file, i) {
+				return nil
+			}
 		}
 
 		rel := file

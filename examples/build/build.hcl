@@ -27,6 +27,7 @@ resource "build" "app" {
   container {
     dockerfile = "Dockerfile"
     context    = "./src"
+    ignore     = ["**/.terraform"]
   }
 
   output {

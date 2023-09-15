@@ -242,7 +242,7 @@ jobs:
         run: |
           jumppad check
           jumppad purge
-          LOG_LEVEL=debug jumppad test ${{matrix.folder}}
+          jumppad test ${{matrix.folder}}
         env:
           DOCKER_HOST: "unix:///run/podman/podman.sock"
 
