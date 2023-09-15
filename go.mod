@@ -38,6 +38,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.0-rc3
 	github.com/otiai10/copy v1.10.0
 	github.com/pkg/errors v0.9.1
+	github.com/ryanuber/go-glob v1.0.0
 	github.com/sethvargo/go-retry v0.2.4
 	github.com/shipyard-run/gohup v0.2.2
 	github.com/shipyard-run/version-manager v0.0.5

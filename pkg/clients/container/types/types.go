@@ -84,7 +84,8 @@ type Image struct {
 
 type Build struct {
 	Name       string
-	DockerFile string
-	Context    string
-	Args       map[string]string
+	DockerFile string            // Name of the Dockerfile to use, must be in context
+	Context    string            // Context to copy to the build process
+	Ignore     []string          // globbed list of files to ignore in the context, same as .dockerignore
+	Args       map[string]string // Arguments to pass to the build process
 }
