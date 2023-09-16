@@ -679,7 +679,7 @@ jobs:
       - tag
     runs-on: windows-latest
     steps:
-    - uses: isaacrlevin/winget-publish-action@1.0
+    - uses: jumppad-labs/winget-publish-action@v0.1.0
       with:
         publish-type: "Update"
         user: "jumppad"
