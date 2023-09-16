@@ -273,10 +273,6 @@ jobs:
         uses: actions/setup-go@v1
         with:
           go-version: 1.19
-      
-      - name: Install dependencies for Podman
-        run: |
-          sudo apt install -y libbtrfs-dev pkg-config libgpgme-dev libdevmapper-dev 
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v1
@@ -425,10 +421,6 @@ jobs:
         uses: actions/setup-go@v1
         with:
           go-version: 1.19
-      
-      - name: Install dependencies for Podman
-        run: |
-          sudo apt install -y libbtrfs-dev pkg-config libgpgme-dev libdevmapper-dev 
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
