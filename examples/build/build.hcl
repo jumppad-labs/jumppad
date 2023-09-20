@@ -25,7 +25,7 @@ variable "kubernetes_ingress_port" {
 
 resource "build" "app" {
   container {
-    dockerfile = "Dockerfile"
+    dockerfile = "./Docker/Dockerfile"
     context    = "./src"
     ignore     = ["**/.terraform"]
   }

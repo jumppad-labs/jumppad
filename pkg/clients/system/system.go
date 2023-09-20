@@ -196,16 +196,16 @@ func (b *SystemImpl) checkDocker() error {
 		return err
 	}
 
-	dt, _ := container.NewDockerTasks(d, nil, nil, b.logger)
+	dt, err := container.NewDockerTasks(d, nil, nil, b.logger)
 
-	if dt == nil {
+	if err != nil {
 		return fmt.Errorf("unable to determine docker engine, please check that Docker or Podman is installed and the DOCKER_HOST is set")
 	}
 
 	// check that the server is a docker engine not podman
 	// if Docker there will be a component cEngine"
 	if dt.EngineInfo().EngineType != types.EngineTypeDocker {
-		return fmt.Errorf("Platform is not Docker")
+		return fmt.Errorf("platform is not Docker")
 	}
 
 	return nil
@@ -218,6 +218,7 @@ func (b *SystemImpl) checkPodman() error {
 	}
 
 	dt, _ := container.NewDockerTasks(d, nil, nil, b.logger)
+	dt, _ := container.NewDockerTasks(d, nil, nil, b.logger)
 
 	if dt == nil {
 		return fmt.Errorf("unable to determine docker engine, please check that Docker or Podman is installed and the DOCKER_HOST is set")
@@ -226,7 +227,7 @@ func (b *SystemImpl) checkPodman() error {
 	// check that the server is a docker engine not podman
 	// if Docker there will be a component called "Engine"
 	if dt.EngineInfo().EngineType != types.EngineTypePodman {
-		return fmt.Errorf("Platform is not Podman")
+		return fmt.Errorf("platform is not Podman")
 	}
 
 	return nil
