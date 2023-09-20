@@ -45,7 +45,7 @@ func createImagePullConfig() (dtypes.Image, *mocks.Docker, *imocks.ImageLog) {
 }
 
 func setupImagePull(t *testing.T, cc dtypes.Image, md *mocks.Docker, mic *imocks.ImageLog, force bool) {
-	p := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
+	p, _ := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
 
 	// create the container
 	err := p.PullImage(cc, force)

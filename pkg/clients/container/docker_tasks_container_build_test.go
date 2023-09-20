@@ -31,7 +31,7 @@ func testBuildSetup(t *testing.T) (*mocks.Docker, *DockerTasks) {
 
 	mk.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 
-	dt := NewDockerTasks(mk, nil, &tar.TarGz{}, logger.NewTestLogger(t))
+	dt, _ := NewDockerTasks(mk, nil, &tar.TarGz{}, logger.NewTestLogger(t))
 
 	return mk, dt
 }

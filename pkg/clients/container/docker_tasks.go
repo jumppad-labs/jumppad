@@ -61,14 +61,11 @@ type DockerTasks struct {
 }
 
 // NewDockerTasks creates a DockerTasks with the given Docker client
-func NewDockerTasks(c Docker, il images.ImageLog, tg *ctar.TarGz, l logger.Logger) *DockerTasks {
-
+func NewDockerTasks(c Docker, il images.ImageLog, tg *ctar.TarGz, l logger.Logger) (*DockerTasks, error) {
 	// Set the engine type, Docker, Podman
 	ver, err := c.ServerVersion(context.Background())
 	if err != nil {
-		l.Error("Error checking server version", "error", err)
-
-		return nil
+		return nil, fmt.Errorf("error checking server version, error: %s", err)
 	}
 
 	t := dtypes.EngineNotFound
@@ -85,12 +82,10 @@ func NewDockerTasks(c Docker, il images.ImageLog, tg *ctar.TarGz, l logger.Logge
 	// Determine the storage driver
 	info, err := c.Info(context.Background())
 	if err != nil {
-		l.Error("Error checking server storage driver", "error", err)
-
-		return nil
+		return nil, fmt.Errorf("error checking server storage driver, error: %s", err)
 	}
 
-	return &DockerTasks{engineType: t, storageDriver: info.Driver, c: c, il: il, tg: tg, l: l}
+	return &DockerTasks{engineType: t, storageDriver: info.Driver, c: c, il: il, tg: tg, l: l}, nil
 }
 
 func (d *DockerTasks) EngineInfo() *dtypes.EngineInfo {

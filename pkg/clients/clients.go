@@ -59,7 +59,7 @@ func GenerateClients(l logger.Logger) (*Clients, error) {
 
 	tgz := &tar.TarGz{}
 
-	ct := container.NewDockerTasks(dc, il, tgz, l)
+	ct, _ := container.NewDockerTasks(dc, il, tgz, l)
 
 	co := connector.DefaultConnectorOptions()
 	cc := connector.NewConnector(co)

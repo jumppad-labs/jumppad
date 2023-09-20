@@ -25,7 +25,7 @@ func TestFindContainerIDsReturnsID(t *testing.T) {
 		nil,
 	)
 
-	dt := NewDockerTasks(md, nil, &tar.TarGz{}, logger.NewTestLogger(t))
+	dt, _ := NewDockerTasks(md, nil, &tar.TarGz{}, logger.NewTestLogger(t))
 
 	ids, err := dt.FindContainerIDs("test.cloud.jumppad.dev")
 	assert.NoError(t, err)
@@ -49,7 +49,7 @@ func TestFindContainerIDsReturnsErrorWhenDockerFail(t *testing.T) {
 	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
-	dt := NewDockerTasks(md, nil, &tar.TarGz{}, logger.NewTestLogger(t))
+	dt, _ := NewDockerTasks(md, nil, &tar.TarGz{}, logger.NewTestLogger(t))
 
 	_, err := dt.FindContainerIDs("test.cloud.jumppad.dev")
 	assert.Error(t, err)
@@ -61,7 +61,7 @@ func TestFindContainerIDsReturnsNilWhenNoIDs(t *testing.T) {
 	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, nil)
 
-	dt := NewDockerTasks(md, nil, &tar.TarGz{}, logger.NewTestLogger(t))
+	dt, _ := NewDockerTasks(md, nil, &tar.TarGz{}, logger.NewTestLogger(t))
 
 	ids, err := dt.FindContainerIDs("test.cloud.jumppad.dev")
 	assert.NoError(t, err)
@@ -74,7 +74,7 @@ func TestFindContainerIDsReturnsNilWhenEmpty(t *testing.T) {
 	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 	md.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{}, nil)
 
-	dt := NewDockerTasks(md, nil, &tar.TarGz{}, logger.NewTestLogger(t))
+	dt, _ := NewDockerTasks(md, nil, &tar.TarGz{}, logger.NewTestLogger(t))
 
 	ids, err := dt.FindContainerIDs("test.cloud.jumppad.dev")
 	assert.NoError(t, err)

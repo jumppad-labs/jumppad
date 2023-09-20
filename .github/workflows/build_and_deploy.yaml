@@ -677,7 +677,7 @@ jobs:
         user: "jumppad"
         package: "jumppad"
         version: ${{ needs.tag.outputs.new_version }}
-        url: "https://github.com/jumppad-labs/jumppad/releases/download/v${{ needs.tag.outputs.new_version }}/jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip|x86"
+        url: "https://github.com/jumppad-labs/jumppad/releases/download/v${{ needs.tag.outputs.new_version }}/jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip|x64"
         token: '${{ secrets.GH_TOKEN }}'
 
     - name: Send status to Discord
