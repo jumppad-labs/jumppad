@@ -97,6 +97,10 @@ func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]strin
 		return nil
 	})
 
+	if err != nil && err.(*hclerrors.ConfigError).ContainsErrors(){
+		e.log.Error("Error parsing configuration", "error", err)
+	}
+
 	return e.config, err
 }
 
@@ -120,7 +124,7 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 	// if not it is possible to get process errors at this point as the
 	// callbacks have not been called for the providers, any referenced
 	// resources will not be found, it is ok to ignore these errors
-	if len(ce.ParseErrors) > 0 {
+	if ce.ContainsErrors() {
 		return nil, nil, nil, nil, parseErr
 	}
 
@@ -314,7 +318,7 @@ func (e *EngineImpl) Destroy() error {
 	// image cache which is manually added by Apply process
 	// should have the correct dependency graph to be
 	// destroyed last
-	err = e.config.Process(e.destroyCallback, true)
+	err = e.config.Walk(e.destroyCallback, true)
 	if err != nil {
 
 		// return the process error
@@ -340,7 +344,7 @@ func (e *EngineImpl) ResourceCountForType(t string) int {
 	return len(r)
 }
 
-func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]string, variablesFile string, callback hclconfig.ProcessCallback) error {
+func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]string, variablesFile string, callback hclconfig.WalkCallback) error {
 	var parseError error
 	var parsedConfig *hclconfig.Config
 

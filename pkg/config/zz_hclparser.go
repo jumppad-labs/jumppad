@@ -35,9 +35,9 @@ func RegisterResource(name string, r types.Resource, p Provider) {
 }
 
 // setupHCLConfig configures the HCLConfig package and registers the custom types
-func NewParser(callback hclconfig.ProcessCallback, variables map[string]string, variablesFiles []string) *hclconfig.Parser {
+func NewParser(callback hclconfig.WalkCallback, variables map[string]string, variablesFiles []string) *hclconfig.Parser {
 	cfg := hclconfig.DefaultOptions()
-	cfg.ParseCallback = callback
+	cfg.Callback = callback
 	cfg.Variables = variables
 	cfg.VariablesFiles = variablesFiles
 
