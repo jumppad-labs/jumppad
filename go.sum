@@ -994,8 +994,6 @@ github.com/jumppad-labs/connector v0.3.0 h1:C+6YpMfhRBzuCAmkDpYEWbIIYN7q6gB9kWRP
 github.com/jumppad-labs/connector v0.3.0/go.mod h1:PqRmJZKayHw4j8JfNkugRMtdQF8ldjdTvtmTxF3O/44=
 github.com/jumppad-labs/go-cty v0.0.0-20230804061424-9e985cb751f6 h1:1ADItCWr5prIIwmKMHhIv4bqU5WY79CC28srzpi2CqI=
 github.com/jumppad-labs/go-cty v0.0.0-20230804061424-9e985cb751f6/go.mod h1:YKQzy/7pZ7iq2jNFzy5go57xdxdWoLLpaEp4u238AE0=
-github.com/jumppad-labs/hclconfig v0.15.1 h1:b800Bj24MTDLwvL/ALNJEYKbPNoSHWFGkudj+Orchxw=
-github.com/jumppad-labs/hclconfig v0.15.1/go.mod h1:uD7I35qbdyuwLu8D5cYbbkEzsexgov3o5A7l4iMeEBQ=
 github.com/jumppad-labs/log v0.0.0-20230711151418-55bbc87954b7 h1:jxF+Sxei1/7c7tLcV3Juu+rCIAhBv2jdicokriFohYE=
 github.com/jumppad-labs/log v0.0.0-20230711151418-55bbc87954b7/go.mod h1:ZApwwzDbbETVTIRTk7724yQRJAXIktt98yGVMMaa3y8=
 github.com/karrick/godirwalk v1.15.8 h1:7+rWAZPn9zuRxaIqqT8Ohs2Q2Ac0msBqwRdxNCr2VVs=
