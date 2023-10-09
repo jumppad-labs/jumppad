@@ -202,7 +202,7 @@ func (c *Provider) internalCreate(sidecar bool) error {
 	for _, p := range c.config.Ports {
 		new.Ports = append(new.Ports, types.Port{
 			Local:         p.Local,
-			Remote:        p.Remote,
+			Remote:        p.Local,
 			Host:          p.Host,
 			Protocol:      p.Protocol,
 			OpenInBrowser: p.OpenInBrowser,
@@ -244,7 +244,7 @@ func (c *Provider) internalCreate(sidecar bool) error {
 		for i, net := range c.config.Networks {
 			if net.ID == n.ID {
 				// remove the netmask
-				ip,_,_ := strings.Cut(n.IPAddress, "/")
+				ip, _, _ := strings.Cut(n.IPAddress, "/")
 
 				// set the assigned address and name
 				c.config.Networks[i].AssignedAddress = ip
