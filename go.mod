@@ -15,6 +15,7 @@ require (
 	github.com/charmbracelet/log v0.2.2
 	github.com/creack/pty v1.1.18
 	github.com/cucumber/godog v0.12.4
+	github.com/digitalocean/go-libvirt v0.0.0-20221205150000-2939327a8519
 	github.com/docker/docker v24.0.5+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/facebookgo/symwalk v0.0.0-20150726040526-42004b9f3222
@@ -52,6 +53,7 @@ require (
 	k8s.io/api v0.23.5
 	k8s.io/apimachinery v0.23.5
 	k8s.io/client-go v0.23.5
+	libvirt.org/go/libvirtxml v1.9007.0
 )
 
 require (

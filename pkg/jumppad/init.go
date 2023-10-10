@@ -19,6 +19,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/null"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/random"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/template"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/vm"
 )
 
 func init() {
@@ -49,6 +50,7 @@ func init() {
 	config.RegisterResource(random.TypeRandomPassword, &random.RandomPassword{}, &random.RandomPasswordProvider{})
 	config.RegisterResource(random.TypeRandomCreature, &random.RandomCreature{}, &random.RandomCreatureProvider{})
 	config.RegisterResource(template.TypeTemplate, &template.Template{}, &template.TemplateProvider{})
+	config.RegisterResource(vm.TypeVM, &vm.VM{}, &vm.Provider{})
 
 	config.RegisterResource(types.TypeModule, &types.Module{}, &null.Provider{})
 	config.RegisterResource(types.TypeOutput, &types.Output{}, &null.Provider{})

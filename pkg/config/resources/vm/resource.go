@@ -1,6 +1,7 @@
 package vm
 
 import (
+	libvirt "github.com/digitalocean/go-libvirt"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
 )
@@ -18,7 +19,7 @@ resource "vm" "test" {
   image = "/path/to/vm-image.qcow2" // .iso .img
 
   resources {
-    cpus = 2
+    cpu = 2
     memory = 4096 // mb
   }
 
@@ -55,6 +56,8 @@ resource "vm" "test" {
 type VM struct {
 	types.ResourceMetadata `hcl:",remain"`
 
+	Config Config `hcl:"config,block" json:"config"`
+
 	Image string `hcl:"image" json:"image"`
 
 	Resources *Resources `hcl:"resources,block" json:"resources,omitempty"`
@@ -65,7 +68,16 @@ type VM struct {
 	Ports    []Port              `hcl:"port,block" json:"ports,omitempty"`
 	Volumes  []Volume            `hcl:"volume,block" json:"volumes,omitempty"`
 
-	CloudConfig string `hcl:"cloud_config" json:"cloud_config"`
+	CloudConfig string `hcl:"cloud_config,optional" json:"cloud_config"`
+
+	// computed
+
+	UUID libvirt.UUID `hcl:"domain_uuid,optional" json:"domain_uuid,omitempty"`
+}
+
+type Config struct {
+	Arch     string `hcl:"arch,optional" json:"arch"`
+	Emulator string `hcl:"emulator,optional" json:"emulator"`
 }
 
 type Resources struct {
