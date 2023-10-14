@@ -149,6 +149,11 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 		hc.RestartPolicy = container.RestartPolicy{Name: "on-failure", MaximumRetryCount: c.MaxRestartCount}
 	}
 
+	if c.Capabilities != nil {
+		hc.CapAdd = c.Capabilities.Add
+		hc.CapDrop = c.Capabilities.Drop
+	}
+
 	// https: //docs.docker.com/config/containers/resource_constraints/#cpu
 	rc := container.Resources{}
 	if c.Resources != nil {
