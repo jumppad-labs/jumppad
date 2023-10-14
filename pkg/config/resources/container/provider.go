@@ -217,6 +217,13 @@ func (c *Provider) internalCreate(sidecar bool) error {
 		})
 	}
 
+	if c.config.Capabilities != nil {
+		new.Capabilities = &types.Capabilities{
+			Add:  c.config.Capabilities.Add,
+			Drop: c.config.Capabilities.Drop,
+		}
+	}
+
 	if c.config.Resources != nil {
 		new.Resources = &types.Resources{
 			CPU:    c.config.Resources.CPU,
@@ -244,7 +251,7 @@ func (c *Provider) internalCreate(sidecar bool) error {
 		for i, net := range c.config.Networks {
 			if net.ID == n.ID {
 				// remove the netmask
-				ip,_,_ := strings.Cut(n.IPAddress, "/")
+				ip, _, _ := strings.Cut(n.IPAddress, "/")
 
 				// set the assigned address and name
 				c.config.Networks[i].AssignedAddress = ip
