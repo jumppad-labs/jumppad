@@ -23,6 +23,7 @@ type Terraform struct {
 	Variables        cty.Value         `hcl:"variables,optional" json:"-"`                                   // variables to pass to terraform
 
 	// Computed values
+
 	Output cty.Value `hcl:"output,optional"` // value of the output
 }
 

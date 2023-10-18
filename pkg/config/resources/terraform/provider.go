@@ -2,7 +2,6 @@ package terraform
 
 import (
 	"encoding/json"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -55,7 +54,6 @@ func (p *TerraformProvider) Create() error {
 	terraformPath := utils.GetTerraformFolder(p.config.Name, 0775)
 
 	err := p.generateVariables(terraformPath)
-	err := p.generateVariables(terraformPath)
 	if err != nil {
 		return fmt.Errorf("unable to generate variables file: %w", err)
 		return fmt.Errorf("unable to generate variables file: %w", err)
@@ -78,8 +76,7 @@ func (p *TerraformProvider) Create() error {
 		return fmt.Errorf("unable to apply terraform configuration: %w", err)
 	}
 
-	outputPath := filepath.Join(terraformPath, "output.json")
-	return p.generateOutput(outputPath)
+	return nil
 }
 
 // Destroy the terraform container
@@ -115,13 +112,6 @@ func (p *TerraformProvider) Lookup() ([]string, error) {
 
 func (p *TerraformProvider) Refresh() error {
 	p.log.Debug("Refresh Terraform", "ref", p.config.ID)
-	return p.Create()
-}
-
-func (p *TerraformProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.Name)
-	return false, nil
-}
 	return p.Create()
 }
 

@@ -97,7 +97,7 @@ func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]strin
 		return nil
 	})
 
-	if err != nil && err.(*hclerrors.ConfigError).ContainsErrors(){
+	if err != nil && err.(*hclerrors.ConfigError).ContainsErrors() {
 		e.log.Error("Error parsing configuration", "error", err)
 	}
 
@@ -117,15 +117,17 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 	// Parse the config to check it is valid
 	res, parseErr := e.ParseConfigWithVariables(path, variables, variablesFile)
 
-	// cast the error to a config error
-	ce := parseErr.(*hclerrors.ConfigError)
+	if parseErr != nil {
+		// cast the error to a config error
+		ce := parseErr.(*hclerrors.ConfigError)
 
-	// if we have parser errors return them
-	// if not it is possible to get process errors at this point as the
-	// callbacks have not been called for the providers, any referenced
-	// resources will not be found, it is ok to ignore these errors
-	if ce.ContainsErrors() {
-		return nil, nil, nil, nil, parseErr
+		// if we have parser errors return them
+		// if not it is possible to get process errors at this point as the
+		// callbacks have not been called for the providers, any referenced
+		// resources will not be found, it is ok to ignore these errors
+		if ce.ContainsErrors() {
+			return nil, nil, nil, nil, parseErr
+		}
 	}
 
 	unchanged := []types.Resource{}
