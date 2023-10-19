@@ -13,14 +13,12 @@ resource "container" "vault" {
 
   port {
     local  = 8200
-    remote = 8200
+    host   = 8200
   }
 
   environment = {
     VAULT_DEV_ROOT_TOKEN_ID = "root"
   }
-
-  privileged = true
 }
 
 resource "terraform" "configure_vault" {

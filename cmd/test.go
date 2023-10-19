@@ -237,6 +237,7 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 	ctx.Step(`^I expect the exit code to be (\d+)$`, cr.iExpectTheExitCodeToBe)
 	ctx.Step(`^I expect the response to contain "([^"]*)"$`, cr.iExpectTheResponseToContain)
 	ctx.Step(`^a TCP connection to "([^"]*)" should open$`, aTCPConnectionToShouldOpen)
+	ctx.Step(`^the following output varaibles should be set$`, cr.theFollowingOutputVaraiblesShouldBeSet)
 }
 
 func (cr *CucumberRunner) iRunApply() error {
@@ -650,6 +651,36 @@ func aTCPConnectionToShouldOpen(addr string) error {
 	}
 
 	return err
+}
+
+func (cr *CucumberRunner) theFollowingOutputVaraiblesShouldBeSet(arg1 *godog.Table) error {
+	c, err := config.LoadState()
+	if err != nil {
+		return fmt.Errorf("unable to load state")
+	}
+
+	for i, row := range arg1.Rows {
+		if i == 0 {
+			if len(row.Cells) != 2 || row.Cells[0].Value != "name" || row.Cells[1].Value != "value" {
+				return fmt.Errorf("tables should be formatted with a header row containing the columns 'name' and value, e.g. | name | value |")
+			}
+
+			continue
+		}
+
+		// find the output
+		r, _ := c.FindResource("output." + row.Cells[0].Value)
+		if r == nil {
+			return fmt.Errorf("expected output variable %s to be set but was nil", row.Cells[0].Value)
+		}
+
+		o := r.(*hcltypes.Output)
+		if o.Value != row.Cells[1].Value {
+			return fmt.Errorf("output variable %s value is %s but expected %s", row.Cells[0].Value, o.Value, row.Cells[1].Value)
+		}
+	}
+
+	return nil
 }
 
 func (cr *CucumberRunner) executeCommand(cmd string) error {

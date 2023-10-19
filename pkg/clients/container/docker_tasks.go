@@ -86,7 +86,6 @@ func NewDockerTasks(c Docker, il images.ImageLog, tg *ctar.TarGz, l logger.Logge
 	}
 
 	return &DockerTasks{engineType: t, storageDriver: info.Driver, c: c, il: il, tg: tg, l: l}, nil
-	return &DockerTasks{engineType: t, storageDriver: info.Driver, c: c, il: il, tg: tg, l: l}, nil
 }
 
 func (d *DockerTasks) EngineInfo() *dtypes.EngineInfo {
