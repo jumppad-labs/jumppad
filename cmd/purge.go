@@ -75,7 +75,7 @@ func newPurgeCmdFunc(dt container.Docker, il images.ImageLog, l logger.Logger) f
 			bHasError = true
 		}
 
-		hcp := utils.GetBlueprintLocalFolder("")
+		hcp := utils.BlueprintLocalFolder("")
 		l.Info("Removing cached blueprints", "path", hcp)
 		err = os.RemoveAll(hcp)
 		if err != nil {
@@ -83,7 +83,7 @@ func newPurgeCmdFunc(dt container.Docker, il images.ImageLog, l logger.Logger) f
 			bHasError = true
 		}
 
-		bcp := utils.GetHelmLocalFolder("")
+		bcp := utils.HelmLocalFolder("")
 		l.Info("Removing cached Helm charts", "path", bcp)
 		err = os.RemoveAll(bcp)
 		if err != nil {
@@ -92,7 +92,7 @@ func newPurgeCmdFunc(dt container.Docker, il images.ImageLog, l logger.Logger) f
 		}
 
 		// delete the releases
-		rcp := utils.GetReleasesFolder()
+		rcp := utils.ReleasesFolder()
 		l.Info("Removing cached releases", "path", rcp)
 		err = os.RemoveAll(rcp)
 		if err != nil {
@@ -100,11 +100,19 @@ func newPurgeCmdFunc(dt container.Docker, il images.ImageLog, l logger.Logger) f
 			bHasError = true
 		}
 
-		dcp := utils.GetDataFolder("", os.ModePerm)
+		dcp := utils.DataFolder("", os.ModePerm)
 		l.Info("Removing data folders", "path", dcp)
 		err = os.RemoveAll(dcp)
 		if err != nil {
 			l.Error("Unable to remove data folder", "error", err)
+			bHasError = true
+		}
+
+		ccp := utils.DataFolder("", os.ModePerm)
+		l.Info("Removing cache folders", "path", ccp)
+		err = os.RemoveAll(ccp)
+		if err != nil {
+			l.Error("Unable to remove cache folder", "error", err)
 			bHasError = true
 		}
 

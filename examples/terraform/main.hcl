@@ -12,8 +12,8 @@ resource "container" "vault" {
   }
 
   port {
-    local  = 8200
-    host   = 8200
+    local = 8200
+    host  = 8200
   }
 
   environment = {
@@ -22,7 +22,9 @@ resource "container" "vault" {
 }
 
 resource "terraform" "configure_vault" {
-  working_directory = "/terraform"
+  network {
+    id = resource.network.main.id
+  }
 
   environment = {
     VAULT_TOKEN = "root"
@@ -34,25 +36,31 @@ resource "terraform" "configure_vault" {
     second = 2
     third = {
       x = 3
-      y = 3
+      y = 4
     }
   }
 
-  network {
-    id = resource.network.main.id
-  }
-
-  volume {
-    source      = "${home()}/.terraform.d"
-    destination = "/root/.terraform.d,ro"
-  }
-
-  volume {
-    source      = "workspace"
-    destination = "/terraform"
-  }
+  source            = "./workspace"
+  working_directory = "/"
+  version           = "1.6.2"
 }
 
 output "first" {
   value = resource.terraform.configure_vault.output.first
+}
+
+output "second" {
+  value = resource.terraform.configure_vault.output.second
+}
+
+output "third_x" {
+  value = resource.terraform.configure_vault.output.third.x
+}
+
+output "third_y" {
+  value = resource.terraform.configure_vault.output.third.y
+}
+
+output "vault_secret" {
+  value = resource.terraform.configure_vault.output.vault_secret
 }

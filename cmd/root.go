@@ -39,7 +39,7 @@ func createEngine(l logger.Logger, c *clients.Clients) (jumppad.Engine, gvm.Vers
 	o := gvm.Options{
 		Organization: "jumppad-labs",
 		Repo:         "jumppad",
-		ReleasesPath: utils.GetReleasesFolder(),
+		ReleasesPath: utils.ReleasesFolder(),
 	}
 
 	o.AssetNameFunc = func(version, goos, goarch string) string {

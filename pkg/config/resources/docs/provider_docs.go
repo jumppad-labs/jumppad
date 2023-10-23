@@ -126,7 +126,7 @@ func (p *DocsProvider) Refresh() error {
 	p.log.Debug("Refresh Docs", "ref", p.config.ID)
 
 	// refresh content on disk
-	configPath := utils.GetLibraryFolder("config", 0775)
+	configPath := utils.LibraryFolder("config", 0775)
 
 	// jumppad.config.js
 	frontendConfigPath := filepath.Join(configPath, "jumppad.config.js")
@@ -150,7 +150,7 @@ func (p *DocsProvider) Refresh() error {
 	}
 
 	// /content
-	contentPath := utils.GetLibraryFolder("content", 0775)
+	contentPath := utils.LibraryFolder("content", 0775)
 
 	for _, book := range p.config.Content {
 		bookPath := filepath.Join(contentPath, book.Name)
@@ -241,7 +241,7 @@ func (p *DocsProvider) createDocsContainer() error {
 	}
 
 	// ~/.jumppad/library/content
-	contentPath := utils.GetLibraryFolder("content", 0775)
+	contentPath := utils.LibraryFolder("content", 0775)
 
 	for _, book := range p.config.Content {
 		bookPath := filepath.Join(contentPath, book.Name)
@@ -272,7 +272,7 @@ func (p *DocsProvider) createDocsContainer() error {
 	)
 
 	// ~/.jumppad/library/config
-	configPath := utils.GetLibraryFolder("config", 0775)
+	configPath := utils.LibraryFolder("config", 0775)
 
 	// write the navigation
 	navigationPath := filepath.Join(configPath, "navigation.jsx")
@@ -297,7 +297,7 @@ func (p *DocsProvider) createDocsContainer() error {
 	)
 
 	// write the frontend config
-	frontendConfigPath := filepath.Join(utils.GetLibraryFolder("", 0775), "jumppad.config.js")
+	frontendConfigPath := filepath.Join(utils.LibraryFolder("", 0775), "jumppad.config.js")
 	err = p.writeConfig(frontendConfigPath)
 	if err != nil {
 		return err

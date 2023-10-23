@@ -49,7 +49,7 @@ func (p *BookProvider) Create() error {
 
 func (p *BookProvider) Destroy() error {
 	// clean up the library folder
-	err := os.RemoveAll(utils.GetLibraryFolder("", os.ModePerm))
+	err := os.RemoveAll(utils.LibraryFolder("", os.ModePerm))
 
 	return err
 }

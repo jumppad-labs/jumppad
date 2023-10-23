@@ -137,12 +137,12 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 
 			if !utils.IsLocalFolder(dst) && !utils.IsHCLFile(dst) {
 				// fetch the remote server from github
-				err := bp.Get(dst, utils.GetBlueprintLocalFolder(dst))
+				err := bp.Get(dst, utils.BlueprintLocalFolder(dst))
 				if err != nil {
 					return fmt.Errorf("unable to retrieve blueprint: %s", err)
 				}
 
-				dst = utils.GetBlueprintLocalFolder(dst)
+				dst = utils.BlueprintLocalFolder(dst)
 			}
 		}
 

@@ -30,6 +30,7 @@ require (
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	github.com/jumppad-labs/connector v0.3.0
 	github.com/jumppad-labs/hclconfig v0.16.1
+	github.com/kennygrant/sanitize v1.2.4
 	github.com/mailgun/raymond/v2 v2.0.48
 	github.com/moby/sys/signal v0.7.0
 	github.com/moby/term v0.5.0

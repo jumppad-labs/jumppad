@@ -11,6 +11,10 @@ Feature: Terraform provider
       | resource.network.main      |
       | resource.container.vault   |
     And a HTTP call to "http://localhost:8200" should result in status 200
-    And the following output varaibles should be set
+    And the following output variables should be set
       | name              | value     |
       | first             | one       |
+      | second            | 2.000000  |
+      | third_x           | 3.000000  |
+      | third_y           | 4.000000  |
+      | vault_secret      | zap       |
