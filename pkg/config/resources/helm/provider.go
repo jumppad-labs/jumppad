@@ -68,7 +68,7 @@ func (p *Provider) Create() error {
 	if !utils.IsLocalFolder(p.config.Chart) && p.config.Repository == nil {
 		p.log.Debug("Fetching remote Helm chart", "ref", p.config.Name, "chart", p.config.Chart)
 
-		helmFolder := utils.GetHelmLocalFolder(p.config.Chart)
+		helmFolder := utils.HelmLocalFolder(p.config.Chart)
 
 		err := p.getterClient.Get(p.config.Chart, helmFolder)
 		if err != nil {

@@ -18,6 +18,7 @@ import (
 	"sync"
 
 	"github.com/jumppad-labs/jumppad/pkg/utils/dirhash"
+  "github.com/kennygrant/sanitize"
 )
 
 // EnsureAbsolute ensure that the given path is either absolute or
@@ -56,7 +57,7 @@ func EnsureAbsolute(path, file string) string {
 
 // Creates the required file structure in the users Home directory
 func CreateFolders() {
-	os.MkdirAll(GetReleasesFolder(), os.FileMode(0755))
+	os.MkdirAll(ReleasesFolder(), os.FileMode(0755))
 }
 
 // ValidateName ensures that the name for a resource is within certain boundaries
@@ -77,7 +78,7 @@ func ValidateName(name string) (bool, error) {
 	return true, nil
 }
 
-// ReplaceNonURIChars replaces any characters in the resrouce name which
+// ReplaceNonURIChars replaces any characters in the resource name which
 // can not be used in a URI
 func ReplaceNonURIChars(s string) (string, error) {
 	reg, err := regexp.Compile(`[^a-zA-Z0-9\-\.]+`)
@@ -235,19 +236,10 @@ func IsHCLFile(path string) bool {
 	return true
 }
 
-func sanitizeBlueprintFolder(blueprint string) string {
-	blueprint = strings.ReplaceAll(blueprint, "//", "/")
-	blueprint = strings.ReplaceAll(blueprint, "?", "/")
-	blueprint = strings.ReplaceAll(blueprint, "&", "/")
-	blueprint = strings.ReplaceAll(blueprint, "=", "/")
-
-	return blueprint
-}
-
-// GetBlueprintFolder parses a blueprint uri and returns the top level
+// BlueprintFolder parses a blueprint uri and returns the top level
 // blueprint folder
 // if the URI is not a blueprint will return an error
-func GetBlueprintFolder(blueprint string) (string, error) {
+func BlueprintFolder(blueprint string) (string, error) {
 	// get the folder for the blueprint
 	parts := strings.Split(blueprint, "//")
 
@@ -255,34 +247,34 @@ func GetBlueprintFolder(blueprint string) (string, error) {
 		return "", InvalidBlueprintURIError
 	}
 
-	return sanitizeBlueprintFolder(parts[1]), nil
+	return sanitize.Path(parts[1]), nil
 }
 
-// GetBlueprintLocalFolder returns the full storage path
+// BlueprintLocalFolder returns the full storage path
 // for the given blueprint URI
-func GetBlueprintLocalFolder(blueprint string) string {
+func BlueprintLocalFolder(blueprint string) string {
 	// we might have a querystring reference such has github.com/abc/cds?ref=dfdf&dfdf
 	// replace these separators with /
-	blueprint = sanitizeBlueprintFolder(blueprint)
+	blueprint = sanitize.Path(blueprint)
 
 	return filepath.Join(JumppadHome(), "blueprints", blueprint)
 }
 
-// GetHelmLocalFolder returns the full storage path
+// HelmLocalFolder returns the full storage path
 // for the given blueprint URI
-func GetHelmLocalFolder(chart string) string {
-	chart = sanitizeBlueprintFolder(chart)
+func HelmLocalFolder(chart string) string {
+	chart = sanitize.Path(chart)
 
 	return filepath.Join(JumppadHome(), "helm_charts", chart)
 }
 
-// GetReleasesFolder return the path of the Shipyard releases
-func GetReleasesFolder() string {
+// ReleasesFolder return the path of the Shipyard releases
+func ReleasesFolder() string {
 	return filepath.Join(JumppadHome(), "releases")
 }
 
-// GetDataFolder creates the data directory used by the application
-func GetDataFolder(p string, perms os.FileMode) string {
+// DataFolder creates the data directory used by the application
+func DataFolder(p string, perms os.FileMode) string {
 	data := filepath.Join(JumppadHome(), "data", p)
 
 	// create the folder if it does not exist
@@ -292,8 +284,21 @@ func GetDataFolder(p string, perms os.FileMode) string {
 	return data
 }
 
-// GetLibraryFolder creates the library directory used by the application
-func GetLibraryFolder(p string, perms os.FileMode) string {
+// CacheFolder creates the cache directory used by the a provider
+// unlike DataFolders, cache folders are not removed when down is called
+func CacheFolder(p string, perms os.FileMode) string {
+	data := filepath.Join(JumppadHome(), "cache", p)
+
+	// create the folder if it does not exist
+	os.MkdirAll(data, perms)
+	os.Chmod(data, perms)
+
+	return data
+}
+
+// LibraryFolder creates the library directory used by the application
+func LibraryFolder(p string, perms os.FileMode) string {
+	p = sanitize.Path(p)
 	data := filepath.Join(JumppadHome(), "library", p)
 
 	// create the folder if it does not exist
@@ -341,64 +346,6 @@ func GetConnectorPIDFile() string {
 func GetConnectorLogFile() string {
 	return filepath.Join(LogsDir(), "connector.log")
 }
-
-func compileShipyardBinary(path string) error {
-	maxLevels := 10
-	currentLevel := 0
-
-	// we are running from a test so compile the binary
-	// and returns its path
-	dir, _ := os.Getwd()
-
-	// walk backwards until we find the go.mod
-	for {
-		files, err := ioutil.ReadDir(dir)
-		if err != nil {
-			return err
-		}
-
-		for _, f := range files {
-			if strings.HasSuffix(f.Name(), "go.mod") {
-				fp, _ := filepath.Abs(dir)
-
-				// found the project root
-				file := filepath.Join(fp, "main.go")
-				tmpBinary := path
-
-				// if windows append the exe extension
-				if runtime.GOOS == "windows" {
-					tmpBinary = tmpBinary + ".exe"
-				}
-
-				os.RemoveAll(tmpBinary)
-
-				outwriter := bytes.NewBufferString("")
-				cmd := exec.Command("go", "build", "-o", tmpBinary, file)
-				cmd.Stderr = outwriter
-				cmd.Stdout = outwriter
-
-				err := cmd.Run()
-				if err != nil {
-					fmt.Println("Error building temporary binary:", cmd.Args)
-					fmt.Println(outwriter.String())
-					panic(fmt.Errorf("unable to build connector binary: %s", err))
-				}
-
-				return nil
-			}
-		}
-
-		// check the parent
-		dir = filepath.Join(dir, "../")
-		fmt.Println(dir)
-		currentLevel++
-		if currentLevel > maxLevels {
-			panic("unable to find go.mod")
-		}
-	}
-}
-
-var buildSync = sync.Once{}
 
 // GetShipyardBinaryPath returns the path to the running Shipyard binary
 func GetShipyardBinaryPath() string {
@@ -561,3 +508,61 @@ func incIP(ip net.IP) net.IP {
 	}
 	return net.IP(byteIp)
 }
+
+func compileShipyardBinary(path string) error {
+	maxLevels := 10
+	currentLevel := 0
+
+	// we are running from a test so compile the binary
+	// and returns its path
+	dir, _ := os.Getwd()
+
+	// walk backwards until we find the go.mod
+	for {
+		files, err := ioutil.ReadDir(dir)
+		if err != nil {
+			return err
+		}
+
+		for _, f := range files {
+			if strings.HasSuffix(f.Name(), "go.mod") {
+				fp, _ := filepath.Abs(dir)
+
+				// found the project root
+				file := filepath.Join(fp, "main.go")
+				tmpBinary := path
+
+				// if windows append the exe extension
+				if runtime.GOOS == "windows" {
+					tmpBinary = tmpBinary + ".exe"
+				}
+
+				os.RemoveAll(tmpBinary)
+
+				outwriter := bytes.NewBufferString("")
+				cmd := exec.Command("go", "build", "-o", tmpBinary, file)
+				cmd.Stderr = outwriter
+				cmd.Stdout = outwriter
+
+				err := cmd.Run()
+				if err != nil {
+					fmt.Println("Error building temporary binary:", cmd.Args)
+					fmt.Println(outwriter.String())
+					panic(fmt.Errorf("unable to build connector binary: %s", err))
+				}
+
+				return nil
+			}
+		}
+
+		// check the parent
+		dir = filepath.Join(dir, "../")
+		fmt.Println(dir)
+		currentLevel++
+		if currentLevel > maxLevels {
+			panic("unable to find go.mod")
+		}
+	}
+}
+
+var buildSync = sync.Once{}

@@ -14,7 +14,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -174,7 +176,12 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 
 		logger := createLogger()
 
-		engine, cli, vm := createEngine(logger)
+		cli, _ := clients.GenerateClients(logger)
+		engine, vm, err := createEngine(logger, cli)
+		if err != nil {
+			fmt.Printf("Unable to setup tests: %s\n", err)
+			return
+		}
 
 		cr.e = engine
 		cr.l = logger
@@ -232,6 +239,7 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 	ctx.Step(`^I expect the exit code to be (\d+)$`, cr.iExpectTheExitCodeToBe)
 	ctx.Step(`^I expect the response to contain "([^"]*)"$`, cr.iExpectTheResponseToContain)
 	ctx.Step(`^a TCP connection to "([^"]*)" should open$`, aTCPConnectionToShouldOpen)
+	ctx.Step(`^the following output variables should be set$`, cr.theFollowingOutputVaraiblesShouldBeSet)
 }
 
 func (cr *CucumberRunner) iRunApply() error {
@@ -249,23 +257,21 @@ func (cr *CucumberRunner) iRunApplyAtPath(path string) error {
 func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
 	output = bytes.NewBufferString("")
 
-	args := []string{}
-
 	// if filepath is not absolute then it will be relative to args
 	absPath := filepath.Join(cr.basePath, fp)
 
-	args = []string{absPath}
+	args := []string{absPath}
 
 	noOpen := true
 	approve := true
 
 	// re-use the run command
 	rc := newRunCmdFunc(
-		engine,
+		cr.e,
 		cr.cli.ContainerTasks,
 		cr.cli.Getter,
 		cr.cli.HTTP,
-		cr.cli.Browser,
+		cr.cli.System,
 		cr.vm,
 		cr.cli.Connector,
 		&noOpen,
@@ -411,7 +417,7 @@ func (cr *CucumberRunner) thereShouldBe1NetworkCalled(arg1 string) error {
 	}
 
 	if len(n) != 1 {
-		return fmt.Errorf("Expected 1 network called %s to be created", arg1)
+		return fmt.Errorf("expected 1 network called %s to be created", arg1)
 	}
 
 	return nil
@@ -447,7 +453,7 @@ func (cr *CucumberRunner) aCallToShouldResultInStatus(arg1 string, arg2 int) err
 		}
 
 		if err == nil {
-			err = fmt.Errorf("Expected status code %d, got %d", arg2, resp.StatusCode)
+			err = fmt.Errorf("expected status code %d, got %d", arg2, resp.StatusCode)
 		}
 
 		time.Sleep(2 * time.Second)
@@ -465,11 +471,11 @@ func (cr *CucumberRunner) theResponseBodyShouldContain(value string) error {
 
 		s := r.FindString(respBody)
 		if s == "" {
-			return fmt.Errorf("Expected value %s to be found in response %s", value, respBody)
+			return fmt.Errorf("expected value %s to be found in response %s", value, respBody)
 		}
 	} else {
 		if !strings.Contains(respBody, value) {
-			return fmt.Errorf("Expected value %s to be found in response %s", value, respBody)
+			return fmt.Errorf("expected value %s to be found in response %s", value, respBody)
 		}
 	}
 
@@ -480,14 +486,14 @@ func (cr *CucumberRunner) theFollowingEnvironmentVariablesAreSet(vars *godog.Tab
 	for i, r := range vars.Rows {
 		if i == 0 {
 			if r.Cells[0].Value != "key" || r.Cells[1].Value != "value" {
-				return fmt.Errorf("Tables should be formatted with a header row containing the columns 'key' and 'value'")
+				return fmt.Errorf("tables should be formatted with a header row containing the columns 'key' and 'value'")
 			}
 
 			continue
 		}
 
 		if len(r.Cells) != 2 {
-			return fmt.Errorf("Table rows should have two columns 'key' and 'value'")
+			return fmt.Errorf("table rows should have two columns 'key' and 'value'")
 		}
 
 		// set the environment variable
@@ -501,14 +507,14 @@ func (cr *CucumberRunner) theFollowingShipyardVariablesAreSet(vars *godog.Table)
 	for i, r := range vars.Rows {
 		if i == 0 {
 			if r.Cells[0].Value != "key" || r.Cells[1].Value != "value" {
-				return fmt.Errorf("Tables should be formatted with a header row containing the columns 'key' and 'value'")
+				return fmt.Errorf("tables should be formatted with a header row containing the columns 'key' and 'value'")
 			}
 
 			continue
 		}
 
 		if len(r.Cells) != 2 {
-			return fmt.Errorf("Table rows should have two columns 'key' and 'value'")
+			return fmt.Errorf("table rows should have two columns 'key' and 'value'")
 		}
 
 		cr.variables = append(cr.variables, fmt.Sprintf("%s=%s", r.Cells[0].Value, r.Cells[1].Value))
@@ -538,7 +544,7 @@ func (cr *CucumberRunner) theResourceInfoShouldContain(path, resource, value str
 	}
 
 	if !strings.Contains(s, value) {
-		return fmt.Errorf("String %s is not found in value %s", value, s)
+		return fmt.Errorf("string %s is not found in value %s", value, s)
 	}
 
 	return nil
@@ -551,7 +557,7 @@ func (cr *CucumberRunner) theResourceInfoShouldEqual(path, resource, value strin
 	}
 
 	if s != value {
-		return fmt.Errorf("String %s is not equal to %s", value, s)
+		return fmt.Errorf("string %s is not equal to %s", value, s)
 	}
 
 	return nil
@@ -606,7 +612,7 @@ func (cr *CucumberRunner) whenIRunTheCommand(arg1 string) error {
 
 func (cr *CucumberRunner) iExpectTheExitCodeToBe(arg1 int) error {
 	if commandExitCode != arg1 {
-		return fmt.Errorf("Expected exit code to be %d, got %d\nOutput:\n%s", arg1, commandExitCode, commandOutput.String())
+		return fmt.Errorf("expected exit code to be %d, got %d\nOutput:\n%s", arg1, commandExitCode, commandOutput.String())
 	}
 
 	return nil
@@ -629,7 +635,7 @@ func (cr *CucumberRunner) iExpectTheResponseToContain(arg1 string) error {
 		}
 	}
 
-	return fmt.Errorf("Expected command output to contain %s.\n Output:\n%s", arg1, commandOutput.String())
+	return fmt.Errorf("expected command output to contain %s.\n Output:\n%s", arg1, commandOutput.String())
 }
 
 func aTCPConnectionToShouldOpen(addr string) error {
@@ -647,6 +653,67 @@ func aTCPConnectionToShouldOpen(addr string) error {
 	}
 
 	return err
+}
+
+func (cr *CucumberRunner) theFollowingOutputVaraiblesShouldBeSet(arg1 *godog.Table) error {
+	c, err := config.LoadState()
+	if err != nil {
+		return fmt.Errorf("unable to load state")
+	}
+
+	for i, row := range arg1.Rows {
+		if i == 0 {
+			if len(row.Cells) != 2 || row.Cells[0].Value != "name" || row.Cells[1].Value != "value" {
+				return fmt.Errorf("tables should be formatted with a header row containing the columns 'name' and value, e.g. | name | value |")
+			}
+
+			continue
+		}
+
+		// find the output
+		r, _ := c.FindResource("output." + row.Cells[0].Value)
+		if r == nil {
+			return fmt.Errorf("expected output variable %s to be set but was nil", row.Cells[0].Value)
+		}
+
+		o := r.(*hcltypes.Output)
+
+		switch v := o.Value.(type) {
+		case int:
+			s := strconv.Itoa(int(v))
+			if s != row.Cells[1].Value {
+				return fmt.Errorf("output variable %s value is %s but expected %s", row.Cells[0].Value, s, row.Cells[1].Value)
+			}
+		case int32:
+			s := strconv.Itoa(int(v))
+			if s != row.Cells[1].Value {
+				return fmt.Errorf("output variable %s value is %s but expected %s", row.Cells[0].Value, s, row.Cells[1].Value)
+			}
+		case int64:
+			s := strconv.Itoa(int(v))
+			if s != row.Cells[1].Value {
+				return fmt.Errorf("output variable %s value is %s but expected %s", row.Cells[0].Value, s, row.Cells[1].Value)
+			}
+		case float32:
+			s := fmt.Sprintf("%f", v)
+			if s != row.Cells[1].Value {
+				return fmt.Errorf("output variable %s value is %s but expected %s", row.Cells[0].Value, s, row.Cells[1].Value)
+			}
+		case float64:
+			s := fmt.Sprintf("%f", v)
+			if s != row.Cells[1].Value {
+				return fmt.Errorf("output variable %s value is %s but expected %s", row.Cells[0].Value, s, row.Cells[1].Value)
+			}
+		case string:
+			if v != row.Cells[1].Value {
+				return fmt.Errorf("output variable %s value is %s but expected %s", row.Cells[0].Value, v, row.Cells[1].Value)
+			}
+		default:
+			return fmt.Errorf("output type is %s, unable to compare", reflect.TypeOf(o.Value).String())
+		}
+	}
+
+	return nil
 }
 
 func (cr *CucumberRunner) executeCommand(cmd string) error {
