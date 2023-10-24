@@ -1,64 +1,17 @@
 package vm
 
 import (
-	libvirt "github.com/digitalocean/go-libvirt"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/config"
 )
 
 // TypeVM is the resource for generating random numbers
 const TypeVM string = "vm"
 
-/*
-resource "vm" "test" {
-	config {
-		arch = "x86_64" // default -> host arch
-		emulator = "qemu"
-	}
-
-  image = "/path/to/vm-image.qcow2" // .iso .img
-
-  resources {
-    cpu = 2
-    memory = 4096 // mb
-  }
-
-  disk "name" {
-    type = "ext4"
-    size = 100 // mb
-  }
-
-  volume {
-    source = "/path/on/host"
-    destination = "/path/in/vm"
-  }
-
-  network {
-    id = resource.network.main.id
-    ip_address = "10.0.10.5"
-  }
-
-  port {
-    local  = 8000
-    remote = 8000
-    host   = 8000
-  }
-
-  cloud_config = <<-EOF
-  runcmd: |-
-    apt update
-    apt install -y curl
-  EOF
-}
-*/
-
-// allows the generation of random numbers
+// Allows the creation of virtual machines using libvirt and qemu
 type VM struct {
 	types.ResourceMetadata `hcl:",remain"`
 
 	Config Config `hcl:"config,block" json:"config"`
-
-	Image string `hcl:"image" json:"image"`
 
 	Resources *Resources `hcl:"resources,block" json:"resources,omitempty"`
 
@@ -68,11 +21,20 @@ type VM struct {
 	Ports    []Port              `hcl:"port,block" json:"ports,omitempty"`
 	Volumes  []Volume            `hcl:"volume,block" json:"volumes,omitempty"`
 
-	CloudConfig string `hcl:"cloud_config,optional" json:"cloud_config"`
+	VNC VNC `hcl:"vnc,block" json:"vnc,omitempty"`
 
-	// computed
+	CloudInit   *CloudInit `hcl:"cloud_init,block" json:"cloud_init,omitempty"`
+	CloudConfig string     `hcl:"cloud_config,optional" json:"cloud_config"`
+}
 
-	UUID libvirt.UUID `hcl:"domain_uuid,optional" json:"domain_uuid,omitempty"`
+type CloudInit struct {
+	NetworkConfig string `hcl:"network_config,optional" json:"network_config"`
+	UserData      string `hcl:"user_data,optional" json:"user_data"`
+	MetaData      string `hcl:"meta_data,optional" json:"meta_data"`
+}
+
+type VNC struct {
+	Port int `hcl:"port" json:"port"`
 }
 
 type Config struct {
@@ -86,9 +48,9 @@ type Resources struct {
 }
 
 type Disk struct {
-	Name string `hcl:"name,label" json:"name"`
-	Type string `hcl:"type" json:"type"` // e.g. ext4
-	Size int    `hcl:"size" json:"size"` // size in MB
+	Type   string `hcl:"type" json:"type"` // e.g. ext4
+	Source string `hcl:"source,optional" json:"source,omitempty"`
+	Size   int    `hcl:"size,optional" json:"size,omitempty"` // size in MB
 }
 
 type NetworkAttachment struct {
@@ -119,17 +81,18 @@ type Volume struct {
 	ReadOnly    bool   `hcl:"read_only,optional" json:"read_only,omitempty"`
 }
 
-func (c *VM) Process() error {
-	// do we have an existing resource in the state?
-	// if so we need to set any computed resources for dependents
-	cfg, err := config.LoadState()
-	if err == nil {
-		// try and find the resource in the state
-		r, _ := cfg.FindResource(c.ID)
-		if r != nil {
-			// state := r.(*VM)
-		}
-	}
+// func (c *VM) Process() error {
+// 	// do we have an existing resource in the state?
+// 	// if so we need to set any computed resources for dependents
+// 	cfg, err := config.LoadState()
+// 	if err == nil {
+// 		// try and find the resource in the state
+// 		r, _ := cfg.FindResource(c.ID)
+// 		if r != nil {
+// 			state := r.(*VM)
+// 			c.UUID = state.UUID
+// 		}
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
