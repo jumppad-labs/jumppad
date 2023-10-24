@@ -18,7 +18,7 @@ import (
 	"sync"
 
 	"github.com/jumppad-labs/jumppad/pkg/utils/dirhash"
-	"github.com/kennygrant/sanitize"
+  "github.com/kennygrant/sanitize"
 )
 
 // EnsureAbsolute ensure that the given path is either absolute or
