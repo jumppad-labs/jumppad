@@ -9,8 +9,13 @@ const TypeBlueprint string = "blueprint"
 type Blueprint struct {
 	types.ResourceMetadata `hcl:",remain"`
 
-	Title       string `hcl:"title,optional" json:"title,omitempty"`
-	Author      string `hcl:"author,optional" json:"author,omitempty"`
-	Slug        string `hcl:"slug,optional" json:"slug,omitempty"`
-	Description string `hcl:"description,optional" json:"description,omitempty"`
+	Title        string   `hcl:"title,optional" json:"title,omitempty"`
+	Organization string   `hcl:"organization,optional" json:"organization,omitempty"`
+	Author       string   `hcl:"author,optional" json:"author,omitempty"`
+	Authors      []string `hcl:"authors,optional" json:"authors,omitempty"`
+	Slug         string   `hcl:"slug,optional" json:"slug,omitempty"`
+	Icon         string   `hcl:"icon,optional" json:"icon,omitempty"`
+	Tags         []string `hcl:"tags,optional" json:"tags,omitempty"`
+	Summary      string   `hcl:"summary,optional" json:"summary,omitempty"`
+	Description  string   `hcl:"description,optional" json:"description,omitempty"`
 }

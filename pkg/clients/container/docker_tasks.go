@@ -61,14 +61,11 @@ type DockerTasks struct {
 }
 
 // NewDockerTasks creates a DockerTasks with the given Docker client
-func NewDockerTasks(c Docker, il images.ImageLog, tg *ctar.TarGz, l logger.Logger) *DockerTasks {
-
+func NewDockerTasks(c Docker, il images.ImageLog, tg *ctar.TarGz, l logger.Logger) (*DockerTasks, error) {
 	// Set the engine type, Docker, Podman
 	ver, err := c.ServerVersion(context.Background())
 	if err != nil {
-		l.Error("Error checking server version", "error", err)
-
-		return nil
+		return nil, fmt.Errorf("error checking server version, error: %s", err)
 	}
 
 	t := dtypes.EngineNotFound
@@ -85,12 +82,10 @@ func NewDockerTasks(c Docker, il images.ImageLog, tg *ctar.TarGz, l logger.Logge
 	// Determine the storage driver
 	info, err := c.Info(context.Background())
 	if err != nil {
-		l.Error("Error checking server storage driver", "error", err)
-
-		return nil
+		return nil, fmt.Errorf("error checking server storage driver, error: %s", err)
 	}
 
-	return &DockerTasks{engineType: t, storageDriver: info.Driver, c: c, il: il, tg: tg, l: l}
+	return &DockerTasks{engineType: t, storageDriver: info.Driver, c: c, il: il, tg: tg, l: l}, nil
 }
 
 func (d *DockerTasks) EngineInfo() *dtypes.EngineInfo {
@@ -547,7 +542,7 @@ func (d *DockerTasks) RemoveImage(id string) error {
 
 func (d *DockerTasks) BuildContainer(config *dtypes.Build, force bool) (string, error) {
 	// get the checksum for the id
-	cs, err := utils.HashDir(config.Context)
+	cs, err := utils.HashDir(config.Context, config.Ignore...)
 	if err != nil {
 		return "", err
 	}
@@ -599,7 +594,7 @@ func (d *DockerTasks) BuildContainer(config *dtypes.Build, force bool) (string, 
 	}
 
 	var buf bytes.Buffer
-	d.tg.Compress(&buf, &ctar.TarGzOptions{OmitRoot: true}, config.Context)
+	d.tg.Compress(&buf, &ctar.TarGzOptions{OmitRoot: true}, []string{config.Context}, config.Ignore...)
 
 	resp, err := d.c.ImageBuild(context.Background(), &buf, buildOpts)
 	if err != nil {

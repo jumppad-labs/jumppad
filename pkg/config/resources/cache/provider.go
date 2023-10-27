@@ -237,6 +237,11 @@ func (p *Provider) reConfigureNetworks(dependentNetworks []string) error {
 		return err
 	}
 
+	// cache not running
+	if len(ids) == 0 {
+		return nil
+	}
+
 	// get a list of the current networks the container is attached to
 	info, err := p.client.ContainerInfo(ids[0])
 	if err != nil {

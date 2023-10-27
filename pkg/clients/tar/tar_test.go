@@ -53,11 +53,11 @@ func TestTarWithRootFolder(t *testing.T) {
 	tg := &TarGz{}
 
 	// compress the directory
-	err := tg.Compress(buf, nil, in)
+	err := tg.Compress(buf, nil, []string{in})
 	require.NoError(t, err)
 
 	// test the output
-	err = tg.Uncompress(buf, out)
+	err = tg.Uncompress(buf, true, out)
 	require.NoError(t, err)
 
 	require.FileExists(t, filepath.Join(out, "/in/test1.txt"))
@@ -78,11 +78,11 @@ func TestTarOmmitingRoot(t *testing.T) {
 	opts := TarGzOptions{OmitRoot: true}
 
 	// compress the directory
-	err := tg.Compress(buf, &opts, in)
+	err := tg.Compress(buf, &opts, []string{in})
 	require.NoError(t, err)
 
 	// test the output
-	err = tg.Uncompress(buf, out)
+	err = tg.Uncompress(buf, true, out)
 	require.NoError(t, err)
 
 	require.FileExists(t, filepath.Join(out, "/test1.txt"))
@@ -102,11 +102,11 @@ func TestTarIndividualFiles(t *testing.T) {
 	tg := &TarGz{}
 	opts := TarGzOptions{OmitRoot: true}
 
-	err := tg.Compress(buf, &opts, filepath.Join(in, "test1.txt"), filepath.Join(in, "test2.txt"))
+	err := tg.Compress(buf, &opts, []string{filepath.Join(in, "test1.txt"), filepath.Join(in, "test2.txt")})
 	require.NoError(t, err)
 
 	// test the output
-	err = tg.Uncompress(buf, out)
+	err = tg.Uncompress(buf, true, out)
 	require.NoError(t, err)
 
 	require.FileExists(t, filepath.Join(out, "/test1.txt"))
@@ -130,15 +130,38 @@ func TestTarDirAndIndividualFile(t *testing.T) {
 	tg := &TarGz{}
 	opts := TarGzOptions{OmitRoot: true}
 
-	err = tg.Compress(buf, &opts, in, filepath.Join(dir, "solo.txt"))
+	err = tg.Compress(buf, &opts, []string{in, filepath.Join(dir, "solo.txt")})
 	require.NoError(t, err)
 
 	// test the output
-	err = tg.Uncompress(buf, out)
+	err = tg.Uncompress(buf, true, out)
 	require.NoError(t, err)
 
 	require.FileExists(t, filepath.Join(out, "/test1.txt"))
 	require.FileExists(t, filepath.Join(out, "/test2.txt"))
 	require.FileExists(t, filepath.Join(out, "/solo.txt"))
 	require.FileExists(t, filepath.Join(out, "/sub/test3.txt"))
+}
+
+func TestTarDirIgnoringFiles(t *testing.T) {
+	dir := setupTarTests(t)
+
+	in := filepath.Join(dir, "in")
+	out := filepath.Join(dir, "out")
+
+	buf := bytes.NewBuffer(nil)
+
+	tg := &TarGz{}
+	opts := TarGzOptions{OmitRoot: true}
+
+	err := tg.Compress(buf, &opts, []string{in}, "**/test1.txt", "**/sub")
+	require.NoError(t, err)
+
+	// test the output
+	err = tg.Uncompress(buf, true, out)
+	require.NoError(t, err)
+
+	require.NoFileExists(t, filepath.Join(out, "/test1.txt"))
+	require.FileExists(t, filepath.Join(out, "/test2.txt"))
+	require.NoFileExists(t, filepath.Join(out, "/sub/test3.txt"))
 }

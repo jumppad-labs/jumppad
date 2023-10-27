@@ -40,7 +40,7 @@ func testExecCommandSetup(t *testing.T) (*DockerTasks, *mocks.Docker, *imocks.Im
 
 	il := &imocks.ImageLog{}
 
-	dt := NewDockerTasks(mk, il, &tar.TarGz{}, logger.NewTestLogger(t))
+	dt, _ := NewDockerTasks(mk, il, &tar.TarGz{}, logger.NewTestLogger(t))
 	return dt, mk, il
 }
 

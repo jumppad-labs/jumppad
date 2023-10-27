@@ -17,6 +17,7 @@ require (
 	github.com/cucumber/godog v0.12.4
 	github.com/docker/docker v24.0.5+incompatible
 	github.com/docker/go-connections v0.4.0
+	github.com/facebookgo/symwalk v0.0.0-20150726040526-42004b9f3222
 	github.com/fatih/color v1.15.0
 	github.com/go-chi/chi v1.5.4
 	github.com/go-chi/cors v1.2.1
@@ -25,9 +26,11 @@ require (
 	github.com/hashicorp/go-getter v1.7.0
 	github.com/hashicorp/go-hclog v1.1.0
 	github.com/hashicorp/go-uuid v1.0.2
+	github.com/hashicorp/hcl/v2 v2.17.0
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	github.com/jumppad-labs/connector v0.3.0
-	github.com/jumppad-labs/hclconfig v0.15.1
+	github.com/jumppad-labs/hclconfig v0.16.1
+	github.com/kennygrant/sanitize v1.2.4
 	github.com/mailgun/raymond/v2 v2.0.48
 	github.com/moby/sys/signal v0.7.0
 	github.com/moby/term v0.5.0
@@ -37,14 +40,14 @@ require (
 	github.com/opencontainers/image-spec v1.1.0-rc3
 	github.com/otiai10/copy v1.10.0
 	github.com/pkg/errors v0.9.1
+	github.com/ryanuber/go-glob v1.0.0
 	github.com/sethvargo/go-retry v0.2.4
 	github.com/shipyard-run/gohup v0.2.2
 	github.com/shipyard-run/version-manager v0.0.5
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
-	github.com/zclconf/go-cty v1.12.0
-	golang.org/x/crypto v0.9.0
-	golang.org/x/mod v0.9.0
+	github.com/zclconf/go-cty v1.13.0
+	golang.org/x/crypto v0.14.0
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2
 	google.golang.org/grpc v1.55.0
 	helm.sh/helm/v3 v3.8.2
@@ -72,7 +75,6 @@ require (
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/agext/levenshtein v1.2.2 // indirect
 	github.com/alecthomas/chroma v0.7.1 // indirect
-	github.com/apparentlymart/go-textseg v1.0.0 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20200428143746-21a406dcc535 // indirect
 	github.com/aws/aws-sdk-go v1.44.122 // indirect
@@ -98,6 +100,10 @@ require (
 	github.com/eliukblau/pixterm/pkg/ansimage v0.0.0-20191210081756-9fb6cf8c2f75 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect
+	github.com/facebookgo/ensure v0.0.0-20200202191622-63f1cf65ac4c // indirect
+	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
+	github.com/facebookgo/subset v0.0.0-20200203212716-c811ad88dec4 // indirect
+	github.com/facebookgo/testname v0.0.0-20150612200628-5443337c3a12 // indirect
 	github.com/flytam/filenamify v1.1.1 // indirect
 	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
@@ -128,13 +134,13 @@ require (
 	github.com/gosuri/uitable v0.0.4 // indirect
 	github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7 // indirect
 	github.com/guillermo/go.procstat v0.0.0-20131123175440-34c2813d2e7f // indirect
+	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-memdb v1.3.2 // indirect
 	github.com/hashicorp/go-safetemp v1.0.0 // indirect
 	github.com/hashicorp/go-version v1.6.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
-	github.com/hashicorp/hcl2 v0.0.0-20191002203319-fb75b3253c80 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
@@ -196,12 +202,12 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	go.starlark.net v0.0.0-20200306205701-8dd3e2ee1dd5 // indirect
 	golang.org/x/image v0.0.0-20191206065243-da761ea9ff43 // indirect
-	golang.org/x/net v0.10.0 // indirect
+	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
 	golang.org/x/sync v0.2.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
-	golang.org/x/term v0.8.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/term v0.13.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/api v0.126.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect

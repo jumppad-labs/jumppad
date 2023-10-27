@@ -135,6 +135,7 @@ jobs:
           './examples/local_exec',
           './examples/remote_exec',
           './examples/certificates',
+          './examples/terraform',
         ]
 
     steps:
@@ -181,9 +182,9 @@ jobs:
         folder: [
           './examples/container',
          # './examples/build',
-         # './examples/docs',
-          './examples/single_k3s_cluster',
-          './examples/nomad',
+         './examples/docs',
+         # './examples/single_k3s_cluster',
+         # './examples/nomad',
          # './examples/local_exec',
         ]
 
@@ -273,10 +274,6 @@ jobs:
         uses: actions/setup-go@v1
         with:
           go-version: 1.19
-      
-      - name: Install dependencies for Podman
-        run: |
-          sudo apt install -y libbtrfs-dev pkg-config libgpgme-dev libdevmapper-dev 
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v1
@@ -425,10 +422,6 @@ jobs:
         uses: actions/setup-go@v1
         with:
           go-version: 1.19
-      
-      - name: Install dependencies for Podman
-        run: |
-          sudo apt install -y libbtrfs-dev pkg-config libgpgme-dev libdevmapper-dev 
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
@@ -679,13 +672,13 @@ jobs:
       - tag
     runs-on: windows-latest
     steps:
-    - uses: isaacrlevin/winget-publish-action@1.0
+    - uses: jumppad-labs/winget-publish-action@v0.1.0
       with:
         publish-type: "Update"
         user: "jumppad"
         package: "jumppad"
         version: ${{ needs.tag.outputs.new_version }}
-        url: "https://github.com/jumppad-labs/jumppad/releases/download/v${{ needs.tag.outputs.new_version }}/jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip"
+        url: "https://github.com/jumppad-labs/jumppad/releases/download/v${{ needs.tag.outputs.new_version }}/jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip|x64"
         token: '${{ secrets.GH_TOKEN }}'
 
     - name: Send status to Discord

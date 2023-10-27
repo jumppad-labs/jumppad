@@ -8,21 +8,28 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/facebookgo/symwalk"
+
+	"github.com/ryanuber/go-glob"
 )
 
 type TarGzOptions struct {
 	// OmitRoot when set to true ignores the top level directory in the tar archive
 	// only adding sub directories and files.
+	// /folder/foo/bar/test.txt -> /test.txt
+	// /folder/foo/bar/baz/* -> /baz
 	OmitRoot bool
 }
 
 type TarGz struct {
 }
 
-// /folder/foo/bar/test.txt -> /test.txt
-// /folder/foo/bar/baz/* -> /baz
+// Compress compresses the src directory into a tar.gz file
+// optionally a list of globs to be ignored can be passed
+func (tg *TarGz) Compress(buf io.Writer, options *TarGzOptions, src []string, ignore ...string) error {
+	var ignoredDirectories []string
 
-func (tg *TarGz) Compress(buf io.Writer, options *TarGzOptions, src ...string) error {
 	if options == nil {
 		options = &TarGzOptions{}
 	}
@@ -45,7 +52,28 @@ func (tg *TarGz) Compress(buf io.Writer, options *TarGzOptions, src ...string) e
 		}
 
 		// walk through every file in the folder
-		filepath.Walk(path, func(file string, fi os.FileInfo, err error) error {
+		// Go's filepath walk does not represent symlinks
+		symwalk.Walk(path, func(file string, fi os.FileInfo, err error) error {
+			// check if the file is in the ignore list
+			for _, i := range ignore {
+				ignore := glob.Glob(i, file)
+				if ignore {
+					// if we are ignoring a directory, we need to also ignore any children
+					// that are in this directory
+					if fi.IsDir() {
+						ignoredDirectories = append(ignoredDirectories, file)
+					}
+
+					return nil
+				}
+			}
+
+			for _, i := range ignoredDirectories {
+				if strings.HasPrefix(file, i) {
+					return nil
+				}
+			}
+
 			// generate tar header
 			header, err := tar.FileInfoHeader(fi, strings.Replace(file, topLevel, "", -1))
 			if err != nil {

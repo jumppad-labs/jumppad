@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/jumppad-labs/hclconfig"
+	hclerrors "github.com/jumppad-labs/hclconfig/errors"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/config"
@@ -96,6 +97,10 @@ func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]strin
 		return nil
 	})
 
+	if err != nil && err.(*hclerrors.ConfigError).ContainsErrors() {
+		e.log.Error("Error parsing configuration", "error", err)
+	}
+
 	return e.config, err
 }
 
@@ -110,9 +115,19 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 	past, _ := config.LoadState()
 
 	// Parse the config to check it is valid
-	res, err := e.ParseConfigWithVariables(path, variables, variablesFile)
-	if err != nil {
-		return nil, nil, nil, nil, err
+	res, parseErr := e.ParseConfigWithVariables(path, variables, variablesFile)
+
+	if parseErr != nil {
+		// cast the error to a config error
+		ce := parseErr.(*hclerrors.ConfigError)
+
+		// if we have parser errors return them
+		// if not it is possible to get process errors at this point as the
+		// callbacks have not been called for the providers, any referenced
+		// resources will not be found, it is ok to ignore these errors
+		if ce.ContainsErrors() {
+			return nil, nil, nil, nil, parseErr
+		}
 	}
 
 	unchanged := []types.Resource{}
@@ -129,7 +144,7 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 		}
 
 		// check if the resource has changed
-		if cr.Metadata().Checksum.Parsed != r.Metadata().Checksum.Parsed {
+		if cr.Metadata().Checksum != r.Metadata().Checksum {
 			// resource has changes rebuild
 			changed = append(changed, r)
 			continue
@@ -180,7 +195,7 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 		}
 	}
 
-	return new, changed, removed, res, err
+	return new, changed, removed, res, nil
 }
 
 // Apply the configuration and create or destroy the resources
@@ -305,7 +320,7 @@ func (e *EngineImpl) Destroy() error {
 	// image cache which is manually added by Apply process
 	// should have the correct dependency graph to be
 	// destroyed last
-	err = e.config.Process(e.destroyCallback, true)
+	err = e.config.Walk(e.destroyCallback, true)
 	if err != nil {
 
 		// return the process error
@@ -331,7 +346,7 @@ func (e *EngineImpl) ResourceCountForType(t string) int {
 	return len(r)
 }
 
-func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]string, variablesFile string, callback hclconfig.ProcessCallback) error {
+func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]string, variablesFile string, callback hclconfig.WalkCallback) error {
 	var parseError error
 	var parsedConfig *hclconfig.Config
 

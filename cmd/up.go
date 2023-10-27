@@ -85,15 +85,6 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 			}
 		}
 
-		// Check the system to see if Docker is running and everything is installed
-		s, err := bc.Preflight()
-		if err != nil {
-			cmd.Println("")
-			cmd.Println("###### SYSTEM DIAGNOSTICS ######")
-			cmd.Println(s)
-			return err
-		}
-
 		// check the variables file exists
 		if variablesFile != nil && *variablesFile != "" {
 			if _, err := os.Stat(*variablesFile); err != nil {
@@ -146,19 +137,13 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 
 			if !utils.IsLocalFolder(dst) && !utils.IsHCLFile(dst) {
 				// fetch the remote server from github
-				err := bp.Get(dst, utils.GetBlueprintLocalFolder(dst))
+				err := bp.Get(dst, utils.BlueprintLocalFolder(dst))
 				if err != nil {
 					return fmt.Errorf("unable to retrieve blueprint: %s", err)
 				}
 
-				dst = utils.GetBlueprintLocalFolder(dst)
+				dst = utils.BlueprintLocalFolder(dst)
 			}
-		}
-
-		// Parse the config to check it is valid
-		_, err = e.ParseConfigWithVariables(dst, vars, *variablesFile)
-		if err != nil {
-			return err
 		}
 
 		// update status every 30s to let people know we are still running

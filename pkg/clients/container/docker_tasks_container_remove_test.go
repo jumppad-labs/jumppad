@@ -18,7 +18,7 @@ func setupRemoveTests(t *testing.T) (*DockerTasks, *mocks.Docker) {
 	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
 
 	mic := &imocks.ImageLog{}
-	dt := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
+	dt, _ := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
 
 	return dt, md
 }

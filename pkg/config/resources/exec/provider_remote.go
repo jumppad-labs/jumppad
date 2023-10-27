@@ -124,8 +124,7 @@ func (p *RemoteProvider) Changed() (bool, error) {
 }
 
 func (p *RemoteProvider) createRemoteExecContainer() (string, error) {
-	// generate the ID for the new container based on the clock time and a string
-	fqdn := utils.FQDN(p.config.Name, p.config.Type, p.config.Module)
+	fqdn := utils.FQDN(p.config.Name, p.config.Module, p.config.Type)
 
 	new := ctypes.Container{
 		Name:        fqdn,
