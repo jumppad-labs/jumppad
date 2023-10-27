@@ -1,3 +1,7 @@
+resource "network" "main" {
+  subnet = "10.0.10.0/24"
+}
+
 resource "vm" "x86_64" {
 	config {
 		arch = "x86_64" // default -> host arch
@@ -30,10 +34,13 @@ resource "vm" "x86_64" {
     destination = "/tmp/test"
   }
 
-  // network {
-  //   id = resource.network.main.id
-  //   ip_address = "10.0.10.5"
-  // }
+  network {
+    id = resource.network.main.id
+  }
+
+  network {
+    id = resource.network.main.id
+  }
 
   port {
     local  = 22
@@ -45,13 +52,6 @@ resource "vm" "x86_64" {
   }
 
   cloud_init {
-    network_config = <<-EOF
-    version: 2
-    ethernets:
-      ens2:
-        dhcp4: true
-    EOF
-
     meta_data = <<-EOF
     instance-id: instruqt
     local-hostname: instruqt
@@ -68,6 +68,7 @@ resource "vm" "x86_64" {
     ssh_pwauth: True
     ssh_authorized_keys:
       - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEsCSbX1+LRRh8ClnXl2/RLXE1CpJgJ2j9RZNJbwKSDM
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKQBDf2i0CLg2/djQWJtNO4/2x5POxUXG3C8XkJSNMqS
     EOF
   }
 }
@@ -104,10 +105,9 @@ resource "vm" "x86_64" {
 //     destination = "/tmp/test"
 //   }
 
-//   // network {
-//   //   id = resource.network.main.id
-//   //   ip_address = "10.0.10.5"
-//   // }
+//   network {
+//     id = resource.network.main.id
+//   }
 
 //   port {
 //     local  = 22
@@ -115,6 +115,6 @@ resource "vm" "x86_64" {
 //   }
 
 //   vnc {
-//     port = 8902
+//     port = 8999
 //   }
 // }

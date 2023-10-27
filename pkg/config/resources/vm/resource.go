@@ -54,9 +54,11 @@ type Disk struct {
 }
 
 type NetworkAttachment struct {
-	ID        string   `hcl:"id" json:"id"`
-	IPAddress string   `hcl:"ip_address,optional" json:"ip_address,omitempty"`
-	Aliases   []string `hcl:"aliases,optional" json:"aliases,omitempty"`
+	ID         string   `hcl:"id" json:"id"`
+	IPAddress  string   `hcl:"ip_address,optional" json:"ip_address,omitempty"`
+	Aliases    []string `hcl:"aliases,optional" json:"aliases,omitempty"`
+	Device     string   `hcl:"device,optional" json:"device,omitempty"`
+	MacAddress string   `hcl:"mac_address,optional" json:"mac_address,omitempty"`
 
 	// output
 
