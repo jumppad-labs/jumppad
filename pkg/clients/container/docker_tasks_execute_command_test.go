@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"testing"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
@@ -41,6 +42,7 @@ func testExecCommandSetup(t *testing.T) (*DockerTasks, *mocks.Docker, *imocks.Im
 	il := &imocks.ImageLog{}
 
 	dt, _ := NewDockerTasks(mk, il, &tar.TarGz{}, logger.NewTestLogger(t))
+	dt.defaultWait = 1 * time.Millisecond
 	return dt, mk, il
 }
 
@@ -79,7 +81,7 @@ func TestExecuteCommandExecFailReturnError(t *testing.T) {
 
 	md, mk, _ := testExecCommandSetup(t)
 	testutils.RemoveOn(&mk.Mock, "ContainerExecCreate")
-	mk.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
+	mk.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(types.IDResponse{}, fmt.Errorf("boom"))
 
 	writer := bytes.NewBufferString("")
 
@@ -110,7 +112,7 @@ func TestExecuteCommandAttachFailReturnError(t *testing.T) {
 
 	md, mk, _ := testExecCommandSetup(t)
 	testutils.RemoveOn(&mk.Mock, "ContainerExecAttach")
-	mk.On("ContainerExecAttach", mock.Anything, "abc", mock.Anything).Return(nil, fmt.Errorf("boom"))
+	mk.On("ContainerExecAttach", mock.Anything, "abc", mock.Anything).Return(types.HijackedResponse{}, fmt.Errorf("boom"))
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}

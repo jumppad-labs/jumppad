@@ -58,10 +58,12 @@ type DockerTasks struct {
 	l             logger.Logger
 	tg            *ctar.TarGz
 	force         bool
+	defaultWait   time.Duration
 }
 
 // NewDockerTasks creates a DockerTasks with the given Docker client
 func NewDockerTasks(c Docker, il images.ImageLog, tg *ctar.TarGz, l logger.Logger) (*DockerTasks, error) {
+
 	// Set the engine type, Docker, Podman
 	ver, err := c.ServerVersion(context.Background())
 	if err != nil {
@@ -85,7 +87,7 @@ func NewDockerTasks(c Docker, il images.ImageLog, tg *ctar.TarGz, l logger.Logge
 		return nil, fmt.Errorf("error checking server storage driver, error: %s", err)
 	}
 
-	return &DockerTasks{engineType: t, storageDriver: info.Driver, c: c, il: il, tg: tg, l: l}, nil
+	return &DockerTasks{engineType: t, storageDriver: info.Driver, c: c, il: il, tg: tg, l: l, defaultWait: 1 * time.Second}, nil
 }
 
 func (d *DockerTasks) EngineInfo() *dtypes.EngineInfo {
@@ -224,7 +226,7 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 				// source does not exist, create the source as a directory
 				err := os.MkdirAll(vc.Source, os.ModePerm)
 				if err != nil {
-					return "", xerrors.Errorf("source for Volume %s does not exist, error creating directory: %w", err)
+					return "", xerrors.Errorf("source for Volume %s does not exist, error creating directory: %w", vc.Source, err)
 				}
 			}
 		}
@@ -302,14 +304,7 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 		}
 	}
 
-	cont, err := d.c.ContainerCreate(
-		context.Background(),
-		dc,
-		hc,
-		nc,
-		nil,
-		c.Name,
-	)
+	cont, err := d.c.ContainerCreate(context.Background(), dc, hc, nc, nil, c.Name)
 	if err != nil {
 		return "", err
 	}
@@ -596,7 +591,7 @@ func (d *DockerTasks) BuildContainer(config *dtypes.Build, force bool) (string, 
 	}
 
 	var buf bytes.Buffer
-	d.tg.Compress(&buf, &ctar.TarGzOptions{OmitRoot: true}, []string{config.Context}, config.Ignore...)
+	d.tg.Create(&buf, &ctar.TarGzOptions{OmitRoot: true, ZipContents: true}, []string{config.Context}, config.Ignore...)
 
 	resp, err := d.c.ImageBuild(context.Background(), &buf, buildOpts)
 	if err != nil {
@@ -691,19 +686,22 @@ func (d *DockerTasks) CopyFromContainer(id, src, dst string) error {
 		}
 	}
 
-	err = d.tg.Uncompress(reader, false, dir)
+	err = d.tg.Extract(reader, false, dir)
 	if err != nil {
 		return fmt.Errorf("unable to extract tar file: %s", err)
 	}
 
 	// copy the source temp to the destination
-
 	// the source file or folder name is the last part of the src
 	filename := path.Base(src)
 	tmpPath := path.Join(dir, filename)
 
 	// if tmpPath is a directory copy the directory
-	i, _ := os.Stat(tmpPath)
+	i, err := os.Stat(tmpPath)
+	if err != nil {
+		return fmt.Errorf("file or directory %s does not exist inside tar", src)
+	}
+
 	if i.IsDir() {
 		err = copyDir(tmpPath, dst)
 		if err != nil {
@@ -822,35 +820,31 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 	defer d.RemoveContainer(tmpID, true)
 
 	// wait for container to start
-
 	successCount := 0
 	failCount := 0
 	var startError error
 	for {
 		i, err := d.c.ContainerInspect(context.Background(), tmpID)
-		if err != nil {
-			startError = err
-			failCount++
-			time.Sleep(1 * time.Second)
-			continue
-		}
 
-		if i.State.Running {
+		switch {
+		case i.State.Running:
 			successCount++
 
-			// wait for 2 positive checks
-			if successCount == 2 {
-				break
-			}
+		case err != nil:
+			startError = err
+			fallthrough
 
-			time.Sleep(1 * time.Second)
-			continue
+		default:
+			// state not running increment fail count
+			failCount++
 		}
 
-		// state not running increment fail count
-		failCount++
+		// after container has been up for two checks succeed
+		if successCount == 2 {
+			break
+		}
 
-		// failed waiting for start
+		// failed waiting for start, the container is not running so return an error
 		if failCount == 5 {
 			d.l.Error("Timeout waiting for container to start", "ref", tmpID, "error", err)
 			startError = xerrors.Errorf("timeout waiting for container to start: %w", startError)
@@ -858,8 +852,11 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 			return nil, startError
 		}
 
-		time.Sleep(1 * time.Second)
+		// still waiting for success wait
+		time.Sleep(d.defaultWait)
 	}
+
+	// container is running copy the files
 
 	// create the directory paths ensure unix paths for containers
 	destPath := filepath.ToSlash(filepath.Join("/cache", path))
@@ -947,6 +944,7 @@ func (d *DockerTasks) CopyFileToContainer(containerID, filename, path string) er
 
 	fi, _ := f.Stat()
 
+	// remove any folder from the file
 	hdr, err := tar.FileInfoHeader(fi, fi.Name())
 	if err != nil {
 		return xerrors.Errorf("unable to create file info header for tar: %w", err)
@@ -1048,7 +1046,7 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 			return i.ExitCode, xerrors.Errorf("container exec failed with exit code %d", i.ExitCode)
 		}
 
-		time.Sleep(1 * time.Second)
+		time.Sleep(d.defaultWait)
 	}
 }
 
@@ -1159,7 +1157,7 @@ func (d *DockerTasks) CreateShell(id string, command []string, stdin io.ReadClos
 			return xerrors.Errorf("container exec failed with exit code %d", i.ExitCode)
 		}
 
-		time.Sleep(1 * time.Second)
+		time.Sleep(d.defaultWait)
 	}
 }
 
@@ -1281,7 +1279,7 @@ func (d *DockerTasks) FindNetwork(id string) (dtypes.NetworkAttachment, error) {
 		}
 	}
 
-	return dtypes.NetworkAttachment{}, fmt.Errorf("a network with the label id:%s, was not found", id)
+	return dtypes.NetworkAttachment{}, fmt.Errorf("a network with the label id: %s, was not found", id)
 }
 
 // publishedPorts defines a Docker published port

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net"
 	"testing"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
@@ -35,7 +36,7 @@ func setupShellMocks(t *testing.T) (*DockerTasks, *mocks.Docker) {
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
 
 	p, _ := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
-
+	p.defaultWait = 1 * time.Millisecond
 	return p, md
 }
 

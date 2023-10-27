@@ -6,9 +6,15 @@ import (
 	"testing"
 
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/require"
 )
+
+func init() {
+	config.RegisterResource(TypeCertificateCA, &CertificateCA{}, &CAProvider{})
+	config.RegisterResource(TypeCertificateLeaf, &CertificateLeaf{}, &LeafProvider{})
+}
 
 func TestCertCAProcessSetsAbsoluteValues(t *testing.T) {
 	wd, err := os.Getwd()
@@ -30,14 +36,24 @@ func TestCertCALoadsValuesFromState(t *testing.T) {
 {
   "blueprint": null,
   "resources": [
-	{
+		{
 			"id": "resource.certificate_ca.test",
-      "name": "test",
-      "status": "created",
-      "type": "certificate_ca",
-			"key_path": "mine.key",
-			"cert_path": "mine.cert"
-	}
+			"name": "test",
+			"status": "created",
+			"type": "certificate_ca",
+			"private_key": {
+				"filename": "private.key"
+			},
+			"public_key_pem": {
+				"filename": "public.key"
+			},
+			"public_key_ssh": {
+				"filename": "public.ssh"
+			},
+			"certificate": {
+				"filename": "cert.pem"
+			}
+		}
 	]
 }`)
 
@@ -52,8 +68,10 @@ func TestCertCALoadsValuesFromState(t *testing.T) {
 	err := ca.Process()
 	require.NoError(t, err)
 
-	require.Equal(t, "mine.key", ca.PrivateKey.Filename)
-	require.Equal(t, "mine.cert", ca.Cert.Filename)
+	require.Equal(t, "private.key", ca.PrivateKey.Filename)
+	require.Equal(t, "public.key", ca.PublicKeyPEM.Filename)
+	require.Equal(t, "public.ssh", ca.PublicKeySSH.Filename)
+	require.Equal(t, "cert.pem", ca.Cert.Filename)
 }
 
 func TestCertLeafProcessSetsAbsoluteValues(t *testing.T) {
@@ -85,8 +103,18 @@ func TestCertLeafLoadsValuesFromState(t *testing.T) {
       "name": "test",
       "status": "created",
       "type": "certificate_leaf",
-			"key_path": "mine.key",
-			"cert_path": "mine.cert"
+			"private_key": {
+				"filename": "private.key"
+			},
+			"public_key_pem": {
+				"filename": "public.key"
+			},
+			"public_key_ssh": {
+				"filename": "public.ssh"
+			},
+			"certificate": {
+				"filename": "cert.pem"
+			}
 	}
 	]
 }`)
@@ -102,6 +130,6 @@ func TestCertLeafLoadsValuesFromState(t *testing.T) {
 	err := ca.Process()
 	require.NoError(t, err)
 
-	require.Equal(t, "mine.key", ca.PrivateKey.Filename)
-	require.Equal(t, "mine.cert", ca.Cert.Filename)
+	require.Equal(t, "private.key", ca.PrivateKey.Filename)
+	require.Equal(t, "cert.pem", ca.Cert.Filename)
 }
