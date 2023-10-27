@@ -495,3 +495,29 @@ func TestContainerAddUserWhenSpecified(t *testing.T) {
 	dc := params[1].(*container.Config)
 	assert.Equal(t, "1010:1011", dc.User)
 }
+
+func TestContainerAddCapabilities(t *testing.T) {
+	cc, md, mic := createContainerConfig()
+	cc.Capabilities = &dtypes.Capabilities{Add: []string{"SYS_ADMIN", "SYS_CHROOT"}}
+
+	err := setupContainer(t, cc, md, mic)
+	assert.NoError(t, err)
+
+	params := testutils.GetCalls(&md.Mock, "ContainerCreate")[0].Arguments
+	dc := params[2].(*container.HostConfig)
+	assert.Equal(t, "SYS_ADMIN", dc.CapAdd[0])
+	assert.Equal(t, "SYS_CHROOT", dc.CapAdd[1])
+}
+
+func TestContainerDropCapabilities(t *testing.T) {
+	cc, md, mic := createContainerConfig()
+	cc.Capabilities = &dtypes.Capabilities{Drop: []string{"SYS_ADMIN", "SYS_CHROOT"}}
+
+	err := setupContainer(t, cc, md, mic)
+	assert.NoError(t, err)
+
+	params := testutils.GetCalls(&md.Mock, "ContainerCreate")[0].Arguments
+	dc := params[2].(*container.HostConfig)
+	assert.Equal(t, "SYS_ADMIN", dc.CapDrop[0])
+	assert.Equal(t, "SYS_CHROOT", dc.CapDrop[1])
+}
