@@ -12,6 +12,7 @@ type Container struct {
 	PortRanges      []PortRange
 	DNS             []string
 	Privileged      bool
+	Capabilities    *Capabilities
 	MaxRestartCount int
 
 	// resource constraints
@@ -35,6 +36,11 @@ type NetworkAttachment struct {
 	Aliases     []string
 	Subnet      string
 	IsContainer bool // is the network attachment a container or normal network
+}
+
+type Capabilities struct {
+	Add  []string
+	Drop []string
 }
 
 // Resources allows the setting of resource constraints for the Container

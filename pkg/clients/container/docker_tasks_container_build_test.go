@@ -41,20 +41,21 @@ func TestBuildListsImagesAndErrorWhenError(t *testing.T) {
 	testutils.RemoveOn(&md.Mock, "ImageList")
 	md.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("Boom"))
 
-	b := &dtypes.Build{Context: "./context"}
+	b := &dtypes.Build{Context: "../../../examples/build/src"}
 
 	_, err := dt.BuildContainer(b, false)
 
 	assert.Error(t, err)
 }
+
 func TestBuildListsImagesAndDoesNotBuildWhenExists(t *testing.T) {
 	_, dt := testBuildSetup(t)
-	b := &dtypes.Build{Context: "./context"}
+	b := &dtypes.Build{Name: "test", Context: "../../../examples/build/src"}
 
 	in, err := dt.BuildContainer(b, false)
 
 	assert.NoError(t, err)
-	assert.Equal(t, "shipyard.run/localcache/test:latest", in)
+	assert.Contains(t, in, "jumppad.dev/localcache/test:")
 }
 
 func TestBuildListsImagesAndBuildsWhenNotExists(t *testing.T) {
@@ -62,12 +63,12 @@ func TestBuildListsImagesAndBuildsWhenNotExists(t *testing.T) {
 	testutils.RemoveOn(&md.Mock, "ImageList")
 	md.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 
-	b := &dtypes.Build{Context: "./context"}
+	b := &dtypes.Build{Name: "test", Context: "../../../examples/build/src"}
 
 	in, err := dt.BuildContainer(b, false)
 
 	assert.NoError(t, err)
-	assert.Equal(t, "shipyard.run/localcache/test:latest", in)
+	assert.Contains(t, in, "jumppad.dev/localcache/test:")
 
 	params := testutils.GetCalls(&md.Mock, "ImageBuild")[0].Arguments[2].(types.ImageBuildOptions)
 	assert.Equal(t, "./Dockerfile", params.Dockerfile)
@@ -78,13 +79,13 @@ func TestBuildListsImagesAndBuildsWhenNotExistsCustomDockerfile(t *testing.T) {
 	testutils.RemoveOn(&md.Mock, "ImageList")
 	md.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 
-	b := &dtypes.Build{Context: "./context", DockerFile: "./Dockerfile-test"}
+	b := &dtypes.Build{Name: "test", Context: "../../../examples/build/src", DockerFile: "./Docker/Dockerfile"}
 
 	in, err := dt.BuildContainer(b, false)
 
 	assert.NoError(t, err)
-	assert.Equal(t, "shipyard.run/localcache/test:latest", in)
+	assert.Contains(t, in, "jumppad.dev/localcache/test:")
 
 	params := testutils.GetCalls(&md.Mock, "ImageBuild")[0].Arguments[2].(types.ImageBuildOptions)
-	assert.Equal(t, "./Dockerfile-test", params.Dockerfile)
+	assert.Equal(t, "./Docker/Dockerfile", params.Dockerfile)
 }

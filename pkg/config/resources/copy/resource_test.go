@@ -5,9 +5,14 @@ import (
 	"testing"
 
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/require"
 )
+
+func init() {
+	config.RegisterResource(TypeCopy, &Copy{}, &Provider{})
+}
 
 func TestCopyProcessSetsAbsolute(t *testing.T) {
 	wd, err := os.Getwd()

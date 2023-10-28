@@ -24,7 +24,7 @@ jobs:
 
       - name: Unit Test
         run: |
-          go test -v -race ./pkg/jumppad
+          go test -v -race ./...
 
       #- name: Upload Code Coverage
       #  uses: codecov/codecov-action@v1

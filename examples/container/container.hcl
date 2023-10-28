@@ -48,6 +48,18 @@ resource "container" "consul_disabled" {
   }
 }
 
+
+resource "container" "consul_capabilities" {
+  image {
+    name = "consul:${variable.consul_version}"
+  }
+
+  capabilities {
+    add = ["NET_ADMIN"]
+    drop = ["ALL"]
+  }
+}
+
 resource "container" "consul" {
   image {
     name = "consul:${variable.consul_version}"

@@ -73,6 +73,10 @@ func (i *Ingress) Process() error {
 			"ports 60000 and 60001 are reserved for internal use", i.Port)
 	}
 
+	if i.Target.Config == nil {
+		i.Target.Config = make(map[string]string)
+	}
+
 	sn, _ := utils.ReplaceNonURIChars(i.Target.Config["service"])
 	// if service is not set, use the name of the ingress
 	if i.Target.Config["service"] == "" {

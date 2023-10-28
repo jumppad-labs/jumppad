@@ -6,10 +6,15 @@ import (
 	"testing"
 
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/require"
 )
+
+func init() {
+	config.RegisterResource(TypeNomadCluster, &NomadCluster{}, &ClusterProvider{})
+}
 
 func TestNomadClusterProcessSetsAbsolute(t *testing.T) {
 	wd, err := os.Getwd()
@@ -51,8 +56,8 @@ func TestNomadClusterSetsOutputsFromState(t *testing.T) {
 			"api_port": 123,
 			"connector_port": 124,
 			"external_ip": "127.0.0.1",
-			"server_fqdn": "server.something.something",
-			"client_fqdn": ["1.client.something.something","2.client.something.something"],
+			"server_container_name": "server.something.something",
+			"client_container_name": ["1.client.something.something","2.client.something.something"],
 			"config_dir": "abc/123"
 	}
 	]

@@ -5,10 +5,15 @@ import (
 	"testing"
 
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/require"
 )
+
+func init() {
+	config.RegisterResource(TypeK8sCluster, &K8sCluster{}, &ClusterProvider{})
+}
 
 func TestK8sClusterProcessSetsAbsolute(t *testing.T) {
 	wd, err := os.Getwd()
@@ -43,7 +48,7 @@ func TestK8sClusterSetsOutputsFromState(t *testing.T) {
 			"api_port": 123,
 			"connector_port": 124,
 			"kubeconfig": "./mine.yaml",
-			"fqdn": "fqdn.mine.com",
+			"container_name": "fqdn.mine.com",
 			"networks": [{
 				"assigned_address": "10.5.0.2",
 				"name": "cloud"
@@ -70,6 +75,6 @@ func TestK8sClusterSetsOutputsFromState(t *testing.T) {
 	require.Equal(t, "fqdn.mine.com", c.ContainerName)
 
 	// check the netwok
-	require.Equal(t, "10.5.0.2", c.Networks[0].IPAddress)
+	require.Equal(t, "10.5.0.2", c.Networks[0].AssignedAddress)
 	require.Equal(t, "cloud", c.Networks[0].Name)
 }
