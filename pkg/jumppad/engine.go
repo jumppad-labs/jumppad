@@ -22,7 +22,7 @@ import (
 
 // Clients contains clients which are responsible for creating and destroying resources
 
-// Engine defines an interface for the Shipyard engine
+// Engine defines an interface for the Jumppad engine
 //
 //go:generate mockery --name Engine --filename engine.go
 type Engine interface {
@@ -46,7 +46,7 @@ type EngineImpl struct {
 	config    *hclconfig.Config
 }
 
-// New creates a new shipyard engine
+// New creates a new Jumppad engine
 func New(p config.Providers, l logger.Logger) (Engine, error) {
 	e := &EngineImpl{}
 	e.log = l
@@ -63,14 +63,14 @@ func (e *EngineImpl) Config() *hclconfig.Config {
 	return e.config
 }
 
-// ParseConfig parses the given Shipyard files and creating the resource types but does
+// ParseConfig parses the given Jumppad files and creating the resource types but does
 // not apply or destroy the resources.
 // This function can be used to check the validity of a configuration without making changes
 func (e *EngineImpl) ParseConfig(path string) (*hclconfig.Config, error) {
 	return e.ParseConfigWithVariables(path, nil, "")
 }
 
-// ParseConfigWithVariables parses the given Shipyard files and creating the resource types but does
+// ParseConfigWithVariables parses the given Jumppad files and creating the resource types but does
 // not apply or destroy the resources.
 // This function can be used to check the validity of a configuration without making changes
 func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]string, variablesFile string) (*hclconfig.Config, error) {
