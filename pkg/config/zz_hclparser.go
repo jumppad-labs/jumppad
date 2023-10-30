@@ -38,7 +38,7 @@ func RegisterResource(name string, r types.Resource, p Provider) {
 func NewParser(callback hclconfig.WalkCallback, variables map[string]string, variablesFiles []string) *hclconfig.Parser {
 	cfg := hclconfig.DefaultOptions()
 
-	cfg.ParseCallback = callback
+	cfg.Callback = callback
 	cfg.VariableEnvPrefix = "JUMPPAD_VAR_"
 	cfg.Variables = variables
 	cfg.VariablesFiles = variablesFiles
