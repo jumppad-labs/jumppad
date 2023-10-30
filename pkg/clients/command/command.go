@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jumppad-labs/gohup"
 	"github.com/jumppad-labs/jumppad/pkg/clients/command/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	"github.com/shipyard-run/gohup"
 )
 
 var ErrorCommandTimeout = fmt.Errorf("Command timed out before completing")

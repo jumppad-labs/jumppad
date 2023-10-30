@@ -994,6 +994,8 @@ github.com/jumppad-labs/connector v0.3.0 h1:C+6YpMfhRBzuCAmkDpYEWbIIYN7q6gB9kWRP
 github.com/jumppad-labs/connector v0.3.0/go.mod h1:PqRmJZKayHw4j8JfNkugRMtdQF8ldjdTvtmTxF3O/44=
 github.com/jumppad-labs/go-cty v0.0.0-20230804061424-9e985cb751f6 h1:1ADItCWr5prIIwmKMHhIv4bqU5WY79CC28srzpi2CqI=
 github.com/jumppad-labs/go-cty v0.0.0-20230804061424-9e985cb751f6/go.mod h1:YKQzy/7pZ7iq2jNFzy5go57xdxdWoLLpaEp4u238AE0=
+github.com/jumppad-labs/gohup v0.3.0 h1:YiHZWUkyfP6mBno5ZyYF0XY6LLhThrya9Fvm/wvNe7s=
+github.com/jumppad-labs/gohup v0.3.0/go.mod h1:Y3Bwz+BItoRYvEYXjWe1KliMJgZqd7CWvGXbhKNAoYs=
 github.com/jumppad-labs/hclconfig v0.16.1 h1:hjxPnsB49cJP64vyJZjzP7+KcI/N1PnV3JKUeJntbXQ=
 github.com/jumppad-labs/hclconfig v0.16.1/go.mod h1:9z3D2BUfFOWfw0iD7djsGXxFehnYc/K+rPUmrX092cc=
 github.com/jumppad-labs/log v0.0.0-20230711151418-55bbc87954b7 h1:jxF+Sxei1/7c7tLcV3Juu+rCIAhBv2jdicokriFohYE=
@@ -1348,8 +1350,6 @@ github.com/sergi/go-diff v1.1.0 h1:we8PVUC3FE2uYfodKH/nBHMSetSfHDR6scGdBi+erh0=
 github.com/sergi/go-diff v1.1.0/go.mod h1:STckp+ISIX8hZLjrqAeVduY0gWCT9IjLuqbuNXdaHfM=
 github.com/sethvargo/go-retry v0.2.4 h1:T+jHEQy/zKJf5s95UkguisicE0zuF9y7+/vgz08Ocec=
 github.com/sethvargo/go-retry v0.2.4/go.mod h1:1afjQuvh7s4gflMObvjLPaWgluLLyhA1wmVZ6KLpICw=
-github.com/shipyard-run/gohup v0.2.2 h1:yIJhQ7BItGd2cZmWeuxCneTNriIxLGaPtMt1FsW191A=
-github.com/shipyard-run/gohup v0.2.2/go.mod h1:jgPnkGXOn4ca6tCWUHw2FUhhvxiMskROiRIoYMYEYHM=
 github.com/shipyard-run/version-manager v0.0.5 h1:gswTn7y/f2yoUOGl9tu18Bbp84EQa7gtqMNBbPu78BA=
 github.com/shipyard-run/version-manager v0.0.5/go.mod h1:odqsb09c70cTpSnm1rhQpBV1j7dF3N1FGzdiz8W0n+c=
 github.com/shopspring/decimal v1.2.0 h1:abSATXmQEYyShuxI4/vyW3tV1MrKAJzCZ/0zLUXYbsQ=
