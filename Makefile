@@ -1,5 +1,7 @@
 git_commit = $(shell git log -1 --pretty=format:"%H")
 
+WORKING_DIRECTORY ?= "registries"
+
 test_unit:
 	dagger call -m "./.dagger" unit-test \
 		--src=. \
@@ -22,7 +24,7 @@ test_functional_docker:
 	go build -ldflags "-X main.version=${git_commit}" -gcflags=all="-N -l" -o bin/jumppad main.go
 	dagger call --mod=.dagger functional-test \
 		--src=$(shell pwd)/examples \
-		--working-directory=registries \
+		--working-directory=$(WORKING_DIRECTORY) \
 		--runtime=docker \
 		--jumppad=./bin/jumppad
 

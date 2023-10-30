@@ -14,7 +14,7 @@ func init() {
 	config.RegisterResource(TypeCopy, &Copy{}, &Provider{})
 }
 
-func TestCopyProcessSetsAbsolute(t *testing.T) {
+func TestCopyProcessSetsAbsoluteIfLocal(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(t, err)
 
@@ -27,6 +27,22 @@ func TestCopyProcessSetsAbsolute(t *testing.T) {
 	c.Process()
 
 	require.Equal(t, wd, c.Source)
+	require.Equal(t, wd, c.Destination)
+}
+
+func TestCopyProcessSetsAbsoluteIfNotLocal(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+
+	c := &Copy{
+		ResourceBase: types.ResourceBase{Meta: types.Meta{File: "./"}},
+		Source:       "github.com/jumppad-labs/jumppad",
+		Destination:  "./",
+	}
+
+	c.Process()
+
+	require.Equal(t, "github.com/jumppad-labs/jumppad", c.Source)
 	require.Equal(t, wd, c.Destination)
 }
 

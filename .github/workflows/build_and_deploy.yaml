@@ -65,6 +65,7 @@ jobs:
           '/certificates',
           '/terraform',
           '/registries',
+          "/copy"
         ]
 
     steps:
