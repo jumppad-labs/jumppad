@@ -73,8 +73,8 @@ var containerConfig = &dtypes.Container{
 		CPUPin: []int{1, 4},
 	},
 	Networks: []dtypes.NetworkAttachment{
-		dtypes.NetworkAttachment{Name: "network.testnet"},
-		dtypes.NetworkAttachment{Name: "network.wan"},
+		dtypes.NetworkAttachment{ID: "network.testnet"},
+		dtypes.NetworkAttachment{ID: "network.wan"},
 	},
 }
 
@@ -98,15 +98,20 @@ func setupContainerMocks() (*mocks.Docker, *imocks.ImageLog) {
 		ioutil.NopCloser(strings.NewReader("hello world")),
 		nil,
 	)
-	md.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	md.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(container.CreateResponse{ID: "test"}, nil)
 	md.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("ContainerStop", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("NetworkConnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("NetworkDisconnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	md.On("NetworkList", mock.Anything, mock.Anything).Return(
+		[]types.NetworkResource{
+			types.NetworkResource{ID: "abc", Labels: map[string]string{"id": "network.testnet"}, IPAM: network.IPAM{Config: []network.IPAMConfig{{Subnet: "10.0.0.0/24"}}}},
+			types.NetworkResource{ID: "123", Labels: map[string]string{"id": "network.wan"}, IPAM: network.IPAM{Config: []network.IPAMConfig{{Subnet: "10.2.0.0/24"}}}},
+		}, nil)
 
-	md.On("VolumeList", mock.Anything, mock.Anything).Return(nil, nil)
+	md.On("VolumeList", mock.Anything, mock.Anything).Return(volume.ListResponse{}, nil)
 	md.On("VolumeCreate", mock.Anything, mock.Anything).Return(volume.Volume{Name: "test_volume"}, nil)
 	md.On("VolumeRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
@@ -134,7 +139,7 @@ func TestContainerCreatesCorrectly(t *testing.T) {
 	assert.NoError(t, err)
 
 	// check that the docker api methods were called
-	md.AssertCalled(t, "ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	md.AssertCalled(t, "ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 	md.AssertCalled(t, "ContainerStart", mock.Anything, mock.Anything, mock.Anything)
 
 	params := testutils.GetCalls(&md.Mock, "ContainerCreate")[0].Arguments
@@ -163,15 +168,6 @@ func TestContainerRemovesBridgeBeforeAttachingToUserNetwork(t *testing.T) {
 	assert.Equal(t, "bridge", params[1])
 }
 
-//func TestContainerReturnsErrorIfErrorRemovingBridge(t *testing.T) {
-//	cc, _, _, md, mic := createContainerConfig()
-//	testutils.RemoveOn(&md.Mock, "NetworkDisconnect")
-//	md.On("NetworkDisconnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
-//
-//	err := setupContainer(t, cc, md, mic)
-//	assert.Error(t, err)
-//}
-
 func TestContainerAttachesToUserNetwork(t *testing.T) {
 	cc, md, mic := createContainerConfig()
 
@@ -186,10 +182,9 @@ func TestContainerAttachesToUserNetwork(t *testing.T) {
 	assert.Nil(t, nc.IPAMConfig) // unless an IP address is set this will be nil
 }
 
-func TestContainerAttachesToContainerNetwork(t *testing.T) {
+func TestSidecarContainerAttachesToContainerNetwork(t *testing.T) {
 	cc, md, mic := createContainerConfig()
-	cc.Networks = []dtypes.NetworkAttachment{dtypes.NetworkAttachment{Name: "container.testcontainer2", IsContainer: true}}
-	md.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{types.Container{ID: "abc"}})
+	cc.Networks = []dtypes.NetworkAttachment{dtypes.NetworkAttachment{ID: "abc", Name: "container.testcontainer2", IsContainer: true}}
 
 	err := setupContainer(t, cc, md, mic)
 	assert.NoError(t, err)
@@ -306,9 +301,8 @@ func TestContainerIgnoresBindOptionsForVolumesTypeVolume(t *testing.T) {
 	params := testutils.GetCalls(&md.Mock, "ContainerCreate")[0].Arguments
 	hc := params[2].(*container.HostConfig)
 
-	assert.Len(t, hc.Mounts, 0)
-	assert.Len(t, hc.Binds, 1)
-	assert.Equal(t, "/tmp:/data:z", hc.Binds[0])
+	assert.Len(t, hc.Mounts, 1)
+	assert.Len(t, hc.Binds, 0)
 }
 
 func TestContainerSetsReadOnlyForVolumeTypeVolume(t *testing.T) {
@@ -322,9 +316,8 @@ func TestContainerSetsReadOnlyForVolumeTypeVolume(t *testing.T) {
 	params := testutils.GetCalls(&md.Mock, "ContainerCreate")[0].Arguments
 	hc := params[2].(*container.HostConfig)
 
-	assert.Len(t, hc.Mounts, 0)
-	assert.Len(t, hc.Binds, 1)
-	assert.Equal(t, "/tmp:/data:z:ro", hc.Binds[0])
+	assert.Len(t, hc.Mounts, 1)
+	assert.True(t, hc.Mounts[0].ReadOnly)
 }
 
 func TestContainerSetsBindOptionsForVolumeTypeBind(t *testing.T) {
@@ -444,6 +437,7 @@ func TestContainerPublishesPortsRanges(t *testing.T) {
 	// check the port bindings for the local machine are nil
 	assert.Nil(t, hc.PortBindings[exp])
 }
+
 func TestContainerConfiguresResources(t *testing.T) {
 	cc, md, mic := createContainerConfig()
 
@@ -500,4 +494,30 @@ func TestContainerAddUserWhenSpecified(t *testing.T) {
 	params := testutils.GetCalls(&md.Mock, "ContainerCreate")[0].Arguments
 	dc := params[1].(*container.Config)
 	assert.Equal(t, "1010:1011", dc.User)
+}
+
+func TestContainerAddCapabilities(t *testing.T) {
+	cc, md, mic := createContainerConfig()
+	cc.Capabilities = &dtypes.Capabilities{Add: []string{"SYS_ADMIN", "SYS_CHROOT"}}
+
+	err := setupContainer(t, cc, md, mic)
+	assert.NoError(t, err)
+
+	params := testutils.GetCalls(&md.Mock, "ContainerCreate")[0].Arguments
+	dc := params[2].(*container.HostConfig)
+	assert.Equal(t, "SYS_ADMIN", dc.CapAdd[0])
+	assert.Equal(t, "SYS_CHROOT", dc.CapAdd[1])
+}
+
+func TestContainerDropCapabilities(t *testing.T) {
+	cc, md, mic := createContainerConfig()
+	cc.Capabilities = &dtypes.Capabilities{Drop: []string{"SYS_ADMIN", "SYS_CHROOT"}}
+
+	err := setupContainer(t, cc, md, mic)
+	assert.NoError(t, err)
+
+	params := testutils.GetCalls(&md.Mock, "ContainerCreate")[0].Arguments
+	dc := params[2].(*container.HostConfig)
+	assert.Equal(t, "SYS_ADMIN", dc.CapDrop[0])
+	assert.Equal(t, "SYS_CHROOT", dc.CapDrop[1])
 }

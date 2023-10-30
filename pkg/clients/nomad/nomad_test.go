@@ -48,14 +48,14 @@ func setupNomadTests(t *testing.T) (Nomad, string, *mocks.HTTP) {
 func TestNomadCreateReturnsErrorWhenFileNotExist(t *testing.T) {
 	c, _, _ := setupNomadTests(t)
 
-	err := c.Create([]string{"../../examples/nomad/example.nomad"})
+	err := c.Create([]string{"../../../examples/nomad/example.nomad"})
 	assert.Error(t, err)
 }
 
 func TestNomadCreateValidatesConfig(t *testing.T) {
 	c, _, mh := setupNomadTests(t)
 
-	err := c.Create([]string{"../../examples/nomad/app_config/example.nomad"})
+	err := c.Create([]string{"../../../examples/nomad/app_config/example.nomad"})
 	assert.NoError(t, err)
 
 	mh.AssertCalled(t, "Do", mock.Anything)
@@ -67,7 +67,7 @@ func TestNomadCreateValidateErrorReturnsError(t *testing.T) {
 	testutils.RemoveOn(&mh.Mock, "Do")
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("Boom"))
 
-	err := c.Create([]string{"../../examples/nomad/app_config/example.nomad"})
+	err := c.Create([]string{"../../../examples/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
 }
 
@@ -77,7 +77,7 @@ func TestNomadCreateValidateNot200ReturnsError(t *testing.T) {
 	testutils.RemoveOn(&mh.Mock, "Do")
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusInternalServerError}, nil)
 
-	err := c.Create([]string{"../../examples/nomad/app_config/example.nomad"})
+	err := c.Create([]string{"../../../examples/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
 }
 
@@ -91,7 +91,7 @@ func TestNomadCreateValidateInvalidReturnsError(t *testing.T) {
 			Body:       ioutil.NopCloser(bytes.NewBufferString("oops")),
 		}, nil)
 
-	err := c.Create([]string{"../../examples/nomad/app_config/example.nomad"})
+	err := c.Create([]string{"../../../examples/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "oops")
 }
@@ -99,7 +99,7 @@ func TestNomadCreateValidateInvalidReturnsError(t *testing.T) {
 func TestNomadCreateSubmitsJob(t *testing.T) {
 	c, _, mh := setupNomadTests(t)
 
-	err := c.Create([]string{"../../examples/nomad/app_config/example.nomad"})
+	err := c.Create([]string{"../../../examples/nomad/app_config/example.nomad"})
 	assert.NoError(t, err)
 
 	mh.AssertNumberOfCalls(t, "Do", 2)
@@ -119,7 +119,7 @@ func TestNomadCreateSubmitErrorReturnsError(t *testing.T) {
 
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("Boom")).Once()
 
-	err := c.Create([]string{"../../examples/nomad/app_config/example.nomad"})
+	err := c.Create([]string{"../../../examples/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
 }
 
@@ -143,14 +143,14 @@ func TestNomadCreateSubmitNot200ReturnsError(t *testing.T) {
 		nil,
 	)
 
-	err := c.Create([]string{"../../examples/nomad/app_config/example.nomad"})
+	err := c.Create([]string{"../../../examples/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
 }
 
 func TestNomadStopValidatesConfig(t *testing.T) {
 	c, _, mh := setupNomadTests(t)
 
-	err := c.Stop([]string{"../../examples/nomad/app_config/example.nomad"})
+	err := c.Stop([]string{"../../../examples/nomad/app_config/example.nomad"})
 	assert.NoError(t, err)
 
 	mh.AssertCalled(t, "Do", mock.Anything)
@@ -162,14 +162,14 @@ func TestNomadStopValidateErrorReturnsError(t *testing.T) {
 	testutils.RemoveOn(&mh.Mock, "Do")
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("Boom"))
 
-	err := c.Stop([]string{"../../examples/nomad/app_config/example.nomad"})
+	err := c.Stop([]string{"../../../examples/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
 }
 
 func TestNomadStopStopsJob(t *testing.T) {
 	c, _, mh := setupNomadTests(t)
 
-	err := c.Stop([]string{"../../examples/nomad/app_config/example.nomad"})
+	err := c.Stop([]string{"../../../examples/nomad/app_config/example.nomad"})
 	assert.NoError(t, err)
 
 	mh.AssertNumberOfCalls(t, "Do", 2)
@@ -188,7 +188,7 @@ func TestNomadStopErrorReturnsError(t *testing.T) {
 	).Once()
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
-	err := c.Stop([]string{"../../examples/nomad/app_config/example.nomad"})
+	err := c.Stop([]string{"../../../examples/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
 }
 
@@ -206,7 +206,7 @@ func TestNomadStopNoStatus200ReturnsError(t *testing.T) {
 
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusInternalServerError}, nil)
 
-	err := c.Stop([]string{"../../examples/nomad/app_config/example.nomad"})
+	err := c.Stop([]string{"../../../examples/nomad/app_config/example.nomad"})
 	assert.Error(t, err)
 }
 
@@ -258,12 +258,15 @@ func TestNomadHealthCallsAPI(t *testing.T) {
 		nil,
 	).Once()
 
+	c.SetConfig("local", 4646, 2)
+
 	err := c.HealthCheckAPI(10 * time.Millisecond)
 	assert.NoError(t, err)
 }
 
 func TestNomadHealthWithNotReadyNodeRetries(t *testing.T) {
 	c, _, mh := setupNomadTests(t)
+	c.SetConfig("local", 4646, 2)
 
 	testutils.RemoveOn(&mh.Mock, "Do")
 
@@ -290,6 +293,7 @@ func TestNomadHealthWithNotReadyNodeRetries(t *testing.T) {
 
 func TestNomadHealthWithNotReadyDockerRetries(t *testing.T) {
 	c, _, mh := setupNomadTests(t)
+	c.SetConfig("local", 4646, 2)
 
 	testutils.RemoveOn(&mh.Mock, "Do")
 

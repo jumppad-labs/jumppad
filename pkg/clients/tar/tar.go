@@ -20,6 +20,13 @@ type TarGzOptions struct {
 	// /folder/foo/bar/test.txt -> /test.txt
 	// /folder/foo/bar/baz/* -> /baz
 	OmitRoot bool
+
+	// ZipContents controlls if the contents of the tar is compressed
+	ZipContents bool
+
+	// StripFolder is like OmitRoot except all folder are removed and the file list is
+	// flattened. Duplicate filenames will be overwritten
+	StripFolders bool
 }
 
 type TarGz struct {
@@ -27,16 +34,21 @@ type TarGz struct {
 
 // Compress compresses the src directory into a tar.gz file
 // optionally a list of globs to be ignored can be passed
-func (tg *TarGz) Compress(buf io.Writer, options *TarGzOptions, src []string, ignore ...string) error {
+func (tg *TarGz) Create(buf io.Writer, options *TarGzOptions, src []string, ignore ...string) error {
 	var ignoredDirectories []string
 
 	if options == nil {
 		options = &TarGzOptions{}
 	}
 
-	// tar > gzip > buf
-	zr := gzip.NewWriter(buf)
-	tw := tar.NewWriter(zr)
+	// do we need to zip the contents
+	// if so wrap the buffer in a zip writer
+	if options.ZipContents {
+		buf = gzip.NewWriter(buf)
+	}
+
+	// create the tar writer
+	tw := tar.NewWriter(buf)
 
 	for _, path := range src {
 		// calculate the root folder
@@ -80,9 +92,18 @@ func (tg *TarGz) Compress(buf io.Writer, options *TarGzOptions, src []string, ig
 				return err
 			}
 
+			name := file
+
+			// if we are stripping the folders then just add the name of the file
+			if options.StripFolders {
+				name = fi.Name()
+			} else {
+				// get the name of the file optionally removing the root
+				name = filepath.ToSlash(strings.Replace(file, topLevel, "", -1))
+			}
+
 			// set the filename as a relative path
 			// remove the leading / if it exists
-			name := filepath.ToSlash(strings.Replace(file, topLevel, "", -1))
 			name = strings.TrimLeft(name, "/")
 			header.Name = name
 
@@ -113,15 +134,18 @@ func (tg *TarGz) Compress(buf io.Writer, options *TarGzOptions, src []string, ig
 	if err := tw.Close(); err != nil {
 		return err
 	}
+
 	// produce gzip
-	if err := zr.Close(); err != nil {
-		return err
+	if options.ZipContents {
+		if err := buf.(*gzip.Writer).Close(); err != nil {
+			return err
+		}
 	}
 	//
 	return nil
 }
 
-func (tg *TarGz) Uncompress(src io.Reader, gziped bool, dst string) error {
+func (tg *TarGz) Extract(src io.Reader, gziped bool, dst string) error {
 	var zr io.Reader = src
 	var err error
 

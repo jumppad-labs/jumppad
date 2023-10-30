@@ -9,6 +9,7 @@ import (
 	"net"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -41,7 +42,7 @@ func testSetupCopyLocal(t *testing.T) (*DockerTasks, *mocks.Docker) {
 		nil,
 	)
 
-	mk.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	mk.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(container.CreateResponse{ID: "myid"}, nil)
 
 	mk.On("ContainerStart", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -88,6 +89,7 @@ func testSetupCopyLocal(t *testing.T) (*DockerTasks, *mocks.Docker) {
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
 
 	dt, _ := NewDockerTasks(mk, mic, &tar.TarGz{}, logger.NewTestLogger(t))
+	dt.defaultWait = 1 * time.Millisecond
 
 	return dt, mk
 }
@@ -174,8 +176,9 @@ func TestCopyToVolumeCreatesTempContainer(t *testing.T) {
 	assert.Equal(t, "tail", cfg.Cmd[0])
 
 	// test mounts volume
-	assert.Len(t, hc.Binds, 1)
-	assert.Equal(t, "images:/cache:z", hc.Binds[0])
+	assert.Len(t, hc.Mounts, 1)
+	assert.Equal(t, "/cache", hc.Mounts[0].Target)
+	assert.Equal(t, "images", hc.Mounts[0].Source)
 }
 
 func TestCopyToVolumeChecksTempContainerStart(t *testing.T) {
@@ -205,10 +208,11 @@ func TestCopyToVolumeReturnsErrorOnFailedContainerStart(t *testing.T) {
 
 	mk.AssertNumberOfCalls(t, "ContainerInspect", 5)
 }
+
 func TestCopyToVolumeTempContainerFailsReturnError(t *testing.T) {
 	dt, mk := testSetupCopyLocal(t)
 	testutils.RemoveOn(&mk.Mock, "ContainerCreate")
-	mk.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	mk.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(container.CreateResponse{}, fmt.Errorf("boom"))
 
 	dt.SetForcePull(true) // set force pull to avoid execute command block
@@ -225,6 +229,7 @@ func TestCopyToVolumePullsImportImage(t *testing.T) {
 	assert.NoError(t, err)
 	mk.AssertCalled(t, "ImagePull", mock.Anything, makeImageCanonical("alpine:latest"), mock.Anything)
 }
+
 func TestCopyToVolumeCreatesDestinationDirectory(t *testing.T) {
 	dt, mk := testSetupCopyLocal(t)
 	dt.SetForcePull(true) // set force pull to avoid execute command block

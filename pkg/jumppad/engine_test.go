@@ -3,6 +3,7 @@ package jumppad
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -398,7 +399,7 @@ func TestParseConfig(t *testing.T) {
 
 	require.Len(t, r.Resources, 6)
 
-	// should not have crated any providers
+	// should not have created any providers
 	testAssertMethodCalled(t, mp, "Create", 0)
 	testAssertMethodCalled(t, mp, "Destroy", 0)
 }
@@ -411,7 +412,27 @@ func TestParseWithVariables(t *testing.T) {
 
 	require.Len(t, r.Resources, 6)
 
-	// should not have crated any providers
+	// should not have created any providers
+	testAssertMethodCalled(t, mp, "Create", 0)
+	testAssertMethodCalled(t, mp, "Destroy", 0)
+
+	c, err := e.config.FindResource("resource.container.consul")
+	require.NoError(t, err)
+	require.Equal(t, "consul:1.8.1", c.(*container.Container).Image.Name)
+}
+
+func TestParseWithEnvironmentVariables(t *testing.T) {
+	e, mp := setupTests(t, nil)
+
+	err := os.Setenv("JUMPPAD_VAR_version", "consul:1.8.1")
+	require.NoError(t, err)
+
+	r, err := e.ParseConfig("../../examples/single_file/container.hcl")
+	require.NoError(t, err)
+
+	require.Len(t, r.Resources, 6)
+
+	// should not have created any providers
 	testAssertMethodCalled(t, mp, "Create", 0)
 	testAssertMethodCalled(t, mp, "Destroy", 0)
 

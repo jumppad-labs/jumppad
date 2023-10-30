@@ -84,7 +84,7 @@ type CertificateLeaf struct {
 
 func (c *CertificateLeaf) Process() error {
 	c.CACert = utils.EnsureAbsolute(c.CACert, c.File)
-	//c.CAKey = utils.EnsureAbsolute(c.CAKey, c.File)
+	c.CAKey = utils.EnsureAbsolute(c.CAKey, c.File)
 	c.Output = utils.EnsureAbsolute(c.Output, c.File)
 	c.PrivateKey = File{}
 	c.PublicKeySSH = File{}
