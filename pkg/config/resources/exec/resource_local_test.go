@@ -4,9 +4,14 @@ import (
 	"testing"
 
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/require"
 )
+
+func init() {
+	config.RegisterResource(TypeLocalExec, &LocalExec{}, &LocalProvider{})
+}
 
 func TestLocalExecSetsOutputsFromState(t *testing.T) {
 	testutils.SetupState(t, `

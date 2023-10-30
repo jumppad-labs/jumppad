@@ -5,9 +5,14 @@ import (
 	"testing"
 
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/require"
 )
+
+func init() {
+	config.RegisterResource(TypeSidecar, &Sidecar{}, &Provider{})
+}
 
 func TestSidecarProcessSetsAbsolute(t *testing.T) {
 	wd, err := os.Getwd()
@@ -38,7 +43,7 @@ func TestSidecarLoadsValuesFromState(t *testing.T) {
       "name": "test",
       "status": "created",
       "type": "sidecar",
-			"fqdn": "fqdn.mine"
+			"container_name": "fqdn.mine"
 	}
 	]
 }`)

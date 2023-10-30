@@ -4,9 +4,14 @@ import (
 	"testing"
 
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/require"
 )
+
+func init() {
+	config.RegisterResource(TypeDocs, &Docs{}, &DocsProvider{})
+}
 
 func TestDocsProcessSetsAbsolute(t *testing.T) {
 	h := &Docs{
@@ -27,7 +32,7 @@ func TestDocsLoadsValuesFromState(t *testing.T) {
       "name": "test",
       "status": "created",
       "type": "docs",
-			"fqrn": "fqdn.mine"
+			"fqdn": "fqdn.mine"
 	}
 	]
 }`)

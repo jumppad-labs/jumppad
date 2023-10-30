@@ -28,7 +28,7 @@ type Clients struct {
 	Command        command.Command
 	Logger         logger.Logger
 	Getter         getter.Getter
-	Browser        system.System
+	System         system.System
 	ImageLog       images.ImageLog
 	Connector      connector.Connector
 	TarGz          *tar.TarGz
@@ -36,10 +36,7 @@ type Clients struct {
 
 // GenerateClients creates the various clients for creating and destroying resources
 func GenerateClients(l logger.Logger) (*Clients, error) {
-	dc, err := container.NewDocker()
-	if err != nil {
-		return nil, err
-	}
+	dc, _ := container.NewDocker()
 
 	kc := k8s.NewKubernetes(60*time.Second, l)
 
@@ -74,7 +71,7 @@ func GenerateClients(l logger.Logger) (*Clients, error) {
 		Nomad:          nc,
 		Logger:         l,
 		Getter:         bp,
-		Browser:        bc,
+		System:         bc,
 		ImageLog:       il,
 		Connector:      cc,
 		TarGz:          tgz,

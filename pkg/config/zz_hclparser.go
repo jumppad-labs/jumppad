@@ -35,8 +35,9 @@ func RegisterResource(name string, r types.Resource, p Provider) {
 }
 
 // setupHCLConfig configures the HCLConfig package and registers the custom types
-func NewParser(callback hclconfig.ProcessCallback, variables map[string]string, variablesFiles []string) *hclconfig.Parser {
+func NewParser(callback hclconfig.WalkCallback, variables map[string]string, variablesFiles []string) *hclconfig.Parser {
 	cfg := hclconfig.DefaultOptions()
+
 	cfg.ParseCallback = callback
 	cfg.VariableEnvPrefix = "JUMPPAD_VAR_"
 	cfg.Variables = variables
@@ -82,10 +83,10 @@ func customHCLFuncDataFolderWithPermissions(name string, permissions int) (strin
 	oInt, _ := strconv.ParseInt(strInt, 8, 64)
 
 	perms := os.FileMode(oInt)
-	return utils.GetDataFolder(name, perms), nil
+	return utils.DataFolder(name, perms), nil
 }
 
 func customHCLFuncDataFolder(name string) (string, error) {
 	perms := os.FileMode(0775)
-	return utils.GetDataFolder(name, perms), nil
+	return utils.DataFolder(name, perms), nil
 }

@@ -19,14 +19,15 @@ type Container struct {
 
 	Networks        []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"`           // Attach to the correct network // only when Image is specified
 	Image           *Image              `hcl:"image,block" json:"image"`                          // Image to use for the container
-	Entrypoint      []string            `hcl:"entrypoint,optional" json:"entrypoint,omitempty"`   // entrypoint to use when starting the container
-	Command         []string            `hcl:"command,optional" json:"command,omitempty"`         // command to use when starting the container
-	Environment     map[string]string   `hcl:"environment,optional" json:"environment,omitempty"` // environment variables to set when starting the container
-	Volumes         []Volume            `hcl:"volume,block" json:"volumes,omitempty"`             // volumes to attach to the container
-	Ports           []Port              `hcl:"port,block" json:"ports,omitempty"`                 // ports to expose
-	PortRanges      []PortRange         `hcl:"port_range,block" json:"port_ranges,omitempty"`     // range of ports to expose
+	Entrypoint      []string            `hcl:"entrypoint,optional" json:"entrypoint,omitempty"`   // Entrypoint to use when starting the container
+	Command         []string            `hcl:"command,optional" json:"command,omitempty"`         // Command to use when starting the container
+	Environment     map[string]string   `hcl:"environment,optional" json:"environment,omitempty"` // Environment variables to set when starting the container
+	Volumes         []Volume            `hcl:"volume,block" json:"volumes,omitempty"`             // Volumes to attach to the container
+	Ports           []Port              `hcl:"port,block" json:"ports,omitempty"`                 // Ports to expose
+	PortRanges      []PortRange         `hcl:"port_range,block" json:"port_ranges,omitempty"`     // Range of ports to expose
 	DNS             []string            `hcl:"dns,optional" json:"dns,omitempty"`                 // Add custom DNS servers to the container
-	Privileged      bool                `hcl:"privileged,optional" json:"privileged,omitempty"`   // run the container in privileged mode?
+	Privileged      bool                `hcl:"privileged,optional" json:"privileged,omitempty"`   // Run the container in privileged mode?
+	Capabilities    *Capabilities       `hcl:"capabilities,block" json:"capabilities,omitempty"`  // Capabilities to add or drop from the container
 	MaxRestartCount int                 `hcl:"max_restart_count,optional" json:"max_restart_count,omitempty"`
 
 	// resource constraints
@@ -74,6 +75,11 @@ type Resources struct {
 	CPU    int   `hcl:"cpu,optional" json:"cpu,omitempty"`         // cpu limit for the container where 1 CPU = 1000
 	CPUPin []int `hcl:"cpu_pin,optional" json:"cpu_pin,omitempty"` // pin the container to one or more cpu cores
 	Memory int   `hcl:"memory,optional" json:"memory,omitempty"`   // max memory the container can consume in MB
+}
+
+type Capabilities struct {
+	Add  []string `hcl:"add,optional" json:"add"`   // CapAdd is a list of kernel capabilities to add to the container
+	Drop []string `hcl:"drop,optional" json:"drop"` // CapDrop is a list of kernel capabilities to remove from the container
 }
 
 // Volume defines a folder, Docker volume, or temp folder to mount to the Container

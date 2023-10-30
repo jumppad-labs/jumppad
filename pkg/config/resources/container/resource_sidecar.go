@@ -37,7 +37,7 @@ type Sidecar struct {
 
 	// ContainerName is the fully qualified domain name for the container the sidecar is linked to, this can be used
 	// to access the sidecar from other sources
-	ContainerName string `hcl:"c,optional" json:"fqrn,omitempty"`
+	ContainerName string `hcl:"container_name,optional" json:"container_name,omitempty"`
 }
 
 func (c *Sidecar) Process() error {

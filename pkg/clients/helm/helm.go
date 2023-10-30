@@ -50,14 +50,14 @@ type HelmImpl struct {
 }
 
 func NewHelm(l logger.Logger) Helm {
-	helmCachePath := path.Join(utils.GetHelmLocalFolder(""), "cache")
-	helmRepoConfig := path.Join(utils.GetHelmLocalFolder(""), "repo")
+	helmCachePath := path.Join(utils.HelmLocalFolder(""), "cache")
+	helmRepoConfig := path.Join(utils.HelmLocalFolder(""), "repo")
 
-	helmDataPath := path.Join(utils.GetHelmLocalFolder(""), "data")
-	helmConfigPath := path.Join(utils.GetHelmLocalFolder(""), "config")
+	helmDataPath := path.Join(utils.HelmLocalFolder(""), "data")
+	helmConfigPath := path.Join(utils.HelmLocalFolder(""), "config")
 
 	// create the paths
-	os.MkdirAll(utils.GetHelmLocalFolder(""), os.ModePerm)
+	os.MkdirAll(utils.HelmLocalFolder(""), os.ModePerm)
 	os.MkdirAll(helmCachePath, os.ModePerm)
 	os.MkdirAll(helmDataPath, os.ModePerm)
 

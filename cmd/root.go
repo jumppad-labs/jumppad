@@ -23,65 +23,23 @@ var rootCmd = &cobra.Command{
 	Long:  `Jumppad is a tool that helps you create and run development, demo, and tutorial environments`,
 }
 
-var engine jumppad.Engine
-var l logger.Logger
-var engineClients *clients.Clients
-
 var version string // set by build process
 var date string    // set by build process
 var commit string  // set by build process
 
-func init() {
+func createEngine(l logger.Logger, c *clients.Clients) (jumppad.Engine, gvm.Versions, error) {
 
-	var vm gvm.Versions
-
-	// setup dependencies
-	l = createLogger()
-	engine, engineClients, vm = createEngine(l)
-
-	rootCmd.AddCommand(checkCmd)
-	rootCmd.AddCommand(outputCmd)
-	rootCmd.AddCommand(newDevCmd())
-	rootCmd.AddCommand(newEnvCmd(engine))
-	rootCmd.AddCommand(newRunCmd(engine, engineClients.ContainerTasks, engineClients.Getter, engineClients.HTTP, engineClients.Browser, vm, engineClients.Connector, l))
-	rootCmd.AddCommand(newTestCmd())
-	rootCmd.AddCommand(newDestroyCmd(engineClients.Connector))
-	rootCmd.AddCommand(statusCmd)
-	rootCmd.AddCommand(newPurgeCmd(engineClients.Docker, engineClients.ImageLog, l))
-	rootCmd.AddCommand(taintCmd)
-	rootCmd.AddCommand(newVersionCmd(vm))
-	rootCmd.AddCommand(uninstallCmd)
-	rootCmd.AddCommand(newPushCmd(engineClients.ContainerTasks, engineClients.Kubernetes, engineClients.HTTP, engineClients.Nomad, l))
-	rootCmd.AddCommand(newLogCmd(engine, engineClients.Docker, os.Stdout, os.Stderr), completionCmd)
-
-	// add the server commands
-	rootCmd.AddCommand(connectorCmd)
-	connectorCmd.AddCommand(newConnectorRunCommand())
-	connectorCmd.AddCommand(connectorStopCmd)
-	connectorCmd.AddCommand(newConnectorCertCmd())
-
-	// add the generate command
-	rootCmd.AddCommand(generateCmd)
-	generateCmd.AddCommand(newGenerateReadmeCommand(engine))
-}
-
-func createEngine(l logger.Logger) (jumppad.Engine, *clients.Clients, gvm.Versions) {
-	engineClients, err := clients.GenerateClients(l)
-	if err != nil {
-		return nil, nil, nil
-	}
-
-	providers := config.NewProviders(engineClients)
+	providers := config.NewProviders(c)
 
 	engine, err := jumppad.New(providers, l)
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 
 	o := gvm.Options{
 		Organization: "jumppad-labs",
 		Repo:         "jumppad",
-		ReleasesPath: utils.GetReleasesFolder(),
+		ReleasesPath: utils.ReleasesFolder(),
 	}
 
 	o.AssetNameFunc = func(version, goos, goarch string) string {
@@ -112,7 +70,7 @@ func createEngine(l logger.Logger) (jumppad.Engine, *clients.Clients, gvm.Versio
 
 	vm := gvm.New(o)
 
-	return engine, engineClients, vm
+	return engine, vm, nil
 }
 
 func createLogger() logger.Logger {
@@ -130,9 +88,52 @@ func Execute(v, c, d string) error {
 	commit = c
 	date = d
 
+	var vm gvm.Versions
+
+	// setup dependencies
+	l := createLogger()
+
+	engineClients, _ := clients.GenerateClients(l)
+
+	// Check the system to see if Docker is running and everything is installed
+	s, err := engineClients.System.Preflight()
+	if err != nil {
+		fmt.Println("")
+		fmt.Println("###### SYSTEM DIAGNOSTICS ######")
+		fmt.Println(s)
+		return err
+	}
+
+	engine, vm, _ := createEngine(l, engineClients)
+
+	rootCmd.AddCommand(checkCmd)
+	rootCmd.AddCommand(outputCmd)
+	rootCmd.AddCommand(newDevCmd())
+	rootCmd.AddCommand(newEnvCmd(engine))
+	rootCmd.AddCommand(newRunCmd(engine, engineClients.ContainerTasks, engineClients.Getter, engineClients.HTTP, engineClients.System, vm, engineClients.Connector, l))
+	rootCmd.AddCommand(newTestCmd())
+	rootCmd.AddCommand(newDestroyCmd(engineClients.Connector))
+	rootCmd.AddCommand(statusCmd)
+	rootCmd.AddCommand(newPurgeCmd(engineClients.Docker, engineClients.ImageLog, l))
+	rootCmd.AddCommand(taintCmd)
+	rootCmd.AddCommand(newVersionCmd(vm))
+	rootCmd.AddCommand(uninstallCmd)
+	rootCmd.AddCommand(newPushCmd(engineClients.ContainerTasks, engineClients.Kubernetes, engineClients.HTTP, engineClients.Nomad, l))
+	rootCmd.AddCommand(newLogCmd(engine, engineClients.Docker, os.Stdout, os.Stderr), completionCmd)
+
+	// add the server commands
+	rootCmd.AddCommand(connectorCmd)
+	connectorCmd.AddCommand(newConnectorRunCommand())
+	connectorCmd.AddCommand(connectorStopCmd)
+	connectorCmd.AddCommand(newConnectorCertCmd())
+
+	// add the generate command
+	rootCmd.AddCommand(generateCmd)
+	generateCmd.AddCommand(newGenerateReadmeCommand(engine))
+
 	rootCmd.SilenceErrors = true
 
-	err := rootCmd.Execute()
+	err = rootCmd.Execute()
 
 	if err != nil {
 		fmt.Println("")

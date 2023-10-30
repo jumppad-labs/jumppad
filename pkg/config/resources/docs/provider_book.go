@@ -2,9 +2,11 @@ package docs
 
 import (
 	"fmt"
+	"os"
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 type BookProvider struct {
@@ -46,7 +48,10 @@ func (p *BookProvider) Create() error {
 }
 
 func (p *BookProvider) Destroy() error {
-	return nil
+	// clean up the library folder
+	err := os.RemoveAll(utils.LibraryFolder("", os.ModePerm))
+
+	return err
 }
 
 func (p *BookProvider) Lookup() ([]string, error) {
