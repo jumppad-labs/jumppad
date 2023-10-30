@@ -18,7 +18,7 @@ import (
 	"sync"
 
 	"github.com/jumppad-labs/jumppad/pkg/utils/dirhash"
-  "github.com/kennygrant/sanitize"
+	"github.com/kennygrant/sanitize"
 )
 
 // EnsureAbsolute ensure that the given path is either absolute or
@@ -147,14 +147,14 @@ func HomeEnvName() string {
 	return "HOME"
 }
 
-// JumppadHome returns the location of the shipyard
-// folder, usually $HOME/.shipyard
+// JumppadHome returns the location of the jumppad
+// folder, usually $HOME/.jumppad
 func JumppadHome() string {
 	return filepath.Join(HomeFolder(), "/.jumppad")
 }
 
-// ShipyardTemp returns a temporary folder
-func ShipyardTemp() string {
+// JumppadTemp returns a temporary folder
+func JumppadTemp() string {
 	dir := filepath.Join(JumppadHome(), "/tmp")
 	err := os.MkdirAll(dir, 0755)
 	if err != nil {
@@ -164,14 +164,14 @@ func ShipyardTemp() string {
 	return dir
 }
 
-// StateDir returns the location of the shipyard
-// state, usually $HOME/.shipyard/state
+// StateDir returns the location of the jumppad
+// state, usually $HOME/.jumppad/state
 func StateDir() string {
 	return filepath.Join(JumppadHome(), "/state")
 }
 
 // CertsDir returns the location of the certificates for the given resource
-// used to secure the Shipyard ingress, usually rooted at $HOME/.shipyard/certs
+// used to secure the Jumppad ingress, usually rooted at $HOME/.jumppad/certs
 func CertsDir(name string) string {
 	certs := filepath.Join(JumppadHome(), "/certs", name)
 	certs = filepath.FromSlash(certs)
@@ -182,7 +182,7 @@ func CertsDir(name string) string {
 }
 
 // LogsDir returns the location of the logs
-// used to secure the Shipyard ingress, usually $HOME/.shipyard/logs
+// used to secure the Jumppad ingress, usually $HOME/.jumppad/logs
 func LogsDir() string {
 	logs := filepath.Join(JumppadHome(), "/logs")
 
@@ -347,8 +347,66 @@ func GetConnectorLogFile() string {
 	return filepath.Join(LogsDir(), "connector.log")
 }
 
-// GetShipyardBinaryPath returns the path to the running Shipyard binary
-func GetShipyardBinaryPath() string {
+func compileJumppadBinary(path string) error {
+	maxLevels := 10
+	currentLevel := 0
+
+	// we are running from a test so compile the binary
+	// and returns its path
+	dir, _ := os.Getwd()
+
+	// walk backwards until we find the go.mod
+	for {
+		files, err := ioutil.ReadDir(dir)
+		if err != nil {
+			return err
+		}
+
+		for _, f := range files {
+			if strings.HasSuffix(f.Name(), "go.mod") {
+				fp, _ := filepath.Abs(dir)
+
+				// found the project root
+				file := filepath.Join(fp, "main.go")
+				tmpBinary := path
+
+				// if windows append the exe extension
+				if runtime.GOOS == "windows" {
+					tmpBinary = tmpBinary + ".exe"
+				}
+
+				os.RemoveAll(tmpBinary)
+
+				outwriter := bytes.NewBufferString("")
+				cmd := exec.Command("go", "build", "-o", tmpBinary, file)
+				cmd.Stderr = outwriter
+				cmd.Stdout = outwriter
+
+				err := cmd.Run()
+				if err != nil {
+					fmt.Println("Error building temporary binary:", cmd.Args)
+					fmt.Println(outwriter.String())
+					panic(fmt.Errorf("unable to build connector binary: %s", err))
+				}
+
+				return nil
+			}
+		}
+
+		// check the parent
+		dir = filepath.Join(dir, "../")
+		fmt.Println(dir)
+		currentLevel++
+		if currentLevel > maxLevels {
+			panic("unable to find go.mod")
+		}
+	}
+}
+
+var buildSync = sync.Once{}
+
+// GetJumppadBinaryPath returns the path to the running Jumppad binary
+func GetJumppadBinaryPath() string {
 	if strings.HasSuffix(os.Args[0], "jumppad") || strings.HasSuffix(os.Args[0], "jumppad-dev") || strings.HasSuffix(os.Args[0], "jumppad.exe") || strings.HasSuffix(os.Args[0], "jp") {
 		ex, err := os.Executable()
 		if err != nil {
@@ -360,7 +418,7 @@ func GetShipyardBinaryPath() string {
 
 	tmpBinary := filepath.Join(os.TempDir(), "jumppad-dev")
 	buildSync.Do(func() {
-		compileShipyardBinary(tmpBinary)
+		compileJumppadBinary(tmpBinary)
 	})
 
 	return tmpBinary
@@ -420,7 +478,7 @@ func HTTPProxyAddress() string {
 		return p
 	}
 
-	return shipyardProxyAddress
+	return jumppadProxyAddress
 }
 
 // HTTPSProxyAddress returns the default HTTPProxy used by
@@ -431,7 +489,7 @@ func HTTPSProxyAddress() string {
 		return p
 	}
 
-	return shipyardProxyAddress
+	return jumppadProxyAddress
 }
 
 // get all ipaddresses in a subnet
@@ -508,61 +566,3 @@ func incIP(ip net.IP) net.IP {
 	}
 	return net.IP(byteIp)
 }
-
-func compileShipyardBinary(path string) error {
-	maxLevels := 10
-	currentLevel := 0
-
-	// we are running from a test so compile the binary
-	// and returns its path
-	dir, _ := os.Getwd()
-
-	// walk backwards until we find the go.mod
-	for {
-		files, err := ioutil.ReadDir(dir)
-		if err != nil {
-			return err
-		}
-
-		for _, f := range files {
-			if strings.HasSuffix(f.Name(), "go.mod") {
-				fp, _ := filepath.Abs(dir)
-
-				// found the project root
-				file := filepath.Join(fp, "main.go")
-				tmpBinary := path
-
-				// if windows append the exe extension
-				if runtime.GOOS == "windows" {
-					tmpBinary = tmpBinary + ".exe"
-				}
-
-				os.RemoveAll(tmpBinary)
-
-				outwriter := bytes.NewBufferString("")
-				cmd := exec.Command("go", "build", "-o", tmpBinary, file)
-				cmd.Stderr = outwriter
-				cmd.Stdout = outwriter
-
-				err := cmd.Run()
-				if err != nil {
-					fmt.Println("Error building temporary binary:", cmd.Args)
-					fmt.Println(outwriter.String())
-					panic(fmt.Errorf("unable to build connector binary: %s", err))
-				}
-
-				return nil
-			}
-		}
-
-		// check the parent
-		dir = filepath.Join(dir, "../")
-		fmt.Println(dir)
-		currentLevel++
-		if currentLevel > maxLevels {
-			panic("unable to find go.mod")
-		}
-	}
-}
-
-var buildSync = sync.Once{}

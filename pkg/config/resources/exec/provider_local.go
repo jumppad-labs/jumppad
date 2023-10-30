@@ -43,6 +43,7 @@ func (p *LocalProvider) Init(cfg htypes.Resource, l logger.Logger) error {
 // Create a new exec
 func (p *LocalProvider) Create() error {
 	p.log.Info("Locally executing script", "ref", p.config.ID, "command", p.config.Command)
+	p.log.Warn("This resource is deprecated and will be removed in a future version of Jumppad, please use exec instead")
 
 	// build the environment variables
 	envs := []string{}

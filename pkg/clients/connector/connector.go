@@ -90,7 +90,7 @@ type ConnectorOptions struct {
 func DefaultConnectorOptions() ConnectorOptions {
 	co := ConnectorOptions{}
 	co.LogDirectory = utils.LogsDir()
-	co.BinaryPath = utils.GetShipyardBinaryPath()
+	co.BinaryPath = utils.GetJumppadBinaryPath()
 	co.GrpcBind = ":30001"
 	co.HTTPBind = ":30002"
 	co.APIBind = ":30003"

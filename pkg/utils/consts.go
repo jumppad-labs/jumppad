@@ -16,7 +16,7 @@ const BuildImagePrefix = "jumppad.dev/localcache"
 const CacheResourceName string = "docker-cache"
 
 // Address of the proxy used for caching docker images
-const shipyardProxyAddress string = "http://default.image-cache.jumppad.dev:3128"
+const jumppadProxyAddress string = "http://default.image-cache.jumppad.dev:3128"
 
 // Addresses to bypass when using a HTTP Proxy
 const ProxyBypass string = "localhost,127.0.0.1,cluster.local,jumppad.dev,svc,consul"
