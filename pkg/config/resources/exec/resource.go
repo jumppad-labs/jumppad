@@ -1,6 +1,7 @@
 package exec
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/jumppad-labs/hclconfig/types"
@@ -46,6 +47,10 @@ func (e *Exec) Process() error {
 
 		// make sure line endings are linux
 		e.Script = strings.Replace(e.Script, "\r\n", "\n", -1)
+	} else {
+		if len(e.Networks) > 0 || len(e.Volumes) > 0 {
+			return fmt.Errorf("unable to create local exec with networks or volumes")
+		}
 	}
 
 	// do we have an existing resource in the state?
