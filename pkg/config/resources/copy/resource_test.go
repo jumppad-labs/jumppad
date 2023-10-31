@@ -76,5 +76,4 @@ func TestCopySetsOutputsFromState(t *testing.T) {
 	c.Process()
 
 	require.Equal(t, []string{"a", "b"}, c.CopiedFiles)
-
 }
