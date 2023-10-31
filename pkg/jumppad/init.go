@@ -12,6 +12,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/docs"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/exec"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/helm"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/http"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/ingress"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/k8s"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/network"
@@ -39,6 +40,7 @@ func init() {
 	config.RegisterResource(exec.TypeLocalExec, &exec.LocalExec{}, &exec.LocalProvider{})
 	config.RegisterResource(exec.TypeRemoteExec, &exec.RemoteExec{}, &exec.RemoteProvider{})
 	config.RegisterResource(helm.TypeHelm, &helm.Helm{}, &helm.Provider{})
+	config.RegisterResource(http.TypeHTTP, &http.HTTP{}, &http.Provider{})
 	config.RegisterResource(ingress.TypeIngress, &ingress.Ingress{}, &ingress.Provider{})
 	config.RegisterResource(k8s.TypeK8sCluster, &k8s.K8sCluster{}, &k8s.ClusterProvider{})
 	config.RegisterResource(k8s.TypeK8sConfig, &k8s.K8sConfig{}, &k8s.ConfigProvider{})
