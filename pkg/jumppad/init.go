@@ -11,6 +11,7 @@ import (
 	"github.com/instruqt/jumppad/pkg/config/resources/docs"
 	"github.com/instruqt/jumppad/pkg/config/resources/exec"
 	"github.com/instruqt/jumppad/pkg/config/resources/helm"
+	"github.com/instruqt/jumppad/pkg/config/resources/http"
 	"github.com/instruqt/jumppad/pkg/config/resources/ingress"
 	"github.com/instruqt/jumppad/pkg/config/resources/k8s"
 	"github.com/instruqt/jumppad/pkg/config/resources/network"
@@ -39,6 +40,7 @@ func init() {
 	config.RegisterResource(docs.TypeBook, &docs.Book{}, &null.Provider{})
 	config.RegisterResource(exec.TypeExec, &exec.Exec{}, &exec.Provider{})
 	config.RegisterResource(helm.TypeHelm, &helm.Helm{}, &helm.Provider{})
+	config.RegisterResource(http.TypeHTTP, &http.HTTP{}, &http.Provider{})
 	config.RegisterResource(ingress.TypeIngress, &ingress.Ingress{}, &ingress.Provider{})
 	config.RegisterResource(k8s.TypeK8sCluster, &k8s.Cluster{}, &k8s.ClusterProvider{})
 	config.RegisterResource(k8s.TypeK8sConfig, &k8s.Config{}, &k8s.ConfigProvider{})
