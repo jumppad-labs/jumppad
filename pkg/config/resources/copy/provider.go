@@ -51,9 +51,6 @@ func (p *Provider) Create() error {
 		return fmt.Errorf("error getting source from %s: %v", p.config.Source, err)
 	}
 
-	// TODO: copy files to a temporary location and then copy them to the destination like before?
-	// use go-getter for the initial copy and then use the existing copy code to copy the files to the destination
-
 	// Check source exists
 	_, err = os.Stat(tempPath)
 	if err != nil {
