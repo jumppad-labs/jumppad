@@ -29,6 +29,7 @@ require (
 	github.com/hashicorp/hcl/v2 v2.17.0
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	github.com/jumppad-labs/connector v0.3.0
+	github.com/jumppad-labs/gohup v0.3.0
 	github.com/jumppad-labs/hclconfig v0.16.1
 	github.com/kennygrant/sanitize v1.2.4
 	github.com/mailgun/raymond/v2 v2.0.48
@@ -42,7 +43,6 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/ryanuber/go-glob v1.0.0
 	github.com/sethvargo/go-retry v0.2.4
-	github.com/shipyard-run/gohup v0.2.2
 	github.com/shipyard-run/version-manager v0.0.5
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4

@@ -345,7 +345,7 @@ func TestContainerSetsBindOptionsForVolumeTypeBind(t *testing.T) {
 }
 
 func TestContainerCreatesDirectoryForVolume(t *testing.T) {
-	tmpFolder := fmt.Sprintf("%s/%d", utils.ShipyardTemp(), time.Now().UnixNano())
+	tmpFolder := fmt.Sprintf("%s/%d", utils.JumppadTemp(), time.Now().UnixNano())
 	defer os.RemoveAll(tmpFolder)
 
 	cc, md, mic := createContainerConfig()
@@ -358,7 +358,7 @@ func TestContainerCreatesDirectoryForVolume(t *testing.T) {
 }
 
 func TestContainerDoesNotCreatesDirectoryForVolumeWhenNotBind(t *testing.T) {
-	tmpFolder := fmt.Sprintf("%s/%d", utils.ShipyardTemp(), time.Now().UnixNano())
+	tmpFolder := fmt.Sprintf("%s/%d", utils.JumppadTemp(), time.Now().UnixNano())
 	defer os.RemoveAll(tmpFolder)
 
 	cc, md, mic := createContainerConfig()

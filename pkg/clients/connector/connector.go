@@ -14,9 +14,9 @@ import (
 
 	"github.com/jumppad-labs/connector/crypto"
 	"github.com/jumppad-labs/connector/protos/shipyard"
+	"github.com/jumppad-labs/gohup"
 	"github.com/jumppad-labs/jumppad/pkg/clients/connector/types"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"github.com/shipyard-run/gohup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -90,7 +90,7 @@ type ConnectorOptions struct {
 func DefaultConnectorOptions() ConnectorOptions {
 	co := ConnectorOptions{}
 	co.LogDirectory = utils.LogsDir()
-	co.BinaryPath = utils.GetShipyardBinaryPath()
+	co.BinaryPath = utils.GetJumppadBinaryPath()
 	co.GrpcBind = ":30001"
 	co.HTTPBind = ":30002"
 	co.APIBind = ":30003"

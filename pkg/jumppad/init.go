@@ -35,6 +35,7 @@ func init() {
 	config.RegisterResource(docs.TypeChapter, &docs.Chapter{}, &docs.ChapterProvider{})
 	config.RegisterResource(docs.TypeTask, &docs.Task{}, &null.Provider{})
 	config.RegisterResource(docs.TypeBook, &docs.Book{}, &docs.BookProvider{})
+	config.RegisterResource(exec.TypeExec, &exec.Exec{}, &exec.Provider{})
 	config.RegisterResource(exec.TypeLocalExec, &exec.LocalExec{}, &exec.LocalProvider{})
 	config.RegisterResource(exec.TypeRemoteExec, &exec.RemoteExec{}, &exec.RemoteProvider{})
 	config.RegisterResource(helm.TypeHelm, &helm.Helm{}, &helm.Provider{})

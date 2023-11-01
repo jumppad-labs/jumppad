@@ -42,6 +42,7 @@ func (p *RemoteProvider) Init(cfg htypes.Resource, l logger.Logger) error {
 // Create a new execution instance
 func (p *RemoteProvider) Create() error {
 	p.log.Info("Remote executing script", "ref", p.config.ID)
+	p.log.Warn("This resource is deprecated and will be removed in a future version of Jumppad, please use exec instead")
 
 	// execution target id
 	targetID := ""

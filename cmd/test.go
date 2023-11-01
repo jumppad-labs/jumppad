@@ -574,7 +574,7 @@ func (cr *CucumberRunner) theResourceInfoShouldExist(path, resource string) erro
 
 func (cr *CucumberRunner) whenIRunTheScript(arg1 *godog.DocString) error {
 	// copy the script into a temp file and try to execute it
-	tmpFile, err := ioutil.TempFile(utils.ShipyardTemp(), "*.sh")
+	tmpFile, err := ioutil.TempFile(utils.JumppadTemp(), "*.sh")
 	if err != nil {
 		return err
 	}

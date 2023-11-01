@@ -24,7 +24,7 @@ var suiteOptions ConnectorOptions
 
 func TestConnectorSuite(t *testing.T) {
 	suiteTemp = t.TempDir()
-	suiteBinary = utils.GetShipyardBinaryPath()
+	suiteBinary = utils.GetJumppadBinaryPath()
 
 	home := os.Getenv(utils.HomeEnvName())
 	os.Setenv(utils.HomeEnvName(), suiteTemp)
