@@ -3,6 +3,7 @@ package build
 import (
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -18,6 +19,8 @@ type Build struct {
 	// Outputs allow files or directories to be copied from the container
 	Outputs []Output `hcl:"output,block" json:"outputs"`
 
+	Registry *container.Image `hcl:"registry,block" json:"registry"` // Optional registry to push the image to
+
 	// outputs
 
 	// Image is the full local reference of the built image
@@ -32,6 +35,9 @@ type BuildContainer struct {
 	Context    string            `hcl:"context" json:"context"`                          // Path to build context
 	Ignore     []string          `hcl:"ignore,optional" json:"ignore,omitempty"`         // Files to ignore in the build context, this is the same as .dockerignore
 	Args       map[string]string `hcl:"args,optional" json:"args,omitempty"`             // Build args to pass  to the container
+}
+
+type Registry struct {
 }
 
 type Output struct {

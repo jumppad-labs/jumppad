@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
@@ -485,6 +486,31 @@ func (d *DockerTasks) PullImage(image dtypes.Image, force bool) error {
 	// write the output to the debug log
 	io.Copy(d.l.StandardWriter(), out)
 
+	return nil
+}
+
+func (d *DockerTasks) PushImage(image dtypes.Image) error {
+	ipo := types.ImagePushOptions{}
+	// if the username and password is not null make an authenticated
+	// image pull
+	if image.Username != "" && image.Password != "" {
+		ipo.RegistryAuth = createRegistryAuth(image.Username, image.Password)
+	}
+
+	ref, err := reference.ParseNormalizedNamed(image.Name)
+	if err != nil {
+		return xerrors.Errorf("error parsing image name: %w", err)
+	}
+
+	name := reference.FamiliarString(ref)
+
+	out, err := d.c.ImagePush(context.Background(), name, ipo)
+	if err != nil {
+		return xerrors.Errorf("Error pushing image: %w", err)
+	}
+
+	// write the output to the debug log
+	io.Copy(d.l.StandardWriter(), out)
 	return nil
 }
 
@@ -1286,6 +1312,10 @@ func (d *DockerTasks) FindNetwork(id string) (dtypes.NetworkAttachment, error) {
 	}
 
 	return dtypes.NetworkAttachment{}, fmt.Errorf("a network with the label id: %s, was not found", id)
+}
+
+func (d *DockerTasks) TagImage(source, destination string) error {
+	return d.c.ImageTag(context.Background(), source, destination)
 }
 
 // publishedPorts defines a Docker published port

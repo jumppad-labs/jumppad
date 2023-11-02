@@ -97,6 +97,25 @@ func (b *Provider) Create() error {
 		}
 	}
 
+	// if we have a registry, push the image
+	if b.config.Registry == nil {
+		return nil
+	}
+
+	// first tag the image
+	b.log.Debug("Tag image", "ref", b.config.ID, "name", b.config.Image, "tag", b.config.Registry.Name)
+	err = b.client.TagImage(b.config.Image, b.config.Registry.Name)
+	if err != nil {
+		return xerrors.Errorf("unable to tag image: %w", err)
+	}
+
+	// push the image
+	b.log.Debug("Push image", "ref", b.config.ID, "tag", b.config.Registry.Name)
+	err = b.client.PushImage(types.Image{Name: b.config.Registry.Name, Username: b.config.Registry.Username, Password: b.config.Registry.Password})
+	if err != nil {
+		return xerrors.Errorf("unable to push image: %w", err)
+	}
+
 	return nil
 }
 
