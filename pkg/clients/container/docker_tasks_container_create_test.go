@@ -521,3 +521,16 @@ func TestContainerDropCapabilities(t *testing.T) {
 	assert.Equal(t, "SYS_ADMIN", dc.CapDrop[0])
 	assert.Equal(t, "SYS_CHROOT", dc.CapDrop[1])
 }
+
+func TestContainerLabels(t *testing.T) {
+	cc, md, mic := createContainerConfig()
+	cc.Labels = map[string]string{"com.example.foo": "bar"}
+
+	err := setupContainer(t, cc, md, mic)
+	assert.NoError(t, err)
+
+	params := testutils.GetCalls(&md.Mock, "ContainerCreate")[0].Arguments
+	dc := params[1].(*container.Config)
+	assert.Contains(t, dc.Labels, "com.example.foo")
+	assert.Equal(t, "bar", dc.Labels["com.example.foo"])
+}

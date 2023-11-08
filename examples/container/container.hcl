@@ -60,6 +60,16 @@ resource "container" "consul_capabilities" {
   }
 }
 
+resource "container" "consul_labels" {
+  image {
+    name = "consul:${variable.consul_version}"
+  }
+
+  labels = {
+    "com.example.foo" = "bar"
+  }
+}
+
 resource "container" "consul" {
   image {
     name = "consul:${variable.consul_version}"
