@@ -27,6 +27,6 @@ output "get_body" {
 }
 
 output "post_body" {
-  value = resource.http.post.status == 200 ? resource.http.get.body : "error"
+  value = resource.http.post.status == 200 ? resource.http.post.body : "error"
 }
 
