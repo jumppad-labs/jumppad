@@ -1,13 +1,15 @@
 resource "exec" "install" {
   script = <<-EOF
   #!/bin/sh
-  OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-  ARCH=$(uname -m | tr '[:upper:]' '[:lower:]')
-
-  if [ ! -f /tmp/consul ]; then
-    curl -L -o /tmp/consul.zip https://releases.hashicorp.com/consul/1.16.2/consul_1.16.2_$${OS}_$${ARCH}.zip
-    cd /tmp && unzip ./consul.zip
-  fi
+  cat <<EOT > /tmp/exec
+  #!/bin/sh
+  while true
+  do
+    echo "hello world"
+    sleep 1
+  done
+  EOT
+  chmod +x /tmp/exec
   EOF
 }
 
@@ -16,7 +18,7 @@ resource "exec" "run" {
 
   script = <<-EOF
   #!/bin/sh
-  /tmp/consul agent -dev
+  /tmp/exec
   EOF
 
   daemon = true
