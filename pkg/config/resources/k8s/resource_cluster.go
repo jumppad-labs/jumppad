@@ -11,6 +11,7 @@ import (
 
 // TypeK8sCluster is the resource string for a Cluster resource
 const TypeK8sCluster string = "k8s_cluster"
+const TypeKubernetesCluster string = "kubernetes_cluster"
 
 // K8sCluster is a config stanza which defines a Kubernetes or a Nomad cluster
 type K8sCluster struct {
@@ -51,8 +52,11 @@ type K8sCluster struct {
 	ExternalIP string `hcl:"external_ip,optional" json:"external_ip,omitempty"`
 }
 
-const k3sBaseImage = "shipyardrun/k3s"
-const k3sBaseVersion = "v1.27.4"
+// const k3sBaseImage = "shipyardrun/k3s"
+const k3sBaseImage = "rancher/k3s"
+
+// const k3sBaseVersion = "v1.27.4"
+const k3sBaseVersion = "v1.27.4-k3s1"
 
 func (k *K8sCluster) Process() error {
 	if k.APIPort == 0 {

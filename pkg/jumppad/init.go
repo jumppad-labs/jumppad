@@ -40,6 +40,8 @@ func init() {
 	config.RegisterResource(exec.TypeRemoteExec, &exec.RemoteExec{}, &exec.RemoteProvider{})
 	config.RegisterResource(helm.TypeHelm, &helm.Helm{}, &helm.Provider{})
 	config.RegisterResource(ingress.TypeIngress, &ingress.Ingress{}, &ingress.Provider{})
+	config.RegisterResource(k8s.TypeKubernetesCluster, &k8s.K8sCluster{}, &k8s.ClusterProvider{})
+	config.RegisterResource(k8s.TypeKubernetesConfig, &k8s.K8sConfig{}, &k8s.ConfigProvider{})
 	config.RegisterResource(k8s.TypeK8sCluster, &k8s.K8sCluster{}, &k8s.ClusterProvider{})
 	config.RegisterResource(k8s.TypeK8sConfig, &k8s.K8sConfig{}, &k8s.ConfigProvider{})
 	config.RegisterResource(network.TypeNetwork, &network.Network{}, &network.Provider{})
