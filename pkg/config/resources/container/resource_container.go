@@ -22,6 +22,7 @@ type Container struct {
 	Entrypoint      []string            `hcl:"entrypoint,optional" json:"entrypoint,omitempty"`   // Entrypoint to use when starting the container
 	Command         []string            `hcl:"command,optional" json:"command,omitempty"`         // Command to use when starting the container
 	Environment     map[string]string   `hcl:"environment,optional" json:"environment,omitempty"` // Environment variables to set when starting the container
+	Labels          map[string]string   `hcl:"labels,optional" json:"labels,omitempty"`           // Labels to set on the container
 	Volumes         []Volume            `hcl:"volume,block" json:"volumes,omitempty"`             // Volumes to attach to the container
 	Ports           []Port              `hcl:"port,block" json:"ports,omitempty"`                 // Ports to expose
 	PortRanges      []PortRange         `hcl:"port_range,block" json:"port_ranges,omitempty"`     // Range of ports to expose

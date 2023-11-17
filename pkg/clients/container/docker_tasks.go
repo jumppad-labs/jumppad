@@ -132,6 +132,7 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 		Domainname:   domain,
 		Image:        c.Image.Name,
 		Env:          env,
+		Labels:       c.Labels,
 		Cmd:          c.Command,
 		Entrypoint:   c.Entrypoint,
 		AttachStdin:  true,
