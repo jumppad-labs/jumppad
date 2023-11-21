@@ -34,10 +34,15 @@ func setupProvider(t *testing.T, b *Build) (*Provider, *mocks.ContainerTasks) {
 func TestCreatePushesToRegistry(t *testing.T) {
 	b := &Build{
 		ResourceMetadata: htypes.ResourceMetadata{Name: "test"},
-		Registry: &container.Image{
-			Name:     "nicholasjackson/fake:latest",
-			Username: "test",
-			Password: "password",
+		Registries: []container.Image{
+			container.Image{
+				Name: "nicholasjackson/fake:latest",
+			},
+			container.Image{
+				Name:     "authed/fake:latest",
+				Username: "test",
+				Password: "password",
+			},
 		},
 	}
 
@@ -47,5 +52,6 @@ func TestCreatePushesToRegistry(t *testing.T) {
 
 	// ensure the image is tagged
 	mc.AssertCalled(t, "TagImage", "buildimage:abcde", "nicholasjackson/fake:latest")
-	mc.AssertCalled(t, "PushImage", types.Image{Name: "nicholasjackson/fake:latest", Username: "test", Password: "password"})
+	mc.AssertCalled(t, "PushImage", types.Image{Name: "nicholasjackson/fake:latest", Username: "", Password: ""})
+	mc.AssertCalled(t, "PushImage", types.Image{Name: "authed/fake:latest", Username: "test", Password: "password"})
 }

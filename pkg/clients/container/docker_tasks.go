@@ -23,6 +23,7 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
+	registrytypes "github.com/docker/docker/api/types/registry"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/go-connections/nat"
@@ -502,6 +503,17 @@ func (d *DockerTasks) PushImage(image dtypes.Image) error {
 		return xerrors.Errorf("error parsing image name: %w", err)
 	}
 
+	//ipo.PrivilegeFunc = RegistryAuthenticationPrivilegedFunc(domain, image.Username, image.Password)
+
+	if ipo.RegistryAuth == "" {
+		domain := reference.Domain(ref)
+		ac := registrytypes.AuthConfig{}
+		ac.ServerAddress = domain
+
+		ra, _ := registrytypes.EncodeAuthConfig(ac)
+		ipo.RegistryAuth = ra
+	}
+
 	name := reference.FamiliarString(ref)
 
 	out, err := d.c.ImagePush(context.Background(), name, ipo)
@@ -512,6 +524,15 @@ func (d *DockerTasks) PushImage(image dtypes.Image) error {
 	// write the output to the debug log
 	io.Copy(d.l.StandardWriter(), out)
 	return nil
+}
+
+func RegistryAuthenticationPrivilegedFunc(server, username, password string) types.RequestPrivilegeFunc {
+	return func() (string, error) {
+		ac := registrytypes.AuthConfig{}
+		ac.ServerAddress = server
+
+		return registrytypes.EncodeAuthConfig(ac)
+	}
 }
 
 // FindContainerIDs returns the Container IDs for the given identifier
@@ -1235,7 +1256,7 @@ func (d *DockerTasks) resizeTTY(id string, out *streams.Out) error {
 }
 
 func (d *DockerTasks) AttachNetwork(net, containerID string, aliases []string, ipAddress string) error {
-	d.l.Debug("Attaching container to network", "ref", containerID, "network", net)
+	d.l.Debug("Attaching container to network", "id", containerID, "network", net)
 	es := &network.EndpointSettings{NetworkID: net}
 
 	// if we have network aliases defined, add them to the network connection
@@ -1245,7 +1266,7 @@ func (d *DockerTasks) AttachNetwork(net, containerID string, aliases []string, i
 
 	// are we binding to a specific ip
 	if ipAddress != "" {
-		d.l.Debug("Assigning static ip address", "ref", containerID, "network", net, "ip_address", ipAddress)
+		d.l.Debug("Assigning static ip address", "id", containerID, "network", net, "ip_address", ipAddress)
 		es.IPAMConfig = &network.EndpointIPAMConfig{IPv4Address: ipAddress}
 	}
 
@@ -1403,11 +1424,12 @@ func createPublishedPortRanges(ps []dtypes.PortRange) (publishedPorts, error) {
 
 // credentials are a json string and need to be base64 encoded
 func createRegistryAuth(username, password string) string {
-	return base64.StdEncoding.EncodeToString(
-		[]byte(
-			fmt.Sprintf(`{"Username": "%s", "Password": "%s"}`, username, password),
-		),
-	)
+	ac := registrytypes.AuthConfig{}
+	ac.Username = username
+	ac.Password = password
+
+	ec, _ := registrytypes.EncodeAuthConfig(ac)
+	return ec
 }
 
 // makeImageCanonical makes sure the image reference uses full canonical name i.e.

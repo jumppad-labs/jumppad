@@ -50,9 +50,11 @@ func init() {
 	config.RegisterResource(random.TypeRandomUUID, &random.RandomUUID{}, &random.RandomUUIDProvider{})
 	config.RegisterResource(random.TypeRandomPassword, &random.RandomPassword{}, &random.RandomPasswordProvider{})
 	config.RegisterResource(random.TypeRandomCreature, &random.RandomCreature{}, &random.RandomCreatureProvider{})
+	config.RegisterResource(cache.TypeRegistry, &cache.Registry{}, &null.Provider{})
 	config.RegisterResource(template.TypeTemplate, &template.Template{}, &template.TemplateProvider{})
 	config.RegisterResource(terraform.TypeTerraform, &terraform.Terraform{}, &terraform.TerraformProvider{})
 
+	// register providers for the default types
 	config.RegisterResource(types.TypeModule, &types.Module{}, &null.Provider{})
 	config.RegisterResource(types.TypeOutput, &types.Output{}, &null.Provider{})
 	config.RegisterResource(types.TypeVariable, &types.Variable{}, &null.Provider{})

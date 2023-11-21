@@ -107,6 +107,39 @@ func TestApplyAddsImageCache(t *testing.T) {
 	require.Equal(t, 1, dc)
 }
 
+func TestApplyAddsNetworksToImageCache(t *testing.T) {
+	e, _ := setupTests(t, nil)
+
+	_, err := e.Apply("../../examples/single_file/container.hcl")
+	require.NoError(t, err)
+
+	dc := e.ResourceCountForType(cache.TypeImageCache)
+	require.Equal(t, 1, dc)
+
+	r, err := e.config.FindResource("resource.image_cache.default")
+	require.NoError(t, err)
+
+	// network should be added as a dependency
+	require.Equal(t, "resource.network.onprem", r.Metadata().DependsOn[0])
+}
+
+func TestApplyAddsCustomRegistriesToImageCache(t *testing.T) {
+	e, _ := setupTests(t, nil)
+
+	_, err := e.Apply("../../examples/registries")
+	require.NoError(t, err)
+
+	dc := e.ResourceCountForType(cache.TypeImageCache)
+	require.Equal(t, 1, dc)
+
+	dc = e.ResourceCountForType(cache.TypeRegistry)
+	require.Equal(t, 2, dc)
+
+	r, err := e.config.FindResource("resource.image_cache.default")
+	require.NoError(t, err)
+	require.Len(t, r.(*cache.ImageCache).Registries, 2)
+}
+
 func TestApplyWithSingleFileAndVariables(t *testing.T) {
 	e, mp := setupTests(t, nil)
 

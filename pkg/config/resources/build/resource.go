@@ -19,7 +19,7 @@ type Build struct {
 	// Outputs allow files or directories to be copied from the container
 	Outputs []Output `hcl:"output,block" json:"outputs"`
 
-	Registry *container.Image `hcl:"registry,block" json:"registry"` // Optional registry to push the image to
+	Registries []container.Image `hcl:"registry,block" json:"registries"` // Optional registry to push the image to
 
 	// outputs
 

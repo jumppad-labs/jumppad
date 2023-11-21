@@ -525,10 +525,8 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 		cc.Environment = map[string]string{}
 	}
 
-	err := p.appendProxyEnv(cc)
-	if err != nil {
-		return "", err
-	}
+	// add the ca for the proxy
+	p.appendProxyEnv(cc)
 
 	id, err := p.client.CreateContainer(cc)
 	if err != nil {
@@ -602,12 +600,12 @@ func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID 
 	cc.Volumes = append(cc.Volumes, p.config.Volumes.ToClientVolumes()...)
 
 	cc.Environment = p.config.Environment
-
-	cc.Environment = map[string]string{}
-	err := p.appendProxyEnv(cc)
-	if err != nil {
-		return "", "", err
+	if cc.Environment == nil {
+		cc.Environment = map[string]string{}
 	}
+
+	// add the ca for the proxy
+	p.appendProxyEnv(cc)
 
 	cid, err := p.client.CreateContainer(cc)
 
@@ -632,35 +630,35 @@ func (p *ClusterProvider) appendProxyEnv(cc *ctypes.Container) error {
 	}
 
 	// add the netmask from the network to the proxy bypass
-	networkSubmasks := []string{}
-	for _, n := range p.config.Networks {
-		net, err := p.client.FindNetwork(n.ID)
-		if err != nil {
-			return fmt.Errorf("network not found: %w", err)
-		}
+	//networkSubmasks := []string{}
+	//for _, n := range p.config.Networks {
+	//	net, err := p.client.FindNetwork(n.ID)
+	//	if err != nil {
+	//		return fmt.Errorf("network not found: %w", err)
+	//	}
 
-		networkSubmasks = append(networkSubmasks, net.Subnet)
-	}
+	//	networkSubmasks = append(networkSubmasks, net.Subnet)
+	//}
 
-	cc.Environment = p.config.Environment
-	if cc.Environment == nil {
-		cc.Environment = map[string]string{}
-	}
+	//cc.Environment = p.config.Environment
+	//if cc.Environment == nil {
+	//	cc.Environment = map[string]string{}
+	//}
 
-	proxyBypass := utils.ProxyBypass + "," + strings.Join(networkSubmasks, ",")
+	//proxyBypass := utils.ProxyBypass + "," + strings.Join(networkSubmasks, ",")
 
-	if noProxy, ok := cc.Environment["NO_PROXY"]; ok {
-		proxyBypass += "," + noProxy
-	}
+	//if noProxy, ok := cc.Environment["NO_PROXY"]; ok {
+	//	proxyBypass += "," + noProxy
+	//}
 
-	mirror := utils.HTTPProxyAddress()
-	if p.config.Cache != nil {
-		mirror = fmt.Sprintf("http://%s.image-cache.jumppad.dev:3128", p.config.Cache.ResourceMetadata.Name)
-	}
+	//mirror := utils.HTTPProxyAddress()
+	//if p.config.Cache != nil {
+	//	mirror = fmt.Sprintf("http://%s.image-cache.jumppad.dev:3128", p.config.Cache.ResourceMetadata.Name)
+	//}
 
-	cc.Environment["HTTP_PROXY"] = mirror
-	cc.Environment["HTTPS_PROXY"] = mirror
-	cc.Environment["NO_PROXY"] = proxyBypass
+	//cc.Environment["HTTP_PROXY"] = mirror
+	//cc.Environment["HTTPS_PROXY"] = mirror
+	//cc.Environment["NO_PROXY"] = proxyBypass
 	cc.Environment["PROXY_CA"] = string(ca)
 
 	return nil

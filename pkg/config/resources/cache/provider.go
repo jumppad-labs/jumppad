@@ -2,10 +2,11 @@ package cache
 
 import (
 	"fmt"
-	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"math/rand"
 	"path/filepath"
 	"strings"
+
+	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 
 	dtypes "github.com/docker/docker/api/types"
 	htypes "github.com/jumppad-labs/hclconfig/types"
@@ -18,12 +19,11 @@ import (
 	"golang.org/x/xerrors"
 )
 
-const cacheImage = "shipyardrun/docker-registry-proxy:0.6.3"
+const cacheImage = "ghcr.io/rpardini/docker-registry-proxy:0.6.4"
 const defaultRegistries = "k8s.gcr.io gcr.io asia.gcr.io eu.gcr.io us.gcr.io quay.io ghcr.io docker.pkg.github.com"
 
 type Provider struct {
 	config     *ImageCache
-	registries []Registry
 	client     container.ContainerTasks
 	httpClient http.HTTP
 	log        logger.Logger
@@ -57,35 +57,29 @@ func (p *Provider) Create() error {
 		return err
 	}
 
-	// get a list of dependent networks for the resource
-	dependentNetworks := p.findDependentNetworks()
-
 	var registries []string
 	var authRegistries []string
 
 	for _, reg := range p.config.Registries {
 		registries = append(registries, reg.Hostname)
 
-		if reg.Auth == nil {
-			continue
+		if reg.Auth != nil {
+			authRegistries = append(authRegistries, reg.Hostname+":::"+reg.Auth.Username+":::"+reg.Auth.Password)
 		}
-
-		hostname := reg.Hostname
-		if len(reg.Auth.Hostname) > 0 {
-			hostname = reg.Auth.Hostname
-			registries = append(registries, reg.Auth.Hostname)
-		}
-		authRegistries = append(authRegistries, hostname+":::"+reg.Auth.Username+":::"+reg.Auth.Password)
 	}
 
 	if len(ids) == 0 {
-		_, err := p.createImageCache(dependentNetworks, registries, authRegistries)
+		_, err := p.createImageCache(registries, authRegistries)
 		if err != nil {
 			return err
 		}
 	}
 
-	return nil
+	// get a list of dependent networks for the resource
+	dependentNetworks := p.findDependentNetworks()
+
+	// add the networks and return
+	return p.reConfigureNetworks(dependentNetworks)
 }
 
 func (p *Provider) Destroy() error {
@@ -130,7 +124,7 @@ func (p *Provider) Changed() (bool, error) {
 	return false, nil
 }
 
-func (p *Provider) createImageCache(networks []string, registries []string, authRegistries []string) (string, error) {
+func (p *Provider) createImageCache(registries []string, authRegistries []string) (string, error) {
 	fqdn := utils.FQDN(p.config.Name, p.config.Module, p.config.Type)
 
 	// Create the volume to store the cache
@@ -171,12 +165,16 @@ func (p *Provider) createImageCache(networks []string, registries []string, auth
 	cc.Environment = map[string]string{
 		"CA_KEY_FILE":             "/cache/ca/root.key",
 		"CA_CRT_FILE":             "/cache/ca/root.cert",
+		"DEBUG":                   "false",
+		"DEBUG_NGINX":             "false",
+		"DEBUG_HUB":               "false",
 		"DOCKER_MIRROR_CACHE":     "/cache/docker",
 		"ENABLE_MANIFEST_CACHE":   "true",
-		"REGISTRIES":              defaultRegistries + " " + strings.Join(registries[:], " "),
+		"REGISTRIES":              defaultRegistries + " " + strings.Join(registries, " "),
 		"AUTH_REGISTRY_DELIMITER": ":::",
-		"AUTH_REGISTRIES":         strings.Join(authRegistries[:], " "),
+		"AUTH_REGISTRIES":         strings.Join(authRegistries, " "),
 		"ALLOW_PUSH":              "true",
+		"VERIFY_SSL":              "false",
 	}
 
 	// expose the docker proxy port on a random port num
@@ -186,18 +184,16 @@ func (p *Provider) createImageCache(networks []string, registries []string, auth
 			Host:     fmt.Sprintf("%d", rand.Intn(3000)+31000),
 			Protocol: "tcp",
 		},
-	}
-
-	cc.Networks = p.config.Networks.ToClientNetworkAttachments()
-
-	// add the name of the network, we only have the id
-	for i, n := range p.config.Networks {
-		net, err := p.client.FindNetwork(n.ID)
-		if err != nil {
-			return "", err
-		}
-
-		p.config.Networks[i].Name = net.Name
+		{
+			Local:    "8081",
+			Host:     fmt.Sprintf("%d", rand.Intn(3000)+31000),
+			Protocol: "tcp",
+		},
+		{
+			Local:    "8082",
+			Host:     fmt.Sprintf("%d", rand.Intn(3000)+31000),
+			Protocol: "tcp",
+		},
 	}
 
 	return p.client.CreateContainer(cc)

@@ -136,6 +136,7 @@ jobs:
           './examples/remote_exec',
           './examples/certificates',
           './examples/terraform',
+          './examples/registries',
         ]
 
     steps:

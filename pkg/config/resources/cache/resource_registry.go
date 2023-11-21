@@ -2,7 +2,9 @@ package cache
 
 import "github.com/jumppad-labs/hclconfig/types"
 
-// Registry defines a structure for registering additional registries
+const TypeRegistry string = "container_registry"
+
+// Registry defines a structure for registering additional registries for the image cache
 type Registry struct {
 	// embedded type holding name, etc
 	types.ResourceMetadata `hcl:",remain"`
@@ -13,7 +15,6 @@ type Registry struct {
 
 // RegistryAuth defines a structure for authenticating against a docker registry
 type RegistryAuth struct {
-	Hostname string `hcl:"hostname,optional" json:"hostname"` // Optional hostname for authentication
-	Username string `hcl:"username" json:"username"`          // Username for authentication, should not be an email
-	Password string `hcl:"password" json:"password"`          // Password for authentication
+	Username string `hcl:"username" json:"username"` // Username for authentication, should not be an email
+	Password string `hcl:"password" json:"password"` // Password for authentication
 }
