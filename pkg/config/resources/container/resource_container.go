@@ -22,6 +22,7 @@ type Container struct {
 	Entrypoint      []string            `hcl:"entrypoint,optional" json:"entrypoint,omitempty"`   // Entrypoint to use when starting the container
 	Command         []string            `hcl:"command,optional" json:"command,omitempty"`         // Command to use when starting the container
 	Environment     map[string]string   `hcl:"environment,optional" json:"environment,omitempty"` // Environment variables to set when starting the container
+	Labels          map[string]string   `hcl:"labels,optional" json:"labels,omitempty"`           // Labels to set on the container
 	Volumes         []Volume            `hcl:"volume,block" json:"volumes,omitempty"`             // Volumes to attach to the container
 	Ports           []Port              `hcl:"port,block" json:"ports,omitempty"`                 // Ports to expose
 	PortRanges      []PortRange         `hcl:"port_range,block" json:"port_ranges,omitempty"`     // Range of ports to expose
@@ -90,7 +91,7 @@ type Volume struct {
 	ReadOnly                    bool   `hcl:"read_only,optional" json:"read_only,omitempty"`                                           // specify that the volume is mounted read only
 	BindPropagation             string `hcl:"bind_propagation,optional" json:"bind_propagation,omitempty"`                             // propagation mode for bind mounts [shared, private, slave, rslave, rprivate]
 	BindPropagationNonRecursive bool   `hcl:"bind_propagation_non_recursive,optional" json:"bind_propagation_non_recursive,omitempty"` // recursive bind mount, default true
-	SelinuxRelabel              string `hcl:"selinux_relabel,optional" json:"selinux_relabel,optional"`                                // selinux_relabeling ["", shared, private]
+	SelinuxRelabel              string `hcl:"selinux_relabel,optional" json:"selinux_relabel,omitempty"`                               // selinux_relabeling ["", shared, private]
 }
 
 type Volumes []Volume

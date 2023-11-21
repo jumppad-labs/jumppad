@@ -7,6 +7,7 @@ type Container struct {
 	Entrypoint      []string
 	Command         []string
 	Environment     map[string]string
+	Labels          map[string]string
 	Volumes         []Volume
 	Ports           []Port
 	PortRanges      []PortRange

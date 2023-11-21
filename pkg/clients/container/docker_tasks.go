@@ -132,6 +132,7 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 		Domainname:   domain,
 		Image:        c.Image.Name,
 		Env:          env,
+		Labels:       c.Labels,
 		Cmd:          c.Command,
 		Entrypoint:   c.Entrypoint,
 		AttachStdin:  true,
@@ -149,6 +150,8 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 
 	if c.MaxRestartCount > 0 {
 		hc.RestartPolicy = container.RestartPolicy{Name: "on-failure", MaximumRetryCount: c.MaxRestartCount}
+	} else if c.MaxRestartCount == -1 {
+		hc.RestartPolicy = container.RestartPolicy{Name: "always"}
 	}
 
 	if c.Capabilities != nil {

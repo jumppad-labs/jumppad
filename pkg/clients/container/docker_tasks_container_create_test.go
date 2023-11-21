@@ -468,6 +468,21 @@ func TestContainerConfiguresRetryWhenCountGreater0(t *testing.T) {
 	assert.Equal(t, hc.RestartPolicy.Name, "on-failure")
 }
 
+func TestContainerConfiguresRetryWhenCountMinusOne(t *testing.T) {
+	cc, md, mic := createContainerConfig()
+	cc.MaxRestartCount = -1
+
+	err := setupContainer(t, cc, md, mic)
+	assert.NoError(t, err)
+
+	params := testutils.GetCalls(&md.Mock, "ContainerCreate")[0].Arguments
+	hc := params[2].(*container.HostConfig)
+	assert.NotEmpty(t, hc.Resources)
+
+	assert.Equal(t, hc.RestartPolicy.MaximumRetryCount, 0)
+	assert.Equal(t, hc.RestartPolicy.Name, "always")
+}
+
 func TestContainerNotConfiguresRetryWhen0(t *testing.T) {
 	cc, md, mic := createContainerConfig()
 
@@ -520,4 +535,17 @@ func TestContainerDropCapabilities(t *testing.T) {
 	dc := params[2].(*container.HostConfig)
 	assert.Equal(t, "SYS_ADMIN", dc.CapDrop[0])
 	assert.Equal(t, "SYS_CHROOT", dc.CapDrop[1])
+}
+
+func TestContainerLabels(t *testing.T) {
+	cc, md, mic := createContainerConfig()
+	cc.Labels = map[string]string{"com.example.foo": "bar"}
+
+	err := setupContainer(t, cc, md, mic)
+	assert.NoError(t, err)
+
+	params := testutils.GetCalls(&md.Mock, "ContainerCreate")[0].Arguments
+	dc := params[1].(*container.Config)
+	assert.Contains(t, dc.Labels, "com.example.foo")
+	assert.Equal(t, "bar", dc.Labels["com.example.foo"])
 }

@@ -46,6 +46,7 @@ func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
 		co.Volumes = cs.Volumes
 		co.Command = cs.Command
 		co.Entrypoint = cs.Entrypoint
+		co.Labels = cs.Labels
 		co.Environment = cs.Environment
 		co.HealthCheck = cs.HealthCheck
 		co.Image = &cs.Image
@@ -172,6 +173,7 @@ func (c *Provider) internalCreate(sidecar bool) error {
 		Entrypoint:      c.config.Entrypoint,
 		Command:         c.config.Command,
 		Environment:     c.config.Environment,
+		Labels:          c.config.Labels,
 		DNS:             c.config.DNS,
 		Privileged:      c.config.Privileged,
 		MaxRestartCount: c.config.MaxRestartCount,
