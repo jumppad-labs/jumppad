@@ -5,7 +5,6 @@ import (
 
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
-	itypes "github.com/jumppad-labs/jumppad/pkg/config/resources/cache"
 	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
@@ -58,11 +57,24 @@ type NomadCluster struct {
 	// to the docker ip
 	ExternalIP string `hcl:"external_ip,optional" json:"external_ip,omitempty"`
 
-	Cache *itypes.ImageCache `hcl:"image_cache,optional" json:"image_cache,omitempty"`
+	Config *Config `hcl:"config,block" json:"config,omitempty"`
 }
 
 const nomadBaseImage = "shipyardrun/nomad"
 const nomadBaseVersion = "1.6.1"
+
+type Config struct {
+	// Specifies configuration for the Docker driver.
+	DockerConfig *DockerConfig `hcl:"docker,block" json:"docker,omitempty"`
+}
+
+type DockerConfig struct {
+	// NoProxy is a list of docker registires that should be excluded from the image cache
+	NoProxy []string `hcl:"no_proxy,optional" json:"no-proxy,omitempty"`
+
+	// InsecureRegistries is a list of docker registries that should be treated as insecure
+	InsecureRegistries []string `hcl:"insecure_registries,optional" json:"insecure-registries,omitempty"`
+}
 
 func (n *NomadCluster) Process() error {
 	if n.Image == nil {

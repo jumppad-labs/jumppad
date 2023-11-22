@@ -3,6 +3,7 @@ package nomad
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -154,6 +155,12 @@ func (p *ClusterProvider) Refresh() error {
 		return nil
 	}
 
+	// create the docker config
+	dockerConfigPath, err := p.createDockerConfig()
+	if err != nil {
+		return fmt.Errorf("unable to create docker config: %s", err)
+	}
+
 	// do we need to scale the cluster up
 	if p.config.ClientNodes > len(p.config.ClientContainerName) {
 		// need to scale up
@@ -164,7 +171,7 @@ func (p *ClusterProvider) Refresh() error {
 
 			p.log.Debug("Create client node", "ref", p.config.ID, "client", id)
 
-			fqdn, _, err := p.createClientNode(randomID(), p.config.Image.Name, utils.ImageVolumeName, p.config.ServerContainerName)
+			fqdn, _, err := p.createClientNode(randomID(), p.config.Image.Name, utils.ImageVolumeName, p.config.ServerContainerName, dockerConfigPath)
 			if err != nil {
 				return fmt.Errorf(`unable to recreate client node "%s", %s`, id, err)
 			}
@@ -338,10 +345,16 @@ func (p *ClusterProvider) createNomad() error {
 
 	// set the API server port to a random number
 	p.config.ConnectorPort = rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
-	p.config.ConfigDir = path.Join(utils.JumppadHome(), p.config.Name, "config")
+	p.config.ConfigDir = path.Join(utils.JumppadHome(), strings.Replace(p.config.ID, ".", "_", -1), "config")
 	p.config.ExternalIP = utils.GetDockerIP()
 
-	_, err = p.createServerNode(p.config.Image.ToClientImage(), volID, isClient)
+	// create the docker config
+	dockerConfigPath, err := p.createDockerConfig()
+	if err != nil {
+		return fmt.Errorf("unable to create docker config: %s", err)
+	}
+
+	_, err = p.createServerNode(p.config.Image.ToClientImage(), volID, isClient, dockerConfigPath)
 	if err != nil {
 		return err
 	}
@@ -358,7 +371,7 @@ func (p *ClusterProvider) createNomad() error {
 	for i := 0; i < p.config.ClientNodes; i++ {
 		// create client node asynchronously
 		go func(id string, image, volID, name string) {
-			fqdn, _, err := p.createClientNode(id, image, volID, name)
+			fqdn, _, err := p.createClientNode(id, image, volID, name, dockerConfigPath)
 			if err != nil {
 				clientError = err
 			}
@@ -414,7 +427,7 @@ func (p *ClusterProvider) createNomad() error {
 	return nil
 }
 
-func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, isClient bool) (string, error) {
+func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, isClient bool, dockerConfig string) (string, error) {
 	// set the resources for CPU, if not a client set the resources low
 	// so that we can only deploy the connector to the server
 	cpu := ""
@@ -452,6 +465,11 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 			Source:      volumeID,
 			Destination: "/cache",
 			Type:        "volume",
+		},
+		{
+			Source:      dockerConfig,
+			Destination: "/etc/docker/daemon.json",
+			Type:        "bind",
 		},
 		{
 			Source:      serverConfigPath,
@@ -538,7 +556,7 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 
 // createClient node creates a Nomad client node
 // returns the fqdn, docker id, and an error if unsuccessful
-func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID string) (string, string, error) {
+func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID string, dockerConfig string) (string, string, error) {
 	// generate the client config
 	sc := dataDir + "\n" + fmt.Sprintf(clientConfig, p.config.Datacenter, serverID)
 
@@ -566,6 +584,11 @@ func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID 
 			Source:      volumeID,
 			Destination: "/cache",
 			Type:        "volume",
+		},
+		{
+			Source:      dockerConfig,
+			Destination: "/etc/docker/daemon.json",
+			Type:        "bind",
 		},
 		{
 			Source:      clientConfigPath,
@@ -622,6 +645,61 @@ func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID 
 	return fqrn, cid, err
 }
 
+type dockerConfig struct {
+	Proxies            dockerProxies `json:"proxies,omitempty"`
+	InsecureRegistries []string      `json:"insecure-registries,omitempty"`
+}
+
+type dockerProxies struct {
+	HTTP    string `json:"http-proxy,omitempty"`
+	HTTPS   string `json:"https-proxy,omitempty"`
+	NOPROXY string `json:"no-proxy,omitempty"`
+}
+
+// createDockerConfig creates the docker daemon config for the cluster
+func (p *ClusterProvider) createDockerConfig() (string, error) {
+	daemonConfigPath := path.Join(p.config.ConfigDir, "daemon.json")
+
+	// remove any existing files, fail silently
+	os.RemoveAll(daemonConfigPath)
+
+	// create the config folder
+	os.MkdirAll(p.config.ConfigDir, os.ModePerm)
+
+	// create the docker config
+	dc := dockerConfig{
+		Proxies: dockerProxies{},
+	}
+
+	// set the insecure registries
+	if p.config.Config != nil &&
+		p.config.Config.DockerConfig != nil &&
+		len(p.config.Config.DockerConfig.InsecureRegistries) > 0 {
+		dc.InsecureRegistries = p.config.Config.DockerConfig.InsecureRegistries
+	}
+
+	// set the no proxy
+	if p.config.Config != nil &&
+		p.config.Config.DockerConfig != nil &&
+		len(p.config.Config.DockerConfig.NoProxy) > 0 {
+		dc.Proxies.NOPROXY = strings.TrimSuffix(strings.Join(p.config.Config.DockerConfig.NoProxy, ","), ",")
+	}
+
+	// set the cache details
+	dc.Proxies.HTTP = utils.ImageCacheAddress()
+	dc.Proxies.HTTPS = utils.ImageCacheAddress()
+
+	// write the config to a file
+	data, err := json.MarshalIndent(dc, "", "  ")
+	if err != nil {
+		return "", err
+	}
+
+	err = os.WriteFile(daemonConfigPath, data, os.ModePerm)
+
+	return daemonConfigPath, err
+}
+
 func (p *ClusterProvider) appendProxyEnv(cc *ctypes.Container) error {
 	// load the CA from a file
 	ca, err := os.ReadFile(filepath.Join(utils.CertsDir(""), "/root.cert"))
@@ -629,36 +707,6 @@ func (p *ClusterProvider) appendProxyEnv(cc *ctypes.Container) error {
 		return fmt.Errorf("unable to read root CA for proxy: %s", err)
 	}
 
-	// add the netmask from the network to the proxy bypass
-	//networkSubmasks := []string{}
-	//for _, n := range p.config.Networks {
-	//	net, err := p.client.FindNetwork(n.ID)
-	//	if err != nil {
-	//		return fmt.Errorf("network not found: %w", err)
-	//	}
-
-	//	networkSubmasks = append(networkSubmasks, net.Subnet)
-	//}
-
-	//cc.Environment = p.config.Environment
-	//if cc.Environment == nil {
-	//	cc.Environment = map[string]string{}
-	//}
-
-	//proxyBypass := utils.ProxyBypass + "," + strings.Join(networkSubmasks, ",")
-
-	//if noProxy, ok := cc.Environment["NO_PROXY"]; ok {
-	//	proxyBypass += "," + noProxy
-	//}
-
-	//mirror := utils.HTTPProxyAddress()
-	//if p.config.Cache != nil {
-	//	mirror = fmt.Sprintf("http://%s.image-cache.jumppad.dev:3128", p.config.Cache.ResourceMetadata.Name)
-	//}
-
-	//cc.Environment["HTTP_PROXY"] = mirror
-	//cc.Environment["HTTPS_PROXY"] = mirror
-	//cc.Environment["NO_PROXY"] = proxyBypass
 	cc.Environment["PROXY_CA"] = string(ca)
 
 	return nil

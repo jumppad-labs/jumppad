@@ -1,14 +1,3 @@
-variable "auth_ip_address" {
-  default = "10.6.0.183"
-}
-
-variable "noauth_ip_address" {
-  default = "10.6.0.184"
-}
-
-variable "insecure_ip_address" {
-  default = "10.6.0.185"
-}
 
 resource "certificate_leaf" "registry" {
   ca_key  = "${jumppad()}/certs/root.key"
@@ -148,41 +137,5 @@ resource "container_registry" "auth" {
   auth {
     username = "admin"
     password = "password"
-  }
-}
-
-resource "nomad_job" "noauth" {
-  cluster    = resource.nomad_cluster.dev
-  depends_on = ["resource.build.app"]
-
-  paths = ["./files/noauth.nomad"]
-
-  health_check {
-    timeout = "60s"
-    jobs    = ["noauth"]
-  }
-}
-
-resource "nomad_job" "auth" {
-  cluster    = resource.nomad_cluster.dev
-  depends_on = ["resource.build.app"]
-
-  paths = ["./files/auth.nomad"]
-
-  health_check {
-    timeout = "60s"
-    jobs    = ["auth"]
-  }
-}
-
-resource "nomad_job" "insecure" {
-  cluster    = resource.nomad_cluster.dev
-  depends_on = ["resource.build.app"]
-
-  paths = ["./files/insecure.nomad"]
-
-  health_check {
-    timeout = "60s"
-    jobs    = ["insecure"]
   }
 }

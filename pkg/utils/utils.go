@@ -481,22 +481,11 @@ func GetLocalIPAndHostname() (string, string) {
 	return "127.0.0.1", "localhost"
 }
 
-// HTTPProxyAddress returns the default HTTPProxy used by
+// ImageCacheADDR returns the default Image cache used by
 // Nomad and Kubernetes clusters unless the environment variable
-// HTTP_PROXY is set when it returns this value
-func HTTPProxyAddress() string {
-	if p := os.Getenv("HTTP_PROXY"); p != "" {
-		return p
-	}
-
-	return jumppadProxyAddress
-}
-
-// HTTPSProxyAddress returns the default HTTPProxy used by
-// Nomad and Kubernetes clusters unless the environment variable
-// HTTPS_PROXY is set when it returns this value
-func HTTPSProxyAddress() string {
-	if p := os.Getenv("HTTPS_PROXY"); p != "" {
+// IMAGE_CACHE_ADDR is set when it returns this value
+func ImageCacheAddress() string {
+	if p := os.Getenv("IMAGE_CACHE_ADDR"); p != "" {
 		return p
 	}
 

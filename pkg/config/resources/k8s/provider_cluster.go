@@ -326,22 +326,8 @@ func (p *ClusterProvider) createK3s() error {
 			return fmt.Errorf("unable to read root CA for proxy: %s", err)
 		}
 
-		// add the netmask from the network to the proxy bypass
-		networkSubmasks := []string{}
-		for _, n := range p.config.Networks {
-			net, err := p.client.FindNetwork(n.ID)
-			if err != nil {
-				return fmt.Errorf("Network not found: %w", err)
-			}
-
-			networkSubmasks = append(networkSubmasks, net.Subnet)
-		}
-
-		proxyBypass := utils.ProxyBypass + "," + strings.Join(networkSubmasks, ",")
-
-		cc.Environment["HTTP_PROXY"] = utils.HTTPProxyAddress()
-		cc.Environment["HTTPS_PROXY"] = utils.HTTPSProxyAddress()
-		cc.Environment["NO_PROXY"] = proxyBypass
+		cc.Environment["CONTAINERD_HTTP_PROXY"] = utils.ImageCacheAddress()
+		cc.Environment["CONTAINERD_HTTPS_PROXY"] = utils.ImageCacheAddress()
 		cc.Environment["PROXY_CA"] = string(ca)
 	}
 

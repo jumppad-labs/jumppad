@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: noauth
+  labels:
+    app: noauth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: noauth
+  template:
+    metadata:
+      labels:
+        app: noauth
+    spec:
+      containers:
+      - name: noauth
+        image: "noauth-registry.demo.gs/mine:v0.1.0"
+        ports:
+        - containerPort: 19090
+        env:
+        - name: LISTEN_ADDR
+          value: ":19090"
+        - name: MESSAGE
+          value: "Registry With No Auth"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: noauth
+spec:
+  selector:
+    app: noauth
+  ports:
+    - protocol: TCP
+      port: 19090
+      targetPort: 19090
