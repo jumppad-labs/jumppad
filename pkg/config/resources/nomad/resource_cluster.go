@@ -36,6 +36,9 @@ type NomadCluster struct {
 	Ports      ctypes.Ports      `hcl:"port,block" json:"ports,omitempty"`             // ports to expose
 	PortRanges ctypes.PortRanges `hcl:"port_range,block" json:"port_ranges,omitempty"` // range of ports to expose
 
+	// Configuration for the drivers
+	Config *Config `hcl:"config,block" json:"config,omitempty"`
+
 	// Output Parameters
 
 	// The APIPort the server is running on
@@ -56,8 +59,6 @@ type NomadCluster struct {
 	// ExternalIP is the ip address of the cluster, this generally resolves
 	// to the docker ip
 	ExternalIP string `hcl:"external_ip,optional" json:"external_ip,omitempty"`
-
-	Config *Config `hcl:"config,block" json:"config,omitempty"`
 }
 
 const nomadBaseImage = "shipyardrun/nomad"

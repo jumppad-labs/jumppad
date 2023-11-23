@@ -2,25 +2,17 @@ variable "network_id" {
   default = ""
 }
 
-resource "template" "k3s_settings" {
-  source = <<-EOF
-  mirrors:
-    "insecure.container.jumppad.dev:5003":
-      endpoint:
-        - "http://insecure.container.jumppad.dev:5003"
-  EOF
-
-  destination = "${data("registry")}/registries.yaml"
-}
-
 resource "k8s_cluster" "k3s" {
   network {
     id = variable.network_id
   }
 
-  volume {
-    source      = resource.template.k3s_settings.destination
-    destination = "/etc/rancher/k3s/registries.yaml"
+  // add configuration to allow cache bypass and insecure registry
+  config {
+    docker {
+      no_proxy            = ["insecure.container.jumppad.dev"]
+      insecure_registries = ["insecure.container.jumppad.dev:5003"]
+    }
   }
 }
 

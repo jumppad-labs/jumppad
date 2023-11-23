@@ -25,6 +25,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"golang.org/x/xerrors"
+	"gopkg.in/yaml.v2"
 )
 
 // https://github.com/rancher/k3d/blob/master/cli/commands.go
@@ -293,12 +294,25 @@ func (p *ClusterProvider) createK3s() error {
 		})
 	}
 
+	// add the registries volume
+	rc, err := p.createRegistriesConfig()
+	if err != nil {
+		return fmt.Errorf("unable to create registries.yaml: %s", err)
+	}
+
+	if rc != "" {
+		cc.Volumes = append(cc.Volumes, ctypes.Volume{
+			Source:      rc,
+			Destination: "/etc/rancher/k3s/registries.yaml",
+			Type:        "bind",
+		})
+	}
+
 	// Add any custom environment variables
 	cc.Environment = map[string]string{}
 
 	// set the environment variables for the K3S_KUBECONFIG_OUTPUT and K3S_CLUSTER_SECRET
 	cc.Environment["K3S_KUBECONFIG_OUTPUT"] = "/output/kubeconfig.yaml"
-	cc.Environment["K3S_CLUSTER_SECRET"] = "mysupersecret"
 
 	// only add the variables for the cache when the kubernetes version is >= v1.18.16
 	sv, err := semver.NewConstraint(">= v1.18.16")
@@ -321,7 +335,7 @@ func (p *ClusterProvider) createK3s() error {
 
 	if sv.Check(v) {
 		// load the CA from a file
-		ca, err := ioutil.ReadFile(filepath.Join(utils.CertsDir(""), "/root.cert"))
+		ca, err := os.ReadFile(filepath.Join(utils.CertsDir(""), "/root.cert"))
 		if err != nil {
 			return fmt.Errorf("unable to read root CA for proxy: %s", err)
 		}
@@ -329,6 +343,13 @@ func (p *ClusterProvider) createK3s() error {
 		cc.Environment["CONTAINERD_HTTP_PROXY"] = utils.ImageCacheAddress()
 		cc.Environment["CONTAINERD_HTTPS_PROXY"] = utils.ImageCacheAddress()
 		cc.Environment["PROXY_CA"] = string(ca)
+
+		// add the no-proxy overrides
+		if p.config.Config != nil &&
+			p.config.Config.DockerConfig != nil &&
+			len(p.config.Config.DockerConfig.InsecureRegistries) > 0 {
+			cc.Environment["CONTAINERD_NO_PROXY"] = strings.Join(p.config.Config.DockerConfig.InsecureRegistries, ",")
+		}
 	}
 
 	// add any custom environment variables
@@ -713,6 +734,43 @@ func (p *ClusterProvider) destroyK3s() error {
 	return nil
 }
 
+// createRegistriesConfig creates the k3s mirrors config for the cluster
+func (p *ClusterProvider) createRegistriesConfig() (string, error) {
+	dir, _, _ := utils.CreateKubeConfigPath(p.config.Name)
+	daemonConfigPath := path.Join(dir, "registries.yaml")
+
+	// remove any existing files, fail silently
+	os.RemoveAll(daemonConfigPath)
+
+	// create the docker config
+	dc := dockerConfig{
+		Mirrors: map[string]dockerMirror{},
+	}
+
+	// if the config is nil, do nothing
+	if p.config.Config == nil ||
+		p.config.Config.DockerConfig == nil ||
+		len(p.config.Config.DockerConfig.InsecureRegistries) < 1 {
+		return "", nil
+	}
+
+	for _, ir := range p.config.Config.DockerConfig.InsecureRegistries {
+		dc.Mirrors[ir] = dockerMirror{
+			Endpoints: []string{fmt.Sprintf("http://%s", ir)},
+		}
+	}
+
+	// write the config to a file
+	data, err := yaml.Marshal(&dc)
+	if err != nil {
+		return "", err
+	}
+
+	err = os.WriteFile(daemonConfigPath, data, os.ModePerm)
+
+	return daemonConfigPath, err
+}
+
 func writeConnectorNamespace(path string) error {
 	return ioutil.WriteFile(path, []byte(connectorNamespace), os.ModePerm)
 }
@@ -756,6 +814,14 @@ func writeConnectorDeployment(path string, grpc, http int, logLevel string) erro
 
 func writeConnectorRBAC(path string) error {
 	return ioutil.WriteFile(path, []byte(connectorRBAC), os.ModePerm)
+}
+
+type dockerConfig struct {
+	Mirrors map[string]dockerMirror `yaml:"mirrors"`
+}
+
+type dockerMirror struct {
+	Endpoints []string `yaml:"endpoint"`
 }
 
 var connectorDeployment = `

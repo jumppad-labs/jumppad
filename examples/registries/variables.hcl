@@ -3,7 +3,7 @@ variable "nomad_enabled" {
 }
 
 variable "k8s_enabled" {
-  default = false
+  default = true
 }
 
 variable "auth_ip_address" {
