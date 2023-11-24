@@ -1,4 +1,4 @@
-package providers
+package k8s
 
 import (
 	"bytes"
@@ -11,10 +11,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
+	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
+	conmocks "github.com/jumppad-labs/jumppad/pkg/clients/connector/mocks"
+	contypes "github.com/jumppad-labs/jumppad/pkg/clients/connector/types"
+	cmocks "github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/k8s"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/config"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/mohae/deepcopy"
 	"github.com/stretchr/testify/mock"
 	assert "github.com/stretchr/testify/require"
@@ -22,9 +31,9 @@ import (
 
 // setupClusterMocks sets up a happy path for mocks
 func setupClusterMocks(t *testing.T) (
-	*config.K8sCluster, *clients.MockContainerTasks, *clients.MockKubernetes, *clients.ConnectorMock) {
+	*K8sCluster, *cmocks.ContainerTasks, *k8s.MockKubernetes, *conmocks.Connector) {
 
-	md := &clients.MockContainerTasks{}
+	md := &cmocks.ContainerTasks{}
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{}, nil)
 	md.On("PullImage", mock.Anything, mock.Anything).Return(nil)
 	md.On("CreateVolume", mock.Anything, mock.Anything).Return("123", nil)
@@ -40,7 +49,7 @@ func setupClusterMocks(t *testing.T) (
 	md.On("RemoveVolume", mock.Anything).Return(nil)
 	md.On("DetachNetwork", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	md.On("EngineInfo").Return(&clients.EngineInfo{StorageDriver: "overlay2"})
+	md.On("EngineInfo").Return(&types.EngineInfo{StorageDriver: "overlay2"})
 
 	// set the home folder to a temp folder
 	tmpDir := t.TempDir()
@@ -66,29 +75,24 @@ func setupClusterMocks(t *testing.T) (
 	kcf.Close()
 
 	// create the Kubernetes client mock
-	mk := &clients.MockKubernetes{}
+	mk := &k8s.MockKubernetes{}
 	mk.Mock.On("SetConfig", mock.Anything).Return(nil)
 	mk.Mock.On("HealthCheckPods", mock.Anything, mock.Anything).Return(nil)
 	mk.Mock.On("Apply", mock.Anything, mock.Anything).Return(nil)
 	mk.Mock.On("GetPodLogs", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 
-	mc := &clients.ConnectorMock{}
-	mc.On("GetLocalCertBundle", mock.Anything).Return(&clients.CertBundle{}, nil)
+	mc := &conmocks.Connector{}
+	mc.On("GetLocalCertBundle", mock.Anything).Return(&contypes.CertBundle{}, nil)
 	mc.On("GenerateLeafCert",
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
-	).Return(&clients.CertBundle{}, nil)
+	).Return(&contypes.CertBundle{}, nil)
 
 	// copy the config
-	cc := deepcopy.Copy(clusterConfig).(*config.K8sCluster)
-	cn := deepcopy.Copy(clusterNetwork).(*config.Network)
-
-	c := config.New()
-	c.AddResource(cc)
-	c.AddResource(cn)
+	cc := deepcopy.Copy(clusterConfig).(*K8sCluster)
 
 	t.Cleanup(func() {
 		os.Setenv(utils.HomeEnvName(), currentHome)
@@ -98,11 +102,11 @@ func setupClusterMocks(t *testing.T) (
 }
 
 func TestClusterK3ErrorsWhenUnableToLookupIDs(t *testing.T) {
-	md := &clients.MockContainerTasks{}
+	md := &cmocks.ContainerTasks{}
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
-	mk := &clients.MockKubernetes{}
-	p := NewK8sCluster(clusterConfig, md, mk, nil, nil, clients.NewTestLogger(t))
+	mk := &k8s.MockKubernetes{}
+	p := ClusterProvider{clusterConfig, md, mk, nil, nil, logger.NewTestLogger(t)}
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -110,44 +114,43 @@ func TestClusterK3ErrorsWhenUnableToLookupIDs(t *testing.T) {
 
 func TestClusterK3SetsEnvironment(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
-	cc.Version = ""
+	cc.Image = nil
 
-	p := NewK8sCluster(cc, md, mk, nil, mc, clients.NewTestLogger(t))
+	p := ClusterProvider{clusterConfig, md, mk, nil, mc, logger.NewTestLogger(t)}
 
 	err := p.Create()
 	assert.NoError(t, err)
 
-	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*container.Container)
 
-	assert.Equal(t, params.EnvVar["K3S_KUBECONFIG_OUTPUT"], "/output/kubeconfig.yaml")
-	assert.Equal(t, params.EnvVar["K3S_CLUSTER_SECRET"], "mysupersecret")
-	assert.Equal(t, params.EnvVar["HTTP_PROXY"], utils.HTTPProxyAddress())
-	assert.Equal(t, params.EnvVar["HTTPS_PROXY"], utils.HTTPSProxyAddress())
-	assert.Equal(t, params.EnvVar["NO_PROXY"], utils.ProxyBypass)
-
-	assert.Equal(t, params.EnvVar["PROXY_CA"], "CA")
+	assert.Equal(t, params.Environment["K3S_KUBECONFIG_OUTPUT"], "/output/kubeconfig.yaml")
+	assert.Equal(t, params.Environment["K3S_CLUSTER_SECRET"], "mysupersecret")
+	assert.Equal(t, params.Environment["HTTP_PROXY"], utils.ImageCacheAddress())
+	assert.Equal(t, params.Environment["HTTPS_PROXY"], utils.ImageCacheAddress())
+	assert.Equal(t, params.Environment["NO_PROXY"], utils.ProxyBypass)
+	assert.Equal(t, params.Environment["PROXY_CA"], "CA")
 }
 
 func TestClusterK3DoesNotSetProxyEnvironmentWithWrongVersion(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
-	cc.Version = "v1.12.1"
+	cc.Image = &ctypes.Image{Name: "jumppad.dev/k3s:v1.12.1"}
 
-	p := NewK8sCluster(cc, md, mk, nil, mc, clients.NewTestLogger(t))
+	p := ClusterProvider{clusterConfig, md, mk, nil, mc, logger.NewTestLogger(t)}
 
 	err := p.Create()
 	assert.NoError(t, err)
 
-	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*container.Container)
 
-	assert.Empty(t, params.EnvVar["HTTP_PROXY"])
+	assert.Empty(t, params.Environment["HTTP_PROXY"])
 }
 
 func TestClusterK3ErrorsWhenClusterExists(t *testing.T) {
-	md := &clients.MockContainerTasks{}
+	md := &cmocks.ContainerTasks{}
 	md.On("FindContainerIDs", "server."+clusterConfig.Name, mock.Anything).Return([]string{"abc"}, nil)
 
-	mk := &clients.MockKubernetes{}
-	p := NewK8sCluster(clusterConfig, md, mk, nil, nil, clients.NewTestLogger(t))
+	mk := &k8s.MockKubernetes{}
+	p := ClusterProvider{clusterConfig, md, mk, nil, nil, logger.NewTestLogger(t)}
 
 	err := p.Create()
 	assert.Error(t, err)
@@ -155,13 +158,13 @@ func TestClusterK3ErrorsWhenClusterExists(t *testing.T) {
 
 func TestClusterK3PullsImageUsingBase(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
-	cc.Version = ""
+	cc.Image = nil
 
-	p := NewK8sCluster(cc, md, mk, nil, mc, clients.NewTestLogger(t))
+	p := ClusterProvider{clusterConfig, md, mk, nil, mc, logger.NewTestLogger(t)}
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "PullImage", config.Image{Name: "shipyardrun/k3s:" + k3sBaseVersion}, false)
+	md.AssertCalled(t, "PullImage", ctypes.Image{Name: "shipyardrun/k3s:" + k3sBaseVersion}, false)
 }
 
 func TestClusterK3PullsImageUsingCustom(t *testing.T) {
@@ -632,17 +635,14 @@ func TestLookupReturnsIDs(t *testing.T) {
 	assert.Equal(t, []string{"found"}, ids)
 }
 
-var clusterNetwork = config.NewNetwork("cloud")
-
-var clusterConfig = &config.K8sCluster{
-	ResourceInfo: config.ResourceInfo{Name: "test", Type: config.TypeK8sCluster},
-	Driver:       "k3s",
-	Version:      "v1.0.0",
-	Images: []config.Image{
-		config.Image{Name: "consul:1.6.1"},
-		config.Image{Name: "vault:1.6.1"},
+var clusterConfig = &K8sCluster{
+	ResourceMetadata: htypes.ResourceMetadata{Name: "test", Type: TypeK8sCluster},
+	Image:            &ctypes.Image{Name: "jumppad.dev/k3s:v1.23.0"},
+	CopyImages: []ctypes.Image{
+		ctypes.Image{Name: "consul:1.6.1"},
+		ctypes.Image{Name: "vault:1.6.1"},
 	},
-	Networks: []config.NetworkAttachment{config.NetworkAttachment{Name: "cloud"}},
+	Networks: []ctypes.NetworkAttachment{ctypes.NetworkAttachment{ID: "cloud"}},
 }
 
 var kubeconfig = `
