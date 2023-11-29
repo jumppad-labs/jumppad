@@ -253,8 +253,7 @@ func (p *Provider) createLocalExec() (int, error) {
 
 	// create the config
 	cc := cmdTypes.CommandConfig{
-		Command:          "/bin/sh",
-		Args:             []string{scriptPath},
+		Command:          scriptPath,
 		Env:              envs,
 		WorkingDirectory: p.config.WorkingDirectory,
 		RunInBackground:  p.config.Daemon,
