@@ -560,7 +560,7 @@ func (p *Provider) createCloudInit() (libvirtxml.DomainDisk, error) {
 		}
 	}
 
-	cloudinit := fmt.Sprintf("/tmp/%s/cloudinit.iso")
+	cloudinit := fmt.Sprintf("/tmp/%s/cloudinit.iso", p.config.Name)
 	outputFile, err := os.OpenFile(cloudinit, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 	if err != nil {
 		return disk, fmt.Errorf("failed to create iso file: %s", err)
