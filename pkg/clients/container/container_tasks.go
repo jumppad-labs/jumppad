@@ -2,6 +2,7 @@ package container
 
 import (
 	"io"
+	"os"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 )
@@ -70,7 +71,9 @@ type ContainerTasks interface {
 	CopyFileToContainer(id, src, dst string) error
 	// CreateFileInContainer creates a file with the given contents and name in the container containerID and
 	// stores it in the container at the directory path.
-	CreateFileInContainer(containerID, contents, filename, path string) error
+	CreateFileInContainer(containerID, contents, filename, path string, user, group string, permissions os.FileMode) error
+	// SetPermissionsInContainer sets the permissions of the file at the given path in the container
+	SetPermissionsInContainer(containerID, path string, user, group string, permissions os.FileMode) error
 	// CopyLocaDockerImageToVolume copies the docker images to the docker volume as a
 	// compressed archive.
 	// the path in the docker volume where the archive is created is returned

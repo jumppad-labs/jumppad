@@ -139,8 +139,8 @@ func (p *Provider) createRemoteExec() error {
 		envs = append(envs, fmt.Sprintf("%s=%s", k, v))
 	}
 
-	user := ""
-	group := ""
+	user := "root"
+	group := "root"
 
 	if p.config.RunAs != nil {
 		user = p.config.RunAs.User
@@ -253,8 +253,7 @@ func (p *Provider) createLocalExec() (int, error) {
 
 	// create the config
 	cc := cmdTypes.CommandConfig{
-		Command:          "/bin/sh",
-		Args:             []string{scriptPath},
+		Command:          scriptPath,
 		Env:              envs,
 		WorkingDirectory: p.config.WorkingDirectory,
 		RunInBackground:  p.config.Daemon,

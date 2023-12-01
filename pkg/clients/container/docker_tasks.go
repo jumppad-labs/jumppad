@@ -320,7 +320,7 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 
 		// get all default attached networks, we will disconnect these later
 		defaultNets := []string{}
-		for k, _ := range info.NetworkSettings.Networks {
+		for k := range info.NetworkSettings.Networks {
 			defaultNets = append(defaultNets, k)
 		}
 
@@ -805,7 +805,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 
 	cc.Image = &dtypes.Image{Name: "alpine:latest"}
 	cc.Volumes = []dtypes.Volume{
-		dtypes.Volume{
+		{
 			Source:      volumeID,
 			Destination: "/cache",
 			Type:        "volume",
@@ -896,7 +896,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 
 // CreateFileInContainer creates a file with the given contents and name in the container containerID and
 // stores it in the container at the directory path.
-func (d *DockerTasks) CreateFileInContainer(containerID, contents, filename, path string) error {
+func (d *DockerTasks) CreateFileInContainer(containerID, contents, filename, path string, user, group string, permissions os.FileMode) error {
 	tmpFile := filepath.Join(os.TempDir(), filename)
 
 	err := os.WriteFile(tmpFile, []byte(contents), 0755)
@@ -911,6 +911,30 @@ func (d *DockerTasks) CreateFileInContainer(containerID, contents, filename, pat
 	err = d.CopyFileToContainer(containerID, tmpFile, path)
 	if err != nil {
 		return err
+	}
+
+	err = d.SetPermissionsInContainer(containerID, filepath.Join(path, filename), user, group, permissions)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// SetFilePermissionsInContainer sets the permissions for the file at path in the container containerID
+func (d *DockerTasks) SetPermissionsInContainer(containerID, path string, user, group string, permissions os.FileMode) error {
+	if user != "" && group != "" {
+		user = fmt.Sprintf("%s:%s", user, group)
+	}
+
+	_, err := d.ExecuteCommand(containerID, []string{"chmod", fmt.Sprintf("%o", permissions), path}, nil, "/", "root", "", 300, nil)
+	if err != nil {
+		return xerrors.Errorf("unable to set permissions for file '%s' in container '%s': %w", path, containerID, err)
+	}
+
+	_, err = d.ExecuteCommand(containerID, []string{"chown", user, path}, nil, "/", "root", "", 300, nil)
+	if err != nil {
+		return xerrors.Errorf("unable to set ownership of file '%s' to '%s' in container '%s': %w", path, user, containerID, err)
 	}
 
 	return nil
@@ -1054,22 +1078,16 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 // id is the id of the container to execute the command in
 // contents is the contents of the script to execute
 // writer [optional] will be used to write any output from the command execution.
-func (d *DockerTasks) ExecuteScript(id string, contents string, env []string, workingDir string, user, group string, timeout int, writer io.Writer) (int, error) {
+func (d *DockerTasks) ExecuteScript(id string, contents string, env []string, workingDir string, user string, group string, timeout int, writer io.Writer) (int, error) {
 	// ensure we only have unix line ending in ths script
 	contents = strings.Replace(contents, "\r\n", "\n", -1)
 
-	// set the user details
-	if user != "" && group != "" {
-		user = fmt.Sprintf("%s:%s", user, group)
-	}
-
-	command := []string{"sh", "/tmp/script.sh"}
-
-	err := d.CreateFileInContainer(id, contents, "script.sh", "/tmp")
+	err := d.CreateFileInContainer(id, contents, "script.sh", "/tmp", user, group, 0755)
 	if err != nil {
 		return defaultExitCode, xerrors.Errorf("unable to create script in container: %w", err)
 	}
 
+	command := []string{"/tmp/script.sh"}
 	exitCode, err := d.ExecuteCommand(id, command, env, workingDir, user, group, timeout, writer)
 	if err != nil {
 		return exitCode, err
@@ -1304,7 +1322,7 @@ func createPublishedPorts(ps []dtypes.Port) publishedPorts {
 		pp.ExposedPorts[dp] = struct{}{}
 
 		pb := []nat.PortBinding{
-			nat.PortBinding{
+			{
 				HostIP:   "0.0.0.0",
 				HostPort: p.Host,
 			},
@@ -1351,7 +1369,7 @@ func createPublishedPortRanges(ps []dtypes.PortRange) (publishedPorts, error) {
 
 			if p.EnableHost {
 				pb := []nat.PortBinding{
-					nat.PortBinding{
+					{
 						HostIP:   "0.0.0.0",
 						HostPort: port,
 					},
@@ -1423,7 +1441,7 @@ func (d *DockerTasks) saveImageToTempFile(image, filename string) (string, error
 func copyDir(src string, dest string) error {
 
 	if dest == src {
-		return fmt.Errorf("cannot copy a folder into the folder itself!")
+		return fmt.Errorf("cannot copy a folder into the folder itself")
 	}
 
 	f, err := os.Open(src)
