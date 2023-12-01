@@ -4,6 +4,7 @@ package mocks
 
 import (
 	io "io"
+	"os"
 
 	types "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	mock "github.com/stretchr/testify/mock"
@@ -209,7 +210,7 @@ func (_m *ContainerTasks) CreateContainer(_a0 *types.Container) (string, error) 
 }
 
 // CreateFileInContainer provides a mock function with given fields: containerID, contents, filename, path
-func (_m *ContainerTasks) CreateFileInContainer(containerID string, contents string, filename string, path string) error {
+func (_m *ContainerTasks) CreateFileInContainer(containerID string, contents string, filename string, path string, user string, group string, permissions os.FileMode) error {
 	ret := _m.Called(containerID, contents, filename, path)
 
 	var r0 error
@@ -221,6 +222,20 @@ func (_m *ContainerTasks) CreateFileInContainer(containerID string, contents str
 
 	return r0
 }
+
+func (_m *ContainerTasks) SetPermissionsInContainer(containerID, path string, user, group string, permissions os.FileMode) error {
+	ret := _m.Called(containerID, path, user, group, permissions)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string, string, string, os.FileMode) error); ok {
+		r0 = rf(containerID, path, user, group, permissions)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 
 // CreateShell provides a mock function with given fields: id, command, stdin, stdout, stderr
 func (_m *ContainerTasks) CreateShell(id string, command []string, stdin io.ReadCloser, stdout io.Writer, stderr io.Writer) error {
