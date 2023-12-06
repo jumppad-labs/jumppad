@@ -47,7 +47,19 @@ func (p *Provider) Create() error {
 	// validate the subnet
 	_, cidr, err := net.ParseCIDR(p.config.Subnet)
 	if err != nil {
-		return fmt.Errorf("Unable to create network %s, invalid subnet %s", p.config.Name, p.config.Subnet)
+		return fmt.Errorf("unable to create network %s, invalid subnet %s", p.config.Name, p.config.Subnet)
+	}
+
+	// check the local networks for overlapping subnets
+	hostIPs, err := p.getHostIPs()
+	if err != nil {
+		return fmt.Errorf("unable to query host networks: %s", err)
+	}
+
+	for _, n := range hostIPs {
+		if cidr.Contains(n) {
+			return fmt.Errorf("unable to create network %s, a local ip address %s already exists that overlaps with the subnet %s. Please use a network subnet that does not confict with a local range", p.config.Name, n, p.config.Subnet)
+		}
 	}
 
 	// get all the networks
@@ -166,4 +178,35 @@ func (p *Provider) getNetworks(name string) ([]types.NetworkResource, error) {
 	args := filters.NewArgs()
 	args.Add("name", name)
 	return p.client.NetworkList(context.Background(), types.NetworkListOptions{Filters: args})
+}
+
+func (p *Provider) getHostIPs() ([]net.IP, error) {
+	ifs, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
+
+	ips := []net.IP{}
+
+	for _, i := range ifs {
+		addrs, err := i.Addrs()
+		if err != nil {
+			return nil, err
+		}
+
+		for _, addr := range addrs {
+			switch v := addr.(type) {
+			case *net.IPNet:
+				if ip := v.IP.To4(); ip != nil {
+					ips = append(ips, ip)
+				}
+			case *net.IPAddr:
+				if ip := v.IP.To4(); ip != nil {
+					ips = append(ips, ip)
+				}
+			}
+		}
+	}
+
+	return ips, nil
 }
