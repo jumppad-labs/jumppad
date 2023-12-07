@@ -347,8 +347,8 @@ func (p *ClusterProvider) createK3s() error {
 		// add the no-proxy overrides
 		if p.config.Config != nil &&
 			p.config.Config.DockerConfig != nil &&
-			len(p.config.Config.DockerConfig.InsecureRegistries) > 0 {
-			cc.Environment["CONTAINERD_NO_PROXY"] = strings.Join(p.config.Config.DockerConfig.InsecureRegistries, ",")
+			len(p.config.Config.DockerConfig.NoProxy) > 0 {
+			cc.Environment["CONTAINERD_NO_PROXY"] = strings.Join(p.config.Config.DockerConfig.NoProxy, ",")
 		}
 	}
 
