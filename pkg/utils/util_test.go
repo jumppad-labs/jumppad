@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -8,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/gosuri/uitable/util/strutil"
+	"github.com/stretchr/testify/require"
 	assert "github.com/stretchr/testify/require"
 )
 
@@ -60,14 +62,14 @@ func TestIsNotFolder(t *testing.T) {
 }
 
 func TestGetBlueprintFolderReturnsFolder(t *testing.T) {
-	dir, err := GetBlueprintFolder("github.com/org/repo//folder?ref=dfdf&foo=bah")
+	dir, err := BlueprintFolder("github.com/org/repo?ref=dfdf&foo=bah//folder")
 
 	assert.NoError(t, err)
-	assert.Equal(t, "folder/ref/dfdf/foo/bah", dir)
+	assert.Equal(t, "folder", dir)
 }
 
 func TestGetBlueprintFolderReturnsError(t *testing.T) {
-	_, err := GetBlueprintFolder("github.com/org/repo/folder")
+	_, err := BlueprintFolder("github.com/org/repo/folder")
 
 	assert.Error(t, err)
 }
@@ -100,7 +102,7 @@ func TestFQDNReturnsCorrectValue(t *testing.T) {
 
 func TestFQDNReplacesInvalidChars(t *testing.T) {
 	fq := FQDN("tes&t", "", "kubernetes_cluster")
-	assert.Equal(t, "tes-t.k8s-cluster.jumppad.dev", fq)
+	assert.Equal(t, "tes-t.kubernetes-cluster.jumppad.dev", fq)
 }
 
 func TestFQDNVolumeReturnsCorrectValue(t *testing.T) {
@@ -115,14 +117,14 @@ func TestHomeReturnsCorrectValue(t *testing.T) {
 
 func TestStateReturnsCorrectValue(t *testing.T) {
 	h := StateDir()
-	expected := filepath.Join(os.Getenv(HomeEnvName()), ".shipyard/state")
+	expected := filepath.Join(os.Getenv(HomeEnvName()), ".jumppad/state")
 
 	assert.Equal(t, expected, h)
 }
 
 func TestStatePathReturnsCorrectValue(t *testing.T) {
 	h := StatePath()
-	assert.Equal(t, filepath.Join(os.Getenv(HomeEnvName()), ".shipyard/state/state.json"), h)
+	assert.Equal(t, filepath.Join(os.Getenv(HomeEnvName()), ".jumppad/state/state.json"), h)
 }
 
 func TestCreateKubeConfigPathReturnsCorrectValues(t *testing.T) {
@@ -133,87 +135,14 @@ func TestCreateKubeConfigPathReturnsCorrectValues(t *testing.T) {
 
 	d, f, dp := CreateKubeConfigPath("testing")
 
-	assert.Equal(t, filepath.Join(tmp, ".shipyard", "config", "testing"), d)
-	assert.Equal(t, filepath.Join(tmp, ".shipyard", "config", "testing", "kubeconfig.yaml"), f)
-	assert.Equal(t, filepath.Join(tmp, ".shipyard", "config", "testing", "kubeconfig-docker.yaml"), dp)
+	assert.Equal(t, filepath.Join(tmp, ".jumppad", "config", "testing"), d)
+	assert.Equal(t, filepath.Join(tmp, ".jumppad", "config", "testing", "kubeconfig.yaml"), f)
+	assert.Equal(t, filepath.Join(tmp, ".jumppad", "config", "testing", "kubeconfig-docker.yaml"), dp)
 
 	// check creates folder
 	s, err := os.Stat(d)
 	assert.NoError(t, err)
 	assert.True(t, s.IsDir())
-}
-
-func setupClusterConfigTest(t *testing.T) {
-	home := os.Getenv(HomeEnvName())
-	tmp := t.TempDir()
-	os.Setenv(HomeEnvName(), tmp)
-
-	t.Cleanup(func() {
-		os.Setenv(HomeEnvName(), home)
-	})
-}
-func TestGetClusterConfigReturnsExistingConfig(t *testing.T) {
-	setupClusterConfigTest(t)
-
-	configDir := filepath.Join(JumppadHome(), "config", "testing")
-	os.MkdirAll(configDir, os.ModePerm)
-
-	// create the temp config
-	cc := ClusterConfig{
-		LocalAddress: "testing",
-	}
-
-	err := cc.Save(filepath.Join(configDir, "config.json"))
-	assert.NoError(t, err)
-
-	conf, dir := GetClusterConfig("nomad_cluster.testing")
-
-	assert.Equal(t, cc.LocalAddress, conf.LocalAddress)
-	assert.Equal(t, configDir, dir)
-}
-
-func TestGetClusterConfigReturnsEmptyWhenUnableToParseName(t *testing.T) {
-	setupClusterConfigTest(t)
-
-	conf, dir := GetClusterConfig("nomad")
-
-	assert.Equal(t, "", conf.LocalAddress)
-	assert.Equal(t, "", dir)
-}
-
-func TestGetClusterConfigCreatesNewNomadConfig(t *testing.T) {
-	setupClusterConfigTest(t)
-	configDir := filepath.Join(JumppadHome(), "config", "testing")
-
-	conf, dir := GetClusterConfig("nomad_cluster.testing")
-
-	assert.Contains(t, GetDockerIP(), conf.LocalAddress)
-	assert.Equal(t, 4646, conf.RemoteAPIPort)
-	assert.Equal(t, "server.testing.nomad-cluster.jumppad.dev", conf.RemoteAddress)
-	assert.Equal(t, GetDockerIP(), conf.LocalAddress)
-	assert.Equal(t, configDir, dir)
-}
-
-func TestGetClusterConfigTwiceReturnsSameConfig(t *testing.T) {
-	setupClusterConfigTest(t)
-
-	conf, _ := GetClusterConfig("nomad_cluster.testing")
-	conf2, _ := GetClusterConfig("nomad_cluster.testing")
-
-	assert.Equal(t, conf2.ConnectorAddress(LocalContext), conf.ConnectorAddress(LocalContext))
-}
-
-func TestGetClusterConfigCreatesNewKubernetesConfig(t *testing.T) {
-	setupClusterConfigTest(t)
-	configDir := filepath.Join(JumppadHome(), "config", "testing")
-
-	conf, dir := GetClusterConfig("kubernetes_cluster.testing")
-
-	assert.Contains(t, GetDockerIP(), conf.LocalAddress)
-	assert.Equal(t, conf.APIPort, conf.RemoteAPIPort)
-	assert.Equal(t, "server.testing.kubernetes-cluster.jumppad.dev", conf.RemoteAddress)
-	assert.Equal(t, GetDockerIP(), conf.LocalAddress)
-	assert.Equal(t, configDir, dir)
 }
 
 func TestShipyardTempReturnsPath(t *testing.T) {
@@ -226,9 +155,9 @@ func TestShipyardTempReturnsPath(t *testing.T) {
 		os.RemoveAll(tmp)
 	})
 
-	st := ShipyardTemp()
+	st := JumppadTemp()
 
-	assert.Equal(t, filepath.Join(tmp, ".shipyard", "/tmp"), st)
+	assert.Equal(t, filepath.Join(tmp, ".jumppad", "/tmp"), st)
 
 	s, err := os.Stat(st)
 	assert.NoError(t, err)
@@ -245,9 +174,9 @@ func TestShipyardDataReturnsPath(t *testing.T) {
 		os.RemoveAll(tmp)
 	})
 
-	d := GetDataFolder("test", 0775)
+	d := DataFolder("test", 0775)
 
-	assert.Equal(t, filepath.Join(tmp, ".shipyard", "/data", "/test"), d)
+	assert.Equal(t, filepath.Join(tmp, ".jumppad", "/data", "/test"), d)
 
 	s, err := os.Stat(d)
 	fmt.Println(d, s)
@@ -258,15 +187,15 @@ func TestShipyardDataReturnsPath(t *testing.T) {
 
 func TestHelmLocalFolderReturnsPath(t *testing.T) {
 	chart := "github.com/jetstack/cert-manager?ref=v1.2.0/deploy/charts//cert-manager"
-	h := GetHelmLocalFolder(chart)
+	h := HelmLocalFolder(chart)
 
-	assert.Equal(t, filepath.Join(os.Getenv(HomeEnvName()), ".shipyard", "/helm_charts", "github.com/jetstack/cert-manager/ref/v1.2.0/deploy/charts/cert-manager"), h)
+	assert.Equal(t, filepath.Join(os.Getenv(HomeEnvName()), ".jumppad", "/helm_charts", "github.com/jetstack/cert-manager/ref-v1.2.0/deploy/charts/cert-manager"), h)
 }
 
 func TestShipyardReleasesReturnsPath(t *testing.T) {
-	r := GetReleasesFolder()
+	r := ReleasesFolder()
 
-	assert.Equal(t, filepath.Join(os.Getenv(HomeEnvName()), ".shipyard", "/releases"), r)
+	assert.Equal(t, filepath.Join(os.Getenv(HomeEnvName()), ".jumppad", "/releases"), r)
 }
 
 func TestIsHCLFile(t *testing.T) {
@@ -304,9 +233,9 @@ func TestIsHCLFile(t *testing.T) {
 }
 
 func TestBlueprintLocalFolder(t *testing.T) {
-	dst := GetBlueprintLocalFolder("github.com/shipyard-run/blueprints//vault-k8s?ref=dfdf&foo=bah")
+	dst := BlueprintLocalFolder("github.com/shipyard-run/blueprints?ref=dfdf&foo=bah//vault-k8s")
 
-	assert.Equal(t, filepath.Join(JumppadHome(), "/blueprints/github.com/shipyard-run/blueprints/vault-k8s/ref/dfdf/foo/bah"), dst)
+	assert.Equal(t, filepath.Join(JumppadHome(), "/blueprints/github.com/shipyard-run/blueprints/ref-dfdf-foo-bah/vault-k8s"), dst)
 }
 
 func TestDockerHostWithDefaultReturnsCorrectValue(t *testing.T) {
@@ -330,13 +259,13 @@ func TestGetLocalIPAndHostnameReturnsCorrectly(t *testing.T) {
 func TestHTTPProxyAddressReturnsDefaultWhenEnvNotSet(t *testing.T) {
 	proxy := HTTPProxyAddress()
 
-	assert.Equal(t, shipyardProxyAddress, proxy)
+	assert.Equal(t, jumppadProxyAddress, proxy)
 }
 
 func TestHTTPSProxyAddressReturnsDefaultWhenEnvNotSet(t *testing.T) {
 	proxy := HTTPSProxyAddress()
 
-	assert.Equal(t, shipyardProxyAddress, proxy)
+	assert.Equal(t, jumppadProxyAddress, proxy)
 }
 
 func TestHTTPProxyAddressReturnsEnvWhenEnvSet(t *testing.T) {
@@ -353,4 +282,29 @@ func TestHTTPSProxyAddressReturnsEnvWhenEnvSet(t *testing.T) {
 	proxy := HTTPSProxyAddress()
 
 	assert.Equal(t, httpsProxy, proxy)
+}
+
+var testData = `
+{
+	"checks": "test",
+	"children": [
+		{
+			"checks": "test"
+		},
+		{
+			"checks": "test2"
+		}
+	]
+}
+`
+
+func TestChecksumInterface(t *testing.T) {
+	var data map[string]interface{}
+	err := json.Unmarshal([]byte(testData), &data)
+	require.NoError(t, err)
+
+	c, err := ChecksumFromInterface(data)
+	require.NoError(t, err)
+
+	assert.Equal(t, "h1:kpp5xuYieKQMhbtP0+Y6N+dUzx9p9pGq9+WXkgbK6fs=", c)
 }

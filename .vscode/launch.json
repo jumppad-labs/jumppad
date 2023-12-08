@@ -64,6 +64,7 @@
       },
       "args": [
         "dev",
+        "--disable-tty",
         "${input:blueprint}",
       ],
     }, 

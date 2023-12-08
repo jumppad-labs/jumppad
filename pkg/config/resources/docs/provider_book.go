@@ -2,11 +2,9 @@ package docs
 
 import (
 	"fmt"
-	"os"
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 type BookProvider struct {
@@ -27,8 +25,6 @@ func (p *BookProvider) Init(cfg htypes.Resource, l logger.Logger) error {
 }
 
 func (p *BookProvider) Create() error {
-	p.log.Info(fmt.Sprintf("Creating %s", p.config.Type), "ref", p.config.Name)
-
 	index := BookIndex{
 		Title: p.config.Title,
 	}
@@ -48,10 +44,7 @@ func (p *BookProvider) Create() error {
 }
 
 func (p *BookProvider) Destroy() error {
-	// clean up the library folder
-	err := os.RemoveAll(utils.LibraryFolder("", os.ModePerm))
-
-	return err
+	return nil
 }
 
 func (p *BookProvider) Lookup() ([]string, error) {
@@ -59,15 +52,11 @@ func (p *BookProvider) Lookup() ([]string, error) {
 }
 
 func (p *BookProvider) Refresh() error {
-	p.log.Debug("Refresh Book", "ref", p.config.ID)
-
-	p.Destroy()
 	p.Create()
 
 	return nil
 }
 
 func (p *BookProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.ID)
 	return false, nil
 }

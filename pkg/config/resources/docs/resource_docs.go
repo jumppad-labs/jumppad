@@ -31,6 +31,10 @@ type Docs struct {
 	// ContainerName is the fully qualified resource name for the container, this can be used
 	// to access the container from other sources
 	ContainerName string `hcl:"fqdn,optional" json:"fqdn,omitempty"`
+
+	// ContentChecksum is the checksum of the content directory, this is used to determine if the
+	// docs need to be recreated
+	ContentChecksum string `hcl:"content_checksum,optional" json:"content_checksum,omitempty"`
 }
 
 type Logo struct {
@@ -54,6 +58,7 @@ func (d *Docs) Process() error {
 		if r != nil {
 			kstate := r.(*Docs)
 			d.ContainerName = kstate.ContainerName
+			d.ContentChecksum = kstate.ContentChecksum
 		}
 	}
 

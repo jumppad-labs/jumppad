@@ -143,8 +143,8 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 			continue
 		}
 
-		// check if the resource has changed
-		if cr.Metadata().Checksum != r.Metadata().Checksum {
+		// check if the hcl resource text has changed
+		if cr.Metadata().Checksum.Parsed != r.Metadata().Checksum.Parsed {
 			// resource has changes rebuild
 			changed = append(changed, r)
 			continue
@@ -274,9 +274,8 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 	processErr := e.readAndProcessConfig(path, vars, variablesFile, e.createCallback)
 
 	// we need to remove any resources that are in the state but not in the config
-	e.log.Debug("removing resources in state but not in current config")
 	for _, r := range removed {
-		e.log.Debug("removing", "id", r.Metadata().ID)
+		e.log.Debug("removing resource in state but not current config", "id", r.Metadata().ID)
 
 		p := e.providers.GetProvider(r)
 		if p == nil {

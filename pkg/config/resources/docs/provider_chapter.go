@@ -27,8 +27,6 @@ func (p *ChapterProvider) Init(cfg htypes.Resource, l logger.Logger) error {
 }
 
 func (p *ChapterProvider) Create() error {
-	p.log.Info(fmt.Sprintf("Creating %s", p.config.Type), "ref", p.config.ID)
-
 	index := ChapterIndex{
 		Title: p.config.Title,
 	}
@@ -78,16 +76,11 @@ func (p *ChapterProvider) Lookup() ([]string, error) {
 }
 
 func (p *ChapterProvider) Refresh() error {
-	p.log.Debug("Refresh Chapter", "ref", p.config.ID)
-
-	p.Destroy()
-	p.Create()
+	p.Create() // always generate content
 
 	return nil
 }
 
 func (p *ChapterProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.ID)
-
 	return false, nil
 }
