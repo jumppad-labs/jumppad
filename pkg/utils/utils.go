@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -247,6 +248,9 @@ func BlueprintFolder(blueprint string) (string, error) {
 		return "", InvalidBlueprintURIError
 	}
 
+	// first replace any ?
+	parts[1] = strings.Replace(parts[1], "?", "-", -1)
+
 	return sanitize.Path(parts[1]), nil
 }
 
@@ -255,6 +259,10 @@ func BlueprintFolder(blueprint string) (string, error) {
 func BlueprintLocalFolder(blueprint string) string {
 	// we might have a querystring reference such has github.com/abc/cds?ref=dfdf&dfdf
 	// replace these separators with /
+
+	// replace any ? with / before sanitizing
+	blueprint = strings.Replace(blueprint, "?", "/", -1)
+
 	blueprint = sanitize.Path(blueprint)
 
 	return filepath.Join(JumppadHome(), "blueprints", blueprint)
@@ -263,6 +271,9 @@ func BlueprintLocalFolder(blueprint string) string {
 // HelmLocalFolder returns the full storage path
 // for the given blueprint URI
 func HelmLocalFolder(chart string) string {
+	// replace any ? with / before sanitizing
+	chart = strings.Replace(chart, "?", "/", -1)
+
 	chart = sanitize.Path(chart)
 
 	return filepath.Join(JumppadHome(), "helm_charts", chart)
@@ -541,6 +552,19 @@ func HashString(content string) (string, error) {
 	}
 
 	return "h1:" + base64.StdEncoding.EncodeToString(hf.Sum(nil)), nil
+}
+
+// InterfaceChecksum returns a checksum of the given interface
+// Note: the checksum is positional, should an element in a map or list change
+// position then a different checksum will be returned.
+func ChecksumFromInterface(i interface{}) (string, error) {
+	// first convert the object to json
+	json, err := json.Marshal(i)
+	if err != nil {
+		return "", fmt.Errorf("unable to marshal interface: %w", err)
+	}
+
+	return HashString(string(json))
 }
 
 func incIP(ip net.IP) net.IP {

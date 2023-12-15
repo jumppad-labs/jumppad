@@ -160,6 +160,11 @@ func doUpdates(v view.View, e jumppad.Engine, source string, variables map[strin
 			v.Logger().Error(err.Error())
 		}
 
+		v.Logger().Debug("Changes detected", "new", len(new), "changed", len(changed), "removed", len(removed))
+		for _, n := range changed {
+			v.Logger().Debug("Changed", "resource", n.Metadata().ID)
+		}
+
 		if len(new) > 0 || len(changed) > 0 || len(removed) > 0 {
 			v.UpdateStatus(
 				fmt.Sprintf(

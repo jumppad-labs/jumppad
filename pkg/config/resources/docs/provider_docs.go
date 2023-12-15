@@ -94,7 +94,8 @@ func (p *DocsProvider) Create() error {
 		return err
 	}
 
-	return nil
+	// write the content
+	return p.Refresh()
 }
 
 // Destroy the documentation container
@@ -114,6 +115,10 @@ func (p *DocsProvider) Destroy() error {
 		}
 	}
 
+	// remove the cached files
+	contentPath := utils.LibraryFolder("", 0775)
+	os.RemoveAll(contentPath)
+
 	return nil
 }
 
@@ -123,14 +128,24 @@ func (p *DocsProvider) Lookup() ([]string, error) {
 }
 
 func (p *DocsProvider) Refresh() error {
-	p.log.Debug("Refresh Docs", "ref", p.config.ID)
+	changed, err := p.checkChanged()
+	if err != nil {
+		return fmt.Errorf("unable to check if content has changed: %s", err)
+	}
+
+	// no changes return
+	if !changed {
+		return nil
+	}
+
+	p.log.Info("Refresh Docs", "ref", p.config.ID)
 
 	// refresh content on disk
 	configPath := utils.LibraryFolder("config", 0775)
 
 	// jumppad.config.js
 	frontendConfigPath := filepath.Join(configPath, "jumppad.config.js")
-	err := p.writeConfig(frontendConfigPath)
+	err = p.writeConfig(frontendConfigPath)
 	if err != nil {
 		return err
 	}
@@ -171,7 +186,46 @@ func (p *DocsProvider) Refresh() error {
 		}
 	}
 
+	// store a checksum of the content
+	cs, err := p.generateContentChecksum()
+	if err != nil {
+		return fmt.Errorf("unable to generate checksum for content: %s", err)
+	}
+
+	p.config.ContentChecksum = cs
+
 	return nil
+}
+
+func (p *DocsProvider) Changed() (bool, error) {
+	p.log.Debug("Checking changes", "ref", p.config.ID)
+
+	// since the content has not been processed we can not reliably determine
+	// if the content has changed, so we will assume it has
+	return true, nil
+}
+
+// check if the content has changed
+func (p *DocsProvider) checkChanged() (bool, error) {
+	if p.config.ContentChecksum == "" {
+		return true, nil
+	}
+
+	cs, err := p.generateContentChecksum()
+	if err != nil {
+		return true, fmt.Errorf("unable to generate checksum for content: %s", err)
+	}
+
+	return cs != p.config.ContentChecksum, nil
+}
+
+func (p *DocsProvider) generateContentChecksum() (string, error) {
+	cs, err := utils.ChecksumFromInterface(p.config.Content)
+	if err != nil {
+		return "", fmt.Errorf("unable to generate checksum for content: %s", err)
+	}
+
+	return cs, nil
 }
 
 func (p *DocsProvider) getDefaultPage() string {
@@ -186,12 +240,6 @@ func (p *DocsProvider) getDefaultPage() string {
 		}
 	}
 	return "/"
-}
-
-func (p *DocsProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.ID)
-
-	return false, nil
 }
 
 func (p *DocsProvider) createDocsContainer() error {
@@ -243,25 +291,6 @@ func (p *DocsProvider) createDocsContainer() error {
 	// ~/.jumppad/library/content
 	contentPath := utils.LibraryFolder("content", 0775)
 
-	for _, book := range p.config.Content {
-		bookPath := filepath.Join(contentPath, book.Name)
-
-		for _, chapter := range book.Chapters {
-			chapterPath := filepath.Join(bookPath, chapter.Name)
-			os.MkdirAll(chapterPath, 0755)
-			os.Chmod(chapterPath, 0755)
-
-			for _, page := range chapter.Pages {
-				pageFile := fmt.Sprintf("%s.mdx", page.Name)
-				pagePath := filepath.Join(chapterPath, pageFile)
-				err := os.WriteFile(pagePath, []byte(page.Content), 0755)
-				if err != nil {
-					return fmt.Errorf("unable to write page %s to disk at %s", page.Name, pagePath)
-				}
-			}
-		}
-	}
-
 	// mount the content
 	cc.Volumes = append(
 		cc.Volumes,
@@ -273,20 +302,6 @@ func (p *DocsProvider) createDocsContainer() error {
 
 	// ~/.jumppad/library/config
 	configPath := utils.LibraryFolder("config", 0775)
-
-	// write the navigation
-	navigationPath := filepath.Join(configPath, "navigation.jsx")
-	err = p.writeNavigation(navigationPath)
-	if err != nil {
-		return err
-	}
-
-	// write the progress
-	progressPath := filepath.Join(configPath, "progress.jsx")
-	err = p.writeProgress(progressPath)
-	if err != nil {
-		return err
-	}
 
 	cc.Volumes = append(
 		cc.Volumes,
