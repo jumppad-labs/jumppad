@@ -17,6 +17,7 @@ import (
 	contTypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 
 // ExecRemote provider allows the execution of arbitrary commands on an existing target or
@@ -29,7 +30,7 @@ type Provider struct {
 }
 
 // Intit creates a new Exec provider
-func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*Exec)
 	if !ok {
 		return fmt.Errorf("unable to initialize provider, resource is not of type Exec")

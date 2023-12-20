@@ -24,6 +24,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/k8s"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v2"
 )
@@ -44,7 +45,7 @@ type ClusterProvider struct {
 	log        logger.Logger
 }
 
-func (p *ClusterProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *ClusterProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*K8sCluster)
 	if !ok {
 		return fmt.Errorf("unable to initialize Kubernetes cluster provider, resource is not of type K8sCluster")

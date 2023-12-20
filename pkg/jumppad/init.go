@@ -1,6 +1,10 @@
 package jumppad
 
 import (
+	"os"
+	"path"
+	"plugin"
+
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/blueprint"
@@ -20,6 +24,8 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/random"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/template"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/terraform"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 
 func init() {
@@ -58,4 +64,44 @@ func init() {
 	config.RegisterResource(types.TypeModule, &types.Module{}, &null.Provider{})
 	config.RegisterResource(types.TypeOutput, &types.Output{}, &null.Provider{})
 	config.RegisterResource(types.TypeVariable, &types.Variable{}, &null.Provider{})
+
+	// load external plugins by scanning the plugin directory
+	dirs, err := os.ReadDir(utils.PluginsDir())
+	if err != nil {
+		panic(err)
+	}
+
+	for _, dir := range dirs {
+		if dir.IsDir() {
+			continue
+		}
+
+		p, err := plugin.Open(path.Join(utils.PluginsDir(), dir.Name()))
+		if err != nil {
+			panic(err)
+		}
+
+		plug, err := p.Lookup("Register")
+		if err != nil {
+			panic(err)
+		}
+
+		registerFunc, ok := plug.(func(sdk.RegisterResourceFunc, sdk.LoadStateFunc) error)
+		if !ok {
+			panic("plugin does not have a Register function")
+		}
+
+		err = registerFunc(
+			func(name string, r types.Resource, p sdk.Provider) {
+				config.RegisterResource(name, r, p)
+			},
+			func() (sdk.Config, error) {
+				return config.LoadState()
+			},
+		)
+
+		if err != nil {
+			panic(err)
+		}
+	}
 }

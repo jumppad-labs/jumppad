@@ -4,15 +4,15 @@ import (
 	"fmt"
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 
 type BookProvider struct {
 	config *Book
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *BookProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *BookProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*Book)
 	if !ok {
 		return fmt.Errorf("unable to initialize Book provider, resource is not of type Book")

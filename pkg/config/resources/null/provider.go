@@ -5,16 +5,16 @@ import (
 
 	"github.com/jumppad-labs/hclconfig/types"
 	htypes "github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 
 // Null is a noop provider
 type Provider struct {
 	config types.Resource
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	p.config = cfg
 	p.log = l
 

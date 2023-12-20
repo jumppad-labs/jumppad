@@ -10,11 +10,12 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 
 type API struct {
 	server *http.Server
-	log    logger.Logger
+	log    sdk.Logger
 }
 
 // New creates a new server

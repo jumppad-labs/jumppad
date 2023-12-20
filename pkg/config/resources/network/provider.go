@@ -11,7 +11,7 @@ import (
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	"golang.org/x/xerrors"
 )
 
@@ -19,10 +19,10 @@ import (
 type Provider struct {
 	config *Network
 	client container.Docker
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*Network)
 	if !ok {
 		return fmt.Errorf("unable to initialize Network provider, resource is not of type Network")

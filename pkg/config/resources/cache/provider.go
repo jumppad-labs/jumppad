@@ -14,6 +14,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	"golang.org/x/xerrors"
 )
 
@@ -26,7 +27,7 @@ type Provider struct {
 	log    logger.Logger
 }
 
-func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*ImageCache)
 	if !ok {
 		return fmt.Errorf("unable to initialize ImageCache provider, resource is not of type ImageCache")

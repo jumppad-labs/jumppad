@@ -8,18 +8,18 @@ import (
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/k8s"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	"golang.org/x/xerrors"
 )
 
 type ConfigProvider struct {
 	config *K8sConfig
 	client k8s.Kubernetes
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *ConfigProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *ConfigProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*K8sConfig)
 	if !ok {
 		return fmt.Errorf("unable to initialize Config provider, resource is not of type K8sConfig")
@@ -63,7 +63,7 @@ func (p *ConfigProvider) Create() error {
 			return xerrors.Errorf("healthcheck failed after helm chart setup: %w", err)
 		}
 	}
-	
+
 	// set the checksums
 	cs, err := p.generateChecksums()
 	if err != nil {

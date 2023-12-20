@@ -15,8 +15,8 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	cclient "github.com/jumppad-labs/jumppad/pkg/clients/container"
 	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	"github.com/kennygrant/sanitize"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -27,10 +27,10 @@ const terraformImageName = "hashicorp/terraform"
 type TerraformProvider struct {
 	config *Terraform
 	client cclient.ContainerTasks
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *TerraformProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *TerraformProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*Terraform)
 	if !ok {
 		return fmt.Errorf("unable to initialize Terraform provider, resource is not of type Terraform")

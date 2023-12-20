@@ -6,16 +6,16 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/infinytum/raymond/v2"
 	htypes "github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	"github.com/mailgun/raymond/v2"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	"github.com/zclconf/go-cty/cty"
 )
 
 // Template provider allows parsing and output of file based templates
 type TemplateProvider struct {
 	config *Template
-	log    logger.Logger
+	log    sdk.Logger
 }
 
 // parseVars converts a map[string]cty.Value into map[string]interface
@@ -64,7 +64,7 @@ func castVar(v cty.Value) interface{} {
 	return nil
 }
 
-func (p *TemplateProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *TemplateProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*Template)
 	if !ok {
 		return fmt.Errorf("unable to initialize Template provider, resource is not of type Template")

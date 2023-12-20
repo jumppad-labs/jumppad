@@ -7,9 +7,9 @@ import (
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/clients/nomad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	"golang.org/x/xerrors"
 )
 
@@ -18,10 +18,10 @@ import (
 type JobProvider struct {
 	config *NomadJob
 	client nomad.Nomad
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *JobProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *JobProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	cli, err := clients.GenerateClients(l)
 	if err != nil {
 		return err

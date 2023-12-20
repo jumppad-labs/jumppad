@@ -7,16 +7,16 @@ import (
 
 	"github.com/hashicorp/go-uuid"
 	htypes "github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 
 // RandomUUID is a provider for generating random UUIDs
 type RandomUUIDProvider struct {
 	config *RandomUUID
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *RandomUUIDProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *RandomUUIDProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*RandomUUID)
 	if !ok {
 		return fmt.Errorf("unable to initialize RandomUUID provider, resource is not of type RandomUUID")

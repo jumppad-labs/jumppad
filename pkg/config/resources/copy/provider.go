@@ -8,17 +8,17 @@ import (
 	"strings"
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	cp "github.com/otiai10/copy"
 	"golang.org/x/xerrors"
 )
 
 type Provider struct {
-	log    logger.Logger
+	log    sdk.Logger
 	config *Copy
 }
 
-func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*Copy)
 	if !ok {
 		return fmt.Errorf("unable to initialize Copy provider, resource is not an instance of Copy")

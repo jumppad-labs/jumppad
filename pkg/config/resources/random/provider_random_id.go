@@ -7,17 +7,17 @@ import (
 	"math/big"
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	"golang.org/x/xerrors"
 )
 
 // RandomID is a provider for generating random IDs
 type RandomIDProvider struct {
 	config *RandomID
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *RandomIDProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *RandomIDProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*RandomID)
 	if !ok {
 		return fmt.Errorf("unable to initialize RandomID provider, resource is not of type RandomID")

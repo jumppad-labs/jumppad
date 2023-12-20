@@ -6,15 +6,15 @@ import (
 	"strings"
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 
 type ChapterProvider struct {
 	config *Chapter
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *ChapterProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *ChapterProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*Chapter)
 	if !ok {
 		return fmt.Errorf("unable to initialize Chapter provider, resource is not of type Chapter")

@@ -5,16 +5,16 @@ import (
 	"math/rand"
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 
 // RandomNumber is a random number provider
 type RandomNumberProvider struct {
 	config *RandomNumber
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *RandomNumberProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *RandomNumberProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*RandomNumber)
 	if !ok {
 		return fmt.Errorf("unable to initialize RandomNumber provider, resource is not of type RandomNumber")

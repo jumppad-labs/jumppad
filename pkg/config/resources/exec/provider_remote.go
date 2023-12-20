@@ -8,8 +8,8 @@ import (
 	cclient "github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	"golang.org/x/xerrors"
 )
 
@@ -18,10 +18,10 @@ import (
 type RemoteProvider struct {
 	config *RemoteExec
 	client cclient.ContainerTasks
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *RemoteProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *RemoteProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*RemoteExec)
 	if !ok {
 		return fmt.Errorf("unable to initialize ImageCache provider, resource is not of type ImageCache")

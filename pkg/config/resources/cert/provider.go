@@ -14,6 +14,7 @@ import (
 	"github.com/jumppad-labs/connector/crypto"
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	"github.com/pkg/errors"
 	"github.com/sethvargo/go-retry"
 	"golang.org/x/crypto/ssh"
@@ -22,15 +23,15 @@ import (
 
 type CAProvider struct {
 	config *CertificateCA
-	log    logger.Logger
+	log    sdk.Logger
 }
 
 type LeafProvider struct {
 	config *CertificateLeaf
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *CAProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *CAProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*CertificateCA)
 	if !ok {
 		return fmt.Errorf("unable to initialize CA provider, resource is not of type CertificateCA")
@@ -41,7 +42,7 @@ func (p *CAProvider) Init(cfg htypes.Resource, l logger.Logger) error {
 	return nil
 }
 
-func (p *LeafProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *LeafProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*CertificateLeaf)
 	if !ok {
 		return fmt.Errorf("unable to initialize Leaf provider, resource is not of type CertificateLeaf")

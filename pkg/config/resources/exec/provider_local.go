@@ -9,8 +9,8 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/command"
 	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/command/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 
 // ExecLocal provider allows the execution of arbitrary commands
@@ -18,11 +18,11 @@ import (
 type LocalProvider struct {
 	config *LocalExec
 	client command.Command
-	log    logger.Logger
+	log    sdk.Logger
 }
 
 // Intit creates a new Local Exec provider
-func (p *LocalProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *LocalProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*LocalExec)
 	if !ok {
 		return fmt.Errorf("unable to initialize Local provider, resource is not of type LocalExec")
