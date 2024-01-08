@@ -43,8 +43,8 @@ type Ingress struct {
 }
 
 type TargetConfig struct {
-	Name          string `hcl:"name,optional" json:"name,omitempty"`
-	Type          string `hcl:"type,optional" json:"type,omitempty"`
+	ResourceName  string `hcl:"resource_name,optional" json:"resource_name,omitempty"`
+	ResourceType  string `hcl:"resource_type,optional" json:"resource_type,omitempty"`
 	ExternalIP    string `hcl:"external_ip,optional" json:"external_ip,omitempty"`
 	ConnectorPort int    `hcl:"connector_port,optional" json:"connector_port,omitempty"`
 }

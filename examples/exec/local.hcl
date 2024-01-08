@@ -9,6 +9,8 @@ resource "exec" "install" {
     cd /tmp && unzip ./consul.zip
   fi
   EOF
+  
+  timeout = "30s"
 }
 
 resource "exec" "run" {

@@ -11,7 +11,7 @@ resource "container" "consul" {
   }
 
   network {
-    id = resource.network.cloud.id
+    id = resource.network.cloud.resource_id
   }
 
   port {

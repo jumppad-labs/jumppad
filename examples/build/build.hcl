@@ -51,7 +51,7 @@ module "container" {
 
   variables = {
     image        = resource.build.app.image
-    network      = resource.network.onprem.id
+    network      = resource.network.onprem.resource_id
     ingress_port = variable.container_ingress_port
   }
 }
@@ -62,7 +62,7 @@ module "nomad" {
 
   variables = {
     image        = resource.build.app.image
-    network      = resource.network.onprem.id
+    network      = resource.network.onprem.resource_id
     ingress_port = variable.nomad_ingress_port
   }
 }
@@ -73,7 +73,7 @@ module "kubernetes" {
 
   variables = {
     image          = resource.build.app.image
-    network        = resource.network.onprem.id
+    network        = resource.network.onprem.resource_id
     ingress_port   = variable.kubernetes_ingress_port
     container_port = module.container.output.local_port
   }

@@ -60,8 +60,8 @@ var statusCmd = &cobra.Command{
 
 			fmt.Println(string(s))
 		} else {
-			fmt.Println()
-			fmt.Printf("%-13s %-60s %s\n", "STATUS", "RESOURCE", "FQDN")
+			// fmt.Println()
+			// fmt.Printf("%-13s %-60s %s\n", "STATUS", "RESOURCE", "FQDN")
 
 			createdCount := 0
 			failedCount := 0
@@ -81,21 +81,25 @@ var statusCmd = &cobra.Command{
 
 			for _, ress := range resourceMap {
 				for _, r := range ress {
-					if (resourceType != "" && r.Metadata().ResourceType != resourceType) || r.Metadata().ResourceType == types.TypeModule {
+					if (resourceType != "" && r.Metadata().ResourceType != resourceType) ||
+						r.Metadata().ResourceType == types.TypeModule ||
+						r.Metadata().ResourceType == types.TypeVariable ||
+						r.Metadata().ResourceType == types.TypeOutput {
 						continue
 					}
 
-					status := fmt.Sprintf(White, "[ PENDING ]  ")
+					status := yellowIcon.Render("?")
 					if r.Metadata().Disabled {
-						status = fmt.Sprintf(Teal, "[ DISABLED ] ")
+						fmt.Printf("%s %s\n", grayIcon.Render("-"), grayText.Render(r.Metadata().ResourceID))
 						disabledCount++
+						continue
 					} else {
 						switch r.Metadata().ResourceProperties[constants.PropertyStatus] {
 						case constants.StatusCreated:
-							status = fmt.Sprintf(Green, "[ CREATED ]  ")
+							status = greenIcon.Render("✔")
 							createdCount++
 						case constants.StatusFailed:
-							status = fmt.Sprintf(Red, "[ FAILED ]   ")
+							status = redIcon.Render("✘")
 							failedCount++
 						default:
 							pendingCount++
@@ -104,29 +108,45 @@ var statusCmd = &cobra.Command{
 
 					switch r.Metadata().ResourceType {
 					case nomad.TypeNomadCluster:
-						fmt.Printf("%-13s %-50s %s\n", status, r.Metadata().ResourceID, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().ResourceName, "", string(r.Metadata().ResourceType))))
+						fmt.Printf("%s %s\n", status, r.Metadata().ResourceID)
+						fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().ResourceName, r.Metadata().ResourceModule, string(r.Metadata().ResourceType)))))
 
 						// add the client nodes
 						nomad := r.(*nomad.NomadCluster)
 						for n := 0; n < nomad.ClientNodes; n++ {
-							fmt.Printf("%-13s %-50s %s\n", "", "", fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Metadata().ResourceName, "", r.Metadata().ResourceType)))
+							fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Metadata().ResourceName, r.Metadata().ResourceModule, string(r.Metadata().ResourceType)))))
 						}
 					case k8s.TypeK8sCluster:
-						fmt.Printf("%-13s %-50s %s\n", status, r.Metadata().ResourceID, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().ResourceName, "", r.Metadata().ResourceType)))
+						fmt.Printf("%s %s\n", status, r.Metadata().ResourceID)
+						fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().ResourceName, r.Metadata().ResourceModule, r.Metadata().ResourceType))))
 					case container.TypeContainer:
-						fallthrough
+						fmt.Printf("%s %s\n", status, r.Metadata().ResourceID)
+						fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(fmt.Sprintf("%s", utils.FQDN(r.Metadata().ResourceName, r.Metadata().ResourceModule, string(r.Metadata().ResourceType)))))
 					case container.TypeSidecar:
-						fallthrough
+						fmt.Printf("%s %s\n", status, r.Metadata().ResourceID)
+						fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(fmt.Sprintf("%s", utils.FQDN(r.Metadata().ResourceName, r.Metadata().ResourceModule, string(r.Metadata().ResourceType)))))
 					case cache.TypeImageCache:
-						fmt.Printf("%-13s %-50s %s\n", status, r.Metadata().ResourceID, "")
+						fmt.Printf("%s %s\n", status, r.Metadata().ResourceID)
 					default:
-						fmt.Printf("%-13s %-50s %s\n", status, r.Metadata().ResourceID, "")
+						fmt.Printf("%s %s\n", status, r.Metadata().ResourceID)
 					}
 				}
 			}
 
+			// fmt.Println(greenIcon.Render("✔") + whiteText.Render("resource.image_cache.default"))
+			// fmt.Println(greenIcon.Render("✔") + whiteText.Render("resource.network.main"))
+			// fmt.Println(greenIcon.Render("✔") + whiteText.Render("resource.container.api"))
+			// fmt.Println(grayText.Render("   ├─ ") + whiteText.Render("api.container.jumppad.dev"))
+			// fmt.Println(grayText.Render("   └─ ") + whiteText.Render("backend.container.jumppad.dev"))
+			// fmt.Println(greenIcon.Render("✔") + whiteText.Render("resource.container.advertisements"))
+			// fmt.Println(grayText.Render("   └─ ") + whiteText.Render("advertisements.container.jumppad.dev"))
+			// fmt.Println(redIcon.Render("✘") + whiteText.Render("resource.container.payments"))
+			// fmt.Println(yellowIcon.Render("?") + whiteText.Render("resource.container.database"))
+			// fmt.Println()
+			// fmt.Println(grayIcon.Render("-") + grayText.Render("resource.container.frontend"))
 			fmt.Println()
-			fmt.Printf("Pending: %d Created: %d Failed: %d Disabled: %d\n", pendingCount, createdCount, failedCount, disabledCount)
+			fmt.Println(whiteText.Render(fmt.Sprintf("Pending: %d  Created: %d  Failed: %d  Disabled: %d", pendingCount, createdCount, failedCount, disabledCount)))
+			fmt.Println()
 		}
 	},
 }

@@ -10,7 +10,7 @@ resource "exec" "in_container" {
   target = resource.container.alpine
 
   script = <<-EOF
-  #/bin/sh -e
+  #!/bin/sh -e
 
   ls -las
   EOF
@@ -22,7 +22,7 @@ resource "exec" "standalone" {
   }
 
   script = <<-EOF
-  #/bin/sh -e
+  #!/bin/sh -e
 
   ls -las
   EOF

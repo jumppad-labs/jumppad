@@ -103,7 +103,7 @@ func (p *Provider) exposeLocal() error {
 		port = p.config.Target.NamedPort
 	}
 
-	switch p.config.Target.Resource.Type {
+	switch p.config.Target.Resource.ResourceType {
 	case k8s.TypeK8sCluster:
 		remoteAddr = fmt.Sprintf(
 			"%s.%s.svc:%s",
@@ -178,7 +178,7 @@ func (p *Provider) exposeRemote() error {
 		port = p.config.Target.NamedPort
 	}
 
-	switch p.config.Target.Resource.Type {
+	switch p.config.Target.Resource.ResourceType {
 	case k8s.TypeK8sCluster:
 		destAddr = fmt.Sprintf(
 			"%s.%s.svc:%s",

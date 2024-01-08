@@ -1,6 +1,6 @@
 resource "k8s_cluster" "k3s" {
   network {
-    id = resource.network.cloud.id
+    id = resource.network.cloud.resource_id
   }
 
   copy_image {

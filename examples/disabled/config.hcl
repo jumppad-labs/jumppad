@@ -4,14 +4,14 @@ resource "network" "dc1_enabled" {
 
 resource "container" "consul_enabled" {
   image {
-    name = "consul:0.12.1"
+    name = "consul:1.10.6"
   }
 
   command = ["consul", "agent", "-dev", "-client", "0.0.0.0"]
 
   network {
-    id         = "abc"
-    ip_address = "10.6.0.200"
+    id         = resource.network.dc1_enabled.resource_id
+    ip_address = "10.15.0.200"
   }
 
   port_range {
@@ -24,8 +24,8 @@ resource "container" "consul_disabled" {
   disabled = true
 
   image {
-    id   = "abc"
-    name = "consul:0.12.1"
+    id   = resource.network.dc1_enabled.resource_id
+    name = "consul:1.10.6"
   }
 
   command = ["consul", "agent", "-dev", "-client", "0.0.0.0"]
