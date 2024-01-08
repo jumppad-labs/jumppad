@@ -62,7 +62,7 @@ type TrafficTarget struct {
 
 func (i *Ingress) Process() error {
 	// connector is a reserved name
-	if i.Name == "connector" {
+	if i.ResourceName == "connector" {
 		return fmt.Errorf("ingress name 'connector' is a reserved name")
 	}
 
@@ -80,7 +80,7 @@ func (i *Ingress) Process() error {
 	sn, _ := utils.ReplaceNonURIChars(i.Target.Config["service"])
 	// if service is not set, use the name of the ingress
 	if i.Target.Config["service"] == "" {
-		sn, _ = utils.ReplaceNonURIChars(i.Name)
+		sn, _ = utils.ReplaceNonURIChars(i.ResourceName)
 	}
 
 	i.Target.Config["service"] = sn
@@ -90,7 +90,7 @@ func (i *Ingress) Process() error {
 	c, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := c.FindResource(i.ID)
+		r, _ := c.FindResource(i.ResourceID)
 		if r != nil {
 			kstate := r.(*Ingress)
 			i.IngressID = kstate.IngressID

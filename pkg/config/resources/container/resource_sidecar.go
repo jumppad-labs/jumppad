@@ -55,7 +55,7 @@ func (c *Sidecar) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(c.ID)
+		r, _ := cfg.FindResource(c.ResourceID)
 		if r != nil {
 			kstate := r.(*Sidecar)
 			c.ContainerName = kstate.ContainerName

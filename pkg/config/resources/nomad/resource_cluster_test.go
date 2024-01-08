@@ -21,7 +21,7 @@ func TestNomadClusterProcessSetsAbsolute(t *testing.T) {
 	require.NoError(t, err)
 
 	c := &NomadCluster{
-		ResourceMetadata: types.ResourceMetadata{File: "./"},
+		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
 
 		ServerConfig: "./server_config.hcl",
 		ClientConfig: "./client_config.hcl",
@@ -83,7 +83,7 @@ func TestNomadClusterSetsOutputsFromState(t *testing.T) {
 
 	c := &NomadCluster{
 		ResourceMetadata: types.ResourceMetadata{
-			ID: "resource.nomad_cluster.test",
+			ResourceID: "resource.nomad_cluster.test",
 		},
 	}
 

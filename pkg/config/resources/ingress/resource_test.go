@@ -31,7 +31,7 @@ func TestIngressSetsOutputsFromState(t *testing.T) {
 
 	c := &Ingress{
 		ResourceMetadata: types.ResourceMetadata{
-			ID: "resource.ingress.test",
+			ResourceID: "resource.ingress.test",
 		},
 	}
 

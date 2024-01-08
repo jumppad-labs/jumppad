@@ -86,15 +86,15 @@ func TestApplyWithSingleFile(t *testing.T) {
 			"consul_config",
 		},
 		[]string{
-			getMetaFromMock(mp, 0).Name,
-			getMetaFromMock(mp, 1).Name,
-			getMetaFromMock(mp, 2).Name,
-			getMetaFromMock(mp, 3).Name,
+			getMetaFromMock(mp, 0).ResourceName,
+			getMetaFromMock(mp, 1).ResourceName,
+			getMetaFromMock(mp, 2).ResourceName,
+			getMetaFromMock(mp, 3).ResourceName,
 		},
 	)
 
-	require.Equal(t, "consul", getMetaFromMock(mp, 4).Name)
-	require.Equal(t, "consul_addr", getMetaFromMock(mp, 5).Name)
+	require.Equal(t, "consul", getMetaFromMock(mp, 4).ResourceName)
+	require.Equal(t, "consul_addr", getMetaFromMock(mp, 5).ResourceName)
 }
 
 func TestApplyAddsImageCache(t *testing.T) {
@@ -148,10 +148,10 @@ func TestApplyWithSingleFileAndVariables(t *testing.T) {
 	require.Len(t, e.config.Resources, 7) // 6 resources in the file plus the image cache
 
 	// then the container should be created
-	require.Equal(t, "consul", getMetaFromMock(mp, 4).Name)
+	require.Equal(t, "consul", getMetaFromMock(mp, 4).ResourceName)
 
 	// finally the provider for the image cache should be updated
-	require.Equal(t, "consul_addr", getMetaFromMock(mp, 5).Name)
+	require.Equal(t, "consul_addr", getMetaFromMock(mp, 5).ResourceName)
 
 	// check the variable has overridden the image
 	cont := getResourceFromMock(mp, 4).(*container.Container)
@@ -226,7 +226,7 @@ func TestApplyNotCallsProviderCreateForDisabledResources(t *testing.T) {
 	// the resource should be in the state but there should be no status
 	r, err := sf.FindResource("resource.container.consul_disabled")
 	require.NoError(t, err)
-	require.Nil(t, r.Metadata().Properties[constants.PropertyStatus])
+	require.Nil(t, r.Metadata().ResourceProperties[constants.PropertyStatus])
 }
 
 func TestApplyShouldNotAddDuplicateDisabledResources(t *testing.T) {
@@ -250,7 +250,7 @@ func TestApplyShouldNotAddDuplicateDisabledResources(t *testing.T) {
 	// the status should be set to disabled
 	r, err := sf.FindResource("resource.container.consul_disabled")
 	require.NoError(t, err)
-	require.Equal(t, constants.StatusDisabled, r.Metadata().Properties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusDisabled, r.Metadata().ResourceProperties[constants.PropertyStatus])
 }
 
 func TestApplySetsCreatedStatusForEachResource(t *testing.T) {
@@ -268,15 +268,15 @@ func TestApplySetsCreatedStatusForEachResource(t *testing.T) {
 
 	r, err := sf.FindResource("resource.container.consul")
 	require.NoError(t, err)
-	require.Equal(t, constants.StatusCreated, r.Metadata().Properties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusCreated, r.Metadata().ResourceProperties[constants.PropertyStatus])
 
 	r, err = sf.FindResource("resource.network.onprem")
 	require.NoError(t, err)
-	require.Equal(t, constants.StatusCreated, r.Metadata().Properties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusCreated, r.Metadata().ResourceProperties[constants.PropertyStatus])
 
 	r, err = sf.FindResource("resource.template.consul_config")
 	require.NoError(t, err)
-	require.Equal(t, constants.StatusCreated, r.Metadata().Properties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusCreated, r.Metadata().ResourceProperties[constants.PropertyStatus])
 }
 
 func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
@@ -296,12 +296,12 @@ func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 	// should set failed status for network
 	r, err := sf.FindResource("resource.network.onprem")
 	require.NoError(t, err)
-	require.Equal(t, constants.StatusFailed, r.Metadata().Properties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusFailed, r.Metadata().ResourceProperties[constants.PropertyStatus])
 
 	// should set created status for template
 	r, err = sf.FindResource("resource.template.consul_config")
 	require.NoError(t, err)
-	require.Equal(t, constants.StatusCreated, r.Metadata().Properties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusCreated, r.Metadata().ResourceProperties[constants.PropertyStatus])
 
 	// container should not be in the state
 	_, err = sf.FindResource("resource.container.consul")
@@ -344,7 +344,7 @@ func TestApplyCallsProviderDestroyForDisabledResources(t *testing.T) {
 	require.NotNil(t, r)
 
 	// property should be disabled
-	require.Equal(t, constants.StatusDisabled, r.Metadata().Properties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusDisabled, r.Metadata().ResourceProperties[constants.PropertyStatus])
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1, r)
@@ -421,7 +421,7 @@ func TestDestroyFailSetsStatus(t *testing.T) {
 	require.Error(t, err)
 
 	r, _ := e.config.FindResource("resource.container.mycontainer")
-	require.Equal(t, constants.StatusFailed, r.Metadata().Properties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusFailed, r.Metadata().ResourceProperties[constants.PropertyStatus])
 }
 
 func TestParseConfig(t *testing.T) {
@@ -493,7 +493,7 @@ func testAssertMethodCalled(t *testing.T, p *mocks.Providers, method string, n i
 		}
 
 		for _, c := range pm.Calls {
-			calls[r.Metadata().Name] = append(calls[r.Metadata().Name], c.Method)
+			calls[r.Metadata().ResourceName] = append(calls[r.Metadata().ResourceName], c.Method)
 
 			if c.Method == method {
 				callCount++

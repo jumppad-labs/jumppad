@@ -14,7 +14,7 @@ func TestTemplateProcessSetsAbsoluteWhenBothFiles(t *testing.T) {
 	require.NoError(t, err)
 
 	c := &Template{
-		ResourceMetadata: types.ResourceMetadata{File: "./"},
+		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
 		Source:           "./",
 		Destination:      "./output.hcl",
 	}
@@ -30,7 +30,7 @@ func TestTemplateProcessSetsAbsoluteWhenSourceString(t *testing.T) {
 	require.NoError(t, err)
 
 	c := &Template{
-		ResourceMetadata: types.ResourceMetadata{File: "./"},
+		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
 		Source:           "foobar",
 		Destination:      "./output.hcl",
 	}

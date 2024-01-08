@@ -28,19 +28,19 @@ var outputCmd = &cobra.Command{
 		out := map[string]interface{}{}
 		// get the output variables
 		for _, r := range cfg.Resources {
-			if r.Metadata().Type == types.TypeOutput {
+			if r.Metadata().ResourceType == types.TypeOutput {
 				// don't output when disabled
 				if r.Metadata().Disabled {
 					continue
 				}
 
-				if r.Metadata().Module != "" {
+				if r.Metadata().ResourceModule != "" {
 					continue
 				}
 
-				out[r.Metadata().Name] = r.(*types.Output).Value
+				out[r.Metadata().ResourceName] = r.(*types.Output).Value
 
-				if len(args) > 0 && strings.EqualFold(args[0], r.Metadata().Name) {
+				if len(args) > 0 && strings.EqualFold(args[0], r.Metadata().ResourceName) {
 					d, _ := json.Marshal(r.(*types.Output).Value)
 					fmt.Printf("%s", string(d))
 					return

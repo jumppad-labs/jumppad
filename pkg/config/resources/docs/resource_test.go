@@ -15,7 +15,7 @@ func init() {
 
 func TestDocsProcessSetsAbsolute(t *testing.T) {
 	h := &Docs{
-		ResourceMetadata: types.ResourceMetadata{File: "./"},
+		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
 	}
 
 	err := h.Process()
@@ -39,8 +39,8 @@ func TestDocsLoadsValuesFromState(t *testing.T) {
 
 	docs := &Docs{
 		ResourceMetadata: types.ResourceMetadata{
-			File: "./",
-			ID:   "resource.docs.test",
+			ResourceFile: "./",
+			ResourceID:   "resource.docs.test",
 		},
 	}
 

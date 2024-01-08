@@ -20,7 +20,7 @@ func TestK8sClusterProcessSetsAbsolute(t *testing.T) {
 	require.NoError(t, err)
 
 	c := &K8sCluster{
-		ResourceMetadata: types.ResourceMetadata{File: "./"},
+		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
 		Volumes: []ctypes.Volume{
 			{
 				Source:      "./",
@@ -58,7 +58,7 @@ func TestK8sClusterSetsOutputsFromState(t *testing.T) {
 
 	c := &K8sCluster{
 		ResourceMetadata: types.ResourceMetadata{
-			ID: "resource.k8s_cluster.test",
+			ResourceID: "resource.k8s_cluster.test",
 		},
 		Networks: []ctypes.NetworkAttachment{
 			ctypes.NetworkAttachment{},

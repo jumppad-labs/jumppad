@@ -19,7 +19,7 @@ func TestSidecarProcessSetsAbsolute(t *testing.T) {
 	require.NoError(t, err)
 
 	c := &Sidecar{
-		ResourceMetadata: types.ResourceMetadata{File: "./"},
+		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
 		Volumes: []Volume{
 			{
 				Source:      "./",
@@ -50,8 +50,8 @@ func TestSidecarLoadsValuesFromState(t *testing.T) {
 
 	docs := &Sidecar{
 		ResourceMetadata: types.ResourceMetadata{
-			File: "./",
-			ID:   "resource.sidecar.test",
+			ResourceFile: "./",
+			ResourceID:   "resource.sidecar.test",
 		},
 	}
 

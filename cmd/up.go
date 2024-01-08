@@ -169,24 +169,24 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 			checkDuration := 30 * time.Second
 
 			for _, r := range res.Resources {
-				switch r.Metadata().Type {
+				switch r.Metadata().ResourceType {
 				case container.TypeContainer:
 					c := r.(*container.Container)
 					for _, p := range c.Ports {
 						if p.Host != "" && p.OpenInBrowser != "" {
-							browserList = append(browserList, buildBrowserPath(r.Metadata().Name, p.Host, r.Metadata().Type, p.OpenInBrowser))
+							browserList = append(browserList, buildBrowserPath(r.Metadata().ResourceName, p.Host, r.Metadata().ResourceType, p.OpenInBrowser))
 						}
 					}
 				case ingress.TypeIngress:
 					c := r.(*ingress.Ingress)
 					if c.OpenInBrowser != "" {
-						browserList = append(browserList, buildBrowserPath(r.Metadata().Name, fmt.Sprintf("%d", c.Port), r.Metadata().Type, c.OpenInBrowser))
+						browserList = append(browserList, buildBrowserPath(r.Metadata().ResourceName, fmt.Sprintf("%d", c.Port), r.Metadata().ResourceType, c.OpenInBrowser))
 					}
 				case nomad.TypeNomadCluster:
 					c := r.(*nomad.NomadCluster)
 					if c.OpenInBrowser {
 						// get the API port
-						browserList = append(browserList, buildBrowserPath("server."+r.Metadata().Name, fmt.Sprintf("%d", c.APIPort), r.Metadata().Type, "/"))
+						browserList = append(browserList, buildBrowserPath("server."+r.Metadata().ResourceName, fmt.Sprintf("%d", c.APIPort), r.Metadata().ResourceType, "/"))
 					}
 				case docs.TypeDocs:
 					c := r.(*docs.Docs)
@@ -196,7 +196,7 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 							port = "80"
 						}
 
-						browserList = append(browserList, buildBrowserPath(r.Metadata().Name, port, r.Metadata().Type, ""))
+						browserList = append(browserList, buildBrowserPath(r.Metadata().ResourceName, port, r.Metadata().ResourceType, ""))
 					}
 				}
 			}
@@ -233,7 +233,7 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 		bps, _ := e.Config().FindResourcesByType(blueprint.TypeBlueprint)
 		for _, bp := range bps {
 			// pick the first blueprint in the root
-			if bp.Metadata().Module == "" {
+			if bp.Metadata().ResourceModule == "" {
 				b = bp.(*blueprint.Blueprint)
 				break
 			}
@@ -256,7 +256,7 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 			os, _ := e.Config().FindResourcesByType(types.TypeOutput)
 			for _, o := range os {
 				// only grab the root outputs
-				if o.Metadata().Module == "" {
+				if o.Metadata().ResourceModule == "" {
 					outputs = append(outputs, o.(*types.Output))
 				}
 			}
@@ -268,15 +268,15 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 
 				maxLen := 0
 				for _, o := range outputs {
-					if len(o.Name) > maxLen {
-						maxLen = len(o.Name)
+					if len(o.ResourceName) > maxLen {
+						maxLen = len(o.ResourceName)
 					}
 				}
 
 				format := fmt.Sprintf(" * %%%ds: %%s\n", maxLen)
 
 				for _, o := range outputs {
-					fmt.Printf(format, o.Name, o.Value)
+					fmt.Printf(format, o.ResourceName, o.Value)
 				}
 
 				cmd.Println("")

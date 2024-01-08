@@ -28,7 +28,7 @@ func (b *Book) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(b.ID)
+		r, _ := cfg.FindResource(b.ResourceID)
 		if r != nil {
 			state := r.(*Book)
 			b.Index = state.Index

@@ -32,7 +32,7 @@ func TestExecSetsOutputsFromState(t *testing.T) {
 
 	c := &Exec{
 		ResourceMetadata: types.ResourceMetadata{
-			ID: "resource.exec.test",
+			ResourceID: "resource.exec.test",
 		},
 	}
 
@@ -46,7 +46,7 @@ func TestExecProcessSetsAbsolute(t *testing.T) {
 	require.NoError(t, err)
 
 	c := &Exec{
-		ResourceMetadata: types.ResourceMetadata{File: "./"},
+		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
 		Image: &ctypes.Image{
 			Name: "test",
 		},
@@ -65,7 +65,7 @@ func TestExecProcessSetsAbsolute(t *testing.T) {
 
 func TestExecLocalWithVolumesReturnsError(t *testing.T) {
 	c := &Exec{
-		ResourceMetadata: types.ResourceMetadata{File: "./"},
+		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
 		Volumes: []ctypes.Volume{
 			{
 				Source:      "./",
@@ -80,7 +80,7 @@ func TestExecLocalWithVolumesReturnsError(t *testing.T) {
 
 func TestExecLocalWithNetworksReturnsError(t *testing.T) {
 	c := &Exec{
-		ResourceMetadata: types.ResourceMetadata{File: "./"},
+		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
 		Networks: []ctypes.NetworkAttachment{
 			{
 				Name: "test",

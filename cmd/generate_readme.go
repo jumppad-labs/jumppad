@@ -36,7 +36,7 @@ func newGenerateReadmeCommand(e jumppad.Engine) *cobra.Command {
 			bps, _ := e.Config().FindResourcesByType(blueprint.TypeBlueprint)
 			for _, bp := range bps {
 				// pick the first blueprint in the root
-				if bp.Metadata().Module == "" {
+				if bp.Metadata().ResourceModule == "" {
 					br = bp.(*blueprint.Blueprint)
 					break
 				}
@@ -64,7 +64,7 @@ func newGenerateReadmeCommand(e jumppad.Engine) *cobra.Command {
 			os, _ := e.Config().FindResourcesByType(types.TypeVariable)
 			for _, o := range os {
 				// only grab the root outputs
-				if o.Metadata().Module == "" {
+				if o.Metadata().ResourceModule == "" {
 					variables = append(variables, o.(*types.Variable))
 				}
 			}
@@ -79,7 +79,7 @@ func newGenerateReadmeCommand(e jumppad.Engine) *cobra.Command {
 				cmd.Println("| ---- |  ----------- |")
 
 				for _, v := range variables {
-					cmd.Printf("| %s | %s |\n", v.Name, v.Description)
+					cmd.Printf("| %s | %s |\n", v.ResourceName, v.Description)
 				}
 				cmd.Println("")
 			}
@@ -88,7 +88,7 @@ func newGenerateReadmeCommand(e jumppad.Engine) *cobra.Command {
 			os, _ = e.Config().FindResourcesByType(types.TypeOutput)
 			for _, o := range os {
 				// only grab the root outputs
-				if o.Metadata().Module == "" {
+				if o.Metadata().ResourceModule == "" {
 					outputs = append(outputs, o.(*types.Output))
 				}
 			}
@@ -103,7 +103,7 @@ func newGenerateReadmeCommand(e jumppad.Engine) *cobra.Command {
 				cmd.Println("| ---- |  ----------- |")
 
 				for _, v := range outputs {
-					cmd.Printf("| %s | %s |\n", v.Name, v.Description)
+					cmd.Printf("| %s | %s |\n", v.ResourceName, v.Description)
 				}
 				cmd.Println("")
 			}

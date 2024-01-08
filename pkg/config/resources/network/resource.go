@@ -25,8 +25,8 @@ func (c *Network) Parse(conf types.Findable) error {
 	}
 
 	for _, n := range nets {
-		if n.Metadata().Name == c.Name && n.Metadata().ID != c.ID {
-			return fmt.Errorf("a network named '%s' is already defined by the resource '%s'", c.Name, n.Metadata().ID)
+		if n.Metadata().ResourceName == c.ResourceName && n.Metadata().ResourceID != c.ResourceID {
+			return fmt.Errorf("a network named '%s' is already defined by the resource '%s'", c.ResourceName, n.Metadata().ResourceID)
 		}
 	}
 

@@ -52,7 +52,7 @@ func (p *RandomUUIDProvider) Refresh() error {
 }
 
 func (p *RandomUUIDProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.ID)
+	p.log.Debug("Checking changes", "ref", p.config.ResourceID)
 
 	return false, nil
 }

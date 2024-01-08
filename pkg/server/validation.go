@@ -203,7 +203,7 @@ func (a *API) validation(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(validationResponse{
-		ID:         task.ID,
+		ID:         task.ResourceID,
 		Conditions: conditions,
 		Status:     status,
 	})

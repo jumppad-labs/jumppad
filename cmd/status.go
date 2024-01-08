@@ -46,6 +46,7 @@ var statusCmd = &cobra.Command{
 
 		cfg, err := config.LoadState()
 		if err != nil {
+			fmt.Println(err)
 			fmt.Printf("Unable to read state file")
 			os.Exit(1)
 		}
@@ -71,16 +72,16 @@ var statusCmd = &cobra.Command{
 			resourceMap := map[string][]types.Resource{}
 
 			for _, r := range cfg.Resources {
-				if resourceMap[r.Metadata().Type] == nil {
-					resourceMap[r.Metadata().Type] = []types.Resource{}
+				if resourceMap[r.Metadata().ResourceType] == nil {
+					resourceMap[r.Metadata().ResourceType] = []types.Resource{}
 				}
 
-				resourceMap[r.Metadata().Type] = append(resourceMap[r.Metadata().Type], r)
+				resourceMap[r.Metadata().ResourceType] = append(resourceMap[r.Metadata().ResourceType], r)
 			}
 
 			for _, ress := range resourceMap {
 				for _, r := range ress {
-					if (resourceType != "" && r.Metadata().Type != resourceType) || r.Metadata().Type == types.TypeModule {
+					if (resourceType != "" && r.Metadata().ResourceType != resourceType) || r.Metadata().ResourceType == types.TypeModule {
 						continue
 					}
 
@@ -89,7 +90,7 @@ var statusCmd = &cobra.Command{
 						status = fmt.Sprintf(Teal, "[ DISABLED ] ")
 						disabledCount++
 					} else {
-						switch r.Metadata().Properties[constants.PropertyStatus] {
+						switch r.Metadata().ResourceProperties[constants.PropertyStatus] {
 						case constants.StatusCreated:
 							status = fmt.Sprintf(Green, "[ CREATED ]  ")
 							createdCount++
@@ -101,25 +102,25 @@ var statusCmd = &cobra.Command{
 						}
 					}
 
-					switch r.Metadata().Type {
+					switch r.Metadata().ResourceType {
 					case nomad.TypeNomadCluster:
-						fmt.Printf("%-13s %-50s %s\n", status, r.Metadata().ID, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, "", string(r.Metadata().Type))))
+						fmt.Printf("%-13s %-50s %s\n", status, r.Metadata().ResourceID, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().ResourceName, "", string(r.Metadata().ResourceType))))
 
 						// add the client nodes
 						nomad := r.(*nomad.NomadCluster)
 						for n := 0; n < nomad.ClientNodes; n++ {
-							fmt.Printf("%-13s %-50s %s\n", "", "", fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Metadata().Name, "", r.Metadata().Type)))
+							fmt.Printf("%-13s %-50s %s\n", "", "", fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Metadata().ResourceName, "", r.Metadata().ResourceType)))
 						}
 					case k8s.TypeK8sCluster:
-						fmt.Printf("%-13s %-50s %s\n", status, r.Metadata().ID, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, "", r.Metadata().Type)))
+						fmt.Printf("%-13s %-50s %s\n", status, r.Metadata().ResourceID, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().ResourceName, "", r.Metadata().ResourceType)))
 					case container.TypeContainer:
 						fallthrough
 					case container.TypeSidecar:
 						fallthrough
 					case cache.TypeImageCache:
-						fmt.Printf("%-13s %-50s %s\n", status, r.Metadata().ID, "")
+						fmt.Printf("%-13s %-50s %s\n", status, r.Metadata().ResourceID, "")
 					default:
-						fmt.Printf("%-13s %-50s %s\n", status, r.Metadata().ID, "")
+						fmt.Printf("%-13s %-50s %s\n", status, r.Metadata().ResourceID, "")
 					}
 				}
 			}

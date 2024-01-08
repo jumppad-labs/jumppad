@@ -33,13 +33,13 @@ type NomadJob struct {
 func (n *NomadJob) Process() error {
 	// make all the paths absolute
 	for i, p := range n.Paths {
-		n.Paths[i] = utils.EnsureAbsolute(p, n.File)
+		n.Paths[i] = utils.EnsureAbsolute(p, n.ResourceFile)
 	}
 
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(n.ID)
+		r, _ := cfg.FindResource(n.ResourceID)
 		if r != nil {
 			state := r.(*NomadJob)
 			n.JobChecksums = state.JobChecksums

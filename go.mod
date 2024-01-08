@@ -33,7 +33,7 @@ require (
 	github.com/infinytum/raymond/v2 v2.0.5
 	github.com/jumppad-labs/connector v0.3.0
 	github.com/jumppad-labs/gohup v0.3.0
-	github.com/jumppad-labs/hclconfig v0.17.0
+	github.com/jumppad-labs/hclconfig v0.18.0
 	github.com/jumppad-labs/plugin-sdk v0.1.0
 	github.com/kennygrant/sanitize v1.2.4
 	github.com/moby/sys/signal v0.7.0
@@ -245,7 +245,7 @@ replace github.com/zclconf/go-cty => github.com/jumppad-labs/go-cty v0.0.0-20230
 
 //replace github.com/jumppad-labs/plugin-sdk => ../plugin-sdk
 
-//replace github.com/jumppad-labs/hclconfig => ../../jumppad-labs/hclconfig/
+replace github.com/jumppad-labs/hclconfig => ../hclconfig/
 
 //replace github.com/jumppad-labs/connector => ../connector
 // hclconfig

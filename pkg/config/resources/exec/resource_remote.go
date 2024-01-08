@@ -36,7 +36,7 @@ func (e *RemoteExec) Process() error {
 	// process volumes
 	// make sure mount paths are absolute
 	for i, v := range e.Volumes {
-		e.Volumes[i].Source = utils.EnsureAbsolute(v.Source, e.File)
+		e.Volumes[i].Source = utils.EnsureAbsolute(v.Source, e.ResourceFile)
 	}
 
 	// make sure line endings are linux

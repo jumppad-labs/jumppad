@@ -39,7 +39,7 @@ func (p *ConfigProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 
 // Create the Kubernetes resources defined by the config
 func (p *ConfigProvider) Create() error {
-	p.log.Info("Applying Kubernetes configuration", "ref", p.config.Name, "config", p.config.Paths)
+	p.log.Info("Applying Kubernetes configuration", "ref", p.config.ResourceName, "config", p.config.Paths)
 
 	err := p.setup()
 	if err != nil {
@@ -77,7 +77,7 @@ func (p *ConfigProvider) Create() error {
 
 // Destroy the Kubernetes resources defined by the config
 func (p *ConfigProvider) Destroy() error {
-	p.log.Info("Destroy Kubernetes configuration", "ref", p.config.ID, "config", p.config.Paths)
+	p.log.Info("Destroy Kubernetes configuration", "ref", p.config.ResourceID, "config", p.config.Paths)
 
 	err := p.setup()
 	if err != nil {
@@ -86,7 +86,7 @@ func (p *ConfigProvider) Destroy() error {
 
 	err = p.client.Delete(p.config.Paths)
 	if err != nil {
-		p.log.Debug("There was a problem destroying Kubernetes config, logging message but ignoring error", "ref", p.config.ID, "error", err)
+		p.log.Debug("There was a problem destroying Kubernetes config, logging message but ignoring error", "ref", p.config.ResourceID, "error", err)
 	}
 	return nil
 }
@@ -106,7 +106,7 @@ func (p *ConfigProvider) Refresh() error {
 		return nil
 	}
 
-	p.log.Info("Refresh Kubernetes config", "ref", p.config.ID, "paths", cp)
+	p.log.Info("Refresh Kubernetes config", "ref", p.config.ResourceID, "paths", cp)
 
 	err = p.Destroy()
 	if err != nil {
@@ -123,7 +123,7 @@ func (p *ConfigProvider) Changed() (bool, error) {
 	}
 
 	if len(cp) > 0 {
-		p.log.Debug("Kubernetes jobs changed, needs refresh", "ref", p.config.ID)
+		p.log.Debug("Kubernetes jobs changed, needs refresh", "ref", p.config.ResourceID)
 		return true, nil
 	}
 	return false, nil

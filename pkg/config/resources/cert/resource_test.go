@@ -21,7 +21,7 @@ func TestCertCAProcessSetsAbsoluteValues(t *testing.T) {
 	require.NoError(t, err)
 
 	ca := &CertificateCA{
-		ResourceMetadata: types.ResourceMetadata{File: "./"},
+		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
 		Output:           "./output",
 	}
 
@@ -59,8 +59,8 @@ func TestCertCALoadsValuesFromState(t *testing.T) {
 
 	ca := &CertificateCA{
 		ResourceMetadata: types.ResourceMetadata{
-			File: "./",
-			ID:   "resource.certificate_ca.test",
+			ResourceFile: "./",
+			ResourceID:   "resource.certificate_ca.test",
 		},
 		Output: "./output",
 	}
@@ -79,7 +79,7 @@ func TestCertLeafProcessSetsAbsoluteValues(t *testing.T) {
 	require.NoError(t, err)
 
 	ca := &CertificateLeaf{
-		ResourceMetadata: types.ResourceMetadata{File: "./"},
+		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
 		CAKey:            "./key.pem",
 		CACert:           "./cert.pem",
 		Output:           "./output",
@@ -121,8 +121,8 @@ func TestCertLeafLoadsValuesFromState(t *testing.T) {
 
 	ca := &CertificateLeaf{
 		ResourceMetadata: types.ResourceMetadata{
-			File: "./",
-			ID:   "resource.certificate_leaf.test",
+			ResourceFile: "./",
+			ResourceID:   "resource.certificate_leaf.test",
 		},
 		Output: "./output",
 	}

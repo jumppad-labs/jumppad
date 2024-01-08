@@ -83,15 +83,15 @@ func (n *NomadCluster) Process() error {
 	}
 
 	if n.ServerConfig != "" {
-		n.ServerConfig = utils.EnsureAbsolute(n.ServerConfig, n.File)
+		n.ServerConfig = utils.EnsureAbsolute(n.ServerConfig, n.ResourceFile)
 	}
 
 	if n.ClientConfig != "" {
-		n.ClientConfig = utils.EnsureAbsolute(n.ClientConfig, n.File)
+		n.ClientConfig = utils.EnsureAbsolute(n.ClientConfig, n.ResourceFile)
 	}
 
 	if n.ConsulConfig != "" {
-		n.ConsulConfig = utils.EnsureAbsolute(n.ConsulConfig, n.File)
+		n.ConsulConfig = utils.EnsureAbsolute(n.ConsulConfig, n.ResourceFile)
 	}
 
 	if n.Datacenter == "" {
@@ -114,7 +114,7 @@ func (n *NomadCluster) Process() error {
 	c, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := c.FindResource(n.ID)
+		r, _ := c.FindResource(n.ResourceID)
 		if r != nil {
 			state := r.(*NomadCluster)
 			n.ExternalIP = state.ExternalIP

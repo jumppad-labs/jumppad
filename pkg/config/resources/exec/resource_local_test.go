@@ -30,7 +30,7 @@ func TestLocalExecSetsOutputsFromState(t *testing.T) {
 
 	c := &LocalExec{
 		ResourceMetadata: types.ResourceMetadata{
-			ID: "resource.local_exec.test",
+			ResourceID: "resource.local_exec.test",
 		},
 	}
 

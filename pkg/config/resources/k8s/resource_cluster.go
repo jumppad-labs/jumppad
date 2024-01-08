@@ -79,7 +79,7 @@ func (k *K8sCluster) Process() error {
 	}
 
 	for i, v := range k.Volumes {
-		k.Volumes[i].Source = utils.EnsureAbsolute(v.Source, k.File)
+		k.Volumes[i].Source = utils.EnsureAbsolute(v.Source, k.ResourceFile)
 	}
 
 	// do we have an existing resource in the state?
@@ -87,7 +87,7 @@ func (k *K8sCluster) Process() error {
 	c, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := c.FindResource(k.ID)
+		r, _ := c.FindResource(k.ResourceID)
 		if r != nil {
 			kstate := r.(*K8sCluster)
 			k.KubeConfig = kstate.KubeConfig

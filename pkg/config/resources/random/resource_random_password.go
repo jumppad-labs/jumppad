@@ -51,7 +51,7 @@ func (c *RandomPassword) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(c.ID)
+		r, _ := cfg.FindResource(c.ResourceID)
 		if r != nil {
 			state := r.(*RandomPassword)
 			c.Value = state.Value

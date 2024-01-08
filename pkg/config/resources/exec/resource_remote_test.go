@@ -14,7 +14,7 @@ func TestRemoteExecProcessSetsAbsolute(t *testing.T) {
 	require.NoError(t, err)
 
 	c := &RemoteExec{
-		ResourceMetadata: types.ResourceMetadata{File: "./"},
+		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
 		Volumes: []ctypes.Volume{
 			{
 				Source:      "./",

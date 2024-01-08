@@ -26,13 +26,13 @@ type Copy struct {
 }
 
 func (t *Copy) Process() error {
-	t.Source = utils.EnsureAbsolute(t.Source, t.File)
-	t.Destination = utils.EnsureAbsolute(t.Destination, t.File)
+	t.Source = utils.EnsureAbsolute(t.Source, t.ResourceFile)
+	t.Destination = utils.EnsureAbsolute(t.Destination, t.ResourceFile)
 
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(t.ID)
+		r, _ := cfg.FindResource(t.ResourceID)
 		if r != nil {
 			kstate := r.(*Copy)
 			t.CopiedFiles = kstate.CopiedFiles

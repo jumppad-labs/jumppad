@@ -44,7 +44,7 @@ func (p *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 }
 
 func (p *Provider) Create() error {
-	p.log.Info("Create Ingress", "ref", p.config.ID)
+	p.log.Info("Create Ingress", "ref", p.config.ResourceID)
 
 	if p.config.ExposeLocal {
 		return p.exposeLocal()
@@ -55,13 +55,13 @@ func (p *Provider) Create() error {
 
 // Destroy satisfies the interface method but is not implemented by LocalExec
 func (p *Provider) Destroy() error {
-	p.log.Info("Destroy Ingress", "ref", p.config.ID, "id", p.config.IngressID)
+	p.log.Info("Destroy Ingress", "ref", p.config.ResourceID, "id", p.config.IngressID)
 
 	err := p.connector.RemoveService(p.config.IngressID)
 	if err != nil {
 		// fail silently as this should not stop us from destroying the
 		// other resources
-		p.log.Warn("Unable to remove local ingress", "ref", p.config.Name, "id", p.config.IngressID, "error", err)
+		p.log.Warn("Unable to remove local ingress", "ref", p.config.ResourceName, "id", p.config.IngressID, "error", err)
 	}
 
 	return nil
@@ -69,19 +69,19 @@ func (p *Provider) Destroy() error {
 
 // Lookup satisfies the interface method but is not implemented by LocalExec
 func (p *Provider) Lookup() ([]string, error) {
-	p.log.Debug("Lookup Ingress", "ref", p.config.ID, "id", p.config.IngressID)
+	p.log.Debug("Lookup Ingress", "ref", p.config.ResourceID, "id", p.config.IngressID)
 
 	return []string{}, nil
 }
 
 func (p *Provider) Refresh() error {
-	p.log.Debug("Refresh Ingress", "ref", p.config.ID)
+	p.log.Debug("Refresh Ingress", "ref", p.config.ResourceID)
 
 	return nil
 }
 
 func (p *Provider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.ID)
+	p.log.Debug("Checking changes", "ref", p.config.ResourceID)
 
 	return false, nil
 }
