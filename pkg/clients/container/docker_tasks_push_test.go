@@ -43,10 +43,14 @@ func TestPushPushestheImageToTheRegistryWithoutAuth(t *testing.T) {
 
 	md.AssertCalled(t, "ImagePush", mock.Anything, "myimage:latest", mock.Anything)
 
-	// ensure auth is not set
+	// ensure auth is set with a domain only
 	args := md.Calls[2].Arguments
 	auth := args.Get(2).(types.ImagePushOptions).RegistryAuth
-	require.Empty(t, auth)
+	authString, _ := base64.StdEncoding.DecodeString(auth)
+
+	require.Contains(t, string(authString), `"serveraddress":"docker.io"`)
+	require.NotContains(t, string(authString), `"username":`)
+	require.NotContains(t, string(authString), `"password":`)
 }
 
 func TestPushPushestheImageToTheRegistryWithAuth(t *testing.T) {

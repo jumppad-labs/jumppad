@@ -98,7 +98,7 @@ func TestPullImageWithValidCredentials(t *testing.T) {
 
 	d, err := base64.StdEncoding.DecodeString(ipo.RegistryAuth)
 	assert.NoError(t, err)
-	assert.Equal(t, `{"Username": "nicjackson", "Password": "S3cur1t11"}`, string(d))
+	assert.Equal(t, `{"username":"nicjackson","password":"S3cur1t11"}`, string(d))
 }
 
 func TestDoNotPullImageWhenLocalImage(t *testing.T) {

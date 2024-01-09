@@ -728,8 +728,8 @@ func (p *ClusterProvider) destroyK3s() error {
 		}
 	}
 
-	_, kubePath, _ := utils.CreateKubeConfigPath(p.config.Name)
-	os.RemoveAll(kubePath)
+	configDir, _, _ := utils.CreateKubeConfigPath(p.config.Name)
+	os.RemoveAll(configDir)
 
 	return nil
 }

@@ -43,6 +43,24 @@ func TestNomadClusterProcessSetsAbsolute(t *testing.T) {
 	require.Equal(t, wd, c.Volumes[0].Source)
 }
 
+func TestNomadClusterProcessDoesNotSetAbsoluteForNonBindMounts(t *testing.T) {
+	c := &NomadCluster{
+		ResourceMetadata: types.ResourceMetadata{File: "./"},
+
+		Volumes: []ctypes.Volume{
+			{
+				Type:        "volume",
+				Source:      "./",
+				Destination: "./",
+			},
+		},
+	}
+
+	c.Process()
+
+	require.Equal(t, "./", c.Volumes[0].Source)
+}
+
 func TestNomadClusterSetsOutputsFromState(t *testing.T) {
 	testutils.SetupState(t, `
 {

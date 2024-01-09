@@ -504,7 +504,8 @@ func (d *DockerTasks) PushImage(image dtypes.Image) error {
 	}
 
 	//ipo.PrivilegeFunc = RegistryAuthenticationPrivilegedFunc(domain, image.Username, image.Password)
-
+	// if pushing to a registry that is not authenticated you still need to
+	// set a registry auth otherwise the API complains that there is no bearer token
 	if ipo.RegistryAuth == "" {
 		domain := reference.Domain(ref)
 		ac := registrytypes.AuthConfig{}

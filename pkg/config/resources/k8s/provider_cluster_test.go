@@ -17,9 +17,11 @@ import (
 	contypes "github.com/jumppad-labs/jumppad/pkg/clients/connector/types"
 	cmocks "github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/k8s"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+
+	container "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/mohae/deepcopy"
@@ -32,7 +34,9 @@ func setupClusterMocks(t *testing.T) (
 	*K8sCluster, *cmocks.ContainerTasks, *k8s.MockKubernetes, *conmocks.Connector) {
 
 	md := &cmocks.ContainerTasks{}
-	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{}, nil)
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{}, nil).Once()
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"123"}, nil) // second call should find the cluster
+
 	md.On("PullImage", mock.Anything, mock.Anything).Return(nil)
 	md.On("CreateVolume", mock.Anything, mock.Anything).Return("123", nil)
 	md.On("CreateContainer", mock.Anything).Return("containerid", nil)
@@ -131,7 +135,7 @@ func TestClusterK3SetsEnvironment(t *testing.T) {
 
 func TestClusterK3DoesNotSetProxyEnvironmentWithWrongVersion(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
-	cc.Image = &ctypes.Image{Name: "jumppad.dev/k3s:v1.12.1"}
+	cc.Image = &container.Image{Name: "jumppad.dev/k3s:v1.12.1"}
 
 	p := ClusterProvider{cc, md, mk, nil, mc, logger.NewTestLogger(t)}
 
@@ -223,19 +227,21 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 	// validate the API port is set
 	localPort, _ := strconv.Atoi(params.Ports[0].Local)
 	hostPort, _ := strconv.Atoi(params.Ports[0].Host)
-	assert.GreaterOrEqual(t, localPort, utils.MinRandomPort)
-	assert.LessOrEqual(t, localPort, utils.MaxRandomPort)
+	assert.Equal(t, localPort, 443)
 	assert.Equal(t, hostPort, localPort)
 	assert.Equal(t, "tcp", params.Ports[0].Protocol)
 
 	localPort, _ = strconv.Atoi(params.Ports[1].Local)
 	hostPort, _ = strconv.Atoi(params.Ports[1].Host)
-	assert.GreaterOrEqual(t, hostPort, 30000)
+	assert.GreaterOrEqual(t, hostPort, utils.MinRandomPort)
+	assert.LessOrEqual(t, hostPort, utils.MaxRandomPort)
+	assert.Equal(t, localPort, hostPort)
 	assert.Equal(t, "tcp", params.Ports[1].Protocol)
 
 	localPort2, _ := strconv.Atoi(params.Ports[2].Local)
 	hostPort2, _ := strconv.Atoi(params.Ports[2].Host)
 	assert.Equal(t, localPort2, localPort+1)
+	assert.Equal(t, localPort2, hostPort2)
 	assert.GreaterOrEqual(t, hostPort2, 30000)
 	assert.Equal(t, "tcp", params.Ports[2].Protocol)
 
@@ -243,16 +249,16 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 	assert.Equal(t, "server", params.Command[0])
 	assert.Contains(t, params.Command[1], params.Ports[0].Local)
 	assert.Contains(t, params.Command[2], "--kube-proxy-arg=conntrack-max-per-core=0")
-	assert.Contains(t, params.Command[3], "--no-deploy=traefik")
+	assert.Contains(t, params.Command[3], "--disable=traefik")
 	assert.Contains(t, params.Command[4], "--snapshotter=overlayfs")
-	assert.Contains(t, params.Command[5], "--tls-san=server.test.k8s-cluster.shipyard.run")
+	assert.Contains(t, params.Command[5], "--tls-san=server.test.k8s-cluster.jumppad.dev")
 }
 
 func TestClusterK3CreatesAServerWithAdditionalPorts(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
 
-	cc.Ports = []ctypes.Port{{Local: "8080", Remote: "8080", Host: "8080"}}
-	cc.PortRanges = []ctypes.PortRange{{Range: "8000-9000", EnableHost: true}}
+	cc.Ports = []container.Port{{Local: "8080", Remote: "8080", Host: "8080"}}
+	cc.PortRanges = []container.PortRange{{Range: "8000-9000", EnableHost: true}}
 
 	p := ClusterProvider{cc, md, mk, nil, mc, logger.NewTestLogger(t)}
 
@@ -342,27 +348,28 @@ func TestClusterK3sSetsServerInConfig(t *testing.T) {
 	assert.Contains(t, string(d), "https://"+utils.GetDockerIP())
 }
 
-func TestClusterK3sCreatesDockerConfig(t *testing.T) {
-	cc, md, mk, mc := setupClusterMocks(t)
-
-	p := ClusterProvider{cc, md, mk, nil, mc, logger.NewTestLogger(t)}
-
-	err := p.Create()
-	assert.NoError(t, err)
-
-	// check the kubeconfig file for docker uses a network ip not localhost
-
-	// check file has been written
-	_, _, dockerPath := utils.CreateKubeConfigPath(clusterConfig.Name)
-	f, err := os.Open(dockerPath)
-	assert.NoError(t, err)
-	defer f.Close()
-
-	// check file contains docker ip
-	d, err := io.ReadAll(f)
-	assert.NoError(t, err)
-	assert.Contains(t, string(d), fmt.Sprintf("server.%s", utils.FQDN(clusterConfig.Name, "", clusterConfig.Type)))
-}
+// Deprecated functionality
+//func TestClusterK3sCreatesDockerConfig(t *testing.T) {
+//	cc, md, mk, mc := setupClusterMocks(t)
+//
+//	p := ClusterProvider{cc, md, mk, nil, mc, logger.NewTestLogger(t)}
+//
+//	err := p.Create()
+//	assert.NoError(t, err)
+//
+//	// check the kubeconfig file for docker uses a network ip not localhost
+//
+//	// check file has been written
+//	_, _, dockerPath := utils.CreateKubeConfigPath(clusterConfig.Name)
+//	f, err := os.Open(dockerPath)
+//	assert.NoError(t, err)
+//	defer f.Close()
+//
+//	// check file contains docker ip
+//	d, err := io.ReadAll(f)
+//	assert.NoError(t, err)
+//	assert.Contains(t, string(d), fmt.Sprintf("server.%s", utils.FQDN(clusterConfig.Name, "", clusterConfig.Type)))
+//}
 
 func TestClusterK3sCreatesKubeClient(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
@@ -426,43 +433,74 @@ func TestClusterK3sStreamsLogsWhenRunning(t *testing.T) {
 func TestClusterK3sImportDockerImagesDoesNothingWhenEmpty(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
 
-	cc.CopyImages[0].Name = ""
+	cc.CopyImages = append(cc.CopyImages, container.Image{Name: ""})
+	cc.CopyImages = append(cc.CopyImages, container.Image{Name: "test:123"})
+
+	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(0, nil)
+	md.On("FindImageInLocalRegistry", mock.Anything).Return("abc123", nil)
 
 	p := ClusterProvider{cc, md, mk, nil, mc, logger.NewTestLogger(t)}
 
 	err := p.Create()
 	assert.NoError(t, err)
 	md.AssertNumberOfCalls(t, "PullImage", 2)
-	md.AssertNotCalled(t, "PullImage", cc.CopyImages[0], false)
-	md.AssertCalled(t, "PullImage", cc.CopyImages[1], false)
+	md.AssertNumberOfCalls(t, "ExecuteCommand", 2) // once for the import, once to prune any build images
+
+	// should not pull for empty image
+	md.AssertNotCalled(t, "PullImage", ctypes.Image{Name: cc.CopyImages[0].Name}, false)
+
+	// should pull for non-empty image
+	md.AssertCalled(t, "PullImage", ctypes.Image{Name: cc.CopyImages[1].Name}, false)
+
+	// should update the image id from the registry on the struct
+	// this enables us to track when the copy image changes so
+	// we can copy a new version to the cluster
+	assert.Equal(t, "abc123", cc.CopyImages[1].ID)
 }
 
 func TestClusterK3sImportDockerImagesPullsImages(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
+	cc.CopyImages = append(cc.CopyImages, container.Image{Name: "test:123"})
+	cc.CopyImages = append(cc.CopyImages, container.Image{Name: "test:abc"})
+
+	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(0, nil)
+	md.On("FindImageInLocalRegistry", mock.Anything).Return("abc123", nil)
 
 	p := ClusterProvider{cc, md, mk, nil, mc, logger.NewTestLogger(t)}
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertNumberOfCalls(t, "PullImage", 3)
-	md.AssertCalled(t, "PullImage", cc.CopyImages[0], false)
-	md.AssertCalled(t, "PullImage", cc.CopyImages[1], false)
+	md.AssertNumberOfCalls(t, "PullImage", 3) //once for main image, once for each copy image
+	md.AssertCalled(t, "PullImage", ctypes.Image{Name: cc.CopyImages[0].Name}, false)
+	md.AssertCalled(t, "PullImage", ctypes.Image{Name: cc.CopyImages[1].Name}, false)
 }
 
 func TestClusterK3sImportDockerCopiesImages(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
 
+	cc.CopyImages = append(cc.CopyImages, container.Image{Name: "test:123"})
+	cc.CopyImages = append(cc.CopyImages, container.Image{Name: "test:abc"})
+
+	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(0, nil)
+	md.On("FindImageInLocalRegistry", mock.Anything).Return("abc123", nil)
+
 	p := ClusterProvider{cc, md, mk, nil, mc, logger.NewTestLogger(t)}
 
 	err := p.Create()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "CopyLocalDockerImagesToVolume", []string{"consul:1.6.1", "vault:1.6.1"}, utils.FQDNVolumeName(utils.ImageVolumeName), false)
+	md.AssertCalled(t, "CopyLocalDockerImagesToVolume", []string{"test:123", "test:abc"}, utils.FQDNVolumeName(utils.ImageVolumeName), false)
 }
 
 func TestClusterK3sImportDockerCopyImageFailReturnsError(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
+	cc.CopyImages = append(cc.CopyImages, container.Image{Name: "test:123"})
+	cc.CopyImages = append(cc.CopyImages, container.Image{Name: "test:abc"})
+
+	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(0, nil)
+	md.On("FindImageInLocalRegistry", mock.Anything).Return("abc123", nil)
+
 	testutils.RemoveOn(&md.Mock, "CopyLocalDockerImagesToVolume")
-	md.On("CopyLocalDockerImagesToVolume", mock.Anything, mock.Anything, mock.Anything).Return("", fmt.Errorf("boom"))
+	md.On("CopyLocalDockerImagesToVolume", mock.Anything, mock.Anything, mock.Anything).Return([]string{}, fmt.Errorf("boom"))
 
 	p := ClusterProvider{cc, md, mk, nil, mc, logger.NewTestLogger(t)}
 
@@ -473,17 +511,27 @@ func TestClusterK3sImportDockerCopyImageFailReturnsError(t *testing.T) {
 func TestClusterK3sImportDockerRunsExecCommand(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
 
+	cc.CopyImages = append(cc.CopyImages, container.Image{Name: "test:123"})
+	cc.CopyImages = append(cc.CopyImages, container.Image{Name: "test:abc"})
+
+	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(0, nil)
+	md.On("FindImageInLocalRegistry", mock.Anything).Return("abc123", nil)
+
 	p := ClusterProvider{cc, md, mk, nil, mc, logger.NewTestLogger(t)}
 	err := p.Create()
 
 	assert.NoError(t, err)
-	md.AssertCalled(t, "ExecuteCommand", "containerid", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	md.AssertCalled(t, "ExecuteCommand", "123", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestClusterK3sImportDockerExecFailReturnsError(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
-	testutils.RemoveOn(&md.Mock, "ExecuteCommand")
-	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
+
+	cc.CopyImages = append(cc.CopyImages, container.Image{Name: "test:123"})
+	cc.CopyImages = append(cc.CopyImages, container.Image{Name: "test:abc"})
+
+	md.On("ExecuteCommand", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(1, fmt.Errorf("boom"))
+	md.On("FindImageInLocalRegistry", mock.Anything).Return("abc123", nil)
 
 	p := ClusterProvider{cc, md, mk, nil, mc, logger.NewTestLogger(t)}
 
@@ -568,7 +616,7 @@ func TestClusterK3sDestroyGetsIDr(t *testing.T) {
 
 	err := p.Destroy()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "FindContainerIDs", "server."+clusterConfig.Name, clusterConfig.Type)
+	md.AssertCalled(t, "FindContainerIDs", "server.test.k8s-cluster.jumppad.dev")
 }
 
 func TestClusterK3sDestroyWithFindIDErrorReturnsError(t *testing.T) {
@@ -638,8 +686,9 @@ func TestLookupReturnsIDs(t *testing.T) {
 
 var clusterConfig = &K8sCluster{
 	ResourceMetadata: htypes.ResourceMetadata{Name: "test", Type: TypeK8sCluster},
-	Image:            &ctypes.Image{Name: "shipyardrun/k3s:v1.27.4"},
-	Networks:         []ctypes.NetworkAttachment{ctypes.NetworkAttachment{ID: "cloud"}},
+	Image:            &container.Image{Name: "shipyardrun/k3s:v1.27.4"},
+	Networks:         []container.NetworkAttachment{container.NetworkAttachment{ID: "cloud"}},
+	APIPort:          443,
 }
 
 var kubeconfig = `

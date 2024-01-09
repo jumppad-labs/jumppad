@@ -101,10 +101,11 @@ func (n *NomadCluster) Process() error {
 	// Process volumes
 	// make sure mount paths are absolute
 	for i, v := range n.Volumes {
-		if v.Type != "bind" {
+		if v.Type != "" && v.Type != "bind" {
 			// only change path for bind mounts
 			continue
 		}
+
 		n.Volumes[i].Source = utils.EnsureAbsolute(v.Source, n.File)
 	}
 
