@@ -3,7 +3,7 @@ Feature: Docker Container
   I should apply a blueprint which defines a simple container setup
   and test the resources are created correctly
 
-Scenario: Single Container from Local Blueprint
+Scenario: Docker Containers from Local Blueprint
   Given I have a running blueprint
   Then the following resources should be running
     | name                                            |
@@ -17,7 +17,7 @@ Scenario: Single Container from Local Blueprint
   And the info "{.NetworkSettings.Ports['8500/tcp'][0].HostPort}" for the running container "resource.container.consul" should contain "85"
   And a HTTP call to "http://consul.container.shipyard.run:8500/v1/status/leader" should result in status 200
 
-Scenario: Single Container from Local Blueprint with multiple runs
+Scenario: Docker Containers from Local Blueprint with multiple runs
   Given the environment variable "CONSUL_VERSION" has a value "<consul>"
   And the environment variable "ENVOY_VERSION" has a value "<envoy>"
   And I have a running blueprint
