@@ -39,11 +39,6 @@ resource "nomad_cluster" "dev" {
   copy_image {
     name = "consul:1.10.1"
   }
-
-  volume {
-    source      = "/tmp"
-    destination = "/files"
-  }
 }
 
 resource "template" "example_2" {

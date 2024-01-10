@@ -9,6 +9,8 @@ Scenario: Single Container from Local Blueprint
     | name                                            |
     | resource.network.consul                         |
     | resource.container.consul                       |
+    | resource.container.consul_labels                |
+    | resource.container.consul_capabilities          |
     | resource.sidecar.envoy                          |
   And the info "{.NetworkSettings.Ports['8501/tcp']}" for the running container "resource.container.consul" should exist
   And the info "{.NetworkSettings.Ports['8500/tcp'][0].HostPort}" for the running container "resource.container.consul" should equal "8500"
@@ -23,6 +25,8 @@ Scenario: Single Container from Local Blueprint with multiple runs
     | name                                            |
     | resource.network.consul                         |
     | resource.container.consul                       |
+    | resource.container.consul_labels                |
+    | resource.container.consul_capabilities          |
     | resource.sidecar.envoy                          |
   And a HTTP call to "http://consul.container.shipyard.run:8500/v1/status/leader" should result in status 200
   And the response body should contain "10.6.0.200"

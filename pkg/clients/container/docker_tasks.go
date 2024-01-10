@@ -924,7 +924,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 	for _, f := range filenames {
 		// get the filename part
 		name := filepath.Base(f)
-		destFile := filepath.Join(destPath, name)
+		destFile := fmt.Sprintf("%s/%s", destPath, name)
 
 		// check if the image exists if we are not doing a forced update
 		if !d.force && !force {

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net"
 	"net/url"
 	"os"
@@ -554,6 +555,25 @@ func ChecksumFromInterface(i interface{}) (string, error) {
 	}
 
 	return HashString(string(json))
+}
+
+// RandomAvailablePort returns a random free port in the given range
+func RandomAvailablePort(from, to int) (int, error) {
+
+	// checks 10 times for a free port
+	for i := 0; i < 10; i++ {
+		port := rand.Intn(to-from) + from
+
+		// check if the port is available
+		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+		if err == nil {
+			ln.Close()
+
+			return port, nil
+		}
+	}
+
+	return 0, fmt.Errorf("unable to find a free port in the range %d-%d", from, to)
 }
 
 func incIP(ip net.IP) net.IP {

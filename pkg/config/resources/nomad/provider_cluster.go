@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -346,7 +347,16 @@ func (p *ClusterProvider) createNomad() error {
 	// set the API server port to a random number
 	p.config.ConnectorPort = rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
 	p.config.ConfigDir = path.Join(utils.JumppadHome(), strings.Replace(p.config.ID, ".", "_", -1), "config")
+
+	// set the external IP to the address where the docker daemon is running
 	p.config.ExternalIP = utils.GetDockerIP()
+
+	// if we are using podman on windows set the external ip to localhost as podman does not bind to the main nic
+	if p.client.EngineInfo().EngineType == "podman" && runtime.GOOS == "windows" {
+		p.config.ExternalIP = "127.0.0.1"
+	}
+
+	p.log.Debug("External IP for server node", "ref", p.config.ID, "ip", p.config.ExternalIP)
 
 	// create the docker config
 	dockerConfigPath, err := p.createDockerConfig()
@@ -478,7 +488,7 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 		},
 	}
 
-	// Add any user config if set
+	// Add any server user config if set
 	if p.config.ServerConfig != "" {
 		vol := ctypes.Volume{
 			Source:      p.config.ServerConfig,
@@ -489,7 +499,7 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 		cc.Volumes = append(cc.Volumes, vol)
 	}
 
-	// Add any user config if set
+	// Add any client user config if set
 	if p.config.ClientConfig != "" {
 		vol := ctypes.Volume{
 			Source:      p.config.ClientConfig,

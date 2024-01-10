@@ -2,7 +2,6 @@ package cache
 
 import (
 	"fmt"
-	"math/rand"
 	"path/filepath"
 	"strings"
 
@@ -178,20 +177,28 @@ func (p *Provider) createImageCache(registries []string, authRegistries []string
 	}
 
 	// expose the docker proxy port on a random port num
+	p1, err1 := utils.RandomAvailablePort(31000, 34000)
+	p2, err2 := utils.RandomAvailablePort(31000, 34000)
+	p3, err3 := utils.RandomAvailablePort(31000, 34000)
+
+	if err1 != nil || err2 != nil || err3 != nil {
+		return "", err
+	}
+
 	cc.Ports = []types.Port{
 		{
 			Local:    "3128",
-			Host:     fmt.Sprintf("%d", rand.Intn(3000)+31000),
+			Host:     fmt.Sprintf("%d", p1),
 			Protocol: "tcp",
 		},
 		{
 			Local:    "8081",
-			Host:     fmt.Sprintf("%d", rand.Intn(3000)+31000),
+			Host:     fmt.Sprintf("%d", p2),
 			Protocol: "tcp",
 		},
 		{
 			Local:    "8082",
-			Host:     fmt.Sprintf("%d", rand.Intn(3000)+31000),
+			Host:     fmt.Sprintf("%d", p3),
 			Protocol: "tcp",
 		},
 	}
