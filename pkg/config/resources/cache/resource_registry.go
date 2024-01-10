@@ -15,6 +15,7 @@ type Registry struct {
 
 // RegistryAuth defines a structure for authenticating against a docker registry
 type RegistryAuth struct {
-	Username string `hcl:"username" json:"username"` // Username for authentication, should not be an email
-	Password string `hcl:"password" json:"password"` // Password for authentication
+	Hostname string `hcl:"hostname,optional" json:"hostname,omitempty"` // Hostname for authentication, can be different from registry hostname
+	Username string `hcl:"username" json:"username"`                    // Username for authentication
+	Password string `hcl:"password" json:"password"`                    // Password for authentication
 }

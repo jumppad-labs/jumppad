@@ -12,7 +12,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/http"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"golang.org/x/xerrors"
@@ -22,10 +21,9 @@ const cacheImage = "ghcr.io/rpardini/docker-registry-proxy:0.6.4"
 const defaultRegistries = "k8s.gcr.io gcr.io asia.gcr.io eu.gcr.io us.gcr.io quay.io ghcr.io docker.pkg.github.com"
 
 type Provider struct {
-	config     *ImageCache
-	client     container.ContainerTasks
-	httpClient http.HTTP
-	log        logger.Logger
+	config *ImageCache
+	client container.ContainerTasks
+	log    logger.Logger
 }
 
 func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
@@ -41,7 +39,6 @@ func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
 
 	p.config = c
 	p.client = cli.ContainerTasks
-	p.httpClient = cli.HTTP
 	p.log = l
 
 	return nil
@@ -63,7 +60,12 @@ func (p *Provider) Create() error {
 		registries = append(registries, reg.Hostname)
 
 		if reg.Auth != nil {
-			authRegistries = append(authRegistries, reg.Hostname+":::"+reg.Auth.Username+":::"+reg.Auth.Password)
+			host := reg.Hostname
+			if reg.Auth.Hostname != "" {
+				host = reg.Auth.Hostname
+			}
+
+			authRegistries = append(authRegistries, host+":::"+reg.Auth.Username+":::"+reg.Auth.Password)
 		}
 	}
 
@@ -169,9 +171,9 @@ func (p *Provider) createImageCache(registries []string, authRegistries []string
 		"DEBUG_HUB":               "false",
 		"DOCKER_MIRROR_CACHE":     "/cache/docker",
 		"ENABLE_MANIFEST_CACHE":   "true",
-		"REGISTRIES":              defaultRegistries + " " + strings.Join(registries, " "),
+		"REGISTRIES":              strings.Trim(defaultRegistries+" "+strings.Join(registries, " "), " "),
 		"AUTH_REGISTRY_DELIMITER": ":::",
-		"AUTH_REGISTRIES":         strings.Join(authRegistries, " "),
+		"AUTH_REGISTRIES":         strings.Trim(strings.Join(authRegistries, " "), " "),
 		"ALLOW_PUSH":              "true",
 		"VERIFY_SSL":              "false",
 	}
