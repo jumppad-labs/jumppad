@@ -4,12 +4,14 @@ resource "exec" "install" {
   OS=$(uname -s | tr '[:upper:]' '[:lower:]')
   ARCH=$(uname -m | tr '[:upper:]' '[:lower:]')
 
-  if [ ! -f /tmp/consul ]; then
-    curl -L -o /tmp/consul.zip https://releases.hashicorp.com/consul/1.16.2/consul_1.16.2_$${OS}_$${ARCH}.zip
-    cd /tmp && unzip ./consul.zip
+  if [ "$ARCH" = "x86_64" ]; then
+    ARCH="amd64"
   fi
+
+  curl -L -o ${data("test")}/consul.zip https://releases.hashicorp.com/consul/1.16.2/consul_1.16.2_$${OS}_$${ARCH}.zip
+  cd ${data("test")} && unzip ./consul.zip
   EOF
-  
+
   timeout = "30s"
 }
 
@@ -18,7 +20,7 @@ resource "exec" "run" {
 
   script = <<-EOF
   #!/bin/sh
-  /tmp/consul agent -dev
+  ${data("test")}/consul agent -dev
   EOF
 
   daemon = true
