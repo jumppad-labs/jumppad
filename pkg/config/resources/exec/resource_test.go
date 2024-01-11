@@ -21,10 +21,9 @@ func TestExecSetsOutputsFromState(t *testing.T) {
   "blueprint": null,
   "resources": [
 	{
-			"id": "resource.exec.test",
-      "name": "test",
-      "status": "created",
-      "type": "exec",
+			"resource_id": "resource.exec.test",
+      "resource_name": "test",
+      "resource_type": "exec",
 			"pid": 42
 	}
 	]

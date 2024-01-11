@@ -45,7 +45,7 @@ func TestNomadClusterProcessSetsAbsolute(t *testing.T) {
 
 func TestNomadClusterProcessDoesNotSetAbsoluteForNonBindMounts(t *testing.T) {
 	c := &NomadCluster{
-		ResourceMetadata: types.ResourceMetadata{File: "./"},
+		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
 
 		Volumes: []ctypes.Volume{
 			{
@@ -67,10 +67,9 @@ func TestNomadClusterSetsOutputsFromState(t *testing.T) {
   "blueprint": null,
   "resources": [
 	{
-			"id": "resource.nomad_cluster.test",
-      "name": "test",
-      "status": "created",
-      "type": "nomad_cluster",
+			"resource_id": "resource.nomad_cluster.test",
+      "resource_name": "test",
+      "resource_type": "nomad_cluster",
 			"api_port": 123,
 			"connector_port": 124,
 			"external_ip": "127.0.0.1",

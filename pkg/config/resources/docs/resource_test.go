@@ -28,10 +28,9 @@ func TestDocsLoadsValuesFromState(t *testing.T) {
   "blueprint": null,
   "resources": [
 	{
-			"id": "resource.docs.test",
-      "name": "test",
-      "status": "created",
-      "type": "docs",
+			"resource_id": "resource.docs.test",
+      "resource_name": "test",
+      "resource_type": "docs",
 			"fqdn": "fqdn.mine"
 	}
 	]

@@ -737,7 +737,7 @@ func (p *ClusterProvider) destroyK3s() error {
 
 // createRegistriesConfig creates the k3s mirrors config for the cluster
 func (p *ClusterProvider) createRegistriesConfig() (string, error) {
-	dir, _, _ := utils.CreateKubeConfigPath(p.config.Name)
+	dir, _, _ := utils.CreateKubeConfigPath(p.config.ResourceName)
 	daemonConfigPath := path.Join(dir, "registries.yaml")
 
 	// remove any existing files, fail silently

@@ -516,12 +516,12 @@ var failedState = `
 {
   "resources": [
 	{
-      "name": "onprem",
- 	    "properties": {
+      "resource_name": "onprem",
+ 	    "resource_properties": {
 				"status": "failed"
 			},
       "subnet": "10.15.0.0/16",
-      "type": "network"
+      "resource_type": "network"
 	}
   ]
 }
@@ -531,12 +531,12 @@ var taintedState = `
 {
   "resources": [
 	{
-      "name": "onprem",
- 	    "properties": {
+      "resource_name": "onprem",
+ 	    "resource_properties": {
 				"status": "tainted"
 			},
       "subnet": "10.15.0.0/16",
-      "type": "network"
+      "resource_type": "network"
 	}
   ]
 }
@@ -546,36 +546,36 @@ var existingState = `
 {
   "resources": [
 	{
-      "name": "cloud",
-      "properties": {
+      "resource_name": "cloud",
+      "resource_properties": {
 				"status": "created"
 			},
       "subnet": "10.15.0.0/16",
-      "type": "network"
+      "resource_type": "network"
 	},
 	{
-      "name": "default",
+      "resource_name": "default",
       "properties": {
 				"status": "created"
 			},
-      "type": "image_cache"
+      "resource_type": "image_cache"
 	},
 	{
-      "name": "container",
-      "properties": {
+      "resource_name": "container",
+      "resource_properties": {
 				"status": "created"
 			},
 			"image": {
 				"name": "test"
 			},
-      "type": "container"
+      "resource_type": "container"
 	},
 	{
-      "name": "consul_config",
-      "properties": {
+      "resource_name": "consul_config",
+      "resource_properties": {
 				"status": "created"
 			},
-      "type": "template"
+      "resource_type": "template"
 	}
   ]
 }
@@ -585,43 +585,43 @@ var singleFileState = `
 {
   "resources": [
 	{
-      "name": "onprem",
-      "properties": {
+      "resource_name": "onprem",
+      "resource_properties": {
 				"status": "created"
 			},
       "subnet": "10.15.0.0/16",
-      "type": "network"
+      "resource_type": "network"
 	},
 	{
-      "name": "default",
-      "properties": {
+      "resource_name": "default",
+      "resource_properties": {
 				"status": "created"
 			},
-      "type": "image_cache"
+      "resource_type": "image_cache"
 	},
 	{
-      "name": "consul",
-      "properties": {
+      "resource_name": "consul",
+      "resource_properties": {
 				"status": "created"
 			},
-      "type": "container",
+      "resource_type": "container",
 			"image": {
 				"name": "test"
 			}
 	},
 	{
-      "name": "consul_config",
-      "properties": {
+      "resource_name": "consul_config",
+      "resource_properties": {
 				"status": "created"
 			},
-      "type": "template"
+      "resource_type": "template"
 	},
 	{
-      "name": "consul_addr",
-      "properties": {
+      "resource_name": "consul_addr",
+      "resource_properties": {
 				"status": "created"
 			},
-      "type": "output"
+      "resource_type": "output"
 	}
   ]
 }
@@ -631,32 +631,32 @@ var complexState = `
 {
   "resources": [
 	{
-      "name": "cloud",
+      "resource_name": "cloud",
       "subnet": "10.15.0.0/16",
-      "properties": {
+      "resource_properties": {
 				"status": "created"
 			},
-      "type": "network"
+      "resource_type": "network"
 	},
 	{
-      "name": "default",
-      "type": "image_cache",
-      "properties": {
+      "resource_name": "default",
+      "resource_type": "image_cache",
+      "resource_properties": {
 				"status": "created"
 			},
 			"depends_on": ["resource.network.cloud"]
 	},
 	{
-      "name": "mytemplate",
-      "properties": {
+      "resource_name": "mytemplate",
+      "resource_properties": {
 				"status": "created"
 			},
-      "type": "template"
+      "resource_type": "template"
 	},
 	{
-      "name": "mycontainer",
-      "type": "container",
-      "properties": {
+      "resource_name": "mycontainer",
+      "resource_type": "container",
+      "resource_properties": {
 				"status": "created"
 			},
 			"depends_on": ["resource.network.cloud", "resource.template.mytemplate"]
@@ -670,25 +670,24 @@ var disabledState = `
   "blueprint": null,
   "resources": [
 	{
-      "name": "default",
-      "status": "created",
-      "type": "image_cache"
+      "resource_name": "default",
+      "resource_type": "image_cache"
 	},
 	{
-      "name": "dc1_enabled",
-      "properties": {
+      "resource_name": "dc1_enabled",
+      "resource_properties": {
 				"status": "created"
 			},
       "subnet": "10.15.0.0/16",
-      "type": "network"
+      "resource_type": "network"
 	},
 	{
 		 "disabled": true,
-      "name": "consul_disabled",
-      "properties": {
+     "resource_name": "consul_disabled",
+     "resource_properties": {
 				"status": "disabled"
 			},
-      "type": "container"
+      "resource_type": "container"
 	}
   ]
 }
@@ -699,38 +698,38 @@ var disabledAndCreatedState = `
   "blueprint": null,
   "resources": [
 	{
-      "name": "default",
-      "properties": {
+      "resource_name": "default",
+      "resource_properties": {
 				"status": "created"
 			},
-      "type": "image_cache"
+      "resource_type": "image_cache"
 	},
 	{
-      "name": "dc1_enabled",
-      "properties": {
+      "resource_name": "dc1_enabled",
+      "resource_properties": {
 				"status": "created"
 			},
       "subnet": "10.15.0.0/16",
-      "type": "network"
+      "resource_type": "network"
 	},
 	{
 		 "disabled": false,
-      "name": "consul_disabled",
-      "properties": {
+      "resource_name": "consul_disabled",
+      "resource_properties": {
 				"status": "created"
 			},
-      "type": "container",
+      "resource_type": "container",
 			"image": {
 				"name": "test"
 			}	
 	},
 	{
 		 "disabled": false,
-      "name": "consul_enabled",
-      "properties": {
+      "resource_name": "consul_enabled",
+      "resource_properties": {
 				"status": "created"
 			},
-      "type": "container",
+      "resource_type": "container",
 			"image": {
 				"name": "test"
 			}

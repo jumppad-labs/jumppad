@@ -248,9 +248,9 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 			},
 		}
 
-		e.log.Debug("Creating new Image Cache", "id", cache.ResourceID)
+		e.log.Debug("Creating new Image Cache", "id", ca.ResourceID)
 
-		p := e.providers.GetProvider(cache)
+		p := e.providers.GetProvider(ca)
 		if p == nil {
 			// this should never happen
 			panic("Unable to find provider for Image Cache, Nic assured me that you should never see this message. Sorry, the monkey has broken something again")
@@ -259,12 +259,12 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 		// create the cache
 		err := p.Create()
 		if err != nil {
-			ca.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
+			ca.ResourceProperties[constants.PropertyStatus] = constants.StatusFailed
 		} else {
-			ca.Metadata().Properties[constants.PropertyStatus] = constants.StatusCreated
+			ca.ResourceProperties[constants.PropertyStatus] = constants.StatusCreated
 		}
 
-		cache.ResourceProperties[constants.PropertyStatus] = constants.StatusCreated
+		ca.ResourceProperties[constants.PropertyStatus] = constants.StatusCreated
 
 		// add the new cache to the config
 		e.config.AppendResource(ca)
@@ -565,7 +565,7 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 		}
 	}
 
-	if r.Metadata().Type == cache.TypeRegistry && r.Metadata().Properties[constants.PropertyStatus] == constants.StatusCreated {
+	if r.Metadata().ResourceType == cache.TypeRegistry && r.Metadata().ResourceProperties[constants.PropertyStatus] == constants.StatusCreated {
 		// get the image cache
 		ic, err := e.config.FindResource("resource.image_cache.default")
 		if err == nil {

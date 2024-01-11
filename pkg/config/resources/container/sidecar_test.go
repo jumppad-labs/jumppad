@@ -39,10 +39,9 @@ func TestSidecarLoadsValuesFromState(t *testing.T) {
   "blueprint": null,
   "resources": [
 	{
-			"id": "resource.sidecar.test",
-      "name": "test",
-      "status": "created",
-      "type": "sidecar",
+			"resource_id": "resource.sidecar.test",
+      "resource_name": "test",
+      "resource_type": "sidecar",
 			"container_name": "fqdn.mine"
 	}
 	]

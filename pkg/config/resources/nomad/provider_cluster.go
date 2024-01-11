@@ -347,7 +347,7 @@ func (p *ClusterProvider) createNomad() error {
 
 	// set the API server port to a random number
 	p.config.ConnectorPort = rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
-	p.config.ConfigDir = path.Join(utils.JumppadHome(), strings.Replace(p.config.ID, ".", "_", -1), "config")
+	p.config.ConfigDir = path.Join(utils.JumppadHome(), strings.Replace(p.config.ResourceID, ".", "_", -1), "config")
 
 	// set the external IP to the address where the docker daemon is running
 	p.config.ExternalIP = utils.GetDockerIP()
@@ -357,7 +357,7 @@ func (p *ClusterProvider) createNomad() error {
 		p.config.ExternalIP = "127.0.0.1"
 	}
 
-	p.log.Debug("External IP for server node", "ref", p.config.ID, "ip", p.config.ExternalIP)
+	p.log.Debug("External IP for server node", "ref", p.config.ResourceID, "ip", p.config.ExternalIP)
 
 	// create the docker config
 	dockerConfigPath, err := p.createDockerConfig()

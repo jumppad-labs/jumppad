@@ -19,10 +19,9 @@ func TestLocalExecSetsOutputsFromState(t *testing.T) {
   "blueprint": null,
   "resources": [
 	{
-			"id": "resource.local_exec.test",
-      "name": "test",
-      "status": "created",
-      "type": "local_exec",
+			"resource_id": "resource.local_exec.test",
+      "resource_name": "test",
+      "resource_type": "local_exec",
 			"pid": 42
 	}
 	]

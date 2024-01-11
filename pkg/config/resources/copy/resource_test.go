@@ -36,10 +36,9 @@ func TestCopySetsOutputsFromState(t *testing.T) {
   "blueprint": null,
   "resources": [
 	{
-			"id": "resource.copy.test",
-      "name": "test",
-      "status": "created",
-      "type": "copy",
+			"resource_id": "resource.copy.test",
+      "resource_name": "test",
+      "resource_type": "copy",
 			"copied_files": ["a","b"]
 	}
 	]

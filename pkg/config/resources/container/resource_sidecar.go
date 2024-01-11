@@ -46,7 +46,7 @@ func (c *Sidecar) Process() error {
 	for i, v := range c.Volumes {
 		// make sure mount paths are absolute when type is bind
 		if v.Type == "" || v.Type == "bind" {
-			c.Volumes[i].Source = utils.EnsureAbsolute(v.Source, c.File)
+			c.Volumes[i].Source = utils.EnsureAbsolute(v.Source, c.ResourceFile)
 		}
 	}
 

@@ -37,10 +37,9 @@ func TestCertCALoadsValuesFromState(t *testing.T) {
   "blueprint": null,
   "resources": [
 		{
-			"id": "resource.certificate_ca.test",
-			"name": "test",
-			"status": "created",
-			"type": "certificate_ca",
+			"resource_id": "resource.certificate_ca.test",
+			"resource_name": "test",
+			"resource_type": "certificate_ca",
 			"private_key": {
 				"filename": "private.key"
 			},
@@ -99,10 +98,9 @@ func TestCertLeafLoadsValuesFromState(t *testing.T) {
   "blueprint": null,
   "resources": [
 	{
-			"id": "resource.certificate_leaf.test",
-      "name": "test",
-      "status": "created",
-      "type": "certificate_leaf",
+			"resource_id": "resource.certificate_leaf.test",
+      "resource_name": "test",
+      "resource_type": "certificate_leaf",
 			"private_key": {
 				"filename": "private.key"
 			},
