@@ -15,6 +15,8 @@ Scenario: Single Container with jumppad Variables
     | name                                       |
     | resource.network.consul                    |
     | resource.container.consul                  |
+    | resource.container.consul_capabilities     |
+    | resource.container.consul_labels           |
     | resource.sidecar.envoy                     |
   And the info "{.Config.Env}" for the running container "resource.container.consul" should contain "something=set by test"
   And the info "{.Config.Env}" for the running container "resource.container.consul" should contain "foo=bah"

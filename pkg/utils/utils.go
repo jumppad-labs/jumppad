@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net"
 	"net/url"
 	"os"
@@ -481,22 +482,11 @@ func GetLocalIPAndHostname() (string, string) {
 	return "127.0.0.1", "localhost"
 }
 
-// HTTPProxyAddress returns the default HTTPProxy used by
+// ImageCacheADDR returns the default Image cache used by
 // Nomad and Kubernetes clusters unless the environment variable
-// HTTP_PROXY is set when it returns this value
-func HTTPProxyAddress() string {
-	if p := os.Getenv("HTTP_PROXY"); p != "" {
-		return p
-	}
-
-	return jumppadProxyAddress
-}
-
-// HTTPSProxyAddress returns the default HTTPProxy used by
-// Nomad and Kubernetes clusters unless the environment variable
-// HTTPS_PROXY is set when it returns this value
-func HTTPSProxyAddress() string {
-	if p := os.Getenv("HTTPS_PROXY"); p != "" {
+// IMAGE_CACHE_ADDR is set when it returns this value
+func ImageCacheAddress() string {
+	if p := os.Getenv("IMAGE_CACHE_ADDR"); p != "" {
 		return p
 	}
 
@@ -565,6 +555,25 @@ func ChecksumFromInterface(i interface{}) (string, error) {
 	}
 
 	return HashString(string(json))
+}
+
+// RandomAvailablePort returns a random free port in the given range
+func RandomAvailablePort(from, to int) (int, error) {
+
+	// checks 10 times for a free port
+	for i := 0; i < 10; i++ {
+		port := rand.Intn(to-from) + from
+
+		// check if the port is available
+		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+		if err == nil {
+			ln.Close()
+
+			return port, nil
+		}
+	}
+
+	return 0, fmt.Errorf("unable to find a free port in the range %d-%d", from, to)
 }
 
 func incIP(ip net.IP) net.IP {

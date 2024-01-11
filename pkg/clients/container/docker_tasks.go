@@ -17,11 +17,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
+	registrytypes "github.com/docker/docker/api/types/registry"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/go-connections/nat"
@@ -294,6 +296,9 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 
 	// is this a priviledged container
 	hc.Privileged = c.Privileged
+	if c.Privileged {
+		hc.CgroupnsMode = "host"
+	}
 
 	// are we attaching the container to a sidecar network?
 	for _, n := range c.Networks {
@@ -483,6 +488,52 @@ func (d *DockerTasks) PullImage(image dtypes.Image, force bool) error {
 	io.Copy(d.l.StandardWriter(), out)
 
 	return nil
+}
+
+func (d *DockerTasks) PushImage(image dtypes.Image) error {
+	ipo := types.ImagePushOptions{}
+	// if the username and password is not null make an authenticated
+	// image pull
+	if image.Username != "" && image.Password != "" {
+		ipo.RegistryAuth = createRegistryAuth(image.Username, image.Password)
+	}
+
+	ref, err := reference.ParseNormalizedNamed(image.Name)
+	if err != nil {
+		return xerrors.Errorf("error parsing image name: %w", err)
+	}
+
+	//ipo.PrivilegeFunc = RegistryAuthenticationPrivilegedFunc(domain, image.Username, image.Password)
+	// if pushing to a registry that is not authenticated you still need to
+	// set a registry auth otherwise the API complains that there is no bearer token
+	if ipo.RegistryAuth == "" {
+		domain := reference.Domain(ref)
+		ac := registrytypes.AuthConfig{}
+		ac.ServerAddress = domain
+
+		ra, _ := registrytypes.EncodeAuthConfig(ac)
+		ipo.RegistryAuth = ra
+	}
+
+	name := reference.FamiliarString(ref)
+
+	out, err := d.c.ImagePush(context.Background(), name, ipo)
+	if err != nil {
+		return xerrors.Errorf("Error pushing image: %w", err)
+	}
+
+	// write the output to the debug log
+	io.Copy(d.l.StandardWriter(), out)
+	return nil
+}
+
+func RegistryAuthenticationPrivilegedFunc(server, username, password string) types.RequestPrivilegeFunc {
+	return func() (string, error) {
+		ac := registrytypes.AuthConfig{}
+		ac.ServerAddress = server
+
+		return registrytypes.EncodeAuthConfig(ac)
+	}
 }
 
 // FindContainerIDs returns the Container IDs for the given identifier
@@ -873,7 +924,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 	for _, f := range filenames {
 		// get the filename part
 		name := filepath.Base(f)
-		destFile := filepath.Join(destPath, name)
+		destFile := fmt.Sprintf("%s/%s", destPath, name)
 
 		// check if the image exists if we are not doing a forced update
 		if !d.force && !force {
@@ -1206,7 +1257,7 @@ func (d *DockerTasks) resizeTTY(id string, out *streams.Out) error {
 }
 
 func (d *DockerTasks) AttachNetwork(net, containerID string, aliases []string, ipAddress string) error {
-	d.l.Debug("Attaching container to network", "ref", containerID, "network", net)
+	d.l.Debug("Attaching container to network", "id", containerID, "network", net)
 	es := &network.EndpointSettings{NetworkID: net}
 
 	// if we have network aliases defined, add them to the network connection
@@ -1216,7 +1267,7 @@ func (d *DockerTasks) AttachNetwork(net, containerID string, aliases []string, i
 
 	// are we binding to a specific ip
 	if ipAddress != "" {
-		d.l.Debug("Assigning static ip address", "ref", containerID, "network", net, "ip_address", ipAddress)
+		d.l.Debug("Assigning static ip address", "id", containerID, "network", net, "ip_address", ipAddress)
 		es.IPAMConfig = &network.EndpointIPAMConfig{IPv4Address: ipAddress}
 	}
 
@@ -1283,6 +1334,10 @@ func (d *DockerTasks) FindNetwork(id string) (dtypes.NetworkAttachment, error) {
 	}
 
 	return dtypes.NetworkAttachment{}, fmt.Errorf("a network with the label id: %s, was not found", id)
+}
+
+func (d *DockerTasks) TagImage(source, destination string) error {
+	return d.c.ImageTag(context.Background(), source, destination)
 }
 
 // publishedPorts defines a Docker published port
@@ -1370,11 +1425,12 @@ func createPublishedPortRanges(ps []dtypes.PortRange) (publishedPorts, error) {
 
 // credentials are a json string and need to be base64 encoded
 func createRegistryAuth(username, password string) string {
-	return base64.StdEncoding.EncodeToString(
-		[]byte(
-			fmt.Sprintf(`{"Username": "%s", "Password": "%s"}`, username, password),
-		),
-	)
+	ac := registrytypes.AuthConfig{}
+	ac.Username = username
+	ac.Password = password
+
+	ec, _ := registrytypes.EncodeAuthConfig(ac)
+	return ec
 }
 
 // makeImageCanonical makes sure the image reference uses full canonical name i.e.

@@ -3,12 +3,14 @@ package nomad
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -154,6 +156,12 @@ func (p *ClusterProvider) Refresh() error {
 		return nil
 	}
 
+	// create the docker config
+	dockerConfigPath, err := p.createDockerConfig()
+	if err != nil {
+		return fmt.Errorf("unable to create docker config: %s", err)
+	}
+
 	// do we need to scale the cluster up
 	if p.config.ClientNodes > len(p.config.ClientContainerName) {
 		// need to scale up
@@ -164,7 +172,7 @@ func (p *ClusterProvider) Refresh() error {
 
 			p.log.Debug("Create client node", "ref", p.config.ID, "client", id)
 
-			fqdn, _, err := p.createClientNode(randomID(), p.config.Image.Name, utils.ImageVolumeName, p.config.ServerContainerName)
+			fqdn, _, err := p.createClientNode(randomID(), p.config.Image.Name, utils.ImageVolumeName, p.config.ServerContainerName, dockerConfigPath)
 			if err != nil {
 				return fmt.Errorf(`unable to recreate client node "%s", %s`, id, err)
 			}
@@ -338,10 +346,25 @@ func (p *ClusterProvider) createNomad() error {
 
 	// set the API server port to a random number
 	p.config.ConnectorPort = rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
-	p.config.ConfigDir = path.Join(utils.JumppadHome(), p.config.Name, "config")
+	p.config.ConfigDir = path.Join(utils.JumppadHome(), strings.Replace(p.config.ID, ".", "_", -1), "config")
+
+	// set the external IP to the address where the docker daemon is running
 	p.config.ExternalIP = utils.GetDockerIP()
 
-	_, err = p.createServerNode(p.config.Image.ToClientImage(), volID, isClient)
+	// if we are using podman on windows set the external ip to localhost as podman does not bind to the main nic
+	if p.client.EngineInfo().EngineType == "podman" && runtime.GOOS == "windows" {
+		p.config.ExternalIP = "127.0.0.1"
+	}
+
+	p.log.Debug("External IP for server node", "ref", p.config.ID, "ip", p.config.ExternalIP)
+
+	// create the docker config
+	dockerConfigPath, err := p.createDockerConfig()
+	if err != nil {
+		return fmt.Errorf("unable to create docker config: %s", err)
+	}
+
+	_, err = p.createServerNode(p.config.Image.ToClientImage(), volID, isClient, dockerConfigPath)
 	if err != nil {
 		return err
 	}
@@ -358,7 +381,7 @@ func (p *ClusterProvider) createNomad() error {
 	for i := 0; i < p.config.ClientNodes; i++ {
 		// create client node asynchronously
 		go func(id string, image, volID, name string) {
-			fqdn, _, err := p.createClientNode(id, image, volID, name)
+			fqdn, _, err := p.createClientNode(id, image, volID, name, dockerConfigPath)
 			if err != nil {
 				clientError = err
 			}
@@ -414,7 +437,7 @@ func (p *ClusterProvider) createNomad() error {
 	return nil
 }
 
-func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, isClient bool) (string, error) {
+func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, isClient bool, dockerConfig string) (string, error) {
 	// set the resources for CPU, if not a client set the resources low
 	// so that we can only deploy the connector to the server
 	cpu := ""
@@ -428,7 +451,7 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 	// write the nomad config to a file
 	os.MkdirAll(p.config.ConfigDir, os.ModePerm)
 	serverConfigPath := path.Join(p.config.ConfigDir, "server_config.hcl")
-	ioutil.WriteFile(serverConfigPath, []byte(sc), os.ModePerm)
+	os.WriteFile(serverConfigPath, []byte(sc), os.ModePerm)
 
 	// create the server
 	// since the server is just a container create the container config and provider
@@ -454,13 +477,18 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 			Type:        "volume",
 		},
 		{
+			Source:      dockerConfig,
+			Destination: "/etc/docker/daemon.json",
+			Type:        "bind",
+		},
+		{
 			Source:      serverConfigPath,
 			Destination: "/etc/nomad.d/config.hcl",
 			Type:        "bind",
 		},
 	}
 
-	// Add any user config if set
+	// Add any server user config if set
 	if p.config.ServerConfig != "" {
 		vol := ctypes.Volume{
 			Source:      p.config.ServerConfig,
@@ -471,7 +499,7 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 		cc.Volumes = append(cc.Volumes, vol)
 	}
 
-	// Add any user config if set
+	// Add any client user config if set
 	if p.config.ClientConfig != "" {
 		vol := ctypes.Volume{
 			Source:      p.config.ClientConfig,
@@ -498,8 +526,6 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 		cc.Volumes = append(cc.Volumes, v.ToClientVolume())
 	}
 
-	cc.Environment = p.config.Environment
-
 	// expose the API server port
 	cc.Ports = []ctypes.Port{
 		{
@@ -522,11 +548,13 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 	cc.Ports = append(cc.Ports, p.config.Ports.ToClientPorts()...)
 	cc.PortRanges = append(cc.PortRanges, p.config.PortRanges.ToClientPortRanges()...)
 
-	cc.Environment = map[string]string{}
-	err := p.appendProxyEnv(cc)
-	if err != nil {
-		return "", err
+	cc.Environment = p.config.Environment
+	if cc.Environment == nil {
+		cc.Environment = map[string]string{}
 	}
+
+	// add the ca for the proxy
+	p.appendProxyEnv(cc)
 
 	id, err := p.client.CreateContainer(cc)
 	if err != nil {
@@ -538,13 +566,13 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 
 // createClient node creates a Nomad client node
 // returns the fqdn, docker id, and an error if unsuccessful
-func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID string) (string, string, error) {
+func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID string, dockerConfig string) (string, string, error) {
 	// generate the client config
 	sc := dataDir + "\n" + fmt.Sprintf(clientConfig, p.config.Datacenter, serverID)
 
 	// write the default config to a file
 	clientConfigPath := path.Join(p.config.ConfigDir, "client_config.hcl")
-	ioutil.WriteFile(clientConfigPath, []byte(sc), os.ModePerm)
+	os.WriteFile(clientConfigPath, []byte(sc), os.ModePerm)
 
 	// create the server
 	// since the server is just a container create the container config and provider
@@ -566,6 +594,11 @@ func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID 
 			Source:      volumeID,
 			Destination: "/cache",
 			Type:        "volume",
+		},
+		{
+			Source:      dockerConfig,
+			Destination: "/etc/docker/daemon.json",
+			Type:        "bind",
 		},
 		{
 			Source:      clientConfigPath,
@@ -600,12 +633,12 @@ func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID 
 	cc.Volumes = append(cc.Volumes, p.config.Volumes.ToClientVolumes()...)
 
 	cc.Environment = p.config.Environment
-
-	cc.Environment = map[string]string{}
-	err := p.appendProxyEnv(cc)
-	if err != nil {
-		return "", "", err
+	if cc.Environment == nil {
+		cc.Environment = map[string]string{}
 	}
+
+	// add the ca for the proxy
+	p.appendProxyEnv(cc)
 
 	cid, err := p.client.CreateContainer(cc)
 
@@ -622,29 +655,68 @@ func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID 
 	return fqrn, cid, err
 }
 
+type dockerConfig struct {
+	Proxies            dockerProxies `json:"proxies,omitempty"`
+	InsecureRegistries []string      `json:"insecure-registries,omitempty"`
+}
+
+type dockerProxies struct {
+	HTTP    string `json:"http-proxy,omitempty"`
+	HTTPS   string `json:"https-proxy,omitempty"`
+	NOPROXY string `json:"no-proxy,omitempty"`
+}
+
+// createDockerConfig creates the docker daemon config for the cluster
+func (p *ClusterProvider) createDockerConfig() (string, error) {
+	daemonConfigPath := path.Join(p.config.ConfigDir, "daemon.json")
+
+	// remove any existing files, fail silently
+	os.RemoveAll(daemonConfigPath)
+
+	// create the config folder
+	os.MkdirAll(p.config.ConfigDir, os.ModePerm)
+
+	// create the docker config
+	dc := dockerConfig{
+		Proxies: dockerProxies{},
+	}
+
+	// set the insecure registries
+	if p.config.Config != nil &&
+		p.config.Config.DockerConfig != nil &&
+		len(p.config.Config.DockerConfig.InsecureRegistries) > 0 {
+		dc.InsecureRegistries = p.config.Config.DockerConfig.InsecureRegistries
+	}
+
+	// set the no proxy
+	if p.config.Config != nil &&
+		p.config.Config.DockerConfig != nil &&
+		len(p.config.Config.DockerConfig.NoProxy) > 0 {
+		dc.Proxies.NOPROXY = strings.TrimSuffix(strings.Join(p.config.Config.DockerConfig.NoProxy, ","), ",")
+	}
+
+	// set the cache details
+	dc.Proxies.HTTP = utils.ImageCacheAddress()
+	dc.Proxies.HTTPS = utils.ImageCacheAddress()
+
+	// write the config to a file
+	data, err := json.MarshalIndent(dc, "", "  ")
+	if err != nil {
+		return "", err
+	}
+
+	err = os.WriteFile(daemonConfigPath, data, os.ModePerm)
+
+	return daemonConfigPath, err
+}
+
 func (p *ClusterProvider) appendProxyEnv(cc *ctypes.Container) error {
 	// load the CA from a file
-	ca, err := ioutil.ReadFile(filepath.Join(utils.CertsDir(""), "/root.cert"))
+	ca, err := os.ReadFile(filepath.Join(utils.CertsDir(""), "/root.cert"))
 	if err != nil {
 		return fmt.Errorf("unable to read root CA for proxy: %s", err)
 	}
 
-	// add the netmask from the network to the proxy bypass
-	networkSubmasks := []string{}
-	for _, n := range p.config.Networks {
-		net, err := p.client.FindNetwork(n.ID)
-		if err != nil {
-			return fmt.Errorf("network not found: %w", err)
-		}
-
-		networkSubmasks = append(networkSubmasks, net.Subnet)
-	}
-
-	proxyBypass := utils.ProxyBypass + "," + strings.Join(networkSubmasks, ",")
-
-	cc.Environment["HTTP_PROXY"] = utils.HTTPProxyAddress()
-	cc.Environment["HTTPS_PROXY"] = utils.HTTPSProxyAddress()
-	cc.Environment["NO_PROXY"] = proxyBypass
 	cc.Environment["PROXY_CA"] = string(ca)
 
 	return nil

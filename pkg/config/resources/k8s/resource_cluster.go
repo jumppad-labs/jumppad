@@ -31,6 +31,8 @@ type K8sCluster struct {
 
 	Environment map[string]string `hcl:"environment,optional" json:"environment,omitempty"` // environment variables to set when starting the container
 
+	Config *Config `hcl:"config,block" json:"config,omitempty"`
+
 	// output parameters
 
 	// Path to the Kubernetes config
@@ -49,6 +51,19 @@ type K8sCluster struct {
 	// ExternalIP is the ip address of the cluster, this generally resolves
 	// to the docker ip
 	ExternalIP string `hcl:"external_ip,optional" json:"external_ip,omitempty"`
+}
+
+type Config struct {
+	// Specifies configuration for the Docker driver.
+	DockerConfig *DockerConfig `hcl:"docker,block" json:"docker,omitempty"`
+}
+
+type DockerConfig struct {
+	// NoProxy is a list of docker registires that should be excluded from the image cache
+	NoProxy []string `hcl:"no_proxy,optional" json:"no-proxy,omitempty"`
+
+	// InsecureRegistries is a list of docker registries that should be treated as insecure
+	InsecureRegistries []string `hcl:"insecure_registries,optional" json:"insecure-registries,omitempty"`
 }
 
 const k3sBaseImage = "shipyardrun/k3s"

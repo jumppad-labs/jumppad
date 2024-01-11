@@ -1,28 +1,28 @@
-package providers
+package cache
 
 import (
 	"encoding/json"
 	"path/filepath"
 	"testing"
 
-	"github.com/docker/docker/api/types"
-	"github.com/hashicorp/go-hclog"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
-	"github.com/jumppad-labs/jumppad/pkg/config"
+	dtypes "github.com/docker/docker/api/types"
+	htypes "github.com/jumppad-labs/hclconfig/types"
+	cmocks "github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/mock"
-	assert "github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
-func setupImageCacheTests(t *testing.T) (*config.ImageCache, *clients.MockContainerTasks, *mocks.MockHTTP) {
-	c := config.New()
-	cc := config.NewImageCache("tests")
-	c.AddResource(cc)
+func setupImageCacheTests(t *testing.T) (*ImageCache, *cmocks.ContainerTasks) {
+	cc := &ImageCache{ResourceMetadata: htypes.ResourceMetadata{Name: "test"}}
 
-	md := &clients.MockContainerTasks{}
-	hc := &mocks.MockHTTP{}
+	md := &cmocks.ContainerTasks{}
 
+	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{}, nil).Once()
 	md.On("CreateContainer", mock.Anything).Once().Return("abc", nil)
 	md.On("PullImage", mock.Anything, mock.Anything).Once().Return(nil)
 	md.On("CreateVolume", "images").Once().Return("images", nil)
@@ -32,15 +32,15 @@ func setupImageCacheTests(t *testing.T) (*config.ImageCache, *clients.MockContai
 	md.On("DetachNetwork", mock.Anything, mock.Anything).Return(nil)
 	md.On("AttachNetwork", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	return cc, md, hc
+	return cc, md
 }
 
 func TestImageCacheCreateDoesNotCreateContainerWhenExists(t *testing.T) {
-	cc, md, hc := setupImageCacheTests(t)
+	cc, md := setupImageCacheTests(t)
 
-	c := NewImageCache(cc, md, hc, clients.NewTestLogger(t))
+	c := Provider{cc, md, logger.NewTestLogger(t)}
 	err := c.Create()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	testutils.RemoveOn(&md.Mock, "FindContainerIDs")
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Once().Return([]string{"abc"}, nil)
@@ -49,70 +49,129 @@ func TestImageCacheCreateDoesNotCreateContainerWhenExists(t *testing.T) {
 }
 
 func TestImageCacheCreateCreatesVolume(t *testing.T) {
-	cc, md, hc := setupImageCacheTests(t)
+	cc, md := setupImageCacheTests(t)
 
-	c := NewImageCache(cc, md, hc, clients.NewTestLogger(t))
+	c := Provider{cc, md, logger.NewTestLogger(t)}
 	err := c.Create()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	md.AssertCalled(t, "CreateVolume", "images")
 }
 
 func TestImageCachePullsImage(t *testing.T) {
-	cc, md, hc := setupImageCacheTests(t)
+	cc, md := setupImageCacheTests(t)
 
-	c := NewImageCache(cc, md, hc, clients.NewTestLogger(t))
+	c := Provider{cc, md, logger.NewTestLogger(t)}
 	err := c.Create()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	md.AssertCalled(t, "PullImage", config.Image{Name: cacheImage}, false)
+	md.AssertCalled(t, "PullImage", ctypes.Image{Name: cacheImage}, false)
 }
 
 func TestImageCacheCreateAddsVolumes(t *testing.T) {
-	cc, md, hc := setupImageCacheTests(t)
+	cc, md := setupImageCacheTests(t)
 
-	c := NewImageCache(cc, md, hc, clients.NewTestLogger(t))
+	c := Provider{cc, md, logger.NewTestLogger(t)}
 	err := c.Create()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	md.AssertCalled(t, "CreateContainer", mock.Anything)
 
 	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0]
-	conf := params.Arguments[0].(*config.Container)
+	conf := params.Arguments[0].(*ctypes.Container)
 
 	// check volumes
-	assert.Equal(t, utils.FQDNVolumeName("images"), conf.Volumes[0].Source)
-	assert.Equal(t, "/cache", conf.Volumes[0].Destination)
-	assert.Equal(t, "volume", conf.Volumes[0].Type)
+	require.Equal(t, utils.FQDNVolumeName("images"), conf.Volumes[0].Source)
+	require.Equal(t, "/cache", conf.Volumes[0].Destination)
+	require.Equal(t, "volume", conf.Volumes[0].Type)
 }
 
 func TestImageCacheCreateAddsEnvironmentVariables(t *testing.T) {
-	cc, md, hc := setupImageCacheTests(t)
+	cc, md := setupImageCacheTests(t)
 
-	c := NewImageCache(cc, md, hc, clients.NewTestLogger(t))
+	c := Provider{cc, md, logger.NewTestLogger(t)}
 	err := c.Create()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	md.AssertCalled(t, "CreateContainer", mock.Anything)
 
 	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0]
-	conf := params.Arguments[0].(*config.Container)
+	conf := params.Arguments[0].(*ctypes.Container)
 
 	// check environment variables
-	assert.Equal(t, conf.EnvVar["CA_KEY_FILE"], "/cache/ca/root.key")
-	assert.Equal(t, conf.EnvVar["CA_CRT_FILE"], "/cache/ca/root.cert")
-	assert.Equal(t, conf.EnvVar["DOCKER_MIRROR_CACHE"], "/cache/docker")
-	assert.Equal(t, conf.EnvVar["ENABLE_MANIFEST_CACHE"], "true")
-	assert.Equal(t, conf.EnvVar["REGISTRIES"], "k8s.gcr.io gcr.io asia.gcr.io eu.gcr.io us.gcr.io quay.io ghcr.io docker.pkg.github.com")
-	assert.Equal(t, conf.EnvVar["ALLOW_PUSH"], "true")
+	require.Equal(t, conf.Environment["CA_KEY_FILE"], "/cache/ca/root.key")
+	require.Equal(t, conf.Environment["CA_CRT_FILE"], "/cache/ca/root.cert")
+	require.Equal(t, conf.Environment["DEBUG"], "false")
+	require.Equal(t, conf.Environment["DEBUG_NGINX"], "false")
+	require.Equal(t, conf.Environment["DEBUG_HUB"], "false")
+	require.Equal(t, conf.Environment["DOCKER_MIRROR_CACHE"], "/cache/docker")
+	require.Equal(t, conf.Environment["ENABLE_MANIFEST_CACHE"], "true")
+	require.Equal(t, conf.Environment["REGISTRIES"], defaultRegistries)
+	require.Equal(t, conf.Environment["AUTH_REGISTRY_DELIMITER"], ":::")
+	require.Equal(t, conf.Environment["AUTH_REGISTRIES"], "")
+	require.Equal(t, conf.Environment["ALLOW_PUSH"], "true")
+	require.Equal(t, conf.Environment["VERIFY_SSL"], "false")
+}
+
+func TestImageCacheCreateAddsUnauthenticatedRegistries(t *testing.T) {
+	cc, md := setupImageCacheTests(t)
+	cc.Registries = []Registry{
+		Registry{
+			Hostname: "my.registry",
+		},
+		Registry{
+			Hostname: "my.other.registry",
+		},
+	}
+
+	c := Provider{cc, md, logger.NewTestLogger(t)}
+	err := c.Create()
+	require.NoError(t, err)
+
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0]
+	conf := params.Arguments[0].(*ctypes.Container)
+
+	require.Equal(t, conf.Environment["REGISTRIES"], defaultRegistries+" my.registry my.other.registry")
+	require.Equal(t, conf.Environment["AUTH_REGISTRIES"], "")
+}
+
+func TestImageCacheCreateAddsAuthenticatedRegistries(t *testing.T) {
+	cc, md := setupImageCacheTests(t)
+	cc.Registries = []Registry{
+		Registry{
+			Hostname: "my.registry",
+			Auth: &RegistryAuth{
+				Username: "user1",
+				Password: "password1",
+			},
+		},
+		Registry{
+			Hostname: "my.other.registry",
+			Auth: &RegistryAuth{
+				Hostname: "alt.domain.registry",
+				Username: "user2",
+				Password: "password2",
+			},
+		},
+	}
+
+	c := Provider{cc, md, logger.NewTestLogger(t)}
+	err := c.Create()
+	require.NoError(t, err)
+
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0]
+	conf := params.Arguments[0].(*ctypes.Container)
+
+	require.Equal(t, conf.Environment["REGISTRIES"], defaultRegistries+" my.registry my.other.registry")
+	require.Equal(t, conf.Environment["AUTH_REGISTRIES"], "my.registry:::user1:::password1 alt.domain.registry:::user2:::password2")
 }
 
 func TestImageCacheCreateCopiesCerts(t *testing.T) {
-	cc, md, hc := setupImageCacheTests(t)
+	cc, md := setupImageCacheTests(t)
 
-	c := NewImageCache(cc, md, hc, clients.NewTestLogger(t))
+	c := Provider{cc, md, logger.NewTestLogger(t)}
 	err := c.Create()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	md.AssertCalled(t, "CreateContainer", mock.Anything)
 
@@ -130,26 +189,25 @@ func TestImageCacheCreateCopiesCerts(t *testing.T) {
 	)
 }
 
-func TestImageCacheDetachesNetworksAndAttachesNew(t *testing.T) {
-	net1 := config.NewNetwork("one")
-	net2 := config.NewNetwork("two")
+func TestImageCacheAttachesAndDetatchesNetworks(t *testing.T) {
+	cc, md := setupImageCacheTests(t)
 
-	cc, md, hc := setupImageCacheTests(t)
-	cc.DependsOn = []string{"network.one", "network.two"}
+	cc.DependsOn = []string{"resource.network.one", "resource.network.two"}
 
-	cc.Config.AddResource(net1)
-	cc.Config.AddResource(net2)
-
-	containerJSON := &types.ContainerJSON{}
+	containerJSON := &dtypes.ContainerJSON{}
 	json.Unmarshal([]byte(cacheContainerInfoWithNetworks), containerJSON)
 
 	testutils.RemoveOn(&md.Mock, "FindContainerIDs")
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Once().Return([]string{"abc"}, nil)
 	md.On("ContainerInfo", "abc").Once().Return(*containerJSON, nil)
+	md.On("FindContainerIDs", mock.Anything).Once().Return([]string{"abc"}, nil)
 
-	c := NewImageCache(cc, md, hc, clients.NewTestLogger(t))
+	md.On("FindNetwork", "resource.network.one").Once().Return(types.NetworkAttachment{Name: "one"}, nil)
+	md.On("FindNetwork", "resource.network.two").Once().Return(types.NetworkAttachment{Name: "two"}, nil)
+
+	c := Provider{cc, md, logger.NewTestLogger(t)}
 	err := c.Create()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// should detatch existing cloud network
 	md.AssertNumberOfCalls(t, "DetachNetwork", 1)

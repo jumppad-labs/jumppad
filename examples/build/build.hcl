@@ -47,7 +47,7 @@ resource "network" "onprem" {
 
 module "container" {
   disabled = !variable.container_enabled
-  source   = "./container"
+  source   = "${dir()}/container"
 
   variables = {
     image        = resource.build.app.image
@@ -58,7 +58,7 @@ module "container" {
 
 module "nomad" {
   disabled = !variable.nomad_enabled
-  source   = "./nomad"
+  source   = "${dir()}/nomad"
 
   variables = {
     image        = resource.build.app.image
@@ -69,7 +69,7 @@ module "nomad" {
 
 module "kubernetes" {
   disabled = !variable.kubernetes_enabled
-  source   = "./kubernetes"
+  source   = "${dir()}/kubernetes"
 
   variables = {
     image          = resource.build.app.image

@@ -7,7 +7,6 @@ variable "envoy_version" {
 }
 
 resource "template" "consul_config" {
-
   source = <<-EOF
   data_dir = "{{ data_dir }}"
   log_level = "DEBUG"
@@ -55,9 +54,11 @@ resource "container" "consul_capabilities" {
   }
 
   capabilities {
-    add = ["NET_ADMIN"]
+    add  = ["NET_ADMIN"]
     drop = ["ALL"]
   }
+
+  privileged = true
 }
 
 resource "container" "consul_labels" {

@@ -1,7 +1,7 @@
 git_commit = $(shell git log -1 --pretty=format:"%H")
 
 test_unit:
-	go test -v -race ./pkg/config/resources/container
+	go test -v -race ./...
 
 test_functional:
 	go run main.go purge
@@ -21,6 +21,21 @@ test_functional:
 	
 	go run main.go purge
 	go run main.go test ./examples/multiple_k3s_clusters
+	
+	go run main.go purge
+	go run main.go test ./examples/local_exec
+	
+	go run main.go purge
+	go run main.go test ./examples/remote_exec
+	
+	go run main.go purge
+	go run main.go test ./examples/certificates
+	
+	go run main.go purge
+	go run main.go test ./examples/terraform
+	
+	go run main.go purge
+	go run main.go test ./examples/registiries
 
 test_e2e_cmd: install_local
 	jumppad up --no-browser ./examples/single_k3s_cluster

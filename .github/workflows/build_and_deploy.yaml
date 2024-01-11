@@ -117,7 +117,7 @@ jobs:
             /usr/local/bin/dnsname
 
   functional_test_docker:
-    name: Functional Test Docker
+    name: Test Docker
     runs-on: ubuntu-latest
     needs: functional_test_build
 
@@ -136,6 +136,7 @@ jobs:
           './examples/remote_exec',
           './examples/certificates',
           './examples/terraform',
+          './examples/registries',
         ]
 
     steps:
@@ -171,7 +172,7 @@ jobs:
           description: "Functional tests for docker: ${{matrix.folder}}"
 
   functional_test_podman:
-    name: Functional Test Podman
+    name: Test Podman
     runs-on: ubuntu-latest
     needs: functional_test_build
 
@@ -181,11 +182,11 @@ jobs:
       matrix:
         folder: [
           './examples/container',
-         # './examples/build',
-         './examples/docs',
-         # './examples/single_k3s_cluster',
-         # './examples/nomad',
-         # './examples/local_exec',
+          './examples/build',
+          './examples/docs',
+          './examples/nomad',
+          './examples/single_k3s_cluster',
+          './examples/multiple_k3s_clusters',
         ]
 
     steps:
@@ -260,7 +261,7 @@ jobs:
     needs:
   #    - test
       - functional_test_docker
-  #    - functional_test_podman
+      - functional_test_podman
   #     - e2e_mac
       - e2e_linux
     if: ${{ github.ref != 'refs/heads/main' }}
@@ -377,7 +378,7 @@ jobs:
     needs:
       - test
       - functional_test_docker
-      #- functional_test_podman
+      - functional_test_podman
       #- e2e_mac
       - e2e_linux
     if: ${{ github.ref == 'refs/heads/main' }}

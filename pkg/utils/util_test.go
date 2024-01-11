@@ -256,32 +256,18 @@ func TestGetLocalIPAndHostnameReturnsCorrectly(t *testing.T) {
 	assert.NotEqual(t, host, "localhost")
 }
 
-func TestHTTPProxyAddressReturnsDefaultWhenEnvNotSet(t *testing.T) {
-	proxy := HTTPProxyAddress()
+func TestImageCacheAddressReturnsDefaultWhenEnvNotSet(t *testing.T) {
+	proxy := ImageCacheAddress()
 
 	assert.Equal(t, jumppadProxyAddress, proxy)
 }
 
-func TestHTTPSProxyAddressReturnsDefaultWhenEnvNotSet(t *testing.T) {
-	proxy := HTTPSProxyAddress()
-
-	assert.Equal(t, jumppadProxyAddress, proxy)
-}
-
-func TestHTTPProxyAddressReturnsEnvWhenEnvSet(t *testing.T) {
+func TestImageCacheAddressReturnsEnvWhenEnvSet(t *testing.T) {
 	httpProxy := "http://myproxy.com"
-	os.Setenv("HTTP_PROXY", httpProxy)
-	proxy := HTTPProxyAddress()
+	os.Setenv("IMAGE_CACHE_ADDR", httpProxy)
+	proxy := ImageCacheAddress()
 
 	assert.Equal(t, httpProxy, proxy)
-}
-
-func TestHTTPSProxyAddressReturnsEnvWhenEnvSet(t *testing.T) {
-	httpsProxy := "https://myproxy.com"
-	os.Setenv("HTTPS_PROXY", httpsProxy)
-	proxy := HTTPSProxyAddress()
-
-	assert.Equal(t, httpsProxy, proxy)
 }
 
 var testData = `

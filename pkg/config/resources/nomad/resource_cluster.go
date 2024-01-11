@@ -36,6 +36,9 @@ type NomadCluster struct {
 	Ports      ctypes.Ports      `hcl:"port,block" json:"ports,omitempty"`             // ports to expose
 	PortRanges ctypes.PortRanges `hcl:"port_range,block" json:"port_ranges,omitempty"` // range of ports to expose
 
+	// Configuration for the drivers
+	Config *Config `hcl:"config,block" json:"config,omitempty"`
+
 	// Output Parameters
 
 	// The APIPort the server is running on
@@ -61,6 +64,19 @@ type NomadCluster struct {
 const nomadBaseImage = "shipyardrun/nomad"
 const nomadBaseVersion = "1.6.1"
 
+type Config struct {
+	// Specifies configuration for the Docker driver.
+	DockerConfig *DockerConfig `hcl:"docker,block" json:"docker,omitempty"`
+}
+
+type DockerConfig struct {
+	// NoProxy is a list of docker registires that should be excluded from the image cache
+	NoProxy []string `hcl:"no_proxy,optional" json:"no-proxy,omitempty"`
+
+	// InsecureRegistries is a list of docker registries that should be treated as insecure
+	InsecureRegistries []string `hcl:"insecure_registries,optional" json:"insecure-registries,omitempty"`
+}
+
 func (n *NomadCluster) Process() error {
 	if n.Image == nil {
 		n.Image = &ctypes.Image{Name: fmt.Sprintf("%s:%s", nomadBaseImage, nomadBaseVersion)}
@@ -85,6 +101,11 @@ func (n *NomadCluster) Process() error {
 	// Process volumes
 	// make sure mount paths are absolute
 	for i, v := range n.Volumes {
+		if v.Type != "" && v.Type != "bind" {
+			// only change path for bind mounts
+			continue
+		}
+
 		n.Volumes[i].Source = utils.EnsureAbsolute(v.Source, n.File)
 	}
 

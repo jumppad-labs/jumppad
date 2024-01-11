@@ -2,27 +2,28 @@ package cache
 
 import (
 	"fmt"
-	"math/rand"
 	"path/filepath"
+	"strings"
+
+	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 
 	dtypes "github.com/docker/docker/api/types"
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/http"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"golang.org/x/xerrors"
 )
 
-const cacheImage = "shipyardrun/docker-registry-proxy:0.6.3"
+const cacheImage = "ghcr.io/rpardini/docker-registry-proxy:0.6.4"
+const defaultRegistries = "k8s.gcr.io gcr.io asia.gcr.io eu.gcr.io us.gcr.io quay.io ghcr.io docker.pkg.github.com"
 
 type Provider struct {
-	config     *ImageCache
-	client     container.ContainerTasks
-	httpClient http.HTTP
-	log        logger.Logger
+	config *ImageCache
+	client container.ContainerTasks
+	log    logger.Logger
 }
 
 func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
@@ -38,7 +39,6 @@ func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
 
 	p.config = c
 	p.client = cli.ContainerTasks
-	p.httpClient = cli.HTTP
 	p.log = l
 
 	return nil
@@ -53,17 +53,34 @@ func (p *Provider) Create() error {
 		return err
 	}
 
-	// get a list of dependent networks for the resource
-	dependentNetworks := p.findDependentNetworks()
+	var registries []string
+	var authRegistries []string
+
+	for _, reg := range p.config.Registries {
+		registries = append(registries, reg.Hostname)
+
+		if reg.Auth != nil {
+			host := reg.Hostname
+			if reg.Auth.Hostname != "" {
+				host = reg.Auth.Hostname
+			}
+
+			authRegistries = append(authRegistries, host+":::"+reg.Auth.Username+":::"+reg.Auth.Password)
+		}
+	}
 
 	if len(ids) == 0 {
-		_, err := p.createImageCache(dependentNetworks)
+		_, err := p.createImageCache(registries, authRegistries)
 		if err != nil {
 			return err
 		}
 	}
 
-	return nil
+	// get a list of dependent networks for the resource
+	dependentNetworks := p.findDependentNetworks()
+
+	// add the networks and return
+	return p.reConfigureNetworks(dependentNetworks)
 }
 
 func (p *Provider) Destroy() error {
@@ -76,7 +93,10 @@ func (p *Provider) Destroy() error {
 
 	if len(ids) > 0 {
 		for _, id := range ids {
-			p.client.RemoveContainer(id, true)
+			err = p.client.RemoveContainer(id, true)
+			if err != nil {
+				p.log.Error(err.Error())
+			}
 		}
 	}
 
@@ -105,7 +125,7 @@ func (p *Provider) Changed() (bool, error) {
 	return false, nil
 }
 
-func (p *Provider) createImageCache(networks []string) (string, error) {
+func (p *Provider) createImageCache(registries []string, authRegistries []string) (string, error) {
 	fqdn := utils.FQDN(p.config.Name, p.config.Module, p.config.Type)
 
 	// Create the volume to store the cache
@@ -144,27 +164,45 @@ func (p *Provider) createImageCache(networks []string) (string, error) {
 	}
 
 	cc.Environment = map[string]string{
-		"CA_KEY_FILE":           "/cache/ca/root.key",
-		"CA_CRT_FILE":           "/cache/ca/root.cert",
-		"DOCKER_MIRROR_CACHE":   "/cache/docker",
-		"ENABLE_MANIFEST_CACHE": "true",
-		"REGISTRIES":            "k8s.gcr.io gcr.io asia.gcr.io eu.gcr.io us.gcr.io quay.io ghcr.io docker.pkg.github.com",
-		"ALLOW_PUSH":            "true",
+		"CA_KEY_FILE":             "/cache/ca/root.key",
+		"CA_CRT_FILE":             "/cache/ca/root.cert",
+		"DEBUG":                   "false",
+		"DEBUG_NGINX":             "false",
+		"DEBUG_HUB":               "false",
+		"DOCKER_MIRROR_CACHE":     "/cache/docker",
+		"ENABLE_MANIFEST_CACHE":   "true",
+		"REGISTRIES":              strings.Trim(defaultRegistries+" "+strings.Join(registries, " "), " "),
+		"AUTH_REGISTRY_DELIMITER": ":::",
+		"AUTH_REGISTRIES":         strings.Trim(strings.Join(authRegistries, " "), " "),
+		"ALLOW_PUSH":              "true",
+		"VERIFY_SSL":              "false",
 	}
 
 	// expose the docker proxy port on a random port num
+	p1, err1 := utils.RandomAvailablePort(31000, 34000)
+	p2, err2 := utils.RandomAvailablePort(31000, 34000)
+	p3, err3 := utils.RandomAvailablePort(31000, 34000)
+
+	if err1 != nil || err2 != nil || err3 != nil {
+		return "", err
+	}
+
 	cc.Ports = []types.Port{
 		{
 			Local:    "3128",
-			Host:     fmt.Sprintf("%d", rand.Intn(3000)+31000),
+			Host:     fmt.Sprintf("%d", p1),
 			Protocol: "tcp",
 		},
-	}
-
-	// add the networks
-	cc.Networks = []types.NetworkAttachment{}
-	for _, n := range networks {
-		cc.Networks = append(cc.Networks, types.NetworkAttachment{ID: n})
+		{
+			Local:    "8081",
+			Host:     fmt.Sprintf("%d", p2),
+			Protocol: "tcp",
+		},
+		{
+			Local:    "8082",
+			Host:     fmt.Sprintf("%d", p3),
+			Protocol: "tcp",
+		},
 	}
 
 	return p.client.CreateContainer(cc)
@@ -174,6 +212,10 @@ func (p *Provider) findDependentNetworks() []string {
 	nets := []string{}
 
 	for _, n := range p.config.DependsOn {
+		if strings.HasSuffix(n, ".id") {
+			// Ignore explicitly configured network dependencies
+			continue
+		}
 		target, err := p.client.FindNetwork(n)
 		if err != nil {
 			// ignore this network
@@ -225,7 +267,7 @@ func (p *Provider) reConfigureNetworks(dependentNetworks []string) error {
 				return fmt.Errorf("unable to attach cache to network: %s", err)
 			}
 
-			p.config.Networks = append(p.config.Networks, n)
+			p.config.Networks = append(p.config.Networks, ctypes.NetworkAttachment{ID: n})
 		}
 
 		added = append(added, n)

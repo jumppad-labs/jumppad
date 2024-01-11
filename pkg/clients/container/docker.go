@@ -60,6 +60,8 @@ type Docker interface {
 	ImageSave(ctx context.Context, imageIDs []string) (io.ReadCloser, error)
 	ImageRemove(ctx context.Context, imageID string, options types.ImageRemoveOptions) ([]types.ImageDeleteResponseItem, error)
 	ImageBuild(ctx context.Context, buildContext io.Reader, options types.ImageBuildOptions) (types.ImageBuildResponse, error)
+	ImageTag(ctx context.Context, source, target string) error
+	ImagePush(ctx context.Context, image string, options types.ImagePushOptions) (io.ReadCloser, error)
 
 	ServerVersion(ctx context.Context) (types.Version, error)
 	Info(ctx context.Context) (types.Info, error)

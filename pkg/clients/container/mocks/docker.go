@@ -429,6 +429,32 @@ func (_m *Docker) ImagePull(ctx context.Context, refStr string, options types.Im
 	return r0, r1
 }
 
+// ImagePush provides a mock function with given fields: ctx, image, options
+func (_m *Docker) ImagePush(ctx context.Context, image string, options types.ImagePushOptions) (io.ReadCloser, error) {
+	ret := _m.Called(ctx, image, options)
+
+	var r0 io.ReadCloser
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.ImagePushOptions) (io.ReadCloser, error)); ok {
+		return rf(ctx, image, options)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, types.ImagePushOptions) io.ReadCloser); ok {
+		r0 = rf(ctx, image, options)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(io.ReadCloser)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, types.ImagePushOptions) error); ok {
+		r1 = rf(ctx, image, options)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ImageRemove provides a mock function with given fields: ctx, imageID, options
 func (_m *Docker) ImageRemove(ctx context.Context, imageID string, options types.ImageRemoveOptions) ([]types.ImageDeleteResponseItem, error) {
 	ret := _m.Called(ctx, imageID, options)
@@ -479,6 +505,20 @@ func (_m *Docker) ImageSave(ctx context.Context, imageIDs []string) (io.ReadClos
 	}
 
 	return r0, r1
+}
+
+// ImageTag provides a mock function with given fields: ctx, source, target
+func (_m *Docker) ImageTag(ctx context.Context, source string, target string) error {
+	ret := _m.Called(ctx, source, target)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
+		r0 = rf(ctx, source, target)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // Info provides a mock function with given fields: ctx
