@@ -34,7 +34,7 @@ require (
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	github.com/infinytum/raymond/v2 v2.0.5
 	github.com/jumppad-labs/connector v0.3.0
-	github.com/jumppad-labs/gohup v0.3.0
+	github.com/jumppad-labs/gohup v0.4.0
 	github.com/jumppad-labs/hclconfig v0.18.2
 	github.com/jumppad-labs/plugin-sdk v0.1.0
 	github.com/kennygrant/sanitize v1.2.4
@@ -246,4 +246,4 @@ replace github.com/zclconf/go-cty => github.com/jumppad-labs/go-cty v0.0.0-20230
 
 replace github.com/jumppad-labs/hclconfig => ../hclconfig/
 
-replace github.com/jumppad-labs/gohup => ../gohup/
+//replace github.com/jumppad-labs/gohup => ../gohup/
