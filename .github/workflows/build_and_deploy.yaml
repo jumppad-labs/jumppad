@@ -132,8 +132,7 @@ jobs:
           './examples/nomad',
           './examples/single_k3s_cluster',
           './examples/multiple_k3s_clusters',
-          './examples/local_exec',
-          './examples/remote_exec',
+          './examples/exec',
           './examples/certificates',
           './examples/terraform',
           './examples/registries',
@@ -187,6 +186,7 @@ jobs:
           './examples/nomad',
           './examples/single_k3s_cluster',
           './examples/multiple_k3s_clusters',
+          './examples/exec',
         ]
 
     steps:
