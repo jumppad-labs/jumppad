@@ -304,7 +304,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: jumppad_binaries
+          name: jumppad_${{matrix.go.os}}_${{matrix.go.arch}}
           path: |
             dist/jumppad_${{matrix.go.os}}_${{matrix.go.arch}}/${{ matrix.go.binary }}
 
@@ -325,11 +325,17 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
 
-    - name: Download-Binaries
+    - name: Download-Binaries x64
       uses: actions/download-artifact@v2
       with:
-        name: jumppad_binaries
-        path: dist/
+        name: jumppad_darwin_amd64
+        path: dist/jumppad_darwin_amd64
+    
+    - name: Download-Binaries Arm64
+      uses: actions/download-artifact@v2
+      with:
+        name: jumppad_darwin_amd64
+        path: dist/jumppad_darwin_arm64
     
     - name: Import Code-Signing Certificates
       uses: Apple-Actions/import-codesign-certs@v1
