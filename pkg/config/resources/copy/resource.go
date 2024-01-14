@@ -17,7 +17,7 @@ type Copy struct {
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 
-	Source      string `hcl:"source" json:"source"`                              // Source file, folder or glob
+	Source      string `hcl:"source" json:"source"`                              // Source file, folder, url, git repo, etc
 	Destination string `hcl:"destination" json:"destination"`                    // Destination to write file or files to
 	Permissions string `hcl:"permissions,optional" json:"permissions,omitempty"` // Permissions 0777 to set for written file
 
@@ -26,7 +26,6 @@ type Copy struct {
 }
 
 func (t *Copy) Process() error {
-	t.Source = utils.EnsureAbsolute(t.Source, t.File)
 	t.Destination = utils.EnsureAbsolute(t.Destination, t.File)
 
 	cfg, err := config.LoadState()

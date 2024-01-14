@@ -1,7 +1,6 @@
 package copy
 
 import (
-	"os"
 	"testing"
 
 	"github.com/jumppad-labs/hclconfig/types"
@@ -12,22 +11,6 @@ import (
 
 func init() {
 	config.RegisterResource(TypeCopy, &Copy{}, &Provider{})
-}
-
-func TestCopyProcessSetsAbsolute(t *testing.T) {
-	wd, err := os.Getwd()
-	require.NoError(t, err)
-
-	c := &Copy{
-		ResourceMetadata: types.ResourceMetadata{File: "./"},
-		Source:           "./",
-		Destination:      "./",
-	}
-
-	c.Process()
-
-	require.Equal(t, wd, c.Source)
-	require.Equal(t, wd, c.Destination)
 }
 
 func TestCopySetsOutputsFromState(t *testing.T) {
@@ -57,5 +40,4 @@ func TestCopySetsOutputsFromState(t *testing.T) {
 	c.Process()
 
 	require.Equal(t, []string{"a", "b"}, c.CopiedFiles)
-
 }
