@@ -130,6 +130,7 @@ func Execute(v, c, d string) error {
 	rootCmd.AddCommand(uninstallCmd)
 	rootCmd.AddCommand(newPushCmd(engineClients.ContainerTasks, engineClients.Kubernetes, engineClients.HTTP, engineClients.Nomad, l))
 	rootCmd.AddCommand(newLogCmd(engine, engineClients.Docker, os.Stdout, os.Stderr), completionCmd)
+	rootCmd.AddCommand(changelogCmd)
 
 	// add the server commands
 	rootCmd.AddCommand(connectorCmd)
@@ -153,7 +154,7 @@ func Execute(v, c, d string) error {
 			// replace """ with ``` in changelog
 			changes = strings.ReplaceAll(changes, `"""`, "```")
 
-			err = cl.Show(changes, "v0.5.60")
+			err = cl.Show(changes, changesVersion, false)
 			if err != nil {
 				showErr(err)
 				return err
@@ -182,28 +183,67 @@ var discordHelp = `
 ### For help and support join our community on Discord: https://discord.gg/ZuEFPJU69D ###
 `
 
+var changesVersion = "v0.5.60"
+
 var changes = `
 ## version v0.5.60
-* Add capability to add custom container registries to the image cache
 
-  Nomad and Kuberentes clusters are started in a Docker container that does not save any state to the local disk.
-  This state includes and Docker Image cache, thefore every time an image is pulled to a new cluster it is downloaded
-  from the internet. This can be slow and bandwidth intensive. To solve this problem Jumppad implemented a pull through
-  cache that is used by all clusters. By default this cache supported the following registires:
-    - k8s.gcr.io 
-    - gcr.io 
-    - asia.gcr.io
-    - eu.gcr.io
-    - us.gcr.io 
-    - quay.io
-    - ghcr.io
-    - docker.pkg.github.com 
+### Breaking Changes:
+This version of Jumppad introduces experimental plugin support for custom resources. 
+To avoid conflicts between the default properties and the custom properties 
+the default properties for a resource have been renamed to prefix "resource_" 
+to their name. For example previously to reference the "id" of a resource you could write:
 
-  To support custom registries Jumppad has added a new resource type "container_registry". This resource type can be used
-  to define either a local or remote registry. When a registry is defined it is added to the pull through cache and
-  any authnetication details are added to the cache meaning you do not need to authenticate each pull on the Nomad or 
-  Kubernetes cluster. Any defined registry must be configured to use HTTPS, the image cache can not be used to pull
-  from insecure registries.
+"""
+resource.container.mine.id
+"""
+
+This has now changed to:
+
+"""
+resource.container.mine.resource_id
+"""
+
+From this version onwards the old property names are no longer be supported 
+and you may need to update your configuration.
+
+The full list of properties tha have been changed are:
+
+| Old Property Name | New Property Name   |
+|-------------------|---------------------|
+| id                | resource_id         |
+| name              | resource_name       |
+| type              | resource_type       |
+| module            | resource_module     |
+| file              | resource_file       |
+| line              | resource_line       |
+| column            | resource_column     |
+| checksum          | resource_checksum   |
+| checksum          | resource_checksum   |
+| properties        | resource_properties |
+
+### Features:
+* Add capability to add custom container registries to the image cache  
+
+Nomad and Kuberentes clusters are started in a Docker container that does not save any state to the local disk.
+This state includes and Docker Image cache, thefore every time an image is pulled to a new cluster it is downloaded
+from the internet. This can be slow and bandwidth intensive. To solve this problem Jumppad implemented a pull through
+cache that is used by all clusters. By default this cache supported the following registires:  
+
+  - k8s.gcr.io 
+  - gcr.io 
+  - asia.gcr.io
+  - eu.gcr.io
+  - us.gcr.io 
+  - quay.io
+  - ghcr.io
+  - docker.pkg.github.com
+  
+To support custom registries Jumppad has added a new resource type "container_registry". This resource type can be used
+to define either a local or remote registry. When a registry is defined it is added to the pull through cache and
+any authnetication details are added to the cache meaning you do not need to authenticate each pull on the Nomad or 
+Kubernetes cluster. Any defined registry must be configured to use HTTPS, the image cache can not be used to pull
+from insecure registries.
 
 """hcl
 # Define a custom registry that does not use authentication
@@ -224,13 +264,13 @@ resource "container_registry" "auth" {
 
 * Add capability to add insecure registries and image cache bypass to Kubernetes and Nomad clusters.
   
-  All images pulled to Nomad and Kubernetes clusters are pulled through the image cache. This cache is a Docker
-  container that is automatically started by Jumppad. To disable the cache and pull images directly from the internet
-  you can add the "no_proxy" parameter to the new docker config stanza. This will cause the cache to be bypassed and
-  the image to be pulled direct from the internet.
+All images pulled to Nomad and Kubernetes clusters are pulled through the image cache. This cache is a Docker
+container that is automatically started by Jumppad. To disable the cache and pull images directly from the internet
+you can add the "no_proxy" parameter to the new docker config stanza. This will cause the cache to be bypassed and
+the image to be pulled direct from the internet.  
 
-  To support insecure registries you can add the "insecure_registries" parameter to the docker config stanza. This
-  must be used in conjunction with the "no_proxy" parameter as the image cache does not support insecure registries. 
+To support insecure registries you can add the "insecure_registries" parameter to the docker config stanza. This
+must be used in conjunction with the "no_proxy" parameter as the image cache does not support insecure registries. 
 
 """hcl
 resource "nomad_cluster" "dev" {

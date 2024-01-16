@@ -13,7 +13,7 @@ type Changelog struct {
 }
 
 // Show is a blocking function that displays the changelog
-func (c *Changelog) Show(content, version string) error {
+func (c *Changelog) Show(content, version string, alwaysShow bool) error {
 	// if not a terminal do not show the changelog
 	if !isatty.IsTerminal(os.Stdout.Fd()) {
 		return nil
@@ -24,7 +24,7 @@ func (c *Changelog) Show(content, version string) error {
 
 	// check if the change log has been acknowledged, if so do not show
 	_, err := os.Stat(changeFile)
-	if err == nil {
+	if err == nil && !alwaysShow {
 		return nil
 	}
 
