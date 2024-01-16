@@ -3,9 +3,11 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	gvm "github.com/shipyard-run/version-manager"
 
+	"github.com/jumppad-labs/jumppad/cmd/changelog"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/config"
@@ -13,6 +15,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 var configFile = ""
@@ -27,8 +30,15 @@ var version string // set by build process
 var date string    // set by build process
 var commit string  // set by build process
 
-func createEngine(l logger.Logger, c *clients.Clients) (jumppad.Engine, gvm.Versions, error) {
+// globalFlags are flags that are set for every command
+func globalFlags() *pflag.FlagSet {
+	flags := pflag.NewFlagSet("global", pflag.ContinueOnError)
+	flags.Bool("non-interactive", false, "Run in non-interactive mode")
 
+	return flags
+}
+
+func createEngine(l logger.Logger, c *clients.Clients) (jumppad.Engine, gvm.Versions, error) {
 	providers := config.NewProviders(c)
 
 	engine, err := jumppad.New(providers, l)
@@ -133,17 +143,117 @@ func Execute(v, c, d string) error {
 
 	rootCmd.SilenceErrors = true
 
+	// set a pre run function to show the changelog
+	rootCmd.PersistentFlags().Bool("non-interactive", false, "Run in non-interactive mode")
+	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		ni, _ := cmd.Flags().GetBool("non-interactive")
+		if !ni {
+			cl := &changelog.Changelog{}
+
+			// replace """ with ``` in changelog
+			changes = strings.ReplaceAll(changes, `"""`, "```")
+
+			err = cl.Show(changes, "v0.5.60")
+			if err != nil {
+				showErr(err)
+				return err
+			}
+		}
+
+		return nil
+	}
+
 	err = rootCmd.Execute()
 
 	if err != nil {
-		fmt.Println("")
-		fmt.Println(err)
-		fmt.Println(discordHelp)
+		showErr(err)
 	}
 
 	return err
 }
 
+func showErr(err error) {
+	fmt.Println("")
+	fmt.Println(err)
+	fmt.Println(discordHelp)
+}
+
 var discordHelp = `
 ### For help and support join our community on Discord: https://discord.gg/ZuEFPJU69D ###
 `
+
+var changes = `
+## version v0.5.60
+* Add capability to add custom container registries to the image cache
+
+  Nomad and Kuberentes clusters are started in a Docker container that does not save any state to the local disk.
+  This state includes and Docker Image cache, thefore every time an image is pulled to a new cluster it is downloaded
+  from the internet. This can be slow and bandwidth intensive. To solve this problem Jumppad implemented a pull through
+  cache that is used by all clusters. By default this cache supported the following registires:
+    - k8s.gcr.io 
+    - gcr.io 
+    - asia.gcr.io
+    - eu.gcr.io
+    - us.gcr.io 
+    - quay.io
+    - ghcr.io
+    - docker.pkg.github.com 
+
+  To support custom registries Jumppad has added a new resource type "container_registry". This resource type can be used
+  to define either a local or remote registry. When a registry is defined it is added to the pull through cache and
+  any authnetication details are added to the cache meaning you do not need to authenticate each pull on the Nomad or 
+  Kubernetes cluster. Any defined registry must be configured to use HTTPS, the image cache can not be used to pull
+  from insecure registries.
+
+"""hcl
+# Define a custom registry that does not use authentication
+resource "container_registry" "noauth" {
+  hostname = "noauth-registry.demo.gs" // cache can not resolve local jumppad.dev dns for some reason, 
+  // using external dns mapped to the local ip address
+}
+
+# Define a custom registry that uses authentication
+resource "container_registry" "auth" {
+  hostname = "auth-registry.demo.gs"
+  auth {
+    username = "admin"
+    password = "password"
+  }
+}
+"""
+
+* Add capability to add insecure registries and image cache bypass to Kubernetes and Nomad clusters.
+  
+  All images pulled to Nomad and Kubernetes clusters are pulled through the image cache. This cache is a Docker
+  container that is automatically started by Jumppad. To disable the cache and pull images directly from the internet
+  you can add the "no_proxy" parameter to the new docker config stanza. This will cause the cache to be bypassed and
+  the image to be pulled direct from the internet.
+
+  To support insecure registries you can add the "insecure_registries" parameter to the docker config stanza. This
+  must be used in conjunction with the "no_proxy" parameter as the image cache does not support insecure registries. 
+
+"""hcl
+resource "nomad_cluster" "dev" {
+  client_nodes = 1
+
+  datacenter = "dc1"
+
+  network {
+    id = variable.network_id
+  }
+
+  // add configuration to allow cache bypass and insecure registry
+  config {
+    docker {
+      no_proxy            = ["insecure.container.jumppad.dev"]
+      insecure_registries = ["insecure.container.jumppad.dev:5003"]
+    }
+  }
+}
+"""
+
+## version v0.5.47
+* Fix isuse where filepath.Walk does not respect symlinks
+* Add "ignore" parameter to "build" resource to allow ignoring of files and folders
+  for Docker builds.
+	`

@@ -158,9 +158,9 @@ jobs:
       
       - name: Run tests
         run: |
-          jumppad check
-          jumppad purge
-          jumppad test ${{matrix.folder}}
+          jumppad check --non-interactive
+          jumppad purge --non-interactive
+          jumppad test --non-interactive ${{matrix.folder}}
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
@@ -242,9 +242,9 @@ jobs:
       
       - name: Run tests
         run: |
-          jumppad check
-          jumppad purge
-          jumppad test ${{matrix.folder}}
+          jumppad check --non-interactive
+          jumppad purge --non-interactive
+          jumppad test --non-interactive ${{matrix.folder}}
         env:
           DOCKER_HOST: "unix:///run/podman/podman.sock"
 
