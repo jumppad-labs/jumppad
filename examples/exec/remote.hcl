@@ -4,15 +4,20 @@ resource "container" "alpine" {
   }
 
   command = ["tail", "-f", "/dev/null"]
+
+  volume {
+    source      = data("test")
+    destination = "/data"
+  }
 }
 
 resource "exec" "in_container" {
   target = resource.container.alpine
 
   script = <<-EOF
-  #/bin/sh -e
+  #!/bin/sh -e
 
-  ls -las
+  touch /data/container.txt
   EOF
 }
 
@@ -22,8 +27,13 @@ resource "exec" "standalone" {
   }
 
   script = <<-EOF
-  #/bin/sh -e
+  #!/bin/sh -e
 
-  ls -las
+  touch /data/standalone.txt
   EOF
+
+  volume {
+    source      = data("test")
+    destination = "/data"
+  }
 }

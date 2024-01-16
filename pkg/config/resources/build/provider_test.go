@@ -18,7 +18,7 @@ func setupProvider(t *testing.T, b *Build) (*Provider, *mocks.ContainerTasks) {
 
 	mc := &mocks.ContainerTasks{}
 	mc.On("BuildContainer", mock.Anything, true).Return("buildimage:abcde", nil)
-	mc.On("FindImagesInLocalRegistry", fmt.Sprintf("jumppad.dev/localcache/%s", b.Name)).Return([]string{}, nil)
+	mc.On("FindImagesInLocalRegistry", fmt.Sprintf("jumppad.dev/localcache/%s", b.ResourceName)).Return([]string{}, nil)
 	mc.On("TagImage", mock.Anything, mock.Anything).Return(nil)
 	mc.On("PushImage", mock.Anything).Return(nil)
 
@@ -33,7 +33,7 @@ func setupProvider(t *testing.T, b *Build) (*Provider, *mocks.ContainerTasks) {
 
 func TestCreatePushesToRegistry(t *testing.T) {
 	b := &Build{
-		ResourceMetadata: htypes.ResourceMetadata{Name: "test"},
+		ResourceMetadata: htypes.ResourceMetadata{ResourceName: "test"},
 		Registries: []container.Image{
 			container.Image{
 				Name: "nicholasjackson/fake:latest",

@@ -7,9 +7,9 @@ import (
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/clients/nomad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	"golang.org/x/xerrors"
 )
 
@@ -18,10 +18,10 @@ import (
 type JobProvider struct {
 	config *NomadJob
 	client nomad.Nomad
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *JobProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *JobProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	cli, err := clients.GenerateClients(l)
 	if err != nil {
 		return err
@@ -41,7 +41,7 @@ func (p *JobProvider) Init(cfg htypes.Resource, l logger.Logger) error {
 
 // Create the Nomad jobs defined by the config
 func (p *JobProvider) Create() error {
-	p.log.Info("Create Nomad Job", "ref", p.config.ID, "files", p.config.Paths)
+	p.log.Info("Create Nomad Job", "ref", p.config.ResourceID, "files", p.config.Paths)
 
 	nomadCluster := p.config.Cluster
 
@@ -67,11 +67,11 @@ func (p *JobProvider) Create() error {
 					return xerrors.Errorf("timeout waiting for job '%s' to start", j)
 				}
 
-				p.log.Debug("Checking health for", "ref", p.config.ID, "job", j)
+				p.log.Debug("Checking health for", "ref", p.config.ResourceID, "job", j)
 
 				s, err := p.client.JobRunning(j)
 				if err == nil && s {
-					p.log.Debug("Health passed for", "ref", p.config.ID, "job", j)
+					p.log.Debug("Health passed for", "ref", p.config.ResourceID, "job", j)
 					break
 				}
 
@@ -94,7 +94,7 @@ func (p *JobProvider) Create() error {
 
 // Destroy the Nomad jobs defined by the config
 func (p *JobProvider) Destroy() error {
-	p.log.Info("Destroy Nomad Job", "ref", p.config.ID)
+	p.log.Info("Destroy Nomad Job", "ref", p.config.ResourceID)
 
 	nomadCluster := p.config.Cluster
 
@@ -125,7 +125,7 @@ func (p *JobProvider) Refresh() error {
 		return nil
 	}
 
-	p.log.Info("Refresh Nomad Jobs", "ref", p.config.ID, "paths", cp)
+	p.log.Info("Refresh Nomad Jobs", "ref", p.config.ResourceID, "paths", cp)
 
 	err = p.Destroy()
 	if err != nil {
@@ -142,7 +142,7 @@ func (p *JobProvider) Changed() (bool, error) {
 	}
 
 	if len(cp) > 0 {
-		p.log.Debug("Nomad jobs changed, needs refresh", "ref", p.config.ID)
+		p.log.Debug("Nomad jobs changed, needs refresh", "ref", p.config.ResourceID)
 		return true, nil
 	}
 

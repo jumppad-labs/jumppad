@@ -46,12 +46,12 @@ type Output struct {
 }
 
 func (b *Build) Process() error {
-	b.Container.Context = utils.EnsureAbsolute(b.Container.Context, b.File)
+	b.Container.Context = utils.EnsureAbsolute(b.Container.Context, b.ResourceFile)
 
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(b.ID)
+		r, _ := cfg.FindResource(b.ResourceID)
 		if r != nil {
 			kstate := r.(*Build)
 			b.Image = kstate.Image

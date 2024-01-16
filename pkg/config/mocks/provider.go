@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	logger "github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	mock "github.com/stretchr/testify/mock"
 
 	types "github.com/jumppad-labs/hclconfig/types"
@@ -67,11 +67,11 @@ func (_m *Provider) Destroy() error {
 }
 
 // Init provides a mock function with given fields: _a0, _a1
-func (_m *Provider) Init(_a0 types.Resource, _a1 logger.Logger) error {
+func (_m *Provider) Init(_a0 types.Resource, _a1 sdk.Logger) error {
 	ret := _m.Called(_a0, _a1)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(types.Resource, logger.Logger) error); ok {
+	if rf, ok := ret.Get(0).(func(types.Resource, sdk.Logger) error); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		r0 = ret.Error(0)

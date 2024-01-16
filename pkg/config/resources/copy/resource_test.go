@@ -19,7 +19,7 @@ func TestCopyProcessSetsAbsolute(t *testing.T) {
 	require.NoError(t, err)
 
 	c := &Copy{
-		ResourceMetadata: types.ResourceMetadata{File: "./"},
+		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
 		Source:           "./",
 		Destination:      "./",
 	}
@@ -36,10 +36,9 @@ func TestCopySetsOutputsFromState(t *testing.T) {
   "blueprint": null,
   "resources": [
 	{
-			"id": "resource.copy.test",
-      "name": "test",
-      "status": "created",
-      "type": "copy",
+			"resource_id": "resource.copy.test",
+      "resource_name": "test",
+      "resource_type": "copy",
 			"copied_files": ["a","b"]
 	}
 	]
@@ -47,8 +46,8 @@ func TestCopySetsOutputsFromState(t *testing.T) {
 
 	c := &Copy{
 		ResourceMetadata: types.ResourceMetadata{
-			ID:   "resource.copy.test",
-			File: "./",
+			ResourceID:   "resource.copy.test",
+			ResourceFile: "./",
 		},
 		Source:      "./",
 		Destination: "./",

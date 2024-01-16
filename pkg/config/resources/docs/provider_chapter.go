@@ -6,15 +6,15 @@ import (
 	"strings"
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 
 type ChapterProvider struct {
 	config *Chapter
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *ChapterProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *ChapterProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*Chapter)
 	if !ok {
 		return fmt.Errorf("unable to initialize Chapter provider, resource is not of type Chapter")
@@ -39,7 +39,7 @@ func (p *ChapterProvider) Create() error {
 		taskMatch := taskRegex.FindAllStringSubmatch(page.Content, -1)
 		for _, match := range taskMatch {
 			taskID := match[1]
-			resourceID := fmt.Sprintf("<Task id=\"%s\">", p.config.Tasks[taskID].ID)
+			resourceID := fmt.Sprintf("<Task id=\"%s\">", p.config.Tasks[taskID].ResourceID)
 			page.Content = taskRegex.ReplaceAllString(page.Content, resourceID)
 		}
 
@@ -56,7 +56,7 @@ func (p *ChapterProvider) Create() error {
 
 		page := ChapterIndexPage{
 			Title: title,
-			URI:   fmt.Sprintf("%s/%s", p.config.Name, page.Name),
+			URI:   fmt.Sprintf("%s/%s", p.config.ResourceName, page.Name),
 		}
 
 		index.Pages = append(index.Pages, page)

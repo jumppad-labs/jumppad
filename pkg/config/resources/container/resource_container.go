@@ -101,7 +101,7 @@ func (c *Container) Process() error {
 	for i, v := range c.Volumes {
 		// make sure mount paths are absolute when type is bind, unless this is the docker sock
 		if v.Type == "" || v.Type == "bind" {
-			c.Volumes[i].Source = utils.EnsureAbsolute(v.Source, c.File)
+			c.Volumes[i].Source = utils.EnsureAbsolute(v.Source, c.ResourceFile)
 		}
 	}
 
@@ -117,7 +117,7 @@ func (c *Container) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(c.ID)
+		r, _ := cfg.FindResource(c.ResourceID)
 		if r != nil {
 			kstate := r.(*Container)
 			c.ContainerName = kstate.ContainerName

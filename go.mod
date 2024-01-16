@@ -4,13 +4,16 @@ module github.com/jumppad-labs/jumppad
 // https://github.com/docker/cli/issues/4437
 // fixed it by using docker v23.0.7-0.20230714215826-f00e7af96042+incompatible
 // switch to v24.0.4+incompatible once github actions updates their docker version
-go 1.20
+go 1.21
+
+toolchain go1.21.5
 
 require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/MichaelMure/go-term-markdown v0.1.4
 	github.com/charmbracelet/bubbles v0.16.1
 	github.com/charmbracelet/bubbletea v0.24.2
+	github.com/charmbracelet/glamour v0.6.0
 	github.com/charmbracelet/lipgloss v0.7.1
 	github.com/charmbracelet/log v0.2.2
 	github.com/creack/pty v1.1.18
@@ -30,11 +33,12 @@ require (
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/hcl/v2 v2.17.0
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
+	github.com/infinytum/raymond/v2 v2.0.5
 	github.com/jumppad-labs/connector v0.3.0
-	github.com/jumppad-labs/gohup v0.3.0
-	github.com/jumppad-labs/hclconfig v0.16.4
+	github.com/jumppad-labs/gohup v0.4.0
+	github.com/jumppad-labs/hclconfig v0.18.2
+	github.com/jumppad-labs/plugin-sdk v0.1.0
 	github.com/kennygrant/sanitize v1.2.4
-	github.com/mailgun/raymond/v2 v2.0.48
 	github.com/moby/sys/signal v0.7.0
 	github.com/moby/term v0.5.0
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
@@ -77,11 +81,12 @@ require (
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/agext/levenshtein v1.2.2 // indirect
-	github.com/alecthomas/chroma v0.7.1 // indirect
+	github.com/alecthomas/chroma v0.10.0 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20200428143746-21a406dcc535 // indirect
 	github.com/aws/aws-sdk-go v1.44.122 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
+	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
@@ -91,10 +96,9 @@ require (
 	github.com/cucumber/gherkin-go/v19 v19.0.3 // indirect
 	github.com/cucumber/messages-go/v16 v16.0.1 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
-	github.com/danwakefield/fnmatch v0.0.0-20160403171240-cbb64ac3d964 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
-	github.com/dlclark/regexp2 v1.1.6 // indirect
+	github.com/dlclark/regexp2 v1.4.0 // indirect
 	github.com/docker/cli v20.10.11+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.6.4 // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
@@ -132,6 +136,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
 	github.com/googleapis/gax-go/v2 v2.11.0 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
+	github.com/gorilla/css v1.0.0 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7 // indirect
 	github.com/guillermo/go.procstat v0.0.0-20131123175440-34c2813d2e7f // indirect
@@ -150,7 +155,6 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.15.11 // indirect
-	github.com/kr/pretty v0.3.0 // indirect
 	github.com/kyokomi/emoji/v2 v2.2.8 // indirect
 	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
 	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
@@ -164,6 +168,7 @@ require (
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
+	github.com/microcosm-cc/bluemonday v1.0.21 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-ps v1.0.0 // indirect
@@ -179,6 +184,7 @@ require (
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/muesli/ansi v0.0.0-20211018074035-2e021307bc4b // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
+	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -200,6 +206,8 @@ require (
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	github.com/xlab/treeprint v0.0.0-20181112141820-a009c3971eca // indirect
+	github.com/yuin/goldmark v1.5.2 // indirect
+	github.com/yuin/goldmark-emoji v1.0.1 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.starlark.net v0.0.0-20200306205701-8dd3e2ee1dd5 // indirect
 	golang.org/x/image v0.0.0-20191206065243-da761ea9ff43 // indirect
@@ -242,7 +250,6 @@ replace github.com/charmbracelet/log => github.com/jumppad-labs/log v0.0.0-20230
 
 replace github.com/zclconf/go-cty => github.com/jumppad-labs/go-cty v0.0.0-20230804061424-9e985cb751f6
 
-//replace github.com/jumppad-labs/hclconfig => ../../jumppad-labs/hclconfig/
+//replace github.com/jumppad-labs/hclconfig => ../hclconfig/
 
-//replace github.com/jumppad-labs/connector => ../connector
-// hclconfig
+//replace github.com/jumppad-labs/gohup => ../gohup/

@@ -15,6 +15,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/http"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 
 // Container is a provider for creating and destroying Docker containers
@@ -26,7 +27,7 @@ type Provider struct {
 	log        logger.Logger
 }
 
-func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	cli, err := clients.GenerateClients(l)
 	if err != nil {
 		return err
@@ -70,7 +71,7 @@ func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
 
 // Create implements provider method and creates a Docker container with the given config
 func (p *Provider) Create() error {
-	p.log.Info("Creating Container", "ref", p.config.ID)
+	p.log.Info("Creating Container", "ref", p.config.ResourceID)
 
 	err := p.internalCreate(p.sidecar != nil)
 	if err != nil {
@@ -97,7 +98,7 @@ func (c *Provider) Refresh() error {
 	}
 
 	if changed {
-		c.log.Debug("Refresh Container", "ref", c.config.ID)
+		c.log.Debug("Refresh Container", "ref", c.config.ResourceID)
 		err := c.Destroy()
 		if err != nil {
 			return err
@@ -111,7 +112,7 @@ func (c *Provider) Refresh() error {
 
 // Destroy stops and removes the container
 func (c *Provider) Destroy() error {
-	c.log.Info("Destroy Container", "ref", c.config.ID)
+	c.log.Info("Destroy Container", "ref", c.config.ResourceID)
 
 	return c.internalDestroy()
 }
@@ -120,14 +121,14 @@ func (c *Provider) Changed() (bool, error) {
 	// has the image id changed
 	id, err := c.client.FindImageInLocalRegistry(types.Image{Name: c.config.Image.Name})
 	if err != nil {
-		c.log.Error("Unable to lookup image in local registry", "ref", c.config.ID, "error", err)
+		c.log.Error("Unable to lookup image in local registry", "ref", c.config.ResourceID, "error", err)
 		return false, err
 	}
 
 	// check that the current registry id for the image is the same
 	// as the image that was used to create this container
 	if id != c.config.Image.ID {
-		c.log.Debug("Container image changed, needs refresh", "ref", c.config.ID)
+		c.log.Debug("Container image changed, needs refresh", "ref", c.config.ResourceID)
 		return true, nil
 	}
 
@@ -136,7 +137,7 @@ func (c *Provider) Changed() (bool, error) {
 
 func (c *Provider) internalCreate(sidecar bool) error {
 	// set the fqdn
-	fqdn := utils.FQDN(c.config.Name, c.config.Module, c.config.Type)
+	fqdn := utils.FQDN(c.config.ResourceName, c.config.ResourceModule, c.config.ResourceType)
 	c.config.ContainerName = fqdn
 
 	if c.config.Image == nil {
@@ -152,7 +153,7 @@ func (c *Provider) internalCreate(sidecar bool) error {
 
 	err := c.client.PullImage(img, false)
 	if err != nil {
-		c.log.Error("Error pulling container image", "ref", c.config.ID, "image", c.config.Image.Name)
+		c.log.Error("Error pulling container image", "ref", c.config.ResourceID, "image", c.config.Image.Name)
 
 		return err
 	}
@@ -160,7 +161,7 @@ func (c *Provider) internalCreate(sidecar bool) error {
 	// update the image ID
 	id, err := c.client.FindImageInLocalRegistry(img)
 	if err != nil {
-		c.log.Error("Unable to lookup image in local registry", "ref", c.config.ID, "error", err)
+		c.log.Error("Unable to lookup image in local registry", "ref", c.config.ResourceID, "error", err)
 		return err
 	}
 
@@ -243,7 +244,7 @@ func (c *Provider) internalCreate(sidecar bool) error {
 
 	id, err = c.client.CreateContainer(&new)
 	if err != nil {
-		c.log.Error("Unable to create container", "ref", c.config.ID, "error", err)
+		c.log.Error("Unable to create container", "ref", c.config.ResourceID, "error", err)
 		return err
 	}
 

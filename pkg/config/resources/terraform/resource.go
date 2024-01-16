@@ -35,7 +35,7 @@ type Terraform struct {
 
 func (t *Terraform) Process() error {
 	// make sure mount paths are absolute
-	t.Source = utils.EnsureAbsolute(t.Source, t.File)
+	t.Source = utils.EnsureAbsolute(t.Source, t.ResourceFile)
 
 	if t.WorkingDirectory == "" {
 		t.WorkingDirectory = "./"
@@ -56,7 +56,7 @@ func (t *Terraform) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(t.ID)
+		r, _ := cfg.FindResource(t.ResourceID)
 		if r != nil {
 			kstate := r.(*Terraform)
 			t.ApplyOutput = kstate.ApplyOutput

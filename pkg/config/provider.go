@@ -5,7 +5,7 @@ import (
 
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 
 // Provider defines an interface to be implemented by providers
@@ -15,7 +15,7 @@ type Provider interface {
 	// Init is called when the provider is created, it is passed a logger that
 	// can be used for any logging purposes. Any other clients must be created
 	// by the provider
-	Init(types.Resource, logger.Logger) error
+	Init(types.Resource, sdk.Logger) error
 
 	// Create is called when a resource does not exist or creation has previously
 	// failed and 'up' is run
@@ -54,7 +54,7 @@ func NewProviders(c *clients.Clients) Providers {
 
 func (p *ProvidersImpl) GetProvider(r types.Resource) Provider {
 	// find the type
-	if t, ok := registeredProviders[r.Metadata().Type]; ok {
+	if t, ok := registeredProviders[r.Metadata().ResourceType]; ok {
 		ptr := reflect.New(reflect.TypeOf(t).Elem())
 
 		prov := ptr.Interface().(Provider)

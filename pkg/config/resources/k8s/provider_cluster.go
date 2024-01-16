@@ -24,6 +24,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/k8s"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v2"
 )
@@ -44,7 +45,7 @@ type ClusterProvider struct {
 	log        logger.Logger
 }
 
-func (p *ClusterProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *ClusterProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*K8sCluster)
 	if !ok {
 		return fmt.Errorf("unable to initialize Kubernetes cluster provider, resource is not of type K8sCluster")
@@ -77,11 +78,11 @@ func (p *ClusterProvider) Destroy() error {
 
 // Lookup the a clusters current state
 func (p *ClusterProvider) Lookup() ([]string, error) {
-	return p.client.FindContainerIDs(utils.FQDN(fmt.Sprintf("server.%s", p.config.Name), p.config.Module, p.config.Type))
+	return p.client.FindContainerIDs(utils.FQDN(fmt.Sprintf("server.%s", p.config.ResourceName), p.config.ResourceModule, p.config.ResourceType))
 }
 
 func (p *ClusterProvider) Refresh() error {
-	p.log.Debug("Refresh Kubernetes Cluster", "ref", p.config.Name)
+	p.log.Debug("Refresh Kubernetes Cluster", "ref", p.config.ResourceName)
 
 	ci, err := p.getChangedImages()
 	if err != nil {
@@ -89,7 +90,7 @@ func (p *ClusterProvider) Refresh() error {
 	}
 
 	if len(ci) > 0 {
-		p.log.Info("Copied images changed, pushing new copy to the cluster", "ref", p.config.ID)
+		p.log.Info("Copied images changed, pushing new copy to the cluster", "ref", p.config.ResourceID)
 		err := p.ImportLocalDockerImages(ci, false)
 		if err != nil {
 			return err
@@ -100,7 +101,7 @@ func (p *ClusterProvider) Refresh() error {
 }
 
 func (p *ClusterProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes Leaf Certificate", "ref", p.config.Name)
+	p.log.Debug("Checking changes Leaf Certificate", "ref", p.config.ResourceName)
 
 	// check to see if the any of the copied images have changed
 	i, err := p.getChangedImages()
@@ -146,7 +147,7 @@ func (p *ClusterProvider) ImportLocalDockerImages(images []ctypes.Image, force b
 	}
 
 	for _, i := range imagesFile {
-		p.log.Debug("Importing docker image", "ref", p.config.ID, "image", i)
+		p.log.Debug("Importing docker image", "ref", p.config.ResourceID, "image", i)
 
 		// execute the command to import the image
 		// write any command output to the logger
@@ -212,14 +213,14 @@ func (p *ClusterProvider) getChangedImages() ([]ctypes.Image, error) {
 		// has the image id changed
 		id, err := p.client.FindImageInLocalRegistry(i.ToClientImage())
 		if err != nil {
-			p.log.Error("Unable to lookup image in local registry", "ref", p.config.ID, "error", err)
+			p.log.Error("Unable to lookup image in local registry", "ref", p.config.ResourceID, "error", err)
 			return nil, err
 		}
 
 		// check that the current registry id for the image is the same
 		// as the image that was used to create this container
 		if id != i.ID {
-			p.log.Debug("Container image changed, needs refresh", "ref", p.config.Name, "image", i.Name)
+			p.log.Debug("Container image changed, needs refresh", "ref", p.config.ResourceName, "image", i.Name)
 			changed = append(changed, i.ToClientImage())
 		}
 	}
@@ -228,7 +229,7 @@ func (p *ClusterProvider) getChangedImages() ([]ctypes.Image, error) {
 }
 
 func (p *ClusterProvider) createK3s() error {
-	p.log.Info("Creating Cluster", "ref", p.config.ID)
+	p.log.Info("Creating Cluster", "ref", p.config.ResourceID)
 
 	// check the cluster does not already exist
 	ids, err := p.Lookup()
@@ -254,8 +255,8 @@ func (p *ClusterProvider) createK3s() error {
 	}
 
 	// create the server
-	name := fmt.Sprintf("server.%s", p.config.Name)
-	fqrn := utils.FQDN(name, p.config.Module, p.config.Type)
+	name := fmt.Sprintf("server.%s", p.config.ResourceName)
+	fqrn := utils.FQDN(name, p.config.ResourceModule, p.config.ResourceType)
 
 	cc := &ctypes.Container{}
 	cc.Name = fqrn
@@ -388,7 +389,7 @@ func (p *ClusterProvider) createK3s() error {
 	}
 
 	// create the server address
-	FQDN := fmt.Sprintf("server.%s", utils.FQDN(p.config.Name, p.config.Module, p.config.Type))
+	FQDN := fmt.Sprintf("server.%s", utils.FQDN(p.config.ResourceName, p.config.ResourceModule, p.config.ResourceType))
 	p.config.ContainerName = FQDN
 
 	// Set the default startup args
@@ -569,7 +570,7 @@ func (p *ClusterProvider) waitForStart(id string) error {
 
 func (p *ClusterProvider) copyKubeConfig(id string) (string, error) {
 	// create destination kubeconfig file paths
-	_, kubePath, _ := utils.CreateKubeConfigPath(p.config.Name)
+	_, kubePath, _ := utils.CreateKubeConfigPath(p.config.ResourceName)
 
 	// get kubeconfig file from container and read contents
 	err := p.client.CopyFromContainer(id, "/output/kubeconfig.yaml", kubePath)
@@ -582,7 +583,7 @@ func (p *ClusterProvider) copyKubeConfig(id string) (string, error) {
 
 func (p *ClusterProvider) createLocalKubeConfig(kubeconfig string) (string, error) {
 	ip := utils.GetDockerIP()
-	_, kubePath, _ := utils.CreateKubeConfigPath(p.config.Name)
+	_, kubePath, _ := utils.CreateKubeConfigPath(p.config.ResourceName)
 
 	err := p.changeServerAddressInK8sConfig(
 		fmt.Sprintf("https://%s", ip),
@@ -647,7 +648,7 @@ func (p *ClusterProvider) deployConnector(grpcPort, httpPort int) error {
 			fmt.Sprintf("%s:%d", utils.GetDockerIP(), grpcPort),
 		},
 		[]string{utils.GetDockerIP()},
-		utils.CertsDir(p.config.Name),
+		utils.CertsDir(p.config.ResourceName),
 	)
 
 	if err != nil {
@@ -714,7 +715,7 @@ func (p *ClusterProvider) deployConnector(grpcPort, httpPort int) error {
 }
 
 func (p *ClusterProvider) destroyK3s() error {
-	p.log.Info("Destroy Cluster", "ref", p.config.Name)
+	p.log.Info("Destroy Cluster", "ref", p.config.ResourceName)
 
 	ids, err := p.Lookup()
 	if err != nil {
@@ -728,7 +729,7 @@ func (p *ClusterProvider) destroyK3s() error {
 		}
 	}
 
-	configDir, _, _ := utils.CreateKubeConfigPath(p.config.Name)
+	configDir, _, _ := utils.CreateKubeConfigPath(p.config.ResourceName)
 	os.RemoveAll(configDir)
 
 	return nil
@@ -736,7 +737,7 @@ func (p *ClusterProvider) destroyK3s() error {
 
 // createRegistriesConfig creates the k3s mirrors config for the cluster
 func (p *ClusterProvider) createRegistriesConfig() (string, error) {
-	dir, _, _ := utils.CreateKubeConfigPath(p.config.Name)
+	dir, _, _ := utils.CreateKubeConfigPath(p.config.ResourceName)
 	daemonConfigPath := path.Join(dir, "registries.yaml")
 
 	// remove any existing files, fail silently

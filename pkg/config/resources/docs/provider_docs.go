@@ -10,8 +10,8 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 
 const docsImageName = "ghcr.io/jumppad-labs/docs"
@@ -63,10 +63,10 @@ type ProgressCondition struct {
 type DocsProvider struct {
 	config *Docs
 	client container.ContainerTasks
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *DocsProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *DocsProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*Docs)
 	if !ok {
 		return fmt.Errorf("unable to initialize Docs provider, resource is not of type Docs")
@@ -86,7 +86,7 @@ func (p *DocsProvider) Init(cfg htypes.Resource, l logger.Logger) error {
 
 // Create a new documentation container
 func (p *DocsProvider) Create() error {
-	p.log.Info("Creating Documentation", "ref", p.config.ID)
+	p.log.Info("Creating Documentation", "ref", p.config.ResourceID)
 
 	// create the documentation container
 	err := p.createDocsContainer()
@@ -100,7 +100,7 @@ func (p *DocsProvider) Create() error {
 
 // Destroy the documentation container
 func (p *DocsProvider) Destroy() error {
-	p.log.Info("Destroy Documentation", "ref", p.config.ID)
+	p.log.Info("Destroy Documentation", "ref", p.config.ResourceID)
 
 	// remove the docs
 	ids, err := p.client.FindContainerIDs(p.config.ContainerName)
@@ -138,7 +138,7 @@ func (p *DocsProvider) Refresh() error {
 		return nil
 	}
 
-	p.log.Info("Refresh Docs", "ref", p.config.ID)
+	p.log.Info("Refresh Docs", "ref", p.config.ResourceID)
 
 	// refresh content on disk
 	configPath := utils.LibraryFolder("config", 0775)
@@ -168,10 +168,10 @@ func (p *DocsProvider) Refresh() error {
 	contentPath := utils.LibraryFolder("content", 0775)
 
 	for _, book := range p.config.Content {
-		bookPath := filepath.Join(contentPath, book.Name)
+		bookPath := filepath.Join(contentPath, book.ResourceName)
 
 		for _, chapter := range book.Chapters {
-			chapterPath := filepath.Join(bookPath, chapter.Name)
+			chapterPath := filepath.Join(bookPath, chapter.ResourceName)
 			os.MkdirAll(chapterPath, 0755)
 			os.Chmod(chapterPath, 0755)
 
@@ -198,7 +198,7 @@ func (p *DocsProvider) Refresh() error {
 }
 
 func (p *DocsProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.ID)
+	p.log.Debug("Checking changes", "ref", p.config.ResourceID)
 
 	// since the content has not been processed we can not reliably determine
 	// if the content has changed, so we will assume it has
@@ -244,7 +244,7 @@ func (p *DocsProvider) getDefaultPage() string {
 
 func (p *DocsProvider) createDocsContainer() error {
 	// set the FQDN
-	fqdn := utils.FQDN(p.config.Name, p.config.Module, p.config.Type)
+	fqdn := utils.FQDN(p.config.ResourceName, p.config.ResourceModule, p.config.ResourceType)
 	p.config.ContainerName = fqdn
 
 	// create the container config
@@ -350,7 +350,7 @@ func (p *DocsProvider) writeProgress(path string) error {
 		for _, chapter := range book.Chapters {
 			for _, task := range chapter.Tasks {
 				p := Progress{
-					ID:            task.ID,
+					ID:            task.ResourceID,
 					Prerequisites: task.Prerequisites,
 					Status:        "locked",
 				}

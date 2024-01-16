@@ -86,15 +86,15 @@ func TestApplyWithSingleFile(t *testing.T) {
 			"consul_config",
 		},
 		[]string{
-			getMetaFromMock(mp, 0).Name,
-			getMetaFromMock(mp, 1).Name,
-			getMetaFromMock(mp, 2).Name,
-			getMetaFromMock(mp, 3).Name,
+			getMetaFromMock(mp, 0).ResourceName,
+			getMetaFromMock(mp, 1).ResourceName,
+			getMetaFromMock(mp, 2).ResourceName,
+			getMetaFromMock(mp, 3).ResourceName,
 		},
 	)
 
-	require.Equal(t, "consul", getMetaFromMock(mp, 4).Name)
-	require.Equal(t, "consul_addr", getMetaFromMock(mp, 5).Name)
+	require.Equal(t, "consul", getMetaFromMock(mp, 4).ResourceName)
+	require.Equal(t, "consul_addr", getMetaFromMock(mp, 5).ResourceName)
 }
 
 func TestApplyAddsImageCache(t *testing.T) {
@@ -148,10 +148,10 @@ func TestApplyWithSingleFileAndVariables(t *testing.T) {
 	require.Len(t, e.config.Resources, 7) // 6 resources in the file plus the image cache
 
 	// then the container should be created
-	require.Equal(t, "consul", getMetaFromMock(mp, 4).Name)
+	require.Equal(t, "consul", getMetaFromMock(mp, 4).ResourceName)
 
 	// finally the provider for the image cache should be updated
-	require.Equal(t, "consul_addr", getMetaFromMock(mp, 5).Name)
+	require.Equal(t, "consul_addr", getMetaFromMock(mp, 5).ResourceName)
 
 	// check the variable has overridden the image
 	cont := getResourceFromMock(mp, 4).(*container.Container)
@@ -226,7 +226,7 @@ func TestApplyNotCallsProviderCreateForDisabledResources(t *testing.T) {
 	// the resource should be in the state but there should be no status
 	r, err := sf.FindResource("resource.container.consul_disabled")
 	require.NoError(t, err)
-	require.Nil(t, r.Metadata().Properties[constants.PropertyStatus])
+	require.Nil(t, r.Metadata().ResourceProperties[constants.PropertyStatus])
 }
 
 func TestApplyShouldNotAddDuplicateDisabledResources(t *testing.T) {
@@ -250,7 +250,7 @@ func TestApplyShouldNotAddDuplicateDisabledResources(t *testing.T) {
 	// the status should be set to disabled
 	r, err := sf.FindResource("resource.container.consul_disabled")
 	require.NoError(t, err)
-	require.Equal(t, constants.StatusDisabled, r.Metadata().Properties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusDisabled, r.Metadata().ResourceProperties[constants.PropertyStatus])
 }
 
 func TestApplySetsCreatedStatusForEachResource(t *testing.T) {
@@ -268,15 +268,15 @@ func TestApplySetsCreatedStatusForEachResource(t *testing.T) {
 
 	r, err := sf.FindResource("resource.container.consul")
 	require.NoError(t, err)
-	require.Equal(t, constants.StatusCreated, r.Metadata().Properties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusCreated, r.Metadata().ResourceProperties[constants.PropertyStatus])
 
 	r, err = sf.FindResource("resource.network.onprem")
 	require.NoError(t, err)
-	require.Equal(t, constants.StatusCreated, r.Metadata().Properties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusCreated, r.Metadata().ResourceProperties[constants.PropertyStatus])
 
 	r, err = sf.FindResource("resource.template.consul_config")
 	require.NoError(t, err)
-	require.Equal(t, constants.StatusCreated, r.Metadata().Properties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusCreated, r.Metadata().ResourceProperties[constants.PropertyStatus])
 }
 
 func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
@@ -296,12 +296,12 @@ func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 	// should set failed status for network
 	r, err := sf.FindResource("resource.network.onprem")
 	require.NoError(t, err)
-	require.Equal(t, constants.StatusFailed, r.Metadata().Properties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusFailed, r.Metadata().ResourceProperties[constants.PropertyStatus])
 
 	// should set created status for template
 	r, err = sf.FindResource("resource.template.consul_config")
 	require.NoError(t, err)
-	require.Equal(t, constants.StatusCreated, r.Metadata().Properties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusCreated, r.Metadata().ResourceProperties[constants.PropertyStatus])
 
 	// container should not be in the state
 	_, err = sf.FindResource("resource.container.consul")
@@ -344,7 +344,7 @@ func TestApplyCallsProviderDestroyForDisabledResources(t *testing.T) {
 	require.NotNil(t, r)
 
 	// property should be disabled
-	require.Equal(t, constants.StatusDisabled, r.Metadata().Properties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusDisabled, r.Metadata().ResourceProperties[constants.PropertyStatus])
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1, r)
@@ -421,7 +421,7 @@ func TestDestroyFailSetsStatus(t *testing.T) {
 	require.Error(t, err)
 
 	r, _ := e.config.FindResource("resource.container.mycontainer")
-	require.Equal(t, constants.StatusFailed, r.Metadata().Properties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusFailed, r.Metadata().ResourceProperties[constants.PropertyStatus])
 }
 
 func TestParseConfig(t *testing.T) {
@@ -493,7 +493,7 @@ func testAssertMethodCalled(t *testing.T, p *mocks.Providers, method string, n i
 		}
 
 		for _, c := range pm.Calls {
-			calls[r.Metadata().Name] = append(calls[r.Metadata().Name], c.Method)
+			calls[r.Metadata().ResourceName] = append(calls[r.Metadata().ResourceName], c.Method)
 
 			if c.Method == method {
 				callCount++
@@ -516,12 +516,12 @@ var failedState = `
 {
   "resources": [
 	{
-      "name": "onprem",
- 	    "properties": {
+      "resource_name": "onprem",
+ 	    "resource_properties": {
 				"status": "failed"
 			},
       "subnet": "10.15.0.0/16",
-      "type": "network"
+      "resource_type": "network"
 	}
   ]
 }
@@ -531,12 +531,12 @@ var taintedState = `
 {
   "resources": [
 	{
-      "name": "onprem",
- 	    "properties": {
+      "resource_name": "onprem",
+ 	    "resource_properties": {
 				"status": "tainted"
 			},
       "subnet": "10.15.0.0/16",
-      "type": "network"
+      "resource_type": "network"
 	}
   ]
 }
@@ -546,36 +546,36 @@ var existingState = `
 {
   "resources": [
 	{
-      "name": "cloud",
-      "properties": {
+      "resource_name": "cloud",
+      "resource_properties": {
 				"status": "created"
 			},
       "subnet": "10.15.0.0/16",
-      "type": "network"
+      "resource_type": "network"
 	},
 	{
-      "name": "default",
+      "resource_name": "default",
       "properties": {
 				"status": "created"
 			},
-      "type": "image_cache"
+      "resource_type": "image_cache"
 	},
 	{
-      "name": "container",
-      "properties": {
+      "resource_name": "container",
+      "resource_properties": {
 				"status": "created"
 			},
 			"image": {
 				"name": "test"
 			},
-      "type": "container"
+      "resource_type": "container"
 	},
 	{
-      "name": "consul_config",
-      "properties": {
+      "resource_name": "consul_config",
+      "resource_properties": {
 				"status": "created"
 			},
-      "type": "template"
+      "resource_type": "template"
 	}
   ]
 }
@@ -585,43 +585,43 @@ var singleFileState = `
 {
   "resources": [
 	{
-      "name": "onprem",
-      "properties": {
+      "resource_name": "onprem",
+      "resource_properties": {
 				"status": "created"
 			},
       "subnet": "10.15.0.0/16",
-      "type": "network"
+      "resource_type": "network"
 	},
 	{
-      "name": "default",
-      "properties": {
+      "resource_name": "default",
+      "resource_properties": {
 				"status": "created"
 			},
-      "type": "image_cache"
+      "resource_type": "image_cache"
 	},
 	{
-      "name": "consul",
-      "properties": {
+      "resource_name": "consul",
+      "resource_properties": {
 				"status": "created"
 			},
-      "type": "container",
+      "resource_type": "container",
 			"image": {
 				"name": "test"
 			}
 	},
 	{
-      "name": "consul_config",
-      "properties": {
+      "resource_name": "consul_config",
+      "resource_properties": {
 				"status": "created"
 			},
-      "type": "template"
+      "resource_type": "template"
 	},
 	{
-      "name": "consul_addr",
-      "properties": {
+      "resource_name": "consul_addr",
+      "resource_properties": {
 				"status": "created"
 			},
-      "type": "output"
+      "resource_type": "output"
 	}
   ]
 }
@@ -631,32 +631,32 @@ var complexState = `
 {
   "resources": [
 	{
-      "name": "cloud",
+      "resource_name": "cloud",
       "subnet": "10.15.0.0/16",
-      "properties": {
+      "resource_properties": {
 				"status": "created"
 			},
-      "type": "network"
+      "resource_type": "network"
 	},
 	{
-      "name": "default",
-      "type": "image_cache",
-      "properties": {
+      "resource_name": "default",
+      "resource_type": "image_cache",
+      "resource_properties": {
 				"status": "created"
 			},
 			"depends_on": ["resource.network.cloud"]
 	},
 	{
-      "name": "mytemplate",
-      "properties": {
+      "resource_name": "mytemplate",
+      "resource_properties": {
 				"status": "created"
 			},
-      "type": "template"
+      "resource_type": "template"
 	},
 	{
-      "name": "mycontainer",
-      "type": "container",
-      "properties": {
+      "resource_name": "mycontainer",
+      "resource_type": "container",
+      "resource_properties": {
 				"status": "created"
 			},
 			"depends_on": ["resource.network.cloud", "resource.template.mytemplate"]
@@ -670,25 +670,24 @@ var disabledState = `
   "blueprint": null,
   "resources": [
 	{
-      "name": "default",
-      "status": "created",
-      "type": "image_cache"
+      "resource_name": "default",
+      "resource_type": "image_cache"
 	},
 	{
-      "name": "dc1_enabled",
-      "properties": {
+      "resource_name": "dc1_enabled",
+      "resource_properties": {
 				"status": "created"
 			},
       "subnet": "10.15.0.0/16",
-      "type": "network"
+      "resource_type": "network"
 	},
 	{
 		 "disabled": true,
-      "name": "consul_disabled",
-      "properties": {
+     "resource_name": "consul_disabled",
+     "resource_properties": {
 				"status": "disabled"
 			},
-      "type": "container"
+      "resource_type": "container"
 	}
   ]
 }
@@ -699,38 +698,38 @@ var disabledAndCreatedState = `
   "blueprint": null,
   "resources": [
 	{
-      "name": "default",
-      "properties": {
+      "resource_name": "default",
+      "resource_properties": {
 				"status": "created"
 			},
-      "type": "image_cache"
+      "resource_type": "image_cache"
 	},
 	{
-      "name": "dc1_enabled",
-      "properties": {
+      "resource_name": "dc1_enabled",
+      "resource_properties": {
 				"status": "created"
 			},
       "subnet": "10.15.0.0/16",
-      "type": "network"
+      "resource_type": "network"
 	},
 	{
 		 "disabled": false,
-      "name": "consul_disabled",
-      "properties": {
+      "resource_name": "consul_disabled",
+      "resource_properties": {
 				"status": "created"
 			},
-      "type": "container",
+      "resource_type": "container",
 			"image": {
 				"name": "test"
 			}	
 	},
 	{
 		 "disabled": false,
-      "name": "consul_enabled",
-      "properties": {
+      "resource_name": "consul_enabled",
+      "resource_properties": {
 				"status": "created"
 			},
-      "type": "container",
+      "resource_type": "container",
 			"image": {
 				"name": "test"
 			}

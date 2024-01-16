@@ -54,7 +54,7 @@ func (d *Docs) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(d.ID)
+		r, _ := cfg.FindResource(d.ResourceID)
 		if r != nil {
 			kstate := r.(*Docs)
 			d.ContainerName = kstate.ContainerName

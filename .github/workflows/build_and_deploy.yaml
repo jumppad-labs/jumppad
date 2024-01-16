@@ -15,7 +15,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.19
+          go-version: 1.21
 
       - name: Get dependencies
         run: |
@@ -49,7 +49,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.19
+          go-version: 1.21
 
       - name: E2E test for build binary
         run: make test_e2e_cmd
@@ -94,7 +94,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.19
+          go-version: 1.21
       
       - name: Build Jumppad binary
         run: |
@@ -132,8 +132,7 @@ jobs:
           './examples/nomad',
           './examples/single_k3s_cluster',
           './examples/multiple_k3s_clusters',
-          './examples/local_exec',
-          './examples/remote_exec',
+          './examples/exec',
           './examples/certificates',
           './examples/terraform',
           './examples/registries',
@@ -155,13 +154,13 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.19
+          go-version: 1.21
       
       - name: Run tests
         run: |
-          jumppad check
-          jumppad purge
-          jumppad test ${{matrix.folder}}
+          jumppad check --non-interactive
+          jumppad purge --non-interactive
+          jumppad test --non-interactive ${{matrix.folder}}
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
@@ -187,6 +186,7 @@ jobs:
           './examples/nomad',
           './examples/single_k3s_cluster',
           './examples/multiple_k3s_clusters',
+          './examples/exec',
         ]
 
     steps:
@@ -205,7 +205,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.19
+          go-version: 1.21
       
       - name: Install dependencies for Podman tests
         run: |
@@ -242,9 +242,9 @@ jobs:
       
       - name: Run tests
         run: |
-          jumppad check
-          jumppad purge
-          jumppad test ${{matrix.folder}}
+          jumppad check --non-interactive
+          jumppad purge --non-interactive
+          jumppad test --non-interactive ${{matrix.folder}}
         env:
           DOCKER_HOST: "unix:///run/podman/podman.sock"
 
@@ -265,6 +265,27 @@ jobs:
   #     - e2e_mac
       - e2e_linux
     if: ${{ github.ref != 'refs/heads/main' }}
+    
+    strategy:
+      max-parallel: 3
+      fail-fast: true
+      matrix:
+        go:  
+          - arch: "arm64"
+            os: "darwin"
+            binary: 'jumppad'
+          - arch: "amd64"
+            os: "darwin"
+            binary: 'jumppad'
+          - arch: "arm64"
+            os: "linux"
+            binary: 'jumppad'
+          - arch: "amd64"
+            os: "linux"
+            binary: 'jumppad'
+          - arch: "amd64"
+            os: "windows"
+            binary: 'jumppad.exe'
 
     runs-on: ubuntu-latest
     steps:
@@ -274,29 +295,18 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.19
+          go-version: 1.21
 
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v1
-        with:
-          version: v1.4.1
-          args: release --rm-dist --snapshot
-          key: ${{ secrets.GPG_PRIVATE_KEY }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+      - name: Build jumppad
+        run: |
+          GOARCH=${{matrix.go.arch}} GOOS=${{matrix.go.os}} go build -o dist/jumppad_${{matrix.go.os}}_${{matrix.go.arch}}/${{ matrix.go.binary }} -ldflags "-X main.version=dev -X main.commit=${{ github.sha }} -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" .
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: jumppad_binaries
+          name: jumppad_${{matrix.go.os}}_${{matrix.go.arch}}
           path: |
-            dist/jumppad_darwin_arm64
-            dist/jumppad_darwin_amd64
-            dist/jumppad_linux_amd64
-            dist/jumppad_linux_arm64
-            dist/jumppad_linux_arm_7
-            dist/jumppad_linux_arm_6
-            dist/jumppad_windows_amd64
+            dist/jumppad_${{matrix.go.os}}_${{matrix.go.arch}}/${{ matrix.go.binary }}
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
@@ -315,11 +325,17 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
 
-    - name: Download-Binaries
+    - name: Download-Binaries x64
       uses: actions/download-artifact@v2
       with:
-        name: jumppad_binaries
-        path: dist/
+        name: jumppad_darwin_amd64
+        path: dist/jumppad_darwin_amd64
+    
+    - name: Download-Binaries Arm64
+      uses: actions/download-artifact@v2
+      with:
+        name: jumppad_darwin_amd64
+        path: dist/jumppad_darwin_arm64
     
     - name: Import Code-Signing Certificates
       uses: Apple-Actions/import-codesign-certs@v1
@@ -422,7 +438,7 @@ jobs:
       - name: Setup Go version
         uses: actions/setup-go@v1
         with:
-          go-version: 1.19
+          go-version: 1.21
 
       - name: Login to DockerHub
         uses: docker/login-action@v1

@@ -14,7 +14,7 @@ func TestK8sConfigProcessSetsAbsolute(t *testing.T) {
 	require.NoError(t, err)
 
 	k := &K8sConfig{
-		ResourceMetadata: types.ResourceMetadata{File: "./"},
+		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
 		Paths:            []string{"./one.yaml", "./two.yaml"},
 	}
 

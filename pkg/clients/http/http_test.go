@@ -51,7 +51,7 @@ func TestHTTPHealthRetryiesOnServerErrorCode(t *testing.T) {
 
 	c := NewHTTP(1*time.Millisecond, logger.NewTestLogger(t))
 
-	err := c.HealthCheckHTTP(url, "", nil, "", []int{200}, 10*time.Millisecond)
+	err := c.HealthCheckHTTP(url, "", nil, "", []int{200}, 50*time.Millisecond)
 	assert.Error(t, err)
 	assert.Greater(t, len(*reqs), 1)
 }

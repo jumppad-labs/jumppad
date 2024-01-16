@@ -172,6 +172,14 @@ func StateDir() string {
 	return filepath.Join(JumppadHome(), "/state")
 }
 
+// PluginsDir returns the location of the plugins
+func PluginsDir() string {
+	logs := filepath.Join(JumppadHome(), "/plugins")
+
+	os.MkdirAll(logs, os.ModePerm)
+	return logs
+}
+
 // CertsDir returns the location of the certificates for the given resource
 // used to secure the Jumppad ingress, usually rooted at $HOME/.jumppad/certs
 func CertsDir(name string) string {

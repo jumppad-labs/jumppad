@@ -37,7 +37,7 @@ func setupProvider(t *testing.T, c *Terraform) (*TerraformProvider, *mocks.Conta
 }
 
 func TestCreateWithNoVariablesDoesNotReturnError(t *testing.T) {
-	p, _, _ := setupProvider(t, &Terraform{ResourceMetadata: types.ResourceMetadata{Name: "test"}})
+	p, _, _ := setupProvider(t, &Terraform{ResourceMetadata: types.ResourceMetadata{ResourceName: "test"}})
 
 	err := p.Create()
 	require.NoError(t, err)
@@ -49,7 +49,7 @@ func TestCreateWithWithVariablesGeneratesFile(t *testing.T) {
 	})
 
 	p, _, sd := setupProvider(t, &Terraform{
-		ResourceMetadata: types.ResourceMetadata{Name: "test"},
+		ResourceMetadata: types.ResourceMetadata{ResourceName: "test"},
 		Variables:        variables,
 	},
 	)
@@ -65,7 +65,7 @@ func TestCreateWithWithVariablesGeneratesFile(t *testing.T) {
 
 func TestCreatesTerraformContainerWithTheCorrectValues(t *testing.T) {
 	res := &Terraform{
-		ResourceMetadata: types.ResourceMetadata{Name: "test"},
+		ResourceMetadata: types.ResourceMetadata{ResourceName: "test"},
 		Networks: []container.NetworkAttachment{
 			container.NetworkAttachment{
 				ID: "Abc123",
@@ -106,7 +106,7 @@ func TestCreatesTerraformContainerWithTheCorrectValues(t *testing.T) {
 
 func TestCreateExecutesCommandInContainer(t *testing.T) {
 	res := &Terraform{
-		ResourceMetadata: types.ResourceMetadata{Name: "test"},
+		ResourceMetadata: types.ResourceMetadata{ResourceName: "test"},
 		Networks: []container.NetworkAttachment{
 			container.NetworkAttachment{
 				ID: "Abc123",
@@ -141,7 +141,7 @@ func TestCreateExecutesCommandInContainer(t *testing.T) {
 
 func TestCreateSetsOutput(t *testing.T) {
 	res := &Terraform{
-		ResourceMetadata: types.ResourceMetadata{Name: "test"},
+		ResourceMetadata: types.ResourceMetadata{ResourceName: "test"},
 		Networks: []container.NetworkAttachment{
 			container.NetworkAttachment{
 				ID: "Abc123",
@@ -160,7 +160,7 @@ func TestCreateSetsOutput(t *testing.T) {
 
 func TestDestroyExecutesCommandInContainer(t *testing.T) {
 	res := &Terraform{
-		ResourceMetadata: types.ResourceMetadata{Name: "test"},
+		ResourceMetadata: types.ResourceMetadata{ResourceName: "test"},
 		Networks: []container.NetworkAttachment{
 			container.NetworkAttachment{
 				ID: "Abc123",

@@ -6,16 +6,16 @@ import (
 	"sort"
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 
 // RandomPassword is a provider for generating random passwords
 type RandomPasswordProvider struct {
 	config *RandomPassword
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *RandomPasswordProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *RandomPasswordProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*RandomPassword)
 	if !ok {
 		return fmt.Errorf("unable to initialize RandomPassword provider, resource is not of type RandomPassword")
@@ -106,7 +106,7 @@ func (p *RandomPasswordProvider) Refresh() error {
 }
 
 func (p *RandomPasswordProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.ID)
+	p.log.Debug("Checking changes", "ref", p.config.ResourceID)
 
 	return false, nil
 }

@@ -30,7 +30,7 @@ type CertificateCA struct {
 }
 
 func (c *CertificateCA) Process() error {
-	c.Output = utils.EnsureAbsolute(c.Output, c.File)
+	c.Output = utils.EnsureAbsolute(c.Output, c.ResourceFile)
 	c.PrivateKey = File{}
 	c.PublicKeySSH = File{}
 	c.PublicKeyPEM = File{}
@@ -41,7 +41,7 @@ func (c *CertificateCA) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(c.ID)
+		r, _ := cfg.FindResource(c.ResourceID)
 		if r != nil {
 			kstate := r.(*CertificateCA)
 			c.PrivateKey = kstate.PrivateKey
@@ -83,9 +83,9 @@ type CertificateLeaf struct {
 }
 
 func (c *CertificateLeaf) Process() error {
-	c.CACert = utils.EnsureAbsolute(c.CACert, c.File)
-	c.CAKey = utils.EnsureAbsolute(c.CAKey, c.File)
-	c.Output = utils.EnsureAbsolute(c.Output, c.File)
+	c.CACert = utils.EnsureAbsolute(c.CACert, c.ResourceFile)
+	c.CAKey = utils.EnsureAbsolute(c.CAKey, c.ResourceFile)
+	c.Output = utils.EnsureAbsolute(c.Output, c.ResourceFile)
 	c.PrivateKey = File{}
 	c.PublicKeySSH = File{}
 	c.PublicKeyPEM = File{}
@@ -96,7 +96,7 @@ func (c *CertificateLeaf) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(c.ID)
+		r, _ := cfg.FindResource(c.ResourceID)
 		if r != nil {
 			kstate := r.(*CertificateLeaf)
 			c.PrivateKey = kstate.PrivateKey

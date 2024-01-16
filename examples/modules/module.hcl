@@ -23,5 +23,5 @@ module "k8s_exec" {
   disabled   = true
   depends_on = ["module.k8s"]
 
-  source = "../local_exec"
+  source = "../exec"
 }

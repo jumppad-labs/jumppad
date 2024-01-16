@@ -33,13 +33,13 @@ type K8sConfig struct {
 func (k *K8sConfig) Process() error {
 	// make all the paths absolute
 	for i, p := range k.Paths {
-		k.Paths[i] = utils.EnsureAbsolute(p, k.File)
+		k.Paths[i] = utils.EnsureAbsolute(p, k.ResourceFile)
 	}
 
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(k.ID)
+		r, _ := cfg.FindResource(k.ResourceID)
 		if r != nil {
 			state := r.(*K8sConfig)
 			k.JobChecksums = state.JobChecksums

@@ -32,7 +32,7 @@ func (e *LocalExec) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(e.ID)
+		r, _ := cfg.FindResource(e.ResourceID)
 		if r != nil {
 			kstate := r.(*LocalExec)
 			e.Pid = kstate.Pid

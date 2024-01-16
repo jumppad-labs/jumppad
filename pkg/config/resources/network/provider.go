@@ -11,7 +11,7 @@ import (
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	"golang.org/x/xerrors"
 )
 
@@ -19,10 +19,10 @@ import (
 type Provider struct {
 	config *Network
 	client container.Docker
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*Network)
 	if !ok {
 		return fmt.Errorf("unable to initialize Network provider, resource is not of type Network")
@@ -42,12 +42,12 @@ func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
 
 // Create implements the provider interface method for creating new networks
 func (p *Provider) Create() error {
-	p.log.Info("Creating Network", "ref", p.config.ID)
+	p.log.Info("Creating Network", "ref", p.config.ResourceID)
 
 	// validate the subnet
 	_, cidr, err := net.ParseCIDR(p.config.Subnet)
 	if err != nil {
-		return fmt.Errorf("unable to create network %s, invalid subnet %s", p.config.Name, p.config.Subnet)
+		return fmt.Errorf("unable to create network %s, invalid subnet %s", p.config.ResourceName, p.config.Subnet)
 	}
 
 	// check the local networks for overlapping subnets
@@ -58,7 +58,7 @@ func (p *Provider) Create() error {
 
 	for _, n := range hostIPs {
 		if cidr.Contains(n) {
-			return fmt.Errorf("unable to create network %s, a local ip address %s already exists that overlaps with the subnet %s. Please use a network subnet that does not confict with a local range", p.config.Name, n, p.config.Subnet)
+			return fmt.Errorf("unable to create network %s, a local ip address %s already exists that overlaps with the subnet %s. Please use a network subnet that does not confict with a local range", p.config.ResourceName, n, p.config.Subnet)
 		}
 	}
 
@@ -70,8 +70,8 @@ func (p *Provider) Create() error {
 
 	// is the network name and subnet equal to one which already exists
 	for _, ne := range nets {
-		if ne.Name == p.config.Name {
-			return fmt.Errorf("a Network already exists with the name: %s ref:%s", p.config.Name, p.config.ID)
+		if ne.Name == p.config.ResourceName {
+			return fmt.Errorf("a Network already exists with the name: %s ref:%s", p.config.ResourceName, p.config.ResourceID)
 		}
 	}
 
@@ -85,16 +85,16 @@ func (p *Provider) Create() error {
 			}
 
 			if cidr.Contains(cidr2.IP) || cidr2.Contains(cidr.IP) {
-				return fmt.Errorf("unable to create network %s, Network %s already exists with an overlapping subnet %s. Either remove the network '%s' or change the subnet for your network", p.config.Name, ne.Name, ci.Subnet, ne.Name)
+				return fmt.Errorf("unable to create network %s, Network %s already exists with an overlapping subnet %s. Either remove the network '%s' or change the subnet for your network", p.config.ResourceName, ne.Name, ci.Subnet, ne.Name)
 			}
 		}
 	}
 
 	// check the network drivers, if bridge is available use bridge, else use nat
-	p.log.Debug("Attempting to create using bridge plugin", "ref", p.config.Name)
+	p.log.Debug("Attempting to create using bridge plugin", "ref", p.config.ResourceName)
 	err = p.createWithDriver("bridge")
 	if err != nil {
-		p.log.Debug("Unable to create using bridge, fall back to use nat plugin", "ref", p.config.Name, "error", err)
+		p.log.Debug("Unable to create using bridge, fall back to use nat plugin", "ref", p.config.ResourceName, "error", err)
 		// fall back to nat
 		err = p.createWithDriver("nat")
 		if err != nil {
@@ -107,7 +107,7 @@ func (p *Provider) Create() error {
 
 // Destroy implements the provider interface method for destroying networks
 func (p *Provider) Destroy() error {
-	p.log.Info("Destroy Network", "ref", p.config.Name)
+	p.log.Info("Destroy Network", "ref", p.config.ResourceName)
 
 	// check network exists if so remove
 	ids, err := p.Lookup()
@@ -116,7 +116,7 @@ func (p *Provider) Destroy() error {
 	}
 
 	if len(ids) == 1 {
-		return p.client.NetworkRemove(context.Background(), p.config.Name)
+		return p.client.NetworkRemove(context.Background(), p.config.ResourceName)
 	}
 
 	return nil
@@ -124,7 +124,7 @@ func (p *Provider) Destroy() error {
 
 // Lookup the ID for a network
 func (p *Provider) Lookup() ([]string, error) {
-	nets, err := p.getNetworks(p.config.Name)
+	nets, err := p.getNetworks(p.config.ResourceName)
 
 	if err != nil {
 		return nil, err
@@ -139,13 +139,13 @@ func (p *Provider) Lookup() ([]string, error) {
 }
 
 func (p *Provider) Refresh() error {
-	p.log.Debug("Refresh Network", "ref", p.config.ID)
+	p.log.Debug("Refresh Network", "ref", p.config.ResourceID)
 
 	return nil
 }
 
 func (p *Provider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.ID)
+	p.log.Debug("Checking changes", "ref", p.config.ResourceID)
 
 	return false, nil
 }
@@ -164,12 +164,12 @@ func (p *Provider) createWithDriver(driver string) error {
 		},
 		Labels: map[string]string{
 			"created_by": "jumppad",
-			"id":         p.config.ID,
+			"id":         p.config.ResourceID,
 		},
 		Attachable: true,
 	}
 
-	_, err := p.client.NetworkCreate(context.Background(), p.config.Name, opts)
+	_, err := p.client.NetworkCreate(context.Background(), p.config.ResourceName, opts)
 
 	return err
 }

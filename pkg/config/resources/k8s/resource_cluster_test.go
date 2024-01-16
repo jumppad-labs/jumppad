@@ -20,7 +20,7 @@ func TestK8sClusterProcessSetsAbsolute(t *testing.T) {
 	require.NoError(t, err)
 
 	c := &K8sCluster{
-		ResourceMetadata: types.ResourceMetadata{File: "./"},
+		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
 		Volumes: []ctypes.Volume{
 			{
 				Source:      "./",
@@ -40,10 +40,9 @@ func TestK8sClusterSetsOutputsFromState(t *testing.T) {
   "blueprint": null,
   "resources": [
 	{
-			"id": "resource.k8s_cluster.test",
-      "name": "test",
-      "status": "created",
-      "type": "k8s_cluster",
+			"resource_id": "resource.k8s_cluster.test",
+      "resource_name": "test",
+      "resource_type": "k8s_cluster",
 			"external_ip": "127.0.0.1",
 			"api_port": 123,
 			"connector_port": 124,
@@ -58,7 +57,7 @@ func TestK8sClusterSetsOutputsFromState(t *testing.T) {
 
 	c := &K8sCluster{
 		ResourceMetadata: types.ResourceMetadata{
-			ID: "resource.k8s_cluster.test",
+			ResourceID: "resource.k8s_cluster.test",
 		},
 		Networks: []ctypes.NetworkAttachment{
 			ctypes.NetworkAttachment{},

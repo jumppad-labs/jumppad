@@ -62,12 +62,12 @@ func newEnvCmd(e jumppad.Engine) *cobra.Command {
 
 			// add output variables
 			for _, r := range c.Resources {
-				if r.Metadata().Type == types.TypeOutput {
+				if r.Metadata().ResourceType == types.TypeOutput {
 					if r.Metadata().Disabled {
 						continue
 					}
 
-					if r.Metadata().Module != "" {
+					if r.Metadata().ResourceModule != "" {
 						continue
 					}
 
@@ -81,9 +81,9 @@ func newEnvCmd(e jumppad.Engine) *cobra.Command {
 					val = strings.ReplaceAll(val, `\`, `\\`)
 					val = strings.ReplaceAll(val, `"`, `\"`)
 					if unset {
-						fmt.Printf("%s%s\n", prefix, r.Metadata().Name)
+						fmt.Printf("%s%s\n", prefix, r.Metadata().ResourceName)
 					} else {
-						fmt.Printf("%s%s=\"%s\"\n", prefix, r.Metadata().Name, val)
+						fmt.Printf("%s%s=\"%s\"\n", prefix, r.Metadata().ResourceName, val)
 					}
 				}
 			}

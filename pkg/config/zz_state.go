@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/jumppad-labs/hclconfig"
@@ -10,7 +9,7 @@ import (
 )
 
 func LoadState() (*hclconfig.Config, error) {
-	d, err := ioutil.ReadFile(utils.StatePath())
+	d, err := os.ReadFile(utils.StatePath())
 	if err != nil {
 		return hclconfig.NewConfig(), fmt.Errorf("unable to read state file: %s", err)
 	}
@@ -36,7 +35,7 @@ func SaveState(c *hclconfig.Config) error {
 		return fmt.Errorf("unable to create directory for state file '%s', error: %s", utils.StateDir(), err)
 	}
 
-	err = ioutil.WriteFile(utils.StatePath(), d, os.ModePerm)
+	err = os.WriteFile(utils.StatePath(), d, os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("unable to write state file '%s', error: %s", utils.StatePath(), err)
 	}

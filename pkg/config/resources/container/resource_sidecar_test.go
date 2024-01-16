@@ -13,7 +13,7 @@ func TestContainerProcessSetsAbsolute(t *testing.T) {
 	require.NoError(t, err)
 
 	c := &Container{
-		ResourceMetadata: types.ResourceMetadata{File: "./"},
+		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
 		Volumes: []Volume{
 			{
 				Source:      "./",

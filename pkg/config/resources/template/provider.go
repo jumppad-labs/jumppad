@@ -6,16 +6,16 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/infinytum/raymond/v2"
 	htypes "github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	"github.com/mailgun/raymond/v2"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	"github.com/zclconf/go-cty/cty"
 )
 
 // Template provider allows parsing and output of file based templates
 type TemplateProvider struct {
 	config *Template
-	log    logger.Logger
+	log    sdk.Logger
 }
 
 // parseVars converts a map[string]cty.Value into map[string]interface
@@ -64,7 +64,7 @@ func castVar(v cty.Value) interface{} {
 	return nil
 }
 
-func (p *TemplateProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *TemplateProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*Template)
 	if !ok {
 		return fmt.Errorf("unable to initialize Template provider, resource is not of type Template")
@@ -78,8 +78,8 @@ func (p *TemplateProvider) Init(cfg htypes.Resource, l logger.Logger) error {
 
 // Create a new template
 func (p *TemplateProvider) Create() error {
-	p.log.Info("Generating template", "ref", p.config.ID, "output", p.config.Destination)
-	p.log.Debug("Template content", "ref", p.config.ID, "source", p.config.Source)
+	p.log.Info("Generating template", "ref", p.config.ResourceID, "output", p.config.Destination)
+	p.log.Debug("Template content", "ref", p.config.ResourceID, "source", p.config.Source)
 
 	// check the template is valid
 	if p.config.Source == "" {
@@ -94,7 +94,7 @@ func (p *TemplateProvider) Create() error {
 		}
 		defer f.Close()
 
-		p.log.Debug("Template output", "ref", p.config.ID, "destination", p.config.Source)
+		p.log.Debug("Template output", "ref", p.config.ResourceID, "destination", p.config.Source)
 		_, err = f.WriteString(p.config.Source)
 
 		return err
@@ -141,7 +141,7 @@ func (p *TemplateProvider) Create() error {
 
 	f.WriteString(result)
 
-	p.log.Debug("Template output", "ref", p.config.ID, "destination", p.config.Destination, "result", result)
+	p.log.Debug("Template output", "ref", p.config.ResourceID, "destination", p.config.Destination, "result", result)
 
 	return nil
 }
@@ -151,7 +151,7 @@ func (p *TemplateProvider) Destroy() error {
 		err := os.RemoveAll(p.config.Destination)
 		if err != nil {
 			p.log.Warn("Unable to delete template file",
-				"ref", p.config.Name,
+				"ref", p.config.ResourceName,
 				"destination", p.config.Destination,
 				"error", err)
 		}
@@ -167,7 +167,7 @@ func (p *TemplateProvider) Lookup() ([]string, error) {
 
 // Refresh causes the template to be destroyed and recreated
 func (p *TemplateProvider) Refresh() error {
-	p.log.Debug("Refresh Template", "ref", p.config.ID)
+	p.log.Debug("Refresh Template", "ref", p.config.ResourceID)
 
 	p.Destroy()
 	return p.Create()

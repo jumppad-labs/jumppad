@@ -19,10 +19,9 @@ func TestIngressSetsOutputsFromState(t *testing.T) {
   "blueprint": null,
   "resources": [
 	{
-			"id": "resource.ingress.test",
-      "name": "test",
-      "status": "created",
-      "type": "ingress",
+			"resource_id": "resource.ingress.test",
+      "resource_name": "test",
+      "resource_type": "ingress",
 			"ingress_id": "42",
 			"local_address": "127.0.0.1"
 	}
@@ -31,7 +30,7 @@ func TestIngressSetsOutputsFromState(t *testing.T) {
 
 	c := &Ingress{
 		ResourceMetadata: types.ResourceMetadata{
-			ID: "resource.ingress.test",
+			ResourceID: "resource.ingress.test",
 		},
 	}
 

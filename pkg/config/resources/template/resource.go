@@ -22,12 +22,12 @@ type Template struct {
 }
 
 func (t *Template) Process() error {
-	t.Destination = utils.EnsureAbsolute(t.Destination, t.File)
+	t.Destination = utils.EnsureAbsolute(t.Destination, t.ResourceFile)
 
 	// Source can be a file or a template as a string
 	// check to see if a valid file before making absolute
 	src := t.Source
-	absSrc := utils.EnsureAbsolute(src, t.File)
+	absSrc := utils.EnsureAbsolute(src, t.ResourceFile)
 
 	if _, err := os.Stat(absSrc); err == nil {
 		// file exists

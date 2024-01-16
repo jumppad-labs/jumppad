@@ -15,8 +15,8 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	cclient "github.com/jumppad-labs/jumppad/pkg/clients/container"
 	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	"github.com/kennygrant/sanitize"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -27,10 +27,10 @@ const terraformImageName = "hashicorp/terraform"
 type TerraformProvider struct {
 	config *Terraform
 	client cclient.ContainerTasks
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *TerraformProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *TerraformProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*Terraform)
 	if !ok {
 		return fmt.Errorf("unable to initialize Terraform provider, resource is not of type Terraform")
@@ -50,7 +50,7 @@ func (p *TerraformProvider) Init(cfg htypes.Resource, l logger.Logger) error {
 
 // Create a new terraform container
 func (p *TerraformProvider) Create() error {
-	p.log.Info("Creating Terraform", "ref", p.config.ID)
+	p.log.Info("Creating Terraform", "ref", p.config.ResourceID)
 
 	err := p.generateVariables()
 	if err != nil {
@@ -60,7 +60,7 @@ func (p *TerraformProvider) Create() error {
 	// terraform init & terraform apply
 	id, err := p.createContainer()
 	if err != nil {
-		return fmt.Errorf("unable to create container for terraform.%s: %w", p.config.Name, err)
+		return fmt.Errorf("unable to create container for terraform.%s: %w", p.config.ResourceName, err)
 	}
 
 	// always remove the container
@@ -68,7 +68,7 @@ func (p *TerraformProvider) Create() error {
 
 	err = p.terraformApply(id)
 	if err != nil {
-		return fmt.Errorf("unable to run apply for terraform.%s: %w", p.config.Name, err)
+		return fmt.Errorf("unable to run apply for terraform.%s: %w", p.config.ResourceName, err)
 	}
 
 	err = p.generateOutput()
@@ -89,11 +89,11 @@ func (p *TerraformProvider) Create() error {
 
 // Destroy the terraform container
 func (p *TerraformProvider) Destroy() error {
-	p.log.Info("Destroy Terraform", "ref", p.config.ID)
+	p.log.Info("Destroy Terraform", "ref", p.config.ResourceID)
 
 	id, err := p.createContainer()
 	if err != nil {
-		return fmt.Errorf("unable to create container for Terraform.%s: %w", p.config.Name, err)
+		return fmt.Errorf("unable to create container for Terraform.%s: %w", p.config.ResourceName, err)
 	}
 
 	// always remove the container
@@ -126,7 +126,7 @@ func (p *TerraformProvider) Refresh() error {
 	if changed {
 		// with Terraform resources we can just re-call apply rather than
 		// destroying and then running create.
-		p.log.Debug("Refresh Terraform", "ref", p.config.ID)
+		p.log.Debug("Refresh Terraform", "ref", p.config.ResourceID)
 		return p.Create()
 	}
 
@@ -148,11 +148,11 @@ func (p *TerraformProvider) Changed() (bool, error) {
 	}
 
 	if newHash != p.config.SourceChecksum {
-		p.log.Debug("Terraform source folder changed", "ref", p.config.ID)
+		p.log.Debug("Terraform source folder changed", "ref", p.config.ResourceID)
 		return true, nil
 	}
 
-	p.log.Debug("Terraform source folder unchanged", "ref", p.config.ID)
+	p.log.Debug("Terraform source folder unchanged", "ref", p.config.ResourceID)
 	return false, nil
 }
 
@@ -186,7 +186,7 @@ func (p *TerraformProvider) generateVariables() error {
 }
 
 func (p *TerraformProvider) createContainer() (string, error) {
-	fqdn := utils.FQDN(p.config.Name, p.config.Module, p.config.Type)
+	fqdn := utils.FQDN(p.config.ResourceName, p.config.ResourceModule, p.config.ResourceType)
 	statePath := terraformStateFolder(p.config)
 	cachePath := terraformCacheFolder()
 
@@ -240,14 +240,14 @@ func (p *TerraformProvider) createContainer() (string, error) {
 	// pull any images needed for this container
 	err := p.client.PullImage(*tf.Image, false)
 	if err != nil {
-		p.log.Error("Error pulling container image", "ref", p.config.ID, "image", tf.Image.Name)
+		p.log.Error("Error pulling container image", "ref", p.config.ResourceID, "image", tf.Image.Name)
 
 		return "", err
 	}
 
 	id, err := p.client.CreateContainer(&tf)
 	if err != nil {
-		p.log.Error("Error creating container for terraform", "ref", p.config.Name, "image", tf.Image.Name, "networks", p.config.Networks)
+		p.log.Error("Error creating container for terraform", "ref", p.config.ResourceName, "image", tf.Image.Name, "networks", p.config.Networks)
 		return "", err
 	}
 
@@ -289,10 +289,10 @@ func (p *TerraformProvider) terraformApply(containerid string) error {
 
 	// write the plan output to the log
 	p.config.ApplyOutput = planOutput.String()
-	p.log.Debug("terraform apply output", "id", p.config.ID, "output", planOutput)
+	p.log.Debug("terraform apply output", "id", p.config.ResourceID, "output", planOutput)
 
 	if err != nil {
-		p.log.Error("Error executing terraform apply", "ref", p.config.Name)
+		p.log.Error("Error executing terraform apply", "ref", p.config.ResourceName)
 		err = fmt.Errorf("unable to execute terraform apply: %w", err)
 		return err
 	}
@@ -380,7 +380,7 @@ func (p *TerraformProvider) terraformDestroy(containerid string) error {
 	`
 	_, err = p.client.ExecuteScript(containerid, script, envs, wd, "root", "", 300, p.log.StandardWriter())
 	if err != nil {
-		p.log.Error("Error executing terraform destroy", "ref", p.config.Name)
+		p.log.Error("Error executing terraform destroy", "ref", p.config.ResourceName)
 		err = fmt.Errorf("unable to execute terraform destroy: %w", err)
 		return err
 	}

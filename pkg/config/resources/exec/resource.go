@@ -42,7 +42,7 @@ func (e *Exec) Process() error {
 		// process volumes
 		// make sure mount paths are absolute
 		for i, v := range e.Volumes {
-			e.Volumes[i].Source = utils.EnsureAbsolute(v.Source, e.File)
+			e.Volumes[i].Source = utils.EnsureAbsolute(v.Source, e.ResourceFile)
 		}
 
 		// make sure line endings are linux
@@ -58,7 +58,7 @@ func (e *Exec) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(e.ID)
+		r, _ := cfg.FindResource(e.ResourceID)
 
 		if r != nil {
 			kstate := r.(*Exec)

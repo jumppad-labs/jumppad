@@ -91,6 +91,7 @@ func (c *CommandImpl) Execute(config types.CommandConfig) (int, error) {
 		if !config.RunInBackground {
 			for {
 				s, err := lp.QueryStatus(pidfile)
+				c.log.Debug("Checking status", "status", s, "pid", pidfile, "err", err)
 				if err != nil {
 					doneCh <- done{err: err, pid: pid}
 				}

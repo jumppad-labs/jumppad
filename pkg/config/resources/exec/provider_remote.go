@@ -8,8 +8,8 @@ import (
 	cclient "github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	"golang.org/x/xerrors"
 )
 
@@ -18,10 +18,10 @@ import (
 type RemoteProvider struct {
 	config *RemoteExec
 	client cclient.ContainerTasks
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *RemoteProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *RemoteProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*RemoteExec)
 	if !ok {
 		return fmt.Errorf("unable to initialize ImageCache provider, resource is not of type ImageCache")
@@ -41,7 +41,7 @@ func (p *RemoteProvider) Init(cfg htypes.Resource, l logger.Logger) error {
 
 // Create a new execution instance
 func (p *RemoteProvider) Create() error {
-	p.log.Info("Remote executing script", "ref", p.config.ID)
+	p.log.Info("Remote executing script", "ref", p.config.ResourceID)
 	p.log.Warn("This resource is deprecated and will be removed in a future version of Jumppad, please use exec instead")
 
 	// execution target id
@@ -51,7 +51,7 @@ func (p *RemoteProvider) Create() error {
 		// Not using existing target create new container
 		id, err := p.createRemoteExecContainer()
 		if err != nil {
-			return xerrors.Errorf("unable to create container for exec_remote.%s: %w", p.config.Name, err)
+			return xerrors.Errorf("unable to create container for exec_remote.%s: %w", p.config.ResourceName, err)
 		}
 
 		targetID = id
@@ -88,7 +88,7 @@ func (p *RemoteProvider) Create() error {
 
 	_, err := p.client.ExecuteScript(targetID, script, envs, p.config.WorkingDirectory, user, group, 300, p.log.StandardWriter())
 	if err != nil {
-		p.log.Error("Error executing command", "ref", p.config.Name, "image", p.config.Image, "script", p.config.Script)
+		p.log.Error("Error executing command", "ref", p.config.ResourceName, "image", p.config.Image, "script", p.config.Script)
 		err = xerrors.Errorf("Unable to execute command: in remote container: %w", err)
 	}
 
@@ -113,19 +113,19 @@ func (p *RemoteProvider) Lookup() ([]string, error) {
 }
 
 func (p *RemoteProvider) Refresh() error {
-	p.log.Debug("Refresh Remote Exec", "ref", p.config.ID)
+	p.log.Debug("Refresh Remote Exec", "ref", p.config.ResourceID)
 
 	return nil
 }
 
 func (p *RemoteProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.Name)
+	p.log.Debug("Checking changes", "ref", p.config.ResourceName)
 
 	return false, nil
 }
 
 func (p *RemoteProvider) createRemoteExecContainer() (string, error) {
-	fqdn := utils.FQDN(p.config.Name, p.config.Module, p.config.Type)
+	fqdn := utils.FQDN(p.config.ResourceName, p.config.ResourceModule, p.config.ResourceType)
 
 	new := ctypes.Container{
 		Name:        fqdn,
@@ -160,14 +160,14 @@ func (p *RemoteProvider) createRemoteExecContainer() (string, error) {
 	// pull any images needed for this container
 	err := p.client.PullImage(*new.Image, false)
 	if err != nil {
-		p.log.Error("Error pulling container image", "ref", p.config.ID, "image", new.Image.Name)
+		p.log.Error("Error pulling container image", "ref", p.config.ResourceID, "image", new.Image.Name)
 
 		return "", err
 	}
 
 	id, err := p.client.CreateContainer(&new)
 	if err != nil {
-		p.log.Error("Error creating container for remote exec", "ref", p.config.Name, "image", p.config.Image, "networks", p.config.Networks, "volumes", p.config.Volumes)
+		p.log.Error("Error creating container for remote exec", "ref", p.config.ResourceName, "image", p.config.Image, "networks", p.config.Networks, "volumes", p.config.Volumes)
 		return "", err
 	}
 

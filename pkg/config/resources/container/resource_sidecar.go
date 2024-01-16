@@ -46,7 +46,7 @@ func (c *Sidecar) Process() error {
 	for i, v := range c.Volumes {
 		// make sure mount paths are absolute when type is bind
 		if v.Type == "" || v.Type == "bind" {
-			c.Volumes[i].Source = utils.EnsureAbsolute(v.Source, c.File)
+			c.Volumes[i].Source = utils.EnsureAbsolute(v.Source, c.ResourceFile)
 		}
 	}
 
@@ -55,7 +55,7 @@ func (c *Sidecar) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(c.ID)
+		r, _ := cfg.FindResource(c.ResourceID)
 		if r != nil {
 			kstate := r.(*Sidecar)
 			c.ContainerName = kstate.ContainerName

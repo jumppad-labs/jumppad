@@ -26,7 +26,7 @@ func (c *RandomID) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(c.ID)
+		r, _ := cfg.FindResource(c.ResourceID)
 		if r != nil {
 			state := r.(*RandomID)
 			c.Base64 = state.Base64

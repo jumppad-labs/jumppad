@@ -9,8 +9,8 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/command"
 	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/command/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 
 // ExecLocal provider allows the execution of arbitrary commands
@@ -18,11 +18,11 @@ import (
 type LocalProvider struct {
 	config *LocalExec
 	client command.Command
-	log    logger.Logger
+	log    sdk.Logger
 }
 
 // Intit creates a new Local Exec provider
-func (p *LocalProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *LocalProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*LocalExec)
 	if !ok {
 		return fmt.Errorf("unable to initialize Local provider, resource is not of type LocalExec")
@@ -42,7 +42,7 @@ func (p *LocalProvider) Init(cfg htypes.Resource, l logger.Logger) error {
 
 // Create a new exec
 func (p *LocalProvider) Create() error {
-	p.log.Info("Locally executing script", "ref", p.config.ID, "command", p.config.Command)
+	p.log.Info("Locally executing script", "ref", p.config.ResourceID, "command", p.config.Command)
 	p.log.Warn("This resource is deprecated and will be removed in a future version of Jumppad, please use exec instead")
 
 	// build the environment variables
@@ -53,7 +53,7 @@ func (p *LocalProvider) Create() error {
 	}
 
 	// create the folders for logs and pids
-	logPath := filepath.Join(utils.LogsDir(), fmt.Sprintf("exec_%s.log", p.config.Name))
+	logPath := filepath.Join(utils.LogsDir(), fmt.Sprintf("exec_%s.log", p.config.ResourceName))
 
 	// do we have a duration to parse
 	var d time.Duration
@@ -85,7 +85,7 @@ func (p *LocalProvider) Create() error {
 	// set the output
 	p.config.Pid = pid
 
-	p.log.Debug("Started process", "ref", p.config.ID, "pid", p.config.Pid)
+	p.log.Debug("Started process", "ref", p.config.ResourceID, "pid", p.config.Pid)
 
 	if err != nil {
 		return err
@@ -98,7 +98,7 @@ func (p *LocalProvider) Create() error {
 func (p *LocalProvider) Destroy() error {
 	if p.config.Daemon {
 		// attempt to destroy the process
-		p.log.Info("Stopping locally executing script", "ref", p.config.ID, "pid", p.config.Pid)
+		p.log.Info("Stopping locally executing script", "ref", p.config.ResourceID, "pid", p.config.Pid)
 
 		if p.config.Pid < 1 {
 			p.log.Warn("Unable to stop local process, no pid")
@@ -120,13 +120,13 @@ func (p *LocalProvider) Lookup() ([]string, error) {
 }
 
 func (p *LocalProvider) Refresh() error {
-	p.log.Debug("Refresh Local Exec", "ref", p.config.Name)
+	p.log.Debug("Refresh Local Exec", "ref", p.config.ResourceName)
 
 	return nil
 }
 
 func (p *LocalProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.ID)
+	p.log.Debug("Checking changes", "ref", p.config.ResourceID)
 
 	return false, nil
 }
