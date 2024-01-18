@@ -19,7 +19,7 @@ import (
 )
 
 const cacheImage = "ghcr.io/rpardini/docker-registry-proxy:0.6.4"
-const defaultRegistries = "k8s.gcr.io gcr.io asia.gcr.io eu.gcr.io us.gcr.io quay.io ghcr.io docker.pkg.github.com"
+const defaultRegistries = "docker.io k8s.gcr.io gcr.io asia.gcr.io eu.gcr.io us.gcr.io quay.io ghcr.io docker.pkg.github.com"
 
 type Provider struct {
 	config *ImageCache
