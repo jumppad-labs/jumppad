@@ -70,13 +70,28 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Build and package
+      - name: Build
         uses: dagger/dagger-for-github@v5
         with:
           verb: download
           module: ./.dagger
-          args: all --src . --output ./dagger-output --focus=false
+          args: build --src . --output ./dagger-output
           version: "0.9.5"
+      
+      - name: Package
+        uses: dagger/dagger-for-github@v5
+        with:
+          verb: download
+          module: ./.dagger
+          args: package --binaries ./dagger-output --output ./dagger-output
+          version: "0.9.5"
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: dagger_output
+          path: |
+            ./dagger-output
 
  # e2e_mac:
  #   name: Mac E2E Tests
