@@ -134,6 +134,14 @@ jobs:
           name: jumpad_debian_amd64
           path: |
             ./dagger-output/pkg/linux/amd64/jumppad.deb
+    
+      - name: Send status to Discord
+        uses: sarisia/actions-status-discord@v1
+        if: always()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          tile: ${{ github.job_id }}
+          description: "Build application"
 
   functional_test_build_dns:
     name: Build binary for Functional Tests
@@ -299,7 +307,6 @@ jobs:
     needs: 
       - functional_test_docker
       - functional_test_podman
-    if: ${{ github.ref != 'refs/heads/main' }}
     runs-on: macos-latest
     steps:
 
@@ -349,15 +356,33 @@ jobs:
       run: |
         gon -log-level=debug -log-json ./.gon_amd64.json
       
-    - name: Upload artifacts
+    - name: Upload artifacts arm64 dmg
       uses: actions/upload-artifact@v2
       with:
-        name: jumppad_osx_notorized
+        name: jumppad_osx_notorized_arm64_dmg
         path: |
           dist/jumppad_arm64.dmg
-          dist/jumppad_arm64.zip
+    
+    - name: Upload artifacts amd64 dmg
+      uses: actions/upload-artifact@v2
+      with:
+        name: jumppad_osx_notorized_amd64_dmg
+        path: |
           dist/jumppad_amd64.dmg
+    
+    - name: Upload artifacts amd64 zip
+      uses: actions/upload-artifact@v2
+      with:
+        name: jumppad_osx_notorized_amd64_zip
+        path: |
           dist/jumppad_amd64.zip
+    
+    - name: Upload artifacts arm64 zip
+      uses: actions/upload-artifact@v2
+      with:
+        name: jumppad_osx_notorized_arm64_zip
+        path: |
+          dist/jumppad_arm64.zip
 
     - name: Send status to Discord
       uses: sarisia/actions-status-discord@v1
@@ -375,7 +400,6 @@ jobs:
     needs:
       - functional_test_docker
       - functional_test_podman
-      #- e2e_mac
       - e2e_linux
     if: ${{ github.ref == 'refs/heads/main' }}
 
@@ -408,27 +432,90 @@ jobs:
   github_release:
     name: Create GitHub Release
     needs: 
-      - notorize_mac_prod
       - tag
     environment:
       name: release
     runs-on: ubuntu-latest
     steps:
-    - name: Download-Binaries
+
+    - name: Download-Binaries Darwin x64
       uses: actions/download-artifact@v2
       with:
-        name: jumppad_archives
-        path: dist/
+        name: jumppad_darwin_amd64
+        path: dist/jumppad_osx_notorized_amd64_zip
+    
+    - name: Download-Binaries Darwin Arm64
+      uses: actions/download-artifact@v2
+      with:
+        name: jumppad_darwin_amd64
+        path: dist/jumppad_osx_notorized_arm64_zip
+    
+    - name: Download-Binaries Linux x64
+      uses: actions/download-artifact@v2
+      with:
+        name: jumppad_linux_amd64
+        path: dist/jumppad_linux_amd64
+    
+    - name: Download-Binaries Linux Arm64
+      uses: actions/download-artifact@v2
+      with:
+        name: jumppad_linux_arm64
+        path: dist/jumppad_linux_arm64
+    
+    - name: Download-Debian Linux x64
+      uses: actions/download-artifact@v2
+      with:
+        name: jumppad_debian_amd64
+        path: dist/jumppad_debian_amd64
+    
+    - name: Download-Debian Linux Arm64
+      uses: actions/download-artifact@v2
+      with:
+        name: jumppad_debian_amd64
+        path: dist/jumppad_debian_arm64
+    
+    - name: Download-Binaries Windows x64
+      uses: actions/download-artifact@v2
+      with:
+        name: jumppad_windows_amd64
+        path: dist/jumppad_windows_amd64
+
+    
+    - name: Zip and move binaries
+      run: |
+        mkdir ./releases
+
+        cd dist/jumppad_osx_notorized_amd64_zip
+        cp jumppad_amd64.zip ../../releases/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
+        cd ../../
+        
+        cd dist/jumppad_osx_notorized_arm64_zip
+        cp jumppad_arm64.zip ../../releases/jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
+        cd ../../
+        
+        cd dist/jumppad_linux_amd64
+        tar -czf ../../releases/jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.tar.gz .
+        cd ../../
+        
+        cd dist/jumppad_linux_arm64
+        tar -czf ../../releases/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz .
+        cd ../../
+        
+        cd dist/jumppad_windows_amd64
+        zip jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip jumppad.exe
+        cp jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip ../../releases
+        cd ../../
+        
+        cp dist/jumppad_debian_amd64/jumppad.deb releases/jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.deb
+        cp dist/jumppad_debian_arm64/jumppad.deb releases/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.deb
 
     - name: Generate SHA256 checksums
       run: |
-        cd dist
+        cd releases
         sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz > checksums.txt
         sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz >> checksums.txt
         sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.deb >> checksums.txt
         sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.deb >> checksums.txt
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.rpm >> checksums.txt
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.rpm >> checksums.txt
         sha256sum jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip >> checksums.txt
         sha256sum jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip >> checksums.txt
         sha256sum jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip >> checksums.txt
@@ -439,22 +526,19 @@ jobs:
         tag_name: ${{ needs.tag.outputs.new_tag }}
         token: ${{ secrets.GH_TOKEN }}
         files: |
-          dist/checksums.txt
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.rpm
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.rpm
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.deb
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.deb
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
+          releases/checksums.txt
+          releases/jumppad_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz
+          releases/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz
+          releases/jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.deb
+          releases/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.deb
+          releases/jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip
+          releases/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
+          releases/jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
 
   brew:
     name: Release to HomeBrew
     needs: 
       - github_release
-      - tag
     runs-on: ubuntu-latest
     steps:
     -
@@ -470,19 +554,57 @@ jobs:
         git config user.name "Jumppad Bot"
         git pull origin main
 
-    - name: Download-Binaries
+    - name: Download-Binaries Darwin x64
       uses: actions/download-artifact@v2
       with:
-        name: jumppad_archives
-        path: dist/
+        name: jumppad_darwin_amd64
+        path: dist/jumppad_osx_notorized_amd64_zip
+    
+    - name: Download-Binaries Darwin Arm64
+      uses: actions/download-artifact@v2
+      with:
+        name: jumppad_darwin_amd64
+        path: dist/jumppad_osx_notorized_arm64_zip
+    
+    - name: Download-Binaries Linux x64
+      uses: actions/download-artifact@v2
+      with:
+        name: jumppad_linux_amd64
+        path: dist/jumppad_linux_amd64
+    
+    - name: Download-Binaries Linux Arm64
+      uses: actions/download-artifact@v2
+      with:
+        name: jumppad_linux_arm64
+        path: dist/jumppad_linux_arm64
+    
+    - name: Zip and move binaries
+      run: |
+        mkdir ./releases
+
+        cd dist/jumppad_osx_notorized_amd64_zip
+        cp jumppad_amd64.zip ../../releases/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
+        cd ../../
+        
+        cd dist/jumppad_osx_notorized_arm64_zip
+        cp jumppad_arm64.zip ../../releases/jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
+        cd ../../
+        
+        cd dist/jumppad_linux_amd64
+        tar -czf ../../releases/jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.tar.gz .
+        cd ../../
+        
+        cd dist/jumppad_linux_arm64
+        tar -czf ../../releases/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz .
+        cd ../../
     
     - name: Generate HomeBrew config
       run: |
         export VERSION=${{ needs.tag.outputs.new_version }}
-        export DARWIN_ARM64_SHA=$(sha256sum  ./dist/jumppad${{ needs.tag.outputs.new_version }}_darwin_arm64.zip | cut -d " " -f 1)
-        export DARWIN_x86_SHA=$(sha256sum  ./dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip | cut -d " " -f 1)
-        export LINUX_ARM64_SHA=$(sha256sum  ./dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz | cut -d " " -f 1)
-        export LINUX_x86_SHA=$(sha256sum  ./dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz | cut -d " " -f 1)
+        export DARWIN_ARM64_SHA=$(sha256sum  ./releases/jumppad${{ needs.tag.outputs.new_version }}_darwin_arm64.zip | cut -d " " -f 1)
+        export DARWIN_x86_SHA=$(sha256sum  ./releases/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip | cut -d " " -f 1)
+        export LINUX_ARM64_SHA=$(sha256sum  ./releases/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz | cut -d " " -f 1)
+        export LINUX_x86_SHA=$(sha256sum  ./releases/jumppad_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz | cut -d " " -f 1)
 
         cat <<- EOF > ./jumppad.rb
         # typed: false
@@ -529,7 +651,6 @@ jobs:
     name: Publish to WinGet
     needs:
       - github_release
-      - tag
     runs-on: windows-latest
     steps:
     - uses: jumppad-labs/winget-publish-action@v0.1.0
@@ -553,11 +674,10 @@ jobs:
     name: Update fury.io Apt repository
     needs:
       - github_release
-      - tag
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: ["amd64.deb", "arm64.deb", "amd64.rpm", "arm64.rpm"]
+        arch: ["amd64.deb", "arm64.deb"]
 
     steps:
     - name: Download release
