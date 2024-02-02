@@ -192,7 +192,7 @@ func (c *ConnectorImpl) GenerateLocalCertBundle(out string) (*types.CertBundle, 
 	}
 
 	grcpParts := strings.Split(c.options.GrpcBind, ":")
-	httpParts := strings.Split(c.options.GrpcBind, ":")
+	httpParts := strings.Split(c.options.HTTPBind, ":")
 
 	ips := utils.GetLocalIPAddresses()
 	host := []string{

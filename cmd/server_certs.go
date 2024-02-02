@@ -5,6 +5,7 @@ import (
 	"path"
 
 	"github.com/jumppad-labs/connector/crypto"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -69,6 +70,10 @@ func newConnectorCertCmd() *cobra.Command {
 				err = k.Private.WriteFile(path.Join(args[0], "leaf.key"))
 				if err != nil {
 					return err
+				}
+
+				if len(ipAddresses) == 0 {
+					ipAddresses = utils.GetLocalIPAddresses()
 				}
 
 				lc, err := crypto.GenerateLeaf("Connector Leaf", ipAddresses, dnsNames, ca, rk.Private, k.Private)
