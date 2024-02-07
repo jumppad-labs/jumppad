@@ -23,10 +23,7 @@ test_functional:
 	go run main.go test ./examples/multiple_k3s_clusters
 	
 	go run main.go purge
-	go run main.go test ./examples/local_exec
-	
-	go run main.go purge
-	go run main.go test ./examples/remote_exec
+	go run main.go test ./examples/exec
 	
 	go run main.go purge
 	go run main.go test ./examples/certificates

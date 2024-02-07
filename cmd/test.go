@@ -167,6 +167,8 @@ func (cr *CucumberRunner) start() {
 }
 
 func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
+	sb := &strings.Builder{}
+
 	ctx.BeforeScenario(func(gs *godog.Scenario) {
 		// ensure the variables are not carried over from a previous scenario
 		envVars = map[string]string{}
@@ -174,17 +176,17 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 		commandExitCode = 0
 		cr.variables = cr.baseVariables
 
-		logger := createLogger()
+		cl := logger.NewLogger(sb, logger.LogLevelDebug)
 
-		cli, _ := clients.GenerateClients(logger)
-		engine, vm, err := createEngine(logger, cli)
+		cli, _ := clients.GenerateClients(cl)
+		engine, vm, err := createEngine(cl, cli)
 		if err != nil {
 			fmt.Printf("Unable to setup tests: %s\n", err)
 			return
 		}
 
 		cr.e = engine
-		cr.l = logger
+		cr.l = cl
 		cr.cli = cli
 		cr.vm = vm
 
@@ -196,9 +198,8 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 	})
 
 	ctx.AfterScenario(func(gs *godog.Scenario, err error) {
-		// only destroy when the dont-destroy flag is false
-
 		if err != nil {
+			fmt.Println(sb.String())
 			fmt.Println(output.String())
 		}
 
@@ -211,14 +212,22 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 			}
 		}
 
+		// only destroy when the dont-destroy flag is false
 		if *cr.dontDestroy {
 			fmt.Println("Not automatically destroying resources, run the command 'jumppad destroy' manually")
 			return
 		}
 
-		dest := newDestroyCmd(cr.cli.Connector)
+		sb := strings.Builder{}
+		l := logger.NewLogger(&sb, logger.LogLevelDebug)
+		dest := newDestroyCmd(cr.cli.Connector, l)
 		dest.SetArgs([]string{})
-		dest.Execute()
+
+		err = dest.Execute()
+		if err != nil {
+			fmt.Println(sb.String())
+			os.Exit(1)
+		}
 	})
 
 	ctx.Step(`^I have a running blueprint$`, cr.iRunApply)

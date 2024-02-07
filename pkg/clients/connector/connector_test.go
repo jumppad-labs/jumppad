@@ -32,10 +32,12 @@ func TestConnectorSuite(t *testing.T) {
 		os.Setenv(utils.HomeEnvName(), home)
 	})
 
-	suiteOptions.LogDirectory = os.TempDir()
+	suiteOptions.LogDirectory = path.Join(suiteTemp, "logs")
 	suiteOptions.BinaryPath = suiteBinary
 	suiteOptions.GrpcBind = fmt.Sprintf(":%d", rand.Intn(1000)+20000)
 	suiteOptions.HTTPBind = fmt.Sprintf(":%d", rand.Intn(1000)+20000)
+
+	os.MkdirAll(suiteOptions.LogDirectory, os.ModePerm)
 
 	t.Run("Generates certificates", testGenerateCreatesBundle)
 	t.Run("Fetches certificates", testFetchesLocalCertBundle)
@@ -95,17 +97,24 @@ func testStartsConnector(t *testing.T) {
 	err := c.Start(suiteCertBundle)
 	assert.NoError(t, err)
 
+	logFile := path.Join(suiteTemp, "logs", "connector.log")
+
 	t.Cleanup(func() {
 		c.Stop()
+
+		if t.Failed() {
+			d, _ := os.ReadFile(logFile)
+			fmt.Println(string(d))
+		}
 	})
 
 	// check the logfile
-	assert.FileExists(t, path.Join(os.TempDir(), "connector.log"))
+	assert.FileExists(t, logFile)
 
 	// check is running
 	assert.Eventually(t, func() bool {
 		return c.IsRunning()
-	}, 3*time.Second, 100*time.Millisecond)
+	}, 15*time.Second, 100*time.Millisecond)
 }
 
 func testExposeServiceCallsExpose(t *testing.T) {

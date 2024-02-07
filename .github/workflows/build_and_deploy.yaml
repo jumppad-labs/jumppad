@@ -3,45 +3,9 @@
 name: Build And Deploy
 on: [push]
 jobs:
-  test:
-    env:
-      GONOSUMDB: "github.com/moby/moby"
-    name: Unit Test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
-
-      - name: Setup Go version
-        uses: actions/setup-go@v4
-        with:
-          go-version: 1.21
-
-      - name: Get dependencies
-        run: |
-          go version
-          go get -v -t ./...
-
-      - name: Unit Test
-        run: |
-          go test -v -race ./...
-
-      #- name: Upload Code Coverage
-      #  uses: codecov/codecov-action@v1
-      #  with:
-      #    token: ${{ secrets.CODECOV_TOKEN }}  # required
-
-      - name: Send status to Discord
-        uses: sarisia/actions-status-discord@v1
-        if: always()
-        with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          title: ${{ github.job_id }}
-
   e2e_linux:
     name: Linux E2E Tests
     runs-on: ubuntu-latest
-    needs: test
 
     steps:
       - uses: actions/checkout@v2
@@ -63,12 +27,19 @@ jobs:
           description: "End to end tests for Linux"
 
   dagger_build:
-    name: Dagger Test
+    name: Dagger Build and Test
     runs-on: ubuntu-latest
-    needs: test
 
     steps:
       - uses: actions/checkout@v2
+      
+      - name: Test
+        uses: dagger/dagger-for-github@v5
+        with:
+          verb: call
+          module: ./.dagger
+          args: unit-test --src=. --with-race=true
+          version: "0.9.5"
 
       - name: Build
         uses: dagger/dagger-for-github@v5
@@ -142,33 +113,6 @@ jobs:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           tile: ${{ github.job_id }}
           description: "Build application"
-
-  functional_test_build_dns:
-    name: Build binary for Functional Tests
-    runs-on: ubuntu-latest
-    needs: dagger_build
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Setup Go version
-        uses: actions/setup-go@v4
-        with:
-          go-version: 1.21
-      
-      - name: Build Podman DNS plugin
-        run: |
-          cd ..
-          git clone https://github.com/containers/dnsname.git
-          cd dnsname
-          make
-          sudo cp ./bin/dnsname /usr/local/bin
-      
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: podman_dns_plugin
-          path: |
-            /usr/local/bin/dnsname
 
   functional_test_docker:
     name: Test Docker

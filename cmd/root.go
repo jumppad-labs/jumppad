@@ -105,15 +105,6 @@ func Execute(v, c, d string) error {
 
 	engineClients, _ := clients.GenerateClients(l)
 
-	// Check the system to see if Docker is running and everything is installed
-	s, err := engineClients.System.Preflight()
-	if err != nil {
-		fmt.Println("")
-		fmt.Println("###### SYSTEM DIAGNOSTICS ######")
-		fmt.Println(s)
-		return err
-	}
-
 	engine, vm, _ := createEngine(l, engineClients)
 
 	rootCmd.AddCommand(checkCmd)
@@ -122,7 +113,7 @@ func Execute(v, c, d string) error {
 	rootCmd.AddCommand(newEnvCmd(engine))
 	rootCmd.AddCommand(newRunCmd(engine, engineClients.ContainerTasks, engineClients.Getter, engineClients.HTTP, engineClients.System, vm, engineClients.Connector, l))
 	rootCmd.AddCommand(newTestCmd())
-	rootCmd.AddCommand(newDestroyCmd(engineClients.Connector))
+	rootCmd.AddCommand(newDestroyCmd(engineClients.Connector, l))
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(newPurgeCmd(engineClients.Docker, engineClients.ImageLog, l))
 	rootCmd.AddCommand(taintCmd)
@@ -148,23 +139,34 @@ func Execute(v, c, d string) error {
 	rootCmd.PersistentFlags().Bool("non-interactive", false, "Run in non-interactive mode")
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		ni, _ := cmd.Flags().GetBool("non-interactive")
-		if !ni {
-			cl := &changelog.Changelog{}
+		if ni {
+			return nil
+		}
 
-			// replace """ with ``` in changelog
-			changes = strings.ReplaceAll(changes, `"""`, "```")
+		cl := &changelog.Changelog{}
 
-			err = cl.Show(changes, changesVersion, false)
-			if err != nil {
-				showErr(err)
-				return err
-			}
+		// replace """ with ``` in changelog
+		changes = strings.ReplaceAll(changes, `"""`, "```")
+
+		err := cl.Show(changes, changesVersion, false)
+		if err != nil {
+			showErr(err)
+			return err
+		}
+
+		// Check the system to see if Docker is running and everything is installed
+		s, err := engineClients.System.Preflight()
+		if err != nil {
+			fmt.Println("")
+			fmt.Println("###### SYSTEM DIAGNOSTICS ######")
+			fmt.Println(s)
+			return err
 		}
 
 		return nil
 	}
 
-	err = rootCmd.Execute()
+	err := rootCmd.Execute()
 
 	if err != nil {
 		showErr(err)

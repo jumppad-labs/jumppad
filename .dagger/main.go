@@ -1,33 +1,81 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"strings"
 )
 
 var oses = []string{"linux", "darwin", "windows"}
 var arches = []string{"amd64", "arm64"}
 
-func New() *Jumppad {
-	return &Jumppad{}
+func New() *JumppadCI {
+	return &JumppadCI{}
 }
 
-type Jumppad struct {
-	lastError error
+type JumppadCI struct {
+	lastError         error
+	goCacheVolume     *CacheVolume
+	dockerCacheVolume *CacheVolume
 }
 
-func (d *Jumppad) All(src *Directory) (*Directory, error) {
-	output, _ := d.Build(src)
+func (d *JumppadCI) All(ctx context.Context, src *Directory) (*Directory, error) {
+	src = src.
+		WithoutDirectory(".dagger").
+		WithoutDirectory(".git").
+		WithoutDirectory("output")
+
+	// get the architecture of the current machine
+	platform, err := dag.DefaultPlatform(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get default architecture: %w", err)
+	}
+	arch := strings.Split(string(platform), "/")[1]
+
+	fmt.Println("Build add for arch:", arch)
+
+	// unit test
+	d.UnitTest(ctx, src, true)
+
+	// build for all achitectures and get the build outputs
+	output, _ := d.Build(ctx, src)
 
 	// package the build outputs
-	return d.Package(output)
+	return d.Package(ctx, output, "0.0.0")
 }
 
-func (d *Jumppad) Build(src *Directory) (*Directory, error) {
+func (d *JumppadCI) Quick(ctx context.Context, src *Directory) (*Directory, error) {
+	src = src.
+		WithoutDirectory(".dagger").
+		WithoutDirectory(".git").
+		WithoutDirectory("output")
+
+	// get the architecture of the current machine
+	platform, err := dag.DefaultPlatform(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get default architecture: %w", err)
+	}
+	arch := strings.Split(string(platform), "/")[1]
+
+	fmt.Println("Build add for arch:", arch)
+
+	oses = []string{"linux"}
+	arches = []string{arch}
+
+	// unit test
+	d.UnitTest(ctx, src, false)
+
+	// build for all achitectures and get the build outputs
+	output, _ := d.Build(ctx, src)
+
+	// package the build outputs
+	return d.Package(ctx, output, "0.0.0")
+}
+
+func (d *JumppadCI) Build(ctx context.Context, src *Directory) (*Directory, error) {
 	if d.hasError() {
 		return nil, d.lastError
 	}
-
-	src = src.WithoutDirectory(".dagger")
 
 	fmt.Println("Building...")
 
@@ -35,10 +83,11 @@ func (d *Jumppad) Build(src *Directory) (*Directory, error) {
 	outputs := dag.Directory()
 
 	// get `golang` image
-	golang := dag.Container().From("golang:latest")
-
-	// mount cloned repository into `golang` image
-	golang = golang.WithDirectory("/src", src).WithWorkdir("/src")
+	golang := dag.Container().
+		From("golang:latest").
+		WithDirectory("/src", src).
+		WithWorkdir("/src").
+		WithMountedCache("/go/pkg/mod", d.goCache())
 
 	for _, goos := range oses {
 		for _, goarch := range arches {
@@ -48,11 +97,17 @@ func (d *Jumppad) Build(src *Directory) (*Directory, error) {
 			path := fmt.Sprintf("build/%s/%s/", goos, goarch)
 
 			// set GOARCH and GOOS in the build environment
-			build := golang.
+			build, err := golang.
 				WithEnvVariable("CGO_ENABLED", "0").
 				WithEnvVariable("GOOS", goos).
 				WithEnvVariable("GOARCH", goarch).
-				WithExec([]string{"go", "build", "-o", path})
+				WithExec([]string{"go", "build", "-o", path}).
+				Sync(ctx)
+
+			if err != nil {
+				d.lastError = err
+				return nil, err
+			}
 
 			// get reference to build output directory in container
 			outputs = outputs.WithDirectory(path, build.Directory(path))
@@ -62,7 +117,32 @@ func (d *Jumppad) Build(src *Directory) (*Directory, error) {
 	return outputs, nil
 }
 
-func (d *Jumppad) Package(binaries *Directory) (*Directory, error) {
+func (d *JumppadCI) UnitTest(ctx context.Context, src *Directory, withRace bool) error {
+	if d.hasError() {
+		return d.lastError
+	}
+
+	raceFlag := ""
+	if withRace {
+		raceFlag = "-race"
+	}
+
+	golang := dag.Container().
+		From("golang:latest").
+		WithDirectory("/src", src).
+		WithMountedCache("/go/pkg/mod", d.goCache()).
+		WithWorkdir("/src").
+		WithExec([]string{"go", "test", "-v", raceFlag, "./..."})
+
+	_, err := golang.Sync(ctx)
+	if err != nil {
+		d.lastError = err
+	}
+
+	return err
+}
+
+func (d *JumppadCI) Package(ctx context.Context, binaries *Directory, version string) (*Directory, error) {
 	if d.hasError() {
 		return nil, d.lastError
 	}
@@ -84,6 +164,66 @@ func (d *Jumppad) Package(binaries *Directory) (*Directory, error) {
 	return binaries, nil
 }
 
-func (d *Jumppad) hasError() bool {
+func (d *JumppadCI) WithGoCache(cache *CacheVolume) *JumppadCI {
+	d.goCacheVolume = cache
+	return d
+}
+
+func (d *JumppadCI) goCache() *CacheVolume {
+	if d.goCacheVolume == nil {
+		d.goCacheVolume = dag.CacheVolume("go-cache")
+	}
+
+	return d.goCacheVolume
+}
+
+func (d *JumppadCI) dockerCache() *CacheVolume {
+	if d.dockerCacheVolume == nil {
+		d.dockerCacheVolume = dag.CacheVolume("docker-cache")
+	}
+
+	return d.dockerCacheVolume
+}
+
+func (d *JumppadCI) hasError() bool {
 	return d.lastError != nil
+}
+
+var functionalTests = []string{
+	//	"/examples/build",
+	//	"/examples/certificates",
+	//	"/examples/container",
+	//	"/examples/docs",
+	//	"/examples/exec",
+	"/examples/multiple_k3s_clusters",
+	// "/examples/nomad",
+	// "/examples/single_file",
+	// "/examples/single_k3s_cluster",
+	// "/examples/terraform",
+}
+
+func (d *JumppadCI) FunctionalTestAll(ctx context.Context, jumppad *File, src *Directory, architecture, runtime string) error {
+	if d.hasError() {
+		return d.lastError
+	}
+
+	for _, ft := range functionalTests {
+		testDir := src.Directory(ft)
+
+		_, err := dag.Jumppad().
+			WithCache(d.dockerCache()).
+			TestBlueprintWithBinary(
+				ctx,
+				testDir,
+				jumppad,
+				JumppadTestBlueprintWithBinaryOpts{Architecture: architecture, Runtime: runtime},
+			)
+
+		if err != nil {
+			d.lastError = err
+			return err
+		}
+	}
+
+	return nil
 }

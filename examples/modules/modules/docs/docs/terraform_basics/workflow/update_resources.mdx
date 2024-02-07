@@ -1,0 +1,24 @@
+# Update resources
+
+Infrastructure is continuously evolving, and Terraform helps you manage that change. 
+As you change Terraform configurations, Terraform builds an execution plan that only modifies what is necessary to reach your desired state.
+
+When doing a `terraform plan`, Terraform will tell you the changes it plans to make.
+The prefix -/+ means that Terraform will destroy and recreate the resource, rather than updating it in-place. 
+Terraform can update some attributes in-place (indicated with the ~ prefix), but changing others requires recreating resources. 
+Terraform handles these details for you, and the execution plan displays what Terraform will do.
+
+Additionally, the execution plan shows which changes force Terraform to replace a resource. 
+Using this information, you can adjust your changes to to avoid destructive updates if necessary.
+
+After changing the configuration, you can run terraform apply again to see how Terraform will apply this change to the existing resources.
+
+<Task>
+  <Instructions>
+    Change the version of the `alpine` image from `3.16` to `3.17` and apply the changes.
+  </Instructions>
+  <Conditions>
+    <Condition description="Change the version of the alpine image" />
+    <Condition description="Apply the changes to the configuration" />
+  </Conditions>
+</Task>

@@ -1,7 +1,8 @@
 {
-  "name": "jumppad",
+  "name": "jumppad-ci",
   "sdk": "go",
   "dependencies": [
+    "github.com/jumppad-labs/daggerverse/jumppad@dfb10f17e1821f7ded833206dc752fdabefe9aad",
     "github.com/nicholasjackson/daggerverse/deb@b2243239e1418ebb14cae682708cc7d7f507e3f7"
   ]
 }
