@@ -272,12 +272,15 @@ func (p *TerraformProvider) terraformApply(containerid string) error {
 	}
 
 	script := `#!/bin/sh
-	terraform init
+	terraform init \
+		-no-color
 	terraform apply \
+	  -no-color \
 		-state=/var/lib/terraform/terraform.tfstate \
 		-var-file=/var/lib/terraform/terraform.tfvars \
 		-auto-approve
 	terraform output \
+		-no-color \
 		-state=/var/lib/terraform/terraform.tfstate \
 		-json > /var/lib/terraform/output.json`
 
@@ -372,8 +375,10 @@ func (p *TerraformProvider) terraformDestroy(containerid string) error {
 	wd := path.Join("/config", p.config.WorkingDirectory)
 
 	script := `#!/bin/sh
-	terraform init
+	terraform init \
+		-no-color
 	terraform destroy \
+		-no-color \
 		-state=/var/lib/terraform/terraform.tfstate \
 		-var-file=/var/lib/terraform/terraform.tfvars \
 		-auto-approve
