@@ -48,6 +48,8 @@ func (d *JumppadCI) All(
 
 	// get the version
 	version := "0.0.0"
+	sha := ""
+
 	var err error
 	var output *Directory
 
@@ -58,10 +60,10 @@ func (d *JumppadCI) All(
 
 	// if we have a github token, get the version from the associated PR label
 	if githubToken != nil {
-		version, err = d.GetVersion(ctx, githubToken, src)
+		version, sha, err = d.GetVersion(ctx, githubToken, src)
 	}
 
-	log.Info("Building version", "semver", version)
+	log.Info("Building version", "semver", version, "sha", sha)
 
 	// run the unit tests
 	d.UnitTest(ctx, src, !quick)
@@ -82,9 +84,9 @@ func (d *JumppadCI) All(
 	return output, err
 }
 
-func (d *JumppadCI) GetVersion(ctx context.Context, token *Secret, src *Directory) (string, error) {
+func (d *JumppadCI) GetVersion(ctx context.Context, token *Secret, src *Directory) (string, string, error) {
 	if d.hasError() {
-		return "", d.lastError
+		return "", "", d.lastError
 	}
 
 	cli := dag.Pipeline("get-version")
@@ -99,23 +101,21 @@ func (d *JumppadCI) GetVersion(ctx context.Context, token *Secret, src *Director
 
 	if err != nil {
 		d.lastError = err
-		return "", err
+		return "", "", err
 	}
 
 	// make sure there is no whitespace from the output
 	ref = strings.TrimSpace(ref)
 	log.Info("github reference", "sha", ref)
 
-	tkn, _ := token.Plaintext(ctx)
-
 	// get the next version from the associated PR label
 	v, err := cli.Github().
-		WithToken(tkn).
+		WithToken(token).
 		NextVersionFromAssociatedPrlabel(ctx, owner, repo, ref)
 
 	if err != nil {
 		d.lastError = err
-		return "", err
+		return "", "", err
 	}
 
 	// if there is no version, default to 0.0.0
@@ -125,7 +125,7 @@ func (d *JumppadCI) GetVersion(ctx context.Context, token *Secret, src *Director
 
 	log.Info("new version", "semver", v)
 
-	return v, nil
+	return v, ref, nil
 }
 
 func (d *JumppadCI) Build(ctx context.Context, src *Directory) (*Directory, error) {
@@ -323,6 +323,31 @@ func (d JumppadCI) SignAndNotorize(ctx context.Context, version string, archives
 	}
 
 	return out, nil
+}
+
+func (d *JumppadCI) Release(ctx context.Context, src *Directory, archives *Directory, githubToken *Secret) (string, error) {
+	if d.hasError() {
+		return "", d.lastError
+	}
+
+	version, sha, err := d.GetVersion(ctx, githubToken, src)
+	if err != nil {
+		d.lastError = err
+		return "", err
+	}
+
+	cli := dag.Pipeline("release")
+
+	_, err = cli.Github().
+		WithToken(githubToken).
+		CreateRelease(ctx, owner, repo, version, sha, GithubCreateReleaseOpts{Files: archives})
+
+	if err != nil {
+		d.lastError = err
+		return "", err
+	}
+
+	return version, err
 }
 
 func (d *JumppadCI) WithGoCache(cache *CacheVolume) *JumppadCI {
