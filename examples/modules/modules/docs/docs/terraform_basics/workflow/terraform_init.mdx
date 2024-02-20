@@ -1,0 +1,29 @@
+# Terraform init
+
+The `terraform init` command initializes a working directory containing Terraform configuration files. This is the first command that should be run after writing a new Terraform configuration or cloning an existing one from version control. It is safe to run this command multiple times.
+
+By default, `terraform init` assumes that the working directory already contains a configuration and will attempt to initialize that configuration.
+
+During init there are several things that happen:
+
+- The root configuration directory is consulted for backend configuration and the chosen backend is initialized using the given configuration settings.
+- The configuration is searched for module blocks, and the source code for referenced modules is retrieved from the locations given in their source arguments.
+- Terraform searches the configuration for both direct and indirect references to providers and attempts to install the plugins for those providers. For providers that are published in either the public Terraform Registry or in a third-party provider registry, terraform init will automatically find, download, and install the necessary provider plugins.
+
+<Task>
+  <Instructions>
+    Initialize the working directory `$HOME/terraform_basics` containing the Terraform configuration files using the `terraform init` command.
+  </Instructions>
+  <Conditions>
+    <Condition 
+      id="init_command"
+      target="vscode" 
+      description="The terraform_basics working directory is initialized" 
+    />
+    <Condition 
+      id="docker_provider"
+      target="vscode" 
+      description="The Docker provider is initialized" 
+    />
+  </Conditions>
+</Task>

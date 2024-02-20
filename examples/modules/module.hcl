@@ -1,9 +1,9 @@
 module "consul" {
-  source = "../container"
+  source = "./modules/container"
 }
 
 module "sub_module" {
-  source = "./sub_module"
+  source = "./modules/sub_module"
 
   variables = {
     version = "1.15.4"
@@ -12,16 +12,16 @@ module "sub_module" {
 
 module "k8s" {
   depends_on = ["resource.module.consul"]
-  source     = "../single_k3s_cluster"
+  source     = "./modules/single_k3s_cluster"
 }
 
 module "docs" {
-  source = "../docs"
+  source = "./modules/docs"
 }
 
 module "k8s_exec" {
   disabled   = true
   depends_on = ["module.k8s"]
 
-  source = "../exec"
+  source = "./modules/exec"
 }

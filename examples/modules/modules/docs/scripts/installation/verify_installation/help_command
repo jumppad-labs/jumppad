@@ -1,0 +1,5 @@
+#!/bin/bash -e
+
+# Is the 'terraform -help' command used?
+validate history contains --match-line "terraform -help" \
+  || validate fail "'terraform help' command was not used to explore the possibilities of the CLI"

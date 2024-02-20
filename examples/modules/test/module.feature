@@ -9,14 +9,12 @@ Feature: Modules
       | ENVOY_VERSION  | 1.14.3                |
     And I have a running blueprint
     Then the following resources should be running
-      | name                      | type              |
-      | cloud                     | network           |
-      | onprem                    | network           |
-      | consul                    | container         |
-      | envoy                     | sidecar           |
-      | consul-container-http     | container_ingress |
-      | consul-container-http-2   | container_ingress |
-      | server.k3s                | k8s_cluster       |
-      | docs                      | docs              |
+      | name                                    |
+      | resource.network.cloud                  |
+      | resource.network.onprem                 |
+      | resource.container.consul               |
+      | resource.sidecar.envoy                  |
+      | resource.k8s_cluster.k3s                |
+      | resource.docs.docs                      |
     And a HTTP call to "http://consul.container.shipyard.run:8500/v1/agent/members" should result in status 200
     And a HTTP call to "http://consul-http.ingress.shipyard.run:18500/v1/agent/members" should result in status 200

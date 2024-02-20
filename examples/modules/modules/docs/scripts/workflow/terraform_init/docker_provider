@@ -1,0 +1,5 @@
+#!/bin/bash -e
+
+# Is the docker provider initialized?
+validate file contains $HOME/terraform_basics/.terraform.lock.hcl 'provider "registry.terraform.io/kreuzwerker/docker" {' \
+  || validate fail "the docker provider was not correctly initialized"

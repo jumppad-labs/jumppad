@@ -1,0 +1,5 @@
+#!/bin/bash -e
+
+# Is the terraform binary present?
+validate command exists terraform \
+  || validate fail "terraform binary not found on the PATH"

@@ -4,7 +4,7 @@ variable "version" {
 
 
 module "consul" {
-  source = "../../single_file"
+  source = "../single_file"
 
   variables = {
     version    = "consul:${variable.version}"

@@ -114,6 +114,7 @@ func (c *ConnectorImpl) Start(cb *types.CertBundle) error {
 	}
 
 	args := []string{
+		"--non-interactive",
 		"connector",
 		"run",
 		"--grpc-bind", c.options.GrpcBind,

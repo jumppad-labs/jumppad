@@ -5,18 +5,18 @@ import (
 
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/connector"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
-func newDestroyCmd(cc connector.Connector) *cobra.Command {
+func newDestroyCmd(cc connector.Connector, l logger.Logger) *cobra.Command {
 	return &cobra.Command{
 		Use:     "down",
 		Short:   "Remove all resources in the current state",
 		Long:    "Remove all resources in the current state",
 		Example: `jumppad down`,
 		Run: func(cmd *cobra.Command, args []string) {
-			l := createLogger()
 			engineClients, _ := clients.GenerateClients(l)
 			engine, _, err := createEngine(l, engineClients)
 			if err != nil {

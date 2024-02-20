@@ -1,0 +1,11 @@
+server:
+  dataStorage:
+    size: "128Mb"
+  dev:
+    enabled: true
+
+  standalone:
+    enabled: true
+
+  authDelegator:
+    enabled: true
