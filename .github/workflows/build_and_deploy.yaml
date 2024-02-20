@@ -210,8 +210,12 @@ jobs:
           cloud-token: ${{ secrets.DAGGER_TOKEN }}
     
       - name: Set output
+        id: setoutput
         run: |
           echo "version=$(cat ./version.txt)" >> $GITHUB_OUTPUT
+
+    outputs:
+      version: ${{ steps.setoutput.outputs.version }}
 
   brew:
     name: Release to HomeBrew
