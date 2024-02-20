@@ -66,13 +66,13 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: archives
-          path: /build_artifacts
+          path: ./build_artifacts
       
       - name: Install binary executable
         run: |
-          cp $(find ../build_archive -name "jumppad_*_linux_x86_64.tar.gz" -type f) /build_artifacts/jumppad.tar.gz
-          tar -xzf /build_artifacts/jumppad.tar.gz /usr/local/bin/jumppad
-          chmod +x /usr/local/bin/jumppad
+          cp $(find ./build_archive -name "jumppad_*_linux_x86_64.tar.gz" -type f) ./build_artifacts/jumppad.tar.gz
+          sudo tar -xzf ./build_artifacts/jumppad.tar.gz /usr/local/bin/jumppad
+          sudo chmod +x /usr/local/bin/jumppad
 
       - uses: actions/checkout@v2
       
@@ -118,9 +118,9 @@ jobs:
       
       - name: Install binary executable
         run: |
-          cp $(find ../build_archive -name "jumppad_*_linux_x86_64.tar.gz" -type f) /build_artifacts/jumppad.tar.gz
-          tar -xzf /build_artifacts/jumppad.tar.gz /usr/local/bin/jumppad
-          chmod +x /usr/local/bin/jumppad
+          cp $(find ./build_archive -name "jumppad_*_linux_x86_64.tar.gz" -type f) ./build_artifacts/jumppad.tar.gz
+          sudo tar -xzf ./build_artifacts/jumppad.tar.gz /usr/local/bin/jumppad
+          sudo chmod +x /usr/local/bin/jumppad
 
       - uses: actions/checkout@v2
       
