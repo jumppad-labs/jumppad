@@ -5,6 +5,7 @@ import (
 	"path"
 	"plugin"
 
+	"github.com/charmbracelet/log"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/blueprint"
@@ -78,7 +79,8 @@ func init() {
 
 		p, err := plugin.Open(path.Join(utils.PluginsDir(), dir.Name()))
 		if err != nil {
-			panic(err)
+			log.Debug("error opening plugin", "error", err, "plugin", dir.Name())
+			continue
 		}
 
 		plug, err := p.Lookup("Register")

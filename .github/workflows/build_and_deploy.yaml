@@ -5,6 +5,8 @@ jobs:
   dagger_build:
     name: Dagger Build and Test
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v2
@@ -178,7 +180,8 @@ jobs:
   
   github_release:
     name: Create GitHub Release
-    if: contains(github.ref, 'refs/main')
+    if: ${{ github.ref == 'refs/heads/main' }}
+
     needs: 
       - functional_test_docker
       - functional_test_podman
@@ -186,6 +189,10 @@ jobs:
       name: release
     runs-on: ubuntu-latest
     steps:
+      - name: Set keys
+        run: |
+          echo "GITHUB_TOKEN=${{secrets.GH_TOKEN}}" >> $GITHUB_ENV
+      
       - uses: actions/checkout@v2
 
       - name: Download-Binaries
