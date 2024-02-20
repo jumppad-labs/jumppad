@@ -182,6 +182,10 @@ jobs:
     environment:
       name: release
     runs-on: ubuntu-latest
+    steps:
+      - name: Create Release
+        run: |
+          echo "Test"
 
   brew:
     name: Release to HomeBrew
