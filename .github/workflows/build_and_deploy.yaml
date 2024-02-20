@@ -183,7 +183,8 @@ jobs:
     if: ${{ github.ref == 'refs/heads/main' }}
 
     needs: 
-      - dagger_build
+      - functional_test_docker
+      - functional_test_podman
     environment:
       name: release
     runs-on: ubuntu-latest
@@ -315,7 +316,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: ["amd64.deb", "arm64.deb"]
+        arch: ["x86_64.deb", "arm64.deb"]
 
     steps:
     - name: Download release
