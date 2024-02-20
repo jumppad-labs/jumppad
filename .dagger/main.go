@@ -336,6 +336,11 @@ func (d *JumppadCI) Release(ctx context.Context, src *Directory, archives *Direc
 		return "", err
 	}
 
+	if version == "0.0.0" {
+		d.lastError = fmt.Errorf("no version to release, did you tag the PR?")
+		return "", d.lastError
+	}
+
 	cli := dag.Pipeline("release")
 
 	_, err = cli.Github().
