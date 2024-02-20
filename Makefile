@@ -38,37 +38,21 @@ test_e2e_cmd: install_local
 	jumppad up --no-browser ./examples/single_k3s_cluster
 	jumppad down
 
-test_docker:
-	docker build -t shipyard-run/tests -f Dockerfile.test .
-	docker run --rm shipyard-run/tests bash -c 'go test -v -race ./...'
+dagger_build:
+	dagger call -m "./.dagger" all \
+		--output=./all_archive \
+		--src=. \
+		--notorize-cert=${QUILL_SIGN_P12} \
+		--notorize-cert-password=QUILL_SIGN_PASSWORD \
+		--notorize-key=${QUILL_NOTARY_KEY} \
+		--notorize-id=${QUILL_NOTARY_KEY_ID} \
+		--notorize-issuer=${QUILL_NOTARY_ISSUER}
 
-test: test_unit test_functional
-
-build: build-darwin build-linux build-windows
-
-build-darwin:
-	CGO_ENABLED=0 GOOS=darwin go build -ldflags "-X main.version=${git_commit}" -o bin/jumppad-darwin main.go
-
-build-linux:
-	CGO_ENABLED=0 GOOS=linux go build -ldflags "-X main.version=${git_commit}" -o bin/jumppad-linux main.go
-
-build-linux-small:
-	CGO_ENABLED=0 GOOS=linux go build -ldflags "-X main.version=${git_commit} -s -w" -o bin/jumppad-linux-small main.go
-
-build-windows:
-	CGO_ENABLED=0 GOOS=windows go build -ldflags "-X main.version=${git_commit}" -o bin/jumppad-windows.exe main.go
-
-install_local:
-	go build -ldflags "-X main.version=${git_commit}" -o bin/jumppad main.go
-	sudo mv /usr/local/bin/jumppad /usr/local/bin/jumppad-old || true
-	sudo cp bin/jumppad /usr/local/bin/jumppad
-
-remove_local:
-	sudo rm /usr/local/bin/jumppad
-	sudo mv /usr/local/bin/jumppad-old /usr/local/bin/jumppad
-
-test_releaser:
-	goreleaser release --rm-dist --snapshot
+dagger_release:
+	dagger call -m "./.dagger" release \
+		--github-token=GITHUB_TOKEN \
+		--archives=./all_archive \
+		--src=.  
 
 generate_mocks:
 	go install github.com/vektra/mockery/v2@v2.20.0
