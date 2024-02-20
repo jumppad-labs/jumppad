@@ -11,16 +11,16 @@ jobs:
 
       - name: Set keys
         run: |
-          echo ${secrets.QUILL_SIGN_P12} | base64 -d  > ./cert.p12
-          echo ${secrets.QUILL_NOTORY_KEY} > ./key.p8
-          echo "QUILL_SIGN_PASSWORD=${secrets.QUILL_SIGN_PASSWORD}" >> $GITHUB_ENV
+          echo ${{secrets.QUILL_SIGN_P12}} | base64 -d  > ./cert.p12
+          echo ${{secrets.QUILL_NOTORY_KEY}} > ./key.p8
+          echo "QUILL_SIGN_PASSWORD=${{secrets.QUILL_SIGN_PASSWORD}}" >> $GITHUB_ENV
       
       - name: All
         uses: dagger/dagger-for-github@v5
         with:
           verb: call
           module: ./.dagger
-          args: all --output=./output --src=. --notorize-cert=./cert.p12 --notorize-cert-password=QUILL_SIGN_PASSWORD --notorize-key=./key.p8 --notorize-id=${secrets.QUILL_NOTARY_KEY_ID} --notorize-issuer=${secrets.QUILL_NOTARY_ISSUER}
+          args: all --output=./output --src=. --notorize-cert=./cert.p12 --notorize-cert-password=QUILL_SIGN_PASSWORD --notorize-key=./key.p8 --notorize-id=${{secrets.QUILL_NOTARY_KEY_ID}} --notorize-issuer=${{secrets.QUILL_NOTARY_ISSUER}}
           version: "0.9.9"
           cloud-token: ${{ secrets.DAGGER_TOKEN }}
       
