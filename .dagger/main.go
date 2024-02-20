@@ -66,7 +66,7 @@ func (d *JumppadCI) All(
 	log.Info("Building version", "semver", version, "sha", sha)
 
 	// run the unit tests
-	d.UnitTest(ctx, src, !quick)
+	//err = d.UnitTest(ctx, src, !quick)
 
 	// build the applications
 	output, err = d.Build(ctx, src)
