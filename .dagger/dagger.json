@@ -3,12 +3,12 @@
   "sdk": "go",
   "dependencies": [
     {
-      "name": "github",
-      "source": "github.com/jumppad-labs/daggerverse/github@5d688f9d8be0ef7042fe2ab33581622c23ae403d"
-    },
-    {
       "name": "deb",
       "source": "github.com/jumppad-labs/daggerverse/deb@1151c479411222d6540dc068ec10bb8231ac8158"
+    },
+    {
+      "name": "github",
+      "source": "github.com/jumppad-labs/daggerverse/github@5d688f9d8be0ef7042fe2ab33581622c23ae403d"
     },
     {
       "name": "jumppad",

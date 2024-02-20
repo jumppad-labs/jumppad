@@ -60,7 +60,7 @@ func (d *JumppadCI) All(
 
 	// if we have a github token, get the version from the associated PR label
 	if githubToken != nil {
-		version, sha, err = d.GetVersion(ctx, githubToken, src)
+		version, sha, err = d.getVersion(ctx, githubToken, src)
 	}
 
 	log.Info("Building version", "semver", version, "sha", sha)
@@ -84,7 +84,7 @@ func (d *JumppadCI) All(
 	return output, err
 }
 
-func (d *JumppadCI) GetVersion(ctx context.Context, token *Secret, src *Directory) (string, string, error) {
+func (d *JumppadCI) getVersion(ctx context.Context, token *Secret, src *Directory) (string, string, error) {
 	if d.hasError() {
 		return "", "", d.lastError
 	}
@@ -330,7 +330,7 @@ func (d *JumppadCI) Release(ctx context.Context, src *Directory, archives *Direc
 		return "", d.lastError
 	}
 
-	version, sha, err := d.GetVersion(ctx, githubToken, src)
+	version, sha, err := d.getVersion(ctx, githubToken, src)
 	if err != nil {
 		d.lastError = err
 		return "", err
