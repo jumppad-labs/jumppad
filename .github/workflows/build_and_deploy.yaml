@@ -1,110 +1,35 @@
 ---
-
 name: Build And Deploy
 on: [push]
 jobs:
-  e2e_linux:
-    name: Linux E2E Tests
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Setup Go version
-        uses: actions/setup-go@v4
-        with:
-          go-version: 1.21
-
-      - name: E2E test for build binary
-        run: make test_e2e_cmd
-
-      - name: Send status to Discord
-        uses: sarisia/actions-status-discord@v1
-        if: always()
-        with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          tile: ${{ github.job_id }}
-          description: "End to end tests for Linux"
-
   dagger_build:
     name: Dagger Build and Test
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
+
+      - name: Set keys
+        run: |
+          echo ${secrets.QUILL_SIGN_P12} | base64 -d  > ./cert.p12
+          echo ${secrets.QUILL_NOTORY_KEY} > ./key.p8
+          echo "QUILL_SIGN_PASSWORD=${secrets.QUILL_SIGN_PASSWORD}" >> $GITHUB_ENV
       
-      - name: Test
+      - name: All
         uses: dagger/dagger-for-github@v5
         with:
           verb: call
           module: ./.dagger
-          args: unit-test --src=. --with-race=true
-          version: "0.9.5"
-
-      - name: Build
-        uses: dagger/dagger-for-github@v5
-        with:
-          verb: download
-          module: ./.dagger
-          args: build --src . --output ./dagger-output
-          version: "0.9.5"
+          args: all --output=./output --src=. --notorize-cert=./cert.p12 --notorize-cert-password=QUILL_SIGN_PASSWORD --notorize-key=./key.p8 --notorize-id=${secrets.QUILL_NOTARY_KEY_ID} --notorize-issuer=${secrets.QUILL_NOTARY_ISSUER}
+          version: "0.9.9"
+          cloud-token: ${{ secrets.DAGGER_TOKEN }}
       
-      - name: Package
-        uses: dagger/dagger-for-github@v5
-        with:
-          verb: download
-          module: ./.dagger
-          args: package --binaries ./dagger-output --output ./dagger-output
-          version: "0.9.5"
-      
-      - name: Upload artifact Jumppad Darwin Arm64
+      - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: jumpad_darwin_arm64
+          name: archives
           path: |
-            ./dagger-output/build/darwin/arm64/jumppad
-      
-      - name: Upload artifact Jumppad Darwin Amd64
-        uses: actions/upload-artifact@v2
-        with:
-          name: jumpad_darwin_amd64
-          path: |
-            ./dagger-output/build/darwin/amd64/jumppad
-      
-      - name: Upload artifact Jumppad Linux Arm64
-        uses: actions/upload-artifact@v2
-        with:
-          name: jumpad_linux_arm64
-          path: |
-            ./dagger-output/build/linux/arm64/jumppad
-
-      - name: Upload artifact Jumppad Linux Amd64
-        uses: actions/upload-artifact@v2
-        with:
-          name: jumpad_linux_amd64
-          path: |
-            ./dagger-output/build/linux/amd64/jumppad
-      
-      - name: Upload artifact Jumppad Windows Amd64
-        uses: actions/upload-artifact@v2
-        with:
-          name: jumpad_windows_amd64
-          path: |
-            ./dagger-output/build/windows/amd64/jumppad.exe
-      
-      - name: Upload artifact debian package Linux Arm64
-        uses: actions/upload-artifact@v2
-        with:
-          name: jumpad_debian_arm64
-          path: |
-            ./dagger-output/pkg/linux/arm64/jumppad.deb
-      
-      - name: Upload artifact debian package Linux Amd64
-        uses: actions/upload-artifact@v2
-        with:
-          name: jumpad_debian_amd64
-          path: |
-            ./dagger-output/pkg/linux/amd64/jumppad.deb
+            ./output
     
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
@@ -140,13 +65,14 @@ jobs:
       - name: Download-Binaries
         uses: actions/download-artifact@v2
         with:
-          name: jumpad_linux_amd64
+          name: archives
           path: /build_artifacts
       
       - name: Install binary executable
         run: |
-          sudo cp /build_artifacts/jumppad /usr/local/bin/jumppad
-          sudo chmod +x /usr/local/bin/jumppad
+          cp $(find ../build_archive -name "jumppad_*_linux_x86_64.tar.gz" -type f) /build_artifacts/jumppad.tar.gz
+          tar -xzf /build_artifacts/jumppad.tar.gz /usr/local/bin/jumppad
+          chmod +x /usr/local/bin/jumppad
 
       - uses: actions/checkout@v2
       
@@ -187,13 +113,14 @@ jobs:
       - name: Download-Binaries
         uses: actions/download-artifact@v2
         with:
-          name: jumpad_linux_amd64
+          name: archives
           path: /build_artifacts
       
       - name: Install binary executable
         run: |
-          sudo cp /build_artifacts/jumppad /usr/local/bin/jumppad
-          sudo chmod +x /usr/local/bin/jumppad
+          cp $(find ../build_archive -name "jumppad_*_linux_x86_64.tar.gz" -type f) /build_artifacts/jumppad.tar.gz
+          tar -xzf /build_artifacts/jumppad.tar.gz /usr/local/bin/jumppad
+          chmod +x /usr/local/bin/jumppad
 
       - uses: actions/checkout@v2
       
@@ -245,239 +172,16 @@ jobs:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           tile: ${{ github.job_id }}
           description: "Functional tests for ${{matrix.folder}}"
-
-  notorize_mac:
-    name: Notrize binaries for Mac
-    needs: 
-      - functional_test_docker
-      - functional_test_podman
-    runs-on: macos-latest
-    steps:
-
-    - name: Checkout
-      uses: actions/checkout@v2
-
-    - name: Download-Binaries x64
-      uses: actions/download-artifact@v2
-      with:
-        name: jumppad_darwin_amd64
-        path: dist/jumppad_darwin_amd64
-    
-    - name: Download-Binaries Arm64
-      uses: actions/download-artifact@v2
-      with:
-        name: jumppad_darwin_amd64
-        path: dist/jumppad_darwin_arm64
-    
-    - name: Import Code-Signing Certificates
-      uses: Apple-Actions/import-codesign-certs@v1
-      with:
-        # The certificates in a PKCS12 file encoded as a base64 string
-        p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
-        # The password used to import the PKCS12 file.
-        p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
-    
-    - name: List identities
-      run: |
-        security find-identity
-
-    - name: Install gon via HomeBrew for code signing and app notarization
-      run: |
-        brew tap mitchellh/gon
-        brew install mitchellh/gon/gon
-
-    - name: Sign the Arm64 Mac binaries with Gon
-      env:
-        AC_USERNAME: ${{ secrets.AC_USERNAME }}
-        AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
-      run: |
-        gon -log-level=debug -log-json ./.gon_arm64.json
-    
-    - name: Sign the Arm64 Mac binaries with Gon
-      env:
-        AC_USERNAME: ${{ secrets.AC_USERNAME }}
-        AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
-      run: |
-        gon -log-level=debug -log-json ./.gon_amd64.json
-      
-    - name: Upload artifacts arm64 dmg
-      uses: actions/upload-artifact@v2
-      with:
-        name: jumppad_osx_notorized_arm64_dmg
-        path: |
-          dist/jumppad_arm64.dmg
-    
-    - name: Upload artifacts amd64 dmg
-      uses: actions/upload-artifact@v2
-      with:
-        name: jumppad_osx_notorized_amd64_dmg
-        path: |
-          dist/jumppad_amd64.dmg
-    
-    - name: Upload artifacts amd64 zip
-      uses: actions/upload-artifact@v2
-      with:
-        name: jumppad_osx_notorized_amd64_zip
-        path: |
-          dist/jumppad_amd64.zip
-    
-    - name: Upload artifacts arm64 zip
-      uses: actions/upload-artifact@v2
-      with:
-        name: jumppad_osx_notorized_arm64_zip
-        path: |
-          dist/jumppad_arm64.zip
-
-    - name: Send status to Discord
-      uses: sarisia/actions-status-discord@v1
-      if: always()
-      with:
-        webhook: ${{ secrets.DISCORD_WEBHOOK }}
-        tile: ${{ github.job_id }}
-        description: "Notorize Mac applications"
-
-  tag:
-    name: Tag latest release
-    runs-on: ubuntu-latest
-    permissions:
-       contents: write
-    needs:
-      - functional_test_docker
-      - functional_test_podman
-      - e2e_linux
-    if: ${{ github.ref == 'refs/heads/main' }}
-
-    steps:
-      - name: Bump version and push tag
-        id: tag
-        uses: mathieudutour/github-tag-action@v5.2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Send status to Discord
-        uses: sarisia/actions-status-discord@v1
-        if: always()
-        with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          description: "Automatically tagged main branch with new tag: ${{ steps.tag_version.outputs.new_tag }}"
-    
-      - name: Remove v in Tag
-        id: version
-        uses: ashley-taylor/regex-property-action@v1.0
-        with:
-          value: ${{ steps.tag.outputs.new_tag }}
-          regex: "v"
-          replacement: ""
-
-    outputs:
-      new_tag: ${{ steps.tag.outputs.new_tag }}
-      new_version: ${{ steps.version.outputs.value }}
   
   github_release:
     name: Create GitHub Release
+    if: contains(github.ref, 'refs/main')
     needs: 
-      - tag
+      - functional_test_docker
+      - functional_test_podman
     environment:
       name: release
     runs-on: ubuntu-latest
-    steps:
-
-    - name: Download-Binaries Darwin x64
-      uses: actions/download-artifact@v2
-      with:
-        name: jumppad_darwin_amd64
-        path: dist/jumppad_osx_notorized_amd64_zip
-    
-    - name: Download-Binaries Darwin Arm64
-      uses: actions/download-artifact@v2
-      with:
-        name: jumppad_darwin_amd64
-        path: dist/jumppad_osx_notorized_arm64_zip
-    
-    - name: Download-Binaries Linux x64
-      uses: actions/download-artifact@v2
-      with:
-        name: jumppad_linux_amd64
-        path: dist/jumppad_linux_amd64
-    
-    - name: Download-Binaries Linux Arm64
-      uses: actions/download-artifact@v2
-      with:
-        name: jumppad_linux_arm64
-        path: dist/jumppad_linux_arm64
-    
-    - name: Download-Debian Linux x64
-      uses: actions/download-artifact@v2
-      with:
-        name: jumppad_debian_amd64
-        path: dist/jumppad_debian_amd64
-    
-    - name: Download-Debian Linux Arm64
-      uses: actions/download-artifact@v2
-      with:
-        name: jumppad_debian_amd64
-        path: dist/jumppad_debian_arm64
-    
-    - name: Download-Binaries Windows x64
-      uses: actions/download-artifact@v2
-      with:
-        name: jumppad_windows_amd64
-        path: dist/jumppad_windows_amd64
-
-    
-    - name: Zip and move binaries
-      run: |
-        mkdir ./releases
-
-        cd dist/jumppad_osx_notorized_amd64_zip
-        cp jumppad_amd64.zip ../../releases/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
-        cd ../../
-        
-        cd dist/jumppad_osx_notorized_arm64_zip
-        cp jumppad_arm64.zip ../../releases/jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
-        cd ../../
-        
-        cd dist/jumppad_linux_amd64
-        tar -czf ../../releases/jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.tar.gz .
-        cd ../../
-        
-        cd dist/jumppad_linux_arm64
-        tar -czf ../../releases/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz .
-        cd ../../
-        
-        cd dist/jumppad_windows_amd64
-        zip jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip jumppad.exe
-        cp jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip ../../releases
-        cd ../../
-        
-        cp dist/jumppad_debian_amd64/jumppad.deb releases/jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.deb
-        cp dist/jumppad_debian_arm64/jumppad.deb releases/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.deb
-
-    - name: Generate SHA256 checksums
-      run: |
-        cd releases
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz > checksums.txt
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz >> checksums.txt
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.deb >> checksums.txt
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.deb >> checksums.txt
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip >> checksums.txt
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip >> checksums.txt
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip >> checksums.txt
-
-    - name: Release
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ needs.tag.outputs.new_tag }}
-        token: ${{ secrets.GH_TOKEN }}
-        files: |
-          releases/checksums.txt
-          releases/jumppad_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz
-          releases/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz
-          releases/jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.deb
-          releases/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.deb
-          releases/jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip
-          releases/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
-          releases/jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
 
   brew:
     name: Release to HomeBrew
@@ -497,50 +201,6 @@ jobs:
         git config user.email "hello@jumppad.dev"
         git config user.name "Jumppad Bot"
         git pull origin main
-
-    - name: Download-Binaries Darwin x64
-      uses: actions/download-artifact@v2
-      with:
-        name: jumppad_darwin_amd64
-        path: dist/jumppad_osx_notorized_amd64_zip
-    
-    - name: Download-Binaries Darwin Arm64
-      uses: actions/download-artifact@v2
-      with:
-        name: jumppad_darwin_amd64
-        path: dist/jumppad_osx_notorized_arm64_zip
-    
-    - name: Download-Binaries Linux x64
-      uses: actions/download-artifact@v2
-      with:
-        name: jumppad_linux_amd64
-        path: dist/jumppad_linux_amd64
-    
-    - name: Download-Binaries Linux Arm64
-      uses: actions/download-artifact@v2
-      with:
-        name: jumppad_linux_arm64
-        path: dist/jumppad_linux_arm64
-    
-    - name: Zip and move binaries
-      run: |
-        mkdir ./releases
-
-        cd dist/jumppad_osx_notorized_amd64_zip
-        cp jumppad_amd64.zip ../../releases/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
-        cd ../../
-        
-        cd dist/jumppad_osx_notorized_arm64_zip
-        cp jumppad_arm64.zip ../../releases/jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
-        cd ../../
-        
-        cd dist/jumppad_linux_amd64
-        tar -czf ../../releases/jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.tar.gz .
-        cd ../../
-        
-        cd dist/jumppad_linux_arm64
-        tar -czf ../../releases/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz .
-        cd ../../
     
     - name: Generate HomeBrew config
       run: |
@@ -644,7 +304,6 @@ jobs:
     name: Update Jumpad website with latest version
     needs:
       - github_release
-      - tag
     runs-on: ubuntu-latest
 
     steps:

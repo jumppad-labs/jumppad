@@ -4,6 +4,7 @@ import (
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
 	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 // TypeDocs is the resource string for a Docs resource
@@ -47,6 +48,10 @@ func (d *Docs) Process() error {
 	// if port not set set port to 80
 	if d.Port == 0 {
 		d.Port = 80
+	}
+
+	if d.Assets != "" {
+		d.Assets = utils.EnsureAbsolute(d.Assets, d.ResourceFile)
 	}
 
 	// do we have an existing resource in the state?
