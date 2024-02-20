@@ -254,19 +254,19 @@ jobs:
           version "${VERSION}"
 
           if OS.mac? && Hardware::CPU.intel?
-            url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/jumppad_${VERSION}_darwin_x86_64.zip"
+            url "https://github.com/jumppad-labs/jumppad/releases/download/${VERSION}/jumppad_${VERSION}_darwin_x86_64.zip"
             sha256 "${DARWIN_x86_SHA}"
           end
           if OS.mac? && Hardware::CPU.arm?
-            url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/jumppad_${VERSION}_darwin_arm64.zip"
+            url "https://github.com/jumppad-labs/jumppad/releases/download/${VERSION}/jumppad_${VERSION}_darwin_arm64.zip"
             sha256 "${DARWIN_ARM64_SHA}"
           end
           if OS.linux? && Hardware::CPU.intel?
-            url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/jumppad_${VERSION}_linux_x86_64.tar.gz"
+            url "https://github.com/jumppad-labs/jumppad/releases/download/${VERSION}/jumppad_${VERSION}_linux_x86_64.tar.gz"
             sha256 "${LINUX_x86_SHA}"
           end
           if OS.linux? && Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-            url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/jumppad_${VERSION}_linux_arm64.tar.gz"
+            url "https://github.com/jumppad-labs/jumppad/releases/download/${VERSION}/jumppad_${VERSION}_linux_arm64.tar.gz"
             sha256 "${LINUX_ARM64_SHA}"
           end
 
@@ -297,7 +297,7 @@ jobs:
         user: "jumppad"
         package: "jumppad"
         version: ${{ needs.github_release.outputs.version }}
-        url: "https://github.com/jumppad-labs/jumppad/releases/download/v${{ needs.github_release.outputs.version }}/jumppad_${{ needs.github_release.outputs.version }}_windows_x86_64.zip|x64"
+        url: "https://github.com/jumppad-labs/jumppad/releases/download/${{ needs.github_release.outputs.version }}/jumppad_${{ needs.github_release.outputs.version }}_windows_x86_64.zip|x64"
         token: '${{ secrets.GH_TOKEN }}'
 
     - name: Send status to Discord
@@ -320,7 +320,7 @@ jobs:
     steps:
     - name: Download release
       run: |
-        wget "https://github.com/jumppad-labs/jumppad/releases/download/v${{ needs.github_release.outputs.version }}/jumppad_${{ needs.github_release.outputs.version }}_linux_${{ matrix.arch }}"
+        wget "https://github.com/jumppad-labs/jumppad/releases/download/${{ needs.github_release.outputs.version }}/jumppad_${{ needs.github_release.outputs.version }}_linux_${{ matrix.arch }}"
 
     - name: Upload release
       run: |
