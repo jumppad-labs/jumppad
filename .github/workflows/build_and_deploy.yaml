@@ -14,13 +14,14 @@ jobs:
           echo "${{secrets.QUILL_SIGN_P12}}" | base64 -d  > ./cert.p12
           echo "${{secrets.QUILL_NOTORY_KEY}}" > ./key.p8
           echo "QUILL_SIGN_PASSWORD=${{secrets.QUILL_SIGN_PASSWORD}}" >> $GITHUB_ENV
+          echo "GITHUB_TOKEN=${{secrets.GH_TOKEN}}" >> $GITHUB_ENV
       
       - name: All
         uses: dagger/dagger-for-github@v5
         with:
           verb: call
           module: ./.dagger
-          args: all --output=./output --src=. --notorize-cert=./cert.p12 --notorize-cert-password=QUILL_SIGN_PASSWORD --notorize-key=./key.p8 --notorize-id=${{secrets.QUILL_NOTARY_KEY_ID}} --notorize-issuer=${{secrets.QUILL_NOTARY_ISSUER}}
+          args: all --output=./output --src=. --github-token=GITHUB_TOKEN --notorize-cert=./cert.p12 --notorize-cert-password=QUILL_SIGN_PASSWORD --notorize-key=./key.p8 --notorize-id=${{secrets.QUILL_NOTARY_KEY_ID}} --notorize-issuer=${{secrets.QUILL_NOTARY_ISSUER}}
           version: "0.9.9"
           cloud-token: ${{ secrets.DAGGER_TOKEN }}
       
@@ -71,7 +72,8 @@ jobs:
       - name: Install binary executable
         run: |
           cp $(find ./build_artifacts -name "jumppad_*_linux_x86_64.tar.gz" -type f) ./build_artifacts/jumppad.tar.gz
-          sudo tar -xzf ./build_artifacts/jumppad.tar.gz /usr/local/bin/jumppad
+          sudo tar -xzf ./build_artifacts/jumppad.tar.gz
+          sudo mv ./jumppad /usr/local/bin/jumppad
           sudo chmod +x /usr/local/bin/jumppad
 
       - uses: actions/checkout@v2
@@ -119,7 +121,8 @@ jobs:
       - name: Install binary executable
         run: |
           cp $(find ./build_artifacts -name "jumppad_*_linux_x86_64.tar.gz" -type f) ./build_artifacts/jumppad.tar.gz
-          sudo tar -xzf ./build_artifacts/jumppad.tar.gz /usr/local/bin/jumppad
+          sudo tar -xzf ./build_artifacts/jumppad.tar.gz
+          sudo mv ./jumppad /usr/local/bin/jumppad
           sudo chmod +x /usr/local/bin/jumppad
 
       - uses: actions/checkout@v2
