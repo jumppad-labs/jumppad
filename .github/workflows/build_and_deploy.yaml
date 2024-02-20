@@ -11,8 +11,8 @@ jobs:
 
       - name: Set keys
         run: |
-          echo ${{secrets.QUILL_SIGN_P12}} | base64 -d  > ./cert.p12
-          echo ${{secrets.QUILL_NOTORY_KEY}} > ./key.p8
+          echo "${{secrets.QUILL_SIGN_P12}}" | base64 -d  > ./cert.p12
+          echo "${{secrets.QUILL_NOTORY_KEY}}" > ./key.p8
           echo "QUILL_SIGN_PASSWORD=${{secrets.QUILL_SIGN_PASSWORD}}" >> $GITHUB_ENV
       
       - name: All
