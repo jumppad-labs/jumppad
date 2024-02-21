@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -19,6 +20,8 @@ type Template struct {
 	Source      string               `hcl:"source" json:"source"`                          // Source template to be processed as string
 	Destination string               `hcl:"destination" json:"destination"`                // Destination filename to write
 	Variables   map[string]cty.Value `hcl:"variables,optional" json:"variables,omitempty"` // Variables to be processed in the template
+
+	Checksum string `hcl:"checksum,optional" json:"checksum,omitempty"` // Checksum of the parsed template
 }
 
 func (t *Template) Process() error {
@@ -35,6 +38,16 @@ func (t *Template) Process() error {
 	} else {
 		// source is a string, replace line endings
 		t.Source = strings.Replace(t.Source, "\r\n", "\n", -1)
+	}
+
+	cfg, err := config.LoadState()
+	if err == nil {
+		// try and find the resource in the state
+		r, _ := cfg.FindResource(t.Meta.ID)
+		if r != nil {
+			kstate := r.(*Template)
+			t.Checksum = kstate.Checksum
+		}
 	}
 
 	return nil

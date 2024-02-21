@@ -8,6 +8,7 @@ import (
 
 	"github.com/infinytum/raymond/v2"
 	htypes "github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -78,7 +79,7 @@ func (p *TemplateProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 
 // Create a new template
 func (p *TemplateProvider) Create() error {
-	p.log.Info("Generating template", "ref", p.config.Meta.ID, "output", p.config.Destination)
+	p.log.Debug("Generating template", "ref", p.config.Meta.ID, "output", p.config.Destination)
 	p.log.Debug("Template content", "ref", p.config.Meta.ID, "source", p.config.Source)
 
 	// check the template is valid
@@ -86,62 +87,74 @@ func (p *TemplateProvider) Create() error {
 		return fmt.Errorf("template source empty")
 	}
 
-	if p.config.Variables == nil {
-		// no variables just write the file
+	output := p.config.Source
+	if p.config.Variables != nil {
+
+		vars := parseVars(p.config.Variables)
+
+		tmpl, err := raymond.Parse(p.config.Source)
+		if err != nil {
+			return fmt.Errorf("error parsing template: %s", err)
+		}
+
+		tmpl.RegisterHelpers(map[string]interface{}{
+			"quote": func(in string) string {
+				return fmt.Sprintf(`"%s"`, in)
+			},
+			"trim": func(in string) string {
+				return strings.TrimSpace(in)
+			},
+		})
+
+		result, err := tmpl.Exec(vars)
+		if err != nil {
+			return fmt.Errorf("error processing template: %s", err)
+		}
+
+		output = result
+	}
+
+	// gemerate a checksum from the result
+	cs, err := utils.ChecksumFromInterface(output)
+	if err != nil {
+		return fmt.Errorf("unable to generate checksum for template: %s", err)
+	}
+
+	p.log.Debug("Template output", "ref", p.config.Meta.ID, "destination", p.config.Destination, "checksum", cs, "result", output)
+
+	outputExists := false
+	if fi, _ := os.Stat(p.config.Destination); fi != nil {
+		outputExists = true
+	}
+
+	// regenerate the template if it has changed or the file does not exist
+	if p.config.Checksum != cs || !outputExists {
+		p.log.Info("Generating template", "ref", p.config.Meta.ID, "output", p.config.Destination)
+
+		// set the checksum
+		p.config.Checksum = cs
+
+		// if an existing file exists delete it
+		if outputExists {
+			err = os.RemoveAll(p.config.Destination)
+			if err != nil {
+				return fmt.Errorf("unable to delete destination file: %s", err)
+			}
+		}
+
+		err = os.MkdirAll(filepath.Dir(p.config.Destination), os.ModePerm)
+		if err != nil {
+			return fmt.Errorf("unable to create destination directory for template: %s", err)
+		}
+
 		f, err := os.Create(p.config.Destination)
 		if err != nil {
 			return fmt.Errorf("unable to create destination file for template: %s", err)
 		}
 		defer f.Close()
 
-		p.log.Debug("Template output", "ref", p.config.Meta.ID, "destination", p.config.Source)
-		_, err = f.WriteString(p.config.Source)
-
-		return err
+		f.WriteString(output)
 	}
-
-	vars := parseVars(p.config.Variables)
-
-	tmpl, err := raymond.Parse(p.config.Source)
-	if err != nil {
-		return fmt.Errorf("error parsing template: %s", err)
-	}
-
-	tmpl.RegisterHelpers(map[string]interface{}{
-		"quote": func(in string) string {
-			return fmt.Sprintf(`"%s"`, in)
-		},
-		"trim": func(in string) string {
-			return strings.TrimSpace(in)
-		},
-	})
-
-	result, err := tmpl.Exec(vars)
-	if err != nil {
-		return fmt.Errorf("error processing template: %s", err)
-	}
-
-	if fi, _ := os.Stat(p.config.Destination); fi != nil {
-		err = os.RemoveAll(p.config.Destination)
-		if err != nil {
-			return fmt.Errorf("unable to delete destination file: %s", err)
-		}
-	}
-
-	err = os.MkdirAll(filepath.Dir(p.config.Destination), os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("unable to create destination directory for template: %s", err)
-	}
-
-	f, err := os.Create(p.config.Destination)
-	if err != nil {
-		return fmt.Errorf("unable to create destination file for template: %s", err)
-	}
-	defer f.Close()
-
-	f.WriteString(result)
-
-	p.log.Debug("Template output", "ref", p.config.Meta.ID, "destination", p.config.Destination, "result", result)
 
 	return nil
 }
@@ -169,7 +182,6 @@ func (p *TemplateProvider) Lookup() ([]string, error) {
 func (p *TemplateProvider) Refresh() error {
 	p.log.Debug("Refresh Template", "ref", p.config.Meta.ID)
 
-	p.Destroy()
 	return p.Create()
 }
 
