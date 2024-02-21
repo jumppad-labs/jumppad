@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/charmbracelet/log"
@@ -50,7 +51,6 @@ func (d *JumppadCI) All(
 	version := "0.0.0"
 	sha := ""
 
-	var err error
 	var output *Directory
 
 	// remove the build output directory from the source
@@ -60,7 +60,7 @@ func (d *JumppadCI) All(
 
 	// if we have a github token, get the version from the associated PR label
 	if githubToken != nil {
-		version, sha, err = d.getVersion(ctx, githubToken, src)
+		version, sha, _ = d.getVersion(ctx, githubToken, src)
 	}
 
 	log.Info("Building version", "semver", version, "sha", sha)
@@ -261,9 +261,14 @@ func (d *JumppadCI) Archive(ctx context.Context, binaries *Directory, version st
 		switch a.Type {
 		case "zip":
 			// create a zip archive
+
+			// first get the filename as with windows this has an extension
+			fn := path.Base(a.Path)
+
+			// zip the file
 			zip := zipContainer.
-				WithMountedFile("/jumppad", binaries.File(a.Path)).
-				WithExec([]string{"zip", "-r", outPath, "/jumppad"})
+				WithMountedFile(fn, binaries.File(a.Path)).
+				WithExec([]string{"zip", "-r", outPath, fn})
 
 			out = out.WithFile(outPath, zip.File(outPath))
 		case "targz":
