@@ -7,12 +7,12 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
-// TypeHelm is the string representation of the ResourceType
+// TypeHelm is the string representation of the Meta.Type
 const TypeHelm string = "helm"
 
 // Helm defines configuration for running Helm charts
 type Helm struct {
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 
@@ -56,12 +56,12 @@ type HelmRepository struct {
 
 func (h *Helm) Process() error {
 	// only set absolute if is local folder
-	if h.Chart != "" && utils.IsLocalFolder(utils.EnsureAbsolute(h.Chart, h.ResourceFile)) {
-		h.Chart = utils.EnsureAbsolute(h.Chart, h.ResourceFile)
+	if h.Chart != "" && utils.IsLocalFolder(utils.EnsureAbsolute(h.Chart, h.Meta.File)) {
+		h.Chart = utils.EnsureAbsolute(h.Chart, h.Meta.File)
 	}
 
 	if h.Values != "" {
-		h.Values = utils.EnsureAbsolute(h.Values, h.ResourceFile)
+		h.Values = utils.EnsureAbsolute(h.Values, h.Meta.File)
 	}
 
 	return nil

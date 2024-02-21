@@ -18,7 +18,7 @@ import (
 )
 
 func setupImageCacheTests(t *testing.T) (*ImageCache, *cmocks.ContainerTasks) {
-	cc := &ImageCache{ResourceMetadata: htypes.ResourceMetadata{ResourceName: "test"}}
+	cc := &ImageCache{ResourceBase: htypes.ResourceBase{Meta: htypes.Meta{Name: "test"}}}
 
 	md := &cmocks.ContainerTasks{}
 

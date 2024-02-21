@@ -18,7 +18,7 @@ import (
 )
 
 func setupContainerTests(t *testing.T) (*Container, *mocks.ContainerTasks, *hmocks.HTTP) {
-	cc := &Container{ResourceMetadata: types.ResourceMetadata{
+	cc := &Container{ResourceBase: types.ResourceBase{
 		Name: "tests",
 	}}
 
@@ -58,7 +58,7 @@ func TestContainerSidecarCreatesContainerSuccessfully(t *testing.T) {
 	testutils.RemoveOn(&md.Mock, "CreateContainer")
 	md.On("CreateContainer", mock.Anything).Once().Return("12345", nil)
 
-	cs := &Sidecar{ResourceMetadata: types.ResourceMetadata{
+	cs := &Sidecar{ResourceBase: types.ResourceBase{
 		Name: "tests",
 	}}
 

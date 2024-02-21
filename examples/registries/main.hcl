@@ -9,7 +9,7 @@ module "nomad" {
   source     = "./nomad"
 
   variables = {
-    network_id = resource.network.cloud.resource_id
+    network_id = resource.network.cloud.meta.id
   }
 }
 
@@ -20,7 +20,7 @@ module "k8s" {
   source     = "./k8s"
 
   variables = {
-    network_id = resource.network.cloud.resource_id
+    network_id = resource.network.cloud.meta.id
   }
 }
 

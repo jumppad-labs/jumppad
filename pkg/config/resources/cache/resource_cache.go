@@ -11,7 +11,7 @@ const TypeImageCache string = "image_cache"
 // ImageCache defines a structure for creating ImageCache containers
 type ImageCache struct {
 	// embedded type holding name, etc
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Registries []Registry `hcl:"registry,block" json:"registries,omitempty"`
 

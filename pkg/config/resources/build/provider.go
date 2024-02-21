@@ -51,7 +51,7 @@ func (b *Provider) Create() error {
 		"Building image",
 		"context", b.config.Container.Context,
 		"dockerfile", b.config.Container.DockerFile,
-		"image", fmt.Sprintf("jumppad.dev/localcache/%s:%s", b.config.ResourceName, tag),
+		"image", fmt.Sprintf("jumppad.dev/localcache/%s:%s", b.config.Meta.Name, tag),
 	)
 
 	force := false
@@ -60,7 +60,7 @@ func (b *Provider) Create() error {
 	}
 
 	build := &types.Build{
-		Name:       b.config.ResourceName,
+		Name:       b.config.Meta.Name,
 		DockerFile: b.config.Container.DockerFile,
 		Context:    b.config.Container.Context,
 		Ignore:     b.config.Container.Ignore,
@@ -83,13 +83,13 @@ func (b *Provider) Create() error {
 	}
 
 	// clean up the previous builds only leaving the last 3
-	ids, err := b.client.FindImagesInLocalRegistry(fmt.Sprintf("jumppad.dev/localcache/%s", b.config.ResourceName))
+	ids, err := b.client.FindImagesInLocalRegistry(fmt.Sprintf("jumppad.dev/localcache/%s", b.config.Meta.Name))
 	if err != nil {
 		return xerrors.Errorf("unable to query local registry for images: %w", err)
 	}
 
 	for i := 3; i < len(ids); i++ {
-		b.log.Debug("Remove image", "ref", b.config.ResourceID, "id", ids[i])
+		b.log.Debug("Remove image", "ref", b.config.Meta.ID, "id", ids[i])
 
 		err := b.client.RemoveImage(ids[i])
 		if err != nil {
@@ -100,14 +100,14 @@ func (b *Provider) Create() error {
 	// if we have a registry, push the image
 	for _, r := range b.config.Registries {
 		// first tag the image
-		b.log.Debug("Tag image", "ref", b.config.ResourceID, "name", b.config.Image, "tag", r.Name)
+		b.log.Debug("Tag image", "ref", b.config.Meta.ID, "name", b.config.Image, "tag", r.Name)
 		err = b.client.TagImage(b.config.Image, r.Name)
 		if err != nil {
 			return xerrors.Errorf("unable to tag image: %w", err)
 		}
 
 		// push the image
-		b.log.Debug("Push image", "ref", b.config.ResourceID, "tag", r.Name)
+		b.log.Debug("Push image", "ref", b.config.Meta.ID, "tag", r.Name)
 		err = b.client.PushImage(types.Image{Name: r.Name, Username: r.Username, Password: r.Password})
 		if err != nil {
 			return xerrors.Errorf("unable to push image: %w", err)
@@ -118,7 +118,7 @@ func (b *Provider) Create() error {
 }
 
 func (b *Provider) Destroy() error {
-	b.log.Info("Destroy Build", "ref", b.config.ResourceID)
+	b.log.Info("Destroy Build", "ref", b.config.Meta.ID)
 
 	return nil
 }
@@ -153,7 +153,7 @@ func (b *Provider) Changed() (bool, error) {
 	}
 
 	if changed {
-		b.log.Debug("Build has changed, requires refresh", "ref", b.config.ResourceID)
+		b.log.Debug("Build has changed, requires refresh", "ref", b.config.Meta.ID)
 		return true, nil
 	}
 
@@ -187,7 +187,7 @@ func (b *Provider) copyOutputs() error {
 		Command:    []string{"tail", "-f", "/dev/null"},
 	}
 
-	b.log.Debug("Creating container to copy files", "ref", b.config.ResourceID, "name", b.config.Image)
+	b.log.Debug("Creating container to copy files", "ref", b.config.Meta.ID, "name", b.config.Image)
 	id, err := b.client.CreateContainer(&c)
 	if err != nil {
 		return err
@@ -195,12 +195,12 @@ func (b *Provider) copyOutputs() error {
 
 	// always remove the temp container
 	defer func() {
-		b.log.Debug("Remove copy container", "ref", b.config.ResourceID, "name", b.config.Image)
+		b.log.Debug("Remove copy container", "ref", b.config.Meta.ID, "name", b.config.Image)
 		b.client.RemoveContainer(id, true)
 	}()
 
 	for _, copy := range b.config.Outputs {
-		b.log.Debug("Copy file from container", "ref", b.config.ResourceID, "source", copy.Source, "destination", copy.Destination)
+		b.log.Debug("Copy file from container", "ref", b.config.Meta.ID, "source", copy.Source, "destination", copy.Destination)
 		err := b.client.CopyFromContainer(id, copy.Source, copy.Destination)
 		if err != nil {
 			return err

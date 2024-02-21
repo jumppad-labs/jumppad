@@ -89,7 +89,7 @@ resource "container" "consul" {
   }
 
   network {
-    id         = resource.network.consul.resource_id
+    id         = resource.network.consul.meta.id
     ip_address = "10.8.0.200" // optional
     aliases    = ["myalias"]
   }

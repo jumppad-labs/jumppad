@@ -18,7 +18,7 @@ resource "container" "consul" {
   command = ["consul", "agent", "-dev", "-client", "0.0.0.0"]
 
   network {
-    id       = resource.network.onprem.resource_id
+    id         = resource.network.onprem.meta.id
     ip_address = "10.6.0.200"
   }
 

@@ -10,7 +10,7 @@ const TypeRandomID string = "random_id"
 
 // allows the generation of random IDs
 type RandomID struct {
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	ByteLength int64 `hcl:"byte_length" json:"byte_length"`
 
@@ -26,7 +26,7 @@ func (c *RandomID) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(c.ResourceID)
+		r, _ := cfg.FindResource(c.Meta.ID)
 		if r != nil {
 			state := r.(*RandomID)
 			c.Base64 = state.Base64

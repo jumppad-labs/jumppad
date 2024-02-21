@@ -69,7 +69,7 @@ func setupClusterMocks(t *testing.T) (
 	cf.Close()
 
 	// write the kubeconfig
-	_, kubePath, _ := utils.CreateKubeConfigPath(clusterConfig.ResourceName)
+	_, kubePath, _ := utils.CreateKubeConfigPath(clusterConfig.Meta.Name)
 	kcf, err := os.Create(kubePath)
 	if err != nil {
 		panic(err)
@@ -162,7 +162,7 @@ func TestClusterK3NoProxyIsSet(t *testing.T) {
 
 func TestClusterK3ErrorsWhenClusterExists(t *testing.T) {
 	md := &cmocks.ContainerTasks{}
-	md.On("FindContainerIDs", utils.FQDN("server."+clusterConfig.ResourceName, "", TypeK8sCluster)).Return([]string{"abc"}, nil)
+	md.On("FindContainerIDs", utils.FQDN("server."+clusterConfig.Meta.Name, "", TypeK8sCluster)).Return([]string{"abc"}, nil)
 
 	mk := &k8s.MockKubernetes{}
 	p := ClusterProvider{clusterConfig, md, mk, nil, nil, logger.NewTestLogger(t)}
@@ -294,7 +294,7 @@ func TestClusterK3sErrorsIfServerNOTStart(t *testing.T) {
 
 func TestClusterK3sDownloadsConfig(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
-	_, kubePath, _ := utils.CreateKubeConfigPath(cc.ResourceName)
+	_, kubePath, _ := utils.CreateKubeConfigPath(cc.Meta.Name)
 
 	p := ClusterProvider{cc, md, mk, nil, mc, logger.NewTestLogger(t)}
 
@@ -337,7 +337,7 @@ func TestClusterK3sSetsServerInConfig(t *testing.T) {
 	// check the kubeconfig file for docker uses a network ip not localhost
 
 	// check file has been written
-	_, kubePath, _ := utils.CreateKubeConfigPath(clusterConfig.ResourceName)
+	_, kubePath, _ := utils.CreateKubeConfigPath(clusterConfig.Meta.Name)
 	f, err := os.Open(kubePath)
 	assert.NoError(t, err)
 	defer f.Close()
@@ -659,7 +659,7 @@ func TestClusterK3sDestroyRemovesConfig(t *testing.T) {
 	testutils.RemoveOn(&md.Mock, "FindContainerIDs")
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"found"}, nil)
 
-	dir, _, _ := utils.CreateKubeConfigPath(cc.ResourceName)
+	dir, _, _ := utils.CreateKubeConfigPath(cc.Meta.Name)
 
 	p := ClusterProvider{cc, md, mk, nil, mc, logger.NewTestLogger(t)}
 
@@ -685,10 +685,10 @@ func TestLookupReturnsIDs(t *testing.T) {
 }
 
 var clusterConfig = &K8sCluster{
-	ResourceMetadata: htypes.ResourceMetadata{ResourceName: "test", ResourceType: TypeK8sCluster},
-	Image:            &container.Image{Name: "shipyardrun/k3s:v1.27.4"},
-	Networks:         []container.NetworkAttachment{container.NetworkAttachment{ID: "cloud"}},
-	APIPort:          443,
+	ResourceBase: htypes.ResourceBase{Meta: htypes.Meta{Name: "test", Type: TypeK8sCluster}},
+	Image:        &container.Image{Name: "shipyardrun/k3s:v1.27.4"},
+	Networks:     []container.NetworkAttachment{container.NetworkAttachment{ID: "cloud"}},
+	APIPort:      443,
 }
 
 var kubeconfig = `

@@ -57,3 +57,8 @@ dagger_release:
 generate_mocks:
 	go install github.com/vektra/mockery/v2@v2.20.0
 	go generate ./...
+
+install_local:
+	go build -ldflags "-X main.version=${git_commit}" -o bin/jumppad main.go
+	sudo mv /usr/local/bin/jumppad /usr/local/bin/jumppad-old || true
+	sudo cp bin/jumppad /usr/local/bin/jumppad

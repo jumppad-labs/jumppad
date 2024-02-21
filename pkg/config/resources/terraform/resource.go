@@ -16,7 +16,7 @@ const TypeTerraform string = "terraform"
 
 // ExecRemote allows commands to be executed in remote containers
 type Terraform struct {
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Networks []ctypes.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
@@ -35,7 +35,7 @@ type Terraform struct {
 
 func (t *Terraform) Process() error {
 	// make sure mount paths are absolute
-	t.Source = utils.EnsureAbsolute(t.Source, t.ResourceFile)
+	t.Source = utils.EnsureAbsolute(t.Source, t.Meta.File)
 
 	if t.WorkingDirectory == "" {
 		t.WorkingDirectory = "./"
@@ -56,7 +56,7 @@ func (t *Terraform) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(t.ResourceID)
+		r, _ := cfg.FindResource(t.Meta.ID)
 		if r != nil {
 			kstate := r.(*Terraform)
 			t.ApplyOutput = kstate.ApplyOutput

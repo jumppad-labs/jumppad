@@ -8,7 +8,7 @@ import (
 const TypeBook string = "book"
 
 type Book struct {
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Title    string    `hcl:"title" json:"title"`
 	Chapters []Chapter `hcl:"chapters" json:"chapters"`
@@ -28,7 +28,7 @@ func (b *Book) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(b.ResourceID)
+		r, _ := cfg.FindResource(b.Meta.ID)
 		if r != nil {
 			state := r.(*Book)
 			b.Index = state.Index

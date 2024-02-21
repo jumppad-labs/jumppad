@@ -15,7 +15,7 @@ const TypeK8sCluster string = "k8s_cluster"
 // K8sCluster is a config stanza which defines a Kubernetes or a Nomad cluster
 type K8sCluster struct {
 	// embedded type holding name, etc.
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Networks []ctypes.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
@@ -79,7 +79,7 @@ func (k *K8sCluster) Process() error {
 	}
 
 	for i, v := range k.Volumes {
-		k.Volumes[i].Source = utils.EnsureAbsolute(v.Source, k.ResourceFile)
+		k.Volumes[i].Source = utils.EnsureAbsolute(v.Source, k.Meta.File)
 	}
 
 	// do we have an existing resource in the state?
@@ -87,7 +87,7 @@ func (k *K8sCluster) Process() error {
 	c, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := c.FindResource(k.ResourceID)
+		r, _ := c.FindResource(k.Meta.ID)
 		if r != nil {
 			kstate := r.(*K8sCluster)
 			k.KubeConfig = kstate.KubeConfig

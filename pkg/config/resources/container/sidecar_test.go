@@ -19,7 +19,7 @@ func TestSidecarProcessSetsAbsolute(t *testing.T) {
 	require.NoError(t, err)
 
 	c := &Sidecar{
-		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
+		ResourceBase: types.ResourceBase{Meta: types.Meta{File: "./"}},
 		Volumes: []Volume{
 			{
 				Source:      "./",
@@ -39,18 +39,22 @@ func TestSidecarLoadsValuesFromState(t *testing.T) {
   "blueprint": null,
   "resources": [
 	{
-			"resource_id": "resource.sidecar.test",
-      "resource_name": "test",
-      "resource_type": "sidecar",
+			"meta": {
+				"id": "resource.sidecar.test",
+  	    "name": "test",
+  	    "type": "sidecar"
+			},
 			"container_name": "fqdn.mine"
 	}
 	]
 }`)
 
 	docs := &Sidecar{
-		ResourceMetadata: types.ResourceMetadata{
-			ResourceFile: "./",
-			ResourceID:   "resource.sidecar.test",
+		ResourceBase: types.ResourceBase{
+			Meta: types.Meta{
+				File: "./",
+				ID:   "resource.sidecar.test",
+			},
 		},
 	}
 

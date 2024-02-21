@@ -14,7 +14,7 @@ const TypeTemplate string = "template"
 
 // Template allows the process of user defined templates
 type Template struct {
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Source      string               `hcl:"source" json:"source"`                          // Source template to be processed as string
 	Destination string               `hcl:"destination" json:"destination"`                // Destination filename to write
@@ -22,12 +22,12 @@ type Template struct {
 }
 
 func (t *Template) Process() error {
-	t.Destination = utils.EnsureAbsolute(t.Destination, t.ResourceFile)
+	t.Destination = utils.EnsureAbsolute(t.Destination, t.Meta.File)
 
 	// Source can be a file or a template as a string
 	// check to see if a valid file before making absolute
 	src := t.Source
-	absSrc := utils.EnsureAbsolute(src, t.ResourceFile)
+	absSrc := utils.EnsureAbsolute(src, t.Meta.File)
 
 	if _, err := os.Stat(absSrc); err == nil {
 		// file exists

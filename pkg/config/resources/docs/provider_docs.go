@@ -86,7 +86,7 @@ func (p *DocsProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 
 // Create a new documentation container
 func (p *DocsProvider) Create() error {
-	p.log.Info("Creating Documentation", "ref", p.config.ResourceID)
+	p.log.Info("Creating Documentation", "ref", p.config.Meta.ID)
 
 	// create the documentation container
 	err := p.createDocsContainer()
@@ -100,7 +100,7 @@ func (p *DocsProvider) Create() error {
 
 // Destroy the documentation container
 func (p *DocsProvider) Destroy() error {
-	p.log.Info("Destroy Documentation", "ref", p.config.ResourceID)
+	p.log.Info("Destroy Documentation", "ref", p.config.Meta.ID)
 
 	// remove the docs
 	ids, err := p.client.FindContainerIDs(p.config.ContainerName)
@@ -138,7 +138,7 @@ func (p *DocsProvider) Refresh() error {
 		return nil
 	}
 
-	p.log.Info("Refresh Docs", "ref", p.config.ResourceID)
+	p.log.Info("Refresh Docs", "ref", p.config.Meta.ID)
 
 	// refresh content on disk
 	configPath := utils.LibraryFolder("config", 0775)
@@ -168,10 +168,10 @@ func (p *DocsProvider) Refresh() error {
 	contentPath := utils.LibraryFolder("content", 0775)
 
 	for _, book := range p.config.Content {
-		bookPath := filepath.Join(contentPath, book.ResourceName)
+		bookPath := filepath.Join(contentPath, book.Meta.Name)
 
 		for _, chapter := range book.Chapters {
-			chapterPath := filepath.Join(bookPath, chapter.ResourceName)
+			chapterPath := filepath.Join(bookPath, chapter.Meta.Name)
 			os.MkdirAll(chapterPath, 0755)
 			os.Chmod(chapterPath, 0755)
 
@@ -198,7 +198,7 @@ func (p *DocsProvider) Refresh() error {
 }
 
 func (p *DocsProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.ResourceID)
+	p.log.Debug("Checking changes", "ref", p.config.Meta.ID)
 
 	// since the content has not been processed we can not reliably determine
 	// if the content has changed, so we will assume it has
@@ -244,7 +244,7 @@ func (p *DocsProvider) getDefaultPage() string {
 
 func (p *DocsProvider) createDocsContainer() error {
 	// set the FQDN
-	fqdn := utils.FQDN(p.config.ResourceName, p.config.ResourceModule, p.config.ResourceType)
+	fqdn := utils.FQDN(p.config.Meta.Name, p.config.Meta.Module, p.config.Meta.Type)
 	p.config.ContainerName = fqdn
 
 	// create the container config
@@ -350,7 +350,7 @@ func (p *DocsProvider) writeProgress(path string) error {
 		for _, chapter := range book.Chapters {
 			for _, task := range chapter.Tasks {
 				p := Progress{
-					ID:            task.ResourceID,
+					ID:            task.Meta.ID,
 					Prerequisites: task.Prerequisites,
 					Status:        "locked",
 				}

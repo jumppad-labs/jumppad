@@ -15,7 +15,7 @@ const TypeContainer string = "container"
 // Container defines a structure for creating Docker containers
 type Container struct {
 	// embedded type holding name, etc
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Networks        []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"`           // Attach to the correct network // only when Image is specified
 	Image           *Image              `hcl:"image,block" json:"image"`                          // Image to use for the container
@@ -101,7 +101,7 @@ func (c *Container) Process() error {
 	for i, v := range c.Volumes {
 		// make sure mount paths are absolute when type is bind, unless this is the docker sock
 		if v.Type == "" || v.Type == "bind" {
-			c.Volumes[i].Source = utils.EnsureAbsolute(v.Source, c.ResourceFile)
+			c.Volumes[i].Source = utils.EnsureAbsolute(v.Source, c.Meta.File)
 		}
 	}
 
@@ -117,7 +117,7 @@ func (c *Container) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(c.ResourceID)
+		r, _ := cfg.FindResource(c.Meta.ID)
 		if r != nil {
 			kstate := r.(*Container)
 			c.ContainerName = kstate.ContainerName

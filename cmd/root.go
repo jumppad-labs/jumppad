@@ -185,10 +185,10 @@ var discordHelp = `
 ### For help and support join our community on Discord: https://discord.gg/ZuEFPJU69D ###
 `
 
-var changesVersion = "v0.5.60"
+var changesVersion = "v0.7.0"
 
 var changes = `
-## version v0.5.60
+## version v0.7.0
 
 ### Breaking Changes:
 This version of Jumppad introduces experimental plugin support for custom resources. 
@@ -203,7 +203,7 @@ resource.container.mine.id
 This has now changed to:
 
 """
-resource.container.mine.resource_id
+resource.container.mine.meta.id
 """
 
 From this version onwards the old property names are no longer be supported 
@@ -213,9 +213,9 @@ The full list of properties tha have been changed are:
 
 | Old Property Name | New Property Name   |
 |-------------------|---------------------|
-| id                | resource_id         |
-| name              | resource_name       |
-| type              | resource_type       |
+| id                | meta.id         |
+| name              | meta.name       |
+| type              | meta.type       |
 | module            | resource_module     |
 | file              | resource_file       |
 | line              | resource_line       |

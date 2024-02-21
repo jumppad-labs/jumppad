@@ -15,7 +15,7 @@ func init() {
 
 func TestDocsProcessSetsAbsolute(t *testing.T) {
 	h := &Docs{
-		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
+		ResourceBase: types.ResourceBase{Meta: types.Meta{File: "./"}},
 	}
 
 	err := h.Process()
@@ -28,18 +28,22 @@ func TestDocsLoadsValuesFromState(t *testing.T) {
   "blueprint": null,
   "resources": [
 	{
-			"resource_id": "resource.docs.test",
-      "resource_name": "test",
-      "resource_type": "docs",
+			"meta": {
+				"id": "resource.docs.test",
+  	    "name": "test",
+  	    "type": "docs"
+			},
 			"fqdn": "fqdn.mine"
 	}
 	]
 }`)
 
 	docs := &Docs{
-		ResourceMetadata: types.ResourceMetadata{
-			ResourceFile: "./",
-			ResourceID:   "resource.docs.test",
+		ResourceBase: types.ResourceBase{
+			Meta: types.Meta{
+				File: "./",
+				ID:   "resource.docs.test",
+			},
 		},
 	}
 

@@ -7,7 +7,7 @@ const TypeRegistry string = "container_registry"
 // Registry defines a structure for registering additional registries for the image cache
 type Registry struct {
 	// embedded type holding name, etc
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Hostname string        `hcl:"hostname" json:"hostname"`         // Hostname of the registry
 	Auth     *RegistryAuth `hcl:"auth,block" json:"auth,omitempty"` // auth to authenticate against registry

@@ -48,7 +48,7 @@ func (p *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 
 // Create implements the provider Create method
 func (p *Provider) Create() error {
-	p.log.Info("Creating Helm chart", "ref", p.config.ResourceID)
+	p.log.Info("Creating Helm chart", "ref", p.config.Meta.ID)
 
 	// if the namespace is null set to default
 	if p.config.Namespace == "" {
@@ -67,7 +67,7 @@ func (p *Provider) Create() error {
 
 	// is the source a helm repo which should be downloaded?
 	if !utils.IsLocalFolder(p.config.Chart) && p.config.Repository == nil {
-		p.log.Debug("Fetching remote Helm chart", "ref", p.config.ResourceName, "chart", p.config.Chart)
+		p.log.Debug("Fetching remote Helm chart", "ref", p.config.Meta.Name, "chart", p.config.Chart)
 
 		helmFolder := utils.HelmLocalFolder(p.config.Chart)
 
@@ -83,14 +83,14 @@ func (p *Provider) Create() error {
 	// set the KubeConfig for the kubernetes client
 	// this is used by the health checks
 	var err error
-	p.log.Debug("Using Kubernetes config", "ref", p.config.ResourceID, "path", p.config.Cluster.KubeConfig)
+	p.log.Debug("Using Kubernetes config", "ref", p.config.Meta.ID, "path", p.config.Cluster.KubeConfig)
 	p.kubeClient, err = p.kubeClient.SetConfig(p.config.Cluster.KubeConfig)
 	if err != nil {
 		return xerrors.Errorf("unable to create Kubernetes client: %w", err)
 	}
 
 	// sanitize the chart name
-	newName, _ := utils.ReplaceNonURIChars(p.config.ResourceName)
+	newName, _ := utils.ReplaceNonURIChars(p.config.Meta.Name)
 
 	failCount := 0
 
@@ -141,7 +141,7 @@ func (p *Provider) Create() error {
 	case createErr := <-errChan:
 		return createErr
 	case <-doneChan:
-		p.log.Debug("Helm chart applied", "ref", p.config.ResourceName)
+		p.log.Debug("Helm chart applied", "ref", p.config.Meta.Name)
 	}
 
 	// we can now health check the install
@@ -162,7 +162,7 @@ func (p *Provider) Create() error {
 
 // Destroy implements the provider Destroy method
 func (p *Provider) Destroy() error {
-	p.log.Info("Destroy Helm chart", "ref", p.config.ResourceID)
+	p.log.Info("Destroy Helm chart", "ref", p.config.Meta.ID)
 
 	// if the namespace is null set to default
 	if p.config.Namespace == "" {
@@ -170,13 +170,13 @@ func (p *Provider) Destroy() error {
 	}
 
 	// sanitize the chart name
-	newName, _ := utils.ReplaceNonURIChars(p.config.ResourceName)
+	newName, _ := utils.ReplaceNonURIChars(p.config.Meta.Name)
 
 	// get the target cluster
 	err := p.helmClient.Destroy(p.config.Cluster.KubeConfig, newName, p.config.Namespace)
 
 	if err != nil {
-		p.log.Debug("There was a problem destroying Helm chart, logging message but ignoring error", "ref", p.config.ResourceID, "error", err)
+		p.log.Debug("There was a problem destroying Helm chart, logging message but ignoring error", "ref", p.config.Meta.ID, "error", err)
 	}
 
 	return nil
@@ -188,13 +188,13 @@ func (p *Provider) Lookup() ([]string, error) {
 }
 
 func (p *Provider) Refresh() error {
-	p.log.Debug("Refresh Helm Chart", "ref", p.config.ResourceName)
+	p.log.Debug("Refresh Helm Chart", "ref", p.config.Meta.Name)
 
 	return nil
 }
 
 func (p *Provider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.ResourceName)
+	p.log.Debug("Checking changes", "ref", p.config.Meta.Name)
 
 	return false, nil
 }

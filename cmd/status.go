@@ -72,29 +72,29 @@ var statusCmd = &cobra.Command{
 			resourceMap := map[string][]types.Resource{}
 
 			for _, r := range cfg.Resources {
-				if resourceMap[r.Metadata().ResourceType] == nil {
-					resourceMap[r.Metadata().ResourceType] = []types.Resource{}
+				if resourceMap[r.Metadata().Type] == nil {
+					resourceMap[r.Metadata().Type] = []types.Resource{}
 				}
 
-				resourceMap[r.Metadata().ResourceType] = append(resourceMap[r.Metadata().ResourceType], r)
+				resourceMap[r.Metadata().Type] = append(resourceMap[r.Metadata().Type], r)
 			}
 
 			for _, ress := range resourceMap {
 				for _, r := range ress {
-					if (resourceType != "" && r.Metadata().ResourceType != resourceType) ||
-						r.Metadata().ResourceType == types.TypeModule ||
-						r.Metadata().ResourceType == types.TypeVariable ||
-						r.Metadata().ResourceType == types.TypeOutput {
+					if (resourceType != "" && r.Metadata().Type != resourceType) ||
+						r.Metadata().Type == types.TypeModule ||
+						r.Metadata().Type == types.TypeVariable ||
+						r.Metadata().Type == types.TypeOutput {
 						continue
 					}
 
 					status := yellowIcon.Render("?")
-					if r.Metadata().Disabled {
-						fmt.Printf("%s %s\n", grayIcon.Render("-"), grayText.Render(r.Metadata().ResourceID))
+					if r.GetDisabled() {
+						fmt.Printf("%s %s\n", grayIcon.Render("-"), grayText.Render(r.Metadata().ID))
 						disabledCount++
 						continue
 					} else {
-						switch r.Metadata().ResourceProperties[constants.PropertyStatus] {
+						switch r.Metadata().Properties[constants.PropertyStatus] {
 						case constants.StatusCreated:
 							status = greenIcon.Render("✔")
 							createdCount++
@@ -106,29 +106,29 @@ var statusCmd = &cobra.Command{
 						}
 					}
 
-					switch r.Metadata().ResourceType {
+					switch r.Metadata().Type {
 					case nomad.TypeNomadCluster:
-						fmt.Printf("%s %s\n", status, r.Metadata().ResourceID)
-						fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().ResourceName, r.Metadata().ResourceModule, string(r.Metadata().ResourceType)))))
+						fmt.Printf("%s %s\n", status, r.Metadata().ID)
+						fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, r.Metadata().Module, string(r.Metadata().Type)))))
 
 						// add the client nodes
 						nomad := r.(*nomad.NomadCluster)
 						for n := 0; n < nomad.ClientNodes; n++ {
-							fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Metadata().ResourceName, r.Metadata().ResourceModule, string(r.Metadata().ResourceType)))))
+							fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Metadata().Name, r.Metadata().Module, string(r.Metadata().Type)))))
 						}
 					case k8s.TypeK8sCluster:
-						fmt.Printf("%s %s\n", status, r.Metadata().ResourceID)
-						fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().ResourceName, r.Metadata().ResourceModule, r.Metadata().ResourceType))))
+						fmt.Printf("%s %s\n", status, r.Metadata().ID)
+						fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type))))
 					case container.TypeContainer:
-						fmt.Printf("%s %s\n", status, r.Metadata().ResourceID)
-						fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(fmt.Sprintf("%s", utils.FQDN(r.Metadata().ResourceName, r.Metadata().ResourceModule, string(r.Metadata().ResourceType)))))
+						fmt.Printf("%s %s\n", status, r.Metadata().ID)
+						fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(fmt.Sprintf("%s", utils.FQDN(r.Metadata().Name, r.Metadata().Module, string(r.Metadata().Type)))))
 					case container.TypeSidecar:
-						fmt.Printf("%s %s\n", status, r.Metadata().ResourceID)
-						fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(fmt.Sprintf("%s", utils.FQDN(r.Metadata().ResourceName, r.Metadata().ResourceModule, string(r.Metadata().ResourceType)))))
+						fmt.Printf("%s %s\n", status, r.Metadata().ID)
+						fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(fmt.Sprintf("%s", utils.FQDN(r.Metadata().Name, r.Metadata().Module, string(r.Metadata().Type)))))
 					case cache.TypeImageCache:
-						fmt.Printf("%s %s\n", status, r.Metadata().ResourceID)
+						fmt.Printf("%s %s\n", status, r.Metadata().ID)
 					default:
-						fmt.Printf("%s %s\n", status, r.Metadata().ResourceID)
+						fmt.Printf("%s %s\n", status, r.Metadata().ID)
 					}
 				}
 			}

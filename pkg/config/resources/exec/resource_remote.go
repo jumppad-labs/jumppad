@@ -13,7 +13,7 @@ const TypeRemoteExec string = "remote_exec"
 
 // ExecRemote allows commands to be executed in remote containers
 type RemoteExec struct {
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Networks []ctypes.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
@@ -36,7 +36,7 @@ func (e *RemoteExec) Process() error {
 	// process volumes
 	// make sure mount paths are absolute
 	for i, v := range e.Volumes {
-		e.Volumes[i].Source = utils.EnsureAbsolute(v.Source, e.ResourceFile)
+		e.Volumes[i].Source = utils.EnsureAbsolute(v.Source, e.Meta.File)
 	}
 
 	// make sure line endings are linux

@@ -11,7 +11,7 @@ const TypeLocalExec string = "local_exec"
 // ExecLocal allows commands to be executed on the local machine
 type LocalExec struct {
 	// embedded type holding name, etc
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	// Script []string `hcl:"script,optional" json:"script,omitempty"` // Script to execute
 	Command          []string          `hcl:"command,optional" json:"command,omitempty"`                     // Command to execute
@@ -32,7 +32,7 @@ func (e *LocalExec) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(e.ResourceID)
+		r, _ := cfg.FindResource(e.Meta.ID)
 		if r != nil {
 			kstate := r.(*LocalExec)
 			e.Pid = kstate.Pid

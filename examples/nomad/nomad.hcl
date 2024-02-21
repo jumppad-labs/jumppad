@@ -33,7 +33,7 @@ resource "nomad_cluster" "dev" {
   datacenter = variable.datacenter
 
   network {
-    id = resource.network.cloud.resource_id
+    id = resource.network.cloud.meta.id
   }
 
   copy_image {

@@ -65,7 +65,7 @@ func getResourceFromMock(mp *mocks.Providers, index int) types.Resource {
 	return r.(types.Resource)
 }
 
-func getMetaFromMock(mp *mocks.Providers, index int) types.ResourceMetadata {
+func getMetaFromMock(mp *mocks.Providers, index int) types.Meta {
 	return *getResourceFromMock(mp, index).Metadata()
 }
 
@@ -86,15 +86,15 @@ func TestApplyWithSingleFile(t *testing.T) {
 			"consul_config",
 		},
 		[]string{
-			getMetaFromMock(mp, 0).ResourceName,
-			getMetaFromMock(mp, 1).ResourceName,
-			getMetaFromMock(mp, 2).ResourceName,
-			getMetaFromMock(mp, 3).ResourceName,
+			getMetaFromMock(mp, 0).Name,
+			getMetaFromMock(mp, 1).Name,
+			getMetaFromMock(mp, 2).Name,
+			getMetaFromMock(mp, 3).Name,
 		},
 	)
 
-	require.Equal(t, "consul", getMetaFromMock(mp, 4).ResourceName)
-	require.Equal(t, "consul_addr", getMetaFromMock(mp, 5).ResourceName)
+	require.Equal(t, "consul", getMetaFromMock(mp, 4).Name)
+	require.Equal(t, "consul_addr", getMetaFromMock(mp, 5).Name)
 }
 
 func TestApplyAddsImageCache(t *testing.T) {
@@ -120,7 +120,7 @@ func TestApplyAddsNetworksToImageCache(t *testing.T) {
 	require.NoError(t, err)
 
 	// network should be added as a dependency
-	require.Equal(t, "resource.network.onprem", r.Metadata().DependsOn[0])
+	require.Equal(t, "resource.network.onprem", r.GetDependsOn()[0])
 }
 
 func TestApplyAddsCustomRegistriesToImageCache(t *testing.T) {
@@ -148,10 +148,10 @@ func TestApplyWithSingleFileAndVariables(t *testing.T) {
 	require.Len(t, e.config.Resources, 7) // 6 resources in the file plus the image cache
 
 	// then the container should be created
-	require.Equal(t, "consul", getMetaFromMock(mp, 4).ResourceName)
+	require.Equal(t, "consul", getMetaFromMock(mp, 4).Name)
 
 	// finally the provider for the image cache should be updated
-	require.Equal(t, "consul_addr", getMetaFromMock(mp, 5).ResourceName)
+	require.Equal(t, "consul_addr", getMetaFromMock(mp, 5).Name)
 
 	// check the variable has overridden the image
 	cont := getResourceFromMock(mp, 4).(*container.Container)
@@ -226,7 +226,7 @@ func TestApplyNotCallsProviderCreateForDisabledResources(t *testing.T) {
 	// the resource should be in the state but there should be no status
 	r, err := sf.FindResource("resource.container.consul_disabled")
 	require.NoError(t, err)
-	require.Nil(t, r.Metadata().ResourceProperties[constants.PropertyStatus])
+	require.Nil(t, r.Metadata().Properties[constants.PropertyStatus])
 }
 
 func TestApplyShouldNotAddDuplicateDisabledResources(t *testing.T) {
@@ -250,7 +250,7 @@ func TestApplyShouldNotAddDuplicateDisabledResources(t *testing.T) {
 	// the status should be set to disabled
 	r, err := sf.FindResource("resource.container.consul_disabled")
 	require.NoError(t, err)
-	require.Equal(t, constants.StatusDisabled, r.Metadata().ResourceProperties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusDisabled, r.Metadata().Properties[constants.PropertyStatus])
 }
 
 func TestApplySetsCreatedStatusForEachResource(t *testing.T) {
@@ -268,15 +268,15 @@ func TestApplySetsCreatedStatusForEachResource(t *testing.T) {
 
 	r, err := sf.FindResource("resource.container.consul")
 	require.NoError(t, err)
-	require.Equal(t, constants.StatusCreated, r.Metadata().ResourceProperties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusCreated, r.Metadata().Properties[constants.PropertyStatus])
 
 	r, err = sf.FindResource("resource.network.onprem")
 	require.NoError(t, err)
-	require.Equal(t, constants.StatusCreated, r.Metadata().ResourceProperties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusCreated, r.Metadata().Properties[constants.PropertyStatus])
 
 	r, err = sf.FindResource("resource.template.consul_config")
 	require.NoError(t, err)
-	require.Equal(t, constants.StatusCreated, r.Metadata().ResourceProperties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusCreated, r.Metadata().Properties[constants.PropertyStatus])
 }
 
 func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
@@ -296,12 +296,12 @@ func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 	// should set failed status for network
 	r, err := sf.FindResource("resource.network.onprem")
 	require.NoError(t, err)
-	require.Equal(t, constants.StatusFailed, r.Metadata().ResourceProperties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusFailed, r.Metadata().Properties[constants.PropertyStatus])
 
 	// should set created status for template
 	r, err = sf.FindResource("resource.template.consul_config")
 	require.NoError(t, err)
-	require.Equal(t, constants.StatusCreated, r.Metadata().ResourceProperties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusCreated, r.Metadata().Properties[constants.PropertyStatus])
 
 	// container should not be in the state
 	_, err = sf.FindResource("resource.container.consul")
@@ -344,7 +344,7 @@ func TestApplyCallsProviderDestroyForDisabledResources(t *testing.T) {
 	require.NotNil(t, r)
 
 	// property should be disabled
-	require.Equal(t, constants.StatusDisabled, r.Metadata().ResourceProperties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusDisabled, r.Metadata().Properties[constants.PropertyStatus])
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1, r)
@@ -421,7 +421,7 @@ func TestDestroyFailSetsStatus(t *testing.T) {
 	require.Error(t, err)
 
 	r, _ := e.config.FindResource("resource.container.mycontainer")
-	require.Equal(t, constants.StatusFailed, r.Metadata().ResourceProperties[constants.PropertyStatus])
+	require.Equal(t, constants.StatusFailed, r.Metadata().Properties[constants.PropertyStatus])
 }
 
 func TestParseConfig(t *testing.T) {
@@ -493,7 +493,7 @@ func testAssertMethodCalled(t *testing.T, p *mocks.Providers, method string, n i
 		}
 
 		for _, c := range pm.Calls {
-			calls[r.Metadata().ResourceName] = append(calls[r.Metadata().ResourceName], c.Method)
+			calls[r.Metadata().Name] = append(calls[r.Metadata().Name], c.Method)
 
 			if c.Method == method {
 				callCount++
@@ -515,14 +515,16 @@ func testAssertMethodCalled(t *testing.T, p *mocks.Providers, method string, n i
 var failedState = `
 {
   "resources": [
-	{
-      "resource_name": "onprem",
- 	    "resource_properties": {
-				"status": "failed"
-			},
-      "subnet": "10.15.0.0/16",
-      "resource_type": "network"
-	}
+  {
+      "meta": {
+        "name": "onprem",
+         "properties": {
+          "status": "failed"
+        },
+        "type": "network"
+      },
+      "subnet": "10.15.0.0/16"
+  }
   ]
 }
 `
@@ -530,14 +532,16 @@ var failedState = `
 var taintedState = `
 {
   "resources": [
-	{
-      "resource_name": "onprem",
- 	    "resource_properties": {
-				"status": "tainted"
-			},
-      "subnet": "10.15.0.0/16",
-      "resource_type": "network"
-	}
+  {
+      "meta": {
+        "name": "onprem",
+        "properties": {
+          "status": "tainted"
+        },
+        "type": "network"
+      },
+      "subnet": "10.15.0.0/16"
+  }
   ]
 }
 `
@@ -545,38 +549,46 @@ var taintedState = `
 var existingState = `
 {
   "resources": [
-	{
-      "resource_name": "cloud",
-      "resource_properties": {
-				"status": "created"
-			},
-      "subnet": "10.15.0.0/16",
-      "resource_type": "network"
-	},
-	{
-      "resource_name": "default",
-      "properties": {
-				"status": "created"
-			},
-      "resource_type": "image_cache"
-	},
-	{
-      "resource_name": "container",
-      "resource_properties": {
-				"status": "created"
-			},
-			"image": {
-				"name": "test"
-			},
-      "resource_type": "container"
-	},
-	{
-      "resource_name": "consul_config",
-      "resource_properties": {
-				"status": "created"
-			},
-      "resource_type": "template"
-	}
+  {
+      "meta": {
+        "name": "cloud",
+        "properties": {
+          "status": "created"
+        },
+        "type": "network"
+      },
+      "subnet": "10.15.0.0/16"
+  },
+  {
+      "meta": {
+        "name": "default",
+        "properties": {
+          "status": "created"
+        },
+        "type": "image_cache"
+      }
+  },
+  {
+      "meta": {
+        "name": "container",
+        "properties": {
+          "status": "created"
+        },
+        "type": "container"
+      },
+      "image": {
+        "name": "test"
+      }
+  },
+  {
+      "meta": {
+        "name": "consul_config",
+        "properties": {
+          "status": "created"
+        },
+        "type": "template"
+      }
+  }
   ]
 }
 `
@@ -584,45 +596,55 @@ var existingState = `
 var singleFileState = `
 {
   "resources": [
-	{
-      "resource_name": "onprem",
-      "resource_properties": {
-				"status": "created"
-			},
-      "subnet": "10.15.0.0/16",
-      "resource_type": "network"
-	},
-	{
-      "resource_name": "default",
-      "resource_properties": {
-				"status": "created"
-			},
-      "resource_type": "image_cache"
-	},
-	{
-      "resource_name": "consul",
-      "resource_properties": {
-				"status": "created"
-			},
-      "resource_type": "container",
-			"image": {
-				"name": "test"
-			}
-	},
-	{
-      "resource_name": "consul_config",
-      "resource_properties": {
-				"status": "created"
-			},
-      "resource_type": "template"
-	},
-	{
-      "resource_name": "consul_addr",
-      "resource_properties": {
-				"status": "created"
-			},
-      "resource_type": "output"
-	}
+  {
+      "meta": {
+        "name": "onprem",
+        "properties": {
+          "status": "created"
+        },
+        "type": "network"
+      },
+      "subnet": "10.15.0.0/16"
+  },
+  {
+      "meta": {
+        "name": "default",
+        "properties": {
+          "status": "created"
+        },
+        "type": "image_cache"
+      }
+  },
+  {
+      "meta": {
+        "name": "consul",
+        "properties": {
+          "status": "created"
+        },
+        "type": "container"
+      },
+      "image": {
+        "name": "test"
+      }
+  },
+  {
+      "meta": {
+        "name": "consul_config",
+        "properties": {
+          "status": "created"
+        },
+        "type": "template"
+      }
+  },
+  {
+      "meta": {
+        "name": "consul_addr",
+        "properties": {
+          "status": "created"
+        },
+        "type": "output"
+      }
+  }
   ]
 }
 `
@@ -630,37 +652,45 @@ var singleFileState = `
 var complexState = `
 {
   "resources": [
-	{
-      "resource_name": "cloud",
-      "subnet": "10.15.0.0/16",
-      "resource_properties": {
-				"status": "created"
-			},
-      "resource_type": "network"
-	},
-	{
-      "resource_name": "default",
-      "resource_type": "image_cache",
-      "resource_properties": {
-				"status": "created"
-			},
-			"depends_on": ["resource.network.cloud"]
-	},
-	{
-      "resource_name": "mytemplate",
-      "resource_properties": {
-				"status": "created"
-			},
-      "resource_type": "template"
-	},
-	{
-      "resource_name": "mycontainer",
-      "resource_type": "container",
-      "resource_properties": {
-				"status": "created"
-			},
-			"depends_on": ["resource.network.cloud", "resource.template.mytemplate"]
-	}
+  {
+      "meta": {
+        "name": "cloud",
+        "properties": {
+          "status": "created"
+        },
+        "type": "network"
+      },
+      "subnet": "10.15.0.0/16"
+  },
+  {
+      "meta": {
+        "name": "default",
+        "type": "image_cache",
+        "properties": {
+          "status": "created"
+        }
+      },
+      "depends_on": ["resource.network.cloud"]
+  },
+  {
+      "meta": {
+        "name": "mytemplate",
+        "properties": {
+          "status": "created"
+        },
+        "type": "template"
+      }
+  },
+  {
+      "meta": {
+        "name": "mycontainer",
+        "type": "container",
+        "properties": {
+          "status": "created"
+        }
+      },
+      "depends_on": ["resource.network.cloud", "resource.template.mytemplate"]
+  }
   ]
 }
 `
@@ -669,26 +699,32 @@ var disabledState = `
 {
   "blueprint": null,
   "resources": [
-	{
-      "resource_name": "default",
-      "resource_type": "image_cache"
-	},
-	{
-      "resource_name": "dc1_enabled",
-      "resource_properties": {
-				"status": "created"
-			},
-      "subnet": "10.15.0.0/16",
-      "resource_type": "network"
-	},
-	{
-		 "disabled": true,
-     "resource_name": "consul_disabled",
-     "resource_properties": {
-				"status": "disabled"
-			},
-      "resource_type": "container"
-	}
+  {
+      "meta": {
+        "name": "default",
+        "type": "image_cache"
+      }
+  },
+  {
+      "meta": {
+        "name": "dc1_enabled",
+        "properties": {
+          "status": "created"
+        },
+        "type": "network"
+      },
+      "subnet": "10.15.0.0/16"
+  },
+  {
+     "disabled": true,
+      "meta": {
+        "name": "consul_disabled",
+        "properties": {
+           "status": "disabled"
+         },
+         "type": "container"
+      }
+  }
   ]
 }
 `
@@ -697,43 +733,51 @@ var disabledAndCreatedState = `
 {
   "blueprint": null,
   "resources": [
-	{
-      "resource_name": "default",
-      "resource_properties": {
-				"status": "created"
-			},
-      "resource_type": "image_cache"
-	},
-	{
-      "resource_name": "dc1_enabled",
-      "resource_properties": {
-				"status": "created"
-			},
-      "subnet": "10.15.0.0/16",
-      "resource_type": "network"
-	},
-	{
-		 "disabled": false,
-      "resource_name": "consul_disabled",
-      "resource_properties": {
-				"status": "created"
-			},
-      "resource_type": "container",
-			"image": {
-				"name": "test"
-			}	
-	},
-	{
-		 "disabled": false,
-      "resource_name": "consul_enabled",
-      "resource_properties": {
-				"status": "created"
-			},
-      "resource_type": "container",
-			"image": {
-				"name": "test"
-			}
-	}
+  {
+      "meta": {
+        "name": "default",
+        "properties": {
+          "status": "created"
+        },
+        "type": "image_cache"
+      }
+  },
+  {
+      "meta": {
+        "name": "dc1_enabled",
+        "properties": {
+          "status": "created"
+        },
+        "type": "network"
+      },
+      "subnet": "10.15.0.0/16"
+  },
+  {
+     "disabled": false,
+     "meta": {
+        "name": "consul_disabled",
+        "properties": {
+          "status": "created"
+        },
+        "type": "container"
+      },
+      "image": {
+        "name": "test"
+      }	
+  },
+  {
+     "disabled": false,
+     "meta": {
+      "name": "consul_enabled",
+      "properties": {
+        "status": "created"
+      },
+      "type": "container"
+      },
+      "image": {
+        "name": "test"
+      }
+  }
   ]
 }
 `

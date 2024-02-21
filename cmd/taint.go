@@ -37,7 +37,7 @@ var taintCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		r.Metadata().ResourceProperties[constants.PropertyStatus] = constants.StatusTainted
+		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusTainted
 
 		d, err := cfg.ToJSON()
 		if err != nil {

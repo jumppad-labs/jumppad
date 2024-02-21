@@ -39,7 +39,7 @@ func (p *ChapterProvider) Create() error {
 		taskMatch := taskRegex.FindAllStringSubmatch(page.Content, -1)
 		for _, match := range taskMatch {
 			taskID := match[1]
-			resourceID := fmt.Sprintf("<Task id=\"%s\">", p.config.Tasks[taskID].ResourceID)
+			resourceID := fmt.Sprintf("<Task id=\"%s\">", p.config.Tasks[taskID].Meta.ID)
 			page.Content = taskRegex.ReplaceAllString(page.Content, resourceID)
 		}
 
@@ -56,7 +56,7 @@ func (p *ChapterProvider) Create() error {
 
 		page := ChapterIndexPage{
 			Title: title,
-			URI:   fmt.Sprintf("%s/%s", p.config.ResourceName, page.Name),
+			URI:   fmt.Sprintf("%s/%s", p.config.Meta.Name, page.Name),
 		}
 
 		index.Pages = append(index.Pages, page)

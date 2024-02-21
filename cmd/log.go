@@ -145,7 +145,7 @@ func getLoggable() ([]string, error) {
 
 	loggable := []string{}
 	for _, r := range cfg.Resources {
-		if r.Metadata().Disabled {
+		if r.GetDisabled() {
 			continue
 		}
 
@@ -157,23 +157,23 @@ func getLoggable() ([]string, error) {
 func getFQDNForResource(r hcltypes.Resource) []string {
 	fqdns := []string{}
 
-	switch r.Metadata().ResourceType {
+	switch r.Metadata().Type {
 	case ct.TypeContainer:
-		fqdns = append(fqdns, utils.FQDN(r.Metadata().ResourceName, r.Metadata().ResourceModule, r.Metadata().ResourceType))
+		fqdns = append(fqdns, utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type))
 	case k8s.TypeK8sCluster:
-		fqdns = append(fqdns, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().ResourceName, r.Metadata().ResourceModule, r.Metadata().ResourceType)))
+		fqdns = append(fqdns, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type)))
 	case nomad.TypeNomadCluster:
-		fqdns = append(fqdns, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().ResourceName, r.Metadata().ResourceModule, r.Metadata().ResourceType)))
+		fqdns = append(fqdns, fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type)))
 
 		// add the client nodes
 		nomad := r.(*nomad.NomadCluster)
 		for n := 0; n < nomad.ClientNodes; n++ {
-			fqdns = append(fqdns, fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Metadata().ResourceName, r.Metadata().ResourceModule, r.Metadata().ResourceType)))
+			fqdns = append(fqdns, fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type)))
 		}
 	case ct.TypeSidecar:
 		fallthrough
 	case cache.TypeImageCache:
-		fqdns = append(fqdns, utils.FQDN(r.Metadata().ResourceName, r.Metadata().ResourceModule, r.Metadata().ResourceType))
+		fqdns = append(fqdns, utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type))
 	}
 
 	return fqdns

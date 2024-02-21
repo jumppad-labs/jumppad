@@ -78,8 +78,8 @@ func (p *TemplateProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 
 // Create a new template
 func (p *TemplateProvider) Create() error {
-	p.log.Info("Generating template", "ref", p.config.ResourceID, "output", p.config.Destination)
-	p.log.Debug("Template content", "ref", p.config.ResourceID, "source", p.config.Source)
+	p.log.Info("Generating template", "ref", p.config.Meta.ID, "output", p.config.Destination)
+	p.log.Debug("Template content", "ref", p.config.Meta.ID, "source", p.config.Source)
 
 	// check the template is valid
 	if p.config.Source == "" {
@@ -94,7 +94,7 @@ func (p *TemplateProvider) Create() error {
 		}
 		defer f.Close()
 
-		p.log.Debug("Template output", "ref", p.config.ResourceID, "destination", p.config.Source)
+		p.log.Debug("Template output", "ref", p.config.Meta.ID, "destination", p.config.Source)
 		_, err = f.WriteString(p.config.Source)
 
 		return err
@@ -141,7 +141,7 @@ func (p *TemplateProvider) Create() error {
 
 	f.WriteString(result)
 
-	p.log.Debug("Template output", "ref", p.config.ResourceID, "destination", p.config.Destination, "result", result)
+	p.log.Debug("Template output", "ref", p.config.Meta.ID, "destination", p.config.Destination, "result", result)
 
 	return nil
 }
@@ -151,7 +151,7 @@ func (p *TemplateProvider) Destroy() error {
 		err := os.RemoveAll(p.config.Destination)
 		if err != nil {
 			p.log.Warn("Unable to delete template file",
-				"ref", p.config.ResourceName,
+				"ref", p.config.Meta.Name,
 				"destination", p.config.Destination,
 				"error", err)
 		}
@@ -167,7 +167,7 @@ func (p *TemplateProvider) Lookup() ([]string, error) {
 
 // Refresh causes the template to be destroyed and recreated
 func (p *TemplateProvider) Refresh() error {
-	p.log.Debug("Refresh Template", "ref", p.config.ResourceID)
+	p.log.Debug("Refresh Template", "ref", p.config.Meta.ID)
 
 	p.Destroy()
 	return p.Create()

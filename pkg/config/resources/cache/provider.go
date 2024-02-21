@@ -46,7 +46,7 @@ func (p *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 }
 
 func (p *Provider) Create() error {
-	p.log.Info("Creating ImageCache", "ref", p.config.ResourceID)
+	p.log.Info("Creating ImageCache", "ref", p.config.Meta.ID)
 
 	// check the cache does not already exist
 	ids, err := p.Lookup()
@@ -85,7 +85,7 @@ func (p *Provider) Create() error {
 }
 
 func (p *Provider) Destroy() error {
-	p.log.Info("Destroy ImageCache", "ref", p.config.ResourceID)
+	p.log.Info("Destroy ImageCache", "ref", p.config.Meta.ID)
 
 	ids, err := p.Lookup()
 	if err != nil {
@@ -108,7 +108,7 @@ func (p *Provider) Destroy() error {
 // this is because we need to ensure that the cache is attached to all networks so that
 // it can work with any clusters that may be on those networks.
 func (p *Provider) Refresh() error {
-	p.log.Debug("Refresh Image Cache", "ref", p.config.ResourceID)
+	p.log.Debug("Refresh Image Cache", "ref", p.config.Meta.ID)
 
 	// get a list of dependent networks for the resource
 	dependentNetworks := p.findDependentNetworks()
@@ -117,17 +117,17 @@ func (p *Provider) Refresh() error {
 }
 
 func (p *Provider) Lookup() ([]string, error) {
-	return p.client.FindContainerIDs(utils.FQDN(p.config.ResourceName, p.config.ResourceModule, p.config.ResourceType))
+	return p.client.FindContainerIDs(utils.FQDN(p.config.Meta.Name, p.config.Meta.Module, p.config.Meta.Type))
 }
 
 func (p *Provider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.ResourceID)
+	p.log.Debug("Checking changes", "ref", p.config.Meta.ID)
 
 	return false, nil
 }
 
 func (p *Provider) createImageCache(registries []string, authRegistries []string) (string, error) {
-	fqdn := utils.FQDN(p.config.ResourceName, p.config.ResourceModule, p.config.ResourceType)
+	fqdn := utils.FQDN(p.config.Meta.Name, p.config.Meta.Module, p.config.Meta.Type)
 
 	// Create the volume to store the cache
 	// if this volume exists it will not be recreated
@@ -277,11 +277,11 @@ func (p *Provider) reConfigureNetworks(dependentNetworks []string) error {
 	// now remove any extra networks that are no longer required
 	for _, n := range currentNetworks {
 		if !contains(added, n) {
-			p.log.Debug("Detaching container from network", "ref", p.config.ResourceID, "id", ids[0], "network", n)
+			p.log.Debug("Detaching container from network", "ref", p.config.Meta.ID, "id", ids[0], "network", n)
 
 			err := p.client.DetachNetwork(n, ids[0])
 			if err != nil {
-				p.log.Warn("Unable to detach network", "ref", p.config.ResourceID, "network", n)
+				p.log.Warn("Unable to detach network", "ref", p.config.Meta.ID, "network", n)
 			}
 		}
 	}

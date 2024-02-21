@@ -40,7 +40,7 @@ func (p *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	cs, sok := cfg.(*Sidecar)
 	if sok {
 		co := &Container{}
-		co.ResourceMetadata = cs.ResourceMetadata
+		co.ResourceBase = cs.ResourceBase
 		co.ContainerName = cs.ContainerName
 
 		co.Networks = []NetworkAttachment{{ID: cs.Target.ContainerName}}
@@ -71,7 +71,7 @@ func (p *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 
 // Create implements provider method and creates a Docker container with the given config
 func (p *Provider) Create() error {
-	p.log.Info("Creating Container", "ref", p.config.ResourceID)
+	p.log.Info("Creating Container", "ref", p.config.Meta.ID)
 
 	err := p.internalCreate(p.sidecar != nil)
 	if err != nil {
@@ -98,7 +98,7 @@ func (c *Provider) Refresh() error {
 	}
 
 	if changed {
-		c.log.Debug("Refresh Container", "ref", c.config.ResourceID)
+		c.log.Debug("Refresh Container", "ref", c.config.Meta.ID)
 		err := c.Destroy()
 		if err != nil {
 			return err
@@ -112,7 +112,7 @@ func (c *Provider) Refresh() error {
 
 // Destroy stops and removes the container
 func (c *Provider) Destroy() error {
-	c.log.Info("Destroy Container", "ref", c.config.ResourceID)
+	c.log.Info("Destroy Container", "ref", c.config.Meta.ID)
 
 	return c.internalDestroy()
 }
@@ -121,14 +121,14 @@ func (c *Provider) Changed() (bool, error) {
 	// has the image id changed
 	id, err := c.client.FindImageInLocalRegistry(types.Image{Name: c.config.Image.Name})
 	if err != nil {
-		c.log.Error("Unable to lookup image in local registry", "ref", c.config.ResourceID, "error", err)
+		c.log.Error("Unable to lookup image in local registry", "ref", c.config.Meta.ID, "error", err)
 		return false, err
 	}
 
 	// check that the current registry id for the image is the same
 	// as the image that was used to create this container
 	if id != c.config.Image.ID {
-		c.log.Debug("Container image changed, needs refresh", "ref", c.config.ResourceID)
+		c.log.Debug("Container image changed, needs refresh", "ref", c.config.Meta.ID)
 		return true, nil
 	}
 
@@ -137,7 +137,7 @@ func (c *Provider) Changed() (bool, error) {
 
 func (c *Provider) internalCreate(sidecar bool) error {
 	// set the fqdn
-	fqdn := utils.FQDN(c.config.ResourceName, c.config.ResourceModule, c.config.ResourceType)
+	fqdn := utils.FQDN(c.config.Meta.Name, c.config.Meta.Module, c.config.Meta.Type)
 	c.config.ContainerName = fqdn
 
 	if c.config.Image == nil {
@@ -153,7 +153,7 @@ func (c *Provider) internalCreate(sidecar bool) error {
 
 	err := c.client.PullImage(img, false)
 	if err != nil {
-		c.log.Error("Error pulling container image", "ref", c.config.ResourceID, "image", c.config.Image.Name)
+		c.log.Error("Error pulling container image", "ref", c.config.Meta.ID, "image", c.config.Image.Name)
 
 		return err
 	}
@@ -161,7 +161,7 @@ func (c *Provider) internalCreate(sidecar bool) error {
 	// update the image ID
 	id, err := c.client.FindImageInLocalRegistry(img)
 	if err != nil {
-		c.log.Error("Unable to lookup image in local registry", "ref", c.config.ResourceID, "error", err)
+		c.log.Error("Unable to lookup image in local registry", "ref", c.config.Meta.ID, "error", err)
 		return err
 	}
 
@@ -244,7 +244,7 @@ func (c *Provider) internalCreate(sidecar bool) error {
 
 	id, err = c.client.CreateContainer(&new)
 	if err != nil {
-		c.log.Error("Unable to create container", "ref", c.config.ResourceID, "error", err)
+		c.log.Error("Unable to create container", "ref", c.config.Meta.ID, "error", err)
 		return err
 	}
 

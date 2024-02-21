@@ -13,7 +13,7 @@ const ImageVolumeName string = "images"
 const BuildImagePrefix = "jumppad.dev/localcache"
 
 // Name of the Cache resource
-const CacheResourceName string = "docker-cache"
+const CacheName string = "docker-cache"
 
 // Address of the proxy used for caching docker images
 const jumppadProxyAddress string = "http://default.image-cache.jumppad.dev:3128"
