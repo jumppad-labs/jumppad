@@ -1,6 +1,9 @@
 ---
 name: Build And Deploy
-on: [push]
+on:
+  push:
+    branches:
+      - "**"
 jobs:
   dagger_build:
     name: Dagger Build and Test

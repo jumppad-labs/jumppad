@@ -66,22 +66,22 @@ func (d *JumppadCI) All(
 	log.Info("Building version", "semver", version, "sha", sha)
 
 	// run the unit tests
-	err = d.UnitTest(ctx, src, !quick)
+	d.UnitTest(ctx, src, !quick)
 
 	// build the applications
-	output, err = d.Build(ctx, src)
+	output, _ = d.Build(ctx, src)
 
 	// package the build outputs
-	output, err = d.Package(ctx, output, version)
+	output, _ = d.Package(ctx, output, version)
 
 	// create the archives
-	output, err = d.Archive(ctx, output, version)
+	output, _ = d.Archive(ctx, output, version)
 
 	if notorizeCert != nil && notorizeCertPassword != nil && notorizeKey != nil && notorizeId != "" && notorizeIssuer != "" {
-		output, err = d.SignAndNotorize(ctx, version, output, notorizeCert, notorizeCertPassword, notorizeKey, notorizeId, notorizeIssuer)
+		output, _ = d.SignAndNotorize(ctx, version, output, notorizeCert, notorizeCertPassword, notorizeKey, notorizeId, notorizeIssuer)
 	}
 
-	return output, err
+	return output, d.lastError
 }
 
 func (d *JumppadCI) getVersion(ctx context.Context, token *Secret, src *Directory) (string, string, error) {
