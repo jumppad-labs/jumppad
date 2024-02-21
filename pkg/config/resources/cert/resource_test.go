@@ -21,8 +21,8 @@ func TestCertCAProcessSetsAbsoluteValues(t *testing.T) {
 	require.NoError(t, err)
 
 	ca := &CertificateCA{
-		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
-		Output:           "./output",
+		ResourceBase: types.ResourceBase{Meta: types.Meta{File: "./"}},
+		Output:       "./output",
 	}
 
 	err = ca.Process()
@@ -37,9 +37,11 @@ func TestCertCALoadsValuesFromState(t *testing.T) {
   "blueprint": null,
   "resources": [
 		{
-			"resource_id": "resource.certificate_ca.test",
-			"resource_name": "test",
-			"resource_type": "certificate_ca",
+			"meta": {
+				"id": "resource.certificate_ca.test",
+				"name": "test",
+				"type": "certificate_ca"
+			},
 			"private_key": {
 				"filename": "private.key"
 			},
@@ -57,9 +59,11 @@ func TestCertCALoadsValuesFromState(t *testing.T) {
 }`)
 
 	ca := &CertificateCA{
-		ResourceMetadata: types.ResourceMetadata{
-			ResourceFile: "./",
-			ResourceID:   "resource.certificate_ca.test",
+		ResourceBase: types.ResourceBase{
+			Meta: types.Meta{
+				File: "./",
+				ID:   "resource.certificate_ca.test",
+			},
 		},
 		Output: "./output",
 	}
@@ -78,10 +82,10 @@ func TestCertLeafProcessSetsAbsoluteValues(t *testing.T) {
 	require.NoError(t, err)
 
 	ca := &CertificateLeaf{
-		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
-		CAKey:            "./key.pem",
-		CACert:           "./cert.pem",
-		Output:           "./output",
+		ResourceBase: types.ResourceBase{Meta: types.Meta{File: "./"}},
+		CAKey:        "./key.pem",
+		CACert:       "./cert.pem",
+		Output:       "./output",
 	}
 
 	err = ca.Process()
@@ -98,9 +102,11 @@ func TestCertLeafLoadsValuesFromState(t *testing.T) {
   "blueprint": null,
   "resources": [
 	{
-			"resource_id": "resource.certificate_leaf.test",
-      "resource_name": "test",
-      "resource_type": "certificate_leaf",
+			"meta": {
+				"id": "resource.certificate_leaf.test",
+  	    "name": "test",
+  	    "type": "certificate_leaf"
+			},
 			"private_key": {
 				"filename": "private.key"
 			},
@@ -118,9 +124,11 @@ func TestCertLeafLoadsValuesFromState(t *testing.T) {
 }`)
 
 	ca := &CertificateLeaf{
-		ResourceMetadata: types.ResourceMetadata{
-			ResourceFile: "./",
-			ResourceID:   "resource.certificate_leaf.test",
+		ResourceBase: types.ResourceBase{
+			Meta: types.Meta{
+				File: "./",
+				ID:   "resource.certificate_leaf.test",
+			},
 		},
 		Output: "./output",
 	}

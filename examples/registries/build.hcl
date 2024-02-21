@@ -22,7 +22,7 @@ resource "container" "noauth" {
   }
 
   network {
-    id         = resource.network.cloud.resource_id
+    id         = resource.network.cloud.meta.id
     ip_address = variable.noauth_ip_address
   }
 
@@ -50,7 +50,7 @@ resource "container" "auth" {
   }
 
   network {
-    id         = resource.network.cloud.resource_id
+    id         = resource.network.cloud.meta.id
     ip_address = variable.auth_ip_address
   }
 
@@ -86,7 +86,7 @@ resource "container" "insecure" {
   }
 
   network {
-    id         = resource.network.cloud.resource_id
+    id         = resource.network.cloud.meta.id
     ip_address = variable.insecure_ip_address
   }
 

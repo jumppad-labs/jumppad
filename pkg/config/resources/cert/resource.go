@@ -11,7 +11,7 @@ const TypeCertificateCA string = "certificate_ca"
 
 // CertificateCA allows the generate of CA certificates
 type CertificateCA struct {
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	// Output directory to write the certificate and key too
 	Output string `hcl:"output" json:"output"`
@@ -30,7 +30,7 @@ type CertificateCA struct {
 }
 
 func (c *CertificateCA) Process() error {
-	c.Output = utils.EnsureAbsolute(c.Output, c.ResourceFile)
+	c.Output = utils.EnsureAbsolute(c.Output, c.Meta.File)
 	c.PrivateKey = File{}
 	c.PublicKeySSH = File{}
 	c.PublicKeyPEM = File{}
@@ -41,7 +41,7 @@ func (c *CertificateCA) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(c.ResourceID)
+		r, _ := cfg.FindResource(c.Meta.ID)
 		if r != nil {
 			kstate := r.(*CertificateCA)
 			c.PrivateKey = kstate.PrivateKey
@@ -59,7 +59,7 @@ const TypeCertificateLeaf string = "certificate_leaf"
 
 // CertificateCA allows the generate of CA certificates
 type CertificateLeaf struct {
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	CAKey  string `hcl:"ca_key" json:"ca_key"`   // Path to the primary key for the root CA
 	CACert string `hcl:"ca_cert" json:"ca_cert"` // Path to the root CA
@@ -83,9 +83,9 @@ type CertificateLeaf struct {
 }
 
 func (c *CertificateLeaf) Process() error {
-	c.CACert = utils.EnsureAbsolute(c.CACert, c.ResourceFile)
-	c.CAKey = utils.EnsureAbsolute(c.CAKey, c.ResourceFile)
-	c.Output = utils.EnsureAbsolute(c.Output, c.ResourceFile)
+	c.CACert = utils.EnsureAbsolute(c.CACert, c.Meta.File)
+	c.CAKey = utils.EnsureAbsolute(c.CAKey, c.Meta.File)
+	c.Output = utils.EnsureAbsolute(c.Output, c.Meta.File)
 	c.PrivateKey = File{}
 	c.PublicKeySSH = File{}
 	c.PublicKeyPEM = File{}
@@ -96,7 +96,7 @@ func (c *CertificateLeaf) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(c.ResourceID)
+		r, _ := cfg.FindResource(c.Meta.ID)
 		if r != nil {
 			kstate := r.(*CertificateLeaf)
 			c.PrivateKey = kstate.PrivateKey

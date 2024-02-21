@@ -13,7 +13,7 @@ const TypeIngress string = "ingress"
 
 // Ingress defines an ingress service mapping ports between local host and resources like containers and kube cluster
 type Ingress struct {
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	// local port to expose the service on
 	Port int `hcl:"port" json:"port"`
@@ -43,10 +43,9 @@ type Ingress struct {
 }
 
 type TargetConfig struct {
-	ResourceName  string `hcl:"resource_name,optional" json:"resource_name,omitempty"`
-	ResourceType  string `hcl:"resource_type,optional" json:"resource_type,omitempty"`
-	ExternalIP    string `hcl:"external_ip,optional" json:"external_ip,omitempty"`
-	ConnectorPort int    `hcl:"connector_port,optional" json:"connector_port,omitempty"`
+	Meta          types.Meta `hcl:"meta" json:"meta"`
+	ExternalIP    string     `hcl:"external_ip,optional" json:"external_ip,omitempty"`
+	ConnectorPort int        `hcl:"connector_port,optional" json:"connector_port,omitempty"`
 }
 
 // Traffic defines either a source or a destination block for ingress traffic
@@ -62,7 +61,7 @@ type TrafficTarget struct {
 
 func (i *Ingress) Process() error {
 	// connector is a reserved name
-	if i.ResourceName == "connector" {
+	if i.Meta.Name == "connector" {
 		return fmt.Errorf("ingress name 'connector' is a reserved name")
 	}
 
@@ -80,7 +79,7 @@ func (i *Ingress) Process() error {
 	sn, _ := utils.ReplaceNonURIChars(i.Target.Config["service"])
 	// if service is not set, use the name of the ingress
 	if i.Target.Config["service"] == "" {
-		sn, _ = utils.ReplaceNonURIChars(i.ResourceName)
+		sn, _ = utils.ReplaceNonURIChars(i.Meta.Name)
 	}
 
 	i.Target.Config["service"] = sn
@@ -90,7 +89,7 @@ func (i *Ingress) Process() error {
 	c, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := c.FindResource(i.ResourceID)
+		r, _ := c.FindResource(i.Meta.ID)
 		if r != nil {
 			kstate := r.(*Ingress)
 			i.IngressID = kstate.IngressID

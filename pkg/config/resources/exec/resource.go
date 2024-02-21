@@ -16,7 +16,7 @@ const TypeExec string = "exec"
 // Exec allows commands to be executed either locally or remotely
 type Exec struct {
 	// embedded type holding name, etc
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Script           string            `hcl:"script" json:"script"`                                          // script to execute
 	WorkingDirectory string            `hcl:"working_directory,optional" json:"working_directory,omitempty"` // Working directory to execute commands
@@ -42,7 +42,7 @@ func (e *Exec) Process() error {
 		// process volumes
 		// make sure mount paths are absolute
 		for i, v := range e.Volumes {
-			e.Volumes[i].Source = utils.EnsureAbsolute(v.Source, e.ResourceFile)
+			e.Volumes[i].Source = utils.EnsureAbsolute(v.Source, e.Meta.File)
 		}
 
 		// make sure line endings are linux
@@ -58,7 +58,7 @@ func (e *Exec) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(e.ResourceID)
+		r, _ := cfg.FindResource(e.Meta.ID)
 
 		if r != nil {
 			kstate := r.(*Exec)

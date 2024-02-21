@@ -21,17 +21,21 @@ func TestExecSetsOutputsFromState(t *testing.T) {
   "blueprint": null,
   "resources": [
 	{
-			"resource_id": "resource.exec.test",
-      "resource_name": "test",
-      "resource_type": "exec",
+			"meta": {
+      	"id": "resource.exec.test",
+      	"name": "test",
+      	"type": "exec"
+			},
 			"pid": 42
 	}
 	]
 }`)
 
 	c := &Exec{
-		ResourceMetadata: types.ResourceMetadata{
-			ResourceID: "resource.exec.test",
+		ResourceBase: types.ResourceBase{
+			Meta: types.Meta{
+				ID: "resource.exec.test",
+			},
 		},
 	}
 
@@ -45,7 +49,7 @@ func TestExecProcessSetsAbsolute(t *testing.T) {
 	require.NoError(t, err)
 
 	c := &Exec{
-		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
+		ResourceBase: types.ResourceBase{Meta: types.Meta{File: "./"}},
 		Image: &ctypes.Image{
 			Name: "test",
 		},
@@ -64,7 +68,7 @@ func TestExecProcessSetsAbsolute(t *testing.T) {
 
 func TestExecLocalWithVolumesReturnsError(t *testing.T) {
 	c := &Exec{
-		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
+		ResourceBase: types.ResourceBase{Meta: types.Meta{File: "./"}},
 		Volumes: []ctypes.Volume{
 			{
 				Source:      "./",
@@ -79,7 +83,7 @@ func TestExecLocalWithVolumesReturnsError(t *testing.T) {
 
 func TestExecLocalWithNetworksReturnsError(t *testing.T) {
 	c := &Exec{
-		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
+		ResourceBase: types.ResourceBase{Meta: types.Meta{File: "./"}},
 		Networks: []ctypes.NetworkAttachment{
 			{
 				Name: "test",

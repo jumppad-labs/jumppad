@@ -42,7 +42,7 @@ func (p *LocalProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 
 // Create a new exec
 func (p *LocalProvider) Create() error {
-	p.log.Info("Locally executing script", "ref", p.config.ResourceID, "command", p.config.Command)
+	p.log.Info("Locally executing script", "ref", p.config.Meta.ID, "command", p.config.Command)
 	p.log.Warn("This resource is deprecated and will be removed in a future version of Jumppad, please use exec instead")
 
 	// build the environment variables
@@ -53,7 +53,7 @@ func (p *LocalProvider) Create() error {
 	}
 
 	// create the folders for logs and pids
-	logPath := filepath.Join(utils.LogsDir(), fmt.Sprintf("exec_%s.log", p.config.ResourceName))
+	logPath := filepath.Join(utils.LogsDir(), fmt.Sprintf("exec_%s.log", p.config.Meta.Name))
 
 	// do we have a duration to parse
 	var d time.Duration
@@ -85,7 +85,7 @@ func (p *LocalProvider) Create() error {
 	// set the output
 	p.config.Pid = pid
 
-	p.log.Debug("Started process", "ref", p.config.ResourceID, "pid", p.config.Pid)
+	p.log.Debug("Started process", "ref", p.config.Meta.ID, "pid", p.config.Pid)
 
 	if err != nil {
 		return err
@@ -98,7 +98,7 @@ func (p *LocalProvider) Create() error {
 func (p *LocalProvider) Destroy() error {
 	if p.config.Daemon {
 		// attempt to destroy the process
-		p.log.Info("Stopping locally executing script", "ref", p.config.ResourceID, "pid", p.config.Pid)
+		p.log.Info("Stopping locally executing script", "ref", p.config.Meta.ID, "pid", p.config.Pid)
 
 		if p.config.Pid < 1 {
 			p.log.Warn("Unable to stop local process, no pid")
@@ -120,13 +120,13 @@ func (p *LocalProvider) Lookup() ([]string, error) {
 }
 
 func (p *LocalProvider) Refresh() error {
-	p.log.Debug("Refresh Local Exec", "ref", p.config.ResourceName)
+	p.log.Debug("Refresh Local Exec", "ref", p.config.Meta.Name)
 
 	return nil
 }
 
 func (p *LocalProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.ResourceID)
+	p.log.Debug("Checking changes", "ref", p.config.Meta.ID)
 
 	return false, nil
 }

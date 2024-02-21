@@ -10,7 +10,7 @@ resource "container" "consul_enabled" {
   command = ["consul", "agent", "-dev", "-client", "0.0.0.0"]
 
   network {
-    id         = resource.network.dc1_enabled.resource_id
+    id         = resource.network.dc1_enabled.meta.id
     ip_address = "10.15.0.200"
   }
 
@@ -24,7 +24,7 @@ resource "container" "consul_disabled" {
   disabled = true
 
   image {
-    id   = resource.network.dc1_enabled.resource_id
+    id   = resource.network.dc1_enabled.meta.id
     name = "consul:1.10.6"
   }
 

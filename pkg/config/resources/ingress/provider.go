@@ -44,7 +44,7 @@ func (p *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 }
 
 func (p *Provider) Create() error {
-	p.log.Info("Create Ingress", "ref", p.config.ResourceID)
+	p.log.Info("Create Ingress", "ref", p.config.Meta.ID)
 
 	if p.config.ExposeLocal {
 		return p.exposeLocal()
@@ -55,13 +55,13 @@ func (p *Provider) Create() error {
 
 // Destroy satisfies the interface method but is not implemented by LocalExec
 func (p *Provider) Destroy() error {
-	p.log.Info("Destroy Ingress", "ref", p.config.ResourceID, "id", p.config.IngressID)
+	p.log.Info("Destroy Ingress", "ref", p.config.Meta.ID, "id", p.config.IngressID)
 
 	err := p.connector.RemoveService(p.config.IngressID)
 	if err != nil {
 		// fail silently as this should not stop us from destroying the
 		// other resources
-		p.log.Warn("Unable to remove local ingress", "ref", p.config.ResourceName, "id", p.config.IngressID, "error", err)
+		p.log.Warn("Unable to remove local ingress", "ref", p.config.Meta.Name, "id", p.config.IngressID, "error", err)
 	}
 
 	return nil
@@ -69,19 +69,19 @@ func (p *Provider) Destroy() error {
 
 // Lookup satisfies the interface method but is not implemented by LocalExec
 func (p *Provider) Lookup() ([]string, error) {
-	p.log.Debug("Lookup Ingress", "ref", p.config.ResourceID, "id", p.config.IngressID)
+	p.log.Debug("Lookup Ingress", "ref", p.config.Meta.ID, "id", p.config.IngressID)
 
 	return []string{}, nil
 }
 
 func (p *Provider) Refresh() error {
-	p.log.Debug("Refresh Ingress", "ref", p.config.ResourceID)
+	p.log.Debug("Refresh Ingress", "ref", p.config.Meta.ID)
 
 	return nil
 }
 
 func (p *Provider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.ResourceID)
+	p.log.Debug("Checking changes", "ref", p.config.Meta.ID)
 
 	return false, nil
 }
@@ -103,7 +103,7 @@ func (p *Provider) exposeLocal() error {
 		port = p.config.Target.NamedPort
 	}
 
-	switch p.config.Target.Resource.ResourceType {
+	switch p.config.Target.Resource.Meta.Type {
 	case k8s.TypeK8sCluster:
 		remoteAddr = fmt.Sprintf(
 			"%s.%s.svc:%s",
@@ -178,7 +178,7 @@ func (p *Provider) exposeRemote() error {
 		port = p.config.Target.NamedPort
 	}
 
-	switch p.config.Target.Resource.ResourceType {
+	switch p.config.Target.Resource.Meta.Type {
 	case k8s.TypeK8sCluster:
 		destAddr = fmt.Sprintf(
 			"%s.%s.svc:%s",

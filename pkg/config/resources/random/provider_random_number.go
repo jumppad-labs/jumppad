@@ -27,10 +27,10 @@ func (p *RandomNumberProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 }
 
 func (p *RandomNumberProvider) Create() error {
-	p.log.Info("Creating random number", "ref", p.config.ResourceID)
+	p.log.Info("Creating random number", "ref", p.config.Meta.ID)
 
 	number := rand.Intn(p.config.Maximum-p.config.Minimum) + p.config.Minimum
-	p.log.Debug("Generated random number", "ref", p.config.ResourceID, "number", number)
+	p.log.Debug("Generated random number", "ref", p.config.Meta.ID, "number", number)
 
 	p.config.Value = number
 
@@ -50,7 +50,7 @@ func (p *RandomNumberProvider) Refresh() error {
 }
 
 func (p *RandomNumberProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.ResourceID)
+	p.log.Debug("Checking changes", "ref", p.config.Meta.ID)
 
 	return false, nil
 }

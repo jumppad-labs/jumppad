@@ -7,7 +7,7 @@ const TypeBlueprint string = "blueprint"
 
 // Blueprint defines a stack blueprint for defining yard configs
 type Blueprint struct {
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Title        string   `hcl:"title,optional" json:"title,omitempty"`
 	Organization string   `hcl:"organization,optional" json:"organization,omitempty"`

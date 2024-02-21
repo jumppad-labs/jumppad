@@ -21,7 +21,7 @@ func (p *Provider) Init(cfg types.Resource, l sdk.Logger) error {
 }
 
 func (p *Provider) Create() error {
-	p.log.Info(fmt.Sprintf("Creating %s", p.config.Metadata().ResourceType), "ref", p.config.Metadata().ResourceID)
+	p.log.Info(fmt.Sprintf("Creating %s", p.config.Metadata().Type), "ref", p.config.Metadata().ID)
 	return nil
 }
 

@@ -12,7 +12,7 @@ const TypeBuild string = "build"
 
 type Build struct {
 	// embedded type holding name, etc
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Container BuildContainer `hcl:"container,block" json:"container"`
 
@@ -46,12 +46,12 @@ type Output struct {
 }
 
 func (b *Build) Process() error {
-	b.Container.Context = utils.EnsureAbsolute(b.Container.Context, b.ResourceFile)
+	b.Container.Context = utils.EnsureAbsolute(b.Container.Context, b.Meta.File)
 
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(b.ResourceID)
+		r, _ := cfg.FindResource(b.Meta.ID)
 		if r != nil {
 			kstate := r.(*Build)
 			b.Image = kstate.Image

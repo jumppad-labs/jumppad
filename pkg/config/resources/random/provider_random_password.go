@@ -106,7 +106,7 @@ func (p *RandomPasswordProvider) Refresh() error {
 }
 
 func (p *RandomPasswordProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.ResourceID)
+	p.log.Debug("Checking changes", "ref", p.config.Meta.ID)
 
 	return false, nil
 }

@@ -19,17 +19,21 @@ func TestLocalExecSetsOutputsFromState(t *testing.T) {
   "blueprint": null,
   "resources": [
 	{
-			"resource_id": "resource.local_exec.test",
-      "resource_name": "test",
-      "resource_type": "local_exec",
+      "meta": {
+      	"id": "resource.local_exec.test",
+      	"name": "test",
+      	"type": "local_exec"
+			},
 			"pid": 42
 	}
 	]
 }`)
 
 	c := &LocalExec{
-		ResourceMetadata: types.ResourceMetadata{
-			ResourceID: "resource.local_exec.test",
+		ResourceBase: types.ResourceBase{
+			Meta: types.Meta{
+				ID: "resource.local_exec.test",
+			},
 		},
 	}
 

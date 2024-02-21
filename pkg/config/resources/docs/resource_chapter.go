@@ -8,7 +8,7 @@ import (
 const TypeChapter string = "chapter"
 
 type Chapter struct {
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Prerequisites []string `hcl:"prerequisites,optional" json:"prerequisites"`
 
@@ -40,7 +40,7 @@ func (c *Chapter) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(c.ResourceID)
+		r, _ := cfg.FindResource(c.Meta.ID)
 		if r != nil {
 			state := r.(*Chapter)
 			c.Index = state.Index

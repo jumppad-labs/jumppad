@@ -20,7 +20,7 @@ func TestK8sClusterProcessSetsAbsolute(t *testing.T) {
 	require.NoError(t, err)
 
 	c := &K8sCluster{
-		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
+		ResourceBase: types.ResourceBase{Meta: types.Meta{File: "./"}},
 		Volumes: []ctypes.Volume{
 			{
 				Source:      "./",
@@ -39,25 +39,29 @@ func TestK8sClusterSetsOutputsFromState(t *testing.T) {
 {
   "blueprint": null,
   "resources": [
-	{
-			"resource_id": "resource.k8s_cluster.test",
-      "resource_name": "test",
-      "resource_type": "k8s_cluster",
-			"external_ip": "127.0.0.1",
-			"api_port": 123,
-			"connector_port": 124,
-			"kubeconfig": "./mine.yaml",
-			"container_name": "fqdn.mine.com",
-			"networks": [{
-				"assigned_address": "10.5.0.2",
-				"name": "cloud"
-			}]
-	}]
+  {
+      "meta": {
+      "id": "resource.k8s_cluster.test",
+      "name": "test",
+      "type": "k8s_cluster"
+      },
+      "external_ip": "127.0.0.1",
+      "api_port": 123,
+      "connector_port": 124,
+      "kubeconfig": "./mine.yaml",
+      "container_name": "fqdn.mine.com",
+      "networks": [{
+        "assigned_address": "10.5.0.2",
+        "name": "cloud"
+      }]
+  }]
 }`)
 
 	c := &K8sCluster{
-		ResourceMetadata: types.ResourceMetadata{
-			ResourceID: "resource.k8s_cluster.test",
+		ResourceBase: types.ResourceBase{
+			Meta: types.Meta{
+				ID: "resource.k8s_cluster.test",
+			},
 		},
 		Networks: []ctypes.NetworkAttachment{
 			ctypes.NetworkAttachment{},

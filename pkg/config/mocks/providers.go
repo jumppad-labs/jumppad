@@ -33,7 +33,7 @@ func (_m *Providers) GetProvider(c types.Resource) config.Provider {
 	// create a mock provider
 	m := &Provider{}
 
-	val := _m.returnVals[c.Metadata().ResourceName]
+	val := _m.returnVals[c.Metadata().Name]
 	m.On("Create").Return(val)
 	m.On("Destroy").Return(val)
 	m.On("Refresh").Return(val)

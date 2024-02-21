@@ -13,7 +13,7 @@ const TypeNomadJob string = "nomad_job"
 // NomadJob applies and deletes and deletes Nomad cluster jobs
 type NomadJob struct {
 	// embedded type holding name, etc
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	// Cluster is the name of the cluster to apply configuration to
 	Cluster NomadCluster `hcl:"cluster" json:"cluster"`
@@ -33,13 +33,13 @@ type NomadJob struct {
 func (n *NomadJob) Process() error {
 	// make all the paths absolute
 	for i, p := range n.Paths {
-		n.Paths[i] = utils.EnsureAbsolute(p, n.ResourceFile)
+		n.Paths[i] = utils.EnsureAbsolute(p, n.Meta.File)
 	}
 
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(n.ResourceID)
+		r, _ := cfg.FindResource(n.Meta.ID)
 		if r != nil {
 			state := r.(*NomadJob)
 			n.JobChecksums = state.JobChecksums

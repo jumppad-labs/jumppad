@@ -14,9 +14,9 @@ func TestHelmProcessSetsAbsolute(t *testing.T) {
 	require.NoError(t, err)
 
 	h := &Helm{
-		ResourceMetadata: types.ResourceMetadata{ResourceFile: "./"},
-		Chart:            "./",
-		Values:           "./values.yaml",
+		ResourceBase: types.ResourceBase{Meta: types.Meta{File: "./"}},
+		Chart:        "./",
+		Values:       "./values.yaml",
 	}
 
 	err = h.Process()

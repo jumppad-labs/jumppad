@@ -13,7 +13,7 @@ const TypeDocs string = "docs"
 // Docs allows the running of a Docusaurus container which can be used for
 // online tutorials or documentation
 type Docs struct {
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Networks ctypes.NetworkAttachments `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
@@ -51,7 +51,7 @@ func (d *Docs) Process() error {
 	}
 
 	if d.Assets != "" {
-		d.Assets = utils.EnsureAbsolute(d.Assets, d.ResourceFile)
+		d.Assets = utils.EnsureAbsolute(d.Assets, d.Meta.File)
 	}
 
 	// do we have an existing resource in the state?
@@ -59,7 +59,7 @@ func (d *Docs) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(d.ResourceID)
+		r, _ := cfg.FindResource(d.Meta.ID)
 		if r != nil {
 			kstate := r.(*Docs)
 			d.ContainerName = kstate.ContainerName

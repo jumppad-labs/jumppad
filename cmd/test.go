@@ -323,22 +323,22 @@ func getLookupAddress(resourceName string) (string, string, int, error) {
 		return "", "", 0, fmt.Errorf("unable to find resource %s %s", resourceName, err)
 	}
 
-	switch res.Metadata().ResourceType {
+	switch res.Metadata().Type {
 	case network.TypeNetwork:
-		return res.Metadata().ResourceName, res.Metadata().ResourceType, 1, nil
+		return res.Metadata().Name, res.Metadata().Type, 1, nil
 	case k8s.TypeK8sCluster:
-		return res.(*k8s.K8sCluster).ContainerName, res.Metadata().ResourceType, 1, nil
+		return res.(*k8s.K8sCluster).ContainerName, res.Metadata().Type, 1, nil
 	case nomad.TypeNomadCluster:
 		cl := res.(*nomad.NomadCluster)
-		return cl.ServerContainerName, res.Metadata().ResourceType, cl.ClientNodes + 1, nil
+		return cl.ServerContainerName, res.Metadata().Type, cl.ClientNodes + 1, nil
 	case container.TypeContainer:
-		return res.(*container.Container).ContainerName, res.Metadata().ResourceType, 1, nil
+		return res.(*container.Container).ContainerName, res.Metadata().Type, 1, nil
 	case container.TypeSidecar:
-		return res.(*container.Sidecar).ContainerName, res.Metadata().ResourceType, 1, nil
+		return res.(*container.Sidecar).ContainerName, res.Metadata().Type, 1, nil
 	case docs.TypeDocs:
-		return res.(*docs.Docs).ContainerName, res.Metadata().ResourceType, 1, nil
+		return res.(*docs.Docs).ContainerName, res.Metadata().Type, 1, nil
 	default:
-		return "", "", 0, fmt.Errorf("resource type %s is not supported", res.Metadata().ResourceType)
+		return "", "", 0, fmt.Errorf("resource type %s is not supported", res.Metadata().Type)
 	}
 }
 

@@ -60,7 +60,7 @@ func newPushCmd(ct container.ContainerTasks, kc ck8s.Kubernetes, ht http.HTTP, n
 				return xerrors.Errorf("Cluster %s is not running", cluster)
 			}
 
-			switch r.Metadata().ResourceType {
+			switch r.Metadata().Type {
 			case k8s.TypeK8sCluster:
 				return pushK8sCluster(image, r.(*k8s.K8sCluster), ct, kc, ht, l, true)
 			case nomad.TypeNomadCluster:
@@ -105,7 +105,7 @@ func pushNomadCluster(image string, c *nomad.NomadCluster, ct container.Containe
 
 	// get the id of the cluster
 
-	log.Info("Pushing to container", "ref", c.ResourceID, "image", image)
+	log.Info("Pushing to container", "ref", c.Meta.ID, "image", image)
 	err := cl.ImportLocalDockerImages([]types.Image{types.Image{Name: strings.Trim(image, " ")}}, force)
 	if err != nil {
 		return xerrors.Errorf("Error pushing image: %w ", err)

@@ -69,7 +69,7 @@ func (d *JumppadCI) All(
 	d.UnitTest(ctx, src, !quick)
 
 	// build the applications
-	output, _ = d.Build(ctx, src)
+	output, _ = d.Build(ctx, src, version, sha)
 
 	// package the build outputs
 	output, _ = d.Package(ctx, output, version)
@@ -128,7 +128,7 @@ func (d *JumppadCI) getVersion(ctx context.Context, token *Secret, src *Director
 	return v, ref, nil
 }
 
-func (d *JumppadCI) Build(ctx context.Context, src *Directory) (*Directory, error) {
+func (d *JumppadCI) Build(ctx context.Context, src *Directory, version, sha string) (*Directory, error) {
 	if d.hasError() {
 		return nil, d.lastError
 	}
@@ -157,7 +157,11 @@ func (d *JumppadCI) Build(ctx context.Context, src *Directory) (*Directory, erro
 				WithEnvVariable("CGO_ENABLED", "0").
 				WithEnvVariable("GOOS", goos).
 				WithEnvVariable("GOARCH", goarch).
-				WithExec([]string{"go", "build", "-o", path}).
+				WithExec([]string{
+					"go", "build",
+					"-o", path,
+					"-ldflags", fmt.Sprintf("-X main.version=%s -X main.sha=%s", version, sha),
+				}).
 				Sync(ctx)
 
 			if err != nil {

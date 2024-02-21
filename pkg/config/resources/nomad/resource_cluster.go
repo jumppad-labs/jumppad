@@ -15,7 +15,7 @@ const TypeNomadCluster string = "nomad_cluster"
 // Cluster is a config stanza which defines a Kubernetes or a Nomad cluster
 type NomadCluster struct {
 	// embedded type holding name, etc
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Networks      ctypes.NetworkAttachments `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 	Image         *ctypes.Image             `hcl:"image,block" json:"images,omitempty"`     // optional image to use for the cluster
@@ -83,15 +83,15 @@ func (n *NomadCluster) Process() error {
 	}
 
 	if n.ServerConfig != "" {
-		n.ServerConfig = utils.EnsureAbsolute(n.ServerConfig, n.ResourceFile)
+		n.ServerConfig = utils.EnsureAbsolute(n.ServerConfig, n.Meta.File)
 	}
 
 	if n.ClientConfig != "" {
-		n.ClientConfig = utils.EnsureAbsolute(n.ClientConfig, n.ResourceFile)
+		n.ClientConfig = utils.EnsureAbsolute(n.ClientConfig, n.Meta.File)
 	}
 
 	if n.ConsulConfig != "" {
-		n.ConsulConfig = utils.EnsureAbsolute(n.ConsulConfig, n.ResourceFile)
+		n.ConsulConfig = utils.EnsureAbsolute(n.ConsulConfig, n.Meta.File)
 	}
 
 	if n.Datacenter == "" {
@@ -103,7 +103,7 @@ func (n *NomadCluster) Process() error {
 	for i, v := range n.Volumes {
 		if v.Type == "" || v.Type == "bind" {
 			// only change path for bind mounts
-			n.Volumes[i].Source = utils.EnsureAbsolute(v.Source, n.ResourceFile)
+			n.Volumes[i].Source = utils.EnsureAbsolute(v.Source, n.Meta.File)
 		}
 	}
 
@@ -112,7 +112,7 @@ func (n *NomadCluster) Process() error {
 	c, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := c.FindResource(n.ResourceID)
+		r, _ := c.FindResource(n.Meta.ID)
 		if r != nil {
 			state := r.(*NomadCluster)
 			n.ExternalIP = state.ExternalIP
