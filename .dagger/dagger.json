@@ -3,8 +3,8 @@
   "sdk": "go",
   "dependencies": [
     {
-      "name": "github",
-      "source": "github.com/jumppad-labs/daggerverse/github@0db72e1659d198fe446725bf1e895cd2b60b022b"
+      "name": "checksum",
+      "source": "github.com/jumppad-labs/daggerverse/checksum@49dff54b421df9844fec87766e3710138bc98914"
     },
     {
       "name": "brew",
@@ -13,6 +13,10 @@
     {
       "name": "deb",
       "source": "github.com/jumppad-labs/daggerverse/deb@1151c479411222d6540dc068ec10bb8231ac8158"
+    },
+    {
+      "name": "github",
+      "source": "github.com/jumppad-labs/daggerverse/github@0db72e1659d198fe446725bf1e895cd2b60b022b"
     },
     {
       "name": "jumppad",

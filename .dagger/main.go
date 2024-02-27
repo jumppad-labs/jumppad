@@ -228,6 +228,8 @@ func (d *JumppadCI) Archive(ctx context.Context, binaries *Directory, version st
 		From("alpine:latest").
 		WithExec([]string{"apk", "add", "zip"})
 
+	checksums := strings.Builder{}
+
 	for _, a := range archives {
 		outPath := strings.ReplaceAll(a.Output, "%%VERSION%%", version)
 		switch a.Type {
@@ -253,7 +255,18 @@ func (d *JumppadCI) Archive(ctx context.Context, binaries *Directory, version st
 		case "copy":
 			out = out.WithFile(outPath, binaries.File(a.Path))
 		}
+
+		// generate the checksum
+		cs, err := cli.Checksum().CalculateFromFile(out.File(outPath))
+		if err != nil {
+			d.lastError = fmt.Errorf("unable to generate checksum for archive: %w", err)
+			return nil, d.lastError
+		}
+
+		checksums.WriteString(fmt.Sprintf("%s  %s\n", cs, outPath))
 	}
+
+	out = out.WithNewFile("checksums.txt", checksums.String())
 
 	return out, nil
 }
