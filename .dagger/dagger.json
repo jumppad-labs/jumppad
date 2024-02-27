@@ -4,7 +4,11 @@
   "dependencies": [
     {
       "name": "github",
-      "source": "github.com/jumppad-labs/daggerverse/github@bd8d1b2e3b21195e29e9ac2f4db6938861b2c0ef"
+      "source": "github.com/jumppad-labs/daggerverse/github@0db72e1659d198fe446725bf1e895cd2b60b022b"
+    },
+    {
+      "name": "brew",
+      "source": "github.com/jumppad-labs/daggerverse/brew@0190848d9c2a55d275de79dd97fb4d25624bbcfd"
     },
     {
       "name": "deb",

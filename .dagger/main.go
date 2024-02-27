@@ -84,48 +84,16 @@ func (d *JumppadCI) All(
 	return output, d.lastError
 }
 
-func (d *JumppadCI) getVersion(ctx context.Context, token *Secret, src *Directory) (string, string, error) {
-	if d.hasError() {
-		return "", "", d.lastError
-	}
+func (d *JumppadCI) Release(ctx context.Context, src *Directory, archives *Directory, githubToken *Secret, gemfuryToken *Secret) (string, error) {
+	// create a new github release
+	version, _ := d.GithubRelease(ctx, src, archives, githubToken)
 
-	cli := dag.Pipeline("get-version")
+	// update the brew formula at jumppad-labs/homebrew-repo
+	d.UpdateBrew(ctx, version, githubToken)
 
-	// get the latest git sha from the source
-	ref, err := cli.Container().
-		From("alpine/git").
-		WithDirectory("/src", src).
-		WithWorkdir("/src").
-		WithExec([]string{"rev-parse", "HEAD"}).
-		Stdout(ctx)
+	d.UpdateWebsite(ctx, version, gemfuryToken)
 
-	if err != nil {
-		d.lastError = err
-		return "", "", err
-	}
-
-	// make sure there is no whitespace from the output
-	ref = strings.TrimSpace(ref)
-	log.Info("github reference", "sha", ref)
-
-	// get the next version from the associated PR label
-	v, err := cli.Github().
-		WithToken(token).
-		NextVersionFromAssociatedPrlabel(ctx, owner, repo, ref)
-
-	if err != nil {
-		d.lastError = err
-		return "", "", err
-	}
-
-	// if there is no version, default to 0.0.0
-	if v == "" {
-		v = "0.0.0"
-	}
-
-	log.Info("new version", "semver", v)
-
-	return v, ref, nil
+	return version, d.lastError
 }
 
 func (d *JumppadCI) Build(ctx context.Context, src *Directory, version, sha string) (*Directory, error) {
@@ -334,7 +302,7 @@ func (d JumppadCI) SignAndNotorize(ctx context.Context, version string, archives
 	return out, nil
 }
 
-func (d *JumppadCI) Release(ctx context.Context, src *Directory, archives *Directory, githubToken *Secret) (string, error) {
+func (d *JumppadCI) GithubRelease(ctx context.Context, src *Directory, archives *Directory, githubToken *Secret) (string, error) {
 	if d.hasError() {
 		return "", d.lastError
 	}
@@ -364,9 +332,137 @@ func (d *JumppadCI) Release(ctx context.Context, src *Directory, archives *Direc
 	return version, err
 }
 
+func (d *JumppadCI) UpdateBrew(ctx context.Context, version string, githubToken *Secret) error {
+	if d.hasError() {
+		return d.lastError
+	}
+
+	cli := dag.Pipeline("update-brew")
+
+	_, err := cli.Brew().Formula(
+		ctx,
+		"https://jumppad.dev",
+		"jumppad-labs/homebrew-repo",
+		version,
+		"Mr Jumppad",
+		"hello@jumppad.dev",
+		"jumppad",
+		githubToken,
+		BrewFormulaOpts{
+			DarwinX86Url:   fmt.Sprintf("https://github.com/jumppad-labs/jumppad/releases/download/%s/jumppad_%s_darwin_x86_64.zip", version, version),
+			DarwinArm64Url: fmt.Sprintf("https://github.com/jumppad-labs/jumppad/releases/download/%s/jumppad_%s_darwin_arm64.zip", version, version),
+			LinuxX86Url:    fmt.Sprintf("https://github.com/jumppad-labs/jumppad/releases/download/%s/jumppad_%s_linux_x86_64.tar.g", version, version),
+			LinuxArm64Url:  fmt.Sprintf("https://github.com/jumppad-labs/jumppad/releases/download/%s/jumppad_%s_linux_arm64.tar.giz", version, version),
+		},
+	)
+
+	if err != nil {
+		d.lastError = err
+	}
+
+	return err
+}
+
+var gemFury = []Archive{
+	{Path: "/pkg/linux/amd64/jumppad.deb", Type: "copy", Output: "jumppad_%%VERSION%%_linux_x86_64.deb"},
+	{Path: "/pkg/linux/arm64/jumppad.deb", Type: "copy", Output: "jumppad_%%VERSION%%_linux_arm64.deb"},
+}
+
+func (d *JumppadCI) UpdateGemFury(ctx context.Context, version string, gemFuryToken *Secret, archives *Directory) error {
+	cli := dag.Pipeline("update-gem-fury")
+
+	tkn, _ := gemFuryToken.Plaintext(ctx)
+	url := fmt.Sprintf("https://%s@push.fury.io/jumppad/", tkn)
+
+	for _, a := range gemFury {
+		output := strings.Replace(a.Output, "%%VERSION%%", version, 1)
+
+		_, err := cli.Container().
+			From("curlimages/curl:latest").
+			WithFile(output, archives.File(output)).
+			WithExec([]string{"-F", fmt.Sprintf("package=@%s", output), url}).
+			Sync(ctx)
+
+		if err != nil {
+			d.lastError = err
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (d *JumppadCI) UpdateWebsite(ctx context.Context, version string, githubToken *Secret) error {
+	cli := dag.Pipeline("update-website")
+
+	f := cli.Directory().WithNewFile("version", version).File("version")
+
+	_, err := cli.Github().
+		WithToken(githubToken).
+		CommitFile(
+			ctx,
+			"jumppad-labs", "jumppad-labs.github.io",
+			"Mr Jumppad", "hello@jumppad.dev",
+			"./public/latest",
+			fmt.Sprintf("Update latest version: %s", version),
+			f,
+		)
+
+	if err != nil {
+		d.lastError = fmt.Errorf("failed to update website: %w", err)
+		return d.lastError
+	}
+
+	return nil
+}
+
 func (d *JumppadCI) WithGoCache(cache *CacheVolume) *JumppadCI {
 	d.goCacheVolume = cache
 	return d
+}
+
+func (d *JumppadCI) getVersion(ctx context.Context, token *Secret, src *Directory) (string, string, error) {
+	if d.hasError() {
+		return "", "", d.lastError
+	}
+
+	cli := dag.Pipeline("get-version")
+
+	// get the latest git sha from the source
+	ref, err := cli.Container().
+		From("alpine/git").
+		WithDirectory("/src", src).
+		WithWorkdir("/src").
+		WithExec([]string{"rev-parse", "HEAD"}).
+		Stdout(ctx)
+
+	if err != nil {
+		d.lastError = err
+		return "", "", err
+	}
+
+	// make sure there is no whitespace from the output
+	ref = strings.TrimSpace(ref)
+	log.Info("github reference", "sha", ref)
+
+	// get the next version from the associated PR label
+	v, err := cli.Github().
+		WithToken(token).
+		NextVersionFromAssociatedPrlabel(ctx, owner, repo, ref)
+
+	if err != nil {
+		d.lastError = err
+		return "", "", err
+	}
+
+	// if there is no version, default to 0.0.0
+	if v == "" {
+		v = "0.0.0"
+	}
+
+	log.Info("new version", "semver", v)
+
+	return v, ref, nil
 }
 
 func (d *JumppadCI) goCache() *CacheVolume {
