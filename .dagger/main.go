@@ -257,7 +257,7 @@ func (d *JumppadCI) Archive(ctx context.Context, binaries *Directory, version st
 		}
 
 		// generate the checksum
-		cs, err := cli.Checksum().CalculateFromFile(out.File(outPath))
+		cs, err := cli.Checksum().CalculateFromFile(ctx, out.File(outPath))
 		if err != nil {
 			d.lastError = fmt.Errorf("unable to generate checksum for archive: %w", err)
 			return nil, d.lastError
