@@ -95,7 +95,7 @@ func (d *JumppadCI) Release(ctx context.Context, src *Directory, archives *Direc
 	d.UpdateGemFury(ctx, version, gemfuryToken, archives)
 
 	// update latest version on website
-	d.UpdateWebsite(ctx, version, gemfuryToken)
+	d.UpdateWebsite(ctx, version, githubToken)
 
 	return version, d.lastError
 }
