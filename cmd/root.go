@@ -185,9 +185,13 @@ var discordHelp = `
 ### For help and support join our community on Discord: https://discord.gg/ZuEFPJU69D ###
 `
 
-var changesVersion = "v0.7.0"
+var changesVersion = "v0.9.1"
 
 var changes = `
+## version v0.9.1
+* Update internal references to use the new 'local.jmpd.in' domain bypassing
+  problems where chrome auto redirects .dev to https://.
+
 ## version v0.7.0
 
 ### Breaking Changes:

@@ -1,6 +1,10 @@
 # Change Log
 
-## version v0.5.60
+## version v0.9.1
+* Update internal references to use the new `local.jmpd.in` domain bypassing
+  problems where chrome auto redirects .dev to https://.
+
+## version v0.7.0
 * Add capability to add custom container registries to the image cache
 
   Nomad and Kuberentes clusters are started in a Docker container that does not save any state to the local disk.

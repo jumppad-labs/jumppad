@@ -206,7 +206,7 @@ func writeLogOutput(rc io.ReadCloser, stdout, stderr io.Writer, name string, c c
 		dat := make([]byte, count)
 		_, err = rc.Read(dat)
 
-		name = strings.TrimSuffix(name, ".jumppad.dev")
+		name = strings.TrimSuffix(name, utils.LocalTLD)
 		colorWriter.Fprintf(w, "[%s]   %s", name, string(dat))
 	}
 }

@@ -9,8 +9,8 @@ resource "certificate_leaf" "registry" {
     "localhost",
     "auth-registry.demo.gs",
     "noauth-registry.demo.gs", // have to set an external dns name as the registry resolves docker dns to localhost
-    "noauth.container.jumppad.dev",
-    "auth.container.jumppad.dev",
+    "noauth.container.local.jmpd.in",
+    "auth.container.local.jmpd.in",
   ]
 
   output = data("certs")

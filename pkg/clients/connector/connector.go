@@ -289,7 +289,7 @@ func (c *ConnectorImpl) GenerateLeafCert(
 		return nil, err
 	}
 
-	hosts := []string{"localhost", "*.jumppad.dev", c.options.GrpcBind}
+	hosts := []string{"localhost", fmt.Sprintf("*.local.%s", utils.LocalTLD), c.options.GrpcBind}
 	hosts = append(hosts, host...)
 
 	lc, err := crypto.GenerateLeaf(
@@ -325,12 +325,12 @@ func (c *ConnectorImpl) ExposeService(
 	dir := utils.CertsDir("")
 	cb, err := c.GetLocalCertBundle(dir)
 	if err != nil {
-		return "", fmt.Errorf("Unable to find certificate at location: %s, error: %s", dir, err)
+		return "", fmt.Errorf("unable to find certificate at location: %s, error: %s", dir, err)
 	}
 
 	cl, err := getClient(cb, c.options.GrpcBind)
 	if err != nil {
-		return "", fmt.Errorf("Unable to create grpc client: %s", err)
+		return "", fmt.Errorf("unable to create grpc client: %s", err)
 	}
 
 	t := shipyard.ServiceType_LOCAL
