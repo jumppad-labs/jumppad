@@ -172,7 +172,7 @@ jobs:
           tile: ${{ github.job_id }}
           description: "Functional tests for ${{matrix.folder}}"
   
-  github_release:
+  release:
     name: Create GitHub Release
     if: ${{ github.ref == 'refs/heads/main' }}
 
@@ -186,6 +186,7 @@ jobs:
       - name: Set keys
         run: |
           echo "GITHUB_TOKEN=${{secrets.GH_TOKEN}}" >> $GITHUB_ENV
+          echo "GEMFURY_TOKEN=${{secrets.FURY_TOKEN}}" >> $GITHUB_ENV
       
       - uses: actions/checkout@v2
 
@@ -200,7 +201,7 @@ jobs:
         with:
           verb: call
           module: ./.dagger
-          args: release --src=. --github-token=GITHUB_TOKEN --archives=./build_artifacts --output=./version.txt
+          args: release --src=. --github-token=GITHUB_TOKEN --gemfury-token=GEMFURY_TOKEN --archives=./build_artifacts --output=./version.txt
           version: "0.9.9"
           cloud-token: ${{ secrets.DAGGER_TOKEN }}
     
@@ -211,79 +212,11 @@ jobs:
 
     outputs:
       version: ${{ steps.setoutput.outputs.version }}
-
-  brew:
-    name: Release to HomeBrew
-    needs: 
-      - github_release
-    runs-on: ubuntu-latest
-    steps:
-    -
-      name: Checkout
-      uses: actions/checkout@v2
-      with:
-        repository: 'jumppad-labs/homebrew-repo'
-        token: '${{ secrets.GH_TOKEN }}'
-
-    - name: Configure Git
-      run: |
-        git config user.email "hello@jumppad.dev"
-        git config user.name "Jumppad Bot"
-        git pull origin main
-    
-    - name: Generate HomeBrew config
-      run: |
-        export VERSION=${{ needs.github_release.outputs.version }}
-        export DARWIN_ARM64_SHA=$(sha256sum  ./releases/jumppad${{ needs.github_release.outputs.version }}_darwin_arm64.zip | cut -d " " -f 1)
-        export DARWIN_x86_SHA=$(sha256sum  ./releases/jumppad_${{ needs.github_release.outputs.version }}_darwin_x86_64.zip | cut -d " " -f 1)
-        export LINUX_ARM64_SHA=$(sha256sum  ./releases/jumppad_${{ needs.github_release.outputs.version }}_linux_arm64.tar.gz | cut -d " " -f 1)
-        export LINUX_x86_SHA=$(sha256sum  ./releases/jumppad_${{ needs.github_release.outputs.version }}_linux_x86_64.tar.gz | cut -d " " -f 1)
-
-        cat <<- EOF > ./jumppad.rb
-        # typed: false
-        # frozen_string_literal: true
-
-        class Jumppad < Formula
-          desc ""
-          homepage "https://jumppad.dev/"
-          version "${VERSION}"
-
-          if OS.mac? && Hardware::CPU.intel?
-            url "https://github.com/jumppad-labs/jumppad/releases/download/${VERSION}/jumppad_${VERSION}_darwin_x86_64.zip"
-            sha256 "${DARWIN_x86_SHA}"
-          end
-          if OS.mac? && Hardware::CPU.arm?
-            url "https://github.com/jumppad-labs/jumppad/releases/download/${VERSION}/jumppad_${VERSION}_darwin_arm64.zip"
-            sha256 "${DARWIN_ARM64_SHA}"
-          end
-          if OS.linux? && Hardware::CPU.intel?
-            url "https://github.com/jumppad-labs/jumppad/releases/download/${VERSION}/jumppad_${VERSION}_linux_x86_64.tar.gz"
-            sha256 "${LINUX_x86_SHA}"
-          end
-          if OS.linux? && Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-            url "https://github.com/jumppad-labs/jumppad/releases/download/${VERSION}/jumppad_${VERSION}_linux_arm64.tar.gz"
-            sha256 "${LINUX_ARM64_SHA}"
-          end
-
-          def install
-            bin.install "jumppad"
-          end
-        end
-        EOF
-
-        cat ./jumppad.rb
-        rm -rf ./dist
-      
-    - name: Push update
-      run: |
-        git add .
-        git commit -m "Update version to ${{ needs.github_release.outputs.version }}"
-        git push
-
+  
   winget:
     name: Publish to WinGet
     needs:
-      - github_release
+      - release
     runs-on: windows-latest
     steps:
     - uses: jumppad-labs/winget-publish-action@v0.1.0
@@ -302,66 +235,3 @@ jobs:
         tile: ${{ github.job_id }}
         webhook: ${{ secrets.DISCORD_WEBHOOK }}
         description: "Push new version ${{ needs.github_release.outputs.version }} to Winget"
-
-  apt:
-    name: Update fury.io Apt repository
-    needs:
-      - github_release
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: ["x86_64.deb", "arm64.deb"]
-
-    steps:
-    - name: Download release
-      run: |
-        wget "https://github.com/jumppad-labs/jumppad/releases/download/${{ needs.github_release.outputs.version }}/jumppad_${{ needs.github_release.outputs.version }}_linux_${{ matrix.arch }}"
-
-    - name: Upload release
-      run: |
-        curl -F package=@jumppad_${{ needs.github_release.outputs.version }}_linux_${{ matrix.arch }} https://${{ secrets.FURY_JUMPPAD_TOKEN }}@push.fury.io/jumppad/
-
-    - name: Send status to Discord
-      uses: sarisia/actions-status-discord@v1
-      if: always()
-      with:
-        tile: ${{ github.job_id }}
-        webhook: ${{ secrets.DISCORD_WEBHOOK }}
-        description: "Push new version ${{ needs.github_release.outputs.version }} to Apt"
-
-  update_website:
-    name: Update Jumppad website with latest version
-    needs:
-      - github_release
-    runs-on: ubuntu-latest
-
-    steps:
-      -
-        name: Checkout
-        uses: actions/checkout@v2
-        with:
-          repository: 'jumppad-labs/jumppad-labs.github.io'
-          token: '${{ secrets.GH_TOKEN }}'
-
-      - name: Configure Git
-        run: |
-          git config user.email "helo@jumppad.dev"
-          git config user.name "Jumppad Bot"
-
-      - name: Write version
-        run: |
-          echo "${{ needs.github_release.outputs.version }}" > ./public/latest
-
-      - name: Push update
-        run: |
-          git add .
-          git commit -m "Update version to ${{ needs.github_release.outputs.version }}"
-          git push
-
-      - name: Send status to Discord
-        uses: sarisia/actions-status-discord@v1
-        if: always()
-        with:
-          tile: ${{ github.job_id }}
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          description: "Update website with latest version ${{ needs.github_release.outputs.version }}"

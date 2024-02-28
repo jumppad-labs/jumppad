@@ -9,6 +9,7 @@ import (
 
 // TypeK8sConfig defines the string type for the Kubernetes config resource
 const TypeK8sConfig string = "k8s_config"
+const TypeKubernetesConfig string = "kubernetes_config"
 
 // K8sConfig applies and deletes and deletes Kubernetes configuration
 type K8sConfig struct {

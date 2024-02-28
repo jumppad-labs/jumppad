@@ -11,6 +11,7 @@ import (
 
 // TypeK8sCluster is the resource string for a Cluster resource
 const TypeK8sCluster string = "k8s_cluster"
+const TypeKubernetesCluster string = "kubernetes_cluster"
 
 // K8sCluster is a config stanza which defines a Kubernetes or a Nomad cluster
 type K8sCluster struct {
