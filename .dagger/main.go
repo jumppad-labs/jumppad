@@ -91,6 +91,10 @@ func (d *JumppadCI) Release(ctx context.Context, src *Directory, archives *Direc
 	// update the brew formula at jumppad-labs/homebrew-repo
 	d.UpdateBrew(ctx, version, githubToken)
 
+	//	update the gemfury repository
+	d.UpdateGemFury(ctx, version, gemfuryToken, archives)
+
+	// update latest version on website
 	d.UpdateWebsite(ctx, version, gemfuryToken)
 
 	return version, d.lastError
