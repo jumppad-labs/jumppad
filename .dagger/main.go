@@ -267,7 +267,11 @@ func (d *JumppadCI) Archive(ctx context.Context, binaries *Directory, version st
 			return nil, d.lastError
 		}
 
-		checksums.WriteString(fmt.Sprintf("%s  %s\n", cs, outPath))
+		// checksum is returned as "checksum filename" we need to remove the filename as it is not
+		// the same as the release name
+		csParts := strings.Split(cs, " ")
+
+		checksums.WriteString(fmt.Sprintf("%s  %s\n", csParts[0], outPath))
 	}
 
 	out = out.WithNewFile("checksums.txt", checksums.String())
