@@ -97,17 +97,17 @@ func TestValidatesNameAndReturnsErrorWhenTooLong(t *testing.T) {
 
 func TestFQDNReturnsCorrectValue(t *testing.T) {
 	fq := FQDN("test", "", "type")
-	assert.Equal(t, "test.type.jumppad.dev", fq)
+	assert.Equal(t, "test.type.local.jmpd.in", fq)
 }
 
 func TestFQDNReplacesInvalidChars(t *testing.T) {
 	fq := FQDN("tes&t", "", "kubernetes_cluster")
-	assert.Equal(t, "tes-t.kubernetes-cluster.jumppad.dev", fq)
+	assert.Equal(t, "tes-t.kubernetes-cluster.local.jmpd.in", fq)
 }
 
 func TestFQDNVolumeReturnsCorrectValue(t *testing.T) {
 	fq := FQDNVolumeName("test")
-	assert.Equal(t, "test.volume.jumppad.dev", fq)
+	assert.Equal(t, "test.volume.jmpd.in", fq)
 }
 
 func TestHomeReturnsCorrectValue(t *testing.T) {

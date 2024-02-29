@@ -1,6 +1,11 @@
 # Change Log
 
-## version v0.5.60
+## version v0.9.1
+* Update internal references to use the new `local.jmpd.in` domain bypassing
+  problems where chrome auto redirects .dev to https://.
+* Update Nomad to 1.7.5
+
+## version v0.7.0
 * Add capability to add custom container registries to the image cache
 
   Nomad and Kuberentes clusters are started in a Docker container that does not save any state to the local disk.
@@ -25,8 +30,8 @@
 ```hcl
 # Define a custom registry that does not use authentication
 resource "container_registry" "noauth" {
-  hostname = "noauth-registry.demo.gs" // cache can not resolve local jumppad.dev dns for some reason, 
-  // using external dns mapped to the local ip address
+  hostname = "noauth-registry.demo.gs" // cache can not resolve local.jmpd.in dns for some reason, 
+                                       // using external dns mapped to the local ip address
 }
 
 # Define a custom registry that uses authentication
@@ -62,8 +67,8 @@ resource "nomad_cluster" "dev" {
   // add configuration to allow cache bypass and insecure registry
   config {
     docker {
-      no_proxy            = ["insecure.container.jumppad.dev"]
-      insecure_registries = ["insecure.container.jumppad.dev:5003"]
+      no_proxy            = ["insecure.container.local.jmpd.in"]
+      insecure_registries = ["insecure.container.local.jmpd.in:5003"]
     }
   }
 }

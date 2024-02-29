@@ -14,8 +14,8 @@ resource "nomad_cluster" "dev" {
   // add configuration to allow cache bypass and insecure registry
   config {
     docker {
-      no_proxy            = ["insecure.container.jumppad.dev"]
-      insecure_registries = ["insecure.container.jumppad.dev:5003"]
+      no_proxy            = ["insecure.container.local.jmpd.in"]
+      insecure_registries = ["insecure.container.local.jmpd.in:5003"]
     }
   }
 }

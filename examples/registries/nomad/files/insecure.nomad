@@ -32,7 +32,7 @@ job "insecure" {
       }
 
       config {
-        image = "insecure.container.jumppad.dev:5003/mine:v0.1.0"
+        image = "insecure.container.local.jmpd.in:5003/mine:v0.1.0"
 
         ports = ["http"]
       }

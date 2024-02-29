@@ -93,9 +93,9 @@ func ReplaceNonURIChars(s string) (string, error) {
 
 // FQDN generates the full qualified name for a container
 func FQDN(name, module, typeName string) string {
-	fqdn := fmt.Sprintf("%s.%s.jumppad.dev", name, typeName)
+	fqdn := fmt.Sprintf("%s.%s.local.%s", name, typeName, LocalTLD)
 	if module != "" {
-		fqdn = fmt.Sprintf("%s.%s.%s.jumppad.dev", name, module, typeName)
+		fqdn = fmt.Sprintf("%s.%s.%s.local.%s", name, module, typeName, LocalTLD)
 	}
 
 	// ensure that the name is valid for URI schema
@@ -115,7 +115,7 @@ func FQDNVolumeName(name string) string {
 		panic(err)
 	}
 
-	return fmt.Sprintf("%s.volume.jumppad.dev", cleanName)
+	return fmt.Sprintf("%s.volume.%s", cleanName, LocalTLD)
 }
 
 // CreateKubeConfigPath creates the file path for the KubeConfig file when

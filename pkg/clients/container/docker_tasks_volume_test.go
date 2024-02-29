@@ -19,7 +19,7 @@ func TestCreateVolumeDoesNothingWhenVolumeExists(t *testing.T) {
 	testutils.RemoveOn(&md.Mock, "VolumeList")
 
 	args := volume.ListOptions{Filters: filters.NewArgs()}
-	args.Filters.Add("name", "test.volume.jumppad.dev")
+	args.Filters.Add("name", "test.volume.jmpd.in")
 	md.On("VolumeList", mock.Anything, args).Return(volume.ListResponse{Volumes: []*volume.Volume{&volume.Volume{}}}, nil)
 
 	p, _ := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
@@ -36,7 +36,7 @@ func TestCreateVolumeReturnsErrorWhenVolumeListError(t *testing.T) {
 	testutils.RemoveOn(&md.Mock, "VolumeList")
 
 	args := volume.ListOptions{Filters: filters.NewArgs()}
-	args.Filters.Add("name", "test.volume.jumppad.dev")
+	args.Filters.Add("name", "test.volume.jmpd.in")
 	md.On("VolumeList", mock.Anything, args).Return(volume.ListResponse{}, fmt.Errorf("Boom"))
 
 	_, err := p.CreateVolume("test")
@@ -63,5 +63,5 @@ func TestRemoveVolumeRemotesSuccesfully(t *testing.T) {
 	err := p.RemoveVolume("test")
 	assert.NoError(t, err)
 
-	md.AssertCalled(t, "VolumeRemove", mock.Anything, "test.volume.jumppad.dev", true)
+	md.AssertCalled(t, "VolumeRemove", mock.Anything, "test.volume.jmpd.in", true)
 }

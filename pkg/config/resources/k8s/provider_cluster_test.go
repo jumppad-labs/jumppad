@@ -251,7 +251,7 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 	assert.Contains(t, params.Command[2], "--kube-proxy-arg=conntrack-max-per-core=0")
 	assert.Contains(t, params.Command[3], "--disable=traefik")
 	assert.Contains(t, params.Command[4], "--snapshotter=overlayfs")
-	assert.Contains(t, params.Command[5], "--tls-san=server.test.k8s-cluster.jumppad.dev")
+	assert.Contains(t, params.Command[5], "--tls-san=server.test.k8s-cluster.local.jmpd.in")
 }
 
 func TestClusterK3CreatesAServerWithAdditionalPorts(t *testing.T) {
@@ -616,7 +616,7 @@ func TestClusterK3sDestroyGetsIDr(t *testing.T) {
 
 	err := p.Destroy()
 	assert.NoError(t, err)
-	md.AssertCalled(t, "FindContainerIDs", "server.test.k8s-cluster.jumppad.dev")
+	md.AssertCalled(t, "FindContainerIDs", "server.test.k8s-cluster.local.jmpd.in")
 }
 
 func TestClusterK3sDestroyWithFindIDErrorReturnsError(t *testing.T) {
