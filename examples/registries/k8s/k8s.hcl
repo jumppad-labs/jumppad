@@ -10,8 +10,8 @@ resource "k8s_cluster" "k3s" {
   // add configuration to allow cache bypass and insecure registry
   config {
     docker {
-      no_proxy            = ["insecure.container.jumppad.dev"]
-      insecure_registries = ["insecure.container.jumppad.dev:5003"]
+      no_proxy            = ["insecure.container.local.jumpd.in"]
+      insecure_registries = ["insecure.container.jmpd.in:5003"]
     }
   }
 }

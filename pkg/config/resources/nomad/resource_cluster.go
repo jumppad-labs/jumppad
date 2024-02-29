@@ -62,7 +62,7 @@ type NomadCluster struct {
 }
 
 const nomadBaseImage = "shipyardrun/nomad"
-const nomadBaseVersion = "1.6.1"
+const nomadBaseVersion = "1.7.5"
 
 type Config struct {
 	// Specifies configuration for the Docker driver.
