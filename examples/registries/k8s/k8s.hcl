@@ -11,7 +11,7 @@ resource "k8s_cluster" "k3s" {
   config {
     docker {
       no_proxy            = ["insecure.container.local.jumpd.in"]
-      insecure_registries = ["insecure.container.jmpd.in:5003"]
+      insecure_registries = ["insecure.container.local.jmpd.in:5003"]
     }
   }
 }
