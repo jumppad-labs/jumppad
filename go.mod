@@ -39,6 +39,7 @@ require (
 	github.com/jumppad-labs/hclconfig v0.20.0
 	github.com/jumppad-labs/plugin-sdk v0.1.0
 	github.com/kennygrant/sanitize v1.2.4
+	github.com/mattn/go-isatty v0.0.18
 	github.com/moby/sys/signal v0.7.0
 	github.com/moby/term v0.5.0
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
@@ -164,7 +165,6 @@ require (
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.18 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect

@@ -16,23 +16,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-/*
-[ CREATED ] network.cloud (green)
-[ FAILED  ] k8s_cluster.k3s (red)
-[ PENDING ] helm.vault (gray)
-*/
-
-const (
-	Black   = "\033[1;30m%s\033[0m"
-	Red     = "\033[1;31m%s\033[0m"
-	Green   = "\033[1;32m%s\033[0m"
-	Yellow  = "\033[1;33m%s\033[0m"
-	Purple  = "\033[1;34m%s\033[0m"
-	Magenta = "\033[1;35m%s\033[0m"
-	Teal    = "\033[1;36m%s\033[0m"
-	White   = "\033[1;37m%s\033[0m"
-)
-
 var jsonFlag bool
 var resourceType string
 
@@ -60,9 +43,6 @@ var statusCmd = &cobra.Command{
 
 			fmt.Println(string(s))
 		} else {
-			// fmt.Println()
-			// fmt.Printf("%-13s %-60s %s\n", "STATUS", "RESOURCE", "FQDN")
-
 			createdCount := 0
 			failedCount := 0
 			disabledCount := 0
@@ -88,18 +68,18 @@ var statusCmd = &cobra.Command{
 						continue
 					}
 
-					status := yellowIcon.Render("?")
+					status := YellowIcon.Render("?")
 					if r.GetDisabled() {
-						fmt.Printf("%s %s\n", grayIcon.Render("-"), grayText.Render(r.Metadata().ID))
+						fmt.Printf("%s %s\n", GrayIcon.Render("-"), GrayText.Render(r.Metadata().ID))
 						disabledCount++
 						continue
 					} else {
 						switch r.Metadata().Properties[constants.PropertyStatus] {
 						case constants.StatusCreated:
-							status = greenIcon.Render("✔")
+							status = GreenIcon.Render("✔")
 							createdCount++
 						case constants.StatusFailed:
-							status = redIcon.Render("✘")
+							status = RedIcon.Render("✘")
 							failedCount++
 						default:
 							pendingCount++
@@ -109,22 +89,22 @@ var statusCmd = &cobra.Command{
 					switch r.Metadata().Type {
 					case nomad.TypeNomadCluster:
 						fmt.Printf("%s %s\n", status, r.Metadata().ID)
-						fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, r.Metadata().Module, string(r.Metadata().Type)))))
+						fmt.Printf("    %s %s\n", GrayText.Render("└─"), WhiteText.Render(fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, r.Metadata().Module, string(r.Metadata().Type)))))
 
 						// add the client nodes
 						nomad := r.(*nomad.NomadCluster)
 						for n := 0; n < nomad.ClientNodes; n++ {
-							fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Metadata().Name, r.Metadata().Module, string(r.Metadata().Type)))))
+							fmt.Printf("    %s %s\n", GrayText.Render("└─"), WhiteText.Render(fmt.Sprintf("%d.%s.%s", n+1, "client", utils.FQDN(r.Metadata().Name, r.Metadata().Module, string(r.Metadata().Type)))))
 						}
 					case k8s.TypeK8sCluster:
 						fmt.Printf("%s %s\n", status, r.Metadata().ID)
-						fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type))))
+						fmt.Printf("    %s %s\n", GrayText.Render("└─"), WhiteText.Render(fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type))))
 					case container.TypeContainer:
 						fmt.Printf("%s %s\n", status, r.Metadata().ID)
-						fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(fmt.Sprintf("%s", utils.FQDN(r.Metadata().Name, r.Metadata().Module, string(r.Metadata().Type)))))
+						fmt.Printf("    %s %s\n", GrayText.Render("└─"), WhiteText.Render(utils.FQDN(r.Metadata().Name, r.Metadata().Module, string(r.Metadata().Type))))
 					case container.TypeSidecar:
 						fmt.Printf("%s %s\n", status, r.Metadata().ID)
-						fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(fmt.Sprintf("%s", utils.FQDN(r.Metadata().Name, r.Metadata().Module, string(r.Metadata().Type)))))
+						fmt.Printf("    %s %s\n", GrayText.Render("└─"), WhiteText.Render(utils.FQDN(r.Metadata().Name, r.Metadata().Module, string(r.Metadata().Type))))
 					case cache.TypeImageCache:
 						fmt.Printf("%s %s\n", status, r.Metadata().ID)
 					default:
@@ -133,19 +113,8 @@ var statusCmd = &cobra.Command{
 				}
 			}
 
-			// fmt.Println(greenIcon.Render("✔") + whiteText.Render("resource.image_cache.default"))
-			// fmt.Println(greenIcon.Render("✔") + whiteText.Render("resource.network.main"))
-			// fmt.Println(greenIcon.Render("✔") + whiteText.Render("resource.container.api"))
-			// fmt.Println(grayText.Render("   ├─ ") + whiteText.Render("api.container.jumppad.dev"))
-			// fmt.Println(grayText.Render("   └─ ") + whiteText.Render("backend.container.jumppad.dev"))
-			// fmt.Println(greenIcon.Render("✔") + whiteText.Render("resource.container.advertisements"))
-			// fmt.Println(grayText.Render("   └─ ") + whiteText.Render("advertisements.container.jumppad.dev"))
-			// fmt.Println(redIcon.Render("✘") + whiteText.Render("resource.container.payments"))
-			// fmt.Println(yellowIcon.Render("?") + whiteText.Render("resource.container.database"))
-			// fmt.Println()
-			// fmt.Println(grayIcon.Render("-") + grayText.Render("resource.container.frontend"))
 			fmt.Println()
-			fmt.Println(whiteText.Render(fmt.Sprintf("Pending: %d  Created: %d  Failed: %d  Disabled: %d", pendingCount, createdCount, failedCount, disabledCount)))
+			fmt.Println(WhiteText.Render(fmt.Sprintf("Pending: %d  Created: %d  Failed: %d  Disabled: %d", pendingCount, createdCount, failedCount, disabledCount)))
 			fmt.Println()
 		}
 	},

@@ -35,7 +35,7 @@ func newPushCmd(ct container.ContainerTasks, kc ck8s.Kubernetes, ht http.HTTP, n
 				return xerrors.Errorf("Push requires two arguments [image] [cluster]")
 			}
 
-			if force == true {
+			if force {
 				ct.SetForcePull(true)
 			}
 
@@ -76,7 +76,7 @@ func newPushCmd(ct container.ContainerTasks, kc ck8s.Kubernetes, ht http.HTTP, n
 	return pushCmd
 }
 
-func pushK8sCluster(image string, c *k8s.K8sCluster, ct container.ContainerTasks, kc ck8s.Kubernetes, ht http.HTTP, log logger.Logger, force bool) error {
+func pushK8sCluster(image string, c *k8s.K8sCluster, _ container.ContainerTasks, _ ck8s.Kubernetes, _ http.HTTP, log logger.Logger, force bool) error {
 	cli, _ := clients.GenerateClients(log)
 	p := config.NewProviders(cli)
 	cl := p.GetProvider(c).(*k8s.ClusterProvider)
@@ -89,7 +89,7 @@ func pushK8sCluster(image string, c *k8s.K8sCluster, ct container.ContainerTasks
 
 	for _, id := range ids {
 		log.Info("Pushing to container", "id", id, "image", image)
-		err = cl.ImportLocalDockerImages([]types.Image{types.Image{Name: strings.Trim(image, " ")}}, force)
+		err = cl.ImportLocalDockerImages([]types.Image{{Name: strings.Trim(image, " ")}}, force)
 		if err != nil {
 			return xerrors.Errorf("Error pushing image: %w ", err)
 		}
@@ -98,7 +98,7 @@ func pushK8sCluster(image string, c *k8s.K8sCluster, ct container.ContainerTasks
 	return nil
 }
 
-func pushNomadCluster(image string, c *nomad.NomadCluster, ct container.ContainerTasks, ht cnomad.Nomad, log logger.Logger, force bool) error {
+func pushNomadCluster(image string, c *nomad.NomadCluster, _ container.ContainerTasks, _ cnomad.Nomad, log logger.Logger, force bool) error {
 	cli, _ := clients.GenerateClients(log)
 	p := config.NewProviders(cli)
 	cl := p.GetProvider(c).(*nomad.ClusterProvider)
@@ -106,7 +106,7 @@ func pushNomadCluster(image string, c *nomad.NomadCluster, ct container.Containe
 	// get the id of the cluster
 
 	log.Info("Pushing to container", "ref", c.Meta.ID, "image", image)
-	err := cl.ImportLocalDockerImages([]types.Image{types.Image{Name: strings.Trim(image, " ")}}, force)
+	err := cl.ImportLocalDockerImages([]types.Image{{Name: strings.Trim(image, " ")}}, force)
 	if err != nil {
 		return xerrors.Errorf("Error pushing image: %w ", err)
 	}

@@ -15,10 +15,27 @@ var checkCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		// Do Stuff Here
 		s := system.SystemImpl{}
-		o, _ := s.Preflight()
+		status := s.Preflight()
 
-		fmt.Println("")
-		fmt.Println("###### SYSTEM DIAGNOSTICS ######")
-		fmt.Println(o)
+		fmt.Println(WhiteText.Render("Checking required system dependencies"))
+		fmt.Println()
+
+		gitStatus := GreenIcon.Render("✔")
+		if !status.Git {
+			gitStatus = RedIcon.Render("✘")
+		}
+		fmt.Println(gitStatus + WhiteText.Render(" Git"))
+
+		containerStatus := GreenIcon.Render("✔")
+		if !status.Docker && !status.Podman {
+			containerStatus = RedIcon.Render("✘")
+		}
+		fmt.Println(containerStatus + WhiteText.Render(" Docker/Podman"))
+
+		fmt.Println()
+		for _, err := range status.Errors {
+			fmt.Println(RedIcon.Render("ERROR") + WhiteText.Render(" "+err.Error()))
+		}
+		fmt.Println()
 	},
 }

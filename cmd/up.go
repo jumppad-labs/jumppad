@@ -66,7 +66,7 @@ func newRunCmd(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Getter, h
 	return runCmd
 }
 
-func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Getter, hc http.HTTP, bc system.System, vm gvm.Versions, cc connector.Connector, noOpen *bool, force *bool, runVersion *string, autoApprove *bool, variables *[]string, variablesFile *string, l logger.Logger) func(cmd *cobra.Command, args []string) error {
+func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Getter, hc http.HTTP, bc system.System, _ gvm.Versions, cc connector.Connector, noOpen *bool, force *bool, _ *string, _ *bool, variables *[]string, variablesFile *string, l logger.Logger) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		// create the shipyard and sub folders in the users home directory
 		utils.CreateFolders()

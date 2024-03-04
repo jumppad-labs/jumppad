@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newEnvCmd(e jumppad.Engine) *cobra.Command {
+func newEnvCmd(_ jumppad.Engine) *cobra.Command {
 	var unset bool
 
 	envCmd := &cobra.Command{

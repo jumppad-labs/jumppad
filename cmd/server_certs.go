@@ -22,7 +22,6 @@ func newConnectorCertCmd() *cobra.Command {
 		Long:  `Allows you to generate a TLS root and leaf certificates for securing connector communication`,
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			if generateCA {
 				k, err := crypto.GenerateKeyPair()
 				if err != nil {
@@ -43,8 +42,6 @@ func newConnectorCertCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-
-				return nil
 			}
 
 			if generateLeaf {
@@ -52,13 +49,13 @@ func newConnectorCertCmd() *cobra.Command {
 				ca := &crypto.X509{}
 				err := ca.ReadFile(rootCA)
 				if err != nil {
-					return fmt.Errorf("Unable to read root certificate: %s", rootCA)
+					return fmt.Errorf("unable to read root certificate: %s", rootCA)
 				}
 
 				rk := crypto.NewKeyPair()
 				err = rk.Private.ReadFile(rootKey)
 				if err != nil {
-					return fmt.Errorf("Unable to read root certificate: %s", rootKey)
+					return fmt.Errorf("unable to read root certificate: %s", rootKey)
 				}
 
 				k, err := crypto.GenerateKeyPair()
@@ -77,7 +74,9 @@ func newConnectorCertCmd() *cobra.Command {
 				}
 
 				err = lc.WriteFile(path.Join(args[0], "leaf.cert"))
-				return nil
+				if err != nil {
+					return err
+				}
 			}
 
 			return nil

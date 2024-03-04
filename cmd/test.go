@@ -801,7 +801,7 @@ func (cr *CucumberRunner) getJSONPath(path, resource string) (string, error) {
 	jp := jsonpath.New("test")
 	err = jp.Parse(path)
 	if err != nil {
-		return "", fmt.Errorf("Unable to parse JSONPath: %s", err)
+		return "", fmt.Errorf("unable to parse JSONPath: %s", err)
 	}
 
 	buf := new(bytes.Buffer)

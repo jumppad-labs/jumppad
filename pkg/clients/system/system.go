@@ -25,7 +25,7 @@ const (
 // System handles interactions between Shipyard and the OS
 type System interface {
 	OpenBrowser(string) error
-	Preflight() (string, error)
+	Preflight() DependencyStatus
 	CheckVersion(string) (string, bool)
 	PromptInput(in io.Reader, out io.Writer, message string) string
 }
@@ -72,66 +72,51 @@ func (b *SystemImpl) OpenBrowser(uri string) error {
 	return err
 }
 
+type DependencyStatus struct {
+	Docker bool
+	Podman bool
+	Git    bool
+	XDG    bool
+
+	Errors []error
+}
+
 // Preflight checks that the required software is installed and is
 // working correctly
-func (b *SystemImpl) Preflight() (string, error) {
-	dockerPass := true
-	podmanPass := true
-	gitPass := true
-	errors := ""
-	output := ""
-
-	// check docker
+func (b *SystemImpl) Preflight() DependencyStatus {
+	status := DependencyStatus{
+		Docker: true,
+		Podman: true,
+		Git:    true,
+		XDG:    true,
+		Errors: []error{},
+	}
 
 	if b.checkDocker() != nil {
-		dockerPass = false
-	} else {
-		output += fmt.Sprintf(" [ %s ] Docker\n", fmt.Sprintf(Green, "  OK   "))
+		status.Docker = false
 	}
 
 	if b.checkPodman() != nil {
-		podmanPass = false
-	} else {
-		output += fmt.Sprintf(" [ %s ] Podman\n", fmt.Sprintf(Green, "  OK   "))
+		status.Podman = false
 	}
 
-	if !dockerPass && podmanPass {
-		output += fmt.Sprintf(" [ %s ] Docker\n", fmt.Sprintf(Yellow, "WARNING"))
-	}
-
-	if dockerPass && !podmanPass {
-		output += fmt.Sprintf(" [ %s ] Podman\n", fmt.Sprintf(Yellow, "WARNING"))
-	}
-
-	if !dockerPass && !podmanPass {
-		output += fmt.Sprintf(" [ %s ] Docker\n", fmt.Sprintf(Red, " ERROR "))
-		errors += "* Unable to connect to Docker, ensure Docker is installed and running.\n"
-		output += fmt.Sprintf(" [ %s ] Podman\n", fmt.Sprintf(Red, " ERROR "))
-		errors += "* Unable to connect to Podman, ensure Podman is installed and running.\n"
+	if !status.Docker && !status.Podman {
+		status.Errors = append(status.Errors, fmt.Errorf("unable to connect to Docker or Podman, ensure Docker or Podman is installed and running"))
 	}
 
 	if b.checkGit() != nil {
-		output += fmt.Sprintf(" [ %s ] Git\n", fmt.Sprintf(Red, " ERROR "))
-		errors += "* Unable to find 'git' command, ensure Git is installed. Shipyard uses the git CLI to download blueprints.\n"
-		gitPass = false
-	} else {
-		output += fmt.Sprintf(" [ %s ] Git\n", fmt.Sprintf(Green, "  OK   "))
+		status.Git = false
+		status.Errors = append(status.Errors, fmt.Errorf("unable to find 'git' command, ensure 'git' is installed"))
 	}
 
 	if runtime.GOOS == "linux" {
 		if b.checkXdgOpen() != nil {
-			output += fmt.Sprintf(" [ %s ] xdg-open\n", fmt.Sprintf(Yellow, "WARNING"))
-			errors += "* Unable to find 'xdg-open' command, ensure 'xdg-open' is installed. Shipyard uses the 'xdg-open' to open browser windows.\n"
-		} else {
-			output += fmt.Sprintf(" [ %s ] xdg-open\n", fmt.Sprintf(Green, "  OK   "))
+			status.XDG = false
+			status.Errors = append(status.Errors, fmt.Errorf("unable to find 'xdg-open' command, ensure 'xdg-open' is installed. jumppad uses the 'xdg-open' to open browser windows"))
 		}
 	}
 
-	if (!dockerPass && !podmanPass) || !gitPass {
-		return fmt.Sprintf("%s\n\n%s", output, errors), fmt.Errorf("Errors preflighting system")
-	}
-
-	return output, nil
+	return status
 }
 
 // CheckVersion checks the current version against the latest online version

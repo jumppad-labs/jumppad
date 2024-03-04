@@ -5,7 +5,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newVersionCmd(vm gvm.Versions) *cobra.Command {
+var version string // set by build process
+var commit string  // set by build process
+var date string    // set by build process
+
+func newVersionCmd(_ gvm.Versions) *cobra.Command {
 	var versionCmd = &cobra.Command{
 		Use:           "version",
 		Short:         "jumppad version manager commands",
@@ -13,8 +17,10 @@ func newVersionCmd(vm gvm.Versions) *cobra.Command {
 		Args:          cobra.NoArgs,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cmd.Println("Current Version:", version)
-			cmd.Println("")
+			cmd.Printf("Version: %s\n", version)
+			cmd.Printf("Commit:  %s\n", commit)
+			cmd.Printf("Date:    %s\n", date)
+			cmd.Println()
 
 			return nil
 		},

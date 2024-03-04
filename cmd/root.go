@@ -15,27 +15,12 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
-
-var configFile = ""
 
 var rootCmd = &cobra.Command{
 	Use:   "jumppad",
 	Short: "Modern cloud native development environments",
 	Long:  `Jumppad is a tool that helps you create and run development, demo, and tutorial environments`,
-}
-
-var version string // set by build process
-var date string    // set by build process
-var commit string  // set by build process
-
-// globalFlags are flags that are set for every command
-func globalFlags() *pflag.FlagSet {
-	flags := pflag.NewFlagSet("global", pflag.ContinueOnError)
-	flags.Bool("non-interactive", false, "Run in non-interactive mode")
-
-	return flags
 }
 
 func createEngine(l logger.Logger, c *clients.Clients) (jumppad.Engine, gvm.Versions, error) {
@@ -155,12 +140,30 @@ func Execute(v, c, d string) error {
 		}
 
 		// Check the system to see if Docker is running and everything is installed
-		s, err := engineClients.System.Preflight()
-		if err != nil {
-			fmt.Println("")
-			fmt.Println("###### SYSTEM DIAGNOSTICS ######")
-			fmt.Println(s)
-			return err
+		status := engineClients.System.Preflight()
+		if len(status.Errors) > 0 {
+			fmt.Println(WhiteText.Render("Checking required system dependencies"))
+			fmt.Println()
+
+			gitStatus := GreenIcon.Render("✔")
+			if !status.Git {
+				gitStatus = RedIcon.Render("✘")
+			}
+			fmt.Println(gitStatus + WhiteText.Render(" Git"))
+
+			containerStatus := GreenIcon.Render("✔")
+			if !status.Docker && !status.Podman {
+				containerStatus = RedIcon.Render("✘")
+			}
+			fmt.Println(containerStatus + WhiteText.Render(" Docker/Podman"))
+
+			fmt.Println()
+			for _, err := range status.Errors {
+				fmt.Println(RedIcon.Render("ERROR") + WhiteText.Render(" "+err.Error()))
+			}
+			fmt.Println()
+
+			return fmt.Errorf("not all required dependencies are installed and/or running")
 		}
 
 		return nil
@@ -218,16 +221,16 @@ The full list of properties tha have been changed are:
 
 | Old Property Name | New Property Name   |
 |-------------------|---------------------|
-| id                | meta.id         |
-| name              | meta.name       |
-| type              | meta.type       |
-| module            | resource_module     |
-| file              | resource_file       |
-| line              | resource_line       |
-| column            | resource_column     |
-| checksum          | resource_checksum   |
-| checksum          | resource_checksum   |
-| properties        | resource_properties |
+| id                | meta.id             |
+| name              | meta.name           |
+| type              | meta.type           |
+| module            | meta.module         |
+| file              | meta.file           |
+| line              | meta.line           |
+| column            | meta.column         |
+| checksum          | meta.checksum       |
+| checksum          | meta.checksum       |
+| properties        | meta.properties     |
 
 ### Features:
 * Add capability to add custom container registries to the image cache  
@@ -303,4 +306,4 @@ resource "nomad_cluster" "dev" {
 * Fix isuse where filepath.Walk does not respect symlinks
 * Add "ignore" parameter to "build" resource to allow ignoring of files and folders
   for Docker builds.
-	`
+`
