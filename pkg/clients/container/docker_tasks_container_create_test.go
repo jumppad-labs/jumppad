@@ -157,6 +157,42 @@ func TestContainerCreatesCorrectly(t *testing.T) {
 	assert.True(t, cfg.AttachStderr)
 }
 
+func TestSetsCanonicalImage(t *testing.T) {
+	cc, md, mic := createContainerConfig()
+
+	cc.Image.Name = "minecraft-dev:v0.1.0"
+
+	err := setupContainer(t, cc, md, mic)
+	assert.NoError(t, err)
+
+	// check that the docker api methods were called
+	md.AssertCalled(t, "ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+
+	params := testutils.GetCalls(&md.Mock, "ContainerCreate")[0].Arguments
+
+	cfg := params[1].(*container.Config)
+
+	assert.Equal(t, "docker.io/library/minecraft-dev:v0.1.0", cfg.Image)
+}
+
+func TestDoesNotSetCanonicalImage(t *testing.T) {
+	cc, md, mic := createContainerConfig()
+
+	cc.Image.Name = "insecure.container.local.jmpd.in:5003/minecraft-dev:v0.1.0"
+
+	err := setupContainer(t, cc, md, mic)
+	assert.NoError(t, err)
+
+	// check that the docker api methods were called
+	md.AssertCalled(t, "ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+
+	params := testutils.GetCalls(&md.Mock, "ContainerCreate")[0].Arguments
+
+	cfg := params[1].(*container.Config)
+
+	assert.Equal(t, "insecure.container.local.jmpd.in:5003/minecraft-dev:v0.1.0", cfg.Image)
+}
+
 func TestContainerRemovesBridgeBeforeAttachingToUserNetwork(t *testing.T) {
 	cc, md, mic := createContainerConfig()
 

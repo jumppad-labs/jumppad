@@ -1440,8 +1440,6 @@ func makeImageCanonical(image string) string {
 	switch len(imageParts) {
 	case 1:
 		return fmt.Sprintf("docker.io/library/%s", imageParts[0])
-	case 2:
-		return fmt.Sprintf("docker.io/%s/%s", imageParts[0], imageParts[1])
 	}
 
 	return image
