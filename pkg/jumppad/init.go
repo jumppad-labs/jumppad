@@ -64,74 +64,16 @@ func init() {
 	config.RegisterResource(resources.TypeModule, &resources.Module{}, &null.Provider{})
 	config.RegisterResource(resources.TypeOutput, &resources.Output{}, &null.Provider{})
 	config.RegisterResource(resources.TypeVariable, &resources.Variable{}, &null.Provider{})
-
-	// load external plugins by scanning the plugin directory
-	//dirs, err := os.ReadDir("./examples/plugins/")
-	//if err != nil {
-	//	panic(err)
-	//}
-
-	//for _, dir := range dirs {
-	//	if !dir.IsDir() {
-	//		continue
-	//	}
-
-	//	// create a new interpreter
-	//	vendorPath, err := filepath.Abs(path.Join("./examples/plugins", dir.Name(), "vendor"))
-	//	if err != nil {
-	//		panic(err)
-	//	}
-
-	//	i := interp.New(interp.Options{GoPath: vendorPath, Stdout: os.Stdout, Stderr: os.Stderr, Unrestricted: true})
-	//	if err := i.Use(stdlib.Symbols); err != nil {
-	//		panic(err)
-	//	}
-
-	//	// evaluate the plugin
-	//	_, err = i.EvalPath("./examples/plugins/" + dir.Name() + "/main.go")
-	//	if err != nil {
-	//		panic(err)
-	//	}
-
-	//	ef, err := i.Eval("example.Echo")
-	//	if err != nil {
-	//		panic(err)
-	//	}
-
-	//	//// print the signature of the function
-	//	fmt.Println(ef.String())
-
-	//	tf, ok := ef.Interface().(func(string) string)
-	//	if !ok {
-	//		panic("plugin does not have a Test function")
-	//	}
-
-	//	fmt.Println(tf("hello"))
-
-	//	rf, err := i.Eval("example.Register")
-	//	if err != nil {
-	//		panic(err)
-	//	}
-
-	//	// print the signature of the function
-	//	fmt.Println(rf.String())
-
-	//	prov, ok := rf.Interface().(func(register sdk.RegisterResourceFunc, loadstate sdk.LoadStateFunc) error)
-	//	if !ok {
-	//		panic("plugin does not have a Provider")
-	//	}
-
-	//	_ = prov
-
-	//	//prov(nil, nil)
-
-	// }
 }
 
+// PluginRegisterResource is a function that registers a resource with the config package
+// it is used by external plugins to register their resources
 func PluginRegisterResource(name string, r types.Resource, p sdk.Provider) {
 	config.RegisterResource(name, r, p)
 }
 
+// PluginLoadState is a function that enables external plugins to load the
+// saved state of the configuration
 func PluginLoadState() (sdk.Config, error) {
 	return config.LoadState()
 }
