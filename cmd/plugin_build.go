@@ -73,7 +73,11 @@ var pluginCmd = &cobra.Command{
 		src := filepath.Join(output, "src")
 
 		// download the source
-		engineClients.Getter.Get("github.com/jumppad-labs/jumppad?ref=main", src)
+		version := "main"
+		if jumppads[0].(*Jumppad).Version != "" {
+			version = jumppads[0].(*Jumppad).Version
+		}
+		engineClients.Getter.Get("github.com/jumppad-labs/jumppad?ref="+version, src)
 
 		fmt.Println("Downloaded source to", src)
 		d, err := os.ReadFile(filepath.Join(src, "go.mod"))
