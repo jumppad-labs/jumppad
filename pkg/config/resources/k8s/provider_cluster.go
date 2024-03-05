@@ -485,7 +485,20 @@ func (p *ClusterProvider) createK3s() error {
 		return xerrors.Errorf("unable to create local Kubernetes config: %w", err)
 	}
 
-	p.config.KubeConfig = config
+	p.config.KubeConfig.ConfigPath = config
+
+	// parse the kubeconfig and get the details
+	data, err := os.ReadFile(config)
+	if err != nil {
+		return xerrors.Errorf("unable to read Kubernetes config: %w", err)
+	}
+
+	cfg := map[string]interface{}{}
+	yaml.Unmarshal(data, &kc)
+
+	p.config.KubeConfig.CA = cfg["clusters"].([]interface{})[0].(map[interface{}]interface{})["cluster"].(map[interface{}]interface{})["certificate-authority-data"].(string)
+	p.config.KubeConfig.ClientCertificate = cfg["users"].([]interface{})[0].(map[interface{}]interface{})["user"].(map[interface{}]interface{})["certificate-certificate-data"].(string)
+	p.config.KubeConfig.ClientKey = cfg["users"].([]interface{})[0].(map[interface{}]interface{})["user"].(map[interface{}]interface{})["certificate-key-data"].(string)
 
 	// wait for all the default pods like core DNS to start running
 	// before progressing

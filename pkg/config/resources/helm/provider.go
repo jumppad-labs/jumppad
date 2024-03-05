@@ -84,7 +84,7 @@ func (p *Provider) Create() error {
 	// this is used by the health checks
 	var err error
 	p.log.Debug("Using Kubernetes config", "ref", p.config.Meta.ID, "path", p.config.Cluster.KubeConfig)
-	p.kubeClient, err = p.kubeClient.SetConfig(p.config.Cluster.KubeConfig)
+	p.kubeClient, err = p.kubeClient.SetConfig(p.config.Cluster.KubeConfig.ConfigPath)
 	if err != nil {
 		return xerrors.Errorf("unable to create Kubernetes client: %w", err)
 	}
@@ -109,7 +109,7 @@ func (p *Provider) Create() error {
 	go func() {
 		for {
 			err = p.helmClient.Create(
-				p.config.Cluster.KubeConfig,
+				p.config.Cluster.KubeConfig.ConfigPath,
 				newName,
 				p.config.Namespace,
 				p.config.CreateNamespace,
@@ -173,7 +173,7 @@ func (p *Provider) Destroy() error {
 	newName, _ := utils.ReplaceNonURIChars(p.config.Meta.Name)
 
 	// get the target cluster
-	err := p.helmClient.Destroy(p.config.Cluster.KubeConfig, newName, p.config.Namespace)
+	err := p.helmClient.Destroy(p.config.Cluster.KubeConfig.ConfigPath, newName, p.config.Namespace)
 
 	if err != nil {
 		p.log.Debug("There was a problem destroying Helm chart, logging message but ignoring error", "ref", p.config.Meta.ID, "error", err)

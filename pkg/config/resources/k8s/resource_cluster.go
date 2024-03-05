@@ -36,8 +36,8 @@ type K8sCluster struct {
 
 	// output parameters
 
-	// Path to the Kubernetes config
-	KubeConfig string `hcl:"kubeconfig,optional" json:"kubeconfig,omitempty"`
+	// Kubernetes config details
+	KubeConfig KubeConfig `hcl:"kube_config,optional" json:"kube_config,omitempty"`
 
 	// Port the API server is running on
 	APIPort int `hcl:"api_port,optional" json:"api_port,omitempty"`
@@ -65,6 +65,13 @@ type DockerConfig struct {
 
 	// InsecureRegistries is a list of docker registries that should be treated as insecure
 	InsecureRegistries []string `hcl:"insecure_registries,optional" json:"insecure-registries,omitempty"`
+}
+
+type KubeConfig struct {
+	ConfigPath        string `hcl:"path" json:"path"`                             // path to the kubeconfig file
+	CA                string `hcl:"ca" json:"ca"`                                 // base64 encoded ca certificate
+	ClientCertificate string `hcl:"client_certificate" json:"client_certificate"` // base64 encoded client certificate
+	ClientKey         string `hcl:"client_key" json:"client_key"`                 // base64 encoded client key
 }
 
 const k3sBaseImage = "shipyardrun/k3s"
@@ -96,6 +103,7 @@ func (k *K8sCluster) Process() error {
 			k.APIPort = kstate.APIPort
 			k.ConnectorPort = kstate.ConnectorPort
 			k.ExternalIP = kstate.ExternalIP
+			k.KubeConfig = kstate.KubeConfig
 
 			// add the network addresses
 			for _, a := range kstate.Networks {

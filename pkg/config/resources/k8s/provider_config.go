@@ -131,7 +131,7 @@ func (p *ConfigProvider) Changed() (bool, error) {
 
 func (p *ConfigProvider) setup() error {
 	var err error
-	p.client, err = p.client.SetConfig(p.config.Cluster.KubeConfig)
+	p.client, err = p.client.SetConfig(p.config.Cluster.KubeConfig.ConfigPath)
 	if err != nil {
 		return xerrors.Errorf("unable to create Kubernetes client: %w", err)
 	}
