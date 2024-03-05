@@ -25,6 +25,7 @@ type Terraform struct {
 	WorkingDirectory string            `hcl:"working_directory,optional" json:"working_directory,omitempty"` // Working directory to run terraform commands
 	Environment      map[string]string `hcl:"environment,optional" json:"environment,omitempty"`             // environment variables to set when starting the container
 	Variables        cty.Value         `hcl:"variables,optional" json:"-"`                                   // variables to pass to terraform
+	Volumes          []ctypes.Volume   `hcl:"volume,block" json:"volumes,omitempty"`                         // Volumes to attach to the container
 
 	// Computed values
 
@@ -45,6 +46,14 @@ func (t *Terraform) Process() error {
 		}
 
 		t.WorkingDirectory = path.Clean("." + t.WorkingDirectory)
+	}
+
+	// process volumes
+	for i, v := range t.Volumes {
+		// make sure mount paths are absolute when type is bind, unless this is the docker sock
+		if v.Type == "" || v.Type == "bind" {
+			t.Volumes[i].Source = utils.EnsureAbsolute(v.Source, t.Meta.File)
+		}
 	}
 
 	// set the base version

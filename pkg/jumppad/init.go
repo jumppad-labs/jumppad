@@ -64,6 +64,7 @@ func init() {
 	config.RegisterResource(resources.TypeModule, &resources.Module{}, &null.Provider{})
 	config.RegisterResource(resources.TypeOutput, &resources.Output{}, &null.Provider{})
 	config.RegisterResource(resources.TypeVariable, &resources.Variable{}, &null.Provider{})
+	config.RegisterResource(resources.TypeLocal, &resources.Local{}, &null.Provider{})
 }
 
 // PluginRegisterResource is a function that registers a resource with the config package
