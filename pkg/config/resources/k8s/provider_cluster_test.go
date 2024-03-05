@@ -348,28 +348,19 @@ func TestClusterK3sSetsServerInConfig(t *testing.T) {
 	assert.Contains(t, string(d), "https://"+utils.GetDockerIP())
 }
 
-// Deprecated functionality
-//func TestClusterK3sCreatesDockerConfig(t *testing.T) {
-//	cc, md, mk, mc := setupClusterMocks(t)
-//
-//	p := ClusterProvider{cc, md, mk, nil, mc, logger.NewTestLogger(t)}
-//
-//	err := p.Create()
-//	assert.NoError(t, err)
-//
-//	// check the kubeconfig file for docker uses a network ip not localhost
-//
-//	// check file has been written
-//	_, _, dockerPath := utils.CreateKubeConfigPath(clusterConfig.Name)
-//	f, err := os.Open(dockerPath)
-//	assert.NoError(t, err)
-//	defer f.Close()
-//
-//	// check file contains docker ip
-//	d, err := io.ReadAll(f)
-//	assert.NoError(t, err)
-//	assert.Contains(t, string(d), fmt.Sprintf("server.%s", utils.FQDN(clusterConfig.Name, "", clusterConfig.Type)))
-//}
+func TestCreateSetsKubeConfig(t *testing.T) {
+	cc, md, mk, mc := setupClusterMocks(t)
+
+	p := ClusterProvider{cc, md, mk, nil, mc, logger.NewTestLogger(t)}
+
+	err := p.Create()
+	assert.NoError(t, err)
+
+	assert.NotEmpty(t, cc.KubeConfig.ConfigPath)
+	assert.NotEmpty(t, cc.KubeConfig.CA)
+	assert.NotEmpty(t, cc.KubeConfig.ClientCertificate)
+	assert.NotEmpty(t, cc.KubeConfig.ClientKey)
+}
 
 func TestClusterK3sCreatesKubeClient(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
@@ -691,14 +682,13 @@ var clusterConfig = &K8sCluster{
 	APIPort:      443,
 }
 
-var kubeconfig = `
-apiVersion: v1
+var kubeconfig = `apiVersion: v1
 clusters:
 - cluster:
-   certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJWakNCL3FBREFnRUNBZ0VBTUFvR0NDcUdTTTQ5QkFNQ01DTXhJVEFmQmdOVkJBTU1HR3N6Y3kxelpYSjIKWlhJdFkyRk
-FNVFUzTlRrNE1qVTNNakFlRncweE9URXlNVEF4TWpVMk1USmFGdzB5T1RFeU1EY3hNalUyTVRKYQpNQ014SVRBZkJnTlZCQU1NR0dzemN5MXpaWEoyWlhJdFkyRkFNVFUzTlRrNE1qVTNNakJaTUJNR0J5cUdTTTQ5CkFn
-RUdDQ3FHU000OUF3RUhBMElBQkhSblYydVliRU53eTlROGkxd2J6ZjQ2NytGdzV2LzRBWVQ2amM4dXorM00KTmRrZEwwd0RhNGM3Y1ByOUFXM1N0ZVRYSDNtNE9mRStJYTE3L1liaDFqR2pJekFoTUE0R0ExVWREd0VCL3
-dRRQpBd0lDcERBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUFvR0NDcUdTTTQ5QkFNQ0EwY0FNRVFDSUhFYlZwbUkzbjZwCnQrYlhKaWlFK1hiRm5XUFhtYm40OFZuNmtkYkdPM3daQWlCRDNyUjF5RjQ5R0piZmVQeXBsREdC
-K3lkNVNQOEUKUmQ4OGxRWW9oRnV2enc9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+    certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJWakNCL3FBREFnRUNBZ0VBTUFvR0NDcUdTTTQ5QkFNQ01DTXhJVEFmQmdOVkJBTU1HR3N6Y3kxelpYSjIKWlhJdFkyRkFNVFUzTlRrNE1qVTNNakFlRncweE9URXlNVEF4TWpVMk1USmFGdzB5T1RFeU1EY3hNalUyTVRKYQpNQ014SVRBZkJnTlZCQU1NR0dzemN5MXpaWEoyWlhJdFkyRkFNVFUzTlRrNE1qVTNNakJaTUJNR0J5cUdTTTQ5CkFnRUdDQ3FHU000OUF3RUhBMElBQkhSblYydVliRU53eTlROGkxd2J6ZjQ2NytGdzV2LzRBWVQ2amM4dXorM00KTmRrZEwwd0RhNGM3Y1ByOUFXM1N0ZVRYSDNtNE9mRStJYTE3L1liaDFqR2pJekFoTUE0R0ExVWREd0VCL3dRRQpBd0lDcERBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUFvR0NDcUdTTTQ5QkFNQ0EwY0FNRVFDSUhFYlZwbUkzbjZwCnQrYlhKaWlFK1hiRm5XUFhtYm40OFZuNmtkYkdPM3daQWlCRDNyUjF5RjQ5R0piZmVQeXBsREdCK3lkNVNQOEUKUmQ4OGxRWW9oRnV2enc9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
     server: https://127.0.0.1:64674
-`
+users:
+- name: default
+  user:
+    client-certificate-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJrakNDQVRlZ0F3SUJBZ0lJWmx1UHFJSDFhOHN3Q2dZSUtvWkl6ajBFQXdJd0l6RWhNQjhHQTFVRUF3d1kKYXpOekxXTnNhV1Z1ZEMxallVQXhOekE1TmpZek1EUTBNQjRYRFRJME1ETXdOVEU0TWpRd05Gb1hEVEkxTURNdwpOVEU0TWpRd05Gb3dNREVYTUJVR0ExVUVDaE1PYzNsemRHVnRPbTFoYzNSbGNuTXhGVEFUQmdOVkJBTVRESE41CmMzUmxiVHBoWkcxcGJqQlpNQk1HQnlxR1NNNDlBZ0VHQ0NxR1NNNDlBd0VIQTBJQUJFemtVS0MweE9XSG1VWkgKdlpSZE5UZ3VLQWZTTlI0VFEwK0NzWXEzNEp4UkhveDIxVlVMaU1OdUp0WWV4QytMTVhBTkt0Zms0Q3N5UytkZwpwWFBKODRpalNEQkdNQTRHQTFVZER3RUIvd1FFQXdJRm9EQVRCZ05WSFNVRUREQUtCZ2dyQmdFRkJRY0RBakFmCkJnTlZIU01FR0RBV2dCU0FWZkZpcnpKNmNycGpaY2NHNFJ4d3EwOE1uekFLQmdncWhrak9QUVFEQWdOSkFEQkcKQWlFQXhlQmhTZkdIZnlWYjJ4cWNXQzl0b3JkTkpHUGluQ2dMekluK2ZZUEtFOXdDSVFDd3Z6Y1gxVXR0eEQzMwpJZVBVZWxKeHV5ckk2MlNiRUdTNDkwWDRiUUpPd1E9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCi0tLS0tQkVHSU4gQ0VSVElGSUNBVEUtLS0tLQpNSUlCZURDQ0FSMmdBd0lCQWdJQkFEQUtCZ2dxaGtqT1BRUURBakFqTVNFd0h3WURWUVFEREJock0zTXRZMnhwClpXNTBMV05oUURFM01EazJOak13TkRRd0hoY05NalF3TXpBMU1UZ3lOREEwV2hjTk16UXdNekF6TVRneU5EQTAKV2pBak1TRXdId1lEVlFRRERCaHJNM010WTJ4cFpXNTBMV05oUURFM01EazJOak13TkRRd1dUQVRCZ2NxaGtqTwpQUUlCQmdncWhrak9QUU1CQndOQ0FBU29RNEdqYjZISC9vQ05zSWgxeEl4dDIwejlKc2dSbjV3aG9mdzl2VlJaCnZZWm9SMk1MOWgyUkVZeDVpNjg0YzdjNGFZOUhRRGNLelZqNVFzMFBpbDBjbzBJd1FEQU9CZ05WSFE4QkFmOEUKQkFNQ0FxUXdEd1lEVlIwVEFRSC9CQVV3QXdFQi96QWRCZ05WSFE0RUZnUVVnRlh4WXE4eWVuSzZZMlhIQnVFYwpjS3RQREo4d0NnWUlLb1pJemowRUF3SURTUUF3UmdJaEFKOE5XcjYrWDd2bUVmbStpbHVmdGoxTzVjYlMycmpGClREYkROVGZYQ3JVUkFpRUFnWVBWa2dkS0NEVXRNRWh4N040OFk0UGtkMFhkV0RrUTZaUzlOTERER29zPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+    client-key-data: LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUVpQUpQclpTRGVuM0pvaHdyQ2syOXVGbk1FeG10NlRYNU9TckpvS0FaVmVvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFVE9SUW9MVEU1WWVaUmtlOWxGMDFPQzRvQjlJMUhoTkRUNEt4aXJmZ25GRWVqSGJWVlF1SQp3MjRtMWg3RUw0c3hjQTBxMStUZ0t6Skw1MkNsYzhuemlBPT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo=`

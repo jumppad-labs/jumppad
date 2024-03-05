@@ -26,7 +26,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 	"golang.org/x/xerrors"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // https://github.com/rancher/k3d/blob/master/cli/commands.go
@@ -493,12 +493,15 @@ func (p *ClusterProvider) createK3s() error {
 		return xerrors.Errorf("unable to read Kubernetes config: %w", err)
 	}
 
-	cfg := map[string]interface{}{}
-	yaml.Unmarshal(data, &kc)
+	cfg := &Configuration{}
+	err = yaml.Unmarshal(data, &cfg)
+	if err != nil {
+		return xerrors.Errorf("unable to unmarshal Kubernetes config: %w", err)
+	}
 
-	p.config.KubeConfig.CA = cfg["clusters"].([]interface{})[0].(map[interface{}]interface{})["cluster"].(map[interface{}]interface{})["certificate-authority-data"].(string)
-	p.config.KubeConfig.ClientCertificate = cfg["users"].([]interface{})[0].(map[interface{}]interface{})["user"].(map[interface{}]interface{})["certificate-certificate-data"].(string)
-	p.config.KubeConfig.ClientKey = cfg["users"].([]interface{})[0].(map[interface{}]interface{})["user"].(map[interface{}]interface{})["certificate-key-data"].(string)
+	p.config.KubeConfig.CA = cfg.Clusters[0].Cluster.CertificateAuthorityData
+	p.config.KubeConfig.ClientCertificate = cfg.Users[0].User.ClientCertificateData
+	p.config.KubeConfig.ClientKey = cfg.Users[0].User.ClientKeyData
 
 	// wait for all the default pods like core DNS to start running
 	// before progressing
@@ -836,6 +839,21 @@ type dockerConfig struct {
 
 type dockerMirror struct {
 	Endpoints []string `yaml:"endpoint"`
+}
+
+type Configuration struct {
+	Clusters []struct {
+		Cluster struct {
+			CertificateAuthorityData string `yaml:"certificate-authority-data"`
+		} `yaml:"cluster"`
+	} `yaml:"clusters"`
+	Users []struct {
+		Name string `yaml:"name"`
+		User struct {
+			ClientCertificateData string `yaml:"client-certificate-data"`
+			ClientKeyData         string `yaml:"client-key-data"`
+		} `yaml:"user"`
+	} `yaml:"users"`
 }
 
 var connectorDeployment = `

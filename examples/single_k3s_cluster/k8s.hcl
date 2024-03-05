@@ -9,5 +9,5 @@ resource "k8s_cluster" "k3s" {
 }
 
 output "KUBECONFIG" {
-  value = resource.k8s_cluster.k3s.kubeconfig
+  value = resource.k8s_cluster.k3s.kube_config.path
 }
