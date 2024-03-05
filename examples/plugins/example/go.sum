@@ -1,0 +1,4 @@
+github.com/jumppad-labs/hclconfig v0.21.0 h1:xNFxRSQgDF/so82AQLJWu8tRpTfqARGvblOwVBr6N80=
+github.com/jumppad-labs/hclconfig v0.21.0/go.mod h1:qbgSASuXOsnOoLWZvE0h6Z5j9oJXTLAXFNeHZORNyts=
+github.com/jumppad-labs/plugin-sdk v0.2.0 h1:cz57xrVqKkv23ekoExEcQX1VgF6k7MhQGzRJSuvSCfo=
+github.com/jumppad-labs/plugin-sdk v0.2.0/go.mod h1:WHWpGi2bxGzPONvw7YMV9dN5usvTvFct8wkitoE71gk=

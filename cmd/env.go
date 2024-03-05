@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/hclconfig/resources"
 	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/spf13/cobra"
@@ -62,7 +62,7 @@ func newEnvCmd(e jumppad.Engine) *cobra.Command {
 
 			// add output variables
 			for _, r := range c.Resources {
-				if r.Metadata().Type == types.TypeOutput {
+				if r.Metadata().Type == resources.TypeOutput {
 					if r.GetDisabled() {
 						continue
 					}
@@ -71,7 +71,7 @@ func newEnvCmd(e jumppad.Engine) *cobra.Command {
 						continue
 					}
 
-					d, _ := json.Marshal(r.(*types.Output).Value)
+					d, _ := json.Marshal(r.(*resources.Output).Value)
 
 					// trim any strings that wrap the output from marshaling
 					val := strings.TrimPrefix(string(d), "\"")

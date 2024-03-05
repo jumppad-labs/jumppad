@@ -630,11 +630,12 @@ func (d *DockerTasks) BuildContainer(config *dtypes.Build, force bool) (string, 
 
 	// configure the build args
 	buildArgs := map[string]*string{}
-	for k, v := range config.Args {
+	for k, _ := range config.Args {
+		v := config.Args[k]
 		buildArgs[k] = &v
 	}
 
-	d.l.Debug("Building image", "id", imageWithId)
+	d.l.Debug("Building image", "id", imageWithId, "args", config.Args)
 
 	// tar the build context folder and send to the server
 	buildOpts := types.ImageBuildOptions{
@@ -1440,8 +1441,6 @@ func makeImageCanonical(image string) string {
 	switch len(imageParts) {
 	case 1:
 		return fmt.Sprintf("docker.io/library/%s", imageParts[0])
-	case 2:
-		return fmt.Sprintf("docker.io/%s/%s", imageParts[0], imageParts[1])
 	}
 
 	return image

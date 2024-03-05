@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/hclconfig/resources"
 	gvm "github.com/shipyard-run/version-manager"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients/connector"
@@ -252,12 +252,12 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 			cmd.Println("")
 			cmd.Print(string(intro))
 
-			outputs := []*types.Output{}
-			os, _ := e.Config().FindResourcesByType(types.TypeOutput)
+			outputs := []*resources.Output{}
+			os, _ := e.Config().FindResourcesByType(resources.TypeOutput)
 			for _, o := range os {
 				// only grab the root outputs
 				if o.Metadata().Module == "" {
-					outputs = append(outputs, o.(*types.Output))
+					outputs = append(outputs, o.(*resources.Output))
 				}
 			}
 

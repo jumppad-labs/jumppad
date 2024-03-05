@@ -1,11 +1,7 @@
 package jumppad
 
 import (
-	"os"
-	"path"
-	"plugin"
-
-	"github.com/charmbracelet/log"
+	"github.com/jumppad-labs/hclconfig/resources"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/blueprint"
@@ -25,7 +21,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/random"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/template"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/terraform"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 
@@ -66,48 +61,19 @@ func init() {
 	config.RegisterResource(terraform.TypeTerraform, &terraform.Terraform{}, &terraform.TerraformProvider{})
 
 	// register providers for the default types
-	config.RegisterResource(types.TypeModule, &types.Module{}, &null.Provider{})
-	config.RegisterResource(types.TypeOutput, &types.Output{}, &null.Provider{})
-	config.RegisterResource(types.TypeVariable, &types.Variable{}, &null.Provider{})
+	config.RegisterResource(resources.TypeModule, &resources.Module{}, &null.Provider{})
+	config.RegisterResource(resources.TypeOutput, &resources.Output{}, &null.Provider{})
+	config.RegisterResource(resources.TypeVariable, &resources.Variable{}, &null.Provider{})
+}
 
-	// load external plugins by scanning the plugin directory
-	dirs, err := os.ReadDir(utils.PluginsDir())
-	if err != nil {
-		panic(err)
-	}
+// PluginRegisterResource is a function that registers a resource with the config package
+// it is used by external plugins to register their resources
+func PluginRegisterResource(name string, r types.Resource, p sdk.Provider) {
+	config.RegisterResource(name, r, p)
+}
 
-	for _, dir := range dirs {
-		if dir.IsDir() {
-			continue
-		}
-
-		p, err := plugin.Open(path.Join(utils.PluginsDir(), dir.Name()))
-		if err != nil {
-			log.Debug("error opening plugin", "error", err, "plugin", dir.Name())
-			continue
-		}
-
-		plug, err := p.Lookup("Register")
-		if err != nil {
-			panic(err)
-		}
-
-		registerFunc, ok := plug.(func(sdk.RegisterResourceFunc, sdk.LoadStateFunc) error)
-		if !ok {
-			panic("plugin does not have a Register function")
-		}
-
-		err = registerFunc(
-			func(name string, r types.Resource, p sdk.Provider) {
-				config.RegisterResource(name, r, p)
-			},
-			func() (sdk.Config, error) {
-				return config.LoadState()
-			},
-		)
-
-		if err != nil {
-			panic(err)
-		}
-	}
+// PluginLoadState is a function that enables external plugins to load the
+// saved state of the configuration
+func PluginLoadState() (sdk.Config, error) {
+	return config.LoadState()
 }

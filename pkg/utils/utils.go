@@ -88,7 +88,13 @@ func ReplaceNonURIChars(s string) (string, error) {
 		return "", err
 	}
 
-	return reg.ReplaceAllString(s, "-"), nil
+	ret := reg.ReplaceAllString(s, "-")
+
+	if strings.HasPrefix(ret, "-") {
+		return ret[1:], nil
+	}
+
+	return ret, nil
 }
 
 // FQDN generates the full qualified name for a container

@@ -25,7 +25,7 @@ import (
 	"github.com/cucumber/godog/colors"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
-	hcltypes "github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/hclconfig/resources"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/config"
@@ -685,7 +685,7 @@ func (cr *CucumberRunner) theFollowingOutputVaraiblesShouldBeSet(arg1 *godog.Tab
 			return fmt.Errorf("expected output variable %s to be set but was nil", row.Cells[0].Value)
 		}
 
-		o := r.(*hcltypes.Output)
+		o := r.(*resources.Output)
 
 		switch v := o.Value.(type) {
 		case int:
@@ -782,7 +782,7 @@ func (cr *CucumberRunner) executeCommand(cmd string) error {
 }
 
 func (cr *CucumberRunner) getJSONPath(path, resource string) (string, error) {
-	fqdn, err := hcltypes.ParseFQRN(resource)
+	fqdn, err := resources.ParseFQRN(resource)
 	if err != nil {
 		return "", fmt.Errorf("invalid resource name: %s", err)
 	}

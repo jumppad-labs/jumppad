@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/jumppad-labs/hclconfig/convert"
+	"github.com/jumppad-labs/hclconfig/resources"
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	cclient "github.com/jumppad-labs/jumppad/pkg/clients/container"
@@ -395,7 +396,7 @@ func (p *TerraformProvider) terraformDestroy(containerid string) error {
 
 // GetTerraformFolder creates the terraform directory used by the application
 func terraformStateFolder(r *Terraform) string {
-	p := sanitize.Path(htypes.FQDNFromResource(r).String())
+	p := sanitize.Path(resources.FQRNFromResource(r).String())
 	data := filepath.Join(utils.JumppadHome(), "terraform", "state", p)
 
 	// create the folder if it does not exist
