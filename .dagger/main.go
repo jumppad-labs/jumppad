@@ -77,9 +77,13 @@ func (d *JumppadCI) All(
 	// create the archives
 	output, _ = d.Archive(ctx, output, version)
 
+	// if we have the notorization details sign and notorize the osx binaries
 	if notorizeCert != nil && notorizeCertPassword != nil && notorizeKey != nil && notorizeId != "" && notorizeIssuer != "" {
 		output, _ = d.SignAndNotorize(ctx, version, output, notorizeCert, notorizeCertPassword, notorizeKey, notorizeId, notorizeIssuer)
 	}
+
+	// generate the checksums
+	output, _ = d.GenerateChecksums(ctx, output, version)
 
 	return output, d.lastError
 }
@@ -277,6 +281,31 @@ func (d *JumppadCI) Archive(ctx context.Context, binaries *Directory, version st
 	out = out.WithNewFile("checksums.txt", checksums.String())
 
 	return out, nil
+}
+
+func (d JumppadCI) GenerateChecksums(ctx context.Context, files *Directory, version string) (*Directory, error) {
+	cli := dag.Pipeline("generate-checksums")
+	checksums := strings.Builder{}
+
+	for _, a := range archives {
+		outPath := strings.ReplaceAll(a.Output, "%%VERSION%%", version)
+
+		// generate the checksum
+		cs, err := cli.Checksum().CalculateFromFile(ctx, files.File(outPath))
+		if err != nil {
+			d.lastError = fmt.Errorf("unable to generate checksum for archive: %w", err)
+			return nil, d.lastError
+		}
+
+		// checksum is returned as "checksum filename" we need to remove the filename as it is not
+		// the same as the release name
+		csParts := strings.Split(cs, " ")
+
+		checksums.WriteString(fmt.Sprintf("%s  %s\n", csParts[0], outPath))
+	}
+
+	files = files.WithNewFile("checksums.txt", checksums.String())
+	return files, nil
 }
 
 var notorize = []Archive{
