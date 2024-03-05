@@ -109,6 +109,20 @@
         "test",
         "${input:blueprint}",
       ],
+    },
+    {
+      "name": "Debug - Build",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}",
+      "env": {
+        "LOG_LEVEL": "debug"
+      },
+      "args": [
+        "build",
+        "./examples/plugins/plugin_config.hcl",
+      ],
     }
   ],
   "inputs": [

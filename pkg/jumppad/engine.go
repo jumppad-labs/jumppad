@@ -11,6 +11,7 @@ import (
 
 	"github.com/jumppad-labs/hclconfig"
 	hclerrors "github.com/jumppad-labs/hclconfig/errors"
+	"github.com/jumppad-labs/hclconfig/resources"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/config"
@@ -450,7 +451,7 @@ func (e *EngineImpl) appendDisabledResources(c *hclconfig.Config) error {
 	for _, r := range c.Resources {
 		if r.GetDisabled() {
 			// if the resource already exists just set the status to disabled
-			er, err := e.config.FindResource(types.FQDNFromResource(r).String())
+			er, err := e.config.FindResource(resources.FQRNFromResource(r).String())
 			if err == nil {
 				er.SetDisabled(true)
 				continue
@@ -474,9 +475,9 @@ func (e *EngineImpl) appendModuleAndVariableResources(c *hclconfig.Config) error
 	}
 
 	for _, r := range c.Resources {
-		if r.Metadata().Type == types.TypeModule || r.Metadata().Type == types.TypeVariable {
+		if r.Metadata().Type == resources.TypeModule || r.Metadata().Type == resources.TypeVariable {
 			// if the resource already exists remove it
-			er, err := e.config.FindResource(types.FQDNFromResource(r).String())
+			er, err := e.config.FindResource(resources.FQRNFromResource(r).String())
 			if err == nil {
 				e.config.RemoveResource(er)
 			}
@@ -606,11 +607,11 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 }
 
 func (e *EngineImpl) destroyCallback(r types.Resource) error {
-	fqdn := types.FQDNFromResource(r)
+	fqrn := resources.FQRNFromResource(r)
 
 	// do nothing for disabled resources
 	if r.GetDisabled() {
-		e.log.Info("Skipping disabled resource", "fqdn", fqdn.String())
+		e.log.Info("Skipping disabled resource", "fqdn", fqrn.String())
 
 		e.config.RemoveResource(r)
 		return nil

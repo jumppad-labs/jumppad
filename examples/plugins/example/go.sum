@@ -1,0 +1,4 @@
+github.com/jumppad-labs/hclconfig v0.20.1-0.20240305063312-6d0146038821 h1:7QaPL3hYhcUtI0Ntwvsalhgn5OS8pdh9j7bp9xb33y0=
+github.com/jumppad-labs/hclconfig v0.20.1-0.20240305063312-6d0146038821/go.mod h1:qbgSASuXOsnOoLWZvE0h6Z5j9oJXTLAXFNeHZORNyts=
+github.com/jumppad-labs/plugin-sdk v0.1.1-0.20240305064425-db3f996a5d29 h1:hBp3p4s62KLdhIKw86R5uM5ruyzOZaeo0BlBxc6KmEA=
+github.com/jumppad-labs/plugin-sdk v0.1.1-0.20240305064425-db3f996a5d29/go.mod h1:dkYBbtYy5XmChNhFASW4pEyUem6bD++IWO/2h9ALIQw=

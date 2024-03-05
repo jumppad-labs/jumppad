@@ -133,6 +133,9 @@ func Execute(v, c, d string) error {
 	rootCmd.AddCommand(generateCmd)
 	generateCmd.AddCommand(newGenerateReadmeCommand(engine))
 
+	// add the plugin commands
+	rootCmd.AddCommand(pluginCmd)
+
 	rootCmd.SilenceErrors = true
 
 	// set a pre run function to show the changelog

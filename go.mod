@@ -36,9 +36,10 @@ require (
 	github.com/infinytum/raymond/v2 v2.0.5
 	github.com/jumppad-labs/connector v0.3.0
 	github.com/jumppad-labs/gohup v0.4.0
-	github.com/jumppad-labs/hclconfig v0.20.0
-	github.com/jumppad-labs/plugin-sdk v0.1.0
+	github.com/jumppad-labs/hclconfig v0.20.1-0.20240305063312-6d0146038821
+	github.com/jumppad-labs/plugin-sdk v0.1.1-0.20240305064425-db3f996a5d29
 	github.com/kennygrant/sanitize v1.2.4
+	github.com/mattn/go-isatty v0.0.18
 	github.com/moby/sys/signal v0.7.0
 	github.com/moby/term v0.5.0
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
@@ -51,9 +52,11 @@ require (
 	github.com/sethvargo/go-retry v0.2.4
 	github.com/shipyard-run/version-manager v0.0.5
 	github.com/spf13/cobra v1.7.0
+	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
 	github.com/zclconf/go-cty v1.13.0
 	golang.org/x/crypto v0.14.0
+	golang.org/x/mod v0.16.0
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2
 	google.golang.org/grpc v1.56.3
 	gopkg.in/yaml.v2 v2.4.0
@@ -164,7 +167,6 @@ require (
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.18 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
@@ -199,7 +201,6 @@ require (
 	github.com/silas/dag v0.0.0-20220518035006-a7e85ada93c5 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect

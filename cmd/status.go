@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/hokaccha/go-prettyjson"
+	"github.com/jumppad-labs/hclconfig/resources"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/cache"
@@ -82,9 +83,9 @@ var statusCmd = &cobra.Command{
 			for _, ress := range resourceMap {
 				for _, r := range ress {
 					if (resourceType != "" && r.Metadata().Type != resourceType) ||
-						r.Metadata().Type == types.TypeModule ||
-						r.Metadata().Type == types.TypeVariable ||
-						r.Metadata().Type == types.TypeOutput {
+						r.Metadata().Type == resources.TypeModule ||
+						r.Metadata().Type == resources.TypeVariable ||
+						r.Metadata().Type == resources.TypeOutput {
 						continue
 					}
 

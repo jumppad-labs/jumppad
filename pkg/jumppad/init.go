@@ -1,11 +1,7 @@
 package jumppad
 
 import (
-	"os"
-	"path"
-	"plugin"
-
-	"github.com/charmbracelet/log"
+	"github.com/jumppad-labs/hclconfig/resources"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/blueprint"
@@ -25,7 +21,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/random"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/template"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/terraform"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 
@@ -66,48 +61,77 @@ func init() {
 	config.RegisterResource(terraform.TypeTerraform, &terraform.Terraform{}, &terraform.TerraformProvider{})
 
 	// register providers for the default types
-	config.RegisterResource(types.TypeModule, &types.Module{}, &null.Provider{})
-	config.RegisterResource(types.TypeOutput, &types.Output{}, &null.Provider{})
-	config.RegisterResource(types.TypeVariable, &types.Variable{}, &null.Provider{})
+	config.RegisterResource(resources.TypeModule, &resources.Module{}, &null.Provider{})
+	config.RegisterResource(resources.TypeOutput, &resources.Output{}, &null.Provider{})
+	config.RegisterResource(resources.TypeVariable, &resources.Variable{}, &null.Provider{})
 
 	// load external plugins by scanning the plugin directory
-	dirs, err := os.ReadDir(utils.PluginsDir())
-	if err != nil {
-		panic(err)
-	}
+	//dirs, err := os.ReadDir("./examples/plugins/")
+	//if err != nil {
+	//	panic(err)
+	//}
 
-	for _, dir := range dirs {
-		if dir.IsDir() {
-			continue
-		}
+	//for _, dir := range dirs {
+	//	if !dir.IsDir() {
+	//		continue
+	//	}
 
-		p, err := plugin.Open(path.Join(utils.PluginsDir(), dir.Name()))
-		if err != nil {
-			log.Debug("error opening plugin", "error", err, "plugin", dir.Name())
-			continue
-		}
+	//	// create a new interpreter
+	//	vendorPath, err := filepath.Abs(path.Join("./examples/plugins", dir.Name(), "vendor"))
+	//	if err != nil {
+	//		panic(err)
+	//	}
 
-		plug, err := p.Lookup("Register")
-		if err != nil {
-			panic(err)
-		}
+	//	i := interp.New(interp.Options{GoPath: vendorPath, Stdout: os.Stdout, Stderr: os.Stderr, Unrestricted: true})
+	//	if err := i.Use(stdlib.Symbols); err != nil {
+	//		panic(err)
+	//	}
 
-		registerFunc, ok := plug.(func(sdk.RegisterResourceFunc, sdk.LoadStateFunc) error)
-		if !ok {
-			panic("plugin does not have a Register function")
-		}
+	//	// evaluate the plugin
+	//	_, err = i.EvalPath("./examples/plugins/" + dir.Name() + "/main.go")
+	//	if err != nil {
+	//		panic(err)
+	//	}
 
-		err = registerFunc(
-			func(name string, r types.Resource, p sdk.Provider) {
-				config.RegisterResource(name, r, p)
-			},
-			func() (sdk.Config, error) {
-				return config.LoadState()
-			},
-		)
+	//	ef, err := i.Eval("example.Echo")
+	//	if err != nil {
+	//		panic(err)
+	//	}
 
-		if err != nil {
-			panic(err)
-		}
-	}
+	//	//// print the signature of the function
+	//	fmt.Println(ef.String())
+
+	//	tf, ok := ef.Interface().(func(string) string)
+	//	if !ok {
+	//		panic("plugin does not have a Test function")
+	//	}
+
+	//	fmt.Println(tf("hello"))
+
+	//	rf, err := i.Eval("example.Register")
+	//	if err != nil {
+	//		panic(err)
+	//	}
+
+	//	// print the signature of the function
+	//	fmt.Println(rf.String())
+
+	//	prov, ok := rf.Interface().(func(register sdk.RegisterResourceFunc, loadstate sdk.LoadStateFunc) error)
+	//	if !ok {
+	//		panic("plugin does not have a Provider")
+	//	}
+
+	//	_ = prov
+
+	//	//prov(nil, nil)
+
+	// }
+}
+
+func PluginRegisterResource(name string, r types.Resource, p sdk.Provider) {
+	config.RegisterResource(name, r, p)
+}
+
+func PluginLoadState() (sdk.Config, error) {
+	return config.LoadState()
 }

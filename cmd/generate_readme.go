@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/hclconfig/resources"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/blueprint"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/spf13/cobra"
@@ -60,12 +60,12 @@ func newGenerateReadmeCommand(e jumppad.Engine) *cobra.Command {
 			cmd.Println("## Description")
 			cmd.Println(br.Description)
 
-			variables := []*types.Variable{}
-			os, _ := e.Config().FindResourcesByType(types.TypeVariable)
+			variables := []*resources.Variable{}
+			os, _ := e.Config().FindResourcesByType(resources.TypeVariable)
 			for _, o := range os {
 				// only grab the root outputs
 				if o.Metadata().Module == "" {
-					variables = append(variables, o.(*types.Variable))
+					variables = append(variables, o.(*resources.Variable))
 				}
 			}
 
@@ -84,12 +84,12 @@ func newGenerateReadmeCommand(e jumppad.Engine) *cobra.Command {
 				cmd.Println("")
 			}
 
-			outputs := []*types.Output{}
-			os, _ = e.Config().FindResourcesByType(types.TypeOutput)
+			outputs := []*resources.Output{}
+			os, _ = e.Config().FindResourcesByType(resources.TypeOutput)
 			for _, o := range os {
 				// only grab the root outputs
 				if o.Metadata().Module == "" {
-					outputs = append(outputs, o.(*types.Output))
+					outputs = append(outputs, o.(*resources.Output))
 				}
 			}
 
