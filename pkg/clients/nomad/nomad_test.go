@@ -40,7 +40,7 @@ func setupNomadTests(t *testing.T) (Nomad, string, *mocks.HTTP) {
 	)
 
 	c := NewNomad(mh, 1*time.Millisecond, logger.NewTestLogger(t))
-	c.SetConfig("local", 4646, 1)
+	c.SetConfig("local", 4646, 1, "")
 
 	return c, tmpDir, mh
 }

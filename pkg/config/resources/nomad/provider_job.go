@@ -46,7 +46,7 @@ func (p *JobProvider) Create() error {
 	nomadCluster := p.config.Cluster
 
 	// load the config
-	p.client.SetConfig(fmt.Sprintf("http://%s", nomadCluster.ExternalIP), nomadCluster.APIPort, nomadCluster.ClientNodes)
+	p.client.SetConfig(fmt.Sprintf("http://%s", nomadCluster.ExternalIP), nomadCluster.APIPort, nomadCluster.ClientNodes, nomadCluster.ACLToken)
 
 	err := p.client.Create(p.config.Paths)
 	if err != nil {
@@ -99,7 +99,7 @@ func (p *JobProvider) Destroy() error {
 	nomadCluster := p.config.Cluster
 
 	// load the config
-	p.client.SetConfig(fmt.Sprintf("http://%s", nomadCluster.ExternalIP), nomadCluster.APIPort, nomadCluster.ClientNodes)
+	p.client.SetConfig(fmt.Sprintf("http://%s", nomadCluster.ExternalIP), nomadCluster.APIPort, nomadCluster.ClientNodes, nomadCluster.ACLToken)
 
 	err := p.client.Stop(p.config.Paths)
 	if err != nil {
