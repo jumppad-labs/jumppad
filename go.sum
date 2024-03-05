@@ -1007,12 +1007,12 @@ github.com/jumppad-labs/go-cty v0.0.0-20230804061424-9e985cb751f6 h1:1ADItCWr5pr
 github.com/jumppad-labs/go-cty v0.0.0-20230804061424-9e985cb751f6/go.mod h1:YKQzy/7pZ7iq2jNFzy5go57xdxdWoLLpaEp4u238AE0=
 github.com/jumppad-labs/gohup v0.4.0 h1:0OplHvnKnOLkqWm417sRHLSiJ4xGeb8LiSSAJ51QrYg=
 github.com/jumppad-labs/gohup v0.4.0/go.mod h1:JYvZnemxJlWDyx8RbDNcCBLZSvIrYlYLnkQqR1BKFW4=
-github.com/jumppad-labs/hclconfig v0.20.1-0.20240305063312-6d0146038821 h1:7QaPL3hYhcUtI0Ntwvsalhgn5OS8pdh9j7bp9xb33y0=
-github.com/jumppad-labs/hclconfig v0.20.1-0.20240305063312-6d0146038821/go.mod h1:qbgSASuXOsnOoLWZvE0h6Z5j9oJXTLAXFNeHZORNyts=
+github.com/jumppad-labs/hclconfig v0.21.0 h1:xNFxRSQgDF/so82AQLJWu8tRpTfqARGvblOwVBr6N80=
+github.com/jumppad-labs/hclconfig v0.21.0/go.mod h1:qbgSASuXOsnOoLWZvE0h6Z5j9oJXTLAXFNeHZORNyts=
 github.com/jumppad-labs/log v0.0.0-20230711151418-55bbc87954b7 h1:jxF+Sxei1/7c7tLcV3Juu+rCIAhBv2jdicokriFohYE=
 github.com/jumppad-labs/log v0.0.0-20230711151418-55bbc87954b7/go.mod h1:ZApwwzDbbETVTIRTk7724yQRJAXIktt98yGVMMaa3y8=
-github.com/jumppad-labs/plugin-sdk v0.1.1-0.20240305064425-db3f996a5d29 h1:hBp3p4s62KLdhIKw86R5uM5ruyzOZaeo0BlBxc6KmEA=
-github.com/jumppad-labs/plugin-sdk v0.1.1-0.20240305064425-db3f996a5d29/go.mod h1:dkYBbtYy5XmChNhFASW4pEyUem6bD++IWO/2h9ALIQw=
+github.com/jumppad-labs/plugin-sdk v0.2.0 h1:cz57xrVqKkv23ekoExEcQX1VgF6k7MhQGzRJSuvSCfo=
+github.com/jumppad-labs/plugin-sdk v0.2.0/go.mod h1:WHWpGi2bxGzPONvw7YMV9dN5usvTvFct8wkitoE71gk=
 github.com/karrick/godirwalk v1.15.8 h1:7+rWAZPn9zuRxaIqqT8Ohs2Q2Ac0msBqwRdxNCr2VVs=
 github.com/karrick/godirwalk v1.15.8/go.mod h1:j4mkqPuvaLI8mp1DroR3P6ad7cyYd4c1qeJ3RV7ULlk=
 github.com/kennygrant/sanitize v1.2.4 h1:gN25/otpP5vAsO2djbMhF/LQX6R7+O1TB4yv8NzpJ3o=
