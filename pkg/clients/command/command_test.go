@@ -36,7 +36,7 @@ func TestExecuteForgroundWithBasicParams(t *testing.T) {
 
 func TestExecuteForgroundLongRunningTimesOut(t *testing.T) {
 	command := "sh"
-	args := []string{"-c", "sleep 10s"}
+	args := []string{"-c", "sleep 10"}
 
 	if runtime.GOOS == "windows" {
 		command = "cmd.exe"
