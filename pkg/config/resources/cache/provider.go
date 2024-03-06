@@ -18,7 +18,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-const cacheImage = "ghcr.io/rpardini/docker-registry-proxy:0.6.4"
+const cacheImage = "ghcr.io/jumppad-labs/docker-registry-proxy:v1.0.0"
 const defaultRegistries = "docker.io k8s.gcr.io gcr.io asia.gcr.io eu.gcr.io us.gcr.io quay.io ghcr.io docker.pkg.github.com"
 
 type Provider struct {
