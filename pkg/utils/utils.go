@@ -7,17 +7,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
-	"sync"
 
 	"github.com/jumppad-labs/jumppad/pkg/utils/dirhash"
 	"github.com/kennygrant/sanitize"
@@ -373,81 +370,11 @@ func GetConnectorLogFile() string {
 	return filepath.Join(LogsDir(), "connector.log")
 }
 
-func compileJumppadBinary(path string) error {
-	maxLevels := 10
-	currentLevel := 0
-
-	// we are running from a test so compile the binary
-	// and returns its path
-	dir, _ := os.Getwd()
-
-	// walk backwards until we find the go.mod
-	for {
-		files, err := ioutil.ReadDir(dir)
-		if err != nil {
-			return err
-		}
-
-		for _, f := range files {
-			if strings.HasSuffix(f.Name(), "go.mod") {
-				fp, _ := filepath.Abs(dir)
-
-				// found the project root
-				file := filepath.Join(fp, "main.go")
-				tmpBinary := path
-
-				// if windows append the exe extension
-				if runtime.GOOS == "windows" {
-					tmpBinary = tmpBinary + ".exe"
-				}
-
-				os.RemoveAll(tmpBinary)
-
-				outwriter := bytes.NewBufferString("")
-				cmd := exec.Command("go", "build", "-o", tmpBinary, file)
-				cmd.Stderr = outwriter
-				cmd.Stdout = outwriter
-
-				err := cmd.Run()
-				if err != nil {
-					fmt.Println("Error building temporary binary:", cmd.Args)
-					fmt.Println(outwriter.String())
-					panic(fmt.Errorf("unable to build connector binary: %s", err))
-				}
-
-				return nil
-			}
-		}
-
-		// check the parent
-		dir = filepath.Join(dir, "../")
-		fmt.Println(dir)
-		currentLevel++
-		if currentLevel > maxLevels {
-			panic("unable to find go.mod")
-		}
-	}
-}
-
-var buildSync = sync.Once{}
-
 // GetJumppadBinaryPath returns the path to the running Jumppad binary
 func GetJumppadBinaryPath() string {
-	if strings.HasSuffix(os.Args[0], "jumppad") || strings.HasSuffix(os.Args[0], "jumppad-dev") || strings.HasSuffix(os.Args[0], "jumppad.exe") || strings.HasSuffix(os.Args[0], "jp") {
-		ex, err := os.Executable()
-		if err != nil {
-			panic(err)
-		}
+	exe, _ := os.Executable()
 
-		return ex
-	}
-
-	tmpBinary := filepath.Join(os.TempDir(), "jumppad-dev")
-	buildSync.Do(func() {
-		compileJumppadBinary(tmpBinary)
-	})
-
-	return tmpBinary
+	return exe
 }
 
 // GetHostname returns the hostname for the current machine
