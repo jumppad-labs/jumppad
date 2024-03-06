@@ -67,7 +67,7 @@ func TestCreatesTerraformContainerWithTheCorrectValues(t *testing.T) {
 	res := &Terraform{
 		ResourceBase: types.ResourceBase{Meta: types.Meta{Name: "test"}},
 		Networks: []container.NetworkAttachment{
-			container.NetworkAttachment{
+			{
 				ID: "Abc123",
 			},
 		},
