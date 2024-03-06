@@ -11,22 +11,28 @@ import (
 )
 
 func newDestroyCmd(cc connector.Connector, l logger.Logger) *cobra.Command {
-	return &cobra.Command{
+	var force bool
+
+	downCmd := &cobra.Command{
 		Use:     "down",
 		Short:   "Remove all resources in the current state",
 		Long:    "Remove all resources in the current state",
 		Example: `jumppad down`,
 		Run: func(cmd *cobra.Command, args []string) {
 			engineClients, _ := clients.GenerateClients(l)
+			engineClients.ContainerTasks.SetForce(force)
+
 			engine, _, err := createEngine(l, engineClients)
 			if err != nil {
 				l.Error("Unable to create engine", "error", err)
 				return
 			}
 
-			err = engine.Destroy()
 			logger := createLogger()
 
+			logger.Debug("Destroying stack", "force", force)
+
+			err = engine.Destroy(force)
 			if err != nil {
 				l.Error("Unable to destroy stack", "error", err)
 				return
@@ -45,4 +51,8 @@ func newDestroyCmd(cc connector.Connector, l logger.Logger) *cobra.Command {
 			}
 		},
 	}
+
+	downCmd.Flags().BoolVarP(&force, "force", "", false, "When set to true Jumppad will not wait for containers to exit gracefully and will ignore errors")
+
+	return downCmd
 }

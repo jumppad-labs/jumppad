@@ -14,6 +14,7 @@
         "LOG_LEVEL": "debug"
       },
       "args": [
+        "--non-interactive",
         "connector",
         "run",
         "--grpc-bind=:30001",
@@ -78,7 +79,8 @@
         "LOG_LEVEL": "debug"
       },
       "args": [
-        "down"
+        "down",
+        "--force"
       ]
     },
     {

@@ -17,7 +17,7 @@ import (
 //
 //go:generate mockery --name ContainerTasks --filename container_tasks.go
 type ContainerTasks interface {
-	SetForcePull(bool)
+	SetForce(bool)
 	// CreateContainer creates a new container for the given configuration
 	// if successful CreateContainer returns the ID of the created container and a nil error
 	// if not successful CreateContainer returns a blank string for the id and an error message

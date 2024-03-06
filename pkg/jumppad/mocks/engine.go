@@ -83,13 +83,13 @@ func (_m *Engine) Config() *hclconfig.Config {
 	return r0
 }
 
-// Destroy provides a mock function with given fields:
-func (_m *Engine) Destroy() error {
-	ret := _m.Called()
+// Destroy provides a mock function with given fields: force
+func (_m *Engine) Destroy(force bool) error {
+	ret := _m.Called(force)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func() error); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(bool) error); ok {
+		r0 = rf(force)
 	} else {
 		r0 = ret.Error(0)
 	}

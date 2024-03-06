@@ -73,7 +73,7 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 
 		if *force {
 			bp.SetForce(true)
-			dt.SetForcePull(true)
+			dt.SetForce(true)
 		}
 
 		// parse the vars into a map

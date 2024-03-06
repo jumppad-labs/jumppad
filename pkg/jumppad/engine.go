@@ -35,7 +35,7 @@ type Engine interface {
 	ApplyWithVariables(path string, variables map[string]string, variablesFile string) (*hclconfig.Config, error)
 	ParseConfig(string) (*hclconfig.Config, error)
 	ParseConfigWithVariables(string, map[string]string, string) (*hclconfig.Config, error)
-	Destroy() error
+	Destroy(force bool) error
 	Config() *hclconfig.Config
 	Diff(path string, variables map[string]string, variablesFile string) (new []types.Resource, changed []types.Resource, removed []types.Resource, cfg *hclconfig.Config, err error)
 }
@@ -45,6 +45,7 @@ type EngineImpl struct {
 	providers config.Providers
 	log       logger.Logger
 	config    *hclconfig.Config
+	force     bool
 }
 
 // New creates a new Jumppad engine
@@ -313,8 +314,9 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 }
 
 // Destroy the resources defined by the state
-func (e *EngineImpl) Destroy() error {
-	e.log.Info("Destroying resources")
+func (e *EngineImpl) Destroy(force bool) error {
+	e.log.Info("Destroying resources", "force", force)
+	e.force = force
 
 	// load the state
 	c, err := config.LoadState()
@@ -625,12 +627,12 @@ func (e *EngineImpl) destroyCallback(r types.Resource) error {
 	}
 
 	err := p.Destroy()
-	if err != nil {
+	if err != nil && !e.force {
 		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
 		return fmt.Errorf("unable to destroy resource Name: %s, Type: %s, Error: %s", r.Metadata().Name, r.Metadata().Type, err)
 	}
 
-	// remove from the state only if not errored
+	// remove from the state
 	e.config.RemoveResource(r)
 
 	return nil

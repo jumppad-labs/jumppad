@@ -376,7 +376,7 @@ func TestApplyCallsProviderRefreshWithErrorHaltsExecution(t *testing.T) {
 func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
 	e, mp := setupTestsWithState(t, nil, existingState)
 
-	err := e.Destroy()
+	err := e.Destroy(false)
 	require.NoError(t, err)
 
 	// should have call create for each provider
@@ -390,7 +390,7 @@ func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
 func TestDestroyNotCallsProviderDestroyForResourcesDisabled(t *testing.T) {
 	e, mp := setupTestsWithState(t, nil, disabledState)
 
-	err := e.Destroy()
+	err := e.Destroy(false)
 	require.NoError(t, err)
 
 	// should have call create for each provider
@@ -404,7 +404,7 @@ func TestDestroyNotCallsProviderDestroyForResourcesDisabled(t *testing.T) {
 func TestDestroyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 	e, mp := setupTestsWithState(t, map[string]error{"mycontainer": fmt.Errorf("boom")}, complexState)
 
-	err := e.Destroy()
+	err := e.Destroy(false)
 	require.Error(t, err)
 
 	// should have call destroy for each provider
@@ -417,7 +417,7 @@ func TestDestroyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 func TestDestroyFailSetsStatus(t *testing.T) {
 	e, _ := setupTestsWithState(t, map[string]error{"mycontainer": fmt.Errorf("boom")}, complexState)
 
-	err := e.Destroy()
+	err := e.Destroy(false)
 	require.Error(t, err)
 
 	r, _ := e.config.FindResource("resource.container.mycontainer")

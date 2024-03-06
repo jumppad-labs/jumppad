@@ -79,9 +79,6 @@ func (p *TemplateProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 
 // Create a new template
 func (p *TemplateProvider) Create() error {
-	p.log.Debug("Generating template", "ref", p.config.Meta.ID, "output", p.config.Destination)
-	p.log.Debug("Template content", "ref", p.config.Meta.ID, "source", p.config.Source)
-
 	// check the template is valid
 	if p.config.Source == "" {
 		return fmt.Errorf("template source empty")
@@ -120,8 +117,6 @@ func (p *TemplateProvider) Create() error {
 		return fmt.Errorf("unable to generate checksum for template: %s", err)
 	}
 
-	p.log.Debug("Template output", "ref", p.config.Meta.ID, "destination", p.config.Destination, "checksum", cs, "result", output)
-
 	outputExists := false
 	if fi, _ := os.Stat(p.config.Destination); fi != nil {
 		outputExists = true
@@ -129,7 +124,7 @@ func (p *TemplateProvider) Create() error {
 
 	// regenerate the template if it has changed or the file does not exist
 	if p.config.Checksum != cs || !outputExists {
-		p.log.Info("Generating template", "ref", p.config.Meta.ID, "output", p.config.Destination)
+		p.log.Info("Generating template", "ref", p.config.Meta.ID, "checksum", p.config.Checksum, "source", p.config.Source, "output", p.config.Destination)
 
 		// set the checksum
 		p.config.Checksum = cs
