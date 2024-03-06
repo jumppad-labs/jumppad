@@ -83,7 +83,7 @@ module "kubernetes" {
 output "KUBECONFIG" {
   disabled = !variable.kubernetes_enabled
 
-  value = module.kubernetes.output.kube_config.path
+  value = module.kubernetes.output.kubeconfig
 }
 
 output "container_app" {
