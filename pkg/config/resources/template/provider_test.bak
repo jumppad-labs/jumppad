@@ -22,7 +22,7 @@ func TestTemplateReturnsErrorWhenEmpty(t *testing.T) {
 	tmpl, provider := setupTemplate(t, "")
 	tmpl.Source = ""
 
-	err := provider.Create()
+	err := provider.Create(context.Background())
 	assert.Error(t, err)
 }
 
@@ -30,7 +30,7 @@ func TestTemplateReturnsErrorWhenCantParse(t *testing.T) {
 	tmpl, provider := setupTemplate(t, "")
 	tmpl.Source = "template #{{ .Something"
 
-	err := provider.Create()
+	err := provider.Create(context.Background())
 	assert.Error(t, err)
 }
 
@@ -41,7 +41,7 @@ func TestTemplateProcessesCorrectly(t *testing.T) {
 
 	tmpl, provider := setupTemplate(t, filename)
 
-	err := provider.Create()
+	err := provider.Create(context.Background())
 	assert.NoError(t, err)
 
 	d, err := ioutil.ReadFile(tmpl.Destination)
@@ -69,7 +69,7 @@ func TestTemplateWriteSourceWhenNoVars(t *testing.T) {
 	tmpl, provider := setupTemplate(t, "")
 	provider.config.Vars = nil
 
-	err := provider.Create()
+	err := provider.Create(context.Background())
 	assert.NoError(t, err)
 
 	d, err := ioutil.ReadFile(tmpl.Destination)
@@ -86,7 +86,7 @@ func TestTemplateOverwritesExistingFile(t *testing.T) {
 	f.WriteString("Some text in the file")
 	f.Close()
 
-	err = provider.Create()
+	err = provider.Create(context.Background())
 	assert.NoError(t, err)
 
 	d, err := ioutil.ReadFile(tmpl.Destination)
@@ -103,7 +103,7 @@ func TestTemplateDestroyRemovesDestination(t *testing.T) {
 	f.WriteString("test")
 	f.Close()
 
-	err = provider.Destroy()
+	err = provider.Destroy(context.Background(),false)
 	assert.NoError(t, err)
 
 	assert.NoFileExists(t, tmpl.Destination)

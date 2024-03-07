@@ -82,7 +82,7 @@ func (p *ChapterProvider) Lookup() ([]string, error) {
 }
 
 func (p *ChapterProvider) Refresh(ctx context.Context) error {
-	p.Create() // always generate content
+	p.Create(context.Background()) // always generate content
 
 	return nil
 }

@@ -2,6 +2,7 @@ package terraform
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -23,6 +24,8 @@ import (
 )
 
 const terraformImageName = "hashicorp/terraform"
+
+var _ sdk.Provider = &TerraformProvider{}
 
 // TerraformProvider provider allows the execution of terraform config
 type TerraformProvider struct {
@@ -50,7 +53,12 @@ func (p *TerraformProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 }
 
 // Create a new terraform container
-func (p *TerraformProvider) Create() error {
+func (p *TerraformProvider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("context cancelled, skipping create", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Info("Creating Terraform", "ref", p.config.Meta.ID)
 
 	err := p.generateVariables()
@@ -89,7 +97,18 @@ func (p *TerraformProvider) Create() error {
 }
 
 // Destroy the terraform container
-func (p *TerraformProvider) Destroy() error {
+func (p *TerraformProvider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		p.log.Debug("context cancelled, skipping destroy", "ref", p.config.Meta.ID)
+		return nil
+	}
+
+	// if force do not try to do a destroy, just exit
+	if force {
+		p.log.Info("Skipping Destroy Terraform", "ref", p.config.Meta.ID, "force", true)
+		return nil
+	}
+
 	p.log.Info("Destroy Terraform", "ref", p.config.Meta.ID)
 
 	id, err := p.createContainer()
@@ -117,7 +136,7 @@ func (p *TerraformProvider) Lookup() ([]string, error) {
 	return []string{}, nil
 }
 
-func (p *TerraformProvider) Refresh() error {
+func (p *TerraformProvider) Refresh(ctx context.Context) error {
 	// has the source folder changed?
 	changed, err := p.Changed()
 	if err != nil {
@@ -128,7 +147,7 @@ func (p *TerraformProvider) Refresh() error {
 		// with Terraform resources we can just re-call apply rather than
 		// destroying and then running create.
 		p.log.Debug("Refresh Terraform", "ref", p.config.Meta.ID)
-		return p.Create()
+		return p.Create(ctx)
 	}
 
 	// nothing changed set the outputs as these are not persisted to state

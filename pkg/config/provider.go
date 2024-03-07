@@ -12,26 +12,7 @@ import (
 //
 //go:generate mockery --name Provider --filename provider.go
 type Provider interface {
-	// Init is called when the provider is created, it is passed a logger that
-	// can be used for any logging purposes. Any other clients must be created
-	// by the provider
-	Init(types.Resource, sdk.Logger) error
-
-	// Create is called when a resource does not exist or creation has previously
-	// failed and 'up' is run
-	Create() error
-
-	// Destroy is called when a resource is failed or created and 'down' is run
-	Destroy() error
-
-	// Refresh is called when a resource is created and 'up' is run
-	Refresh() error
-
-	// Changed returns if a resource has changed since the last run
-	Changed() (bool, error)
-
-	// Lookup is a utility to determine the existence of a resource
-	Lookup() ([]string, error)
+	sdk.Provider
 }
 
 // ConfigWrapper allows the provider config to be deserialized to a type
@@ -41,7 +22,7 @@ type ConfigWrapper struct {
 }
 
 type Providers interface {
-	GetProvider(c types.Resource) Provider
+	GetProvider(c types.Resource) sdk.Provider
 }
 
 type ProvidersImpl struct {
@@ -52,7 +33,7 @@ func NewProviders(c *clients.Clients) Providers {
 	return &ProvidersImpl{c}
 }
 
-func (p *ProvidersImpl) GetProvider(r types.Resource) Provider {
+func (p *ProvidersImpl) GetProvider(r types.Resource) sdk.Provider {
 	// find the type
 	if t, ok := registeredProviders[r.Metadata().Type]; ok {
 		ptr := reflect.New(reflect.TypeOf(t).Elem())

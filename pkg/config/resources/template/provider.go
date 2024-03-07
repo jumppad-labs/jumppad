@@ -1,6 +1,7 @@
 package template
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,56 +14,12 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
+var _ sdk.Provider = &TemplateProvider{}
+
 // Template provider allows parsing and output of file based templates
 type TemplateProvider struct {
 	config *Template
 	log    sdk.Logger
-}
-
-// parseVars converts a map[string]cty.Value into map[string]interface
-// where the interface are generic go types like string, number, bool, slice, map
-//
-// TODO move this into the parser class and add more robust testing
-func parseVars(value map[string]cty.Value) map[string]interface{} {
-	vars := map[string]interface{}{}
-
-	for k, v := range value {
-		vars[k] = castVar(v)
-	}
-
-	return vars
-}
-
-func castVar(v cty.Value) interface{} {
-	if v.IsNull() {
-		return nil
-	}
-
-	if v.Type() == cty.String {
-		return v.AsString()
-	} else if v.Type() == cty.Bool {
-		return v.True()
-	} else if v.Type() == cty.Number {
-		return v.AsBigFloat()
-	} else if v.Type().IsObjectType() || v.Type().IsMapType() {
-		return parseVars(v.AsValueMap())
-	} else if v.Type().IsTupleType() || v.Type().IsListType() {
-		i := v.ElementIterator()
-		vars := []interface{}{}
-		for {
-			if !i.Next() {
-				// cant iterate
-				break
-			}
-
-			_, value := i.Element()
-			vars = append(vars, castVar(value))
-		}
-
-		return vars
-	}
-
-	return nil
 }
 
 func (p *TemplateProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
@@ -78,7 +35,12 @@ func (p *TemplateProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 }
 
 // Create a new template
-func (p *TemplateProvider) Create() error {
+func (p *TemplateProvider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context cancelled, skipping create", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	// check the template is valid
 	if p.config.Source == "" {
 		return fmt.Errorf("template source empty")
@@ -154,7 +116,12 @@ func (p *TemplateProvider) Create() error {
 	return nil
 }
 
-func (p *TemplateProvider) Destroy() error {
+func (p *TemplateProvider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context cancelled, skipping destroy", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	if _, err := os.Stat(p.config.Destination); !os.IsNotExist(err) {
 		err := os.RemoveAll(p.config.Destination)
 		if err != nil {
@@ -174,12 +141,63 @@ func (p *TemplateProvider) Lookup() ([]string, error) {
 }
 
 // Refresh causes the template to be destroyed and recreated
-func (p *TemplateProvider) Refresh() error {
+func (p *TemplateProvider) Refresh(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context cancelled, skipping refresh", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Debug("Refresh Template", "ref", p.config.Meta.ID)
 
-	return p.Create()
+	return p.Create(ctx)
 }
 
 func (p *TemplateProvider) Changed() (bool, error) {
 	return false, nil
+}
+
+// parseVars converts a map[string]cty.Value into map[string]interface
+// where the interface are generic go types like string, number, bool, slice, map
+//
+// TODO move this into the parser class and add more robust testing
+func parseVars(value map[string]cty.Value) map[string]interface{} {
+	vars := map[string]interface{}{}
+
+	for k, v := range value {
+		vars[k] = castVar(v)
+	}
+
+	return vars
+}
+
+func castVar(v cty.Value) interface{} {
+	if v.IsNull() {
+		return nil
+	}
+
+	if v.Type() == cty.String {
+		return v.AsString()
+	} else if v.Type() == cty.Bool {
+		return v.True()
+	} else if v.Type() == cty.Number {
+		return v.AsBigFloat()
+	} else if v.Type().IsObjectType() || v.Type().IsMapType() {
+		return parseVars(v.AsValueMap())
+	} else if v.Type().IsTupleType() || v.Type().IsListType() {
+		i := v.ElementIterator()
+		vars := []interface{}{}
+		for {
+			if !i.Next() {
+				// cant iterate
+				break
+			}
+
+			_, value := i.Element()
+			vars = append(vars, castVar(value))
+		}
+
+		return vars
+	}
+
+	return nil
 }

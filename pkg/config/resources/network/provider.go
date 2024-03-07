@@ -15,6 +15,8 @@ import (
 	"golang.org/x/xerrors"
 )
 
+var _ sdk.Provider = &Provider{}
+
 // Network is a provider for creating docker networks
 type Provider struct {
 	config *Network
@@ -41,7 +43,12 @@ func (p *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 }
 
 // Create implements the provider interface method for creating new networks
-func (p *Provider) Create() error {
+func (p *Provider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping create, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Info("Creating Network", "ref", p.config.Meta.ID)
 
 	// validate the subnet
@@ -106,7 +113,12 @@ func (p *Provider) Create() error {
 }
 
 // Destroy implements the provider interface method for destroying networks
-func (p *Provider) Destroy() error {
+func (p *Provider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping destroy, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Info("Destroy Network", "ref", p.config.Meta.Name)
 
 	// check network exists if so remove
@@ -138,7 +150,12 @@ func (p *Provider) Lookup() ([]string, error) {
 	return ids, nil
 }
 
-func (p *Provider) Refresh() error {
+func (p *Provider) Refresh(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping refresh, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Debug("Refresh Network", "ref", p.config.Meta.ID)
 
 	return nil

@@ -1,6 +1,7 @@
 package exec
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,6 +20,9 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 )
+
+// checks Provider implements the sdk.Provider interface
+var _ sdk.Provider = &Provider{}
 
 // ExecRemote provider allows the execution of arbitrary commands on an existing target or
 // can create a new container before running
@@ -49,7 +53,12 @@ func (p *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	return nil
 }
 
-func (p *Provider) Create() error {
+func (p *Provider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping create, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Info("executing script", "ref", p.config.Meta.ID, "script", p.config.Script)
 
 	// check if we have a target or image specified
@@ -72,7 +81,12 @@ func (p *Provider) Create() error {
 	return nil
 }
 
-func (p *Provider) Destroy() error {
+func (p *Provider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping destroy, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	// check that we don't we have a target or image specified as
 	// remote execs are not daemonized
 	if p.config.Daemon && p.config.Image == nil && p.config.Target == nil {
@@ -94,7 +108,12 @@ func (p *Provider) Lookup() ([]string, error) {
 	return []string{}, nil
 }
 
-func (p *Provider) Refresh() error {
+func (p *Provider) Refresh(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping refresh, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Debug("refresh Exec", "ref", p.config.Meta.Name)
 
 	return nil

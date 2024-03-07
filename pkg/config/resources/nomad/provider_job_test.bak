@@ -41,7 +41,7 @@ func TestNomadJobWithNonExistentClusterReturnsError(t *testing.T) {
 
 	p := NewNomadJob(jc, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 }
 
@@ -54,7 +54,7 @@ func TestNomadJobUnableToLoadConfigReturnsError(t *testing.T) {
 
 	p := NewNomadJob(jc, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 }
 
@@ -65,7 +65,7 @@ func TestNomadJobCreateReturnsError(t *testing.T) {
 
 	p := NewNomadJob(jc, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 }
 
@@ -74,7 +74,7 @@ func TestNomadJobValidatesConfig(t *testing.T) {
 
 	p := NewNomadJob(jc, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.NoError(t, err)
 }
 
@@ -89,7 +89,7 @@ func TestNomadJobHealthCheckInvalidDurationReturnsError(t *testing.T) {
 
 	p := NewNomadJob(jc, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 }
 
@@ -103,7 +103,7 @@ func TestNomadJobHealthCheckReturnsErrorWhenNotHealthy(t *testing.T) {
 
 	p := NewNomadJob(jc, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 	mh.AssertNumberOfCalls(t, "JobRunning", 3)
 }
@@ -118,7 +118,7 @@ func TestNomadJobHealthCheckReturnsErrorWhenHealthError(t *testing.T) {
 
 	p := NewNomadJob(jc, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 	mh.AssertNumberOfCalls(t, "JobRunning", 3)
 }
@@ -133,7 +133,7 @@ func TestNomadJobHealthCheckReturnsOKHealthy(t *testing.T) {
 
 	p := NewNomadJob(jc, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.NoError(t, err)
 	mh.AssertNumberOfCalls(t, "JobRunning", 1)
 }
@@ -144,7 +144,7 @@ func TestNomadJobDestroyReturnsErrorWhenNoCluster(t *testing.T) {
 
 	p := NewNomadJob(jc, mh, clients.NewTestLogger(t))
 
-	err := p.Destroy()
+	err := p.Destroy(context.Background(),false)
 	assert.Error(t, err)
 }
 
@@ -156,7 +156,7 @@ func TestNomadJobDestroyCallsStop(t *testing.T) {
 
 	p := NewNomadJob(jc, mh, clients.NewTestLogger(t))
 
-	err := p.Destroy()
+	err := p.Destroy(context.Background(),false)
 	assert.NoError(t, err)
 
 	mh.AssertCalled(t, "Stop", jc.Paths)

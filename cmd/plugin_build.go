@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -187,7 +188,7 @@ var pluginCmd = &cobra.Command{
 			},
 		}, l)
 
-		err = prov.Create()
+		err = prov.Create(context.Background())
 		if err != nil {
 			panic(err)
 		}

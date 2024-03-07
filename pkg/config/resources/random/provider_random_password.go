@@ -1,6 +1,7 @@
 package random
 
 import (
+	"context"
 	"crypto/rand"
 	"fmt"
 	"sort"
@@ -8,6 +9,8 @@ import (
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 )
+
+var _ sdk.Provider = &RandomPasswordProvider{}
 
 // RandomPassword is a provider for generating random passwords
 type RandomPasswordProvider struct {
@@ -27,7 +30,7 @@ func (p *RandomPasswordProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	return nil
 }
 
-func (p *RandomPasswordProvider) Create() error {
+func (p *RandomPasswordProvider) Create(ctx context.Context) error {
 	const numChars = "0123456789"
 	const lowerChars = "abcdefghijklmnopqrstuvwxyz"
 	const upperChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -93,7 +96,7 @@ func (p *RandomPasswordProvider) Create() error {
 	return nil
 }
 
-func (p *RandomPasswordProvider) Destroy() error {
+func (p *RandomPasswordProvider) Destroy(ctx context.Context, force bool) error {
 	return nil
 }
 
@@ -101,7 +104,7 @@ func (p *RandomPasswordProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (p *RandomPasswordProvider) Refresh() error {
+func (p *RandomPasswordProvider) Refresh(ctx context.Context) error {
 	return nil
 }
 

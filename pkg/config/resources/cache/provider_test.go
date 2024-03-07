@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"encoding/json"
 	"path/filepath"
 	"testing"
@@ -39,7 +40,7 @@ func TestImageCacheCreateDoesNotCreateContainerWhenExists(t *testing.T) {
 	cc, md := setupImageCacheTests(t)
 
 	c := Provider{cc, md, logger.NewTestLogger(t)}
-	err := c.Create()
+	err := c.Create(context.Background())
 	require.NoError(t, err)
 
 	testutils.RemoveOn(&md.Mock, "FindContainerIDs")
@@ -52,7 +53,7 @@ func TestImageCacheCreateCreatesVolume(t *testing.T) {
 	cc, md := setupImageCacheTests(t)
 
 	c := Provider{cc, md, logger.NewTestLogger(t)}
-	err := c.Create()
+	err := c.Create(context.Background())
 	require.NoError(t, err)
 
 	md.AssertCalled(t, "CreateVolume", "images")
@@ -62,7 +63,7 @@ func TestImageCachePullsImage(t *testing.T) {
 	cc, md := setupImageCacheTests(t)
 
 	c := Provider{cc, md, logger.NewTestLogger(t)}
-	err := c.Create()
+	err := c.Create(context.Background())
 	require.NoError(t, err)
 
 	md.AssertCalled(t, "PullImage", ctypes.Image{Name: cacheImage}, false)
@@ -72,7 +73,7 @@ func TestImageCacheCreateAddsVolumes(t *testing.T) {
 	cc, md := setupImageCacheTests(t)
 
 	c := Provider{cc, md, logger.NewTestLogger(t)}
-	err := c.Create()
+	err := c.Create(context.Background())
 	require.NoError(t, err)
 
 	md.AssertCalled(t, "CreateContainer", mock.Anything)
@@ -90,7 +91,7 @@ func TestImageCacheCreateAddsEnvironmentVariables(t *testing.T) {
 	cc, md := setupImageCacheTests(t)
 
 	c := Provider{cc, md, logger.NewTestLogger(t)}
-	err := c.Create()
+	err := c.Create(context.Background())
 	require.NoError(t, err)
 
 	md.AssertCalled(t, "CreateContainer", mock.Anything)
@@ -125,7 +126,7 @@ func TestImageCacheCreateAddsUnauthenticatedRegistries(t *testing.T) {
 	}
 
 	c := Provider{cc, md, logger.NewTestLogger(t)}
-	err := c.Create()
+	err := c.Create(context.Background())
 	require.NoError(t, err)
 
 	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0]
@@ -156,7 +157,7 @@ func TestImageCacheCreateAddsAuthenticatedRegistries(t *testing.T) {
 	}
 
 	c := Provider{cc, md, logger.NewTestLogger(t)}
-	err := c.Create()
+	err := c.Create(context.Background())
 	require.NoError(t, err)
 
 	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0]
@@ -170,7 +171,7 @@ func TestImageCacheCreateCopiesCerts(t *testing.T) {
 	cc, md := setupImageCacheTests(t)
 
 	c := Provider{cc, md, logger.NewTestLogger(t)}
-	err := c.Create()
+	err := c.Create(context.Background())
 	require.NoError(t, err)
 
 	md.AssertCalled(t, "CreateContainer", mock.Anything)
@@ -206,7 +207,7 @@ func TestImageCacheAttachesAndDetatchesNetworks(t *testing.T) {
 	md.On("FindNetwork", "resource.network.two").Once().Return(types.NetworkAttachment{Name: "two"}, nil)
 
 	c := Provider{cc, md, logger.NewTestLogger(t)}
-	err := c.Create()
+	err := c.Create(context.Background())
 	require.NoError(t, err)
 
 	// should detatch existing cloud network

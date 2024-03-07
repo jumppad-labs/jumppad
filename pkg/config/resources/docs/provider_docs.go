@@ -101,7 +101,7 @@ func (p *DocsProvider) Create(ctx context.Context) error {
 	}
 
 	// write the content
-	return p.Refresh()
+	return p.Refresh(ctx)
 }
 
 // Destroy the documentation container

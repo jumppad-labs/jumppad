@@ -8,6 +8,7 @@ import (
 	"github.com/jumppad-labs/hclconfig"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 
 // registeredTypes is a static list of types that can be used by the parser
@@ -24,7 +25,7 @@ func init() {
 }
 
 // RegisterResource allows a resource to register itself with the parser
-func RegisterResource(name string, r types.Resource, p Provider) {
+func RegisterResource(name string, r types.Resource, p sdk.Provider) {
 	if r != nil {
 		registeredTypes[name] = r
 	}

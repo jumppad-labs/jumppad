@@ -1,6 +1,7 @@
 package helm
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -14,6 +15,8 @@ import (
 	sdk "github.com/jumppad-labs/plugin-sdk"
 	"golang.org/x/xerrors"
 )
+
+var _ sdk.Provider = &Provider{}
 
 type Provider struct {
 	config       *Helm
@@ -47,7 +50,12 @@ func (p *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 }
 
 // Create implements the provider Create method
-func (p *Provider) Create() error {
+func (p *Provider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping create, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Info("Creating Helm chart", "ref", p.config.Meta.ID)
 
 	// if the namespace is null set to default
@@ -108,6 +116,14 @@ func (p *Provider) Create() error {
 
 	go func() {
 		for {
+
+			// context is cancelled do not retry
+			if ctx.Err() != nil {
+				p.log.Debug("Skipping create, context cancelled", "ref", p.config.Meta.ID)
+				err := xerrors.Errorf("context cancelled, skipping helm chart creation", "ref", p.config.Meta.ID)
+				errChan <- err
+			}
+
 			err = p.helmClient.Create(
 				p.config.Cluster.KubeConfig.ConfigPath,
 				newName,
@@ -151,7 +167,7 @@ func (p *Provider) Create() error {
 			return xerrors.Errorf("unable to parse health check duration: %w", err)
 		}
 
-		err = p.kubeClient.HealthCheckPods(p.config.HealthCheck.Pods, to)
+		err = p.kubeClient.HealthCheckPods(ctx, p.config.HealthCheck.Pods, to)
 		if err != nil {
 			return xerrors.Errorf("health check failed after helm chart setup: %w", err)
 		}
@@ -161,7 +177,12 @@ func (p *Provider) Create() error {
 }
 
 // Destroy implements the provider Destroy method
-func (p *Provider) Destroy() error {
+func (p *Provider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping destroy, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Info("Destroy Helm chart", "ref", p.config.Meta.ID)
 
 	// if the namespace is null set to default
@@ -176,7 +197,7 @@ func (p *Provider) Destroy() error {
 	err := p.helmClient.Destroy(p.config.Cluster.KubeConfig.ConfigPath, newName, p.config.Namespace)
 
 	if err != nil {
-		p.log.Debug("There was a problem destroying Helm chart, logging message but ignoring error", "ref", p.config.Meta.ID, "error", err)
+		p.log.Warn("There was a problem destroying Helm chart, logging message but ignoring error", "ref", p.config.Meta.ID, "error", err)
 	}
 
 	return nil
@@ -187,7 +208,12 @@ func (p *Provider) Lookup() ([]string, error) {
 	return []string{}, nil
 }
 
-func (p *Provider) Refresh() error {
+func (p *Provider) Refresh(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping refresh, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Debug("Refresh Helm Chart", "ref", p.config.Meta.Name)
 
 	return nil

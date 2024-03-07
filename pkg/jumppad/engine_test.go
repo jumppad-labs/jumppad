@@ -1,6 +1,7 @@
 package jumppad
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -72,7 +73,7 @@ func getMetaFromMock(mp *mocks.Providers, index int) types.Meta {
 func TestApplyWithSingleFile(t *testing.T) {
 	e, mp := setupTests(t, nil)
 
-	_, err := e.Apply("../../examples/single_file/container.hcl")
+	_, err := e.Apply(context.Background(), "../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
 	require.Len(t, e.config.Resources, 7) // 6 resources in the file plus the image cache
@@ -100,7 +101,7 @@ func TestApplyWithSingleFile(t *testing.T) {
 func TestApplyAddsImageCache(t *testing.T) {
 	e, _ := setupTests(t, nil)
 
-	_, err := e.Apply("../../examples/single_file/container.hcl")
+	_, err := e.Apply(context.Background(), "../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
 	dc := e.ResourceCountForType(cache.TypeImageCache)
@@ -110,7 +111,7 @@ func TestApplyAddsImageCache(t *testing.T) {
 func TestApplyAddsNetworksToImageCache(t *testing.T) {
 	e, _ := setupTests(t, nil)
 
-	_, err := e.Apply("../../examples/single_file/container.hcl")
+	_, err := e.Apply(context.Background(), "../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
 	dc := e.ResourceCountForType(cache.TypeImageCache)
@@ -126,7 +127,7 @@ func TestApplyAddsNetworksToImageCache(t *testing.T) {
 func TestApplyAddsCustomRegistriesToImageCache(t *testing.T) {
 	e, _ := setupTests(t, nil)
 
-	_, err := e.Apply("../../examples/registries")
+	_, err := e.Apply(context.Background(), "../../examples/registries")
 	require.NoError(t, err)
 
 	dc := e.ResourceCountForType(cache.TypeImageCache)
@@ -143,7 +144,7 @@ func TestApplyAddsCustomRegistriesToImageCache(t *testing.T) {
 func TestApplyWithSingleFileAndVariables(t *testing.T) {
 	e, mp := setupTests(t, nil)
 
-	_, err := e.ApplyWithVariables("../../examples/single_file/container.hcl", nil, "../../examples/single_file/default.vars")
+	_, err := e.ApplyWithVariables(context.Background(), "../../examples/single_file/container.hcl", nil, "../../examples/single_file/default.vars")
 	require.NoError(t, err)
 	require.Len(t, e.config.Resources, 7) // 6 resources in the file plus the image cache
 
@@ -161,7 +162,7 @@ func TestApplyWithSingleFileAndVariables(t *testing.T) {
 func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
 	e, mp := setupTests(t, nil)
 
-	_, err := e.Apply("../../examples/single_k3s_cluster")
+	_, err := e.Apply(context.Background(), "../../examples/single_k3s_cluster")
 	require.NoError(t, err)
 
 	// should have call create for each resource in the config
@@ -179,7 +180,7 @@ func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
 func TestApplyDoesNotCallsProviderCreateWhenInState(t *testing.T) {
 	e, mp := setupTestsWithState(t, nil, existingState)
 
-	_, err := e.Apply("../../examples/single_file")
+	_, err := e.Apply(context.Background(), "../../examples/single_file")
 	require.NoError(t, err)
 
 	// should only be called for resources that are not in the state
@@ -193,7 +194,7 @@ func TestApplyDoesNotCallsProviderCreateWhenInState(t *testing.T) {
 func TestApplyRemovesItemsInStateWhenNotInFiles(t *testing.T) {
 	e, mp := setupTestsWithState(t, nil, existingState)
 
-	_, err := e.Apply("../../examples/single_file")
+	_, err := e.Apply(context.Background(), "../../examples/single_file")
 	require.NoError(t, err)
 
 	// should only be called for resources that are not in the state
@@ -211,7 +212,7 @@ func TestApplyNotCallsProviderCreateForDisabledResources(t *testing.T) {
 	e, mp := setupTests(t, nil)
 
 	// contains 3 resources one is disabled
-	_, err := e.Apply("../../examples/disabled")
+	_, err := e.Apply(context.Background(), "../../examples/disabled")
 	require.NoError(t, err)
 
 	// should have call create for non disabled resources
@@ -233,7 +234,7 @@ func TestApplyShouldNotAddDuplicateDisabledResources(t *testing.T) {
 	e, mp := setupTestsWithState(t, nil, disabledState)
 
 	// contains 2 resources one is disabled
-	_, err := e.Apply("../../examples/disabled")
+	_, err := e.Apply(context.Background(), "../../examples/disabled")
 	require.NoError(t, err)
 
 	// should have call create for each provider
@@ -256,7 +257,7 @@ func TestApplyShouldNotAddDuplicateDisabledResources(t *testing.T) {
 func TestApplySetsCreatedStatusForEachResource(t *testing.T) {
 	e, mp := setupTests(t, nil)
 
-	_, err := e.Apply("../../examples/single_file/container.hcl")
+	_, err := e.Apply(context.Background(), "../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
 	require.Equal(t, 7, e.config.ResourceCount())
@@ -282,7 +283,7 @@ func TestApplySetsCreatedStatusForEachResource(t *testing.T) {
 func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 	e, mp := setupTests(t, map[string]error{"onprem": fmt.Errorf("boom")})
 
-	_, err := e.Apply("../../examples/single_file/container.hcl")
+	_, err := e.Apply(context.Background(), "../../examples/single_file/container.hcl")
 	require.Error(t, err)
 
 	// should have call create for each provider
@@ -311,7 +312,7 @@ func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 func TestApplyCallsProviderDestroyAndCreateForFailedResources(t *testing.T) {
 	e, mp := setupTestsWithState(t, nil, failedState)
 
-	_, err := e.Apply("../../examples/single_file/container.hcl")
+	_, err := e.Apply(context.Background(), "../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
 	// should have call create for each provider
@@ -322,7 +323,7 @@ func TestApplyCallsProviderDestroyAndCreateForFailedResources(t *testing.T) {
 func TestApplyCallsProviderDestroyForTaintedResources(t *testing.T) {
 	e, mp := setupTestsWithState(t, nil, taintedState)
 
-	_, err := e.Apply("../../examples/single_file/container.hcl")
+	_, err := e.Apply(context.Background(), "../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
 	// should have call create for each provider
@@ -335,7 +336,7 @@ func TestApplyCallsProviderDestroyForDisabledResources(t *testing.T) {
 	// destroyed
 	e, mp := setupTestsWithState(t, nil, disabledAndCreatedState)
 
-	_, err := e.Apply("../../examples/disabled/config.hcl")
+	_, err := e.Apply(context.Background(), "../../examples/disabled/config.hcl")
 	require.NoError(t, err)
 
 	// get the disabled resource
@@ -354,7 +355,7 @@ func TestApplyCallsProviderDestroyForDisabledResources(t *testing.T) {
 func TestApplyCallsProviderRefreshForCreatedResources(t *testing.T) {
 	e, mp := setupTestsWithState(t, nil, existingState)
 
-	_, err := e.Apply("../../examples/single_file/container.hcl")
+	_, err := e.Apply(context.Background(), "../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
 	// should only call twice as there is only one item in the state
@@ -366,7 +367,7 @@ func TestApplyCallsProviderRefreshForCreatedResources(t *testing.T) {
 func TestApplyCallsProviderRefreshWithErrorHaltsExecution(t *testing.T) {
 	e, mp := setupTestsWithState(t, map[string]error{"consul_config": fmt.Errorf("boom")}, singleFileState)
 
-	_, err := e.Apply("../../examples/single_file/container.hcl")
+	_, err := e.Apply(context.Background(), "../../examples/single_file/container.hcl")
 	require.Error(t, err)
 
 	testAssertMethodCalled(t, mp, "Refresh", 3)
@@ -376,7 +377,7 @@ func TestApplyCallsProviderRefreshWithErrorHaltsExecution(t *testing.T) {
 func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
 	e, mp := setupTestsWithState(t, nil, existingState)
 
-	err := e.Destroy(false)
+	err := e.Destroy(context.Background(), false)
 	require.NoError(t, err)
 
 	// should have call create for each provider
@@ -390,7 +391,7 @@ func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
 func TestDestroyNotCallsProviderDestroyForResourcesDisabled(t *testing.T) {
 	e, mp := setupTestsWithState(t, nil, disabledState)
 
-	err := e.Destroy(false)
+	err := e.Destroy(context.Background(), false)
 	require.NoError(t, err)
 
 	// should have call create for each provider
@@ -404,7 +405,7 @@ func TestDestroyNotCallsProviderDestroyForResourcesDisabled(t *testing.T) {
 func TestDestroyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 	e, mp := setupTestsWithState(t, map[string]error{"mycontainer": fmt.Errorf("boom")}, complexState)
 
-	err := e.Destroy(false)
+	err := e.Destroy(context.Background(), false)
 	require.Error(t, err)
 
 	// should have call destroy for each provider
@@ -417,7 +418,7 @@ func TestDestroyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 func TestDestroyFailSetsStatus(t *testing.T) {
 	e, _ := setupTestsWithState(t, map[string]error{"mycontainer": fmt.Errorf("boom")}, complexState)
 
-	err := e.Destroy(false)
+	err := e.Destroy(context.Background(), false)
 	require.Error(t, err)
 
 	r, _ := e.config.FindResource("resource.container.mycontainer")

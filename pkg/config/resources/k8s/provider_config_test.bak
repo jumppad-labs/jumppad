@@ -36,7 +36,7 @@ func setupK8sConfig() (*clients.MockKubernetes, *K8sConfig) {
 func TestCreatesCorrectly(t *testing.T) {
 	mk, p := setupK8sConfig()
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.NoError(t, err)
 
 	_, destPath, _ := utils.CreateKubeConfigPath("testcluster")
@@ -52,7 +52,7 @@ func TestRunsHealthChecks(t *testing.T) {
 	}
 	mk.On("HealthCheckPods", mock.Anything, mock.Anything).Return(nil)
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.NoError(t, err)
 
 	mk.AssertCalled(t, "HealthCheckPods", []string{"app=mine"}, 60*time.Second)
@@ -66,7 +66,7 @@ func TestHealthCheckFailReturnsError(t *testing.T) {
 	}
 	mk.On("HealthCheckPods", mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 
 	mk.AssertCalled(t, "HealthCheckPods", []string{"app=mine"}, 60*time.Second)
@@ -77,7 +77,7 @@ func TestCreateSetupErrorReturnsError(t *testing.T) {
 	testutils.RemoveOn(&mk.Mock, "SetConfig")
 	mk.On("SetConfig", mock.Anything).Return(fmt.Errorf("boom"))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 }
 
@@ -85,14 +85,14 @@ func TestCreateNoClusterErrorReturnsError(t *testing.T) {
 	_, p := setupK8sConfig()
 	p.config.Config.RemoveResource(p.config.Config.Resources[1])
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 }
 
 func TestDestroysCorrectly(t *testing.T) {
 	mk, p := setupK8sConfig()
 
-	err := p.Destroy()
+	err := p.Destroy(context.Background(),false)
 	assert.NoError(t, err)
 
 	mk.AssertCalled(t, "Delete", p.config.Paths)
@@ -103,6 +103,6 @@ func TestDestroySetupErrorReturnsError(t *testing.T) {
 	testutils.RemoveOn(&mk.Mock, "SetConfig")
 	mk.On("SetConfig", mock.Anything).Return(fmt.Errorf("boom"))
 
-	err := p.Destroy()
+	err := p.Destroy(context.Background(),false)
 	assert.Error(t, err)
 }

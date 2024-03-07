@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -30,6 +31,8 @@ import (
 )
 
 // https://github.com/rancher/k3d/blob/master/cli/commands.go
+
+var _ sdk.Provider = &ClusterProvider{}
 
 var startTimeout = (300 * time.Second)
 
@@ -67,13 +70,23 @@ func (p *ClusterProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 }
 
 // Create implements interface method to create a cluster of the specified type
-func (p *ClusterProvider) Create() error {
-	return p.createK3s()
+func (p *ClusterProvider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping create, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
+	return p.createK3s(ctx)
 }
 
 // Destroy implements interface method to destroy a cluster
-func (p *ClusterProvider) Destroy() error {
-	return p.destroyK3s()
+func (p *ClusterProvider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping destroy, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
+	return p.destroyK3s(ctx, force)
 }
 
 // Lookup the a clusters current state
@@ -81,7 +94,12 @@ func (p *ClusterProvider) Lookup() ([]string, error) {
 	return p.client.FindContainerIDs(utils.FQDN(fmt.Sprintf("server.%s", p.config.Meta.Name), p.config.Meta.Module, p.config.Meta.Type))
 }
 
-func (p *ClusterProvider) Refresh() error {
+func (p *ClusterProvider) Refresh(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping refresh, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Debug("Refresh Kubernetes Cluster", "ref", p.config.Meta.Name)
 
 	ci, err := p.getChangedImages()
@@ -228,7 +246,7 @@ func (p *ClusterProvider) getChangedImages() ([]ctypes.Image, error) {
 	return changed, nil
 }
 
-func (p *ClusterProvider) createK3s() error {
+func (p *ClusterProvider) createK3s(ctx context.Context) error {
 	p.log.Info("Creating Cluster", "ref", p.config.Meta.ID)
 
 	// check the cluster does not already exist
@@ -450,7 +468,7 @@ func (p *ClusterProvider) createK3s() error {
 	}
 
 	// wait for the server to start
-	err = p.waitForStart(id)
+	err = p.waitForStart(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -513,7 +531,7 @@ func (p *ClusterProvider) createK3s() error {
 	}
 
 	// ensure essential pods have started before announcing the resource is available
-	err = p.kubeClient.HealthCheckPods([]string{"app=local-path-provisioner", "k8s-app=kube-dns"}, startTimeout)
+	err = p.kubeClient.HealthCheckPods(ctx, []string{"app=local-path-provisioner", "k8s-app=kube-dns"}, startTimeout)
 	if err != nil {
 		// fetch the logs from the container before exit
 		lr, lerr := p.client.ContainerLogs(id, true, true)
@@ -548,13 +566,17 @@ func (p *ClusterProvider) createK3s() error {
 
 	// start the connectorService
 	p.log.Debug("Deploying connector")
-	return p.deployConnector(p.config.ConnectorPort, p.config.ConnectorPort+1)
+	return p.deployConnector(ctx, p.config.ConnectorPort, p.config.ConnectorPort+1)
 }
 
-func (p *ClusterProvider) waitForStart(id string) error {
+func (p *ClusterProvider) waitForStart(ctx context.Context, id string) error {
 	start := time.Now()
 
 	for {
+		if ctx.Err() != nil {
+			return xerrors.Errorf("context cancelled, the cluster may be in an incoplete state")
+		}
+
 		// not running after timeout exceeded? Rollback and delete everything.
 		if startTimeout != 0 && time.Now().After(start.Add(startTimeout)) {
 			//deleteCluster()
@@ -647,7 +669,7 @@ func (p *ClusterProvider) changeServerAddressInK8sConfig(addr, origFile, newFile
 
 // deployConnector deploys the connector service to the cluster
 // once it has started
-func (p *ClusterProvider) deployConnector(grpcPort, httpPort int) error {
+func (p *ClusterProvider) deployConnector(ctx context.Context, grpcPort, httpPort int) error {
 	// generate the certificates for the service
 	cb, err := p.connector.GetLocalCertBundle(utils.CertsDir(""))
 	if err != nil {
@@ -722,7 +744,7 @@ func (p *ClusterProvider) deployConnector(grpcPort, httpPort int) error {
 	}
 
 	// wait for it to start
-	p.kubeClient.HealthCheckPods([]string{"app=connector"}, 60*time.Second)
+	p.kubeClient.HealthCheckPods(ctx, []string{"app=connector"}, 60*time.Second)
 	if err != nil {
 		return fmt.Errorf("timeout waiting for connector to start: %s", err)
 	}
@@ -730,7 +752,7 @@ func (p *ClusterProvider) deployConnector(grpcPort, httpPort int) error {
 	return nil
 }
 
-func (p *ClusterProvider) destroyK3s() error {
+func (p *ClusterProvider) destroyK3s(ctx context.Context, force bool) error {
 	p.log.Info("Destroy Cluster", "ref", p.config.Meta.Name)
 
 	ids, err := p.Lookup()
@@ -739,7 +761,7 @@ func (p *ClusterProvider) destroyK3s() error {
 	}
 
 	for _, i := range ids {
-		err := p.client.RemoveContainer(i, false)
+		err := p.client.RemoveContainer(i, force)
 		if err != nil {
 			return err
 		}

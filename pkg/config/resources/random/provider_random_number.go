@@ -1,12 +1,15 @@
 package random
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 )
+
+var _ sdk.Provider = &RandomNumberProvider{}
 
 // RandomNumber is a random number provider
 type RandomNumberProvider struct {
@@ -26,7 +29,7 @@ func (p *RandomNumberProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	return nil
 }
 
-func (p *RandomNumberProvider) Create() error {
+func (p *RandomNumberProvider) Create(ctx context.Context) error {
 	p.log.Info("Creating random number", "ref", p.config.Meta.ID)
 
 	number := rand.Intn(p.config.Maximum-p.config.Minimum) + p.config.Minimum
@@ -37,7 +40,7 @@ func (p *RandomNumberProvider) Create() error {
 	return nil
 }
 
-func (p *RandomNumberProvider) Destroy() error {
+func (p *RandomNumberProvider) Destroy(ctx context.Context, force bool) error {
 	return nil
 }
 
@@ -45,7 +48,7 @@ func (p *RandomNumberProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (p *RandomNumberProvider) Refresh() error {
+func (p *RandomNumberProvider) Refresh(ctx context.Context) error {
 	return nil
 }
 

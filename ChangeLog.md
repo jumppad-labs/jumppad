@@ -2,7 +2,44 @@
 
 ## version v0.10.0
 
+## New Features:
+* Add experimental cancellation for long running commands, you can
+  now press 'ctrl-c' to interupt 'up' and 'down' commands
+* Add --force flag to ignore graceful exit for the down command
+
 ### Breaking Changes: 
+
+#### Exec Local and Exec Remote Resources
+The 'exec_local' and 'exec_remote' resources have been removed in favor
+of the new 'exec' resource. The 'exec' resource supports all the functionality
+of the old resources and more.
+
+"""hcl
+resource "container" "alpine" {
+  image {
+    name = "alpine"
+  }
+
+  command = ["tail", "-f", "/dev/null"]
+
+  volume {
+    source      = data("test")
+    destination = "/data"
+  }
+}
+
+resource "exec" "run" {
+  script = <<-EOF
+  #!/bin/sh
+  ${data("test")}/consul agent -dev
+  EOF
+
+  daemon = true
+}
+"""
+
+#### Kubernetes Clusters
+
 Prior to this version Kubernetes clusters could access the config path like
 the following example:
 

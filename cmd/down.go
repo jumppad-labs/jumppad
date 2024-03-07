@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"context"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/connector"
@@ -30,9 +33,25 @@ func newDestroyCmd(cc connector.Connector, l logger.Logger) *cobra.Command {
 
 			logger := createLogger()
 
-			logger.Debug("Destroying stack", "force", force)
+			done := make(chan os.Signal, 1)
+			signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
 
-			err = engine.Destroy(force)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			cmd.Println("Destroying resources", " -- press ctrl c to cancel")
+			cmd.Println("")
+
+			logger.Debug("Destroying stack, press ctrl-c to stop", "force", force)
+
+			go func() {
+				<-done // Will block here until user hits ctrl+c
+
+				// cancel the context
+				cancel()
+			}()
+
+			err = engine.Destroy(ctx, force)
 			if err != nil {
 				l.Error("Unable to destroy stack", "error", err)
 				return

@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -12,6 +13,8 @@ import (
 	sdk "github.com/jumppad-labs/plugin-sdk"
 	"golang.org/x/xerrors"
 )
+
+var _ sdk.Provider = &ConfigProvider{}
 
 type ConfigProvider struct {
 	config *K8sConfig
@@ -38,7 +41,12 @@ func (p *ConfigProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 }
 
 // Create the Kubernetes resources defined by the config
-func (p *ConfigProvider) Create() error {
+func (p *ConfigProvider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping create, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Info("Applying Kubernetes configuration", "ref", p.config.Meta.Name, "config", p.config.Paths)
 
 	err := p.setup()
@@ -58,7 +66,7 @@ func (p *ConfigProvider) Create() error {
 			return xerrors.Errorf("unable to parse healthcheck duration: %w", err)
 		}
 
-		err = p.client.HealthCheckPods(p.config.HealthCheck.Pods, to)
+		err = p.client.HealthCheckPods(ctx, p.config.HealthCheck.Pods, to)
 		if err != nil {
 			return xerrors.Errorf("healthcheck failed after helm chart setup: %w", err)
 		}
@@ -76,7 +84,12 @@ func (p *ConfigProvider) Create() error {
 }
 
 // Destroy the Kubernetes resources defined by the config
-func (p *ConfigProvider) Destroy() error {
+func (p *ConfigProvider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping destroy, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Info("Destroy Kubernetes configuration", "ref", p.config.Meta.ID, "config", p.config.Paths)
 
 	err := p.setup()
@@ -96,7 +109,7 @@ func (p *ConfigProvider) Lookup() ([]string, error) {
 	return []string{}, nil
 }
 
-func (p *ConfigProvider) Refresh() error {
+func (p *ConfigProvider) Refresh(ctx context.Context) error {
 	cp, err := p.getChangedPaths()
 	if err != nil {
 		return err
@@ -108,12 +121,12 @@ func (p *ConfigProvider) Refresh() error {
 
 	p.log.Info("Refresh Kubernetes config", "ref", p.config.Meta.ID, "paths", cp)
 
-	err = p.Destroy()
+	err = p.Destroy(ctx, false)
 	if err != nil {
 		return err
 	}
 
-	return p.Create()
+	return p.Create(ctx)
 }
 
 func (p *ConfigProvider) Changed() (bool, error) {

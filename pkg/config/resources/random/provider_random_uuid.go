@@ -1,6 +1,7 @@
 package random
 
 import (
+	"context"
 	"crypto/rand"
 	"fmt"
 	"math/big"
@@ -9,6 +10,8 @@ import (
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 )
+
+var _ sdk.Provider = &RandomUUIDProvider{}
 
 // RandomUUID is a provider for generating random UUIDs
 type RandomUUIDProvider struct {
@@ -28,7 +31,7 @@ func (p *RandomUUIDProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	return nil
 }
 
-func (p *RandomUUIDProvider) Create() error {
+func (p *RandomUUIDProvider) Create(ctx context.Context) error {
 	result, err := uuid.GenerateUUID()
 	if err != nil {
 		return err
@@ -39,7 +42,7 @@ func (p *RandomUUIDProvider) Create() error {
 	return nil
 }
 
-func (p *RandomUUIDProvider) Destroy() error {
+func (p *RandomUUIDProvider) Destroy(ctx context.Context, force bool) error {
 	return nil
 }
 
@@ -47,7 +50,7 @@ func (p *RandomUUIDProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (p *RandomUUIDProvider) Refresh() error {
+func (p *RandomUUIDProvider) Refresh(ctx context.Context) error {
 	return nil
 }
 

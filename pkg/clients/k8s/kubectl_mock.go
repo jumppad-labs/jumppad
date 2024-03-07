@@ -49,8 +49,8 @@ func (m *MockKubernetes) Delete(files []string) error {
 	return args.Error(0)
 }
 
-func (m *MockKubernetes) HealthCheckPods(selectors []string, timeout time.Duration) error {
-	args := m.Called(selectors, timeout)
+func (m *MockKubernetes) HealthCheckPods(ctx context.Context, selectors []string, timeout time.Duration) error {
+	args := m.Called(ctx, selectors, timeout)
 
 	return args.Error(0)
 }

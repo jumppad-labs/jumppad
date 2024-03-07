@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	types "github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/config"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -26,7 +26,7 @@ func NewProviders(returnVals map[string]error) *Providers {
 }
 
 // GetProvider provides a mock function with given fields: c
-func (_m *Providers) GetProvider(c types.Resource) config.Provider {
+func (_m *Providers) GetProvider(c types.Resource) sdk.Provider {
 	_m.lock.Lock()
 	defer _m.lock.Unlock()
 
@@ -34,9 +34,9 @@ func (_m *Providers) GetProvider(c types.Resource) config.Provider {
 	m := &Provider{}
 
 	val := _m.returnVals[c.Metadata().Name]
-	m.On("Create").Return(val)
-	m.On("Destroy").Return(val)
-	m.On("Refresh").Return(val)
+	m.On("Create", mock.Anything).Return(val)
+	m.On("Destroy", mock.Anything, mock.Anything).Return(val)
+	m.On("Refresh", mock.Anything).Return(val)
 	m.On("Changed").Return(false, val)
 	m.On("Init", mock.Anything, mock.Anything).Return(nil)
 

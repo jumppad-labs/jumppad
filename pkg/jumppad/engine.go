@@ -4,6 +4,7 @@ import (
 
 	// "fmt"
 
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -27,15 +28,15 @@ import (
 //
 //go:generate mockery --name Engine --filename engine.go
 type Engine interface {
-	Apply(string) (*hclconfig.Config, error)
+	Apply(context.Context, string) (*hclconfig.Config, error)
 
 	// ApplyWithVariables applies a configuration file or directory containing
 	// configuration. Optionally the user can provide a map of variables which the configuration
 	// uses and / or a file containing variables.
-	ApplyWithVariables(path string, variables map[string]string, variablesFile string) (*hclconfig.Config, error)
+	ApplyWithVariables(ctx context.Context, path string, variables map[string]string, variablesFile string) (*hclconfig.Config, error)
 	ParseConfig(string) (*hclconfig.Config, error)
 	ParseConfigWithVariables(string, map[string]string, string) (*hclconfig.Config, error)
-	Destroy(force bool) error
+	Destroy(ctx context.Context, force bool) error
 	Config() *hclconfig.Config
 	Diff(path string, variables map[string]string, variablesFile string) (new []types.Resource, changed []types.Resource, removed []types.Resource, cfg *hclconfig.Config, err error)
 }
@@ -45,6 +46,7 @@ type EngineImpl struct {
 	providers config.Providers
 	log       logger.Logger
 	config    *hclconfig.Config
+	ctx       context.Context
 	force     bool
 }
 
@@ -201,12 +203,14 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 }
 
 // Apply the configuration and create or destroy the resources
-func (e *EngineImpl) Apply(path string) (*hclconfig.Config, error) {
-	return e.ApplyWithVariables(path, nil, "")
+func (e *EngineImpl) Apply(ctx context.Context, path string) (*hclconfig.Config, error) {
+	return e.ApplyWithVariables(ctx, path, nil, "")
 }
 
 // ApplyWithVariables applies the current config creating the resources
-func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, variablesFile string) (*hclconfig.Config, error) {
+func (e *EngineImpl) ApplyWithVariables(ctx context.Context, path string, vars map[string]string, variablesFile string) (*hclconfig.Config, error) {
+	e.ctx = ctx
+
 	// abs paths
 	var err error
 	path, err = filepath.Abs(path)
@@ -261,7 +265,7 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 		}
 
 		// create the cache
-		err := p.Create()
+		err := p.Create(ctx)
 		if err != nil {
 			ca.Meta.Properties[constants.PropertyStatus] = constants.StatusFailed
 		} else {
@@ -295,7 +299,7 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 		}
 
 		// call destroy
-		err := p.Destroy()
+		err := p.Destroy(e.ctx, e.force)
 		if err != nil {
 			processErr = fmt.Errorf("unable to destroy resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
 			continue
@@ -314,9 +318,10 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 }
 
 // Destroy the resources defined by the state
-func (e *EngineImpl) Destroy(force bool) error {
+func (e *EngineImpl) Destroy(ctx context.Context, force bool) error {
 	e.log.Info("Destroying resources", "force", force)
 	e.force = force
+	e.ctx = ctx
 
 	// load the state
 	c, err := config.LoadState()
@@ -405,7 +410,7 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 	}
 
 	// destroy any resources that might have been set to disabled
-	err = e.destroyDisabledResources()
+	err = e.destroyDisabledResources(e.ctx, e.force)
 	if err != nil {
 		return err
 	}
@@ -415,7 +420,7 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 
 // destroyDisabledResources destroys any resrouces that were created but
 // have subsequently been set to disabled
-func (e *EngineImpl) destroyDisabledResources() error {
+func (e *EngineImpl) destroyDisabledResources(ctx context.Context, force bool) error {
 	// we need to check if we have any disabbled resroucea that are marked
 	// as created, this could be because the disabled state has changed
 	// these respurces should be destroyed
@@ -431,7 +436,7 @@ func (e *EngineImpl) destroyDisabledResources() error {
 			}
 
 			// call destroy
-			err := p.Destroy()
+			err := p.Destroy(ctx, force)
 			if err != nil {
 				r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
 				return fmt.Errorf("unable to destroy resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
@@ -496,6 +501,11 @@ func (e *EngineImpl) appendModuleAndVariableResources(c *hclconfig.Config) error
 }
 
 func (e *EngineImpl) createCallback(r types.Resource) error {
+	// if the context is cancelled skip
+	if e.ctx.Err() != nil {
+		return nil
+	}
+
 	p := e.providers.GetProvider(r)
 	if p == nil {
 		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
@@ -519,7 +529,7 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 	var providerError error
 	switch r.Metadata().Properties[constants.PropertyStatus] {
 	case constants.StatusCreated:
-		providerError = p.Refresh()
+		providerError = p.Refresh(e.ctx)
 		if providerError != nil {
 			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
 		}
@@ -532,7 +542,7 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 
 	// Always attempt to destroy and re-create failed resources
 	case constants.StatusFailed:
-		providerError = p.Destroy()
+		providerError = p.Destroy(e.ctx, false)
 		if providerError != nil {
 			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
 		}
@@ -541,7 +551,7 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 
 	default:
 		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusCreated
-		providerError = p.Create()
+		providerError = p.Create(e.ctx)
 		if providerError != nil {
 			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
 		}
@@ -564,7 +574,7 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 
 			// reload the networks
 			np := e.providers.GetProvider(ic)
-			np.Refresh()
+			np.Refresh(e.ctx)
 		} else {
 			e.log.Error("Unable to find Image Cache", "error", err)
 		}
@@ -590,12 +600,12 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 				// we now need to stop and restart the container to pick up the new registry changes
 				np := e.providers.GetProvider(ic)
 
-				err := np.Destroy()
+				err := np.Destroy(e.ctx, e.force)
 				if err != nil {
 					e.log.Error("Unable to destroy Image Cache", "error", err)
 				}
 
-				err = np.Create()
+				err = np.Create(e.ctx)
 				if err != nil {
 					e.log.Error("Unable to create Image Cache", "error", err)
 				}
@@ -609,6 +619,11 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 }
 
 func (e *EngineImpl) destroyCallback(r types.Resource) error {
+	// if the context is cancelled skip
+	if e.ctx.Err() != nil {
+		return nil
+	}
+
 	fqrn := resources.FQRNFromResource(r)
 
 	// do nothing for disabled resources
@@ -626,7 +641,7 @@ func (e *EngineImpl) destroyCallback(r types.Resource) error {
 		return fmt.Errorf("unable to create provider for resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
 	}
 
-	err := p.Destroy()
+	err := p.Destroy(e.ctx, e.force)
 	if err != nil && !e.force {
 		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
 		return fmt.Errorf("unable to destroy resource Name: %s, Type: %s, Error: %s", r.Metadata().Name, r.Metadata().Type, err)

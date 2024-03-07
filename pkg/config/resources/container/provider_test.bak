@@ -47,7 +47,7 @@ func TestContainerCreatesSuccessfully(t *testing.T) {
 
 	c := Provider{cc, nil, md, hc, logger.NewTestLogger(t)}
 
-	err := c.Create()
+	err := c.Create(context.Background())
 	assert.NoError(t, err)
 
 	hc.AssertNotCalled(t, "HealthCheckHTTP", mock.Anything, mock.Anything)
@@ -74,7 +74,7 @@ func TestContainerSidecarCreatesContainerSuccessfully(t *testing.T) {
 	cs.MaxRestartCount = 10
 
 	c := Provider(cs, md, hc, clients.NewTestLogger(t))
-	err := c.Create()
+	err := c.Create(context.Background())
 	assert.NoError(t, err)
 
 	ac := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*ctypes.Container)
@@ -105,7 +105,7 @@ func TestContainerRunsHTTPChecks(t *testing.T) {
 
 	hc.On("HealthCheckHTTP", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	err := c.Create()
+	err := c.Create(context.Background())
 	assert.NoError(t, err)
 
 	hc.AssertCalled(t, "HealthCheckHTTP", "http://localhost:8500", []int{200, 429}, 30*time.Second)
@@ -124,7 +124,7 @@ func TestContainerRunsTCPChecks(t *testing.T) {
 
 	hc.On("HealthCheckTCP", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	err := c.Create()
+	err := c.Create(context.Background())
 	assert.NoError(t, err)
 
 	hc.AssertCalled(t, "HealthCheckTCP", "http://localhost:8500", 30*time.Second)
@@ -144,7 +144,7 @@ func TestContainerRunsExecChecksWithCommand(t *testing.T) {
 
 	c := NewContainerProvider(cc, md, hc, clients.NewTestLogger(t))
 
-	err := c.Create()
+	err := c.Create(context.Background())
 	assert.NoError(t, err)
 
 	md.AssertNumberOfCalls(t, "ExecuteCommand", 1)
@@ -166,7 +166,7 @@ func TestContainerRunsExecChecksWithScript(t *testing.T) {
 
 	c := NewContainerProvider(cc, md, hc, clients.NewTestLogger(t))
 
-	err := c.Create()
+	err := c.Create(context.Background())
 	assert.NoError(t, err)
 
 	md.AssertNumberOfCalls(t, "ExecuteCommand", 1)
@@ -184,7 +184,7 @@ func TestContainerDoesNOTCreateWhenPullImageFail(t *testing.T) {
 	// check does not call CreateContainer with the config
 	md.On("CreateContainer", cc).Times(0)
 
-	err := c.Create()
+	err := c.Create(context.Background())
 	assert.Equal(t, imageErr, err)
 }
 
@@ -197,7 +197,7 @@ func TestContainerDestroysCorrectlyWhenContainerExists(t *testing.T) {
 	md.On("RemoveContainer", "abc", false).Return(nil)
 	md.On("DetachNetwork", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	err := c.Destroy()
+	err := c.Destroy(context.Background(),false)
 	assert.NoError(t, err)
 }
 
@@ -208,7 +208,7 @@ func TestContainerDoesNotDestroysWhenNotExists(t *testing.T) {
 
 	md.On("FindContainerIDs", cc.ContainerName).Return(nil, nil)
 
-	err := c.Destroy()
+	err := c.Destroy(context.Background(),false)
 	assert.NoError(t, err)
 	md.AssertNotCalled(t, "RemoveContainer")
 }
@@ -220,7 +220,7 @@ func TestContainerDoesNotDestroysWhenLookupError(t *testing.T) {
 
 	md.On("FindContainerIDs", cc.ContainerName).Return(nil, fmt.Errorf("boom"))
 
-	err := c.Destroy()
+	err := c.Destroy(context.Background(),false)
 	assert.Error(t, err)
 	md.AssertNotCalled(t, "RemoveContainer")
 }

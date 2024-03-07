@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -174,7 +175,7 @@ func doUpdates(v view.View, e jumppad.Engine, source string, variables map[strin
 					len(removed),
 				), true)
 
-			_, err := e.ApplyWithVariables(source, variables, variableFile)
+			_, err := e.ApplyWithVariables(context.Background(), source, variables, variableFile)
 			if err != nil {
 				v.Logger().Error(err.Error())
 			}

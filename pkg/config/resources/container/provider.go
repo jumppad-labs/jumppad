@@ -321,7 +321,7 @@ func (c *Provider) internalCreate(ctx context.Context, sidecar bool) error {
 	}
 
 	for _, hc := range c.config.HealthCheck.Exec {
-		err := c.runExecHealthCheck(id, hc.Command, hc.Script, hc.ExitCode, timeout)
+		err := c.runExecHealthCheck(ctx, id, hc.Command, hc.Script, hc.ExitCode, timeout)
 		if err != nil {
 			return err
 		}
