@@ -2,6 +2,7 @@ package container
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"path"
@@ -70,10 +71,15 @@ func (p *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 }
 
 // Create implements provider method and creates a Docker container with the given config
-func (p *Provider) Create() error {
+func (p *Provider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context cancelled, skipping container", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Info("Creating Container", "ref", p.config.Meta.ID)
 
-	err := p.internalCreate(p.sidecar != nil)
+	err := p.internalCreate(ctx, p.sidecar != nil)
 	if err != nil {
 		return err
 	}
@@ -91,7 +97,12 @@ func (p *Provider) Lookup() ([]string, error) {
 	return p.client.FindContainerIDs(p.config.ContainerName)
 }
 
-func (c *Provider) Refresh() error {
+func (c *Provider) Refresh(ctx context.Context) error {
+	if ctx.Err() != nil {
+		c.log.Debug("Context cancelled, skipping container refresh", "ref", c.config.Meta.ID)
+		return nil
+	}
+
 	changed, err := c.Changed()
 	if err != nil {
 		return err
@@ -99,22 +110,27 @@ func (c *Provider) Refresh() error {
 
 	if changed {
 		c.log.Debug("Refresh Container", "ref", c.config.Meta.ID)
-		err := c.Destroy()
+		err := c.Destroy(ctx, false)
 		if err != nil {
 			return err
 		}
 
-		return c.Create()
+		return c.Create(ctx)
 	}
 
 	return nil
 }
 
 // Destroy stops and removes the container
-func (c *Provider) Destroy() error {
+func (c *Provider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		c.log.Debug("Context cancelled, skipping container destroy", "ref", c.config.Meta.ID)
+		return nil
+	}
+
 	c.log.Info("Destroy Container", "ref", c.config.Meta.ID)
 
-	return c.internalDestroy()
+	return c.internalDestroy(ctx, force)
 }
 
 func (c *Provider) Changed() (bool, error) {
@@ -135,7 +151,7 @@ func (c *Provider) Changed() (bool, error) {
 	return false, nil
 }
 
-func (c *Provider) internalCreate(sidecar bool) error {
+func (c *Provider) internalCreate(ctx context.Context, sidecar bool) error {
 	// set the fqdn
 	fqdn := utils.FQDN(c.config.Meta.Name, c.config.Meta.Module, c.config.Meta.Type)
 	c.config.ContainerName = fqdn
@@ -314,7 +330,7 @@ func (c *Provider) internalCreate(sidecar bool) error {
 	return nil
 }
 
-func (c *Provider) runExecHealthCheck(id string, command []string, script string, exitCode int, timeout time.Duration) error {
+func (c *Provider) runExecHealthCheck(ctx context.Context, id string, command []string, script string, exitCode int, timeout time.Duration) error {
 	if len(script) > 0 {
 		// write the script to a temp file
 		dir, err := os.MkdirTemp(os.TempDir(), "script*")
@@ -342,6 +358,11 @@ func (c *Provider) runExecHealthCheck(id string, command []string, script string
 	st := time.Now()
 
 	for {
+		if ctx.Err() != nil {
+			c.log.Debug("Context cancelled, skipping exec health check", "ref", c.config.Meta.ID)
+			return nil
+		}
+
 		if time.Since(st) > timeout {
 			c.log.Error("Timeout waiting for Exec health check")
 
@@ -362,7 +383,12 @@ func (c *Provider) runExecHealthCheck(id string, command []string, script string
 	}
 }
 
-func (c *Provider) internalDestroy() error {
+func (c *Provider) internalDestroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		c.log.Debug("Context cancelled, skipping container destroy", "ref", c.config.Meta.ID)
+		return nil
+	}
+
 	ids, err := c.Lookup()
 	if err != nil {
 		return err
@@ -370,7 +396,7 @@ func (c *Provider) internalDestroy() error {
 
 	if len(ids) > 0 {
 		for _, id := range ids {
-			err := c.client.RemoveContainer(id, false)
+			err := c.client.RemoveContainer(id, force)
 
 			if err != nil {
 				return err

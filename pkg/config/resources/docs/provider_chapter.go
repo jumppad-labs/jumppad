@@ -1,6 +1,7 @@
 package docs
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -26,7 +27,12 @@ func (p *ChapterProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	return nil
 }
 
-func (p *ChapterProvider) Create() error {
+func (p *ChapterProvider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context is cancelled, skipping create", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	index := ChapterIndex{
 		Title: p.config.Title,
 	}
@@ -67,7 +73,7 @@ func (p *ChapterProvider) Create() error {
 	return nil
 }
 
-func (p *ChapterProvider) Destroy() error {
+func (p *ChapterProvider) Destroy(ctx context.Context, force bool) error {
 	return nil
 }
 
@@ -75,7 +81,7 @@ func (p *ChapterProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (p *ChapterProvider) Refresh() error {
+func (p *ChapterProvider) Refresh(ctx context.Context) error {
 	p.Create() // always generate content
 
 	return nil

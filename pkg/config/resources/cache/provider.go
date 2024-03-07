@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -45,7 +46,11 @@ func (p *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	return nil
 }
 
-func (p *Provider) Create() error {
+func (p *Provider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context cancelled, skipping cache", "ref", p.config.Meta.ID)
+	}
+
 	p.log.Info("Creating ImageCache", "ref", p.config.Meta.ID)
 
 	// check the cache does not already exist
@@ -84,7 +89,12 @@ func (p *Provider) Create() error {
 	return p.reConfigureNetworks(dependentNetworks)
 }
 
-func (p *Provider) Destroy() error {
+func (p *Provider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context cancelled, skipping destroy", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Info("Destroy ImageCache", "ref", p.config.Meta.ID)
 
 	ids, err := p.Lookup()
@@ -107,7 +117,12 @@ func (p *Provider) Destroy() error {
 // Refresh is called whenever any Network resources are added or removed in Shipyard
 // this is because we need to ensure that the cache is attached to all networks so that
 // it can work with any clusters that may be on those networks.
-func (p *Provider) Refresh() error {
+func (p *Provider) Refresh(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context cancelled, skipping refresh", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Debug("Refresh Image Cache", "ref", p.config.Meta.ID)
 
 	// get a list of dependent networks for the resource
