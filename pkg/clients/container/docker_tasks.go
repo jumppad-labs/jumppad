@@ -96,9 +96,10 @@ func (d *DockerTasks) EngineInfo() *dtypes.EngineInfo {
 	return &dtypes.EngineInfo{StorageDriver: d.storageDriver, EngineType: d.engineType}
 }
 
-// SetForcePull sets a global override for the DockerTasks, when set to true
+// SetForce sets a global override for the DockerTasks, when set to true
 // Images will always be pulled from remote registries
-func (d *DockerTasks) SetForcePull(force bool) {
+// Containers will be destroyed immediately and not wait for graceful shutdown
+func (d *DockerTasks) SetForce(force bool) {
 	d.force = force
 }
 
@@ -564,8 +565,9 @@ func (d *DockerTasks) FindContainerIDs(fqdn string) ([]string, error) {
 // RemoveContainer with the given id
 func (d *DockerTasks) RemoveContainer(id string, force bool) error {
 	var err error
-	if !force {
-		// try and shutdown graceful
+
+	// try and shutdown graceful only if we are not forcing
+	if !force && !d.force {
 		timeout := 30
 		err = d.c.ContainerStop(context.Background(), id, container.StopOptions{Timeout: &timeout})
 		if err == nil {

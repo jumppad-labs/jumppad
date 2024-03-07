@@ -20,12 +20,12 @@ func (p *ExampleProvider) Init(resource types.Resource, logger sdk.Logger) error
 	return nil
 }
 
-func (p *ExampleProvider) Create() error {
+func (p *ExampleProvider) Create(context.Background()) error {
 	p.logger.Info("Create example")
 	return nil
 }
 
-func (p *ExampleProvider) Destroy() error {
+func (p *ExampleProvider) Destroy(context.Background(),false) error {
 	p.logger.Info("Destroy example")
 	return nil
 }

@@ -1,5 +1,83 @@
 # Change Log
 
+## version v0.10.0
+
+## New Features:
+* Add experimental cancellation for long running commands, you can
+  now press 'ctrl-c' to interupt 'up' and 'down' commands
+* Add --force flag to ignore graceful exit for the down command
+
+### Breaking Changes: 
+
+#### Exec Local and Exec Remote Resources
+The 'exec_local' and 'exec_remote' resources have been removed in favor
+of the new 'exec' resource. The 'exec' resource supports all the functionality
+of the old resources and more.
+
+"""hcl
+resource "container" "alpine" {
+  image {
+    name = "alpine"
+  }
+
+  command = ["tail", "-f", "/dev/null"]
+
+  volume {
+    source      = data("test")
+    destination = "/data"
+  }
+}
+
+resource "exec" "run" {
+  script = <<-EOF
+  #!/bin/sh
+  ${data("test")}/consul agent -dev
+  EOF
+
+  daemon = true
+}
+"""
+
+#### Kubernetes Clusters
+
+Prior to this version Kubernetes clusters could access the config path like
+the following example:
+
+```javascript
+resource "k8s_cluster" "k3s" {
+}
+
+output "KUBECONFIG" {
+  value = resource.k8s_cluster.k3s.kubeconfig
+}
+```
+
+In the latest version this has changed to expand the details of the kubeconfig
+providing access to the cluster ca certificate, client certificate and client key.
+
+An updated example can be seen below:
+
+```javascript
+resource "k8s_cluster" "k3s" {
+}
+
+output "KUBECONFIG" {
+  value = resource.k8s_cluster.k3s.kube_config.path
+}
+
+output "KUBE_CA" {
+  value = resource.k8s_cluster.k3s.kube_config.ca
+}
+
+output "KUBE_CLIENT_CERT" {
+  value = resource.k8s_cluster.k3s.kube_config.client_certificate
+}
+
+output "KUBE_CLIENT_KEY" {
+  value = resource.k8s_cluster.k3s.kube_config.client_key
+}
+```
+
 ## version v0.9.1
 * Update internal references to use the new `local.jmpd.in` domain bypassing
   problems where chrome auto redirects .dev to https://.

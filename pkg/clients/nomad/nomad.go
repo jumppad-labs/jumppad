@@ -2,6 +2,7 @@ package nomad
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -30,7 +31,7 @@ type Nomad interface {
 	// HealthCheckAPI uses the Nomad API to check that all servers and nodes
 	// are ready. The function will block until either all nodes are healthy or the
 	// timeout period elapses.
-	HealthCheckAPI(time.Duration) error
+	HealthCheckAPI(context.Context, time.Duration) error
 	// Endpoints returns a list of endpoints for a cluster
 	Endpoints(job, group, task string) ([]map[string]string, error)
 }
@@ -69,10 +70,14 @@ func (n *NomadImpl) SetConfig(address string, port, nodes int) error {
 }
 
 // HealthCheckAPI executes a HTTP heath check for a Nomad cluster
-func (n *NomadImpl) HealthCheckAPI(timeout time.Duration) error {
+func (n *NomadImpl) HealthCheckAPI(ctx context.Context, timeout time.Duration) error {
 	n.l.Debug("Performing Nomad health check", "address", n.address)
 	st := time.Now()
 	for {
+		if ctx.Err() != nil {
+			return fmt.Errorf("context cancelled, cluster health check aborted")
+		}
+
 		if time.Now().Sub(st) > timeout {
 			n.l.Error("Timeout wating for Nomad healthcheck", "address", n.address)
 

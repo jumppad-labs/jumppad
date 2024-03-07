@@ -66,7 +66,7 @@ func TestNetworkCreatesCorrectly(t *testing.T) {
 
 	md, p := setupNetworkTests(c)
 
-	err := p.Create()
+	err := p.Create(context.Background())
 
 	assert.NoError(t, err)
 
@@ -94,7 +94,7 @@ func TestNetworkCreatesNatWhenNoBridge(t *testing.T) {
 	md.On("NetworkCreate", mock.Anything, mock.Anything, mock.Anything).Once().Return(nil, fmt.Errorf("boom"))
 	md.On("NetworkCreate", mock.Anything, mock.Anything, mock.Anything).Once().Return(nil, nil)
 
-	p.Create()
+	p.Create(context.Background())
 
 	md.AssertNumberOfCalls(t, "NetworkCreate", 2)
 	params := md.Calls[2].Arguments
@@ -118,7 +118,7 @@ func TestNetworkDoesNOTCreateWhenExists(t *testing.T) {
 		}, bridgeNetwork,
 	}, nil)
 
-	p.Create()
+	p.Create(context.Background())
 
 	md.AssertNotCalled(t, "NetworkCreate", mock.Anything, mock.Anything, mock.Anything)
 }
@@ -138,7 +138,7 @@ func TestCreateWithCorrectNameAndDifferentSubnetReturnsError(t *testing.T) {
 		}, bridgeNetwork,
 	}, nil)
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 }
 
@@ -157,6 +157,6 @@ func TestCreateWithOverlappingSubnetReturnsError(t *testing.T) {
 		}, bridgeNetwork,
 	}, nil)
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 }

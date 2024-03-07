@@ -1,6 +1,7 @@
 package nomad
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -12,6 +13,8 @@ import (
 	sdk "github.com/jumppad-labs/plugin-sdk"
 	"golang.org/x/xerrors"
 )
+
+var _ sdk.Provider = &JobProvider{}
 
 // NomadJob is a provider which enabled the creation and destruction
 // of Nomad jobs
@@ -40,7 +43,12 @@ func (p *JobProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 }
 
 // Create the Nomad jobs defined by the config
-func (p *JobProvider) Create() error {
+func (p *JobProvider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping create, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Info("Create Nomad Job", "ref", p.config.Meta.ID, "files", p.config.Paths)
 
 	nomadCluster := p.config.Cluster
@@ -63,6 +71,10 @@ func (p *JobProvider) Create() error {
 
 		for _, j := range p.config.HealthCheck.Jobs {
 			for {
+				if ctx.Err() != nil {
+					return fmt.Errorf("context cancelled, unable to wait for job health")
+				}
+
 				if time.Since(st) >= dur {
 					return xerrors.Errorf("timeout waiting for job '%s' to start", j)
 				}
@@ -93,7 +105,12 @@ func (p *JobProvider) Create() error {
 }
 
 // Destroy the Nomad jobs defined by the config
-func (p *JobProvider) Destroy() error {
+func (p *JobProvider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping destroy, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Info("Destroy Nomad Job", "ref", p.config.Meta.ID)
 
 	nomadCluster := p.config.Cluster
@@ -115,7 +132,12 @@ func (p *JobProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (p *JobProvider) Refresh() error {
+func (p *JobProvider) Refresh(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping refresh, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	cp, err := p.getChangedPaths()
 	if err != nil {
 		return err
@@ -127,12 +149,12 @@ func (p *JobProvider) Refresh() error {
 
 	p.log.Info("Refresh Nomad Jobs", "ref", p.config.Meta.ID, "paths", cp)
 
-	err = p.Destroy()
+	err = p.Destroy(ctx, false)
 	if err != nil {
 		return err
 	}
 
-	return p.Create()
+	return p.Create(context.Background())
 }
 
 func (p *JobProvider) Changed() (bool, error) {

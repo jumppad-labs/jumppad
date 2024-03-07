@@ -47,7 +47,7 @@ func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
 	mockSystem.On("CheckVersion", mock.Anything).Return("", false)
 
 	mockTasks := &mocks.ContainerTasks{}
-	mockTasks.On("SetForcePull", mock.Anything)
+	mockTasks.On("SetForce", mock.Anything)
 
 	mockConnector := &clients.ConnectorMock{}
 	mockConnector.On("GetLocalCertBundle", mock.Anything).Return(

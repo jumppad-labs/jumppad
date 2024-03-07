@@ -1,6 +1,7 @@
 package copy
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"os"
@@ -30,7 +31,12 @@ func (p *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	return nil
 }
 
-func (p *Provider) Create() error {
+func (p *Provider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context is cacncelled, skipping create", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Info("Creating Copy", "ref", p.config.Meta.Name, "source", p.config.Source, "destination", p.config.Destination, "perms", p.config.Permissions)
 
 	// Check source exists
@@ -94,7 +100,12 @@ func (p *Provider) Create() error {
 	return nil
 }
 
-func (p *Provider) Destroy() error {
+func (p *Provider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context is cacncelled, skipping destroy", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Info("Destroy Copy", "ref", p.config.Meta.Name)
 
 	for _, f := range p.config.CopiedFiles {
@@ -117,7 +128,7 @@ func (p *Provider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (p *Provider) Refresh() error {
+func (p *Provider) Refresh(ctx context.Context) error {
 	p.log.Debug("Refresh Copied files", "ref", p.config.Meta.Name)
 
 	return nil

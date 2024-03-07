@@ -1,13 +1,16 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"os"
+	"os/signal"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/jumppad-labs/hclconfig/resources"
@@ -73,7 +76,7 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 
 		if *force {
 			bp.SetForce(true)
-			dt.SetForcePull(true)
+			dt.SetForce(true)
 		}
 
 		// parse the vars into a map
@@ -132,7 +135,7 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 		}
 
 		if dst != "" {
-			cmd.Println("Running configuration from: ", dst)
+			cmd.Println("Running configuration from ", dst, " -- press ctrl c to cancel")
 			cmd.Println("")
 
 			if !utils.IsLocalFolder(dst) && !utils.IsHCLFile(dst) {
@@ -157,7 +160,21 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 			}
 		}()
 
-		res, err := e.ApplyWithVariables(dst, vars, *variablesFile)
+		// trap ctrl c
+		done := make(chan os.Signal, 1)
+		signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		go func() {
+			<-done // Will block here until user hits ctrl+c
+
+			// cancel the context
+			cancel()
+		}()
+
+		res, err := e.ApplyWithVariables(ctx, dst, vars, *variablesFile)
 		if err != nil {
 			return err
 		}

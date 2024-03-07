@@ -73,7 +73,7 @@ func TestClusterNomadErrorsWhenUnableToLookupIDs(t *testing.T) {
 
 	p := NewNomadCluster(clusterNomadConfig, md, nil, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 }
 
@@ -83,7 +83,7 @@ func TestClusterNomadErrorsWhenClusterExists(t *testing.T) {
 
 	p := NewNomadCluster(clusterNomadConfig, md, nil, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 }
 
@@ -95,7 +95,7 @@ func TestClusterNomadErrorsWhenWorkerNodesExist(t *testing.T) {
 
 	p := NewNomadCluster(cc, md, nil, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 }
 
@@ -104,7 +104,7 @@ func TestClusterNomadPullsImage(t *testing.T) {
 
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.NoError(t, err)
 	md.AssertCalled(t, "PullImage", config.Image{Name: "shipyardrun/nomad:v1.0.0"}, false)
 }
@@ -115,7 +115,7 @@ func TestClusterNomadPullsImageWithDefault(t *testing.T) {
 
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.NoError(t, err)
 	md.AssertCalled(t, "PullImage", config.Image{Name: "shipyardrun/nomad:" + nomadBaseVersion}, false)
 }
@@ -125,7 +125,7 @@ func TestClusterNomadCreatesANewVolume(t *testing.T) {
 
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.NoError(t, err)
 	md.AssertCalled(t, "CreateVolume", utils.ImageVolumeName)
 }
@@ -138,7 +138,7 @@ func TestClusterNomadFailsWhenUnableToCreatesANewVolume(t *testing.T) {
 
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 	md.AssertCalled(t, "CreateVolume", utils.ImageVolumeName)
 }
@@ -150,7 +150,7 @@ func TestClusterNomadCreatesAServer(t *testing.T) {
 
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.NoError(t, err)
 
 	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
@@ -203,7 +203,7 @@ func TestClusterNomadCreatesClientNodes(t *testing.T) {
 
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.NoError(t, err)
 
 	md.AssertNumberOfCalls(t, "CreateContainer", 4)
@@ -217,7 +217,7 @@ func TestClusterNomadCreatesClientNodesWithCorrectDetails(t *testing.T) {
 
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.NoError(t, err)
 
 	md.AssertNumberOfCalls(t, "CreateContainer", 2)
@@ -254,7 +254,7 @@ func TestClusterNomadSetsNodeCountInConfig(t *testing.T) {
 
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.NoError(t, err)
 
 	conf, _ := utils.GetClusterConfig(string(config.TypeNomadCluster) + "." + cc.Name)
@@ -267,7 +267,7 @@ func TestClusterNomadHealthChecksAPI(t *testing.T) {
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 	startTimeout = 10 * time.Millisecond // reset the startTimeout, do not want to wait 120s
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.NoError(t, err)
 
 	mh.AssertCalled(t, "HealthCheckAPI", mock.Anything)
@@ -282,7 +282,7 @@ func TestClusterNomadErrorsIfHealthFails(t *testing.T) {
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 	startTimeout = 10 * time.Millisecond // reset the startTimeout, do not want to wait 120s
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 }
 
@@ -291,7 +291,7 @@ func TestClusterNomadImportDockerImagesDoesNothingWhenNameEmpty(t *testing.T) {
 	cc.Images[0].Name = ""
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.NoError(t, err)
 	md.AssertNumberOfCalls(t, "PullImage", 2)
 	md.AssertNotCalled(t, "PullImage", cc.Images[0], false)
@@ -303,7 +303,7 @@ func TestClusterNomadImportDockerImagesPullsImages(t *testing.T) {
 
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.NoError(t, err)
 	md.AssertNumberOfCalls(t, "PullImage", 3)
 	md.AssertCalled(t, "PullImage", cc.Images[0], false)
@@ -315,7 +315,7 @@ func TestClusterNomadImportDockerCopiesImages(t *testing.T) {
 
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.NoError(t, err)
 	md.AssertCalled(t, "CopyLocalDockerImagesToVolume", []string{"consul:1.6.1", "vault:1.6.1"}, "images.volume.shipyard.run", false)
 }
@@ -327,7 +327,7 @@ func TestClusterNomadImportDockerCopyImageFailReturnsError(t *testing.T) {
 
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 }
 
@@ -337,7 +337,7 @@ func TestClusterNomadImportDockerRunsExecCommand(t *testing.T) {
 
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.NoError(t, err)
 
 	importCommand := []string{"docker", "load", "-i", "file.tar.gz"}
@@ -352,7 +352,7 @@ func TestClusterNomadImportDockerExecFailReturnsError(t *testing.T) {
 
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 }
 
@@ -363,7 +363,7 @@ func TestClusterNomadSetsEnvironmentOnServerAndClient(t *testing.T) {
 
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.NoError(t, err)
 
 	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
@@ -388,7 +388,7 @@ func TestClusterNomadDoesNotSetProxyEnvironmentWithWrongVersion(t *testing.T) {
 
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.NoError(t, err)
 
 	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
@@ -405,7 +405,7 @@ func TestClusterNomadDestroyGetsIDs(t *testing.T) {
 
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
-	err := p.Destroy()
+	err := p.Destroy(context.Background(),false)
 	assert.NoError(t, err)
 	md.AssertCalled(t, "FindContainerIDs", "server."+clusterNomadConfig.Name, clusterNomadConfig.Type)
 	md.AssertCalled(t, "FindContainerIDs", "1.client."+clusterNomadConfig.Name, clusterNomadConfig.Type)
@@ -420,7 +420,7 @@ func TestClusterNomadDestroyWithFindIDErrorReturnsError(t *testing.T) {
 
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
-	err := p.Destroy()
+	err := p.Destroy(context.Background(),false)
 	assert.Error(t, err)
 }
 
@@ -433,7 +433,7 @@ func TestClusterNomadDestroyWithFindIDClientNodeErrorReturnsError(t *testing.T) 
 
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
-	err := p.Destroy()
+	err := p.Destroy(context.Background(),false)
 	assert.Error(t, err)
 }
 
@@ -444,7 +444,7 @@ func TestClusterNomadDestroyWithNoIDReturns(t *testing.T) {
 
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
-	err := p.Destroy()
+	err := p.Destroy(context.Background(),false)
 	assert.NoError(t, err)
 	md.AssertNotCalled(t, "RemoveContainer", mock.Anything)
 }
@@ -457,7 +457,7 @@ func TestClusterNomadDestroyRemovesContainer(t *testing.T) {
 
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
-	err := p.Destroy()
+	err := p.Destroy(context.Background(),false)
 	assert.NoError(t, err)
 	md.AssertNumberOfCalls(t, "RemoveContainer", 4)
 }
@@ -471,7 +471,7 @@ func TestClusterNomadDestroyRemovesConfig(t *testing.T) {
 
 	p := NewNomadCluster(cc, md, mh, clients.NewTestLogger(t))
 
-	err := p.Destroy()
+	err := p.Destroy(context.Background(),false)
 	assert.NoError(t, err)
 	md.AssertCalled(t, "RemoveContainer", mock.Anything, mock.Anything)
 

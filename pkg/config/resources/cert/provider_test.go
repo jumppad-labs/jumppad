@@ -1,6 +1,7 @@
 package cert
 
 import (
+	"context"
 	"fmt"
 	"path"
 	"testing"
@@ -25,7 +26,7 @@ func setupLeafCert(t *testing.T) (*CertificateLeaf, *LeafProvider) {
 	dir := t.TempDir()
 	ca, p := setupCACert(t)
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	require.NoError(t, err)
 
 	cl := &CertificateLeaf{ResourceBase: types.ResourceBase{Meta: types.Meta{Name: "test"}}}
@@ -43,7 +44,7 @@ func setupLeafCert(t *testing.T) (*CertificateLeaf, *LeafProvider) {
 func TestGeneratesValidCA(t *testing.T) {
 	c, p := setupCACert(t)
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	require.NoError(t, err)
 
 	require.FileExists(t, path.Join(c.Output, fmt.Sprintf("%s.cert", c.Meta.Name)))
@@ -55,10 +56,10 @@ func TestGeneratesValidCA(t *testing.T) {
 func TestDestroyCleansUpCA(t *testing.T) {
 	c, p := setupCACert(t)
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	require.NoError(t, err)
 
-	err = p.Destroy()
+	err = p.Destroy(context.Background(), false)
 	require.NoError(t, err)
 
 	require.NoFileExists(t, path.Join(c.Output, fmt.Sprintf("%s.cert", c.Meta.Name)))
@@ -70,7 +71,7 @@ func TestDestroyCleansUpCA(t *testing.T) {
 func TestGeneratesValidLeaf(t *testing.T) {
 	c, p := setupLeafCert(t)
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	require.NoError(t, err)
 
 	require.FileExists(t, path.Join(c.Output, fmt.Sprintf("%s-leaf.cert", c.Meta.Name)))
@@ -82,10 +83,10 @@ func TestGeneratesValidLeaf(t *testing.T) {
 func TestDestroyCleansUpLeaf(t *testing.T) {
 	c, p := setupLeafCert(t)
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	require.NoError(t, err)
 
-	err = p.Destroy()
+	err = p.Destroy(context.Background(), false)
 	require.NoError(t, err)
 
 	require.NoFileExists(t, path.Join(c.Output, fmt.Sprintf("%s-leaf.cert", c.Meta.Name)))

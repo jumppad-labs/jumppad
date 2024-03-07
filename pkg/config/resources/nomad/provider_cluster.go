@@ -28,6 +28,8 @@ import (
 	"golang.org/x/xerrors"
 )
 
+var _ sdk.Provider = &ClusterProvider{}
+
 // NomadCluster defines a provider which can create Kubernetes clusters
 type ClusterProvider struct {
 	config      *NomadCluster
@@ -60,13 +62,23 @@ func (p *ClusterProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 }
 
 // Create implements interface method to create a cluster of the specified type
-func (p *ClusterProvider) Create() error {
-	return p.createNomad()
+func (p *ClusterProvider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping create, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
+	return p.createNomad(ctx)
 }
 
 // Destroy implements interface method to destroy a cluster
-func (p *ClusterProvider) Destroy() error {
-	return p.destroyNomad()
+func (p *ClusterProvider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping destroy, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
+	return p.destroyNomad(ctx, force)
 }
 
 // Lookup the a clusters current state
@@ -95,7 +107,12 @@ func (p *ClusterProvider) Lookup() ([]string, error) {
 
 // Refresh is called when `up` is run and the resource has been marked as created
 // checks the nodes are healthy and replaces if needed.
-func (p *ClusterProvider) Refresh() error {
+func (p *ClusterProvider) Refresh(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping refresh, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Debug("Refresh Nomad Cluster", "ref", p.config.Meta.ID)
 
 	p.log.Debug("Checking health of server node", "ref", p.config.Meta.ID, "server", p.config.ServerContainerName)
@@ -135,7 +152,7 @@ func (p *ClusterProvider) Refresh() error {
 			p.log.Debug("Removing node", "ref", p.config.Meta.ID, "client", n)
 
 			go func(name string) {
-				err := p.destroyNode(name)
+				err := p.destroyNode(name, false)
 				wg.Done()
 
 				if err != nil {
@@ -149,7 +166,7 @@ func (p *ClusterProvider) Refresh() error {
 		wg.Wait()
 
 		p.nomadClient.SetConfig(fmt.Sprintf("http://%s", p.config.ExternalIP), p.config.APIPort, p.config.ClientNodes+1)
-		err := p.nomadClient.HealthCheckAPI(startTimeout)
+		err := p.nomadClient.HealthCheckAPI(ctx, startTimeout)
 		if err != nil {
 			return err
 		}
@@ -184,7 +201,7 @@ func (p *ClusterProvider) Refresh() error {
 		}
 
 		p.nomadClient.SetConfig(fmt.Sprintf("http://%s", p.config.ExternalIP), p.config.APIPort, p.config.ClientNodes+1)
-		err := p.nomadClient.HealthCheckAPI(startTimeout)
+		err := p.nomadClient.HealthCheckAPI(ctx, startTimeout)
 		if err != nil {
 			return err
 		}
@@ -303,7 +320,7 @@ func (p *ClusterProvider) pruneBuildImages() error {
 	return nil
 }
 
-func (p *ClusterProvider) createNomad() error {
+func (p *ClusterProvider) createNomad(ctx context.Context) error {
 	p.log.Info("Creating Cluster", "ref", p.config.Meta.ID)
 
 	// check the client nodes do not already exist
@@ -416,7 +433,7 @@ func (p *ClusterProvider) createNomad() error {
 
 	// ensure all client nodes are up
 	p.nomadClient.SetConfig(fmt.Sprintf("http://%s", p.config.ExternalIP), p.config.APIPort, clientNodes)
-	err = p.nomadClient.HealthCheckAPI(startTimeout)
+	err = p.nomadClient.HealthCheckAPI(ctx, startTimeout)
 	if err != nil {
 		return err
 	}
@@ -815,7 +832,7 @@ func (p *ClusterProvider) deployConnector() error {
 	return lastError
 }
 
-func (p *ClusterProvider) destroyNomad() error {
+func (p *ClusterProvider) destroyNomad(ctx context.Context, force bool) error {
 	p.log.Info("Destroy Nomad Cluster", "ref", p.config.Meta.ID)
 
 	// destroy the clients
@@ -826,7 +843,7 @@ func (p *ClusterProvider) destroyNomad() error {
 		go func(name string) {
 			defer wg.Done()
 
-			err := p.destroyNode(name)
+			err := p.destroyNode(name, force)
 			if err != nil {
 				p.log.Error("unable to remove cluster client", "client", name)
 			}
@@ -836,7 +853,7 @@ func (p *ClusterProvider) destroyNomad() error {
 	wg.Wait()
 
 	// destroy the server
-	err := p.destroyNode(p.config.ServerContainerName)
+	err := p.destroyNode(p.config.ServerContainerName, force)
 	if err != nil {
 		return err
 	}
@@ -847,7 +864,7 @@ func (p *ClusterProvider) destroyNomad() error {
 	return nil
 }
 
-func (p *ClusterProvider) destroyNode(id string) error {
+func (p *ClusterProvider) destroyNode(id string, force bool) error {
 	// FindContainerIDs works on absolute addresses, we need to append the server
 	ids, _ := p.client.FindContainerIDs(id)
 	if len(ids) == 0 {
@@ -865,7 +882,7 @@ func (p *ClusterProvider) destroyNode(id string) error {
 			}
 		}
 
-		err := p.client.RemoveContainer(i, false)
+		err := p.client.RemoveContainer(i, force)
 		if err != nil {
 			return err
 		}

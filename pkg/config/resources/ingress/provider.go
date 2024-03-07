@@ -1,6 +1,7 @@
 package ingress
 
 import (
+	"context"
 	"fmt"
 	"net"
 
@@ -15,6 +16,8 @@ import (
 	sdk "github.com/jumppad-labs/plugin-sdk"
 	"golang.org/x/xerrors"
 )
+
+var _ sdk.Provider = &Provider{}
 
 // Ingress defines a provider for handling connection ingress for a cluster
 type Provider struct {
@@ -43,7 +46,12 @@ func (p *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	return nil
 }
 
-func (p *Provider) Create() error {
+func (p *Provider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping create, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Info("Create Ingress", "ref", p.config.Meta.ID)
 
 	if p.config.ExposeLocal {
@@ -54,7 +62,12 @@ func (p *Provider) Create() error {
 }
 
 // Destroy satisfies the interface method but is not implemented by LocalExec
-func (p *Provider) Destroy() error {
+func (p *Provider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping destroy, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Info("Destroy Ingress", "ref", p.config.Meta.ID, "id", p.config.IngressID)
 
 	err := p.connector.RemoveService(p.config.IngressID)
@@ -74,7 +87,12 @@ func (p *Provider) Lookup() ([]string, error) {
 	return []string{}, nil
 }
 
-func (p *Provider) Refresh() error {
+func (p *Provider) Refresh(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping refresh, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Debug("Refresh Ingress", "ref", p.config.Meta.ID)
 
 	return nil

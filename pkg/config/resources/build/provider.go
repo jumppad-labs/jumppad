@@ -1,6 +1,7 @@
 package build
 
 import (
+	"context"
 	"fmt"
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
@@ -38,7 +39,12 @@ func (b *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	return nil
 }
 
-func (b *Provider) Create() error {
+func (b *Provider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		b.log.Debug("Context cancelled, skipping build", "ref", b.config.Meta.ID)
+		return nil
+	}
+
 	// calculate the hash
 	hash, err := utils.HashDir(b.config.Container.Context, b.config.Container.Ignore...)
 	if err != nil {
@@ -117,7 +123,7 @@ func (b *Provider) Create() error {
 	return nil
 }
 
-func (b *Provider) Destroy() error {
+func (b *Provider) Destroy(ctx context.Context, force bool) error {
 	b.log.Info("Destroy Build", "ref", b.config.Meta.ID)
 
 	return nil
@@ -127,7 +133,12 @@ func (b *Provider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (b *Provider) Refresh() error {
+func (b *Provider) Refresh(ctx context.Context) error {
+	if ctx.Err() != nil {
+		b.log.Debug("Context cancelled, skipping refresh", "ref", b.config.Meta.ID)
+		return nil
+	}
+
 	// calculate the hash
 	changed, err := b.hasChanged()
 	if err != nil {
@@ -136,12 +147,12 @@ func (b *Provider) Refresh() error {
 
 	if changed {
 		b.log.Info("Build status changed, rebuild")
-		err := b.Destroy()
+		err := b.Destroy(ctx, false)
 		if err != nil {
 			return xerrors.Errorf("unable to destroy existing container: %w", err)
 		}
 
-		return b.Create()
+		return b.Create(ctx)
 	}
 	return nil
 }

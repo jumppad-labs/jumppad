@@ -1,6 +1,7 @@
 package random
 
 import (
+	"context"
 	"fmt"
 	mrand "math/rand"
 
@@ -214,6 +215,8 @@ var adjectives = []string{
 	"Sunny",
 }
 
+var _ sdk.Provider = &RandomCreatureProvider{}
+
 // RandomCreature is a provider for generating random creatures
 type RandomCreatureProvider struct {
 	config *RandomCreature
@@ -232,7 +235,7 @@ func (p *RandomCreatureProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	return nil
 }
 
-func (p *RandomCreatureProvider) Create() error {
+func (p *RandomCreatureProvider) Create(ctx context.Context) error {
 	ci := mrand.Intn(99)
 	ai := mrand.Intn(99)
 
@@ -241,7 +244,7 @@ func (p *RandomCreatureProvider) Create() error {
 	return nil
 }
 
-func (p *RandomCreatureProvider) Destroy() error {
+func (p *RandomCreatureProvider) Destroy(ctx context.Context, force bool) error {
 	return nil
 }
 
@@ -249,7 +252,7 @@ func (p *RandomCreatureProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (p *RandomCreatureProvider) Refresh() error {
+func (p *RandomCreatureProvider) Refresh(ctx context.Context) error {
 	return nil
 }
 

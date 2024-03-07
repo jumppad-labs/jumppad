@@ -1,6 +1,7 @@
 package build
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -47,7 +48,7 @@ func TestCreatePushesToRegistry(t *testing.T) {
 	}
 
 	p, mc := setupProvider(t, b)
-	err := p.Create()
+	err := p.Create(context.Background())
 	require.NoError(t, err)
 
 	// ensure the image is tagged

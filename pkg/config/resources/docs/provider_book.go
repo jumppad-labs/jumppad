@@ -1,6 +1,7 @@
 package docs
 
 import (
+	"context"
 	"fmt"
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
@@ -24,7 +25,12 @@ func (p *BookProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	return nil
 }
 
-func (p *BookProvider) Create() error {
+func (p *BookProvider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context is cancelled, skipping create", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	index := BookIndex{
 		Title: p.config.Title,
 	}
@@ -43,7 +49,7 @@ func (p *BookProvider) Create() error {
 	return nil
 }
 
-func (p *BookProvider) Destroy() error {
+func (p *BookProvider) Destroy(ctx context.Context, force bool) error {
 	return nil
 }
 
@@ -51,8 +57,8 @@ func (p *BookProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (p *BookProvider) Refresh() error {
-	p.Create()
+func (p *BookProvider) Refresh(ctx context.Context) error {
+	p.Create(ctx)
 
 	return nil
 }

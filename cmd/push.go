@@ -36,7 +36,7 @@ func newPushCmd(ct container.ContainerTasks, kc ck8s.Kubernetes, ht http.HTTP, n
 			}
 
 			if force == true {
-				ct.SetForcePull(true)
+				ct.SetForce(true)
 			}
 
 			image := args[0]

@@ -42,7 +42,7 @@ func setupDocs(t *testing.T) (*Docs, *clients.MockContainerTasks) {
 func TestDocsPullsDocsContainer(t *testing.T) {
 	d, md := setupDocs(t)
 
-	err := d.Create()
+	err := d.Create(context.Background())
 	assert.NoError(t, err)
 
 	params := testutils.GetCalls(&md.Mock, "PullImage")[0].Arguments[0].(config.Image)
@@ -52,7 +52,7 @@ func TestDocsPullsDocsContainer(t *testing.T) {
 func TestDocsMountsMarkdown(t *testing.T) {
 	d, md := setupDocs(t)
 
-	err := d.Create()
+	err := d.Create(context.Background())
 	assert.NoError(t, err)
 
 	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
@@ -66,7 +66,7 @@ func TestDocsMountsMarkdown(t *testing.T) {
 func TestDocsGeneratesDocusaurusConfig(t *testing.T) {
 	d, md := setupDocs(t)
 
-	err := d.Create()
+	err := d.Create(context.Background())
 	assert.NoError(t, err)
 
 	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
@@ -88,7 +88,7 @@ func TestDocsGeneratesDocusaurusConfig(t *testing.T) {
 func TestDocsSetsDocsPorts(t *testing.T) {
 	d, md := setupDocs(t)
 
-	err := d.Create()
+	err := d.Create(context.Background())
 	assert.NoError(t, err)
 
 	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
@@ -108,7 +108,7 @@ func TestDocsSetsDocsPortsWithCustomReload(t *testing.T) {
 	d, md := setupDocs(t)
 	d.config.LiveReloadPort = 30000
 
-	err := d.Create()
+	err := d.Create(context.Background())
 	assert.NoError(t, err)
 
 	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
@@ -127,7 +127,7 @@ func TestDocsSetsDocsPortsWithCustomReload(t *testing.T) {
 func TestDocsSetsTerminalPorts(t *testing.T) {
 	d, md := setupDocs(t)
 
-	err := d.Create()
+	err := d.Create(context.Background())
 	assert.NoError(t, err)
 
 	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*config.Container)
@@ -143,10 +143,10 @@ func TestDestroyRemovesContainers(t *testing.T) {
 	testutils.RemoveOn(&md.Mock, "FindContainerIDs")
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{"abc"}, nil)
 
-	err := d.Create()
+	err := d.Create(context.Background())
 	assert.NoError(t, err)
 
-	err = d.Destroy()
+	err = d.Destroy(context.Background(),false)
 	assert.NoError(t, err)
 
 	md.AssertNumberOfCalls(t, "FindContainerIDs", 1)

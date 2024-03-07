@@ -48,7 +48,9 @@ func TestK8sClusterSetsOutputsFromState(t *testing.T) {
       "external_ip": "127.0.0.1",
       "api_port": 123,
       "connector_port": 124,
-      "kubeconfig": "./mine.yaml",
+      "kube_config": {
+				"path": "./mine.yaml"
+			},
       "container_name": "fqdn.mine.com",
       "networks": [{
         "assigned_address": "10.5.0.2",
@@ -74,7 +76,7 @@ func TestK8sClusterSetsOutputsFromState(t *testing.T) {
 	require.Equal(t, "127.0.0.1", c.ExternalIP)
 	require.Equal(t, 123, c.APIPort)
 	require.Equal(t, 124, c.ConnectorPort)
-	require.Equal(t, "./mine.yaml", c.KubeConfig)
+	require.Equal(t, "./mine.yaml", c.KubeConfig.ConfigPath)
 	require.Equal(t, "fqdn.mine.com", c.ContainerName)
 
 	// check the netwok

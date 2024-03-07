@@ -38,8 +38,6 @@ func init() {
 	config.RegisterResource(docs.TypeTask, &docs.Task{}, &null.Provider{})
 	config.RegisterResource(docs.TypeBook, &docs.Book{}, &docs.BookProvider{})
 	config.RegisterResource(exec.TypeExec, &exec.Exec{}, &exec.Provider{})
-	config.RegisterResource(exec.TypeLocalExec, &exec.LocalExec{}, &exec.LocalProvider{})
-	config.RegisterResource(exec.TypeRemoteExec, &exec.RemoteExec{}, &exec.RemoteProvider{})
 	config.RegisterResource(helm.TypeHelm, &helm.Helm{}, &helm.Provider{})
 	config.RegisterResource(ingress.TypeIngress, &ingress.Ingress{}, &ingress.Provider{})
 	config.RegisterResource(k8s.TypeK8sCluster, &k8s.K8sCluster{}, &k8s.ClusterProvider{})
@@ -64,6 +62,7 @@ func init() {
 	config.RegisterResource(resources.TypeModule, &resources.Module{}, &null.Provider{})
 	config.RegisterResource(resources.TypeOutput, &resources.Output{}, &null.Provider{})
 	config.RegisterResource(resources.TypeVariable, &resources.Variable{}, &null.Provider{})
+	config.RegisterResource(resources.TypeLocal, &resources.Local{}, &null.Provider{})
 }
 
 // PluginRegisterResource is a function that registers a resource with the config package

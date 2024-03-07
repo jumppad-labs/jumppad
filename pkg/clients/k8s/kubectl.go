@@ -23,7 +23,7 @@ import (
 type Kubernetes interface {
 	SetConfig(string) (Kubernetes, error)
 	GetPods(string) (*v1.PodList, error)
-	HealthCheckPods(selectors []string, timeout time.Duration) error
+	HealthCheckPods(ctx context.Context, selectors []string, timeout time.Duration) error
 	Apply(files []string, waitUntilReady bool) error
 	Delete(files []string) error
 	GetPodLogs(ctx context.Context, podName, nameSpace string) (io.ReadCloser, error)
@@ -161,12 +161,15 @@ func (k *KubernetesImpl) Delete(files []string) error {
 // and running.
 // selectors are checked sequentially
 // pods = ["component=server,app=consul", "component=client,app=consul"]
-func (k *KubernetesImpl) HealthCheckPods(selectors []string, timeout time.Duration) error {
+func (k *KubernetesImpl) HealthCheckPods(ctx context.Context, selectors []string, timeout time.Duration) error {
 	// check all pods are running
 	for _, s := range selectors {
 		k.l.Debug("Health checking pods", "selector", s)
+		if ctx.Err() != nil {
+			return fmt.Errorf("context cancelled")
+		}
 
-		err := k.healthCheckSingle(s, timeout)
+		err := k.healthCheckSingle(ctx, s, timeout)
 		if err != nil {
 			return err
 		}
@@ -176,9 +179,13 @@ func (k *KubernetesImpl) HealthCheckPods(selectors []string, timeout time.Durati
 }
 
 // healthCheckSingle checks for running containers with the given selector
-func (k *KubernetesImpl) healthCheckSingle(selector string, timeout time.Duration) error {
+func (k *KubernetesImpl) healthCheckSingle(ctx context.Context, selector string, timeout time.Duration) error {
 	st := time.Now()
 	for {
+		if ctx.Err() != nil {
+			return fmt.Errorf("context cancelled")
+		}
+
 		// backoff
 		time.Sleep(2 * time.Second)
 

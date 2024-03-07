@@ -1,6 +1,7 @@
 package docs
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -85,7 +86,12 @@ func (p *DocsProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 }
 
 // Create a new documentation container
-func (p *DocsProvider) Create() error {
+func (p *DocsProvider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context is cancelled, skipping create", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Info("Creating Documentation", "ref", p.config.Meta.ID)
 
 	// create the documentation container
@@ -95,11 +101,16 @@ func (p *DocsProvider) Create() error {
 	}
 
 	// write the content
-	return p.Refresh()
+	return p.Refresh(ctx)
 }
 
 // Destroy the documentation container
-func (p *DocsProvider) Destroy() error {
+func (p *DocsProvider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context is cancelled, skipping destroy", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Info("Destroy Documentation", "ref", p.config.Meta.ID)
 
 	// remove the docs
@@ -127,7 +138,12 @@ func (p *DocsProvider) Lookup() ([]string, error) {
 	return p.client.FindContainerIDs(p.config.ContainerName)
 }
 
-func (p *DocsProvider) Refresh() error {
+func (p *DocsProvider) Refresh(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context is cancelled, skipping refresh", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	changed, err := p.checkChanged()
 	if err != nil {
 		return fmt.Errorf("unable to check if content has changed: %s", err)

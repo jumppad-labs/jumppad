@@ -2,6 +2,7 @@ package terraform
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -23,6 +24,8 @@ import (
 )
 
 const terraformImageName = "hashicorp/terraform"
+
+var _ sdk.Provider = &TerraformProvider{}
 
 // TerraformProvider provider allows the execution of terraform config
 type TerraformProvider struct {
@@ -50,7 +53,12 @@ func (p *TerraformProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 }
 
 // Create a new terraform container
-func (p *TerraformProvider) Create() error {
+func (p *TerraformProvider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("context cancelled, skipping create", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Info("Creating Terraform", "ref", p.config.Meta.ID)
 
 	err := p.generateVariables()
@@ -89,7 +97,18 @@ func (p *TerraformProvider) Create() error {
 }
 
 // Destroy the terraform container
-func (p *TerraformProvider) Destroy() error {
+func (p *TerraformProvider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		p.log.Debug("context cancelled, skipping destroy", "ref", p.config.Meta.ID)
+		return nil
+	}
+
+	// if force do not try to do a destroy, just exit
+	if force {
+		p.log.Info("Skipping Destroy Terraform", "ref", p.config.Meta.ID, "force", true)
+		return nil
+	}
+
 	p.log.Info("Destroy Terraform", "ref", p.config.Meta.ID)
 
 	id, err := p.createContainer()
@@ -117,7 +136,7 @@ func (p *TerraformProvider) Lookup() ([]string, error) {
 	return []string{}, nil
 }
 
-func (p *TerraformProvider) Refresh() error {
+func (p *TerraformProvider) Refresh(ctx context.Context) error {
 	// has the source folder changed?
 	changed, err := p.Changed()
 	if err != nil {
@@ -128,7 +147,7 @@ func (p *TerraformProvider) Refresh() error {
 		// with Terraform resources we can just re-call apply rather than
 		// destroying and then running create.
 		p.log.Debug("Refresh Terraform", "ref", p.config.Meta.ID)
-		return p.Create()
+		return p.Create(ctx)
 	}
 
 	// nothing changed set the outputs as these are not persisted to state
@@ -235,6 +254,19 @@ func (p *TerraformProvider) createContainer() (string, error) {
 		Destination: "/var/lib/terraform.d",
 	})
 
+	// Add any additional volumes
+	for _, v := range p.config.Volumes {
+		tf.Volumes = append(tf.Volumes, ctypes.Volume{
+			Source:                      v.Source,
+			Destination:                 v.Destination,
+			Type:                        v.Type,
+			ReadOnly:                    v.ReadOnly,
+			BindPropagation:             v.BindPropagation,
+			BindPropagationNonRecursive: v.BindPropagationNonRecursive,
+			SelinuxRelabel:              v.SelinuxRelabel,
+		})
+	}
+
 	tf.Entrypoint = []string{}
 	tf.Command = []string{"tail", "-f", "/dev/null"} // ensure container does not immediately exit
 
@@ -272,22 +304,28 @@ func (p *TerraformProvider) terraformApply(containerid string) error {
 		envs = append(envs, fmt.Sprintf("%s=%s", k, v))
 	}
 
-	script := `#!/bin/sh
-	terraform init \
-		-no-color
-	terraform apply \
-	  -no-color \
-		-state=/var/lib/terraform/terraform.tfstate \
-		-var-file=/var/lib/terraform/terraform.tfvars \
-		-auto-approve
-	terraform output \
-		-no-color \
-		-state=/var/lib/terraform/terraform.tfstate \
-		-json > /var/lib/terraform/output.json`
-
+	tfvarFlag := getTerraformVarsFlag(p.config)
 	wd := path.Join("/config", p.config.WorkingDirectory)
 
+	script := `#!/bin/sh
+  terraform init \
+    -no-color
+  terraform apply \
+    -no-color \
+    -state=/var/lib/terraform/terraform.tfstate \
+    -auto-approve`
+
+	// add the tf vars flag if we have a file
+	script = script + tfvarFlag
+
+	script = script + `terraform output \
+    -no-color \
+    -state=/var/lib/terraform/terraform.tfstate \
+    -json > /var/lib/terraform/output.json`
+
 	planOutput := bytes.NewBufferString("")
+
+	p.log.Debug("Running terraform apply", "id", p.config.Meta.ID, "script", script, "envs", envs, "wd", wd)
 
 	_, err := p.client.ExecuteScript(containerid, script, envs, wd, "root", "", 300, planOutput)
 
@@ -375,15 +413,21 @@ func (p *TerraformProvider) terraformDestroy(containerid string) error {
 
 	wd := path.Join("/config", p.config.WorkingDirectory)
 
+	tfvarFlag := getTerraformVarsFlag(p.config)
+
 	script := `#!/bin/sh
-	terraform init \
-		-no-color
-	terraform destroy \
-		-no-color \
-		-state=/var/lib/terraform/terraform.tfstate \
-		-var-file=/var/lib/terraform/terraform.tfvars \
-		-auto-approve
-	`
+  terraform init \
+    -no-color
+  terraform destroy \
+    -no-color \
+    -state=/var/lib/terraform/terraform.tfstate \
+    -auto-approve`
+
+	// add the tf vars flag if we have a file
+	script = script + tfvarFlag
+
+	p.log.Debug("Running terraform destroy", "id", p.config.Meta.ID, "script", script, "envs", envs, "wd", wd)
+
 	_, err = p.client.ExecuteScript(containerid, script, envs, wd, "root", "", 300, p.log.StandardWriter())
 	if err != nil {
 		p.log.Error("Error executing terraform destroy", "ref", p.config.Meta.Name)
@@ -392,6 +436,22 @@ func (p *TerraformProvider) terraformDestroy(containerid string) error {
 	}
 
 	return nil
+}
+
+func getTerraformVarsFlag(r *Terraform) string {
+	// do we have a vars file
+	statePath := terraformStateFolder(r)
+	tfvarFlag := ` \
+    -var-file=/var/lib/terraform/terraform.tfvars
+  `
+
+	_, err := os.Stat(filepath.Join(statePath, "terraform.tfvars"))
+	if err != nil {
+		// vars file does not exit remove the flag
+		return ""
+	}
+
+	return tfvarFlag
 }
 
 // GetTerraformFolder creates the terraform directory used by the application

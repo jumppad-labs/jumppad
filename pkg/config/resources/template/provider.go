@@ -1,6 +1,7 @@
 package template
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,10 +14,146 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
+var _ sdk.Provider = &TemplateProvider{}
+
 // Template provider allows parsing and output of file based templates
 type TemplateProvider struct {
 	config *Template
 	log    sdk.Logger
+}
+
+func (p *TemplateProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
+	c, ok := cfg.(*Template)
+	if !ok {
+		return fmt.Errorf("unable to initialize Template provider, resource is not of type Template")
+	}
+
+	p.config = c
+	p.log = l
+
+	return nil
+}
+
+// Create a new template
+func (p *TemplateProvider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context cancelled, skipping create", "ref", p.config.Meta.ID)
+		return nil
+	}
+
+	// check the template is valid
+	if p.config.Source == "" {
+		return fmt.Errorf("template source empty")
+	}
+
+	output := p.config.Source
+	if p.config.Variables != nil {
+
+		vars := parseVars(p.config.Variables)
+
+		tmpl, err := raymond.Parse(p.config.Source)
+		if err != nil {
+			return fmt.Errorf("error parsing template: %s", err)
+		}
+
+		tmpl.RegisterHelpers(map[string]interface{}{
+			"quote": func(in string) string {
+				return fmt.Sprintf(`"%s"`, in)
+			},
+			"trim": func(in string) string {
+				return strings.TrimSpace(in)
+			},
+		})
+
+		result, err := tmpl.Exec(vars)
+		if err != nil {
+			return fmt.Errorf("error processing template: %s", err)
+		}
+
+		output = result
+	}
+
+	// gemerate a checksum from the result
+	cs, err := utils.ChecksumFromInterface(output)
+	if err != nil {
+		return fmt.Errorf("unable to generate checksum for template: %s", err)
+	}
+
+	outputExists := false
+	if fi, _ := os.Stat(p.config.Destination); fi != nil {
+		outputExists = true
+	}
+
+	// regenerate the template if it has changed or the file does not exist
+	if p.config.Checksum != cs || !outputExists {
+		p.log.Info("Generating template", "ref", p.config.Meta.ID, "checksum", p.config.Checksum, "source", p.config.Source, "output", p.config.Destination)
+
+		// set the checksum
+		p.config.Checksum = cs
+
+		// if an existing file exists delete it
+		if outputExists {
+			err = os.RemoveAll(p.config.Destination)
+			if err != nil {
+				return fmt.Errorf("unable to delete destination file: %s", err)
+			}
+		}
+
+		err = os.MkdirAll(filepath.Dir(p.config.Destination), os.ModePerm)
+		if err != nil {
+			return fmt.Errorf("unable to create destination directory for template: %s", err)
+		}
+
+		f, err := os.Create(p.config.Destination)
+		if err != nil {
+			return fmt.Errorf("unable to create destination file for template: %s", err)
+		}
+		defer f.Close()
+
+		f.WriteString(output)
+	}
+
+	return nil
+}
+
+func (p *TemplateProvider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context cancelled, skipping destroy", "ref", p.config.Meta.ID)
+		return nil
+	}
+
+	if _, err := os.Stat(p.config.Destination); !os.IsNotExist(err) {
+		err := os.RemoveAll(p.config.Destination)
+		if err != nil {
+			p.log.Warn("Unable to delete template file",
+				"ref", p.config.Meta.Name,
+				"destination", p.config.Destination,
+				"error", err)
+		}
+	}
+
+	return nil
+}
+
+// Lookup satisfies the interface method but is not implemented by Template
+func (p *TemplateProvider) Lookup() ([]string, error) {
+	return []string{}, nil
+}
+
+// Refresh causes the template to be destroyed and recreated
+func (p *TemplateProvider) Refresh(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context cancelled, skipping refresh", "ref", p.config.Meta.ID)
+		return nil
+	}
+
+	p.log.Debug("Refresh Template", "ref", p.config.Meta.ID)
+
+	return p.Create(ctx)
+}
+
+func (p *TemplateProvider) Changed() (bool, error) {
+	return false, nil
 }
 
 // parseVars converts a map[string]cty.Value into map[string]interface
@@ -63,128 +200,4 @@ func castVar(v cty.Value) interface{} {
 	}
 
 	return nil
-}
-
-func (p *TemplateProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
-	c, ok := cfg.(*Template)
-	if !ok {
-		return fmt.Errorf("unable to initialize Template provider, resource is not of type Template")
-	}
-
-	p.config = c
-	p.log = l
-
-	return nil
-}
-
-// Create a new template
-func (p *TemplateProvider) Create() error {
-	p.log.Debug("Generating template", "ref", p.config.Meta.ID, "output", p.config.Destination)
-	p.log.Debug("Template content", "ref", p.config.Meta.ID, "source", p.config.Source)
-
-	// check the template is valid
-	if p.config.Source == "" {
-		return fmt.Errorf("template source empty")
-	}
-
-	output := p.config.Source
-	if p.config.Variables != nil {
-
-		vars := parseVars(p.config.Variables)
-
-		tmpl, err := raymond.Parse(p.config.Source)
-		if err != nil {
-			return fmt.Errorf("error parsing template: %s", err)
-		}
-
-		tmpl.RegisterHelpers(map[string]interface{}{
-			"quote": func(in string) string {
-				return fmt.Sprintf(`"%s"`, in)
-			},
-			"trim": func(in string) string {
-				return strings.TrimSpace(in)
-			},
-		})
-
-		result, err := tmpl.Exec(vars)
-		if err != nil {
-			return fmt.Errorf("error processing template: %s", err)
-		}
-
-		output = result
-	}
-
-	// gemerate a checksum from the result
-	cs, err := utils.ChecksumFromInterface(output)
-	if err != nil {
-		return fmt.Errorf("unable to generate checksum for template: %s", err)
-	}
-
-	p.log.Debug("Template output", "ref", p.config.Meta.ID, "destination", p.config.Destination, "checksum", cs, "result", output)
-
-	outputExists := false
-	if fi, _ := os.Stat(p.config.Destination); fi != nil {
-		outputExists = true
-	}
-
-	// regenerate the template if it has changed or the file does not exist
-	if p.config.Checksum != cs || !outputExists {
-		p.log.Info("Generating template", "ref", p.config.Meta.ID, "output", p.config.Destination)
-
-		// set the checksum
-		p.config.Checksum = cs
-
-		// if an existing file exists delete it
-		if outputExists {
-			err = os.RemoveAll(p.config.Destination)
-			if err != nil {
-				return fmt.Errorf("unable to delete destination file: %s", err)
-			}
-		}
-
-		err = os.MkdirAll(filepath.Dir(p.config.Destination), os.ModePerm)
-		if err != nil {
-			return fmt.Errorf("unable to create destination directory for template: %s", err)
-		}
-
-		f, err := os.Create(p.config.Destination)
-		if err != nil {
-			return fmt.Errorf("unable to create destination file for template: %s", err)
-		}
-		defer f.Close()
-
-		f.WriteString(output)
-	}
-
-	return nil
-}
-
-func (p *TemplateProvider) Destroy() error {
-	if _, err := os.Stat(p.config.Destination); !os.IsNotExist(err) {
-		err := os.RemoveAll(p.config.Destination)
-		if err != nil {
-			p.log.Warn("Unable to delete template file",
-				"ref", p.config.Meta.Name,
-				"destination", p.config.Destination,
-				"error", err)
-		}
-	}
-
-	return nil
-}
-
-// Lookup satisfies the interface method but is not implemented by Template
-func (p *TemplateProvider) Lookup() ([]string, error) {
-	return []string{}, nil
-}
-
-// Refresh causes the template to be destroyed and recreated
-func (p *TemplateProvider) Refresh() error {
-	p.log.Debug("Refresh Template", "ref", p.config.Meta.ID)
-
-	return p.Create()
-}
-
-func (p *TemplateProvider) Changed() (bool, error) {
-	return false, nil
 }

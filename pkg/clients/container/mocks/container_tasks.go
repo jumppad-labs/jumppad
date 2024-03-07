@@ -524,8 +524,8 @@ func (_m *ContainerTasks) RemoveVolume(name string) error {
 	return r0
 }
 
-// SetForcePull provides a mock function with given fields: _a0
-func (_m *ContainerTasks) SetForcePull(_a0 bool) {
+// SetForce provides a mock function with given fields: _a0
+func (_m *ContainerTasks) SetForce(_a0 bool) {
 	_m.Called(_a0)
 }
 

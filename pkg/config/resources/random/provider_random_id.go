@@ -1,6 +1,7 @@
 package random
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -10,6 +11,8 @@ import (
 	sdk "github.com/jumppad-labs/plugin-sdk"
 	"golang.org/x/xerrors"
 )
+
+var _ sdk.Provider = &RandomIDProvider{}
 
 // RandomID is a provider for generating random IDs
 type RandomIDProvider struct {
@@ -29,7 +32,7 @@ func (p *RandomIDProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	return nil
 }
 
-func (p *RandomIDProvider) Create() error {
+func (p *RandomIDProvider) Create(ctx context.Context) error {
 	byteLength := p.config.ByteLength
 	bytes := make([]byte, byteLength)
 
@@ -53,7 +56,7 @@ func (p *RandomIDProvider) Create() error {
 	return nil
 }
 
-func (p *RandomIDProvider) Destroy() error {
+func (p *RandomIDProvider) Destroy(ctx context.Context, force bool) error {
 	return nil
 }
 
@@ -61,7 +64,7 @@ func (p *RandomIDProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (p *RandomIDProvider) Refresh() error {
+func (p *RandomIDProvider) Refresh(ctx context.Context) error {
 	return nil
 }
 

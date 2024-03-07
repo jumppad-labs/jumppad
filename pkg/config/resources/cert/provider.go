@@ -1,6 +1,7 @@
 package cert
 
 import (
+	"context"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -53,7 +54,12 @@ func (p *LeafProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	return nil
 }
 
-func (p *CAProvider) Create() error {
+func (p *CAProvider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context cancelled, skipping CA", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Info("Creating CA Certificate", "ref", p.config.Meta.ID)
 
 	directory := strings.Replace(p.config.Meta.Module, ".", "_", -1)
@@ -133,7 +139,11 @@ func (p *CAProvider) Create() error {
 	return nil
 }
 
-func (p *CAProvider) Destroy() error {
+func (p *CAProvider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context cancelled, skipping destroy", "ref", p.config.Meta.ID)
+	}
+
 	p.log.Info("Destroy CA Certificate", "ref", p.config.Meta.ID)
 
 	return destroy(p.config.Meta.Module, p.config.Meta.Name, p.config.Output, p.log)
@@ -143,7 +153,12 @@ func (p *CAProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (p *CAProvider) Refresh() error {
+func (p *CAProvider) Refresh(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context cancelled, skipping refresh", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Debug("Refresh CA Certificate", "ref", p.config.Meta.ID)
 
 	return nil
@@ -155,7 +170,12 @@ func (p *CAProvider) Changed() (bool, error) {
 	return false, nil
 }
 
-func (p *LeafProvider) Create() error {
+func (p *LeafProvider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context cancelled, skipping leaf", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	p.log.Info("Creating Leaf Certificate", "ref", p.config.Meta.ID)
 
 	directory := strings.Replace(p.config.Meta.Module, ".", "_", -1)
@@ -249,20 +269,30 @@ func (p *LeafProvider) Create() error {
 	return err
 }
 
-func (p *LeafProvider) Destroy() error {
+func (p *LeafProvider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context cancelled, skipping destroy", "ref", p.config.Meta.Name)
+		return nil
+	}
+
 	p.log.Info("Destroy Leaf Certificate", "ref", p.config.Meta.Name)
 
 	return destroy(p.config.Meta.Module, fmt.Sprintf("%s-leaf", p.config.Meta.Name), p.config.Output, p.log)
 }
 
-func (p *LeafProvider) Lookup() ([]string, error) {
-	return nil, nil
-}
+func (p *LeafProvider) Refresh(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context cancelled, skipping refresh", "ref", p.config.Meta.Name)
+		return nil
+	}
 
-func (p *LeafProvider) Refresh() error {
 	p.log.Debug("Refresh Leaf Certificate", "ref", p.config.Meta.Name)
 
 	return nil
+}
+
+func (p *LeafProvider) Lookup() ([]string, error) {
+	return nil, nil
 }
 
 func (p *LeafProvider) Changed() (bool, error) {
