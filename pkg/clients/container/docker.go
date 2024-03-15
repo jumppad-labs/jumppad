@@ -64,6 +64,7 @@ type Docker interface {
 	ImagePush(ctx context.Context, image string, options types.ImagePushOptions) (io.ReadCloser, error)
 
 	ServerVersion(ctx context.Context) (types.Version, error)
+
 	Info(ctx context.Context) (types.Info, error)
 }
 
