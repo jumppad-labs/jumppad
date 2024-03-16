@@ -608,7 +608,7 @@ func (p *ClusterProvider) waitForStart(ctx context.Context, id string) error {
 
 func (p *ClusterProvider) copyKubeConfig(id string) (string, error) {
 	// create destination kubeconfig file paths
-	_, kubePath, _ := utils.CreateKubeConfigPath(p.config.Meta.Name)
+	_, kubePath, _ := utils.CreateKubeConfigPath(p.config.Meta.ID)
 
 	// get kubeconfig file from container and read contents
 	err := p.client.CopyFromContainer(id, "/output/kubeconfig.yaml", kubePath)
@@ -621,7 +621,7 @@ func (p *ClusterProvider) copyKubeConfig(id string) (string, error) {
 
 func (p *ClusterProvider) createLocalKubeConfig(kubeconfig string) (string, error) {
 	ip := utils.GetDockerIP()
-	_, kubePath, _ := utils.CreateKubeConfigPath(p.config.Meta.Name)
+	_, kubePath, _ := utils.CreateKubeConfigPath(p.config.Meta.ID)
 
 	err := p.changeServerAddressInK8sConfig(
 		fmt.Sprintf("https://%s", ip),
@@ -753,7 +753,7 @@ func (p *ClusterProvider) deployConnector(ctx context.Context, grpcPort, httpPor
 }
 
 func (p *ClusterProvider) destroyK3s(ctx context.Context, force bool) error {
-	p.log.Info("Destroy Cluster", "ref", p.config.Meta.Name)
+	p.log.Info("Destroy Cluster", "ref", p.config.Meta.ID)
 
 	ids, err := p.Lookup()
 	if err != nil {
@@ -767,7 +767,7 @@ func (p *ClusterProvider) destroyK3s(ctx context.Context, force bool) error {
 		}
 	}
 
-	configDir, _, _ := utils.CreateKubeConfigPath(p.config.Meta.Name)
+	configDir, _, _ := utils.CreateKubeConfigPath(p.config.Meta.ID)
 	os.RemoveAll(configDir)
 
 	return nil
@@ -775,7 +775,7 @@ func (p *ClusterProvider) destroyK3s(ctx context.Context, force bool) error {
 
 // createRegistriesConfig creates the k3s mirrors config for the cluster
 func (p *ClusterProvider) createRegistriesConfig() (string, error) {
-	dir, _, _ := utils.CreateKubeConfigPath(p.config.Meta.Name)
+	dir, _, _ := utils.CreateKubeConfigPath(p.config.Meta.ID)
 	daemonConfigPath := path.Join(dir, "registries.yaml")
 
 	// remove any existing files, fail silently

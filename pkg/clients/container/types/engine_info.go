@@ -6,6 +6,10 @@ type EngineInfo struct {
 
 	// EngineType, docker, podman, not found
 	EngineType string
+
+	// EngineType, docker, podman, not found
+	CPU    int
+	Memory int
 }
 
 const (

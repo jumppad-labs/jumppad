@@ -1,5 +1,9 @@
 # Change Log
 
+## version v0.10.1
+* Ensure that the total compute is set correctly	for Nomad clusters when 
+	running on Docker in Apple Silicon.
+
 ## version v0.10.0
 
 ## New Features:

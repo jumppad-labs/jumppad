@@ -55,6 +55,8 @@ const defaultExitCode = 254
 type DockerTasks struct {
 	engineType    string
 	storageDriver string
+	memory        int
+	cpu           int
 	c             Docker
 	il            images.ImageLog
 	l             logger.Logger
@@ -89,11 +91,11 @@ func NewDockerTasks(c Docker, il images.ImageLog, tg *ctar.TarGz, l logger.Logge
 		return nil, fmt.Errorf("error checking server storage driver, error: %s", err)
 	}
 
-	return &DockerTasks{engineType: t, storageDriver: info.Driver, c: c, il: il, tg: tg, l: l, defaultWait: 1 * time.Second}, nil
+	return &DockerTasks{engineType: t, storageDriver: info.Driver, c: c, il: il, tg: tg, l: l, defaultWait: 1 * time.Second, cpu: info.NCPU, memory: int(info.MemTotal)}, nil
 }
 
 func (d *DockerTasks) EngineInfo() *dtypes.EngineInfo {
-	return &dtypes.EngineInfo{StorageDriver: d.storageDriver, EngineType: d.engineType}
+	return &dtypes.EngineInfo{StorageDriver: d.storageDriver, EngineType: d.engineType, CPU: d.cpu, Memory: d.memory}
 }
 
 // SetForce sets a global override for the DockerTasks, when set to true
