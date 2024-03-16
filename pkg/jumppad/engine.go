@@ -403,12 +403,6 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 		return parseError
 	}
 
-	// process is not called for module resources, add manually
-	err = e.appendModuleAndVariableResources(parsedConfig)
-	if err != nil {
-		return parseError
-	}
-
 	// destroy any resources that might have been set to disabled
 	err = e.destroyDisabledResources(e.ctx, e.force)
 	if err != nil {
@@ -468,31 +462,6 @@ func (e *EngineImpl) appendDisabledResources(c *hclconfig.Config) error {
 			err = e.config.AppendResource(r)
 			if err != nil {
 				return fmt.Errorf("unable to add disabled resource: %s", err)
-			}
-		}
-	}
-
-	return nil
-}
-
-// appends module in the given config to the engines config
-func (e *EngineImpl) appendModuleAndVariableResources(c *hclconfig.Config) error {
-	if c == nil {
-		return nil
-	}
-
-	for _, r := range c.Resources {
-		if r.Metadata().Type == resources.TypeModule || r.Metadata().Type == resources.TypeVariable {
-			// if the resource already exists remove it
-			er, err := e.config.FindResource(resources.FQRNFromResource(r).String())
-			if err == nil {
-				e.config.RemoveResource(er)
-			}
-
-			// add the resource to the state
-			err = e.config.AppendResource(r)
-			if err != nil {
-				return fmt.Errorf("unable to add resource: %s", err)
 			}
 		}
 	}
@@ -570,7 +539,7 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 		ic, err := e.config.FindResource("resource.image_cache.default")
 		if err == nil {
 			e.log.Debug("Attaching image cache to network", "network", ic.Metadata().ID)
-			ic.SetDependsOn(appendIfNotContains(ic.GetDependsOn(), r.Metadata().ID))
+			ic.AddDependency(r.Metadata().ID)
 
 			// reload the networks
 			np := e.providers.GetProvider(ic)

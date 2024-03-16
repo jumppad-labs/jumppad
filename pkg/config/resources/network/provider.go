@@ -119,7 +119,7 @@ func (p *Provider) Destroy(ctx context.Context, force bool) error {
 		return nil
 	}
 
-	p.log.Info("Destroy Network", "ref", p.config.Meta.Name)
+	p.log.Info("Destroy Network", "ref", p.config.Meta.ID)
 
 	// check network exists if so remove
 	ids, err := p.Lookup()

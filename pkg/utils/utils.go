@@ -123,8 +123,9 @@ func FQDNVolumeName(name string) string {
 
 // CreateKubeConfigPath creates the file path for the KubeConfig file when
 // using Kubernetes cluster
-func CreateKubeConfigPath(name string) (dir, filePath string, dockerPath string) {
-	dir = filepath.Join(JumppadHome(), "/config/", name)
+func CreateKubeConfigPath(id string) (dir, filePath string, dockerPath string) {
+	id, _ = ReplaceNonURIChars(id)
+	dir = filepath.Join(JumppadHome(), "/config/", id)
 	filePath = filepath.Join(dir, "/kubeconfig.yaml")
 	dockerPath = filepath.Join(dir, "/kubeconfig-docker.yaml")
 

@@ -69,7 +69,7 @@ func setupClusterMocks(t *testing.T) (
 	cf.Close()
 
 	// write the kubeconfig
-	_, kubePath, _ := utils.CreateKubeConfigPath(clusterConfig.Meta.Name)
+	_, kubePath, _ := utils.CreateKubeConfigPath(clusterConfig.Meta.ID)
 	kcf, err := os.Create(kubePath)
 	if err != nil {
 		panic(err)
@@ -294,7 +294,7 @@ func TestClusterK3sErrorsIfServerNOTStart(t *testing.T) {
 
 func TestClusterK3sDownloadsConfig(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
-	_, kubePath, _ := utils.CreateKubeConfigPath(cc.Meta.Name)
+	_, kubePath, _ := utils.CreateKubeConfigPath(cc.Meta.ID)
 
 	p := ClusterProvider{cc, md, mk, nil, mc, logger.NewTestLogger(t)}
 
@@ -337,7 +337,7 @@ func TestClusterK3sSetsServerInConfig(t *testing.T) {
 	// check the kubeconfig file for docker uses a network ip not localhost
 
 	// check file has been written
-	_, kubePath, _ := utils.CreateKubeConfigPath(clusterConfig.Meta.Name)
+	_, kubePath, _ := utils.CreateKubeConfigPath(clusterConfig.Meta.ID)
 	f, err := os.Open(kubePath)
 	assert.NoError(t, err)
 	defer f.Close()
