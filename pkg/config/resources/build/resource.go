@@ -21,6 +21,8 @@ type Build struct {
 
 	Registries []container.Image `hcl:"registry,block" json:"registries"` // Optional registry to push the image to
 
+	Cache Cache `hcl:"cache,block" json:"cache,omitempty"` // Optional cache to use for the build
+
 	// outputs
 
 	// Image is the full local reference of the built image
@@ -35,6 +37,11 @@ type BuildContainer struct {
 	Context    string            `hcl:"context" json:"context"`                          // Path to build context
 	Ignore     []string          `hcl:"ignore,optional" json:"ignore,omitempty"`         // Files to ignore in the build context, this is the same as .dockerignore
 	Args       map[string]string `hcl:"args,optional" json:"args,omitempty"`             // Build args to pass  to the container
+}
+
+type Cache struct {
+	Name string `hcl:"name,label" json:"name"`
+	Path string `hcl:"path" json:"path"`
 }
 
 type Registry struct {
