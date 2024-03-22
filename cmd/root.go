@@ -5,8 +5,6 @@ import (
 	"os"
 	"strings"
 
-	gvm "github.com/shipyard-run/version-manager"
-
 	"github.com/jumppad-labs/jumppad/cmd/changelog"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
@@ -16,9 +14,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 )
-
-var configFile = ""
 
 var rootCmd = &cobra.Command{
 	Use:   "jumppad",
@@ -38,49 +35,15 @@ func globalFlags() *pflag.FlagSet {
 	return flags
 }
 
-func createEngine(l logger.Logger, c *clients.Clients) (jumppad.Engine, gvm.Versions, error) {
+func createEngine(l logger.Logger, c *clients.Clients, credentials map[string]string) (jumppad.Engine, error) {
 	providers := config.NewProviders(c)
 
-	engine, err := jumppad.New(providers, l)
+	engine, err := jumppad.New(providers, l, credentials)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	o := gvm.Options{
-		Organization: "jumppad-labs",
-		Repo:         "jumppad",
-		ReleasesPath: utils.ReleasesFolder(),
-	}
-
-	o.AssetNameFunc = func(version, goos, goarch string) string {
-		// No idea why we set the release architecture for the binary like this
-		if goarch == "amd64" {
-			goarch = "x86_64"
-		}
-
-		switch goos {
-		case "linux":
-			return fmt.Sprintf("jumppad_%s_%s_%s.tar.gz", version, goos, goarch)
-		case "darwin":
-			return fmt.Sprintf("jumppad_%s_%s_%s.zip", version, goos, goarch)
-		case "windows":
-			return fmt.Sprintf("jumppad_%s_%s_%s.zip", version, goos, goarch)
-		}
-
-		return ""
-	}
-
-	o.ExeNameFunc = func(version, goos, goarch string) string {
-		if goos == "windows" {
-			return "jumppad.exe"
-		}
-
-		return "jumppad"
-	}
-
-	vm := gvm.New(o)
-
-	return engine, vm, nil
+	return engine, nil
 }
 
 func createLogger() logger.Logger {
@@ -98,26 +61,45 @@ func Execute(v, c, d string) error {
 	commit = c
 	date = d
 
-	var vm gvm.Versions
-
 	// setup dependencies
 	l := createLogger()
 
+	viper.AddConfigPath(utils.JumppadHome())
+	viper.SetConfigName("config")
+	err := viper.ReadInConfig()
+	if err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			l.Debug("No config file found, using defaults")
+		} else {
+			return err
+		}
+	}
+
+	credentials := map[string]string{}
+	for _, registries := range viper.Get("credentials").([]map[string]interface{}) {
+		for r, v := range registries {
+			c := v.([]map[string]interface{})[0]
+			if c["token"] != nil {
+				credentials[r] = c["token"].(string)
+			}
+		}
+	}
+
 	engineClients, _ := clients.GenerateClients(l)
 
-	engine, vm, _ := createEngine(l, engineClients)
+	engine, _ := createEngine(l, engineClients, credentials)
 
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(outputCmd)
 	rootCmd.AddCommand(newDevCmd())
 	rootCmd.AddCommand(newEnvCmd(engine))
-	rootCmd.AddCommand(newRunCmd(engine, engineClients.ContainerTasks, engineClients.Getter, engineClients.HTTP, engineClients.System, vm, engineClients.Connector, l))
+	rootCmd.AddCommand(newRunCmd(engine, engineClients.ContainerTasks, engineClients.Getter, engineClients.HTTP, engineClients.System, engineClients.Connector, l))
 	rootCmd.AddCommand(newTestCmd())
 	rootCmd.AddCommand(newDestroyCmd(engineClients.Connector, l))
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(newPurgeCmd(engineClients.Docker, engineClients.ImageLog, l))
 	rootCmd.AddCommand(taintCmd)
-	rootCmd.AddCommand(newVersionCmd(vm))
+	rootCmd.AddCommand(newVersionCmd())
 	rootCmd.AddCommand(uninstallCmd)
 	rootCmd.AddCommand(newPushCmd(engineClients.ContainerTasks, engineClients.Kubernetes, engineClients.HTTP, engineClients.Nomad, l))
 	rootCmd.AddCommand(newLogCmd(engine, engineClients.Docker, os.Stdout, os.Stderr), completionCmd)
@@ -169,7 +151,7 @@ func Execute(v, c, d string) error {
 		return nil
 	}
 
-	err := rootCmd.Execute()
+	err = rootCmd.Execute()
 
 	if err != nil {
 		showErr(err)

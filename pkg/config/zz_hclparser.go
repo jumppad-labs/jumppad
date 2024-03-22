@@ -36,9 +36,10 @@ func RegisterResource(name string, r types.Resource, p sdk.Provider) {
 }
 
 // setupHCLConfig configures the HCLConfig package and registers the custom types
-func NewParser(callback hclconfig.WalkCallback, variables map[string]string, variablesFiles []string) *hclconfig.Parser {
+func NewParser(callback hclconfig.WalkCallback, variables map[string]string, variablesFiles []string, registryCredentials map[string]string) *hclconfig.Parser {
 	cfg := hclconfig.DefaultOptions()
 
+	cfg.RegistryCredentials = registryCredentials
 	cfg.Callback = callback
 	cfg.VariableEnvPrefix = "JUMPPAD_VAR_"
 	cfg.Variables = variables

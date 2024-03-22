@@ -43,18 +43,20 @@ type Engine interface {
 
 // EngineImpl is responsible for creating and destroying resources
 type EngineImpl struct {
-	providers config.Providers
-	log       logger.Logger
-	config    *hclconfig.Config
-	ctx       context.Context
-	force     bool
+	providers   config.Providers
+	log         logger.Logger
+	config      *hclconfig.Config
+	ctx         context.Context
+	force       bool
+	credentials map[string]string
 }
 
 // New creates a new Jumppad engine
-func New(p config.Providers, l logger.Logger) (Engine, error) {
+func New(p config.Providers, l logger.Logger, credentials map[string]string) (Engine, error) {
 	e := &EngineImpl{}
 	e.log = l
 	e.providers = p
+	e.credentials = credentials
 
 	// Set the standard writer to our logger as the DAG uses the standard library log.
 	log.SetOutput(l.StandardWriter())
@@ -375,7 +377,7 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 		variablesFiles = append(variablesFiles, variablesFile)
 	}
 
-	hclParser := config.NewParser(callback, variables, variablesFiles)
+	hclParser := config.NewParser(callback, variables, variablesFiles, e.credentials)
 
 	if utils.IsHCLFile(path) {
 		// ParseFile processes the HCL, builds a graph of resources then calls
@@ -570,7 +572,7 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 		ic, err := e.config.FindResource("resource.image_cache.default")
 		if err == nil {
 			e.log.Debug("Attaching image cache to network", "network", ic.Metadata().ID)
-			ic.SetDependsOn(appendIfNotContains(ic.GetDependsOn(), r.Metadata().ID))
+			ic.AddDependency(r.Metadata().ID)
 
 			// reload the networks
 			np := e.providers.GetProvider(ic)

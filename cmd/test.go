@@ -36,8 +36,8 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/nomad"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	gvm "github.com/shipyard-run/version-manager"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"k8s.io/client-go/util/jsonpath"
 )
 
@@ -117,7 +117,7 @@ type CucumberRunner struct {
 	args          []string
 	e             jumppad.Engine
 	cli           *clients.Clients
-	vm            gvm.Versions
+	cred          map[string]string
 	testFolder    string
 	testPath      string
 	basePath      string
@@ -178,8 +178,13 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 
 		cl := logger.NewLogger(sb, logger.LogLevelDebug)
 
+		credentials := map[string]string{}
+		for k, v := range viper.GetStringMap("credentials") {
+			credentials[k] = v.(string)
+		}
+
 		cli, _ := clients.GenerateClients(cl)
-		engine, vm, err := createEngine(cl, cli)
+		engine, err := createEngine(cl, cli, credentials)
 		if err != nil {
 			fmt.Printf("Unable to setup tests: %s\n", err)
 			return
@@ -188,7 +193,7 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 		cr.e = engine
 		cr.l = cl
 		cr.cli = cli
-		cr.vm = vm
+		cr.cred = credentials
 
 		// do we need to pure the cache
 		if *cr.purge {
@@ -281,7 +286,6 @@ func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
 		cr.cli.Getter,
 		cr.cli.HTTP,
 		cr.cli.System,
-		cr.vm,
 		cr.cli.Connector,
 		&noOpen,
 		cr.force,

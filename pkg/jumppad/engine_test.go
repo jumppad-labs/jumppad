@@ -121,7 +121,7 @@ func TestApplyAddsNetworksToImageCache(t *testing.T) {
 	require.NoError(t, err)
 
 	// network should be added as a dependency
-	require.Equal(t, "resource.network.onprem", r.GetDependsOn()[0])
+	require.Equal(t, "resource.network.onprem", r.GetDependencies()[0])
 }
 
 func TestApplyAddsCustomRegistriesToImageCache(t *testing.T) {
