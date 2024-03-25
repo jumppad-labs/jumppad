@@ -458,7 +458,9 @@ func (p *ClusterProvider) createNomad(ctx context.Context) error {
 func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, isClient bool, dockerConfig string) (string, error) {
 	// set the resources for CPU, if not a client set the resources low
 	// so that we can only deploy the connector to the server
-	cpu := ""
+	info := p.client.EngineInfo()
+	cpu := fmt.Sprintf("cpu_total_compute = %d", info.CPU*1000)
+
 	if !isClient {
 		cpu = "cpu_total_compute = 500"
 	}
@@ -585,8 +587,12 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 // createClient node creates a Nomad client node
 // returns the fqdn, docker id, and an error if unsuccessful
 func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID string, dockerConfig string) (string, string, error) {
+
+	info := p.client.EngineInfo()
+	cpu := fmt.Sprintf("cpu_total_compute = %d", info.CPU*1000)
+
 	// generate the client config
-	sc := dataDir + "\n" + fmt.Sprintf(clientConfig, p.config.Datacenter, serverID)
+	sc := dataDir + "\n" + fmt.Sprintf(clientConfig, p.config.Datacenter, serverID, cpu)
 
 	// write the default config to a file
 	clientConfigPath := path.Join(p.config.ConfigDir, "client_config.hcl")
@@ -1108,6 +1114,8 @@ client {
 	server_join {
 		retry_join = ["%s"]
 	}
+
+	%s
 }
 
 plugin "raw_exec" {

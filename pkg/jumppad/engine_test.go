@@ -78,24 +78,25 @@ func TestApplyWithSingleFile(t *testing.T) {
 
 	require.Len(t, e.config.Resources, 7) // 6 resources in the file plus the image cache
 
-	// Because of the DAG both network and template are top level resources
+	// Check the provider was called for each resource
 	require.ElementsMatch(t,
 		[]string{
 			"default",
 			"onprem",
 			"default",
 			"consul_config",
+			"port_range",
+			"version",
 		},
 		[]string{
 			getMetaFromMock(mp, 0).Name,
 			getMetaFromMock(mp, 1).Name,
 			getMetaFromMock(mp, 2).Name,
 			getMetaFromMock(mp, 3).Name,
+			getMetaFromMock(mp, 4).Name,
+			getMetaFromMock(mp, 5).Name,
 		},
 	)
-
-	require.Equal(t, "consul", getMetaFromMock(mp, 4).Name)
-	require.Equal(t, "consul_addr", getMetaFromMock(mp, 5).Name)
 }
 
 func TestApplyAddsImageCache(t *testing.T) {
@@ -149,13 +150,13 @@ func TestApplyWithSingleFileAndVariables(t *testing.T) {
 	require.Len(t, e.config.Resources, 7) // 6 resources in the file plus the image cache
 
 	// then the container should be created
-	require.Equal(t, "consul", getMetaFromMock(mp, 4).Name)
+	require.Equal(t, "consul", getMetaFromMock(mp, 6).Name)
 
 	// finally the provider for the image cache should be updated
-	require.Equal(t, "consul_addr", getMetaFromMock(mp, 5).Name)
+	require.Equal(t, "consul_addr", getMetaFromMock(mp, 7).Name)
 
 	// check the variable has overridden the image
-	cont := getResourceFromMock(mp, 4).(*container.Container)
+	cont := getResourceFromMock(mp, 6).(*container.Container)
 	require.Equal(t, "consul:1.8.1", cont.Image.Name)
 }
 
@@ -184,7 +185,7 @@ func TestApplyDoesNotCallsProviderCreateWhenInState(t *testing.T) {
 	require.NoError(t, err)
 
 	// should only be called for resources that are not in the state
-	testAssertMethodCalled(t, mp, "Create", 3)
+	testAssertMethodCalled(t, mp, "Create", 5)
 
 	// the state should also contain 7 resources
 	sf := testLoadState(t, e)
@@ -198,7 +199,7 @@ func TestApplyRemovesItemsInStateWhenNotInFiles(t *testing.T) {
 	require.NoError(t, err)
 
 	// should only be called for resources that are not in the state
-	testAssertMethodCalled(t, mp, "Create", 3)
+	testAssertMethodCalled(t, mp, "Create", 5)
 
 	// should remove items not in files
 	testAssertMethodCalled(t, mp, "Destroy", 2)
@@ -263,7 +264,7 @@ func TestApplySetsCreatedStatusForEachResource(t *testing.T) {
 	require.Equal(t, 7, e.config.ResourceCount())
 
 	// should only call create and destroy for the cache as this is pending update
-	testAssertMethodCalled(t, mp, "Create", 5) // ImageCache is always created
+	testAssertMethodCalled(t, mp, "Create", 7) // ImageCache is always created
 
 	sf := testLoadState(t, e)
 
@@ -290,7 +291,7 @@ func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 	// there are two top level config items, template and network
 	// network will fail
 	// ImageCache should always be created
-	testAssertMethodCalled(t, mp, "Create", 3)
+	testAssertMethodCalled(t, mp, "Create", 5)
 
 	sf := testLoadState(t, e)
 
@@ -317,7 +318,7 @@ func TestApplyCallsProviderDestroyAndCreateForFailedResources(t *testing.T) {
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1)
-	testAssertMethodCalled(t, mp, "Create", 5) // ImageCache is always created
+	testAssertMethodCalled(t, mp, "Create", 7) // ImageCache is always created
 }
 
 func TestApplyCallsProviderDestroyForTaintedResources(t *testing.T) {
@@ -328,7 +329,7 @@ func TestApplyCallsProviderDestroyForTaintedResources(t *testing.T) {
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1)
-	testAssertMethodCalled(t, mp, "Create", 5) // ImageCache is always created
+	testAssertMethodCalled(t, mp, "Create", 7) // ImageCache is always created
 }
 
 func TestApplyCallsProviderDestroyForDisabledResources(t *testing.T) {
@@ -371,7 +372,7 @@ func TestApplyCallsProviderRefreshWithErrorHaltsExecution(t *testing.T) {
 	require.Error(t, err)
 
 	testAssertMethodCalled(t, mp, "Refresh", 3)
-	testAssertMethodCalled(t, mp, "Create", 0)
+	testAssertMethodCalled(t, mp, "Create", 2)
 }
 
 func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
