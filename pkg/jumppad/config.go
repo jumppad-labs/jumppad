@@ -8,11 +8,14 @@ func GetDefaultRegistry() string {
 
 func GetRegistryCredentials() map[string]string {
 	registryCredentials := map[string]string{}
-	for _, registries := range viper.Get("credentials").([]map[string]interface{}) {
-		for r, v := range registries {
-			c := v.([]map[string]interface{})[0]
-			if c["token"] != nil {
-				registryCredentials[r] = c["token"].(string)
+
+	if viper.IsSet("credentials") {
+		for _, registries := range viper.Get("credentials").([]map[string]interface{}) {
+			for r, v := range registries {
+				c := v.([]map[string]interface{})[0]
+				if c["token"] != nil {
+					registryCredentials[r] = c["token"].(string)
+				}
 			}
 		}
 	}
