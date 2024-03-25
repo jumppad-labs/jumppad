@@ -9,9 +9,9 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/connector"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 func newDestroyCmd(cc connector.Connector, l logger.Logger) *cobra.Command {
@@ -26,12 +26,10 @@ func newDestroyCmd(cc connector.Connector, l logger.Logger) *cobra.Command {
 			engineClients, _ := clients.GenerateClients(l)
 			engineClients.ContainerTasks.SetForce(force)
 
-			credentials := map[string]string{}
-			for k, v := range viper.GetStringMap("credentials") {
-				credentials[k] = v.(string)
-			}
+			defaultRegistry := jumppad.GetDefaultRegistry()
+			registryCredentials := jumppad.GetRegistryCredentials()
 
-			engine, err := createEngine(l, engineClients, credentials)
+			engine, err := createEngine(l, engineClients, defaultRegistry, registryCredentials)
 			if err != nil {
 				l.Error("Unable to create engine", "error", err)
 				return

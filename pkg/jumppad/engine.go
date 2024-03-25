@@ -43,20 +43,22 @@ type Engine interface {
 
 // EngineImpl is responsible for creating and destroying resources
 type EngineImpl struct {
-	providers   config.Providers
-	log         logger.Logger
-	config      *hclconfig.Config
-	ctx         context.Context
-	force       bool
-	credentials map[string]string
+	providers           config.Providers
+	log                 logger.Logger
+	config              *hclconfig.Config
+	ctx                 context.Context
+	force               bool
+	defaultRegistry     string
+	registryCredentials map[string]string
 }
 
 // New creates a new Jumppad engine
-func New(p config.Providers, l logger.Logger, credentials map[string]string) (Engine, error) {
+func New(p config.Providers, l logger.Logger, defaultRegistry string, registryCredentials map[string]string) (Engine, error) {
 	e := &EngineImpl{}
 	e.log = l
 	e.providers = p
-	e.credentials = credentials
+	e.defaultRegistry = defaultRegistry
+	e.registryCredentials = registryCredentials
 
 	// Set the standard writer to our logger as the DAG uses the standard library log.
 	log.SetOutput(l.StandardWriter())
@@ -377,7 +379,7 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 		variablesFiles = append(variablesFiles, variablesFile)
 	}
 
-	hclParser := config.NewParser(callback, variables, variablesFiles, e.credentials)
+	hclParser := config.NewParser(callback, variables, variablesFiles, e.defaultRegistry, e.registryCredentials)
 
 	if utils.IsHCLFile(path) {
 		// ParseFile processes the HCL, builds a graph of resources then calls

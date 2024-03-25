@@ -12,7 +12,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 func newDevCmd() *cobra.Command {
@@ -58,13 +57,11 @@ func newDevCmdFunc(variables *[]string, variablesFile, interval *string, ttyFlag
 			}
 		}
 
-		credentials := map[string]string{}
-		for k, v := range viper.GetStringMap("credentials") {
-			credentials[k] = v.(string)
-		}
+		defaultRegistry := jumppad.GetDefaultRegistry()
+		registryCredentials := jumppad.GetRegistryCredentials()
 
 		engineClients, _ := clients.GenerateClients(v.Logger())
-		engine, err := createEngine(v.Logger(), engineClients, credentials)
+		engine, err := createEngine(v.Logger(), engineClients, defaultRegistry, registryCredentials)
 		if err != nil {
 			return fmt.Errorf("unable to create engine: %s", err)
 		}

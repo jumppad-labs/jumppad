@@ -37,7 +37,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"k8s.io/client-go/util/jsonpath"
 )
 
@@ -178,13 +177,11 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 
 		cl := logger.NewLogger(sb, logger.LogLevelDebug)
 
-		credentials := map[string]string{}
-		for k, v := range viper.GetStringMap("credentials") {
-			credentials[k] = v.(string)
-		}
+		defaultRegistry := jumppad.GetDefaultRegistry()
+		registryCredentials := jumppad.GetRegistryCredentials()
 
 		cli, _ := clients.GenerateClients(cl)
-		engine, err := createEngine(cl, cli, credentials)
+		engine, err := createEngine(cl, cli, defaultRegistry, registryCredentials)
 		if err != nil {
 			fmt.Printf("Unable to setup tests: %s\n", err)
 			return
@@ -193,7 +190,7 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 		cr.e = engine
 		cr.l = cl
 		cr.cli = cli
-		cr.cred = credentials
+		cr.cred = registryCredentials
 
 		// do we need to pure the cache
 		if *cr.purge {

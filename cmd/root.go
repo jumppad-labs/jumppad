@@ -35,10 +35,10 @@ func globalFlags() *pflag.FlagSet {
 	return flags
 }
 
-func createEngine(l logger.Logger, c *clients.Clients, credentials map[string]string) (jumppad.Engine, error) {
+func createEngine(l logger.Logger, c *clients.Clients, defaultRegistry string, registryCredentials map[string]string) (jumppad.Engine, error) {
 	providers := config.NewProviders(c)
 
-	engine, err := jumppad.New(providers, l, credentials)
+	engine, err := jumppad.New(providers, l, defaultRegistry, registryCredentials)
 	if err != nil {
 		return nil, err
 	}
@@ -75,19 +75,12 @@ func Execute(v, c, d string) error {
 		}
 	}
 
-	credentials := map[string]string{}
-	for _, registries := range viper.Get("credentials").([]map[string]interface{}) {
-		for r, v := range registries {
-			c := v.([]map[string]interface{})[0]
-			if c["token"] != nil {
-				credentials[r] = c["token"].(string)
-			}
-		}
-	}
+	defaultRegistry := jumppad.GetDefaultRegistry()
+	registryCredentials := jumppad.GetRegistryCredentials()
 
 	engineClients, _ := clients.GenerateClients(l)
 
-	engine, _ := createEngine(l, engineClients, credentials)
+	engine, _ := createEngine(l, engineClients, defaultRegistry, registryCredentials)
 
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(outputCmd)
