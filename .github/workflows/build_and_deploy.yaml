@@ -224,8 +224,8 @@ jobs:
         publish-type: "Update"
         user: "jumppad"
         package: "jumppad"
-        version: ${{ needs.github_release.outputs.version }}
-        url: "https://github.com/jumppad-labs/jumppad/releases/download/${{ needs.github_release.outputs.version }}/jumppad_${{ needs.github_release.outputs.version }}_windows_x86_64.zip|x64"
+        version: ${{ needs.release.outputs.version }}
+        url: "https://github.com/jumppad-labs/jumppad/releases/download/${{ needs.release.outputs.version }}/jumppad_${{ needs.release.outputs.version }}_windows_x86_64.zip|x64"
         token: '${{ secrets.GH_TOKEN }}'
 
     - name: Send status to Discord
