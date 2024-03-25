@@ -21,8 +21,6 @@ type Build struct {
 
 	Registries []container.Image `hcl:"registry,block" json:"registries"` // Optional registry to push the image to
 
-	Cache Cache `hcl:"cache,block" json:"cache,omitempty"` // Optional cache to use for the build
-
 	// outputs
 
 	// Image is the full local reference of the built image

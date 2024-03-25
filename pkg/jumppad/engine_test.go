@@ -82,11 +82,11 @@ func TestApplyWithSingleFile(t *testing.T) {
 	require.ElementsMatch(t,
 		[]string{
 			"default",
+			"version",
+			"port_range",
 			"onprem",
 			"default",
 			"consul_config",
-			"port_range",
-			"version",
 		},
 		[]string{
 			getMetaFromMock(mp, 0).Name,
