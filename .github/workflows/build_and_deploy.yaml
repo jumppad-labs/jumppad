@@ -145,6 +145,8 @@ jobs:
           sudo apt-get -y upgrade
           sudo apt-get -y install podman
 
+          podman version
+
           # Start the Podman sock
           sudo nohup podman system service -t 0 > ./podman.log &
           sleep 10
