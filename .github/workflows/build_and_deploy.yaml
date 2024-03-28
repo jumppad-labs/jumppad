@@ -212,11 +212,21 @@ jobs:
 
     outputs:
       version: ${{ steps.setoutput.outputs.version }}
-  
+
+  sync_winget:
+    name: Sync winget-pkgs repo
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh repo sync jumppad-labs/winget-pkgs -b master
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
   winget:
     name: Publish to WinGet
     needs:
       - release
+      - sync_winget
     runs-on: windows-latest
     steps:
     - uses: jumppad-labs/winget-publish-action@v0.1.0
