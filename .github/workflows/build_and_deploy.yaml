@@ -141,9 +141,9 @@ jobs:
           curl -fsSL https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/xUbuntu_22.04/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/devel_kubic_libcontainers_unstable.gpg > /dev/null
           
           # Install Podman
-          apt-get update
-          apt-get -y upgrade
-          apt-get -y install podman
+          sudo apt-get update
+          sudo apt-get -y upgrade
+          sudo apt-get -y install podman
 
           # Start the Podman sock
           sudo nohup podman system service -t 0 > ./podman.log &
