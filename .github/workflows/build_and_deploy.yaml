@@ -136,19 +136,8 @@ jobs:
         run: |
           sudo mkdir -p /etc/apt/keyrings
 
-          # Debian Unstable/Sid
-          curl -fsSL https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/Debian_Unstable/Release.key \
-            | gpg --dearmor \
-            | sudo tee /etc/apt/keyrings/devel_kubic_libcontainers_unstable.gpg > /dev/null
-          echo \
-            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/devel_kubic_libcontainers_unstable.gpg]\
-              https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/Debian_Unstable/ /" \
-            | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:unstable.list > /dev/null
-
-          # Install Podman
-          sudo apt-get update
-          sudo apt-get -y upgrade
-          sudo apt-get -y install podman
+          wget http://ftp.us.debian.org/debian/pool/main/libp/libpod/podman_4.9.3+ds1-1_amd64.deb
+          sudo dpkg -i podman_4.9.3+ds1-1_amd64.deb
 
           # Start the Podman sock
           sudo nohup podman system service -t 0 > ./podman.log &
@@ -216,6 +205,9 @@ jobs:
   sync_winget:
     name: Sync winget-pkgs repo
     if: ${{ github.ref == 'refs/heads/main' }}
+    needs: 
+      - functional_test_docker
+      - functional_test_podman
     runs-on: ubuntu-latest
     steps:
       - run: gh repo sync jumppad-labs/winget-pkgs -b master
