@@ -51,7 +51,7 @@ jobs:
     needs: dagger_build
 
     strategy:
-      max-parallel: 2
+      max-parallel: 5
       fail-fast: false
       matrix:
         folder: [
@@ -83,11 +83,14 @@ jobs:
 
       - uses: actions/checkout@v2
       
-      - name: Run tests
-        run: |
-          jumppad check --non-interactive
-          jumppad purge --non-interactive
-          jumppad test --non-interactive ${{matrix.folder}}
+      - name: All
+        uses: dagger/dagger-for-github@v5
+        with:
+          verb: call
+          module: ./.dagger
+          args: functional-test --src=./examples --working-directory=${{matrix.folder}} --jumppad=/usr/local/bin/jumppad --runtime=docker
+          version: "0.9.9"
+          cloud-token: ${{ secrets.DAGGER_TOKEN }}
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
@@ -103,7 +106,7 @@ jobs:
     needs: dagger_build
 
     strategy:
-      max-parallel: 2
+      max-parallel: 5
       fail-fast: false
       matrix:
         folder: [
@@ -114,6 +117,9 @@ jobs:
           './examples/single_k3s_cluster',
           './examples/multiple_k3s_clusters',
           './examples/exec',
+          './examples/certificates',
+          './examples/terraform',
+          './examples/registries',
         ]
 
     steps:
@@ -132,35 +138,15 @@ jobs:
 
       - uses: actions/checkout@v2
       
-      - name: Install dependencies for Podman tests
-        run: |
-          sudo mkdir -p /etc/apt/keyrings
-
-          # Add Podman repository
-          echo 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/unstable/xUbuntu_22.04/ /' | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:unstable.list
-          curl -fsSL https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/xUbuntu_22.04/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/devel_kubic_libcontainers_unstable.gpg > /dev/null
-          
-          # Install Podman
-          sudo apt-get update
-          sudo apt-get -y upgrade
-          sudo apt-get -y install podman
-
-          podman version
-
-          # Start the Podman sock
-          sudo nohup podman system service -t 0 > ./podman.log &
-          sleep 10
-          sudo chmod +x /run/podman
-          sudo chmod 777 /run/podman/podman.sock
+      - name: All
+        uses: dagger/dagger-for-github@v5
+        with:
+          verb: call
+          module: ./.dagger
+          args: functional-test --src=./examples --working-directory=${{matrix.folder}} --jumppad=/usr/local/bin/jumppad --runtime=podman
+          version: "0.9.9"
+          cloud-token: ${{ secrets.DAGGER_TOKEN }}
       
-      - name: Run tests
-        run: |
-          jumppad check --non-interactive
-          jumppad purge --non-interactive
-          jumppad test --non-interactive ${{matrix.folder}}
-        env:
-          DOCKER_HOST: "unix:///run/podman/podman.sock"
-
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
         if: always()

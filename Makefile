@@ -1,38 +1,14 @@
 git_commit = $(shell git log -1 --pretty=format:"%H")
 
 test_unit:
-	go test -v -race ./...
+	dagger call -m "./.dagger" unit-test \
+		--src=. \
+		--with-race=false
 
 test_functional:
-	go run main.go purge
-	go run main.go test ./examples/container
-	
-	go run main.go purge
-	go run main.go test ./examples/build
-
-	go run main.go purge
-	go run main.go test ./examples/docs
-
-	go run main.go purge
-	go run main.go test ./examples/nomad
-
-	go run main.go purge
-	go run main.go test ./examples/single_k3s_cluster
-	
-	go run main.go purge
-	go run main.go test ./examples/multiple_k3s_clusters
-	
-	go run main.go purge
-	go run main.go test ./examples/exec
-	
-	go run main.go purge
-	go run main.go test ./examples/certificates
-	
-	go run main.go purge
-	go run main.go test ./examples/terraform
-	
-	go run main.go purge
-	go run main.go test ./examples/registiries
+	dagger call --mod=.dagger functional-test-all \
+		--src=/home/nicj/go/src/github.com/jumppad-labs/jumppad/examples \
+		--jumppad=$(which jumppad)
 
 test_e2e_cmd: install_local
 	jumppad up --no-browser ./examples/single_k3s_cluster
