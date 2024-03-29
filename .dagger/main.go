@@ -656,34 +656,67 @@ func (d *JumppadCI) FunctionalTestAll(
 		return d.lastError
 	}
 
+	cli := dag.Pipeline("functional-test-all")
+
 	// get the architecture of the current machine
-	platform, err := dag.DefaultPlatform(ctx)
+	platform, err := cli.DefaultPlatform(ctx)
 	if err != nil {
 		panic(err)
 	}
 
+	jobCount := len(functionalTests) * len(runtimes)
 	arch := strings.Split(string(platform), "/")[1]
+	jobs := make(chan job, jobCount)
+	errors := make(chan error, jobCount)
 
+	// start the workers
+	for w := 0; w < 1; w++ {
+		go startTestWorker(ctx, cli, jumppad, src, arch, jobs, errors)
+	}
+
+	// add the jobs
 	for _, runtime := range runtimes {
 		for _, ft := range functionalTests {
-			pl := dag.Pipeline("functional-test " + ft + " " + runtime)
+			jobs <- job{workingDirectory: ft, runtime: runtime}
+		}
+	}
+	close(jobs)
 
-			_, err := pl.Jumppad().
-				TestBlueprintWithBinary(
-					ctx,
-					src,
-					jumppad,
-					JumppadTestBlueprintWithBinaryOpts{WorkingDirectory: ft, Architecture: arch, Runtime: runtime, Cache: runtime},
-				)
-
-			if err != nil {
-				d.lastError = err
-				return err
-			}
+	for i := 0; i < jobCount; i++ {
+		err := <-errors
+		if err != nil {
+			d.lastError = err
+			return err
 		}
 	}
 
 	return nil
+}
+
+type job struct {
+	workingDirectory string
+	runtime          string
+}
+
+func startTestWorker(ctx context.Context, cli *Client, jumppad *File, src *Directory, arch string, jobs <-chan job, errors chan<- error) {
+	for j := range jobs {
+		wd := strings.TrimPrefix(j.workingDirectory, "/")
+		pl := cli.Pipeline("functional-test-" + wd + "-" + j.runtime)
+
+		_, err := pl.Jumppad().
+			TestBlueprintWithBinary(
+				ctx,
+				src,
+				jumppad,
+				JumppadTestBlueprintWithBinaryOpts{WorkingDirectory: j.workingDirectory, Architecture: arch, Runtime: j.runtime, Cache: j.runtime},
+			)
+
+		if err != nil {
+			errors <- err
+		}
+
+		errors <- nil
+	}
 }
 
 // FunctionalTest runs the functional tests for the jumppad binary
@@ -703,7 +736,9 @@ func (d *JumppadCI) FunctionalTest(
 	if d.hasError() {
 		return d.lastError
 	}
-	pl := dag.Pipeline("functional-test " + WorkingDirectory + " " + Runtime)
+
+	wd := strings.TrimPrefix(WorkingDirectory, "/")
+	pl := dag.Pipeline("functional-test-" + wd + "-" + Runtime)
 
 	// get the architecture of the current machine
 	platform, err := pl.DefaultPlatform(ctx)
