@@ -55,16 +55,16 @@ jobs:
       fail-fast: false
       matrix:
         folder: [
-          './examples/container',
-          './examples/build',
-          './examples/docs',
-          './examples/nomad',
-          './examples/single_k3s_cluster',
-          './examples/multiple_k3s_clusters',
-          './examples/exec',
-          './examples/certificates',
-          './examples/terraform',
-          './examples/registries',
+          '/container',
+          '/build',
+          '/docs',
+          '/nomad',
+          '/single_k3s_cluster',
+          '/multiple_k3s_clusters',
+          '/exec',
+          '/certificates',
+          '/terraform',
+          '/registries',
         ]
 
     steps:
@@ -110,16 +110,16 @@ jobs:
       fail-fast: false
       matrix:
         folder: [
-          './examples/container',
-          './examples/build',
-          './examples/docs',
-          './examples/nomad',
-          './examples/single_k3s_cluster',
-          './examples/multiple_k3s_clusters',
-          './examples/exec',
-          './examples/certificates',
-          './examples/terraform',
-          './examples/registries',
+          '/container',
+          '/build',
+          '/docs',
+          '/nomad',
+          '/single_k3s_cluster',
+          '/multiple_k3s_clusters',
+          '/exec',
+          '/certificates',
+          '/terraform',
+          '/registries',
         ]
 
     steps:
