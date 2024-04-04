@@ -5,10 +5,26 @@ test_unit:
 		--src=. \
 		--with-race=false
 
-test_functional:
+test_functional_all:
 	dagger call --mod=.dagger functional-test-all \
-		--src=/home/nicj/go/src/github.com/jumppad-labs/jumppad/examples \
+		--src=$(shell pwd)/examples \
 		--jumppad=$(which jumppad)
+
+test_functional_podman:
+	go build -ldflags "-X main.version=${git_commit}" -gcflags=all="-N -l" -o bin/jumppad main.go
+	dagger call --mod=.dagger functional-test \
+		--src=$(shell pwd)/examples \
+		--working-directory=registries \
+		--runtime=podman \
+		--jumppad=./bin/jumppad
+
+test_functional_docker:
+	go build -ldflags "-X main.version=${git_commit}" -gcflags=all="-N -l" -o bin/jumppad main.go
+	dagger call --mod=.dagger functional-test \
+		--src=$(shell pwd)/examples \
+		--working-directory=registries \
+		--runtime=docker \
+		--jumppad=./bin/jumppad
 
 test_e2e_cmd: install_local
 	jumppad up --no-browser ./examples/single_k3s_cluster

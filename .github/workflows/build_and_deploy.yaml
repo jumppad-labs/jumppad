@@ -119,7 +119,6 @@ jobs:
           '/exec',
           '/certificates',
           '/terraform',
-          '/registries',
         ]
 
     steps:
