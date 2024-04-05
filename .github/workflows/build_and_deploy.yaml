@@ -203,7 +203,7 @@ jobs:
       - functional_test_podman
     runs-on: ubuntu-latest
     steps:
-      - run: gh repo sync jumppad-labs/winget-pkgs -b master
+      - run: gh repo sync nicholasjackson/winget-pkgs -b master
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
