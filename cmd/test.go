@@ -221,7 +221,7 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 		sb := strings.Builder{}
 		l := logger.NewLogger(&sb, logger.LogLevelDebug)
 		dest := newDestroyCmd(cr.cli.Connector, l)
-		dest.SetArgs([]string{})
+		dest.SetArgs([]string{"--force"})
 
 		err = dest.Execute()
 		if err != nil {

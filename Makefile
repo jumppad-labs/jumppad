@@ -1,38 +1,30 @@
 git_commit = $(shell git log -1 --pretty=format:"%H")
 
 test_unit:
-	go test -v -race ./...
+	dagger call -m "./.dagger" unit-test \
+		--src=. \
+		--with-race=false
 
-test_functional:
-	go run main.go purge
-	go run main.go test ./examples/container
-	
-	go run main.go purge
-	go run main.go test ./examples/build
+test_functional_all:
+	dagger call --mod=.dagger functional-test-all \
+		--src=$(shell pwd)/examples \
+		--jumppad=$(which jumppad)
 
-	go run main.go purge
-	go run main.go test ./examples/docs
+test_functional_podman:
+	go build -ldflags "-X main.version=${git_commit}" -gcflags=all="-N -l" -o bin/jumppad main.go
+	dagger call --mod=.dagger functional-test \
+		--src=$(shell pwd)/examples \
+		--working-directory=registries \
+		--runtime=podman \
+		--jumppad=./bin/jumppad
 
-	go run main.go purge
-	go run main.go test ./examples/nomad
-
-	go run main.go purge
-	go run main.go test ./examples/single_k3s_cluster
-	
-	go run main.go purge
-	go run main.go test ./examples/multiple_k3s_clusters
-	
-	go run main.go purge
-	go run main.go test ./examples/exec
-	
-	go run main.go purge
-	go run main.go test ./examples/certificates
-	
-	go run main.go purge
-	go run main.go test ./examples/terraform
-	
-	go run main.go purge
-	go run main.go test ./examples/registiries
+test_functional_docker:
+	go build -ldflags "-X main.version=${git_commit}" -gcflags=all="-N -l" -o bin/jumppad main.go
+	dagger call --mod=.dagger functional-test \
+		--src=$(shell pwd)/examples \
+		--working-directory=registries \
+		--runtime=docker \
+		--jumppad=./bin/jumppad
 
 test_e2e_cmd: install_local
 	jumppad up --no-browser ./examples/single_k3s_cluster

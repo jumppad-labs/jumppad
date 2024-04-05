@@ -3,12 +3,16 @@
   "sdk": "go",
   "dependencies": [
     {
-      "name": "checksum",
-      "source": "github.com/jumppad-labs/daggerverse/checksum@49dff54b421df9844fec87766e3710138bc98914"
+      "name": "jumppad",
+      "source": "github.com/jumppad-labs/daggerverse/jumppad@b818a297c78f559e95190a1a19a30668abdd996f"
     },
     {
       "name": "brew",
       "source": "github.com/jumppad-labs/daggerverse/brew@0190848d9c2a55d275de79dd97fb4d25624bbcfd"
+    },
+    {
+      "name": "checksum",
+      "source": "github.com/jumppad-labs/daggerverse/checksum@49dff54b421df9844fec87766e3710138bc98914"
     },
     {
       "name": "deb",
@@ -17,10 +21,6 @@
     {
       "name": "github",
       "source": "github.com/jumppad-labs/daggerverse/github@0db72e1659d198fe446725bf1e895cd2b60b022b"
-    },
-    {
-      "name": "jumppad",
-      "source": "github.com/jumppad-labs/daggerverse/jumppad@862ddf584a73ef19dc14e3bedbfae56cb90b4e79"
     },
     {
       "name": "notorize",

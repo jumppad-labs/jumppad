@@ -1,4 +1,4 @@
-Feature: Remote Exec
+Feature: Remotely Executing Scripts
   In order to test remote exec capabilities
   I should apply a blueprint
   And test the output
