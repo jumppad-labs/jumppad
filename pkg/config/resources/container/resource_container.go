@@ -76,6 +76,12 @@ type Resources struct {
 	CPU    int   `hcl:"cpu,optional" json:"cpu,omitempty"`         // cpu limit for the container where 1 CPU = 1000
 	CPUPin []int `hcl:"cpu_pin,optional" json:"cpu_pin,omitempty"` // pin the container to one or more cpu cores
 	Memory int   `hcl:"memory,optional" json:"memory,omitempty"`   // max memory the container can consume in MB
+	GPU    *GPU  `hcl:"gpu,block" json:"gpu,omitempty"`            // GPU resource constraints
+}
+
+type GPU struct {
+	Driver    string   `hcl:"driver" json:"driver"`         // driver to use for the GPU
+	DeviceIDs []string `hcl:"device_ids" json:"device_ids"` // device ids to use for the GPU
 }
 
 type Capabilities struct {

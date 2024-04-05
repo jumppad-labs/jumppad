@@ -1,8 +1,30 @@
 # Change Log
 
-## version v0.10.1
-* Ensure that the total compute is set correctly	for Nomad clusters when 
-	running on Docker in Apple Silicon.
+## version v0.10.4
+
+## New Features:
+Enable experimental support for nvidia GPUs for container resources
+
+This feature configures the container to use the nvidia runtime and the nvidia
+device plugin to access the GPU.  Currently this has only been tested with WSL2 and
+Nvidia GPUs.
+
+```hcl
+resource "container" "gpu_test" {
+  image {
+    name = "nvcr.io/nvidia/k8s/cuda-sample:nbody"
+  }
+
+  command = ["nbody", "-gpu", "-benchmark"]
+
+  resources {
+    gpu {
+      driver     = "nvidia"
+      device_ids = ["0"]
+    }
+  }
+}
+```
 
 ## version v0.10.0
 
