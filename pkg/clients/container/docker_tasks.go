@@ -189,6 +189,17 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 		hc.Resources = rc
 	}
 
+	// Add GPU details
+	if c.Resources.GPU != nil {
+		hc.DeviceRequests = []container.DeviceRequest{
+			{
+				Driver:       c.Resources.GPU.Driver,
+				DeviceIDs:    c.Resources.GPU.DeviceIDs,
+				Capabilities: [][]string{[]string{"gpu", c.Resources.GPU.Driver, "compute"}},
+			},
+		}
+	}
+
 	// by default the container should NOT be attached to a network
 	nc.EndpointsConfig = make(map[string]*network.EndpointSettings)
 

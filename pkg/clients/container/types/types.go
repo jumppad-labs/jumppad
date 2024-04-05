@@ -49,6 +49,12 @@ type Resources struct {
 	CPU    int
 	CPUPin []int
 	Memory int
+	GPU    *GPU
+}
+
+type GPU struct {
+	Driver    string
+	DeviceIDs []string
 }
 
 // Volume defines a folder, Docker volume, or temp folder to mount to the Container

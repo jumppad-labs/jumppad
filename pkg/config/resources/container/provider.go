@@ -248,6 +248,10 @@ func (c *Provider) internalCreate(ctx context.Context, sidecar bool) error {
 			CPU:    c.config.Resources.CPU,
 			CPUPin: c.config.Resources.CPUPin,
 			Memory: c.config.Resources.Memory,
+			GPU: &types.GPU{
+				Driver:    c.config.Resources.GPU.Driver,
+				DeviceIDs: c.config.Resources.GPU.DeviceIDs,
+			},
 		}
 	}
 
