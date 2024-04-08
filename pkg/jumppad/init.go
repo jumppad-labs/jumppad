@@ -40,11 +40,11 @@ func init() {
 	config.RegisterResource(exec.TypeExec, &exec.Exec{}, &exec.Provider{})
 	config.RegisterResource(helm.TypeHelm, &helm.Helm{}, &helm.Provider{})
 	config.RegisterResource(ingress.TypeIngress, &ingress.Ingress{}, &ingress.Provider{})
-	config.RegisterResource(k8s.TypeK8sCluster, &k8s.K8sCluster{}, &k8s.ClusterProvider{})
-	config.RegisterResource(k8s.TypeK8sConfig, &k8s.K8sConfig{}, &k8s.ConfigProvider{})
+	config.RegisterResource(k8s.TypeK8sCluster, &k8s.Cluster{}, &k8s.ClusterProvider{})
+	config.RegisterResource(k8s.TypeK8sConfig, &k8s.Config{}, &k8s.ConfigProvider{})
 	// add alias for k8s
-	config.RegisterResource(k8s.TypeKubernetesCluster, &k8s.K8sCluster{}, &k8s.ClusterProvider{})
-	config.RegisterResource(k8s.TypeKubernetesConfig, &k8s.K8sConfig{}, &k8s.ConfigProvider{})
+	config.RegisterResource(k8s.TypeKubernetesCluster, &k8s.Cluster{}, &k8s.ClusterProvider{})
+	config.RegisterResource(k8s.TypeKubernetesConfig, &k8s.Config{}, &k8s.ConfigProvider{})
 
 	config.RegisterResource(network.TypeNetwork, &network.Network{}, &network.Provider{})
 	config.RegisterResource(nomad.TypeNomadCluster, &nomad.NomadCluster{}, &nomad.ClusterProvider{})

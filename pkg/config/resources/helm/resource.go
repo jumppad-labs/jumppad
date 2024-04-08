@@ -16,7 +16,7 @@ type Helm struct {
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 
-	Cluster k8s.K8sCluster `hcl:"cluster" json:"cluster"`
+	Cluster k8s.Cluster `hcl:"cluster" json:"cluster"`
 
 	// Optional HelmRepository, if specified will try to download the chart from the give repository
 	Repository *HelmRepository `hcl:"repository,block" json:"repository"`
