@@ -38,7 +38,7 @@ The following snippets are examples of things you can build with Jumppad, for mo
 
 ```hcl
 resource "network" "cloud" {
-  subnet = "10.5.0.0/16"
+  subnet = "10.5.0.0/24"
 }
 
 resource "k8s_cluster" "k3s" {
