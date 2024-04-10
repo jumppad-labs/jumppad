@@ -6,7 +6,7 @@ module "consul_dc1" {
   source = "./module_k3s"
 
   variables = {
-    network_id  = resource.network.cloud.id
+    network_id  = resource.network.cloud.meta.id
     consul_port = 18500
   }
 }
@@ -19,7 +19,7 @@ module "consul_dc2" {
   source = "./module_k3s"
 
   variables = {
-    network_id  = resource.network.cloud.id
+    network_id  = resource.network.cloud.meta.id
     consul_port = 18501
   }
 }

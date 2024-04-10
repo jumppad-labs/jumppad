@@ -3,6 +3,8 @@
 package mocks
 
 import (
+	context "context"
+
 	hclconfig "github.com/jumppad-labs/hclconfig"
 
 	mock "github.com/stretchr/testify/mock"
@@ -15,25 +17,25 @@ type Engine struct {
 	mock.Mock
 }
 
-// Apply provides a mock function with given fields: _a0
-func (_m *Engine) Apply(_a0 string) (*hclconfig.Config, error) {
-	ret := _m.Called(_a0)
+// Apply provides a mock function with given fields: _a0, _a1
+func (_m *Engine) Apply(_a0 context.Context, _a1 string) (*hclconfig.Config, error) {
+	ret := _m.Called(_a0, _a1)
 
 	var r0 *hclconfig.Config
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string) (*hclconfig.Config, error)); ok {
-		return rf(_a0)
+	if rf, ok := ret.Get(0).(func(context.Context, string) (*hclconfig.Config, error)); ok {
+		return rf(_a0, _a1)
 	}
-	if rf, ok := ret.Get(0).(func(string) *hclconfig.Config); ok {
-		r0 = rf(_a0)
+	if rf, ok := ret.Get(0).(func(context.Context, string) *hclconfig.Config); ok {
+		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*hclconfig.Config)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(_a0)
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(_a0, _a1)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -41,25 +43,25 @@ func (_m *Engine) Apply(_a0 string) (*hclconfig.Config, error) {
 	return r0, r1
 }
 
-// ApplyWithVariables provides a mock function with given fields: path, variables, variablesFile
-func (_m *Engine) ApplyWithVariables(path string, variables map[string]string, variablesFile string) (*hclconfig.Config, error) {
-	ret := _m.Called(path, variables, variablesFile)
+// ApplyWithVariables provides a mock function with given fields: ctx, path, variables, variablesFile
+func (_m *Engine) ApplyWithVariables(ctx context.Context, path string, variables map[string]string, variablesFile string) (*hclconfig.Config, error) {
+	ret := _m.Called(ctx, path, variables, variablesFile)
 
 	var r0 *hclconfig.Config
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string, map[string]string, string) (*hclconfig.Config, error)); ok {
-		return rf(path, variables, variablesFile)
+	if rf, ok := ret.Get(0).(func(context.Context, string, map[string]string, string) (*hclconfig.Config, error)); ok {
+		return rf(ctx, path, variables, variablesFile)
 	}
-	if rf, ok := ret.Get(0).(func(string, map[string]string, string) *hclconfig.Config); ok {
-		r0 = rf(path, variables, variablesFile)
+	if rf, ok := ret.Get(0).(func(context.Context, string, map[string]string, string) *hclconfig.Config); ok {
+		r0 = rf(ctx, path, variables, variablesFile)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*hclconfig.Config)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(string, map[string]string, string) error); ok {
-		r1 = rf(path, variables, variablesFile)
+	if rf, ok := ret.Get(1).(func(context.Context, string, map[string]string, string) error); ok {
+		r1 = rf(ctx, path, variables, variablesFile)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -83,13 +85,13 @@ func (_m *Engine) Config() *hclconfig.Config {
 	return r0
 }
 
-// Destroy provides a mock function with given fields:
-func (_m *Engine) Destroy() error {
-	ret := _m.Called()
+// Destroy provides a mock function with given fields: ctx, force
+func (_m *Engine) Destroy(ctx context.Context, force bool) error {
+	ret := _m.Called(ctx, force)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func() error); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(context.Context, bool) error); ok {
+		r0 = rf(ctx, force)
 	} else {
 		r0 = ret.Error(0)
 	}

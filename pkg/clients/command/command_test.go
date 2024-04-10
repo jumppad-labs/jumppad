@@ -36,11 +36,15 @@ func TestExecuteForgroundWithBasicParams(t *testing.T) {
 
 func TestExecuteForgroundLongRunningTimesOut(t *testing.T) {
 	command := "sh"
-	args := []string{"-c", "sleep 10s"}
+	args := []string{"-c", "sleep 10"}
 
 	if runtime.GOOS == "windows" {
 		command = "cmd.exe"
 		args = []string{"/c", "ping", "192.0.2.1", "-n", "1", "-w", "100000", ">NUL"}
+	}
+
+	if runtime.GOOS == "darwin" {
+		args = []string{"-c", "sleep 10"}
 	}
 
 	e := setupExecute(t)

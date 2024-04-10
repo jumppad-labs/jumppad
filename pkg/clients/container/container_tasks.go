@@ -17,7 +17,7 @@ import (
 //
 //go:generate mockery --name ContainerTasks --filename container_tasks.go
 type ContainerTasks interface {
-	SetForcePull(bool)
+	SetForce(bool)
 	// CreateContainer creates a new container for the given configuration
 	// if successful CreateContainer returns the ID of the created container and a nil error
 	// if not successful CreateContainer returns a blank string for the id and an error message
@@ -56,6 +56,8 @@ type ContainerTasks interface {
 	// If the force parameter is set then PullImage will pull regardless of the image already
 	// being cached locally.
 	PullImage(image types.Image, force bool) error
+	// PushImage pushes an image to the registry
+	PushImage(image types.Image) error
 	// FindContainerIDs returns the Container IDs for the given container name
 	FindContainerIDs(containerName string) ([]string, error)
 	// RemoveImage removes the image with the given id from the local registry
@@ -103,6 +105,9 @@ type ContainerTasks interface {
 
 	// CreateShell in the running container and attach
 	CreateShell(id string, command []string, stdin io.ReadCloser, stdout io.Writer, stderr io.Writer) error
+
+	// TagImage tags an image with the given tag
+	TagImage(source, destination string) error
 
 	// Returns basic information related to the Docker Engine
 	EngineInfo() *types.EngineInfo

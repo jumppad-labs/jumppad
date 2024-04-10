@@ -3,7 +3,9 @@
 package mocks
 
 import (
-	logger "github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	context "context"
+
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	mock "github.com/stretchr/testify/mock"
 
 	types "github.com/jumppad-labs/hclconfig/types"
@@ -38,13 +40,13 @@ func (_m *Provider) Changed() (bool, error) {
 	return r0, r1
 }
 
-// Create provides a mock function with given fields:
-func (_m *Provider) Create() error {
-	ret := _m.Called()
+// Create provides a mock function with given fields: ctx
+func (_m *Provider) Create(ctx context.Context) error {
+	ret := _m.Called(ctx)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func() error); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = rf(ctx)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -52,13 +54,13 @@ func (_m *Provider) Create() error {
 	return r0
 }
 
-// Destroy provides a mock function with given fields:
-func (_m *Provider) Destroy() error {
-	ret := _m.Called()
+// Destroy provides a mock function with given fields: ctx, force
+func (_m *Provider) Destroy(ctx context.Context, force bool) error {
+	ret := _m.Called(ctx, force)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func() error); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(context.Context, bool) error); ok {
+		r0 = rf(ctx, force)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -66,13 +68,13 @@ func (_m *Provider) Destroy() error {
 	return r0
 }
 
-// Init provides a mock function with given fields: _a0, _a1
-func (_m *Provider) Init(_a0 types.Resource, _a1 logger.Logger) error {
-	ret := _m.Called(_a0, _a1)
+// Init provides a mock function with given fields: cfg, log
+func (_m *Provider) Init(cfg types.Resource, log sdk.Logger) error {
+	ret := _m.Called(cfg, log)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(types.Resource, logger.Logger) error); ok {
-		r0 = rf(_a0, _a1)
+	if rf, ok := ret.Get(0).(func(types.Resource, sdk.Logger) error); ok {
+		r0 = rf(cfg, log)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -106,13 +108,13 @@ func (_m *Provider) Lookup() ([]string, error) {
 	return r0, r1
 }
 
-// Refresh provides a mock function with given fields:
-func (_m *Provider) Refresh() error {
-	ret := _m.Called()
+// Refresh provides a mock function with given fields: ctx
+func (_m *Provider) Refresh(ctx context.Context) error {
+	ret := _m.Called(ctx)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func() error); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = rf(ctx)
 	} else {
 		r0 = ret.Error(0)
 	}

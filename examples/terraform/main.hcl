@@ -8,7 +8,7 @@ resource "container" "vault" {
   }
 
   network {
-    id = resource.network.main.id
+    id = resource.network.main.meta.id
   }
 
   port {
@@ -23,7 +23,7 @@ resource "container" "vault" {
 
 resource "terraform" "configure_vault" {
   network {
-    id = resource.network.main.id
+    id = resource.network.main.meta.id
   }
 
   environment = {

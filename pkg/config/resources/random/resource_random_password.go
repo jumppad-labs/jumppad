@@ -10,7 +10,7 @@ const TypeRandomPassword string = "random_password"
 
 // allows the generation of random Passwords
 type RandomPassword struct {
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Length int64 `hcl:"length" json:"lenght"`
 
@@ -51,7 +51,7 @@ func (c *RandomPassword) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(c.ID)
+		r, _ := cfg.FindResource(c.Meta.ID)
 		if r != nil {
 			state := r.(*RandomPassword)
 			c.Value = state.Value

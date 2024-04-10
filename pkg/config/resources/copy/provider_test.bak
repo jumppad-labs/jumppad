@@ -36,7 +36,7 @@ func setupCopy(t *testing.T) (*config.Copy, *Copy) {
 func TestCopiesADirectory(t *testing.T) {
 	c, p := setupCopy(t)
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	require.NoError(t, err)
 
 	// check the destination
@@ -54,7 +54,7 @@ func TestCopiesASingleFile(t *testing.T) {
 	c.Source = path.Join(c.Source, "file1.txt")
 	c.Destination = path.Join(c.Destination, "file1.txt")
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	require.NoError(t, err)
 
 	// check the files
@@ -66,7 +66,7 @@ func TestCopiesADirectoryWithPermissions(t *testing.T) {
 	c, p := setupCopy(t)
 	c.Permissions = "0777"
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	require.NoError(t, err)
 
 	// check the destination
@@ -83,10 +83,10 @@ func TestCopiesADirectoryWithPermissions(t *testing.T) {
 func TestRemovesFiles(t *testing.T) {
 	c, p := setupCopy(t)
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	require.NoError(t, err)
 
-	err = p.Destroy()
+	err = p.Destroy(context.Background(),false)
 	require.NoError(t, err)
 
 	require.NoFileExists(t, path.Join(c.Destination, "file1.txt"))

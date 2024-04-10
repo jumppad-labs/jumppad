@@ -338,17 +338,17 @@ func (_m *ContainerTasks) ExecuteScript(id string, contents string, env []string
 	return r0, r1
 }
 
-// FindContainerIDs provides a mock function with given fields: fqdn
-func (_m *ContainerTasks) FindContainerIDs(fqdn string) ([]string, error) {
-	ret := _m.Called(fqdn)
+// FindContainerIDs provides a mock function with given fields: containerName
+func (_m *ContainerTasks) FindContainerIDs(containerName string) ([]string, error) {
+	ret := _m.Called(containerName)
 
 	var r0 []string
 	var r1 error
 	if rf, ok := ret.Get(0).(func(string) ([]string, error)); ok {
-		return rf(fqdn)
+		return rf(containerName)
 	}
 	if rf, ok := ret.Get(0).(func(string) []string); ok {
-		r0 = rf(fqdn)
+		r0 = rf(containerName)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]string)
@@ -356,7 +356,7 @@ func (_m *ContainerTasks) FindContainerIDs(fqdn string) ([]string, error) {
 	}
 
 	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(fqdn)
+		r1 = rf(containerName)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -468,6 +468,20 @@ func (_m *ContainerTasks) PullImage(image types.Image, force bool) error {
 	return r0
 }
 
+// PushImage provides a mock function with given fields: image
+func (_m *ContainerTasks) PushImage(image types.Image) error {
+	ret := _m.Called(image)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(types.Image) error); ok {
+		r0 = rf(image)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // RemoveContainer provides a mock function with given fields: id, force
 func (_m *ContainerTasks) RemoveContainer(id string, force bool) error {
 	ret := _m.Called(id, force)
@@ -510,9 +524,23 @@ func (_m *ContainerTasks) RemoveVolume(name string) error {
 	return r0
 }
 
-// SetForcePull provides a mock function with given fields: _a0
-func (_m *ContainerTasks) SetForcePull(_a0 bool) {
+// SetForce provides a mock function with given fields: _a0
+func (_m *ContainerTasks) SetForce(_a0 bool) {
 	_m.Called(_a0)
+}
+
+// TagImage provides a mock function with given fields: source, destination
+func (_m *ContainerTasks) TagImage(source string, destination string) error {
+	ret := _m.Called(source, destination)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(source, destination)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 type mockConstructorTestingTNewContainerTasks interface {

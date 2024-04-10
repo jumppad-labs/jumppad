@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: insecure
+  labels:
+    app: insecure
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: insecure
+  template:
+    metadata:
+      labels:
+        app: insecure
+    spec:
+      containers:
+      - name: insecure
+        image: "insecure.container.local.jmpd.in:5003/mine:v0.1.0"
+        ports:
+        - containerPort: 19092
+        env:
+        - name: LISTEN_ADDR
+          value: ":19092"
+        - name: MESSAGE
+          value: "Registry Insecure"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: insecure
+spec:
+  selector:
+    app: insecure
+  ports:
+    - protocol: TCP
+      port: 19092
+      targetPort: 19092

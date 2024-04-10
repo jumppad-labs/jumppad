@@ -6,6 +6,8 @@ import (
 	"net"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,24 +20,54 @@ import (
 )
 
 var suiteTemp string
-var suiteBinary string
 var suiteCertBundle *types.CertBundle
 var suiteOptions ConnectorOptions
 
+func getBinaryPath(t *testing.T) string {
+	currentLevel := 0
+	maxLevels := 10
+
+	// we are running from a test so use go run main.go as the command
+	dir, _ := os.Getwd()
+	// walk backwards until we find the go.mod
+	for {
+		files, err := os.ReadDir(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		for _, f := range files {
+			if strings.HasSuffix(f.Name(), "go.mod") {
+				fp, _ := filepath.Abs(dir)
+				// found the project root
+				file := filepath.Join(fp, "main.go")
+				return fmt.Sprintf("go run %s", file)
+			}
+		}
+
+		// check the parent
+		dir = filepath.Join(dir, "../")
+		fmt.Println(dir)
+		currentLevel++
+		if currentLevel > maxLevels {
+			t.Fatal("unable to find go.mod")
+		}
+	}
+}
+
 func TestConnectorSuite(t *testing.T) {
 	suiteTemp = t.TempDir()
-	suiteBinary = utils.GetJumppadBinaryPath()
 
-	home := os.Getenv(utils.HomeEnvName())
+	tmpBinary := getBinaryPath(t)
+
 	os.Setenv(utils.HomeEnvName(), suiteTemp)
-	t.Cleanup(func() {
-		os.Setenv(utils.HomeEnvName(), home)
-	})
 
-	suiteOptions.LogDirectory = os.TempDir()
-	suiteOptions.BinaryPath = suiteBinary
+	suiteOptions.LogDirectory = path.Join(suiteTemp, "logs")
+	suiteOptions.BinaryPath = tmpBinary
 	suiteOptions.GrpcBind = fmt.Sprintf(":%d", rand.Intn(1000)+20000)
 	suiteOptions.HTTPBind = fmt.Sprintf(":%d", rand.Intn(1000)+20000)
+
+	os.MkdirAll(suiteOptions.LogDirectory, os.ModePerm)
 
 	t.Run("Generates certificates", testGenerateCreatesBundle)
 	t.Run("Fetches certificates", testFetchesLocalCertBundle)
@@ -95,17 +127,24 @@ func testStartsConnector(t *testing.T) {
 	err := c.Start(suiteCertBundle)
 	assert.NoError(t, err)
 
+	logFile := path.Join(suiteTemp, "logs", "connector.log")
+
 	t.Cleanup(func() {
 		c.Stop()
+
+		if t.Failed() {
+			d, _ := os.ReadFile(logFile)
+			fmt.Println(string(d))
+		}
 	})
 
 	// check the logfile
-	assert.FileExists(t, path.Join(os.TempDir(), "connector.log"))
+	assert.FileExists(t, logFile)
 
 	// check is running
 	assert.Eventually(t, func() bool {
 		return c.IsRunning()
-	}, 3*time.Second, 100*time.Millisecond)
+	}, 15*time.Second, 100*time.Millisecond)
 }
 
 func testExposeServiceCallsExpose(t *testing.T) {

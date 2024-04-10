@@ -1,0 +1,5 @@
+# Is the installed version the latest version?
+TERRAFORM_LATEST=$(curl --fail --silent --show-error https://api.releases.hashicorp.com/v1/releases/terraform/latest | jq -r .version)
+TERRAFORM_CURRENT=$(terraform version -json | jq -r .terraform_version)
+validate string compare --gt $TERRAFORM_CURRENT $TERRAFORM_LATEST \
+  || validate fail "terraform binary is not the latest version"

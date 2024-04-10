@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth
+  labels:
+    app: auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth
+  template:
+    metadata:
+      labels:
+        app: auth
+    spec:
+      containers:
+      - name: auth
+        image: "auth-registry.demo.gs/mine:v0.1.0"
+        ports:
+        - containerPort: 19091
+        env:
+        - name: LISTEN_ADDR
+          value: ":19091"
+        - name: MESSAGE
+          value: "Registry With Auth"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth
+spec:
+  selector:
+    app: auth
+  ports:
+    - protocol: TCP
+      port: 19091
+      targetPort: 19091

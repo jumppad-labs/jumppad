@@ -1,27 +1,30 @@
 package nomad
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/clients/nomad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	"golang.org/x/xerrors"
 )
+
+var _ sdk.Provider = &JobProvider{}
 
 // NomadJob is a provider which enabled the creation and destruction
 // of Nomad jobs
 type JobProvider struct {
 	config *NomadJob
 	client nomad.Nomad
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *JobProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *JobProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	cli, err := clients.GenerateClients(l)
 	if err != nil {
 		return err
@@ -40,8 +43,13 @@ func (p *JobProvider) Init(cfg htypes.Resource, l logger.Logger) error {
 }
 
 // Create the Nomad jobs defined by the config
-func (p *JobProvider) Create() error {
-	p.log.Info("Create Nomad Job", "ref", p.config.ID, "files", p.config.Paths)
+func (p *JobProvider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping create, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
+	p.log.Info("Create Nomad Job", "ref", p.config.Meta.ID, "files", p.config.Paths)
 
 	nomadCluster := p.config.Cluster
 
@@ -63,15 +71,19 @@ func (p *JobProvider) Create() error {
 
 		for _, j := range p.config.HealthCheck.Jobs {
 			for {
+				if ctx.Err() != nil {
+					return fmt.Errorf("context cancelled, unable to wait for job health")
+				}
+
 				if time.Since(st) >= dur {
 					return xerrors.Errorf("timeout waiting for job '%s' to start", j)
 				}
 
-				p.log.Debug("Checking health for", "ref", p.config.ID, "job", j)
+				p.log.Debug("Checking health for", "ref", p.config.Meta.ID, "job", j)
 
 				s, err := p.client.JobRunning(j)
 				if err == nil && s {
-					p.log.Debug("Health passed for", "ref", p.config.ID, "job", j)
+					p.log.Debug("Health passed for", "ref", p.config.Meta.ID, "job", j)
 					break
 				}
 
@@ -93,8 +105,13 @@ func (p *JobProvider) Create() error {
 }
 
 // Destroy the Nomad jobs defined by the config
-func (p *JobProvider) Destroy() error {
-	p.log.Info("Destroy Nomad Job", "ref", p.config.ID)
+func (p *JobProvider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping destroy, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
+	p.log.Info("Destroy Nomad Job", "ref", p.config.Meta.ID)
 
 	nomadCluster := p.config.Cluster
 
@@ -115,7 +132,12 @@ func (p *JobProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (p *JobProvider) Refresh() error {
+func (p *JobProvider) Refresh(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping refresh, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	cp, err := p.getChangedPaths()
 	if err != nil {
 		return err
@@ -125,14 +147,14 @@ func (p *JobProvider) Refresh() error {
 		return nil
 	}
 
-	p.log.Info("Refresh Nomad Jobs", "ref", p.config.ID, "paths", cp)
+	p.log.Info("Refresh Nomad Jobs", "ref", p.config.Meta.ID, "paths", cp)
 
-	err = p.Destroy()
+	err = p.Destroy(ctx, false)
 	if err != nil {
 		return err
 	}
 
-	return p.Create()
+	return p.Create(context.Background())
 }
 
 func (p *JobProvider) Changed() (bool, error) {
@@ -142,7 +164,7 @@ func (p *JobProvider) Changed() (bool, error) {
 	}
 
 	if len(cp) > 0 {
-		p.log.Debug("Nomad jobs changed, needs refresh", "ref", p.config.ID)
+		p.log.Debug("Nomad jobs changed, needs refresh", "ref", p.config.Meta.ID)
 		return true, nil
 	}
 

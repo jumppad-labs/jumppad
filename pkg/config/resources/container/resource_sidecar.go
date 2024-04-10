@@ -13,7 +13,7 @@ const TypeSidecar string = "sidecar"
 // Sidecar defines a structure for creating Docker containers
 type Sidecar struct {
 	// embedded type holding name, etc
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Target Container `hcl:"target" json:"target"`
 
@@ -21,6 +21,7 @@ type Sidecar struct {
 	Entrypoint  []string          `hcl:"entrypoint,optional" json:"entrypoint,omitempty"`   // entrypoint to use when starting the container
 	Command     []string          `hcl:"command,optional" json:"command,omitempty"`         // command to use when starting the container
 	Environment map[string]string `hcl:"environment,optional" json:"environment,omitempty"` // environment variables to set when starting the container
+	Labels      map[string]string `hcl:"labels,optional" json:"labels,omitempty"`           // labels to set on the container
 	Volumes     []Volume          `hcl:"volume,block" json:"volumes,omitempty"`             // volumes to attach to the container
 
 	Privileged bool `hcl:"privileged,optional" json:"privileged,omitempty"` // run the container in privileged mode?
@@ -45,8 +46,7 @@ func (c *Sidecar) Process() error {
 	for i, v := range c.Volumes {
 		// make sure mount paths are absolute when type is bind
 		if v.Type == "" || v.Type == "bind" {
-			c.Volumes[i].Source = utils.EnsureAbsolute(v.Source, c.File)
-			c.Volumes[i].Destination = utils.EnsureAbsolute(v.Destination, c.File)
+			c.Volumes[i].Source = utils.EnsureAbsolute(v.Source, c.Meta.File)
 		}
 	}
 
@@ -55,7 +55,7 @@ func (c *Sidecar) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(c.ID)
+		r, _ := cfg.FindResource(c.Meta.ID)
 		if r != nil {
 			kstate := r.(*Sidecar)
 			c.ContainerName = kstate.ContainerName

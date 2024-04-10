@@ -33,16 +33,11 @@ resource "nomad_cluster" "dev" {
   datacenter = variable.datacenter
 
   network {
-    id = resource.network.cloud.id
+    id = resource.network.cloud.meta.id
   }
 
   copy_image {
     name = "consul:1.10.1"
-  }
-
-  volume {
-    source      = "/tmp"
-    destination = "/files"
   }
 }
 

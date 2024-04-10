@@ -9,10 +9,11 @@ import (
 
 // TypeK8sConfig defines the string type for the Kubernetes config resource
 const TypeK8sConfig string = "k8s_config"
+const TypeKubernetesConfig string = "kubernetes_config"
 
 // K8sConfig applies and deletes and deletes Kubernetes configuration
 type K8sConfig struct {
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Cluster K8sCluster `hcl:"cluster" json:"cluster"`
 
@@ -33,13 +34,13 @@ type K8sConfig struct {
 func (k *K8sConfig) Process() error {
 	// make all the paths absolute
 	for i, p := range k.Paths {
-		k.Paths[i] = utils.EnsureAbsolute(p, k.File)
+		k.Paths[i] = utils.EnsureAbsolute(p, k.Meta.File)
 	}
 
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(k.ID)
+		r, _ := cfg.FindResource(k.Meta.ID)
 		if r != nil {
 			state := r.(*K8sConfig)
 			k.JobChecksums = state.JobChecksums

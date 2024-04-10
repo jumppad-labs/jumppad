@@ -1,16 +1,19 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"os"
+	"os/signal"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
-	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/hclconfig/resources"
 	gvm "github.com/shipyard-run/version-manager"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients/connector"
@@ -73,7 +76,7 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 
 		if *force {
 			bp.SetForce(true)
-			dt.SetForcePull(true)
+			dt.SetForce(true)
 		}
 
 		// parse the vars into a map
@@ -132,7 +135,7 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 		}
 
 		if dst != "" {
-			cmd.Println("Running configuration from: ", dst)
+			cmd.Println("Running configuration from ", dst, " -- press ctrl c to cancel")
 			cmd.Println("")
 
 			if !utils.IsLocalFolder(dst) && !utils.IsHCLFile(dst) {
@@ -157,7 +160,21 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 			}
 		}()
 
-		res, err := e.ApplyWithVariables(dst, vars, *variablesFile)
+		// trap ctrl c
+		done := make(chan os.Signal, 1)
+		signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		go func() {
+			<-done // Will block here until user hits ctrl+c
+
+			// cancel the context
+			cancel()
+		}()
+
+		res, err := e.ApplyWithVariables(ctx, dst, vars, *variablesFile)
 		if err != nil {
 			return err
 		}
@@ -252,12 +269,12 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 			cmd.Println("")
 			cmd.Print(string(intro))
 
-			outputs := []*types.Output{}
-			os, _ := e.Config().FindResourcesByType(types.TypeOutput)
+			outputs := []*resources.Output{}
+			os, _ := e.Config().FindResourcesByType(resources.TypeOutput)
 			for _, o := range os {
 				// only grab the root outputs
 				if o.Metadata().Module == "" {
-					outputs = append(outputs, o.(*types.Output))
+					outputs = append(outputs, o.(*resources.Output))
 				}
 			}
 
@@ -268,15 +285,15 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 
 				maxLen := 0
 				for _, o := range outputs {
-					if len(o.Name) > maxLen {
-						maxLen = len(o.Name)
+					if len(o.Meta.Name) > maxLen {
+						maxLen = len(o.Meta.Name)
 					}
 				}
 
 				format := fmt.Sprintf(" * %%%ds: %%s\n", maxLen)
 
 				for _, o := range outputs {
-					fmt.Printf(format, o.Name, o.Value)
+					fmt.Printf(format, o.Meta.Name, o.Value)
 				}
 
 				cmd.Println("")

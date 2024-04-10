@@ -15,13 +15,14 @@ const TypeContainer string = "container"
 // Container defines a structure for creating Docker containers
 type Container struct {
 	// embedded type holding name, etc
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Networks        []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"`           // Attach to the correct network // only when Image is specified
 	Image           *Image              `hcl:"image,block" json:"image"`                          // Image to use for the container
 	Entrypoint      []string            `hcl:"entrypoint,optional" json:"entrypoint,omitempty"`   // Entrypoint to use when starting the container
 	Command         []string            `hcl:"command,optional" json:"command,omitempty"`         // Command to use when starting the container
 	Environment     map[string]string   `hcl:"environment,optional" json:"environment,omitempty"` // Environment variables to set when starting the container
+	Labels          map[string]string   `hcl:"labels,optional" json:"labels,omitempty"`           // Labels to set on the container
 	Volumes         []Volume            `hcl:"volume,block" json:"volumes,omitempty"`             // Volumes to attach to the container
 	Ports           []Port              `hcl:"port,block" json:"ports,omitempty"`                 // Ports to expose
 	PortRanges      []PortRange         `hcl:"port_range,block" json:"port_ranges,omitempty"`     // Range of ports to expose
@@ -75,6 +76,12 @@ type Resources struct {
 	CPU    int   `hcl:"cpu,optional" json:"cpu,omitempty"`         // cpu limit for the container where 1 CPU = 1000
 	CPUPin []int `hcl:"cpu_pin,optional" json:"cpu_pin,omitempty"` // pin the container to one or more cpu cores
 	Memory int   `hcl:"memory,optional" json:"memory,omitempty"`   // max memory the container can consume in MB
+	GPU    *GPU  `hcl:"gpu,block" json:"gpu,omitempty"`            // GPU resource constraints
+}
+
+type GPU struct {
+	Driver    string   `hcl:"driver" json:"driver"`         // driver to use for the GPU
+	DeviceIDs []string `hcl:"device_ids" json:"device_ids"` // device ids to use for the GPU
 }
 
 type Capabilities struct {
@@ -90,7 +97,7 @@ type Volume struct {
 	ReadOnly                    bool   `hcl:"read_only,optional" json:"read_only,omitempty"`                                           // specify that the volume is mounted read only
 	BindPropagation             string `hcl:"bind_propagation,optional" json:"bind_propagation,omitempty"`                             // propagation mode for bind mounts [shared, private, slave, rslave, rprivate]
 	BindPropagationNonRecursive bool   `hcl:"bind_propagation_non_recursive,optional" json:"bind_propagation_non_recursive,omitempty"` // recursive bind mount, default true
-	SelinuxRelabel              string `hcl:"selinux_relabel,optional" json:"selinux_relabel,optional"`                                // selinux_relabeling ["", shared, private]
+	SelinuxRelabel              string `hcl:"selinux_relabel,optional" json:"selinux_relabel,omitempty"`                               // selinux_relabeling ["", shared, private]
 }
 
 type Volumes []Volume
@@ -100,7 +107,7 @@ func (c *Container) Process() error {
 	for i, v := range c.Volumes {
 		// make sure mount paths are absolute when type is bind, unless this is the docker sock
 		if v.Type == "" || v.Type == "bind" {
-			c.Volumes[i].Source = utils.EnsureAbsolute(v.Source, c.File)
+			c.Volumes[i].Source = utils.EnsureAbsolute(v.Source, c.Meta.File)
 		}
 	}
 
@@ -116,7 +123,7 @@ func (c *Container) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(c.ID)
+		r, _ := cfg.FindResource(c.Meta.ID)
 		if r != nil {
 			kstate := r.(*Container)
 			c.ContainerName = kstate.ContainerName

@@ -15,7 +15,7 @@ const TypeNomadCluster string = "nomad_cluster"
 // Cluster is a config stanza which defines a Kubernetes or a Nomad cluster
 type NomadCluster struct {
 	// embedded type holding name, etc
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Networks      ctypes.NetworkAttachments `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 	Image         *ctypes.Image             `hcl:"image,block" json:"images,omitempty"`     // optional image to use for the cluster
@@ -35,6 +35,9 @@ type NomadCluster struct {
 	// Additional ports to expose on the nomad sever node
 	Ports      ctypes.Ports      `hcl:"port,block" json:"ports,omitempty"`             // ports to expose
 	PortRanges ctypes.PortRanges `hcl:"port_range,block" json:"port_ranges,omitempty"` // range of ports to expose
+
+	// Configuration for the drivers
+	Config *Config `hcl:"config,block" json:"config,omitempty"`
 
 	// Output Parameters
 
@@ -59,7 +62,20 @@ type NomadCluster struct {
 }
 
 const nomadBaseImage = "shipyardrun/nomad"
-const nomadBaseVersion = "1.6.1"
+const nomadBaseVersion = "1.7.5"
+
+type Config struct {
+	// Specifies configuration for the Docker driver.
+	DockerConfig *DockerConfig `hcl:"docker,block" json:"docker,omitempty"`
+}
+
+type DockerConfig struct {
+	// NoProxy is a list of docker registires that should be excluded from the image cache
+	NoProxy []string `hcl:"no_proxy,optional" json:"no-proxy,omitempty"`
+
+	// InsecureRegistries is a list of docker registries that should be treated as insecure
+	InsecureRegistries []string `hcl:"insecure_registries,optional" json:"insecure-registries,omitempty"`
+}
 
 func (n *NomadCluster) Process() error {
 	if n.Image == nil {
@@ -67,15 +83,15 @@ func (n *NomadCluster) Process() error {
 	}
 
 	if n.ServerConfig != "" {
-		n.ServerConfig = utils.EnsureAbsolute(n.ServerConfig, n.File)
+		n.ServerConfig = utils.EnsureAbsolute(n.ServerConfig, n.Meta.File)
 	}
 
 	if n.ClientConfig != "" {
-		n.ClientConfig = utils.EnsureAbsolute(n.ClientConfig, n.File)
+		n.ClientConfig = utils.EnsureAbsolute(n.ClientConfig, n.Meta.File)
 	}
 
 	if n.ConsulConfig != "" {
-		n.ConsulConfig = utils.EnsureAbsolute(n.ConsulConfig, n.File)
+		n.ConsulConfig = utils.EnsureAbsolute(n.ConsulConfig, n.Meta.File)
 	}
 
 	if n.Datacenter == "" {
@@ -85,7 +101,10 @@ func (n *NomadCluster) Process() error {
 	// Process volumes
 	// make sure mount paths are absolute
 	for i, v := range n.Volumes {
-		n.Volumes[i].Source = utils.EnsureAbsolute(v.Source, n.File)
+		if v.Type == "" || v.Type == "bind" {
+			// only change path for bind mounts
+			n.Volumes[i].Source = utils.EnsureAbsolute(v.Source, n.Meta.File)
+		}
 	}
 
 	// do we have an existing resource in the state?
@@ -93,7 +112,7 @@ func (n *NomadCluster) Process() error {
 	c, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := c.FindResource(n.ID)
+		r, _ := c.FindResource(n.Meta.ID)
 		if r != nil {
 			state := r.(*NomadCluster)
 			n.ExternalIP = state.ExternalIP

@@ -3,11 +3,11 @@ package resources
 import "github.com/jumppad-labs/hclconfig/types"
 
 type Feature struct {
-	types.ResourceMetadata `hcl:",remain" hclconfig:"alias=feature,omitlabel"`
+	types.ResourceBase `hcl:",remain" hclconfig:"alias=feature,omitlabel"`
 }
 
 type Test struct {
-	types.ResourceMetadata `hcl:",remain" hclconfig:"alias=test"`
+	types.ResourceBase `hcl:",remain" hclconfig:"alias=test"`
 }
 
 /*

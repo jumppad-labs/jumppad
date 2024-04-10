@@ -10,7 +10,7 @@ const TypeRandomNumber string = "random_number"
 
 // allows the generation of random numbers
 type RandomNumber struct {
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Minimum int `hcl:"minimum" json:"minimum"`
 	Maximum int `hcl:"maximum" json:"maximum"`
@@ -25,7 +25,7 @@ func (c *RandomNumber) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(c.ID)
+		r, _ := cfg.FindResource(c.Meta.ID)
 		if r != nil {
 			state := r.(*RandomNumber)
 			c.Value = state.Value

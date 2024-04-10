@@ -1,6 +1,7 @@
 package cert
 
 import (
+	"context"
 	"fmt"
 	"path"
 	"testing"
@@ -13,7 +14,7 @@ import (
 func setupCACert(t *testing.T) (*CertificateCA, *CAProvider) {
 	dir := t.TempDir()
 
-	ca := &CertificateCA{ResourceMetadata: types.ResourceMetadata{Name: "test"}}
+	ca := &CertificateCA{ResourceBase: types.ResourceBase{Meta: types.Meta{Name: "test"}}}
 	ca.Output = dir
 
 	p := &CAProvider{ca, logger.NewTestLogger(t)}
@@ -25,10 +26,10 @@ func setupLeafCert(t *testing.T) (*CertificateLeaf, *LeafProvider) {
 	dir := t.TempDir()
 	ca, p := setupCACert(t)
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	require.NoError(t, err)
 
-	cl := &CertificateLeaf{ResourceMetadata: types.ResourceMetadata{Name: "test"}}
+	cl := &CertificateLeaf{ResourceBase: types.ResourceBase{Meta: types.Meta{Name: "test"}}}
 	cl.Output = dir
 	cl.IPAddresses = []string{"127.0.0.1"}
 	cl.DNSNames = []string{"localhost"}
@@ -43,53 +44,53 @@ func setupLeafCert(t *testing.T) (*CertificateLeaf, *LeafProvider) {
 func TestGeneratesValidCA(t *testing.T) {
 	c, p := setupCACert(t)
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	require.NoError(t, err)
 
-	require.FileExists(t, path.Join(c.Output, fmt.Sprintf("%s.cert", c.Name)))
-	require.FileExists(t, path.Join(c.Output, fmt.Sprintf("%s.key", c.Name)))
-	require.FileExists(t, path.Join(c.Output, fmt.Sprintf("%s.pub", c.Name)))
-	require.FileExists(t, path.Join(c.Output, fmt.Sprintf("%s.ssh", c.Name)))
+	require.FileExists(t, path.Join(c.Output, fmt.Sprintf("%s.cert", c.Meta.Name)))
+	require.FileExists(t, path.Join(c.Output, fmt.Sprintf("%s.key", c.Meta.Name)))
+	require.FileExists(t, path.Join(c.Output, fmt.Sprintf("%s.pub", c.Meta.Name)))
+	require.FileExists(t, path.Join(c.Output, fmt.Sprintf("%s.ssh", c.Meta.Name)))
 }
 
 func TestDestroyCleansUpCA(t *testing.T) {
 	c, p := setupCACert(t)
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	require.NoError(t, err)
 
-	err = p.Destroy()
+	err = p.Destroy(context.Background(), false)
 	require.NoError(t, err)
 
-	require.NoFileExists(t, path.Join(c.Output, fmt.Sprintf("%s.cert", c.Name)))
-	require.NoFileExists(t, path.Join(c.Output, fmt.Sprintf("%s.key", c.Name)))
-	require.NoFileExists(t, path.Join(c.Output, fmt.Sprintf("%s.pub", c.Name)))
-	require.NoFileExists(t, path.Join(c.Output, fmt.Sprintf("%s.ssh", c.Name)))
+	require.NoFileExists(t, path.Join(c.Output, fmt.Sprintf("%s.cert", c.Meta.Name)))
+	require.NoFileExists(t, path.Join(c.Output, fmt.Sprintf("%s.key", c.Meta.Name)))
+	require.NoFileExists(t, path.Join(c.Output, fmt.Sprintf("%s.pub", c.Meta.Name)))
+	require.NoFileExists(t, path.Join(c.Output, fmt.Sprintf("%s.ssh", c.Meta.Name)))
 }
 
 func TestGeneratesValidLeaf(t *testing.T) {
 	c, p := setupLeafCert(t)
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	require.NoError(t, err)
 
-	require.FileExists(t, path.Join(c.Output, fmt.Sprintf("%s-leaf.cert", c.Name)))
-	require.FileExists(t, path.Join(c.Output, fmt.Sprintf("%s-leaf.key", c.Name)))
-	require.FileExists(t, path.Join(c.Output, fmt.Sprintf("%s-leaf.pub", c.Name)))
-	require.FileExists(t, path.Join(c.Output, fmt.Sprintf("%s-leaf.ssh", c.Name)))
+	require.FileExists(t, path.Join(c.Output, fmt.Sprintf("%s-leaf.cert", c.Meta.Name)))
+	require.FileExists(t, path.Join(c.Output, fmt.Sprintf("%s-leaf.key", c.Meta.Name)))
+	require.FileExists(t, path.Join(c.Output, fmt.Sprintf("%s-leaf.pub", c.Meta.Name)))
+	require.FileExists(t, path.Join(c.Output, fmt.Sprintf("%s-leaf.ssh", c.Meta.Name)))
 }
 
 func TestDestroyCleansUpLeaf(t *testing.T) {
 	c, p := setupLeafCert(t)
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	require.NoError(t, err)
 
-	err = p.Destroy()
+	err = p.Destroy(context.Background(), false)
 	require.NoError(t, err)
 
-	require.NoFileExists(t, path.Join(c.Output, fmt.Sprintf("%s-leaf.cert", c.Name)))
-	require.NoFileExists(t, path.Join(c.Output, fmt.Sprintf("%s-leaf.key", c.Name)))
-	require.NoFileExists(t, path.Join(c.Output, fmt.Sprintf("%s-leaf.pub", c.Name)))
-	require.NoFileExists(t, path.Join(c.Output, fmt.Sprintf("%s-leaf.ssh", c.Name)))
+	require.NoFileExists(t, path.Join(c.Output, fmt.Sprintf("%s-leaf.cert", c.Meta.Name)))
+	require.NoFileExists(t, path.Join(c.Output, fmt.Sprintf("%s-leaf.key", c.Meta.Name)))
+	require.NoFileExists(t, path.Join(c.Output, fmt.Sprintf("%s-leaf.pub", c.Meta.Name)))
+	require.NoFileExists(t, path.Join(c.Output, fmt.Sprintf("%s-leaf.ssh", c.Meta.Name)))
 }

@@ -1,20 +1,23 @@
 package random
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 )
+
+var _ sdk.Provider = &RandomNumberProvider{}
 
 // RandomNumber is a random number provider
 type RandomNumberProvider struct {
 	config *RandomNumber
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *RandomNumberProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *RandomNumberProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*RandomNumber)
 	if !ok {
 		return fmt.Errorf("unable to initialize RandomNumber provider, resource is not of type RandomNumber")
@@ -26,18 +29,18 @@ func (p *RandomNumberProvider) Init(cfg htypes.Resource, l logger.Logger) error 
 	return nil
 }
 
-func (p *RandomNumberProvider) Create() error {
-	p.log.Info("Creating random number", "ref", p.config.ID)
+func (p *RandomNumberProvider) Create(ctx context.Context) error {
+	p.log.Info("Creating random number", "ref", p.config.Meta.ID)
 
 	number := rand.Intn(p.config.Maximum-p.config.Minimum) + p.config.Minimum
-	p.log.Debug("Generated random number", "ref", p.config.ID, "number", number)
+	p.log.Debug("Generated random number", "ref", p.config.Meta.ID, "number", number)
 
 	p.config.Value = number
 
 	return nil
 }
 
-func (p *RandomNumberProvider) Destroy() error {
+func (p *RandomNumberProvider) Destroy(ctx context.Context, force bool) error {
 	return nil
 }
 
@@ -45,12 +48,12 @@ func (p *RandomNumberProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (p *RandomNumberProvider) Refresh() error {
+func (p *RandomNumberProvider) Refresh(ctx context.Context) error {
 	return nil
 }
 
 func (p *RandomNumberProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.ID)
+	p.log.Debug("Checking changes", "ref", p.config.Meta.ID)
 
 	return false, nil
 }

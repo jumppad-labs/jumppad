@@ -36,7 +36,7 @@ func newPushCmd(ct container.ContainerTasks, kc ck8s.Kubernetes, ht http.HTTP, n
 			}
 
 			if force == true {
-				ct.SetForcePull(true)
+				ct.SetForce(true)
 			}
 
 			image := args[0]
@@ -105,7 +105,7 @@ func pushNomadCluster(image string, c *nomad.NomadCluster, ct container.Containe
 
 	// get the id of the cluster
 
-	log.Info("Pushing to container", "ref", c.ID, "image", image)
+	log.Info("Pushing to container", "ref", c.Meta.ID, "image", image)
 	err := cl.ImportLocalDockerImages([]types.Image{types.Image{Name: strings.Trim(image, " ")}}, force)
 	if err != nil {
 		return xerrors.Errorf("Error pushing image: %w ", err)

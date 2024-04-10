@@ -4,6 +4,7 @@ import (
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
 	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 // TypeDocs is the resource string for a Docs resource
@@ -12,7 +13,7 @@ const TypeDocs string = "docs"
 // Docs allows the running of a Docusaurus container which can be used for
 // online tutorials or documentation
 type Docs struct {
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Networks ctypes.NetworkAttachments `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
@@ -31,6 +32,10 @@ type Docs struct {
 	// ContainerName is the fully qualified resource name for the container, this can be used
 	// to access the container from other sources
 	ContainerName string `hcl:"fqdn,optional" json:"fqdn,omitempty"`
+
+	// ContentChecksum is the checksum of the content directory, this is used to determine if the
+	// docs need to be recreated
+	ContentChecksum string `hcl:"content_checksum,optional" json:"content_checksum,omitempty"`
 }
 
 type Logo struct {
@@ -45,15 +50,20 @@ func (d *Docs) Process() error {
 		d.Port = 80
 	}
 
+	if d.Assets != "" {
+		d.Assets = utils.EnsureAbsolute(d.Assets, d.Meta.File)
+	}
+
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(d.ID)
+		r, _ := cfg.FindResource(d.Meta.ID)
 		if r != nil {
 			kstate := r.(*Docs)
 			d.ContainerName = kstate.ContainerName
+			d.ContentChecksum = kstate.ContentChecksum
 		}
 	}
 

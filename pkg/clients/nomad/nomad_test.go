@@ -2,6 +2,7 @@ package nomad
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -260,7 +261,7 @@ func TestNomadHealthCallsAPI(t *testing.T) {
 
 	c.SetConfig("local", 4646, 2)
 
-	err := c.HealthCheckAPI(10 * time.Millisecond)
+	err := c.HealthCheckAPI(context.Background(), 10*time.Millisecond)
 	assert.NoError(t, err)
 }
 
@@ -286,7 +287,7 @@ func TestNomadHealthWithNotReadyNodeRetries(t *testing.T) {
 		nil,
 	).Once()
 
-	err := c.HealthCheckAPI(10 * time.Millisecond)
+	err := c.HealthCheckAPI(context.Background(), 10*time.Millisecond)
 	assert.NoError(t, err)
 	mh.AssertNumberOfCalls(t, "Do", 2)
 }
@@ -313,7 +314,7 @@ func TestNomadHealthWithNotReadyDockerRetries(t *testing.T) {
 		nil,
 	).Once()
 
-	err := c.HealthCheckAPI(10 * time.Millisecond)
+	err := c.HealthCheckAPI(context.Background(), 10*time.Millisecond)
 	assert.NoError(t, err)
 	mh.AssertNumberOfCalls(t, "Do", 2)
 }
@@ -327,7 +328,7 @@ func TestNomadHealthErrorsOnClientError(t *testing.T) {
 		fmt.Errorf("boom"),
 	)
 
-	err := c.HealthCheckAPI(10 * time.Millisecond)
+	err := c.HealthCheckAPI(context.Background(), 10*time.Millisecond)
 	assert.Error(t, err)
 }
 

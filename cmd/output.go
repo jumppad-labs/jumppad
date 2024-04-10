@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/hokaccha/go-prettyjson"
-	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/hclconfig/resources"
 	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/spf13/cobra"
 )
@@ -28,9 +28,9 @@ var outputCmd = &cobra.Command{
 		out := map[string]interface{}{}
 		// get the output variables
 		for _, r := range cfg.Resources {
-			if r.Metadata().Type == types.TypeOutput {
+			if r.Metadata().Type == resources.TypeOutput {
 				// don't output when disabled
-				if r.Metadata().Disabled {
+				if r.GetDisabled() {
 					continue
 				}
 
@@ -38,10 +38,10 @@ var outputCmd = &cobra.Command{
 					continue
 				}
 
-				out[r.Metadata().Name] = r.(*types.Output).Value
+				out[r.Metadata().Name] = r.(*resources.Output).Value
 
 				if len(args) > 0 && strings.EqualFold(args[0], r.Metadata().Name) {
-					d, _ := json.Marshal(r.(*types.Output).Value)
+					d, _ := json.Marshal(r.(*resources.Output).Value)
 					fmt.Printf("%s", string(d))
 					return
 				}

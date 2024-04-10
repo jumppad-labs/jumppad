@@ -1,14 +1,15 @@
 package build
 
 import (
+	"context"
 	"fmt"
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	"golang.org/x/xerrors"
 )
 
@@ -16,11 +17,11 @@ import (
 type Provider struct {
 	config *Build
 	client container.ContainerTasks
-	log    logger.Logger
+	log    sdk.Logger
 }
 
 // NewBuild creates a null noop provider
-func (b *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (b *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*Build)
 	if !ok {
 		return fmt.Errorf("unable to initialize Build provider, resource is not of type Build")
@@ -38,7 +39,12 @@ func (b *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
 	return nil
 }
 
-func (b *Provider) Create() error {
+func (b *Provider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		b.log.Debug("Context cancelled, skipping build", "ref", b.config.Meta.ID)
+		return nil
+	}
+
 	// calculate the hash
 	hash, err := utils.HashDir(b.config.Container.Context, b.config.Container.Ignore...)
 	if err != nil {
@@ -51,7 +57,7 @@ func (b *Provider) Create() error {
 		"Building image",
 		"context", b.config.Container.Context,
 		"dockerfile", b.config.Container.DockerFile,
-		"image", fmt.Sprintf("jumppad.dev/localcache/%s:%s", b.config.Name, tag),
+		"image", fmt.Sprintf("jumppad.dev/localcache/%s:%s", b.config.Meta.Name, tag),
 	)
 
 	force := false
@@ -60,7 +66,7 @@ func (b *Provider) Create() error {
 	}
 
 	build := &types.Build{
-		Name:       b.config.Name,
+		Name:       b.config.Meta.Name,
 		DockerFile: b.config.Container.DockerFile,
 		Context:    b.config.Container.Context,
 		Ignore:     b.config.Container.Ignore,
@@ -83,13 +89,13 @@ func (b *Provider) Create() error {
 	}
 
 	// clean up the previous builds only leaving the last 3
-	ids, err := b.client.FindImagesInLocalRegistry(fmt.Sprintf("jumppad.dev/localcache/%s", b.config.Name))
+	ids, err := b.client.FindImagesInLocalRegistry(fmt.Sprintf("jumppad.dev/localcache/%s", b.config.Meta.Name))
 	if err != nil {
 		return xerrors.Errorf("unable to query local registry for images: %w", err)
 	}
 
 	for i := 3; i < len(ids); i++ {
-		b.log.Debug("Remove image", "ref", b.config.ID, "id", ids[i])
+		b.log.Debug("Remove image", "ref", b.config.Meta.ID, "id", ids[i])
 
 		err := b.client.RemoveImage(ids[i])
 		if err != nil {
@@ -97,11 +103,28 @@ func (b *Provider) Create() error {
 		}
 	}
 
+	// if we have a registry, push the image
+	for _, r := range b.config.Registries {
+		// first tag the image
+		b.log.Debug("Tag image", "ref", b.config.Meta.ID, "name", b.config.Image, "tag", r.Name)
+		err = b.client.TagImage(b.config.Image, r.Name)
+		if err != nil {
+			return xerrors.Errorf("unable to tag image: %w", err)
+		}
+
+		// push the image
+		b.log.Debug("Push image", "ref", b.config.Meta.ID, "tag", r.Name)
+		err = b.client.PushImage(types.Image{Name: r.Name, Username: r.Username, Password: r.Password})
+		if err != nil {
+			return xerrors.Errorf("unable to push image: %w", err)
+		}
+	}
+
 	return nil
 }
 
-func (b *Provider) Destroy() error {
-	b.log.Info("Destroy Build", "ref", b.config.ID)
+func (b *Provider) Destroy(ctx context.Context, force bool) error {
+	b.log.Info("Destroy Build", "ref", b.config.Meta.ID)
 
 	return nil
 }
@@ -110,7 +133,12 @@ func (b *Provider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (b *Provider) Refresh() error {
+func (b *Provider) Refresh(ctx context.Context) error {
+	if ctx.Err() != nil {
+		b.log.Debug("Context cancelled, skipping refresh", "ref", b.config.Meta.ID)
+		return nil
+	}
+
 	// calculate the hash
 	changed, err := b.hasChanged()
 	if err != nil {
@@ -119,12 +147,12 @@ func (b *Provider) Refresh() error {
 
 	if changed {
 		b.log.Info("Build status changed, rebuild")
-		err := b.Destroy()
+		err := b.Destroy(ctx, false)
 		if err != nil {
 			return xerrors.Errorf("unable to destroy existing container: %w", err)
 		}
 
-		return b.Create()
+		return b.Create(ctx)
 	}
 	return nil
 }
@@ -136,7 +164,7 @@ func (b *Provider) Changed() (bool, error) {
 	}
 
 	if changed {
-		b.log.Debug("Build has changed, requires refresh", "ref", b.config.ID)
+		b.log.Debug("Build has changed, requires refresh", "ref", b.config.Meta.ID)
 		return true, nil
 	}
 
@@ -170,7 +198,7 @@ func (b *Provider) copyOutputs() error {
 		Command:    []string{"tail", "-f", "/dev/null"},
 	}
 
-	b.log.Debug("Creating container to copy files", "ref", b.config.ID, "name", b.config.Image)
+	b.log.Debug("Creating container to copy files", "ref", b.config.Meta.ID, "name", b.config.Image)
 	id, err := b.client.CreateContainer(&c)
 	if err != nil {
 		return err
@@ -178,12 +206,12 @@ func (b *Provider) copyOutputs() error {
 
 	// always remove the temp container
 	defer func() {
-		b.log.Debug("Remove copy container", "ref", b.config.ID, "name", b.config.Image)
+		b.log.Debug("Remove copy container", "ref", b.config.Meta.ID, "name", b.config.Image)
 		b.client.RemoveContainer(id, true)
 	}()
 
 	for _, copy := range b.config.Outputs {
-		b.log.Debug("Copy file from container", "ref", b.config.ID, "source", copy.Source, "destination", copy.Destination)
+		b.log.Debug("Copy file from container", "ref", b.config.Meta.ID, "source", copy.Source, "destination", copy.Destination)
 		err := b.client.CopyFromContainer(id, copy.Source, copy.Destination)
 		if err != nil {
 			return err

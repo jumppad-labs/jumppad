@@ -42,7 +42,7 @@ func TestIngressExposeLocalErrorsWhenUnableToFindDependencies(t *testing.T) {
 
 	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 }
 
@@ -56,7 +56,7 @@ func TestIngressExposeLocalErrorsWhenInvalidName(t *testing.T) {
 
 	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 }
 
@@ -70,7 +70,7 @@ func TestIngressExposeLocalErrorsWhenInvalidPort(t *testing.T) {
 
 	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 }
 
@@ -84,14 +84,14 @@ func TestIngressExposeLocalErrorsWhenPortReserved(t *testing.T) {
 
 	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 
 	tc.Source.Config.Port = "60001"
 
 	p = NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
-	err = p.Create()
+	err = p.Create(context.Background())
 	assert.Error(t, err)
 }
 
@@ -105,7 +105,7 @@ func TestIngressExposeLocalErrorsWhenInvalidAddress(t *testing.T) {
 
 	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 }
 
@@ -120,7 +120,7 @@ func TestIngressExposeLocalCallsExpose(t *testing.T) {
 
 	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.NoError(t, err)
 
 	port, _ := strconv.Atoi(tc.Source.Config.Port)
@@ -145,7 +145,7 @@ func TestIngressExposeRemoteErrorsWhenUnableToFindDependencies(t *testing.T) {
 
 	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 }
 
@@ -159,7 +159,7 @@ func TestIngressExposeRemoteErrorsWhenNoDestinationAddress(t *testing.T) {
 
 	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 }
 
@@ -173,7 +173,7 @@ func TestIngressExposeRemoteErrorsWhenUnableToParsePort(t *testing.T) {
 
 	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 }
 
@@ -187,14 +187,14 @@ func TestIngressExposeRemoteErrorsWhenReservedPort(t *testing.T) {
 
 	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.Error(t, err)
 
 	tc.Source.Config.Port = "30002"
 
 	p = NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
-	err = p.Create()
+	err = p.Create(context.Background())
 	assert.Error(t, err)
 }
 
@@ -209,7 +209,7 @@ func TestIngressExposeRemoteCallsExpose(t *testing.T) {
 
 	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	assert.NoError(t, err)
 
 	port, _ := strconv.Atoi(tc.Source.Config.Port)
@@ -233,7 +233,7 @@ func TestIngressDestroyCallsRemove(t *testing.T) {
 
 	p := NewIngress(&tc, md, mc, clients.NewTestLogger(t))
 
-	err := p.Destroy()
+	err := p.Destroy(context.Background(),false)
 	assert.NoError(t, err)
 
 	mc.AssertCalled(t, "RemoveService", "12345")

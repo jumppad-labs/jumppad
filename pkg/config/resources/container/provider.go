@@ -2,6 +2,7 @@ package container
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"path"
@@ -15,6 +16,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/http"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 
 // Container is a provider for creating and destroying Docker containers
@@ -26,7 +28,7 @@ type Provider struct {
 	log        logger.Logger
 }
 
-func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	cli, err := clients.GenerateClients(l)
 	if err != nil {
 		return err
@@ -39,13 +41,14 @@ func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
 	cs, sok := cfg.(*Sidecar)
 	if sok {
 		co := &Container{}
-		co.ResourceMetadata = cs.ResourceMetadata
+		co.ResourceBase = cs.ResourceBase
 		co.ContainerName = cs.ContainerName
 
 		co.Networks = []NetworkAttachment{{ID: cs.Target.ContainerName}}
 		co.Volumes = cs.Volumes
 		co.Command = cs.Command
 		co.Entrypoint = cs.Entrypoint
+		co.Labels = cs.Labels
 		co.Environment = cs.Environment
 		co.HealthCheck = cs.HealthCheck
 		co.Image = &cs.Image
@@ -68,10 +71,15 @@ func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
 }
 
 // Create implements provider method and creates a Docker container with the given config
-func (p *Provider) Create() error {
-	p.log.Info("Creating Container", "ref", p.config.ID)
+func (p *Provider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context cancelled, skipping container", "ref", p.config.Meta.ID)
+		return nil
+	}
 
-	err := p.internalCreate(p.sidecar != nil)
+	p.log.Info("Creating Container", "ref", p.config.Meta.ID)
+
+	err := p.internalCreate(ctx, p.sidecar != nil)
 	if err != nil {
 		return err
 	}
@@ -89,53 +97,63 @@ func (p *Provider) Lookup() ([]string, error) {
 	return p.client.FindContainerIDs(p.config.ContainerName)
 }
 
-func (c *Provider) Refresh() error {
+func (c *Provider) Refresh(ctx context.Context) error {
+	if ctx.Err() != nil {
+		c.log.Debug("Context cancelled, skipping container refresh", "ref", c.config.Meta.ID)
+		return nil
+	}
+
 	changed, err := c.Changed()
 	if err != nil {
 		return err
 	}
 
 	if changed {
-		c.log.Debug("Refresh Container", "ref", c.config.ID)
-		err := c.Destroy()
+		c.log.Debug("Refresh Container", "ref", c.config.Meta.ID)
+		err := c.Destroy(ctx, false)
 		if err != nil {
 			return err
 		}
 
-		return c.Create()
+		return c.Create(ctx)
 	}
 
 	return nil
 }
 
 // Destroy stops and removes the container
-func (c *Provider) Destroy() error {
-	c.log.Info("Destroy Container", "ref", c.config.ID)
+func (c *Provider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		c.log.Debug("Context cancelled, skipping container destroy", "ref", c.config.Meta.ID)
+		return nil
+	}
 
-	return c.internalDestroy()
+	c.log.Info("Destroy Container", "ref", c.config.Meta.ID)
+
+	return c.internalDestroy(ctx, force)
 }
 
 func (c *Provider) Changed() (bool, error) {
 	// has the image id changed
 	id, err := c.client.FindImageInLocalRegistry(types.Image{Name: c.config.Image.Name})
 	if err != nil {
-		c.log.Error("Unable to lookup image in local registry", "ref", c.config.ID, "error", err)
+		c.log.Error("Unable to lookup image in local registry", "ref", c.config.Meta.ID, "error", err)
 		return false, err
 	}
 
 	// check that the current registry id for the image is the same
 	// as the image that was used to create this container
 	if id != c.config.Image.ID {
-		c.log.Debug("Container image changed, needs refresh", "ref", c.config.ID)
+		c.log.Debug("Container image changed, needs refresh", "ref", c.config.Meta.ID)
 		return true, nil
 	}
 
 	return false, nil
 }
 
-func (c *Provider) internalCreate(sidecar bool) error {
+func (c *Provider) internalCreate(ctx context.Context, sidecar bool) error {
 	// set the fqdn
-	fqdn := utils.FQDN(c.config.Name, c.config.Module, c.config.Type)
+	fqdn := utils.FQDN(c.config.Meta.Name, c.config.Meta.Module, c.config.Meta.Type)
 	c.config.ContainerName = fqdn
 
 	if c.config.Image == nil {
@@ -151,7 +169,7 @@ func (c *Provider) internalCreate(sidecar bool) error {
 
 	err := c.client.PullImage(img, false)
 	if err != nil {
-		c.log.Error("Error pulling container image", "ref", c.config.ID, "image", c.config.Image.Name)
+		c.log.Error("Error pulling container image", "ref", c.config.Meta.ID, "image", c.config.Image.Name)
 
 		return err
 	}
@@ -159,7 +177,7 @@ func (c *Provider) internalCreate(sidecar bool) error {
 	// update the image ID
 	id, err := c.client.FindImageInLocalRegistry(img)
 	if err != nil {
-		c.log.Error("Unable to lookup image in local registry", "ref", c.config.ID, "error", err)
+		c.log.Error("Unable to lookup image in local registry", "ref", c.config.Meta.ID, "error", err)
 		return err
 	}
 
@@ -172,6 +190,7 @@ func (c *Provider) internalCreate(sidecar bool) error {
 		Entrypoint:      c.config.Entrypoint,
 		Command:         c.config.Command,
 		Environment:     c.config.Environment,
+		Labels:          c.config.Labels,
 		DNS:             c.config.DNS,
 		Privileged:      c.config.Privileged,
 		MaxRestartCount: c.config.MaxRestartCount,
@@ -230,6 +249,13 @@ func (c *Provider) internalCreate(sidecar bool) error {
 			CPUPin: c.config.Resources.CPUPin,
 			Memory: c.config.Resources.Memory,
 		}
+
+		if c.config.Resources.GPU != nil {
+			new.Resources.GPU = &types.GPU{
+				Driver:    c.config.Resources.GPU.Driver,
+				DeviceIDs: c.config.Resources.GPU.DeviceIDs,
+			}
+		}
 	}
 
 	if c.config.RunAs != nil {
@@ -241,7 +267,7 @@ func (c *Provider) internalCreate(sidecar bool) error {
 
 	id, err = c.client.CreateContainer(&new)
 	if err != nil {
-		c.log.Error("Unable to create container", "ref", c.config.ID, "error", err)
+		c.log.Error("Unable to create container", "ref", c.config.Meta.ID, "error", err)
 		return err
 	}
 
@@ -302,7 +328,7 @@ func (c *Provider) internalCreate(sidecar bool) error {
 	}
 
 	for _, hc := range c.config.HealthCheck.Exec {
-		err := c.runExecHealthCheck(id, hc.Command, hc.Script, hc.ExitCode, timeout)
+		err := c.runExecHealthCheck(ctx, id, hc.Command, hc.Script, hc.ExitCode, timeout)
 		if err != nil {
 			return err
 		}
@@ -311,7 +337,7 @@ func (c *Provider) internalCreate(sidecar bool) error {
 	return nil
 }
 
-func (c *Provider) runExecHealthCheck(id string, command []string, script string, exitCode int, timeout time.Duration) error {
+func (c *Provider) runExecHealthCheck(ctx context.Context, id string, command []string, script string, exitCode int, timeout time.Duration) error {
 	if len(script) > 0 {
 		// write the script to a temp file
 		dir, err := os.MkdirTemp(os.TempDir(), "script*")
@@ -339,6 +365,11 @@ func (c *Provider) runExecHealthCheck(id string, command []string, script string
 	st := time.Now()
 
 	for {
+		if ctx.Err() != nil {
+			c.log.Debug("Context cancelled, skipping exec health check", "ref", c.config.Meta.ID)
+			return nil
+		}
+
 		if time.Since(st) > timeout {
 			c.log.Error("Timeout waiting for Exec health check")
 
@@ -359,7 +390,12 @@ func (c *Provider) runExecHealthCheck(id string, command []string, script string
 	}
 }
 
-func (c *Provider) internalDestroy() error {
+func (c *Provider) internalDestroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		c.log.Debug("Context cancelled, skipping container destroy", "ref", c.config.Meta.ID)
+		return nil
+	}
+
 	ids, err := c.Lookup()
 	if err != nil {
 		return err
@@ -367,7 +403,7 @@ func (c *Provider) internalDestroy() error {
 
 	if len(ids) > 0 {
 		for _, id := range ids {
-			err := c.client.RemoveContainer(id, false)
+			err := c.client.RemoveContainer(id, force)
 
 			if err != nil {
 				return err

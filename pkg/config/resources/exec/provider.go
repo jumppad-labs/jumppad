@@ -1,6 +1,7 @@
 package exec
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,7 +18,11 @@ import (
 	contTypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 )
+
+// checks Provider implements the sdk.Provider interface
+var _ sdk.Provider = &Provider{}
 
 // ExecRemote provider allows the execution of arbitrary commands on an existing target or
 // can create a new container before running
@@ -29,7 +34,7 @@ type Provider struct {
 }
 
 // Intit creates a new Exec provider
-func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*Exec)
 	if !ok {
 		return fmt.Errorf("unable to initialize provider, resource is not of type Exec")
@@ -48,8 +53,13 @@ func (p *Provider) Init(cfg htypes.Resource, l logger.Logger) error {
 	return nil
 }
 
-func (p *Provider) Create() error {
-	p.log.Info("executing script", "ref", p.config.ID, "script", p.config.Script)
+func (p *Provider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping create, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
+	p.log.Info("executing script", "ref", p.config.Meta.ID, "script", p.config.Script)
 
 	// check if we have a target or image specified
 	if p.config.Image != nil || p.config.Target != nil {
@@ -71,7 +81,12 @@ func (p *Provider) Create() error {
 	return nil
 }
 
-func (p *Provider) Destroy() error {
+func (p *Provider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping destroy, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
 	// check that we don't we have a target or image specified as
 	// remote execs are not daemonized
 	if p.config.Daemon && p.config.Image == nil && p.config.Target == nil {
@@ -93,14 +108,19 @@ func (p *Provider) Lookup() ([]string, error) {
 	return []string{}, nil
 }
 
-func (p *Provider) Refresh() error {
-	p.log.Debug("refresh Exec", "ref", p.config.Name)
+func (p *Provider) Refresh(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping refresh, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
+	p.log.Debug("refresh Exec", "ref", p.config.Meta.Name)
 
 	return nil
 }
 
 func (p *Provider) Changed() (bool, error) {
-	p.log.Debug("checking changes", "ref", p.config.ID)
+	p.log.Debug("checking changes", "ref", p.config.Meta.ID)
 
 	return false, nil
 }
@@ -112,7 +132,7 @@ func (p *Provider) createRemoteExec() error {
 		// Not using existing target create new container
 		id, err := p.createRemoteExecContainer()
 		if err != nil {
-			return fmt.Errorf("unable to create container for exec.%s: %w", p.config.Name, err)
+			return fmt.Errorf("unable to create container for exec.%s: %w", p.config.Meta.Name, err)
 		}
 
 		targetID = id
@@ -149,7 +169,7 @@ func (p *Provider) createRemoteExec() error {
 
 	_, err := p.container.ExecuteScript(targetID, script, envs, p.config.WorkingDirectory, user, group, 300, p.log.StandardWriter())
 	if err != nil {
-		p.log.Error("error executing command", "ref", p.config.Name, "image", p.config.Image, "script", p.config.Script)
+		p.log.Error("error executing command", "ref", p.config.Meta.Name, "image", p.config.Image, "script", p.config.Script)
 		return fmt.Errorf("unable to execute command: in remote container: %w", err)
 
 	}
@@ -164,7 +184,7 @@ func (p *Provider) createRemoteExec() error {
 
 func (p *Provider) createRemoteExecContainer() (string, error) {
 	// generate the ID for the new container based on the clock time and a string
-	fqdn := utils.FQDN(p.config.Name, p.config.Module, p.config.Type)
+	fqdn := utils.FQDN(p.config.Meta.Name, p.config.Meta.Module, p.config.Meta.Type)
 
 	new := contTypes.Container{
 		Name:        fqdn,
@@ -199,14 +219,14 @@ func (p *Provider) createRemoteExecContainer() (string, error) {
 	// pull any images needed for this container
 	err := p.container.PullImage(*new.Image, false)
 	if err != nil {
-		p.log.Error("error pulling container image", "ref", p.config.ID, "image", new.Image.Name)
+		p.log.Error("error pulling container image", "ref", p.config.Meta.ID, "image", new.Image.Name)
 
 		return "", err
 	}
 
 	id, err := p.container.CreateContainer(&new)
 	if err != nil {
-		p.log.Error("error creating container for remote exec", "ref", p.config.Name, "image", p.config.Image, "networks", p.config.Networks, "volumes", p.config.Volumes)
+		p.log.Error("error creating container for remote exec", "ref", p.config.Meta.Name, "image", p.config.Image, "networks", p.config.Networks, "volumes", p.config.Volumes)
 		return "", err
 	}
 
@@ -222,7 +242,7 @@ func (p *Provider) createLocalExec() (int, error) {
 	}
 
 	// create a temporary file for the script
-	scriptPath := filepath.Join(utils.JumppadTemp(), fmt.Sprintf("exec_%s.sh", p.config.Name))
+	scriptPath := filepath.Join(utils.JumppadTemp(), fmt.Sprintf("exec_%s.sh", p.config.Meta.Name))
 	err := os.WriteFile(scriptPath, []byte(contents), 0755)
 	if err != nil {
 		return 0, fmt.Errorf("unable to write script to file: %s", err)
@@ -236,7 +256,7 @@ func (p *Provider) createLocalExec() (int, error) {
 	}
 
 	// create the folders for logs and pids
-	logPath := filepath.Join(utils.LogsDir(), fmt.Sprintf("exec_%s.log", p.config.Name))
+	logPath := filepath.Join(utils.LogsDir(), fmt.Sprintf("exec_%s.log", p.config.Meta.Name))
 
 	// do we have a duration to parse
 	var d time.Duration
@@ -253,8 +273,7 @@ func (p *Provider) createLocalExec() (int, error) {
 
 	// create the config
 	cc := cmdTypes.CommandConfig{
-		Command:          "/bin/sh",
-		Args:             []string{scriptPath},
+		Command:          scriptPath,
 		Env:              envs,
 		WorkingDirectory: p.config.WorkingDirectory,
 		RunInBackground:  p.config.Daemon,

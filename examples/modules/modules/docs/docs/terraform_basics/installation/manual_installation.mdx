@@ -1,0 +1,30 @@
+# Manual installation
+
+The command line interface to Terraform is the terraform command, which accepts a variety of subcommands such as terraform init or terraform plan.
+We refer to the `terraform` command line tool as "Terraform CLI". This terminology is often used to distinguish it from other components you might use in the Terraform product family, such as Terraform Cloud or the various Terraform providers, which are developed and released separately from Terraform CLI.
+
+To use Terraform you will need to install it. HashiCorp distributes Terraform as a binary package. You can also install Terraform using popular package managers.
+
+To install Terraform manually, find the appropriate package for your system and download it as a zip archive.
+After downloading Terraform, unzip the package. Terraform runs as a single binary named terraform. Any other files in the package can be safely removed and Terraform will still function.
+
+To be able to run terraform from any location, ensure that the terraform binary is available on your PATH. You can print a colon-separated list of locations in your PATH by executing `echo $PATH`.
+Move the Terraform binary to one of the listed locations e.g. `/usr/local/bin`.
+
+<Task id="installation/manual_installation">
+  <Instructions>
+    Install the latest version of Terraform for Linux (AMD64) by downloading it from the [downloads](https://developer.hashicorp.com/terraform/downloads?product_intent=terraform) page and installing it on the PATH.
+  </Instructions>
+  <Conditions>
+    <Condition 
+      id="binary_exists"
+      target="vscode"
+      description="The terraform binary exists on the PATH" 
+    />
+    <Condition 
+      id="version_latest"
+      target="vscode"
+      description="The terraform binary is the latest version" 
+    />
+  </Conditions>
+</Task>

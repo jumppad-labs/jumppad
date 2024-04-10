@@ -1,0 +1,16 @@
+# Terraform apply
+
+The `terraform apply` command executes the actions proposed in a Terraform plan.
+
+When you run terraform apply without passing a saved plan file, Terraform automatically creates a new execution plan as if you had run terraform plan, prompts you to approve that plan, and takes the indicated actions. You can use all of the planning modes and planning options to customize how Terraform will create the plan.
+
+You can pass the -auto-approve option to instruct Terraform to apply the plan without asking for confirmation.
+
+<Task>
+  <Instructions>
+    Run `terraform apply` to execute the actions proposed in the Terraform plan.
+  </Instructions>
+  <Conditions>
+    <Condition description="Use the terraform apply command" />
+  </Conditions>
+</Task>

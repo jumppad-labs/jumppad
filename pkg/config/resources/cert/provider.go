@@ -1,6 +1,7 @@
 package cert
 
 import (
+	"context"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -14,6 +15,7 @@ import (
 	"github.com/jumppad-labs/connector/crypto"
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	"github.com/pkg/errors"
 	"github.com/sethvargo/go-retry"
 	"golang.org/x/crypto/ssh"
@@ -22,15 +24,15 @@ import (
 
 type CAProvider struct {
 	config *CertificateCA
-	log    logger.Logger
+	log    sdk.Logger
 }
 
 type LeafProvider struct {
 	config *CertificateLeaf
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *CAProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *CAProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*CertificateCA)
 	if !ok {
 		return fmt.Errorf("unable to initialize CA provider, resource is not of type CertificateCA")
@@ -41,7 +43,7 @@ func (p *CAProvider) Init(cfg htypes.Resource, l logger.Logger) error {
 	return nil
 }
 
-func (p *LeafProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *LeafProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*CertificateLeaf)
 	if !ok {
 		return fmt.Errorf("unable to initialize Leaf provider, resource is not of type CertificateLeaf")
@@ -52,24 +54,29 @@ func (p *LeafProvider) Init(cfg htypes.Resource, l logger.Logger) error {
 	return nil
 }
 
-func (p *CAProvider) Create() error {
-	p.log.Info("Creating CA Certificate", "ref", p.config.ID)
+func (p *CAProvider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context cancelled, skipping CA", "ref", p.config.Meta.ID)
+		return nil
+	}
 
-	directory := strings.Replace(p.config.Module, ".", "_", -1)
+	p.log.Info("Creating CA Certificate", "ref", p.config.Meta.ID)
+
+	directory := strings.Replace(p.config.Meta.Module, ".", "_", -1)
 	directory = path.Join(p.config.Output, directory)
 	os.MkdirAll(directory, os.ModePerm)
 
-	keyFile := path.Join(directory, fmt.Sprintf("%s.key", p.config.Name))
-	publicKeyFile := path.Join(directory, fmt.Sprintf("%s.pub", p.config.Name))
-	publicSSHFile := path.Join(directory, fmt.Sprintf("%s.ssh", p.config.Name))
-	certificateFile := path.Join(directory, fmt.Sprintf("%s.cert", p.config.Name))
+	keyFile := path.Join(directory, fmt.Sprintf("%s.key", p.config.Meta.Name))
+	publicKeyFile := path.Join(directory, fmt.Sprintf("%s.pub", p.config.Meta.Name))
+	publicSSHFile := path.Join(directory, fmt.Sprintf("%s.ssh", p.config.Meta.Name))
+	certificateFile := path.Join(directory, fmt.Sprintf("%s.cert", p.config.Meta.Name))
 
 	k, err := crypto.GenerateKeyPair()
 	if err != nil {
 		return err
 	}
 
-	ca, err := crypto.GenerateCA(p.config.Name, k.Private)
+	ca, err := crypto.GenerateCA(p.config.Meta.Name, k.Private)
 	if err != nil {
 		return err
 	}
@@ -104,67 +111,81 @@ func (p *CAProvider) Create() error {
 	p.config.Cert = File{
 		Path:      certificateFile,
 		Directory: directory,
-		Filename:  fmt.Sprintf("%s.cert", p.config.Name),
+		Filename:  fmt.Sprintf("%s.cert", p.config.Meta.Name),
 		Contents:  ca.String(),
 	}
 
 	p.config.PrivateKey = File{
 		Path:      keyFile,
 		Directory: directory,
-		Filename:  fmt.Sprintf("%s.key", p.config.Name),
+		Filename:  fmt.Sprintf("%s.key", p.config.Meta.Name),
 		Contents:  k.Private.String(),
 	}
 
 	p.config.PublicKeyPEM = File{
 		Path:      publicKeyFile,
 		Directory: directory,
-		Filename:  fmt.Sprintf("%s.pub", p.config.Name),
+		Filename:  fmt.Sprintf("%s.pub", p.config.Meta.Name),
 		Contents:  k.Public.String(),
 	}
 
 	p.config.PublicKeySSH = File{
 		Path:      publicSSHFile,
 		Directory: directory,
-		Filename:  fmt.Sprintf("%s.ssh", p.config.Name),
+		Filename:  fmt.Sprintf("%s.ssh", p.config.Meta.Name),
 		Contents:  ssh,
 	}
 
 	return nil
 }
 
-func (p *CAProvider) Destroy() error {
-	p.log.Info("Destroy CA Certificate", "ref", p.config.ID)
+func (p *CAProvider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context cancelled, skipping destroy", "ref", p.config.Meta.ID)
+	}
 
-	return destroy(p.config.Module, p.config.Name, p.config.Output, p.log)
+	p.log.Info("Destroy CA Certificate", "ref", p.config.Meta.ID)
+
+	return destroy(p.config.Meta.Module, p.config.Meta.Name, p.config.Output, p.log)
 }
 
 func (p *CAProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (p *CAProvider) Refresh() error {
-	p.log.Debug("Refresh CA Certificate", "ref", p.config.ID)
+func (p *CAProvider) Refresh(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context cancelled, skipping refresh", "ref", p.config.Meta.ID)
+		return nil
+	}
+
+	p.log.Debug("Refresh CA Certificate", "ref", p.config.Meta.ID)
 
 	return nil
 }
 
 func (p *CAProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes Leaf Certificate", "ref", p.config.Name)
+	p.log.Debug("Checking changes Leaf Certificate", "ref", p.config.Meta.ID)
 
 	return false, nil
 }
 
-func (p *LeafProvider) Create() error {
-	p.log.Info("Creating Leaf Certificate", "ref", p.config.ID)
+func (p *LeafProvider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context cancelled, skipping leaf", "ref", p.config.Meta.ID)
+		return nil
+	}
 
-	directory := strings.Replace(p.config.Module, ".", "_", -1)
+	p.log.Info("Creating Leaf Certificate", "ref", p.config.Meta.ID)
+
+	directory := strings.Replace(p.config.Meta.Module, ".", "_", -1)
 	directory = path.Join(p.config.Output, directory)
 	os.MkdirAll(directory, os.ModePerm)
 
-	keyFile := path.Join(directory, fmt.Sprintf("%s-leaf.key", p.config.Name))
-	pubkeyFile := path.Join(directory, fmt.Sprintf("%s-leaf.pub", p.config.Name))
-	pubsshFile := path.Join(directory, fmt.Sprintf("%s-leaf.ssh", p.config.Name))
-	certFile := path.Join(directory, fmt.Sprintf("%s-leaf.cert", p.config.Name))
+	keyFile := path.Join(directory, fmt.Sprintf("%s-leaf.key", p.config.Meta.Name))
+	pubkeyFile := path.Join(directory, fmt.Sprintf("%s-leaf.pub", p.config.Meta.Name))
+	pubsshFile := path.Join(directory, fmt.Sprintf("%s-leaf.ssh", p.config.Meta.Name))
+	certFile := path.Join(directory, fmt.Sprintf("%s-leaf.cert", p.config.Meta.Name))
 
 	ca := &crypto.X509{}
 	err := ca.ReadFile(p.config.CACert)
@@ -183,7 +204,7 @@ func (p *LeafProvider) Create() error {
 		return err
 	}
 
-	lc, err := crypto.GenerateLeaf(p.config.Name, p.config.IPAddresses, p.config.DNSNames, ca, rk.Private, k.Private)
+	lc, err := crypto.GenerateLeaf(p.config.Meta.Name, p.config.IPAddresses, p.config.DNSNames, ca, rk.Private, k.Private)
 	if err != nil {
 		return err
 	}
@@ -220,52 +241,62 @@ func (p *LeafProvider) Create() error {
 	p.config.PublicKeySSH = File{
 		Path:      pubsshFile,
 		Directory: directory,
-		Filename:  fmt.Sprintf("%s-leaf.ssh", p.config.Name),
+		Filename:  fmt.Sprintf("%s-leaf.ssh", p.config.Meta.Name),
 		Contents:  ssh,
 	}
 
 	p.config.PublicKeyPEM = File{
 		Path:      pubkeyFile,
 		Directory: directory,
-		Filename:  fmt.Sprintf("%s-leaf.pub", p.config.Name),
+		Filename:  fmt.Sprintf("%s-leaf.pub", p.config.Meta.Name),
 		Contents:  k.Public.String(),
 	}
 
 	p.config.Cert = File{
 		Path:      certFile,
 		Directory: directory,
-		Filename:  fmt.Sprintf("%s-leaf.cert", p.config.Name),
+		Filename:  fmt.Sprintf("%s-leaf.cert", p.config.Meta.Name),
 		Contents:  lc.String(),
 	}
 
 	p.config.PrivateKey = File{
 		Path:      keyFile,
 		Directory: directory,
-		Filename:  fmt.Sprintf("%s-leaf.key", p.config.Name),
+		Filename:  fmt.Sprintf("%s-leaf.key", p.config.Meta.Name),
 		Contents:  k.Private.String(),
 	}
 
 	return err
 }
 
-func (p *LeafProvider) Destroy() error {
-	p.log.Info("Destroy Leaf Certificate", "ref", p.config.Name)
+func (p *LeafProvider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context cancelled, skipping destroy", "ref", p.config.Meta.Name)
+		return nil
+	}
 
-	return destroy(p.config.Module, fmt.Sprintf("%s-leaf", p.config.Name), p.config.Output, p.log)
+	p.log.Info("Destroy Leaf Certificate", "ref", p.config.Meta.Name)
+
+	return destroy(p.config.Meta.Module, fmt.Sprintf("%s-leaf", p.config.Meta.Name), p.config.Output, p.log)
+}
+
+func (p *LeafProvider) Refresh(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context cancelled, skipping refresh", "ref", p.config.Meta.Name)
+		return nil
+	}
+
+	p.log.Debug("Refresh Leaf Certificate", "ref", p.config.Meta.Name)
+
+	return nil
 }
 
 func (p *LeafProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (p *LeafProvider) Refresh() error {
-	p.log.Debug("Refresh Leaf Certificate", "ref", p.config.Name)
-
-	return nil
-}
-
 func (p *LeafProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes Leaf Certificate", "ref", p.config.Name)
+	p.log.Debug("Checking changes Leaf Certificate", "ref", p.config.Meta.Name)
 
 	return false, nil
 }

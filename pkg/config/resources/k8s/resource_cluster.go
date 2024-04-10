@@ -11,11 +11,12 @@ import (
 
 // TypeK8sCluster is the resource string for a Cluster resource
 const TypeK8sCluster string = "k8s_cluster"
+const TypeKubernetesCluster string = "kubernetes_cluster"
 
 // K8sCluster is a config stanza which defines a Kubernetes or a Nomad cluster
 type K8sCluster struct {
 	// embedded type holding name, etc.
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Networks []ctypes.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
@@ -31,10 +32,12 @@ type K8sCluster struct {
 
 	Environment map[string]string `hcl:"environment,optional" json:"environment,omitempty"` // environment variables to set when starting the container
 
+	Config *Config `hcl:"config,block" json:"config,omitempty"`
+
 	// output parameters
 
-	// Path to the Kubernetes config
-	KubeConfig string `hcl:"kubeconfig,optional" json:"kubeconfig,omitempty"`
+	// Kubernetes config details
+	KubeConfig KubeConfig `hcl:"kube_config,optional" json:"kube_config,omitempty"`
 
 	// Port the API server is running on
 	APIPort int `hcl:"api_port,optional" json:"api_port,omitempty"`
@@ -51,6 +54,26 @@ type K8sCluster struct {
 	ExternalIP string `hcl:"external_ip,optional" json:"external_ip,omitempty"`
 }
 
+type Config struct {
+	// Specifies configuration for the Docker driver.
+	DockerConfig *DockerConfig `hcl:"docker,block" json:"docker,omitempty"`
+}
+
+type DockerConfig struct {
+	// NoProxy is a list of docker registires that should be excluded from the image cache
+	NoProxy []string `hcl:"no_proxy,optional" json:"no-proxy,omitempty"`
+
+	// InsecureRegistries is a list of docker registries that should be treated as insecure
+	InsecureRegistries []string `hcl:"insecure_registries,optional" json:"insecure-registries,omitempty"`
+}
+
+type KubeConfig struct {
+	ConfigPath        string `hcl:"path" json:"path"`                             // path to the kubeconfig file
+	CA                string `hcl:"ca" json:"ca"`                                 // base64 encoded ca certificate
+	ClientCertificate string `hcl:"client_certificate" json:"client_certificate"` // base64 encoded client certificate
+	ClientKey         string `hcl:"client_key" json:"client_key"`                 // base64 encoded client key
+}
+
 const k3sBaseImage = "shipyardrun/k3s"
 const k3sBaseVersion = "v1.27.4"
 
@@ -64,7 +87,7 @@ func (k *K8sCluster) Process() error {
 	}
 
 	for i, v := range k.Volumes {
-		k.Volumes[i].Source = utils.EnsureAbsolute(v.Source, k.File)
+		k.Volumes[i].Source = utils.EnsureAbsolute(v.Source, k.Meta.File)
 	}
 
 	// do we have an existing resource in the state?
@@ -72,7 +95,7 @@ func (k *K8sCluster) Process() error {
 	c, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := c.FindResource(k.ID)
+		r, _ := c.FindResource(k.Meta.ID)
 		if r != nil {
 			kstate := r.(*K8sCluster)
 			k.KubeConfig = kstate.KubeConfig
@@ -80,6 +103,7 @@ func (k *K8sCluster) Process() error {
 			k.APIPort = kstate.APIPort
 			k.ConnectorPort = kstate.ConnectorPort
 			k.ExternalIP = kstate.ExternalIP
+			k.KubeConfig = kstate.KubeConfig
 
 			// add the network addresses
 			for _, a := range kstate.Networks {

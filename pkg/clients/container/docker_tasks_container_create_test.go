@@ -71,6 +71,10 @@ var containerConfig = &dtypes.Container{
 		CPU:    1000,
 		Memory: 1000,
 		CPUPin: []int{1, 4},
+		GPU: &dtypes.GPU{
+			Driver:    "nvidia",
+			DeviceIDs: []string{"1"},
+		},
 	},
 	Networks: []dtypes.NetworkAttachment{
 		dtypes.NetworkAttachment{ID: "network.testnet"},
@@ -155,6 +159,42 @@ func TestContainerCreatesCorrectly(t *testing.T) {
 	assert.True(t, cfg.AttachStdin)
 	assert.True(t, cfg.AttachStdout)
 	assert.True(t, cfg.AttachStderr)
+}
+
+func TestSetsCanonicalImage(t *testing.T) {
+	cc, md, mic := createContainerConfig()
+
+	cc.Image.Name = "minecraft-dev:v0.1.0"
+
+	err := setupContainer(t, cc, md, mic)
+	assert.NoError(t, err)
+
+	// check that the docker api methods were called
+	md.AssertCalled(t, "ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+
+	params := testutils.GetCalls(&md.Mock, "ContainerCreate")[0].Arguments
+
+	cfg := params[1].(*container.Config)
+
+	assert.Equal(t, "docker.io/library/minecraft-dev:v0.1.0", cfg.Image)
+}
+
+func TestDoesNotSetCanonicalImage(t *testing.T) {
+	cc, md, mic := createContainerConfig()
+
+	cc.Image.Name = "insecure.container.local.jmpd.in:5003/minecraft-dev:v0.1.0"
+
+	err := setupContainer(t, cc, md, mic)
+	assert.NoError(t, err)
+
+	// check that the docker api methods were called
+	md.AssertCalled(t, "ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+
+	params := testutils.GetCalls(&md.Mock, "ContainerCreate")[0].Arguments
+
+	cfg := params[1].(*container.Config)
+
+	assert.Equal(t, "insecure.container.local.jmpd.in:5003/minecraft-dev:v0.1.0", cfg.Image)
 }
 
 func TestContainerRemovesBridgeBeforeAttachingToUserNetwork(t *testing.T) {
@@ -453,6 +493,21 @@ func TestContainerConfiguresResources(t *testing.T) {
 	assert.Equal(t, hc.Resources.CpusetCpus, "1,4")
 }
 
+func TestContainerConfiguresGPU(t *testing.T) {
+	cc, md, mic := createContainerConfig()
+
+	err := setupContainer(t, cc, md, mic)
+	assert.NoError(t, err)
+
+	params := testutils.GetCalls(&md.Mock, "ContainerCreate")[0].Arguments
+	hc := params[2].(*container.HostConfig)
+	assert.NotEmpty(t, hc.Resources)
+
+	assert.Equal(t, hc.DeviceRequests[0].Driver, "nvidia")
+	assert.Equal(t, hc.DeviceRequests[0].DeviceIDs[0], "1")
+	assert.Equal(t, hc.DeviceRequests[0].Capabilities, [][]string{[]string{"gpu", "nvidia", "compute"}})
+}
+
 func TestContainerConfiguresRetryWhenCountGreater0(t *testing.T) {
 	cc, md, mic := createContainerConfig()
 	cc.MaxRestartCount = 10
@@ -466,6 +521,21 @@ func TestContainerConfiguresRetryWhenCountGreater0(t *testing.T) {
 
 	assert.Equal(t, hc.RestartPolicy.MaximumRetryCount, 10)
 	assert.Equal(t, hc.RestartPolicy.Name, "on-failure")
+}
+
+func TestContainerConfiguresRetryWhenCountMinusOne(t *testing.T) {
+	cc, md, mic := createContainerConfig()
+	cc.MaxRestartCount = -1
+
+	err := setupContainer(t, cc, md, mic)
+	assert.NoError(t, err)
+
+	params := testutils.GetCalls(&md.Mock, "ContainerCreate")[0].Arguments
+	hc := params[2].(*container.HostConfig)
+	assert.NotEmpty(t, hc.Resources)
+
+	assert.Equal(t, hc.RestartPolicy.MaximumRetryCount, 0)
+	assert.Equal(t, hc.RestartPolicy.Name, "always")
 }
 
 func TestContainerNotConfiguresRetryWhen0(t *testing.T) {
@@ -520,4 +590,17 @@ func TestContainerDropCapabilities(t *testing.T) {
 	dc := params[2].(*container.HostConfig)
 	assert.Equal(t, "SYS_ADMIN", dc.CapDrop[0])
 	assert.Equal(t, "SYS_CHROOT", dc.CapDrop[1])
+}
+
+func TestContainerLabels(t *testing.T) {
+	cc, md, mic := createContainerConfig()
+	cc.Labels = map[string]string{"com.example.foo": "bar"}
+
+	err := setupContainer(t, cc, md, mic)
+	assert.NoError(t, err)
+
+	params := testutils.GetCalls(&md.Mock, "ContainerCreate")[0].Arguments
+	dc := params[1].(*container.Config)
+	assert.Contains(t, dc.Labels, "com.example.foo")
+	assert.Equal(t, "bar", dc.Labels["com.example.foo"])
 }

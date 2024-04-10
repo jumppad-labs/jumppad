@@ -1,166 +1,96 @@
 ---
-
 name: Build And Deploy
-on: [push]
+on:
+  push:
+    branches:
+      - "**"
 jobs:
-  test:
-    env:
-      GONOSUMDB: "github.com/moby/moby"
-    name: Unit Test
+  dagger_build:
+    name: Dagger Build and Test
     runs-on: ubuntu-latest
-    steps:
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
-
-      - name: Setup Go version
-        uses: actions/setup-go@v1
-        with:
-          go-version: 1.19
-
-      - name: Get dependencies
-        run: |
-          go version
-          go get -v -t ./...
-
-      - name: Unit Test
-        run: |
-          go test -v -race ./...
-
-      #- name: Upload Code Coverage
-      #  uses: codecov/codecov-action@v1
-      #  with:
-      #    token: ${{ secrets.CODECOV_TOKEN }}  # required
-
-      - name: Send status to Discord
-        uses: sarisia/actions-status-discord@v1
-        if: always()
-        with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          title: ${{ github.job_id }}
-
-  e2e_linux:
-    name: Linux E2E Tests
-    runs-on: ubuntu-latest
-    needs: test
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v2
 
-      - name: Setup Go version
-        uses: actions/setup-go@v1
+      - name: Set keys
+        run: |
+          echo "${{secrets.QUILL_SIGN_P12}}" | base64 -d  > ./cert.p12
+          echo "${{secrets.QUILL_NOTORY_KEY}}" > ./key.p8
+          echo "QUILL_SIGN_PASSWORD=${{secrets.QUILL_SIGN_PASSWORD}}" >> $GITHUB_ENV
+          echo "GITHUB_TOKEN=${{secrets.GH_TOKEN}}" >> $GITHUB_ENV
+      
+      - name: All
+        uses: dagger/dagger-for-github@v5
         with:
-          go-version: 1.19
-
-      - name: E2E test for build binary
-        run: make test_e2e_cmd
-
+          verb: call
+          module: ./.dagger
+          args: all --output=./output --src=. --github-token=GITHUB_TOKEN --notorize-cert=./cert.p12 --notorize-cert-password=QUILL_SIGN_PASSWORD --notorize-key=./key.p8 --notorize-id=${{secrets.QUILL_NOTARY_KEY_ID}} --notorize-issuer=${{secrets.QUILL_NOTARY_ISSUER}}
+          version: "0.9.9"
+          cloud-token: ${{ secrets.DAGGER_TOKEN }}
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: archives
+          path: |
+            ./output
+    
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
         if: always()
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           tile: ${{ github.job_id }}
-          description: "End to end tests for Linux"
-
- # e2e_mac:
- #   name: Mac E2E Tests
- #   runs-on: ubuntu-latest
- #   needs: test
-
- #   steps:
- #     - name: Repository Dispatch
- #       uses: peter-evans/repository-dispatch@v1
- #       with:
- #         token: '${{ secrets.GH_TOKEN }}'
- #         repository: jumppad-labs/jumppad-mac-build
- #         event-type: test
- #         client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}"}'
-
- #     - name: Send status to Discord
- #       uses: sarisia/actions-status-discord@v1
- #       if: always()
- #       with:
- #         webhook: ${{ secrets.DISCORD_WEBHOOK }}
- #         tile: ${{ github.job_id }}
- #         description: "End to end tests for MacOS amd64"
-
-  functional_test_build:
-    name: Build binary for Functional Tests
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Setup Go version
-        uses: actions/setup-go@v1
-        with:
-          go-version: 1.19
-      
-      - name: Build Jumppad binary
-        run: |
-          make install_local
-      
-      - name: Build Podman DNS plugin
-        run: |
-          cd ..
-          git clone https://github.com/containers/dnsname.git
-          cd dnsname
-          make
-          sudo cp ./bin/dnsname /usr/local/bin
-      
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: test_binary
-          path: |
-            /usr/local/bin/jumppad
-            /usr/local/bin/dnsname
+          description: "Build application"
 
   functional_test_docker:
-    name: Functional Test Docker
+    name: Test Docker
     runs-on: ubuntu-latest
-    needs: functional_test_build
+    needs: dagger_build
 
     strategy:
-      max-parallel: 2
+      max-parallel: 5
       fail-fast: false
       matrix:
         folder: [
-          './examples/container',
-          './examples/build',
-          './examples/docs',
-          './examples/nomad',
-          './examples/single_k3s_cluster',
-          './examples/multiple_k3s_clusters',
-          './examples/local_exec',
-          './examples/remote_exec',
-          './examples/certificates',
-          './examples/terraform',
+          '/container',
+          '/build',
+          '/docs',
+          '/nomad',
+          '/single_k3s_cluster',
+          '/multiple_k3s_clusters',
+          '/exec',
+          '/certificates',
+          '/terraform',
+          '/registries',
         ]
 
     steps:
       - name: Download-Binaries
         uses: actions/download-artifact@v2
         with:
-          name: test_binary
-          path: /usr/local/bin
+          name: archives
+          path: ./build_artifacts
       
-      - name: Make binary executable
+      - name: Install binary executable
         run: |
+          cp $(find ./build_artifacts -name "jumppad_*_linux_x86_64.tar.gz" -type f) ./build_artifacts/jumppad.tar.gz
+          sudo tar -xzf ./build_artifacts/jumppad.tar.gz
+          sudo mv ./jumppad /usr/local/bin/jumppad
           sudo chmod +x /usr/local/bin/jumppad
 
       - uses: actions/checkout@v2
-
-      - name: Setup Go version
-        uses: actions/setup-go@v1
-        with:
-          go-version: 1.19
       
-      - name: Run tests
-        run: |
-          jumppad check
-          jumppad purge
-          jumppad test ${{matrix.folder}}
+      - name: All
+        uses: dagger/dagger-for-github@v5
+        with:
+          verb: call
+          module: ./.dagger
+          args: functional-test --src=./examples --working-directory=${{matrix.folder}} --jumppad=/usr/local/bin/jumppad --runtime=docker
+          version: "0.9.9"
+          cloud-token: ${{ secrets.DAGGER_TOKEN }}
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
@@ -171,82 +101,51 @@ jobs:
           description: "Functional tests for docker: ${{matrix.folder}}"
 
   functional_test_podman:
-    name: Functional Test Podman
+    name: Test Podman
     runs-on: ubuntu-latest
-    needs: functional_test_build
+    needs: dagger_build
 
     strategy:
-      max-parallel: 2
+      max-parallel: 5
       fail-fast: false
       matrix:
         folder: [
-          './examples/container',
-         # './examples/build',
-         './examples/docs',
-         # './examples/single_k3s_cluster',
-         # './examples/nomad',
-         # './examples/local_exec',
+          '/container',
+          '/build',
+          '/docs',
+          '/nomad',
+          '/single_k3s_cluster',
+          '/multiple_k3s_clusters',
+          '/exec',
+          '/certificates',
+          '/terraform',
         ]
 
     steps:
       - name: Download-Binaries
         uses: actions/download-artifact@v2
         with:
-          name: test_binary
-          path: /usr/local/bin
+          name: archives
+          path: ./build_artifacts
       
-      - name: Make binary executable
+      - name: Install binary executable
         run: |
+          cp $(find ./build_artifacts -name "jumppad_*_linux_x86_64.tar.gz" -type f) ./build_artifacts/jumppad.tar.gz
+          sudo tar -xzf ./build_artifacts/jumppad.tar.gz
+          sudo mv ./jumppad /usr/local/bin/jumppad
           sudo chmod +x /usr/local/bin/jumppad
 
       - uses: actions/checkout@v2
-
-      - name: Setup Go version
-        uses: actions/setup-go@v1
+      
+      - name: All
+        uses: dagger/dagger-for-github@v5
         with:
-          go-version: 1.19
+          verb: call
+          module: ./.dagger
+          args: functional-test --src=./examples --working-directory=${{matrix.folder}} --jumppad=/usr/local/bin/jumppad --runtime=podman
+          version: "0.9.9"
+          cloud-token: ${{ secrets.DAGGER_TOKEN }}
       
-      - name: Install dependencies for Podman tests
-        run: |
-          sudo mkdir -p /etc/apt/keyrings
-
-          # Debian Testing/Bookworm
-          curl -fsSL https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/Debian_Testing/Release.key \
-            | gpg --dearmor \
-            | sudo tee /etc/apt/keyrings/devel_kubic_libcontainers_unstable.gpg > /dev/null
-          echo \
-            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/devel_kubic_libcontainers_unstable.gpg]\
-              https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/Debian_Testing/ /" \
-            | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:unstable.list > /dev/null
-
-          # Debian Unstable/Sid
-          curl -fsSL https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/Debian_Unstable/Release.key \
-            | gpg --dearmor \
-            | sudo tee /etc/apt/keyrings/devel_kubic_libcontainers_unstable.gpg > /dev/null
-          echo \
-            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/devel_kubic_libcontainers_unstable.gpg]\
-              https://download.opensuse.org/repositories/devel:kubic:libcontainers:unstable/Debian_Unstable/ /" \
-            | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:unstable.list > /dev/null
-
-          # Install Podman
-          sudo apt-get update
-          sudo apt-get -y upgrade
-          sudo apt-get -y install podman
-
-          # Start the Podman sock
-          sudo nohup podman system service -t 0 > ./podman.log &
-          sleep 10
-          sudo chmod +x /run/podman
-          sudo chmod 777 /run/podman/podman.sock
-      
-      - name: Run tests
-        run: |
-          jumppad check
-          jumppad purge
-          jumppad test ${{matrix.folder}}
-        env:
-          DOCKER_HOST: "unix:///run/podman/podman.sock"
-
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
         if: always()
@@ -254,422 +153,65 @@ jobs:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           tile: ${{ github.job_id }}
           description: "Functional tests for ${{matrix.folder}}"
-
-  build_dev:
-    name: Build Dev Version
-    needs:
-  #    - test
-      - functional_test_docker
-  #    - functional_test_podman
-  #     - e2e_mac
-      - e2e_linux
-    if: ${{ github.ref != 'refs/heads/main' }}
-
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
-
-      - name: Setup Go version
-        uses: actions/setup-go@v1
-        with:
-          go-version: 1.19
-
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v1
-        with:
-          version: v1.4.1
-          args: release --rm-dist --snapshot
-          key: ${{ secrets.GPG_PRIVATE_KEY }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: jumppad_binaries
-          path: |
-            dist/jumppad_darwin_arm64
-            dist/jumppad_darwin_amd64
-            dist/jumppad_linux_amd64
-            dist/jumppad_linux_arm64
-            dist/jumppad_linux_arm_7
-            dist/jumppad_linux_arm_6
-            dist/jumppad_windows_amd64
-
-      - name: Send status to Discord
-        uses: sarisia/actions-status-discord@v1
-        if: always()
-        with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          tile: ${{ github.job_id }}
-          description: "Build dev version and upload artifacts"
-
-  notorize_mac_dev:
-    name: Notrize binaries for Mac
-    needs: build_dev
-    if: ${{ github.ref != 'refs/heads/main' }}
-    runs-on: macos-latest
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-
-    - name: Download-Binaries
-      uses: actions/download-artifact@v2
-      with:
-        name: jumppad_binaries
-        path: dist/
-    
-    - name: Import Code-Signing Certificates
-      uses: Apple-Actions/import-codesign-certs@v1
-      with:
-        # The certificates in a PKCS12 file encoded as a base64 string
-        p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
-        # The password used to import the PKCS12 file.
-        p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
-    
-    - name: List identities
-      run: |
-        security find-identity
-
-    - name: Install gon via HomeBrew for code signing and app notarization
-      run: |
-        brew tap mitchellh/gon
-        brew install mitchellh/gon/gon
-
-    - name: Sign the Arm64 Mac binaries with Gon
-      env:
-        AC_USERNAME: ${{ secrets.AC_USERNAME }}
-        AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
-      run: |
-        gon -log-level=debug -log-json ./.gon_arm64.json
-    
-    - name: Sign the Arm64 Mac binaries with Gon
-      env:
-        AC_USERNAME: ${{ secrets.AC_USERNAME }}
-        AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
-      run: |
-        gon -log-level=debug -log-json ./.gon_amd64.json
-      
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: jumppad_osx_notorized
-        path: |
-          dist/jumppad_arm64.dmg
-          dist/jumppad_arm64.zip
-          dist/jumppad_amd64.dmg
-          dist/jumppad_amd64.zip
-
-    - name: Send status to Discord
-      uses: sarisia/actions-status-discord@v1
-      if: always()
-      with:
-        webhook: ${{ secrets.DISCORD_WEBHOOK }}
-        tile: ${{ github.job_id }}
-        description: "Notorize Mac applications"
-
-  tag:
-    name: Tag latest release
-    runs-on: ubuntu-latest
-    permissions:
-       contents: write
-    needs:
-      - test
-      - functional_test_docker
-      #- functional_test_podman
-      #- e2e_mac
-      - e2e_linux
+  
+  release:
+    name: Create GitHub Release
     if: ${{ github.ref == 'refs/heads/main' }}
 
-    steps:
-      - name: Bump version and push tag
-        id: tag
-        uses: mathieudutour/github-tag-action@v5.2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Send status to Discord
-        uses: sarisia/actions-status-discord@v1
-        if: always()
-        with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          description: "Automatically tagged main branch with new tag: ${{ steps.tag_version.outputs.new_tag }}"
-    
-      - name: Remove v in Tag
-        id: version
-        uses: ashley-taylor/regex-property-action@v1.0
-        with:
-          value: ${{ steps.tag.outputs.new_tag }}
-          regex: "v"
-          replacement: ""
-
-    outputs:
-      new_tag: ${{ steps.tag.outputs.new_tag }}
-      new_version: ${{ steps.version.outputs.value }}
-
-  build_prod:
-    name: Build Prod Version
-    needs: tag
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
-        with:
-          ref: ${{ needs.tag.outputs.new_tag }}
-
-      - name: Setup Go version
-        uses: actions/setup-go@v1
-        with:
-          go-version: 1.19
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_PASS }}
-
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v1
-        with:
-          version: v1.4.1
-          args: release --rm-dist
-          key: ${{ secrets.GPG_PRIVATE_KEY }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: jumppad_binaries
-          path: |
-            dist/jumppad_darwin_arm64
-            dist/jumppad_darwin_amd64
-            dist/jumppad_linux_amd64
-            dist/jumppad_linux_arm64
-            dist/jumppad_windows_amd64
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: jumppad_archives
-          path: |
-            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.rpm
-            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz
-            dist/jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip
-            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz
-            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.deb
-            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.rpm
-            dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
-            dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
-            dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.deb
-
-      - name: Send status to Discord
-        uses: sarisia/actions-status-discord@v1
-        if: always()
-        with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          tile: ${{ github.job_id }}
-          description: "Build prod version and upload artifacts"
-  
-  notorize_mac_prod:
-    name: Notrize binaries for Mac
     needs: 
-      - build_prod
-      - tag
-    runs-on: macos-latest
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-      with:
-        ref: ${{ needs.tag.outputs.new_tag }}
-
-    - name: Download-Binaries
-      uses: actions/download-artifact@v2
-      with:
-        name: jumppad_binaries
-        path: dist/
-    
-    - name: Import Code-Signing Certificates
-      uses: Apple-Actions/import-codesign-certs@v1
-      with:
-        # The certificates in a PKCS12 file encoded as a base64 string
-        p12-file-base64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
-        # The password used to import the PKCS12 file.
-        p12-password: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
-    
-    - name: List identities
-      run: |
-        security find-identity
-
-    - name: Install gon via HomeBrew for code signing and app notarization
-      run: |
-        brew tap mitchellh/gon
-        brew install mitchellh/gon/gon
-
-    - name: Sign the Arm64 Mac binaries with Gon
-      env:
-        AC_USERNAME: ${{ secrets.AC_USERNAME }}
-        AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
-      run: |
-        gon -log-level=debug -log-json ./.gon_arm64.json
-    
-    - name: Sign the Arm64 Mac binaries with Gon
-      env:
-        AC_USERNAME: ${{ secrets.AC_USERNAME }}
-        AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
-      run: |
-        gon -log-level=debug -log-json ./.gon_amd64.json
-    
-    - name: Rename files
-      run: |
-        ls -las ./dist
-        rm -f ./dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
-        rm -f ./dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
-        mv ./dist/jumppad_arm64.zip ./dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
-        mv ./dist/jumppad_amd64.zip ./dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
-      
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: jumppad_archives
-        path: |
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
-
-    - name: Send status to Discord
-      uses: sarisia/actions-status-discord@v1
-      if: always()
-      with:
-        webhook: ${{ secrets.DISCORD_WEBHOOK }}
-        tile: ${{ github.job_id }}
-        description: "Notorize Mac Prod applications and release assets"
-
-  github_release:
-    name: Create GitHub Release
-    needs: 
-      - notorize_mac_prod
-      - tag
+      - functional_test_docker
+      - functional_test_podman
     environment:
       name: release
     runs-on: ubuntu-latest
     steps:
-    - name: Download-Binaries
-      uses: actions/download-artifact@v2
-      with:
-        name: jumppad_archives
-        path: dist/
+      - name: Set keys
+        run: |
+          echo "GITHUB_TOKEN=${{secrets.GH_TOKEN}}" >> $GITHUB_ENV
+          echo "GEMFURY_TOKEN=${{secrets.FURY_TOKEN}}" >> $GITHUB_ENV
+      
+      - uses: actions/checkout@v2
 
-    - name: Generate SHA256 checksums
-      run: |
-        cd dist
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz > checksums.txt
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz >> checksums.txt
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.deb >> checksums.txt
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.deb >> checksums.txt
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.rpm >> checksums.txt
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.rpm >> checksums.txt
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip >> checksums.txt
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip >> checksums.txt
-        sha256sum jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip >> checksums.txt
+      - name: Download-Binaries
+        uses: actions/download-artifact@v2
+        with:
+          name: archives
+          path: ./build_artifacts
 
-    - name: Release
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ needs.tag.outputs.new_tag }}
-        token: ${{ secrets.GH_TOKEN }}
-        files: |
-          dist/checksums.txt
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.rpm
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.rpm
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_amd64.deb
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.deb
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip
-          dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_arm64.zip
+      - name: Release
+        uses: dagger/dagger-for-github@v5
+        with:
+          verb: call
+          module: ./.dagger
+          args: release --src=. --github-token=GITHUB_TOKEN --gemfury-token=GEMFURY_TOKEN --archives=./build_artifacts --output=./version.txt
+          version: "0.9.9"
+          cloud-token: ${{ secrets.DAGGER_TOKEN }}
+    
+      - name: Set output
+        id: setoutput
+        run: |
+          echo "version=$(cat ./version.txt)" >> $GITHUB_OUTPUT
 
-  brew:
-    name: Release to HomeBrew
+    outputs:
+      version: ${{ steps.setoutput.outputs.version }}
+
+  sync_winget:
+    name: Sync winget-pkgs repo
+    if: ${{ github.ref == 'refs/heads/main' }}
     needs: 
-      - github_release
-      - tag
+      - functional_test_docker
+      - functional_test_podman
     runs-on: ubuntu-latest
     steps:
-    -
-      name: Checkout
-      uses: actions/checkout@v2
-      with:
-        repository: 'jumppad-labs/homebrew-repo'
-        token: '${{ secrets.GH_TOKEN }}'
-
-    - name: Configure Git
-      run: |
-        git config user.email "hello@jumppad.dev"
-        git config user.name "Jumppad Bot"
-        git pull origin main
-
-    - name: Download-Binaries
-      uses: actions/download-artifact@v2
-      with:
-        name: jumppad_archives
-        path: dist/
-    
-    - name: Generate HomeBrew config
-      run: |
-        export VERSION=${{ needs.tag.outputs.new_version }}
-        export DARWIN_ARM64_SHA=$(sha256sum  ./dist/jumppad${{ needs.tag.outputs.new_version }}_darwin_arm64.zip | cut -d " " -f 1)
-        export DARWIN_x86_SHA=$(sha256sum  ./dist/jumppad_${{ needs.tag.outputs.new_version }}_darwin_x86_64.zip | cut -d " " -f 1)
-        export LINUX_ARM64_SHA=$(sha256sum  ./dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_arm64.tar.gz | cut -d " " -f 1)
-        export LINUX_x86_SHA=$(sha256sum  ./dist/jumppad_${{ needs.tag.outputs.new_version }}_linux_x86_64.tar.gz | cut -d " " -f 1)
-
-        cat <<- EOF > ./jumppad.rb
-        # typed: false
-        # frozen_string_literal: true
-
-        class Jumppad < Formula
-          desc ""
-          homepage "https://jumppad.dev/"
-          version "${VERSION}"
-
-          if OS.mac? && Hardware::CPU.intel?
-            url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/jumppad_${VERSION}_darwin_x86_64.zip"
-            sha256 "${DARWIN_x86_SHA}"
-          end
-          if OS.mac? && Hardware::CPU.arm?
-            url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/jumppad_${VERSION}_darwin_arm64.zip"
-            sha256 "${DARWIN_ARM64_SHA}"
-          end
-          if OS.linux? && Hardware::CPU.intel?
-            url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/jumppad_${VERSION}_linux_x86_64.tar.gz"
-            sha256 "${LINUX_x86_SHA}"
-          end
-          if OS.linux? && Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-            url "https://github.com/jumppad-labs/jumppad/releases/download/v${VERSION}/jumppad_${VERSION}_linux_arm64.tar.gz"
-            sha256 "${LINUX_ARM64_SHA}"
-          end
-
-          def install
-            bin.install "jumppad"
-          end
-        end
-        EOF
-
-        cat ./jumppad.rb
-        rm -rf ./dist
-      
-    - name: Push update
-      run: |
-        git add .
-        git commit -m "Update version to ${{ needs.tag.outputs.new_tag }}"
-        git push
+      - run: gh repo sync nicholasjackson/winget-pkgs -b master
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
   winget:
     name: Publish to WinGet
     needs:
-      - github_release
-      - tag
+      - release
+      - sync_winget
     runs-on: windows-latest
     steps:
     - uses: jumppad-labs/winget-publish-action@v0.1.0
@@ -677,8 +219,8 @@ jobs:
         publish-type: "Update"
         user: "jumppad"
         package: "jumppad"
-        version: ${{ needs.tag.outputs.new_version }}
-        url: "https://github.com/jumppad-labs/jumppad/releases/download/v${{ needs.tag.outputs.new_version }}/jumppad_${{ needs.tag.outputs.new_version }}_windows_x86_64.zip|x64"
+        version: ${{ needs.release.outputs.version }}
+        url: "https://github.com/jumppad-labs/jumppad/releases/download/${{ needs.release.outputs.version }}/jumppad_${{ needs.release.outputs.version }}_windows_x86_64.zip|x64"
         token: '${{ secrets.GH_TOKEN }}'
 
     - name: Send status to Discord
@@ -687,69 +229,4 @@ jobs:
       with:
         tile: ${{ github.job_id }}
         webhook: ${{ secrets.DISCORD_WEBHOOK }}
-        description: "Push new version ${{ needs.tag.outputs.new_version }} to Winget"
-
-  apt:
-    name: Update fury.io Apt repository
-    needs:
-      - github_release
-      - tag
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: ["amd64.deb", "arm64.deb", "amd64.rpm", "arm64.rpm"]
-
-    steps:
-    - name: Download release
-      run: |
-        wget "https://github.com/jumppad-labs/jumppad/releases/download/v${{ needs.tag.outputs.new_version }}/jumppad_${{ needs.tag.outputs.new_version }}_linux_${{ matrix.arch }}"
-
-    - name: Upload release
-      run: |
-        curl -F package=@jumppad_${{ needs.tag.outputs.new_version }}_linux_${{ matrix.arch }} https://${{ secrets.FURY_JUMPPAD_TOKEN }}@push.fury.io/jumppad/
-
-    - name: Send status to Discord
-      uses: sarisia/actions-status-discord@v1
-      if: always()
-      with:
-        tile: ${{ github.job_id }}
-        webhook: ${{ secrets.DISCORD_WEBHOOK }}
-        description: "Push new version ${{ needs.tag.outputs.new_version }} to Apt"
-
-  update_website:
-    name: Update Jumpad website with latest version
-    needs:
-      - github_release
-      - tag
-    runs-on: ubuntu-latest
-
-    steps:
-      -
-        name: Checkout
-        uses: actions/checkout@v2
-        with:
-          repository: 'jumppad-labs/jumppad-labs.github.io'
-          token: '${{ secrets.GH_TOKEN }}'
-
-      - name: Configure Git
-        run: |
-          git config user.email "helo@jumppad.dev"
-          git config user.name "Jumppad Bot"
-
-      - name: Write version
-        run: |
-          echo "${{ needs.tag.outputs.new_version }}" > ./public/latest
-
-      - name: Push update
-        run: |
-          git add .
-          git commit -m "Update version to ${{ needs.tag.outputs.new_version }}"
-          git push
-
-      - name: Send status to Discord
-        uses: sarisia/actions-status-discord@v1
-        if: always()
-        with:
-          tile: ${{ github.job_id }}
-          webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          description: "Update website with latest version ${{ needs.tag.outputs.new_version }}"
+        description: "Push new version ${{ needs.github_release.outputs.version }} to Winget"

@@ -114,6 +114,7 @@ func (c *ConnectorImpl) Start(cb *types.CertBundle) error {
 	}
 
 	args := []string{
+		"--non-interactive",
 		"connector",
 		"run",
 		"--grpc-bind", c.options.GrpcBind,
@@ -123,6 +124,14 @@ func (c *ConnectorImpl) Start(cb *types.CertBundle) error {
 		"--server-cert-path", cb.LeafCertPath,
 		"--server-key-path", cb.LeafKeyPath,
 		"--log-level", ll,
+	}
+
+	// if the binary path contains a space, split this to args
+	if strings.Contains(c.options.BinaryPath, " ") {
+		parts := strings.Split(c.options.BinaryPath, " ")
+		c.options.BinaryPath = parts[0]
+
+		args = append(parts[1:], args...)
 	}
 
 	lp := &gohup.LocalProcess{}
@@ -288,7 +297,7 @@ func (c *ConnectorImpl) GenerateLeafCert(
 		return nil, err
 	}
 
-	hosts := []string{"localhost", "*.jumppad.dev", c.options.GrpcBind}
+	hosts := []string{"localhost", fmt.Sprintf("*.local.%s", utils.LocalTLD), c.options.GrpcBind}
 	hosts = append(hosts, host...)
 
 	lc, err := crypto.GenerateLeaf(
@@ -324,12 +333,12 @@ func (c *ConnectorImpl) ExposeService(
 	dir := utils.CertsDir("")
 	cb, err := c.GetLocalCertBundle(dir)
 	if err != nil {
-		return "", fmt.Errorf("Unable to find certificate at location: %s, error: %s", dir, err)
+		return "", fmt.Errorf("unable to find certificate at location: %s, error: %s", dir, err)
 	}
 
 	cl, err := getClient(cb, c.options.GrpcBind)
 	if err != nil {
-		return "", fmt.Errorf("Unable to create grpc client: %s", err)
+		return "", fmt.Errorf("unable to create grpc client: %s", err)
 	}
 
 	t := shipyard.ServiceType_LOCAL

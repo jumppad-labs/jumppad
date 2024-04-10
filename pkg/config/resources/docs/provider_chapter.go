@@ -1,20 +1,21 @@
 package docs
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 
 type ChapterProvider struct {
 	config *Chapter
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *ChapterProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *ChapterProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*Chapter)
 	if !ok {
 		return fmt.Errorf("unable to initialize Chapter provider, resource is not of type Chapter")
@@ -26,8 +27,11 @@ func (p *ChapterProvider) Init(cfg htypes.Resource, l logger.Logger) error {
 	return nil
 }
 
-func (p *ChapterProvider) Create() error {
-	p.log.Info(fmt.Sprintf("Creating %s", p.config.Type), "ref", p.config.ID)
+func (p *ChapterProvider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Context is cancelled, skipping create", "ref", p.config.Meta.ID)
+		return nil
+	}
 
 	index := ChapterIndex{
 		Title: p.config.Title,
@@ -41,7 +45,7 @@ func (p *ChapterProvider) Create() error {
 		taskMatch := taskRegex.FindAllStringSubmatch(page.Content, -1)
 		for _, match := range taskMatch {
 			taskID := match[1]
-			resourceID := fmt.Sprintf("<Task id=\"%s\">", p.config.Tasks[taskID].ID)
+			resourceID := fmt.Sprintf("<Task id=\"%s\">", p.config.Tasks[taskID].Meta.ID)
 			page.Content = taskRegex.ReplaceAllString(page.Content, resourceID)
 		}
 
@@ -58,7 +62,7 @@ func (p *ChapterProvider) Create() error {
 
 		page := ChapterIndexPage{
 			Title: title,
-			URI:   fmt.Sprintf("%s/%s", p.config.Name, page.Name),
+			URI:   fmt.Sprintf("%s/%s", p.config.Meta.Name, page.Name),
 		}
 
 		index.Pages = append(index.Pages, page)
@@ -69,7 +73,7 @@ func (p *ChapterProvider) Create() error {
 	return nil
 }
 
-func (p *ChapterProvider) Destroy() error {
+func (p *ChapterProvider) Destroy(ctx context.Context, force bool) error {
 	return nil
 }
 
@@ -77,17 +81,12 @@ func (p *ChapterProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (p *ChapterProvider) Refresh() error {
-	p.log.Debug("Refresh Chapter", "ref", p.config.ID)
-
-	p.Destroy()
-	p.Create()
+func (p *ChapterProvider) Refresh(ctx context.Context) error {
+	p.Create(context.Background()) // always generate content
 
 	return nil
 }
 
 func (p *ChapterProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.ID)
-
 	return false, nil
 }

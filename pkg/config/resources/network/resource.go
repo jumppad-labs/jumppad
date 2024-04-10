@@ -12,7 +12,7 @@ const TypeNetwork string = "network"
 // Network defines a Docker network
 type Network struct {
 	// embedded type holding name, etc
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Subnet string `hcl:"subnet" json:"subnet"`
 }
@@ -25,8 +25,8 @@ func (c *Network) Parse(conf types.Findable) error {
 	}
 
 	for _, n := range nets {
-		if n.Metadata().Name == c.Name && n.Metadata().ID != c.ID {
-			return fmt.Errorf("a network named '%s' is already defined by the resource '%s'", c.Name, n.Metadata().ID)
+		if n.Metadata().Name == c.Meta.Name && n.Metadata().ID != c.Meta.ID {
+			return fmt.Errorf("a network named '%s' is already defined by the resource '%s'", c.Meta.Name, n.Metadata().ID)
 		}
 	}
 

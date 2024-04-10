@@ -14,7 +14,7 @@ func TestNomadJobProcessSetsAbsolute(t *testing.T) {
 	require.NoError(t, err)
 
 	c := &NomadJob{
-		ResourceMetadata: types.ResourceMetadata{File: "./"},
+		ResourceBase: types.ResourceBase{Meta: types.Meta{File: "./"}},
 		Paths: []string{
 			"./one.hcl",
 			"./two.hcl",

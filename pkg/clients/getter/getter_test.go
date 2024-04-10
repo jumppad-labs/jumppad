@@ -75,12 +75,12 @@ func TestGetsFolderWhenExistsAndForceTrue(t *testing.T) {
 
 func TestGetFunctional(t *testing.T) {
 	g := NewGetter(true)
-	url := "github.com/jetstack/cert-manager?ref=v1.2.0/deploy/charts//cert-manager"
+	url := "github.com/shipyard-run/blueprints//consul-nomad?ref=v0.0.1"
 	dir := t.TempDir()
 
 	fmt.Println(dir)
 
 	err := g.Get(url, dir)
 	assert.NoError(t, err)
-	assert.FileExists(t, filepath.Join(dir, "values.yaml"))
+	assert.FileExists(t, filepath.Join(dir, "README.md"))
 }

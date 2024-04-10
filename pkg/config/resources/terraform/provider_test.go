@@ -1,6 +1,7 @@
 package terraform
 
 import (
+	"context"
 	"os"
 	"path"
 	"testing"
@@ -37,9 +38,9 @@ func setupProvider(t *testing.T, c *Terraform) (*TerraformProvider, *mocks.Conta
 }
 
 func TestCreateWithNoVariablesDoesNotReturnError(t *testing.T) {
-	p, _, _ := setupProvider(t, &Terraform{ResourceMetadata: types.ResourceMetadata{Name: "test"}})
+	p, _, _ := setupProvider(t, &Terraform{ResourceBase: types.ResourceBase{Meta: types.Meta{Name: "test"}}})
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	require.NoError(t, err)
 }
 
@@ -49,12 +50,12 @@ func TestCreateWithWithVariablesGeneratesFile(t *testing.T) {
 	})
 
 	p, _, sd := setupProvider(t, &Terraform{
-		ResourceMetadata: types.ResourceMetadata{Name: "test"},
-		Variables:        variables,
+		ResourceBase: types.ResourceBase{Meta: types.Meta{Name: "test"}},
+		Variables:    variables,
 	},
 	)
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	require.NoError(t, err)
 
 	// check variables file
@@ -65,9 +66,9 @@ func TestCreateWithWithVariablesGeneratesFile(t *testing.T) {
 
 func TestCreatesTerraformContainerWithTheCorrectValues(t *testing.T) {
 	res := &Terraform{
-		ResourceMetadata: types.ResourceMetadata{Name: "test"},
+		ResourceBase: types.ResourceBase{Meta: types.Meta{Name: "test"}},
 		Networks: []container.NetworkAttachment{
-			container.NetworkAttachment{
+			{
 				ID: "Abc123",
 			},
 		},
@@ -77,7 +78,7 @@ func TestCreatesTerraformContainerWithTheCorrectValues(t *testing.T) {
 
 	p, m, _ := setupProvider(t, res)
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	require.NoError(t, err)
 
 	c := m.Calls[1].Arguments[0].(*ctypes.Container)
@@ -106,7 +107,7 @@ func TestCreatesTerraformContainerWithTheCorrectValues(t *testing.T) {
 
 func TestCreateExecutesCommandInContainer(t *testing.T) {
 	res := &Terraform{
-		ResourceMetadata: types.ResourceMetadata{Name: "test"},
+		ResourceBase: types.ResourceBase{Meta: types.Meta{Name: "test"}},
 		Networks: []container.NetworkAttachment{
 			container.NetworkAttachment{
 				ID: "Abc123",
@@ -117,7 +118,7 @@ func TestCreateExecutesCommandInContainer(t *testing.T) {
 
 	p, m, _ := setupProvider(t, res)
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	require.NoError(t, err)
 
 	// assert script was executed in container
@@ -141,7 +142,7 @@ func TestCreateExecutesCommandInContainer(t *testing.T) {
 
 func TestCreateSetsOutput(t *testing.T) {
 	res := &Terraform{
-		ResourceMetadata: types.ResourceMetadata{Name: "test"},
+		ResourceBase: types.ResourceBase{Meta: types.Meta{Name: "test"}},
 		Networks: []container.NetworkAttachment{
 			container.NetworkAttachment{
 				ID: "Abc123",
@@ -152,7 +153,7 @@ func TestCreateSetsOutput(t *testing.T) {
 
 	p, _, _ := setupProvider(t, res)
 
-	err := p.Create()
+	err := p.Create(context.Background())
 	require.NoError(t, err)
 
 	require.Equal(t, "123", res.Output.AsValueMap()["abc"].AsString())
@@ -160,7 +161,7 @@ func TestCreateSetsOutput(t *testing.T) {
 
 func TestDestroyExecutesCommandInContainer(t *testing.T) {
 	res := &Terraform{
-		ResourceMetadata: types.ResourceMetadata{Name: "test"},
+		ResourceBase: types.ResourceBase{Meta: types.Meta{Name: "test"}},
 		Networks: []container.NetworkAttachment{
 			container.NetworkAttachment{
 				ID: "Abc123",
@@ -175,7 +176,7 @@ func TestDestroyExecutesCommandInContainer(t *testing.T) {
 	os.WriteFile(path.Join(sd, "terraform.tfstate"), []byte("{\"abc\": {\"value\": \"123\"}}"), 0655)
 	os.WriteFile(path.Join(sd, "terraform.tfvars"), []byte("{\"abc\": {\"value\": \"123\"}}"), 0655)
 
-	err := p.Destroy()
+	err := p.Destroy(context.Background(), false)
 	require.NoError(t, err)
 
 	// assert script was executed in container

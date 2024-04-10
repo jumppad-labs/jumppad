@@ -3,9 +3,11 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	gvm "github.com/shipyard-run/version-manager"
 
+	"github.com/jumppad-labs/jumppad/cmd/changelog"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/config"
@@ -13,6 +15,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 var configFile = ""
@@ -27,8 +30,15 @@ var version string // set by build process
 var date string    // set by build process
 var commit string  // set by build process
 
-func createEngine(l logger.Logger, c *clients.Clients) (jumppad.Engine, gvm.Versions, error) {
+// globalFlags are flags that are set for every command
+func globalFlags() *pflag.FlagSet {
+	flags := pflag.NewFlagSet("global", pflag.ContinueOnError)
+	flags.Bool("non-interactive", false, "Run in non-interactive mode")
 
+	return flags
+}
+
+func createEngine(l logger.Logger, c *clients.Clients) (jumppad.Engine, gvm.Versions, error) {
 	providers := config.NewProviders(c)
 
 	engine, err := jumppad.New(providers, l)
@@ -95,15 +105,6 @@ func Execute(v, c, d string) error {
 
 	engineClients, _ := clients.GenerateClients(l)
 
-	// Check the system to see if Docker is running and everything is installed
-	s, err := engineClients.System.Preflight()
-	if err != nil {
-		fmt.Println("")
-		fmt.Println("###### SYSTEM DIAGNOSTICS ######")
-		fmt.Println(s)
-		return err
-	}
-
 	engine, vm, _ := createEngine(l, engineClients)
 
 	rootCmd.AddCommand(checkCmd)
@@ -112,7 +113,7 @@ func Execute(v, c, d string) error {
 	rootCmd.AddCommand(newEnvCmd(engine))
 	rootCmd.AddCommand(newRunCmd(engine, engineClients.ContainerTasks, engineClients.Getter, engineClients.HTTP, engineClients.System, vm, engineClients.Connector, l))
 	rootCmd.AddCommand(newTestCmd())
-	rootCmd.AddCommand(newDestroyCmd(engineClients.Connector))
+	rootCmd.AddCommand(newDestroyCmd(engineClients.Connector, l))
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(newPurgeCmd(engineClients.Docker, engineClients.ImageLog, l))
 	rootCmd.AddCommand(taintCmd)
@@ -120,6 +121,7 @@ func Execute(v, c, d string) error {
 	rootCmd.AddCommand(uninstallCmd)
 	rootCmd.AddCommand(newPushCmd(engineClients.ContainerTasks, engineClients.Kubernetes, engineClients.HTTP, engineClients.Nomad, l))
 	rootCmd.AddCommand(newLogCmd(engine, engineClients.Docker, os.Stdout, os.Stderr), completionCmd)
+	rootCmd.AddCommand(changelogCmd)
 
 	// add the server commands
 	rootCmd.AddCommand(connectorCmd)
@@ -131,17 +133,55 @@ func Execute(v, c, d string) error {
 	rootCmd.AddCommand(generateCmd)
 	generateCmd.AddCommand(newGenerateReadmeCommand(engine))
 
+	// add the plugin commands
+	rootCmd.AddCommand(pluginCmd)
+
 	rootCmd.SilenceErrors = true
 
-	err = rootCmd.Execute()
+	// set a pre run function to show the changelog
+	rootCmd.PersistentFlags().Bool("non-interactive", false, "Run in non-interactive mode")
+	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		ni, _ := cmd.Flags().GetBool("non-interactive")
+		if ni {
+			return nil
+		}
+
+		cl := &changelog.Changelog{}
+
+		// replace """ with ``` in changelog
+		changes = strings.ReplaceAll(changes, `"""`, "```")
+
+		err := cl.Show(changes, changesVersion, false)
+		if err != nil {
+			showErr(err)
+			return err
+		}
+
+		// Check the system to see if Docker is running and everything is installed
+		s, err := engineClients.System.Preflight()
+		if err != nil {
+			fmt.Println("")
+			fmt.Println("###### SYSTEM DIAGNOSTICS ######")
+			fmt.Println(s)
+			return err
+		}
+
+		return nil
+	}
+
+	err := rootCmd.Execute()
 
 	if err != nil {
-		fmt.Println("")
-		fmt.Println(err)
-		fmt.Println(discordHelp)
+		showErr(err)
 	}
 
 	return err
+}
+
+func showErr(err error) {
+	fmt.Println("")
+	fmt.Println(err)
+	fmt.Println(discordHelp)
 }
 
 var discordHelp = `

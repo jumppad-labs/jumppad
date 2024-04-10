@@ -1,22 +1,25 @@
 package random
 
 import (
+	"context"
 	"crypto/rand"
 	"fmt"
 	"math/big"
 
 	"github.com/hashicorp/go-uuid"
 	htypes "github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 )
+
+var _ sdk.Provider = &RandomUUIDProvider{}
 
 // RandomUUID is a provider for generating random UUIDs
 type RandomUUIDProvider struct {
 	config *RandomUUID
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *RandomUUIDProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *RandomUUIDProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*RandomUUID)
 	if !ok {
 		return fmt.Errorf("unable to initialize RandomUUID provider, resource is not of type RandomUUID")
@@ -28,7 +31,7 @@ func (p *RandomUUIDProvider) Init(cfg htypes.Resource, l logger.Logger) error {
 	return nil
 }
 
-func (p *RandomUUIDProvider) Create() error {
+func (p *RandomUUIDProvider) Create(ctx context.Context) error {
 	result, err := uuid.GenerateUUID()
 	if err != nil {
 		return err
@@ -39,7 +42,7 @@ func (p *RandomUUIDProvider) Create() error {
 	return nil
 }
 
-func (p *RandomUUIDProvider) Destroy() error {
+func (p *RandomUUIDProvider) Destroy(ctx context.Context, force bool) error {
 	return nil
 }
 
@@ -47,12 +50,12 @@ func (p *RandomUUIDProvider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (p *RandomUUIDProvider) Refresh() error {
+func (p *RandomUUIDProvider) Refresh(ctx context.Context) error {
 	return nil
 }
 
 func (p *RandomUUIDProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.ID)
+	p.log.Debug("Checking changes", "ref", p.config.Meta.ID)
 
 	return false, nil
 }

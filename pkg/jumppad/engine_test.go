@@ -1,6 +1,7 @@
 package jumppad
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -65,70 +66,104 @@ func getResourceFromMock(mp *mocks.Providers, index int) types.Resource {
 	return r.(types.Resource)
 }
 
-func getMetaFromMock(mp *mocks.Providers, index int) types.ResourceMetadata {
+func getMetaFromMock(mp *mocks.Providers, index int) types.Meta {
 	return *getResourceFromMock(mp, index).Metadata()
 }
 
 func TestApplyWithSingleFile(t *testing.T) {
 	e, mp := setupTests(t, nil)
 
-	_, err := e.Apply("../../examples/single_file/container.hcl")
+	_, err := e.Apply(context.Background(), "../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
 	require.Len(t, e.config.Resources, 7) // 6 resources in the file plus the image cache
 
-	// Because of the DAG both network and template are top level resources
+	// Check the provider was called for each resource
 	require.ElementsMatch(t,
 		[]string{
 			"default",
 			"onprem",
 			"default",
 			"consul_config",
+			"port_range",
+			"version",
 		},
 		[]string{
 			getMetaFromMock(mp, 0).Name,
 			getMetaFromMock(mp, 1).Name,
 			getMetaFromMock(mp, 2).Name,
 			getMetaFromMock(mp, 3).Name,
+			getMetaFromMock(mp, 4).Name,
+			getMetaFromMock(mp, 5).Name,
 		},
 	)
-
-	require.Equal(t, "consul", getMetaFromMock(mp, 4).Name)
-	require.Equal(t, "consul_addr", getMetaFromMock(mp, 5).Name)
 }
 
 func TestApplyAddsImageCache(t *testing.T) {
 	e, _ := setupTests(t, nil)
 
-	_, err := e.Apply("../../examples/single_file/container.hcl")
+	_, err := e.Apply(context.Background(), "../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
 	dc := e.ResourceCountForType(cache.TypeImageCache)
 	require.Equal(t, 1, dc)
 }
 
+func TestApplyAddsNetworksToImageCache(t *testing.T) {
+	e, _ := setupTests(t, nil)
+
+	_, err := e.Apply(context.Background(), "../../examples/single_file/container.hcl")
+	require.NoError(t, err)
+
+	dc := e.ResourceCountForType(cache.TypeImageCache)
+	require.Equal(t, 1, dc)
+
+	r, err := e.config.FindResource("resource.image_cache.default")
+	require.NoError(t, err)
+
+	// network should be added as a dependency
+	require.Equal(t, "resource.network.onprem", r.GetDependencies()[0])
+}
+
+func TestApplyAddsCustomRegistriesToImageCache(t *testing.T) {
+	e, _ := setupTests(t, nil)
+
+	_, err := e.Apply(context.Background(), "../../examples/registries")
+	require.NoError(t, err)
+
+	dc := e.ResourceCountForType(cache.TypeImageCache)
+	require.Equal(t, 1, dc)
+
+	dc = e.ResourceCountForType(cache.TypeRegistry)
+	require.Equal(t, 2, dc)
+
+	r, err := e.config.FindResource("resource.image_cache.default")
+	require.NoError(t, err)
+	require.Len(t, r.(*cache.ImageCache).Registries, 2)
+}
+
 func TestApplyWithSingleFileAndVariables(t *testing.T) {
 	e, mp := setupTests(t, nil)
 
-	_, err := e.ApplyWithVariables("../../examples/single_file/container.hcl", nil, "../../examples/single_file/default.vars")
+	_, err := e.ApplyWithVariables(context.Background(), "../../examples/single_file/container.hcl", nil, "../../examples/single_file/default.vars")
 	require.NoError(t, err)
 	require.Len(t, e.config.Resources, 7) // 6 resources in the file plus the image cache
 
 	// then the container should be created
-	require.Equal(t, "consul", getMetaFromMock(mp, 4).Name)
+	require.Equal(t, "consul", getMetaFromMock(mp, 6).Name)
 
 	// finally the provider for the image cache should be updated
-	require.Equal(t, "consul_addr", getMetaFromMock(mp, 5).Name)
+	require.Equal(t, "consul_addr", getMetaFromMock(mp, 7).Name)
 
 	// check the variable has overridden the image
-	cont := getResourceFromMock(mp, 4).(*container.Container)
+	cont := getResourceFromMock(mp, 6).(*container.Container)
 	require.Equal(t, "consul:1.8.1", cont.Image.Name)
 }
 
 func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
 	e, mp := setupTests(t, nil)
 
-	_, err := e.Apply("../../examples/single_k3s_cluster")
+	_, err := e.Apply(context.Background(), "../../examples/single_k3s_cluster")
 	require.NoError(t, err)
 
 	// should have call create for each resource in the config
@@ -146,11 +181,11 @@ func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
 func TestApplyDoesNotCallsProviderCreateWhenInState(t *testing.T) {
 	e, mp := setupTestsWithState(t, nil, existingState)
 
-	_, err := e.Apply("../../examples/single_file")
+	_, err := e.Apply(context.Background(), "../../examples/single_file")
 	require.NoError(t, err)
 
 	// should only be called for resources that are not in the state
-	testAssertMethodCalled(t, mp, "Create", 3)
+	testAssertMethodCalled(t, mp, "Create", 5)
 
 	// the state should also contain 7 resources
 	sf := testLoadState(t, e)
@@ -160,11 +195,11 @@ func TestApplyDoesNotCallsProviderCreateWhenInState(t *testing.T) {
 func TestApplyRemovesItemsInStateWhenNotInFiles(t *testing.T) {
 	e, mp := setupTestsWithState(t, nil, existingState)
 
-	_, err := e.Apply("../../examples/single_file")
+	_, err := e.Apply(context.Background(), "../../examples/single_file")
 	require.NoError(t, err)
 
 	// should only be called for resources that are not in the state
-	testAssertMethodCalled(t, mp, "Create", 3)
+	testAssertMethodCalled(t, mp, "Create", 5)
 
 	// should remove items not in files
 	testAssertMethodCalled(t, mp, "Destroy", 2)
@@ -178,7 +213,7 @@ func TestApplyNotCallsProviderCreateForDisabledResources(t *testing.T) {
 	e, mp := setupTests(t, nil)
 
 	// contains 3 resources one is disabled
-	_, err := e.Apply("../../examples/disabled")
+	_, err := e.Apply(context.Background(), "../../examples/disabled")
 	require.NoError(t, err)
 
 	// should have call create for non disabled resources
@@ -200,7 +235,7 @@ func TestApplyShouldNotAddDuplicateDisabledResources(t *testing.T) {
 	e, mp := setupTestsWithState(t, nil, disabledState)
 
 	// contains 2 resources one is disabled
-	_, err := e.Apply("../../examples/disabled")
+	_, err := e.Apply(context.Background(), "../../examples/disabled")
 	require.NoError(t, err)
 
 	// should have call create for each provider
@@ -223,13 +258,13 @@ func TestApplyShouldNotAddDuplicateDisabledResources(t *testing.T) {
 func TestApplySetsCreatedStatusForEachResource(t *testing.T) {
 	e, mp := setupTests(t, nil)
 
-	_, err := e.Apply("../../examples/single_file/container.hcl")
+	_, err := e.Apply(context.Background(), "../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
 	require.Equal(t, 7, e.config.ResourceCount())
 
 	// should only call create and destroy for the cache as this is pending update
-	testAssertMethodCalled(t, mp, "Create", 5) // ImageCache is always created
+	testAssertMethodCalled(t, mp, "Create", 7) // ImageCache is always created
 
 	sf := testLoadState(t, e)
 
@@ -249,14 +284,14 @@ func TestApplySetsCreatedStatusForEachResource(t *testing.T) {
 func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 	e, mp := setupTests(t, map[string]error{"onprem": fmt.Errorf("boom")})
 
-	_, err := e.Apply("../../examples/single_file/container.hcl")
+	_, err := e.Apply(context.Background(), "../../examples/single_file/container.hcl")
 	require.Error(t, err)
 
 	// should have call create for each provider
 	// there are two top level config items, template and network
 	// network will fail
 	// ImageCache should always be created
-	testAssertMethodCalled(t, mp, "Create", 3)
+	testAssertMethodCalled(t, mp, "Create", 5)
 
 	sf := testLoadState(t, e)
 
@@ -278,23 +313,23 @@ func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 func TestApplyCallsProviderDestroyAndCreateForFailedResources(t *testing.T) {
 	e, mp := setupTestsWithState(t, nil, failedState)
 
-	_, err := e.Apply("../../examples/single_file/container.hcl")
+	_, err := e.Apply(context.Background(), "../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1)
-	testAssertMethodCalled(t, mp, "Create", 5) // ImageCache is always created
+	testAssertMethodCalled(t, mp, "Create", 7) // ImageCache is always created
 }
 
 func TestApplyCallsProviderDestroyForTaintedResources(t *testing.T) {
 	e, mp := setupTestsWithState(t, nil, taintedState)
 
-	_, err := e.Apply("../../examples/single_file/container.hcl")
+	_, err := e.Apply(context.Background(), "../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1)
-	testAssertMethodCalled(t, mp, "Create", 5) // ImageCache is always created
+	testAssertMethodCalled(t, mp, "Create", 7) // ImageCache is always created
 }
 
 func TestApplyCallsProviderDestroyForDisabledResources(t *testing.T) {
@@ -302,7 +337,7 @@ func TestApplyCallsProviderDestroyForDisabledResources(t *testing.T) {
 	// destroyed
 	e, mp := setupTestsWithState(t, nil, disabledAndCreatedState)
 
-	_, err := e.Apply("../../examples/disabled/config.hcl")
+	_, err := e.Apply(context.Background(), "../../examples/disabled/config.hcl")
 	require.NoError(t, err)
 
 	// get the disabled resource
@@ -321,7 +356,7 @@ func TestApplyCallsProviderDestroyForDisabledResources(t *testing.T) {
 func TestApplyCallsProviderRefreshForCreatedResources(t *testing.T) {
 	e, mp := setupTestsWithState(t, nil, existingState)
 
-	_, err := e.Apply("../../examples/single_file/container.hcl")
+	_, err := e.Apply(context.Background(), "../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
 	// should only call twice as there is only one item in the state
@@ -333,17 +368,17 @@ func TestApplyCallsProviderRefreshForCreatedResources(t *testing.T) {
 func TestApplyCallsProviderRefreshWithErrorHaltsExecution(t *testing.T) {
 	e, mp := setupTestsWithState(t, map[string]error{"consul_config": fmt.Errorf("boom")}, singleFileState)
 
-	_, err := e.Apply("../../examples/single_file/container.hcl")
+	_, err := e.Apply(context.Background(), "../../examples/single_file/container.hcl")
 	require.Error(t, err)
 
 	testAssertMethodCalled(t, mp, "Refresh", 3)
-	testAssertMethodCalled(t, mp, "Create", 0)
+	testAssertMethodCalled(t, mp, "Create", 2)
 }
 
 func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
 	e, mp := setupTestsWithState(t, nil, existingState)
 
-	err := e.Destroy()
+	err := e.Destroy(context.Background(), false)
 	require.NoError(t, err)
 
 	// should have call create for each provider
@@ -357,7 +392,7 @@ func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
 func TestDestroyNotCallsProviderDestroyForResourcesDisabled(t *testing.T) {
 	e, mp := setupTestsWithState(t, nil, disabledState)
 
-	err := e.Destroy()
+	err := e.Destroy(context.Background(), false)
 	require.NoError(t, err)
 
 	// should have call create for each provider
@@ -371,7 +406,7 @@ func TestDestroyNotCallsProviderDestroyForResourcesDisabled(t *testing.T) {
 func TestDestroyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 	e, mp := setupTestsWithState(t, map[string]error{"mycontainer": fmt.Errorf("boom")}, complexState)
 
-	err := e.Destroy()
+	err := e.Destroy(context.Background(), false)
 	require.Error(t, err)
 
 	// should have call destroy for each provider
@@ -384,7 +419,7 @@ func TestDestroyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 func TestDestroyFailSetsStatus(t *testing.T) {
 	e, _ := setupTestsWithState(t, map[string]error{"mycontainer": fmt.Errorf("boom")}, complexState)
 
-	err := e.Destroy()
+	err := e.Destroy(context.Background(), false)
 	require.Error(t, err)
 
 	r, _ := e.config.FindResource("resource.container.mycontainer")
@@ -482,14 +517,16 @@ func testAssertMethodCalled(t *testing.T, p *mocks.Providers, method string, n i
 var failedState = `
 {
   "resources": [
-	{
-      "name": "onprem",
- 	    "properties": {
-				"status": "failed"
-			},
-      "subnet": "10.15.0.0/16",
-      "type": "network"
-	}
+  {
+      "meta": {
+        "name": "onprem",
+         "properties": {
+          "status": "failed"
+        },
+        "type": "network"
+      },
+      "subnet": "10.15.0.0/16"
+  }
   ]
 }
 `
@@ -497,14 +534,16 @@ var failedState = `
 var taintedState = `
 {
   "resources": [
-	{
-      "name": "onprem",
- 	    "properties": {
-				"status": "tainted"
-			},
-      "subnet": "10.15.0.0/16",
-      "type": "network"
-	}
+  {
+      "meta": {
+        "name": "onprem",
+        "properties": {
+          "status": "tainted"
+        },
+        "type": "network"
+      },
+      "subnet": "10.15.0.0/16"
+  }
   ]
 }
 `
@@ -512,38 +551,46 @@ var taintedState = `
 var existingState = `
 {
   "resources": [
-	{
-      "name": "cloud",
-      "properties": {
-				"status": "created"
-			},
-      "subnet": "10.15.0.0/16",
-      "type": "network"
-	},
-	{
-      "name": "default",
-      "properties": {
-				"status": "created"
-			},
-      "type": "image_cache"
-	},
-	{
-      "name": "container",
-      "properties": {
-				"status": "created"
-			},
-			"image": {
-				"name": "test"
-			},
-      "type": "container"
-	},
-	{
-      "name": "consul_config",
-      "properties": {
-				"status": "created"
-			},
-      "type": "template"
-	}
+  {
+      "meta": {
+        "name": "cloud",
+        "properties": {
+          "status": "created"
+        },
+        "type": "network"
+      },
+      "subnet": "10.15.0.0/16"
+  },
+  {
+      "meta": {
+        "name": "default",
+        "properties": {
+          "status": "created"
+        },
+        "type": "image_cache"
+      }
+  },
+  {
+      "meta": {
+        "name": "container",
+        "properties": {
+          "status": "created"
+        },
+        "type": "container"
+      },
+      "image": {
+        "name": "test"
+      }
+  },
+  {
+      "meta": {
+        "name": "consul_config",
+        "properties": {
+          "status": "created"
+        },
+        "type": "template"
+      }
+  }
   ]
 }
 `
@@ -551,45 +598,55 @@ var existingState = `
 var singleFileState = `
 {
   "resources": [
-	{
-      "name": "onprem",
-      "properties": {
-				"status": "created"
-			},
-      "subnet": "10.15.0.0/16",
-      "type": "network"
-	},
-	{
-      "name": "default",
-      "properties": {
-				"status": "created"
-			},
-      "type": "image_cache"
-	},
-	{
-      "name": "consul",
-      "properties": {
-				"status": "created"
-			},
-      "type": "container",
-			"image": {
-				"name": "test"
-			}
-	},
-	{
-      "name": "consul_config",
-      "properties": {
-				"status": "created"
-			},
-      "type": "template"
-	},
-	{
-      "name": "consul_addr",
-      "properties": {
-				"status": "created"
-			},
-      "type": "output"
-	}
+  {
+      "meta": {
+        "name": "onprem",
+        "properties": {
+          "status": "created"
+        },
+        "type": "network"
+      },
+      "subnet": "10.15.0.0/16"
+  },
+  {
+      "meta": {
+        "name": "default",
+        "properties": {
+          "status": "created"
+        },
+        "type": "image_cache"
+      }
+  },
+  {
+      "meta": {
+        "name": "consul",
+        "properties": {
+          "status": "created"
+        },
+        "type": "container"
+      },
+      "image": {
+        "name": "test"
+      }
+  },
+  {
+      "meta": {
+        "name": "consul_config",
+        "properties": {
+          "status": "created"
+        },
+        "type": "template"
+      }
+  },
+  {
+      "meta": {
+        "name": "consul_addr",
+        "properties": {
+          "status": "created"
+        },
+        "type": "output"
+      }
+  }
   ]
 }
 `
@@ -597,37 +654,45 @@ var singleFileState = `
 var complexState = `
 {
   "resources": [
-	{
-      "name": "cloud",
-      "subnet": "10.15.0.0/16",
-      "properties": {
-				"status": "created"
-			},
-      "type": "network"
-	},
-	{
-      "name": "default",
-      "type": "image_cache",
-      "properties": {
-				"status": "created"
-			},
-			"depends_on": ["resource.network.cloud"]
-	},
-	{
-      "name": "mytemplate",
-      "properties": {
-				"status": "created"
-			},
-      "type": "template"
-	},
-	{
-      "name": "mycontainer",
-      "type": "container",
-      "properties": {
-				"status": "created"
-			},
-			"depends_on": ["resource.network.cloud", "resource.template.mytemplate"]
-	}
+  {
+      "meta": {
+        "name": "cloud",
+        "properties": {
+          "status": "created"
+        },
+        "type": "network"
+      },
+      "subnet": "10.15.0.0/16"
+  },
+  {
+      "meta": {
+        "name": "default",
+        "type": "image_cache",
+        "properties": {
+          "status": "created"
+        }
+      },
+      "depends_on": ["resource.network.cloud"]
+  },
+  {
+      "meta": {
+        "name": "mytemplate",
+        "properties": {
+          "status": "created"
+        },
+        "type": "template"
+      }
+  },
+  {
+      "meta": {
+        "name": "mycontainer",
+        "type": "container",
+        "properties": {
+          "status": "created"
+        }
+      },
+      "depends_on": ["resource.network.cloud", "resource.template.mytemplate"]
+  }
   ]
 }
 `
@@ -636,27 +701,32 @@ var disabledState = `
 {
   "blueprint": null,
   "resources": [
-	{
-      "name": "default",
-      "status": "created",
-      "type": "image_cache"
-	},
-	{
-      "name": "dc1_enabled",
-      "properties": {
-				"status": "created"
-			},
-      "subnet": "10.15.0.0/16",
-      "type": "network"
-	},
-	{
-		 "disabled": true,
-      "name": "consul_disabled",
-      "properties": {
-				"status": "disabled"
-			},
-      "type": "container"
-	}
+  {
+      "meta": {
+        "name": "default",
+        "type": "image_cache"
+      }
+  },
+  {
+      "meta": {
+        "name": "dc1_enabled",
+        "properties": {
+          "status": "created"
+        },
+        "type": "network"
+      },
+      "subnet": "10.15.0.0/16"
+  },
+  {
+     "disabled": true,
+      "meta": {
+        "name": "consul_disabled",
+        "properties": {
+           "status": "disabled"
+         },
+         "type": "container"
+      }
+  }
   ]
 }
 `
@@ -665,43 +735,51 @@ var disabledAndCreatedState = `
 {
   "blueprint": null,
   "resources": [
-	{
-      "name": "default",
-      "properties": {
-				"status": "created"
-			},
-      "type": "image_cache"
-	},
-	{
-      "name": "dc1_enabled",
-      "properties": {
-				"status": "created"
-			},
-      "subnet": "10.15.0.0/16",
-      "type": "network"
-	},
-	{
-		 "disabled": false,
-      "name": "consul_disabled",
-      "properties": {
-				"status": "created"
-			},
-      "type": "container",
-			"image": {
-				"name": "test"
-			}	
-	},
-	{
-		 "disabled": false,
+  {
+      "meta": {
+        "name": "default",
+        "properties": {
+          "status": "created"
+        },
+        "type": "image_cache"
+      }
+  },
+  {
+      "meta": {
+        "name": "dc1_enabled",
+        "properties": {
+          "status": "created"
+        },
+        "type": "network"
+      },
+      "subnet": "10.15.0.0/16"
+  },
+  {
+     "disabled": false,
+     "meta": {
+        "name": "consul_disabled",
+        "properties": {
+          "status": "created"
+        },
+        "type": "container"
+      },
+      "image": {
+        "name": "test"
+      }	
+  },
+  {
+     "disabled": false,
+     "meta": {
       "name": "consul_enabled",
       "properties": {
-				"status": "created"
-			},
-      "type": "container",
-			"image": {
-				"name": "test"
-			}
-	}
+        "status": "created"
+      },
+      "type": "container"
+      },
+      "image": {
+        "name": "test"
+      }
+  }
   ]
 }
 `

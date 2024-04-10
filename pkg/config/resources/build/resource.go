@@ -3,6 +3,7 @@ package build
 import (
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -11,12 +12,14 @@ const TypeBuild string = "build"
 
 type Build struct {
 	// embedded type holding name, etc
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Container BuildContainer `hcl:"container,block" json:"container"`
 
 	// Outputs allow files or directories to be copied from the container
 	Outputs []Output `hcl:"output,block" json:"outputs"`
+
+	Registries []container.Image `hcl:"registry,block" json:"registries"` // Optional registry to push the image to
 
 	// outputs
 
@@ -34,18 +37,21 @@ type BuildContainer struct {
 	Args       map[string]string `hcl:"args,optional" json:"args,omitempty"`             // Build args to pass  to the container
 }
 
+type Registry struct {
+}
+
 type Output struct {
 	Source      string `hcl:"source" json:"source"`           // Source file or directory in container
 	Destination string `hcl:"destination" json:"destination"` // Destination for copied file or directory
 }
 
 func (b *Build) Process() error {
-	b.Container.Context = utils.EnsureAbsolute(b.Container.Context, b.File)
+	b.Container.Context = utils.EnsureAbsolute(b.Container.Context, b.Meta.File)
 
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(b.ID)
+		r, _ := cfg.FindResource(b.Meta.ID)
 		if r != nil {
 			kstate := r.(*Build)
 			b.Image = kstate.Image

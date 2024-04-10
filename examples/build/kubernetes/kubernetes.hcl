@@ -119,7 +119,7 @@ resource "ingress" "k8s_app" {
 }
 
 output "kubeconfig" {
-  value = resource.k8s_cluster.dev.kubeconfig
+  value = resource.k8s_cluster.dev.kube_config.path
 }
 
 output "cluster" {

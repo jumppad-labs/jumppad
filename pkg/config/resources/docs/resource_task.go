@@ -7,7 +7,7 @@ import (
 const TypeTask string = "task"
 
 type Task struct {
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Prerequisites []string    `hcl:"prerequisites,optional" json:"prerequisites"`
 	Config        *Config     `hcl:"config,block" json:"config,omitempty"`

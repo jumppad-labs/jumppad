@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -8,18 +9,20 @@ import (
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/k8s"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	"golang.org/x/xerrors"
 )
+
+var _ sdk.Provider = &ConfigProvider{}
 
 type ConfigProvider struct {
 	config *K8sConfig
 	client k8s.Kubernetes
-	log    logger.Logger
+	log    sdk.Logger
 }
 
-func (p *ConfigProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *ConfigProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*K8sConfig)
 	if !ok {
 		return fmt.Errorf("unable to initialize Config provider, resource is not of type K8sConfig")
@@ -38,8 +41,13 @@ func (p *ConfigProvider) Init(cfg htypes.Resource, l logger.Logger) error {
 }
 
 // Create the Kubernetes resources defined by the config
-func (p *ConfigProvider) Create() error {
-	p.log.Info("Applying Kubernetes configuration", "ref", p.config.Name, "config", p.config.Paths)
+func (p *ConfigProvider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping create, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
+	p.log.Info("Applying Kubernetes configuration", "ref", p.config.Meta.Name, "config", p.config.Paths)
 
 	err := p.setup()
 	if err != nil {
@@ -58,12 +66,12 @@ func (p *ConfigProvider) Create() error {
 			return xerrors.Errorf("unable to parse healthcheck duration: %w", err)
 		}
 
-		err = p.client.HealthCheckPods(p.config.HealthCheck.Pods, to)
+		err = p.client.HealthCheckPods(ctx, p.config.HealthCheck.Pods, to)
 		if err != nil {
 			return xerrors.Errorf("healthcheck failed after helm chart setup: %w", err)
 		}
 	}
-	
+
 	// set the checksums
 	cs, err := p.generateChecksums()
 	if err != nil {
@@ -76,8 +84,13 @@ func (p *ConfigProvider) Create() error {
 }
 
 // Destroy the Kubernetes resources defined by the config
-func (p *ConfigProvider) Destroy() error {
-	p.log.Info("Destroy Kubernetes configuration", "ref", p.config.ID, "config", p.config.Paths)
+func (p *ConfigProvider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping destroy, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
+	p.log.Info("Destroy Kubernetes configuration", "ref", p.config.Meta.ID, "config", p.config.Paths)
 
 	err := p.setup()
 	if err != nil {
@@ -86,7 +99,7 @@ func (p *ConfigProvider) Destroy() error {
 
 	err = p.client.Delete(p.config.Paths)
 	if err != nil {
-		p.log.Debug("There was a problem destroying Kubernetes config, logging message but ignoring error", "ref", p.config.ID, "error", err)
+		p.log.Debug("There was a problem destroying Kubernetes config, logging message but ignoring error", "ref", p.config.Meta.ID, "error", err)
 	}
 	return nil
 }
@@ -96,7 +109,7 @@ func (p *ConfigProvider) Lookup() ([]string, error) {
 	return []string{}, nil
 }
 
-func (p *ConfigProvider) Refresh() error {
+func (p *ConfigProvider) Refresh(ctx context.Context) error {
 	cp, err := p.getChangedPaths()
 	if err != nil {
 		return err
@@ -106,14 +119,14 @@ func (p *ConfigProvider) Refresh() error {
 		return nil
 	}
 
-	p.log.Info("Refresh Kubernetes config", "ref", p.config.ID, "paths", cp)
+	p.log.Info("Refresh Kubernetes config", "ref", p.config.Meta.ID, "paths", cp)
 
-	err = p.Destroy()
+	err = p.Destroy(ctx, false)
 	if err != nil {
 		return err
 	}
 
-	return p.Create()
+	return p.Create(ctx)
 }
 
 func (p *ConfigProvider) Changed() (bool, error) {
@@ -123,7 +136,7 @@ func (p *ConfigProvider) Changed() (bool, error) {
 	}
 
 	if len(cp) > 0 {
-		p.log.Debug("Kubernetes jobs changed, needs refresh", "ref", p.config.ID)
+		p.log.Debug("Kubernetes jobs changed, needs refresh", "ref", p.config.Meta.ID)
 		return true, nil
 	}
 	return false, nil
@@ -131,7 +144,7 @@ func (p *ConfigProvider) Changed() (bool, error) {
 
 func (p *ConfigProvider) setup() error {
 	var err error
-	p.client, err = p.client.SetConfig(p.config.Cluster.KubeConfig)
+	p.client, err = p.client.SetConfig(p.config.Cluster.KubeConfig.ConfigPath)
 	if err != nil {
 		return xerrors.Errorf("unable to create Kubernetes client: %w", err)
 	}

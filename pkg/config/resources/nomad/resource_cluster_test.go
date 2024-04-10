@@ -21,7 +21,7 @@ func TestNomadClusterProcessSetsAbsolute(t *testing.T) {
 	require.NoError(t, err)
 
 	c := &NomadCluster{
-		ResourceMetadata: types.ResourceMetadata{File: "./"},
+		ResourceBase: types.ResourceBase{Meta: types.Meta{File: "./"}},
 
 		ServerConfig: "./server_config.hcl",
 		ClientConfig: "./client_config.hcl",
@@ -43,29 +43,48 @@ func TestNomadClusterProcessSetsAbsolute(t *testing.T) {
 	require.Equal(t, wd, c.Volumes[0].Source)
 }
 
+func TestNomadClusterProcessDoesNotSetAbsoluteForNonBindMounts(t *testing.T) {
+	c := &NomadCluster{
+		ResourceBase: types.ResourceBase{Meta: types.Meta{File: "./"}},
+
+		Volumes: []ctypes.Volume{
+			{
+				Type:        "volume",
+				Source:      "./",
+				Destination: "./",
+			},
+		},
+	}
+
+	c.Process()
+
+	require.Equal(t, "./", c.Volumes[0].Source)
+}
+
 func TestNomadClusterSetsOutputsFromState(t *testing.T) {
 	testutils.SetupState(t, `
 {
   "blueprint": null,
   "resources": [
-	{
-			"id": "resource.nomad_cluster.test",
-      "name": "test",
-      "status": "created",
-      "type": "nomad_cluster",
-			"api_port": 123,
-			"connector_port": 124,
-			"external_ip": "127.0.0.1",
-			"server_container_name": "server.something.something",
-			"client_container_name": ["1.client.something.something","2.client.something.something"],
-			"config_dir": "abc/123"
-	}
-	]
+  {
+      "meta": {
+        "id": "resource.nomad_cluster.test",
+        "name": "test",
+        "type": "nomad_cluster"
+      },
+      "api_port": 123,
+      "connector_port": 124,
+      "external_ip": "127.0.0.1",
+      "server_container_name": "server.something.something",
+      "client_container_name": ["1.client.something.something","2.client.something.something"],
+      "config_dir": "abc/123"
+  }
+  ]
 }`)
 
 	c := &NomadCluster{
-		ResourceMetadata: types.ResourceMetadata{
-			ID: "resource.nomad_cluster.test",
+		ResourceBase: types.ResourceBase{
+			Meta: types.Meta{ID: "resource.nomad_cluster.test"},
 		},
 	}
 

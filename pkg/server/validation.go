@@ -8,7 +8,7 @@ import (
 	"os"
 
 	"github.com/go-chi/chi"
-	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/hclconfig/resources"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/images"
 	"github.com/jumppad-labs/jumppad/pkg/clients/tar"
@@ -51,7 +51,7 @@ type validationCondition struct {
 }
 
 func getTarget(id string) (string, error) {
-	fqrn, err := types.ParseFQRN(id)
+	fqrn, err := resources.ParseFQRN(id)
 	if err != nil {
 		return "", err
 	}
@@ -203,7 +203,7 @@ func (a *API) validation(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(validationResponse{
-		ID:         task.ID,
+		ID:         task.Meta.ID,
 		Conditions: conditions,
 		Status:     status,
 	})

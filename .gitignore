@@ -5,3 +5,4 @@ dist/
 .envrc
 .terraform
 .terraform.lock.hcl
+output/

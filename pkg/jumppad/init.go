@@ -1,6 +1,7 @@
 package jumppad
 
 import (
+	"github.com/jumppad-labs/hclconfig/resources"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/blueprint"
@@ -21,6 +22,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/random"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/template"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/terraform"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 
 func init() {
@@ -37,13 +39,15 @@ func init() {
 	config.RegisterResource(docs.TypeTask, &docs.Task{}, &null.Provider{})
 	config.RegisterResource(docs.TypeBook, &docs.Book{}, &docs.BookProvider{})
 	config.RegisterResource(exec.TypeExec, &exec.Exec{}, &exec.Provider{})
-	config.RegisterResource(exec.TypeLocalExec, &exec.LocalExec{}, &exec.LocalProvider{})
-	config.RegisterResource(exec.TypeRemoteExec, &exec.RemoteExec{}, &exec.RemoteProvider{})
 	config.RegisterResource(helm.TypeHelm, &helm.Helm{}, &helm.Provider{})
 	config.RegisterResource(http.TypeHTTP, &http.HTTP{}, &http.Provider{})
 	config.RegisterResource(ingress.TypeIngress, &ingress.Ingress{}, &ingress.Provider{})
 	config.RegisterResource(k8s.TypeK8sCluster, &k8s.K8sCluster{}, &k8s.ClusterProvider{})
 	config.RegisterResource(k8s.TypeK8sConfig, &k8s.K8sConfig{}, &k8s.ConfigProvider{})
+	// add alias for k8s
+	config.RegisterResource(k8s.TypeKubernetesCluster, &k8s.K8sCluster{}, &k8s.ClusterProvider{})
+	config.RegisterResource(k8s.TypeKubernetesConfig, &k8s.K8sConfig{}, &k8s.ConfigProvider{})
+
 	config.RegisterResource(network.TypeNetwork, &network.Network{}, &network.Provider{})
 	config.RegisterResource(nomad.TypeNomadCluster, &nomad.NomadCluster{}, &nomad.ClusterProvider{})
 	config.RegisterResource(nomad.TypeNomadJob, &nomad.NomadJob{}, &nomad.JobProvider{})
@@ -52,10 +56,25 @@ func init() {
 	config.RegisterResource(random.TypeRandomUUID, &random.RandomUUID{}, &random.RandomUUIDProvider{})
 	config.RegisterResource(random.TypeRandomPassword, &random.RandomPassword{}, &random.RandomPasswordProvider{})
 	config.RegisterResource(random.TypeRandomCreature, &random.RandomCreature{}, &random.RandomCreatureProvider{})
+	config.RegisterResource(cache.TypeRegistry, &cache.Registry{}, &null.Provider{})
 	config.RegisterResource(template.TypeTemplate, &template.Template{}, &template.TemplateProvider{})
 	config.RegisterResource(terraform.TypeTerraform, &terraform.Terraform{}, &terraform.TerraformProvider{})
 
-	config.RegisterResource(types.TypeModule, &types.Module{}, &null.Provider{})
-	config.RegisterResource(types.TypeOutput, &types.Output{}, &null.Provider{})
-	config.RegisterResource(types.TypeVariable, &types.Variable{}, &null.Provider{})
+	// register providers for the default types
+	config.RegisterResource(resources.TypeModule, &resources.Module{}, &null.Provider{})
+	config.RegisterResource(resources.TypeOutput, &resources.Output{}, &null.Provider{})
+	config.RegisterResource(resources.TypeVariable, &resources.Variable{}, &null.Provider{})
+	config.RegisterResource(resources.TypeLocal, &resources.Local{}, &null.Provider{})
+}
+
+// PluginRegisterResource is a function that registers a resource with the config package
+// it is used by external plugins to register their resources
+func PluginRegisterResource(name string, r types.Resource, p sdk.Provider) {
+	config.RegisterResource(name, r, p)
+}
+
+// PluginLoadState is a function that enables external plugins to load the
+// saved state of the configuration
+func PluginLoadState() (sdk.Config, error) {
+	return config.LoadState()
 }

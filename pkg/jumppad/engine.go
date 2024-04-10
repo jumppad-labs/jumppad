@@ -4,6 +4,7 @@ import (
 
 	// "fmt"
 
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/jumppad-labs/hclconfig"
 	hclerrors "github.com/jumppad-labs/hclconfig/errors"
+	"github.com/jumppad-labs/hclconfig/resources"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/config"
@@ -26,15 +28,15 @@ import (
 //
 //go:generate mockery --name Engine --filename engine.go
 type Engine interface {
-	Apply(string) (*hclconfig.Config, error)
+	Apply(context.Context, string) (*hclconfig.Config, error)
 
 	// ApplyWithVariables applies a configuration file or directory containing
 	// configuration. Optionally the user can provide a map of variables which the configuration
 	// uses and / or a file containing variables.
-	ApplyWithVariables(path string, variables map[string]string, variablesFile string) (*hclconfig.Config, error)
+	ApplyWithVariables(ctx context.Context, path string, variables map[string]string, variablesFile string) (*hclconfig.Config, error)
 	ParseConfig(string) (*hclconfig.Config, error)
 	ParseConfigWithVariables(string, map[string]string, string) (*hclconfig.Config, error)
-	Destroy() error
+	Destroy(ctx context.Context, force bool) error
 	Config() *hclconfig.Config
 	Diff(path string, variables map[string]string, variablesFile string) (new []types.Resource, changed []types.Resource, removed []types.Resource, cfg *hclconfig.Config, err error)
 }
@@ -44,6 +46,8 @@ type EngineImpl struct {
 	providers config.Providers
 	log       logger.Logger
 	config    *hclconfig.Config
+	ctx       context.Context
+	force     bool
 }
 
 // New creates a new Jumppad engine
@@ -143,8 +147,8 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 			continue
 		}
 
-		// check if the resource has changed
-		if cr.Metadata().Checksum != r.Metadata().Checksum {
+		// check if the hcl resource text has changed
+		if cr.Metadata().Checksum.Parsed != r.Metadata().Checksum.Parsed {
 			// resource has changes rebuild
 			changed = append(changed, r)
 			continue
@@ -178,7 +182,7 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 	// to see if any internal properties that have changed
 	for _, r := range unchanged {
 		// call changed on when not disabled
-		if !r.Metadata().Disabled {
+		if !r.GetDisabled() {
 			p := e.providers.GetProvider(r)
 			if p == nil {
 				return nil, nil, nil, nil, fmt.Errorf("unable to create provider for resource Name: %s, Type: %s. Please check the provider is registered in providers.go", r.Metadata().Name, r.Metadata().Type)
@@ -199,12 +203,14 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 }
 
 // Apply the configuration and create or destroy the resources
-func (e *EngineImpl) Apply(path string) (*hclconfig.Config, error) {
-	return e.ApplyWithVariables(path, nil, "")
+func (e *EngineImpl) Apply(ctx context.Context, path string) (*hclconfig.Config, error) {
+	return e.ApplyWithVariables(ctx, path, nil, "")
 }
 
 // ApplyWithVariables applies the current config creating the resources
-func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, variablesFile string) (*hclconfig.Config, error) {
+func (e *EngineImpl) ApplyWithVariables(ctx context.Context, path string, vars map[string]string, variablesFile string) (*hclconfig.Config, error) {
+	e.ctx = ctx
+
 	// abs paths
 	var err error
 	path, err = filepath.Abs(path)
@@ -236,47 +242,55 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 	e.config = c
 
 	// check to see we already have an image cache
-	_, err = e.config.FindResourcesByType(cache.TypeImageCache)
+	_, err = c.FindResourcesByType(cache.TypeImageCache)
 	if err != nil {
-		cache := &cache.ImageCache{
-			ResourceMetadata: types.ResourceMetadata{
-				Name:       "default",
-				Type:       cache.TypeImageCache,
-				ID:         "resource.image_cache.default",
-				Properties: map[string]interface{}{},
+		// create a new cache with the correct registries
+		ca := &cache.ImageCache{
+			ResourceBase: types.ResourceBase{
+				Meta: types.Meta{
+					Name:       "default",
+					Type:       cache.TypeImageCache,
+					ID:         "resource.image_cache.default",
+					Properties: map[string]interface{}{},
+				},
 			},
 		}
 
-		e.log.Debug("Creating new Image Cache", "id", cache.ID)
+		e.log.Debug("Creating new Image Cache", "id", ca.Meta.ID)
 
-		p := e.providers.GetProvider(cache)
+		p := e.providers.GetProvider(ca)
 		if p == nil {
 			// this should never happen
 			panic("Unable to find provider for Image Cache, Nic assured me that you should never see this message. Sorry, the monkey has broken something again")
 		}
 
 		// create the cache
-		err := p.Create()
+		err := p.Create(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("unable to create image cache: %s", err)
+			ca.Meta.Properties[constants.PropertyStatus] = constants.StatusFailed
+		} else {
+			ca.Meta.Properties[constants.PropertyStatus] = constants.StatusCreated
 		}
 
-		cache.Properties[constants.PropertyStatus] = constants.StatusCreated
+		ca.Meta.Properties[constants.PropertyStatus] = constants.StatusCreated
 
 		// add the new cache to the config
-		e.config.AppendResource(cache)
+		e.config.AppendResource(ca)
 
 		// save the state
 		config.SaveState(e.config)
+
+		if err != nil {
+			return nil, fmt.Errorf("unable to create image cache %s", err)
+		}
 	}
 
 	// finally we can process and create resources
 	processErr := e.readAndProcessConfig(path, vars, variablesFile, e.createCallback)
 
 	// we need to remove any resources that are in the state but not in the config
-	e.log.Debug("removing resources in state but not in current config")
 	for _, r := range removed {
-		e.log.Debug("removing", "id", r.Metadata().ID)
+		e.log.Debug("removing resource in state but not current config", "id", r.Metadata().ID)
 
 		p := e.providers.GetProvider(r)
 		if p == nil {
@@ -285,7 +299,7 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 		}
 
 		// call destroy
-		err := p.Destroy()
+		err := p.Destroy(e.ctx, e.force)
 		if err != nil {
 			processErr = fmt.Errorf("unable to destroy resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
 			continue
@@ -304,8 +318,10 @@ func (e *EngineImpl) ApplyWithVariables(path string, vars map[string]string, var
 }
 
 // Destroy the resources defined by the state
-func (e *EngineImpl) Destroy() error {
-	e.log.Info("Destroying resources")
+func (e *EngineImpl) Destroy(ctx context.Context, force bool) error {
+	e.log.Info("Destroying resources", "force", force)
+	e.force = force
+	e.ctx = ctx
 
 	// load the state
 	c, err := config.LoadState()
@@ -387,14 +403,8 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 		return parseError
 	}
 
-	// process is not called for module resources, add manually
-	err = e.appendModuleAndVariableResources(parsedConfig)
-	if err != nil {
-		return parseError
-	}
-
 	// destroy any resources that might have been set to disabled
-	err = e.destroyDisabledResources()
+	err = e.destroyDisabledResources(e.ctx, e.force)
 	if err != nil {
 		return err
 	}
@@ -404,13 +414,13 @@ func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]stri
 
 // destroyDisabledResources destroys any resrouces that were created but
 // have subsequently been set to disabled
-func (e *EngineImpl) destroyDisabledResources() error {
+func (e *EngineImpl) destroyDisabledResources(ctx context.Context, force bool) error {
 	// we need to check if we have any disabbled resroucea that are marked
 	// as created, this could be because the disabled state has changed
 	// these respurces should be destroyed
 
 	for _, r := range e.config.Resources {
-		if r.Metadata().Disabled &&
+		if r.GetDisabled() &&
 			r.Metadata().Properties[constants.PropertyStatus] == constants.StatusCreated {
 
 			p := e.providers.GetProvider(r)
@@ -420,7 +430,7 @@ func (e *EngineImpl) destroyDisabledResources() error {
 			}
 
 			// call destroy
-			err := p.Destroy()
+			err := p.Destroy(ctx, force)
 			if err != nil {
 				r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
 				return fmt.Errorf("unable to destroy resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
@@ -440,11 +450,11 @@ func (e *EngineImpl) appendDisabledResources(c *hclconfig.Config) error {
 	}
 
 	for _, r := range c.Resources {
-		if r.Metadata().Disabled {
+		if r.GetDisabled() {
 			// if the resource already exists just set the status to disabled
-			er, err := e.config.FindResource(types.FQDNFromResource(r).String())
+			er, err := e.config.FindResource(resources.FQRNFromResource(r).String())
 			if err == nil {
-				er.Metadata().Disabled = true
+				er.SetDisabled(true)
 				continue
 			}
 
@@ -459,32 +469,12 @@ func (e *EngineImpl) appendDisabledResources(c *hclconfig.Config) error {
 	return nil
 }
 
-// appends module in the given config to the engines config
-func (e *EngineImpl) appendModuleAndVariableResources(c *hclconfig.Config) error {
-	if c == nil {
+func (e *EngineImpl) createCallback(r types.Resource) error {
+	// if the context is cancelled skip
+	if e.ctx.Err() != nil {
 		return nil
 	}
 
-	for _, r := range c.Resources {
-		if r.Metadata().Type == types.TypeModule || r.Metadata().Type == types.TypeVariable {
-			// if the resource already exists remove it
-			er, err := e.config.FindResource(types.FQDNFromResource(r).String())
-			if err == nil {
-				e.config.RemoveResource(er)
-			}
-
-			// add the resource to the state
-			err = e.config.AppendResource(r)
-			if err != nil {
-				return fmt.Errorf("unable to add resource: %s", err)
-			}
-		}
-	}
-
-	return nil
-}
-
-func (e *EngineImpl) createCallback(r types.Resource) error {
 	p := e.providers.GetProvider(r)
 	if p == nil {
 		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
@@ -508,7 +498,7 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 	var providerError error
 	switch r.Metadata().Properties[constants.PropertyStatus] {
 	case constants.StatusCreated:
-		providerError = p.Refresh()
+		providerError = p.Refresh(e.ctx)
 		if providerError != nil {
 			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
 		}
@@ -521,7 +511,7 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 
 	// Always attempt to destroy and re-create failed resources
 	case constants.StatusFailed:
-		providerError = p.Destroy()
+		providerError = p.Destroy(e.ctx, false)
 		if providerError != nil {
 			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
 		}
@@ -530,7 +520,7 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 
 	default:
 		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusCreated
-		providerError = p.Create()
+		providerError = p.Create(e.ctx)
 		if providerError != nil {
 			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
 		}
@@ -549,11 +539,46 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 		ic, err := e.config.FindResource("resource.image_cache.default")
 		if err == nil {
 			e.log.Debug("Attaching image cache to network", "network", ic.Metadata().ID)
-			ic.Metadata().DependsOn = appendIfNotContains(ic.Metadata().DependsOn, r.Metadata().ID)
+			ic.AddDependency(r.Metadata().ID)
 
 			// reload the networks
 			np := e.providers.GetProvider(ic)
-			np.Refresh()
+			np.Refresh(e.ctx)
+		} else {
+			e.log.Error("Unable to find Image Cache", "error", err)
+		}
+	}
+
+	if r.Metadata().Type == cache.TypeRegistry && r.Metadata().Properties[constants.PropertyStatus] == constants.StatusCreated {
+		// get the image cache
+		ic, err := e.config.FindResource("resource.image_cache.default")
+		if err == nil {
+			// append the registry if not all ready present
+			bfound := false
+			for _, reg := range ic.(*cache.ImageCache).Registries {
+				if reg.Hostname == r.(*cache.Registry).Hostname {
+					bfound = true
+					break
+				}
+			}
+
+			if !bfound {
+				ic.(*cache.ImageCache).Registries = append(ic.(*cache.ImageCache).Registries, *r.(*cache.Registry))
+				e.log.Debug("Adding registy to image cache", "registry", r.(*cache.Registry).Hostname)
+
+				// we now need to stop and restart the container to pick up the new registry changes
+				np := e.providers.GetProvider(ic)
+
+				err := np.Destroy(e.ctx, e.force)
+				if err != nil {
+					e.log.Error("Unable to destroy Image Cache", "error", err)
+				}
+
+				err = np.Create(e.ctx)
+				if err != nil {
+					e.log.Error("Unable to create Image Cache", "error", err)
+				}
+			}
 		} else {
 			e.log.Error("Unable to find Image Cache", "error", err)
 		}
@@ -563,11 +588,16 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 }
 
 func (e *EngineImpl) destroyCallback(r types.Resource) error {
-	fqdn := types.FQDNFromResource(r)
+	// if the context is cancelled skip
+	if e.ctx.Err() != nil {
+		return nil
+	}
+
+	fqrn := resources.FQRNFromResource(r)
 
 	// do nothing for disabled resources
-	if r.Metadata().Disabled {
-		e.log.Info("Skipping disabled resource", "fqdn", fqdn.String())
+	if r.GetDisabled() {
+		e.log.Info("Skipping disabled resource", "fqdn", fqrn.String())
 
 		e.config.RemoveResource(r)
 		return nil
@@ -580,13 +610,13 @@ func (e *EngineImpl) destroyCallback(r types.Resource) error {
 		return fmt.Errorf("unable to create provider for resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
 	}
 
-	err := p.Destroy()
-	if err != nil {
+	err := p.Destroy(e.ctx, e.force)
+	if err != nil && !e.force {
 		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
 		return fmt.Errorf("unable to destroy resource Name: %s, Type: %s, Error: %s", r.Metadata().Name, r.Metadata().Type, err)
 	}
 
-	// remove from the state only if not errored
+	// remove from the state
 	e.config.RemoveResource(r)
 
 	return nil

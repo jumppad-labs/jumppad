@@ -13,7 +13,7 @@ const TypeCopy string = "copy"
 // online tutorials or documentation
 type Copy struct {
 	// embedded type holding name, etc
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 
@@ -26,13 +26,13 @@ type Copy struct {
 }
 
 func (t *Copy) Process() error {
-	t.Source = utils.EnsureAbsolute(t.Source, t.File)
-	t.Destination = utils.EnsureAbsolute(t.Destination, t.File)
+	t.Source = utils.EnsureAbsolute(t.Source, t.Meta.File)
+	t.Destination = utils.EnsureAbsolute(t.Destination, t.Meta.File)
 
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(t.ID)
+		r, _ := cfg.FindResource(t.Meta.ID)
 		if r != nil {
 			kstate := r.(*Copy)
 			t.CopiedFiles = kstate.CopiedFiles

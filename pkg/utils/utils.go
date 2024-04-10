@@ -4,18 +4,17 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"math/rand"
 	"net"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
-	"sync"
 
 	"github.com/jumppad-labs/jumppad/pkg/utils/dirhash"
 	"github.com/kennygrant/sanitize"
@@ -86,14 +85,20 @@ func ReplaceNonURIChars(s string) (string, error) {
 		return "", err
 	}
 
-	return reg.ReplaceAllString(s, "-"), nil
+	ret := reg.ReplaceAllString(s, "-")
+
+	if strings.HasPrefix(ret, "-") {
+		return ret[1:], nil
+	}
+
+	return ret, nil
 }
 
 // FQDN generates the full qualified name for a container
 func FQDN(name, module, typeName string) string {
-	fqdn := fmt.Sprintf("%s.%s.jumppad.dev", name, typeName)
+	fqdn := fmt.Sprintf("%s.%s.local.%s", name, typeName, LocalTLD)
 	if module != "" {
-		fqdn = fmt.Sprintf("%s.%s.%s.jumppad.dev", name, module, typeName)
+		fqdn = fmt.Sprintf("%s.%s.%s.local.%s", name, module, typeName, LocalTLD)
 	}
 
 	// ensure that the name is valid for URI schema
@@ -113,13 +118,14 @@ func FQDNVolumeName(name string) string {
 		panic(err)
 	}
 
-	return fmt.Sprintf("%s.volume.jumppad.dev", cleanName)
+	return fmt.Sprintf("%s.volume.%s", cleanName, LocalTLD)
 }
 
 // CreateKubeConfigPath creates the file path for the KubeConfig file when
 // using Kubernetes cluster
-func CreateKubeConfigPath(name string) (dir, filePath string, dockerPath string) {
-	dir = filepath.Join(JumppadHome(), "/config/", name)
+func CreateKubeConfigPath(id string) (dir, filePath string, dockerPath string) {
+	id, _ = ReplaceNonURIChars(id)
+	dir = filepath.Join(JumppadHome(), "/config/", id)
 	filePath = filepath.Join(dir, "/kubeconfig.yaml")
 	dockerPath = filepath.Join(dir, "/kubeconfig-docker.yaml")
 
@@ -168,6 +174,14 @@ func JumppadTemp() string {
 // state, usually $HOME/.jumppad/state
 func StateDir() string {
 	return filepath.Join(JumppadHome(), "/state")
+}
+
+// PluginsDir returns the location of the plugins
+func PluginsDir() string {
+	logs := filepath.Join(JumppadHome(), "/plugins")
+
+	os.MkdirAll(logs, os.ModePerm)
+	return logs
 }
 
 // CertsDir returns the location of the certificates for the given resource
@@ -247,6 +261,9 @@ func BlueprintFolder(blueprint string) (string, error) {
 		return "", InvalidBlueprintURIError
 	}
 
+	// first replace any ?
+	parts[1] = strings.Replace(parts[1], "?", "-", -1)
+
 	return sanitize.Path(parts[1]), nil
 }
 
@@ -255,6 +272,10 @@ func BlueprintFolder(blueprint string) (string, error) {
 func BlueprintLocalFolder(blueprint string) string {
 	// we might have a querystring reference such has github.com/abc/cds?ref=dfdf&dfdf
 	// replace these separators with /
+
+	// replace any ? with / before sanitizing
+	blueprint = strings.Replace(blueprint, "?", "/", -1)
+
 	blueprint = sanitize.Path(blueprint)
 
 	return filepath.Join(JumppadHome(), "blueprints", blueprint)
@@ -263,6 +284,9 @@ func BlueprintLocalFolder(blueprint string) string {
 // HelmLocalFolder returns the full storage path
 // for the given blueprint URI
 func HelmLocalFolder(chart string) string {
+	// replace any ? with / before sanitizing
+	chart = strings.Replace(chart, "?", "/", -1)
+
 	chart = sanitize.Path(chart)
 
 	return filepath.Join(JumppadHome(), "helm_charts", chart)
@@ -347,81 +371,11 @@ func GetConnectorLogFile() string {
 	return filepath.Join(LogsDir(), "connector.log")
 }
 
-func compileJumppadBinary(path string) error {
-	maxLevels := 10
-	currentLevel := 0
-
-	// we are running from a test so compile the binary
-	// and returns its path
-	dir, _ := os.Getwd()
-
-	// walk backwards until we find the go.mod
-	for {
-		files, err := ioutil.ReadDir(dir)
-		if err != nil {
-			return err
-		}
-
-		for _, f := range files {
-			if strings.HasSuffix(f.Name(), "go.mod") {
-				fp, _ := filepath.Abs(dir)
-
-				// found the project root
-				file := filepath.Join(fp, "main.go")
-				tmpBinary := path
-
-				// if windows append the exe extension
-				if runtime.GOOS == "windows" {
-					tmpBinary = tmpBinary + ".exe"
-				}
-
-				os.RemoveAll(tmpBinary)
-
-				outwriter := bytes.NewBufferString("")
-				cmd := exec.Command("go", "build", "-o", tmpBinary, file)
-				cmd.Stderr = outwriter
-				cmd.Stdout = outwriter
-
-				err := cmd.Run()
-				if err != nil {
-					fmt.Println("Error building temporary binary:", cmd.Args)
-					fmt.Println(outwriter.String())
-					panic(fmt.Errorf("unable to build connector binary: %s", err))
-				}
-
-				return nil
-			}
-		}
-
-		// check the parent
-		dir = filepath.Join(dir, "../")
-		fmt.Println(dir)
-		currentLevel++
-		if currentLevel > maxLevels {
-			panic("unable to find go.mod")
-		}
-	}
-}
-
-var buildSync = sync.Once{}
-
 // GetJumppadBinaryPath returns the path to the running Jumppad binary
 func GetJumppadBinaryPath() string {
-	if strings.HasSuffix(os.Args[0], "jumppad") || strings.HasSuffix(os.Args[0], "jumppad-dev") || strings.HasSuffix(os.Args[0], "jumppad.exe") || strings.HasSuffix(os.Args[0], "jp") {
-		ex, err := os.Executable()
-		if err != nil {
-			panic(err)
-		}
+	exe, _ := os.Executable()
 
-		return ex
-	}
-
-	tmpBinary := filepath.Join(os.TempDir(), "jumppad-dev")
-	buildSync.Do(func() {
-		compileJumppadBinary(tmpBinary)
-	})
-
-	return tmpBinary
+	return exe
 }
 
 // GetHostname returns the hostname for the current machine
@@ -470,22 +424,11 @@ func GetLocalIPAndHostname() (string, string) {
 	return "127.0.0.1", "localhost"
 }
 
-// HTTPProxyAddress returns the default HTTPProxy used by
+// ImageCacheADDR returns the default Image cache used by
 // Nomad and Kubernetes clusters unless the environment variable
-// HTTP_PROXY is set when it returns this value
-func HTTPProxyAddress() string {
-	if p := os.Getenv("HTTP_PROXY"); p != "" {
-		return p
-	}
-
-	return jumppadProxyAddress
-}
-
-// HTTPSProxyAddress returns the default HTTPProxy used by
-// Nomad and Kubernetes clusters unless the environment variable
-// HTTPS_PROXY is set when it returns this value
-func HTTPSProxyAddress() string {
-	if p := os.Getenv("HTTPS_PROXY"); p != "" {
+// IMAGE_CACHE_ADDR is set when it returns this value
+func ImageCacheAddress() string {
+	if p := os.Getenv("IMAGE_CACHE_ADDR"); p != "" {
 		return p
 	}
 
@@ -541,6 +484,38 @@ func HashString(content string) (string, error) {
 	}
 
 	return "h1:" + base64.StdEncoding.EncodeToString(hf.Sum(nil)), nil
+}
+
+// InterfaceChecksum returns a checksum of the given interface
+// Note: the checksum is positional, should an element in a map or list change
+// position then a different checksum will be returned.
+func ChecksumFromInterface(i interface{}) (string, error) {
+	// first convert the object to json
+	json, err := json.Marshal(i)
+	if err != nil {
+		return "", fmt.Errorf("unable to marshal interface: %w", err)
+	}
+
+	return HashString(string(json))
+}
+
+// RandomAvailablePort returns a random free port in the given range
+func RandomAvailablePort(from, to int) (int, error) {
+
+	// checks 10 times for a free port
+	for i := 0; i < 10; i++ {
+		port := rand.Intn(to-from) + from
+
+		// check if the port is available
+		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+		if err == nil {
+			ln.Close()
+
+			return port, nil
+		}
+	}
+
+	return 0, fmt.Errorf("unable to find a free port in the range %d-%d", from, to)
 }
 
 func incIP(ip net.IP) net.IP {

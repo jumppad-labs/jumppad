@@ -3,12 +3,14 @@ package nomad
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -22,8 +24,11 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/clients/nomad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 	"golang.org/x/xerrors"
 )
+
+var _ sdk.Provider = &ClusterProvider{}
 
 // NomadCluster defines a provider which can create Kubernetes clusters
 type ClusterProvider struct {
@@ -36,7 +41,7 @@ type ClusterProvider struct {
 
 var startTimeout = (300 * time.Second)
 
-func (p *ClusterProvider) Init(cfg htypes.Resource, l logger.Logger) error {
+func (p *ClusterProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
 	cli, err := clients.GenerateClients(l)
 	if err != nil {
 		return err
@@ -57,13 +62,23 @@ func (p *ClusterProvider) Init(cfg htypes.Resource, l logger.Logger) error {
 }
 
 // Create implements interface method to create a cluster of the specified type
-func (p *ClusterProvider) Create() error {
-	return p.createNomad()
+func (p *ClusterProvider) Create(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping create, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
+	return p.createNomad(ctx)
 }
 
 // Destroy implements interface method to destroy a cluster
-func (p *ClusterProvider) Destroy() error {
-	return p.destroyNomad()
+func (p *ClusterProvider) Destroy(ctx context.Context, force bool) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping destroy, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
+
+	return p.destroyNomad(ctx, force)
 }
 
 // Lookup the a clusters current state
@@ -92,25 +107,30 @@ func (p *ClusterProvider) Lookup() ([]string, error) {
 
 // Refresh is called when `up` is run and the resource has been marked as created
 // checks the nodes are healthy and replaces if needed.
-func (p *ClusterProvider) Refresh() error {
-	p.log.Debug("Refresh Nomad Cluster", "ref", p.config.ID)
+func (p *ClusterProvider) Refresh(ctx context.Context) error {
+	if ctx.Err() != nil {
+		p.log.Debug("Skipping refresh, context cancelled", "ref", p.config.Meta.ID)
+		return nil
+	}
 
-	p.log.Debug("Checking health of server node", "ref", p.config.ID, "server", p.config.ServerContainerName)
+	p.log.Debug("Refresh Nomad Cluster", "ref", p.config.Meta.ID)
+
+	p.log.Debug("Checking health of server node", "ref", p.config.Meta.ID, "server", p.config.ServerContainerName)
 
 	ids, _ := p.client.FindContainerIDs(p.config.ServerContainerName)
 	if len(ids) == 1 {
-		p.log.Debug("Server node exists", "ref", p.config.ID, "server", p.config.ServerContainerName, "id", ids[0])
+		p.log.Debug("Server node exists", "ref", p.config.Meta.ID, "server", p.config.ServerContainerName, "id", ids[0])
 	}
 
 	// find any nodes that have crashed or have been deleted
 	for _, cl := range p.config.ClientContainerName {
-		p.log.Debug("Checking health of client nodes", "ref", p.config.ID, "client", cl)
+		p.log.Debug("Checking health of client nodes", "ref", p.config.Meta.ID, "client", cl)
 
 		ids, _ := p.client.FindContainerIDs(cl)
 		if len(ids) == 1 {
-			p.log.Debug("Client node healthy", "ref", p.config.ID, "client", cl, "id", ids[0])
+			p.log.Debug("Client node healthy", "ref", p.config.Meta.ID, "client", cl, "id", ids[0])
 		} else {
-			p.log.Debug("Client node does not exist", "ref", p.config.ID, "client", cl)
+			p.log.Debug("Client node does not exist", "ref", p.config.Meta.ID, "client", cl)
 			// recreate the node
 			p.config.ClientContainerName = removeElement(p.config.ClientContainerName, cl)
 		}
@@ -120,7 +140,7 @@ func (p *ClusterProvider) Refresh() error {
 	if p.config.ClientNodes < len(p.config.ClientContainerName) {
 		// calculate the number of nodes that should be removed
 		removeCount := len(p.config.ClientContainerName) - p.config.ClientNodes
-		p.log.Info("Scaling cluster down", "ref", p.config.ID, "current_scale", len(p.config.ClientContainerName), "new_scale", p.config.ClientNodes, "removing", removeCount)
+		p.log.Info("Scaling cluster down", "ref", p.config.Meta.ID, "current_scale", len(p.config.ClientContainerName), "new_scale", p.config.ClientNodes, "removing", removeCount)
 
 		// add the nodes to the remove list
 		nodesToRemove := p.config.ClientContainerName[:removeCount]
@@ -129,14 +149,14 @@ func (p *ClusterProvider) Refresh() error {
 		wg.Add(len(nodesToRemove))
 
 		for _, n := range nodesToRemove {
-			p.log.Debug("Removing node", "ref", p.config.ID, "client", n)
+			p.log.Debug("Removing node", "ref", p.config.Meta.ID, "client", n)
 
 			go func(name string) {
-				err := p.destroyNode(name)
+				err := p.destroyNode(name, false)
 				wg.Done()
 
 				if err != nil {
-					p.log.Error("Unable to remove node", "ref", p.config.ID, "client", name)
+					p.log.Error("Unable to remove node", "ref", p.config.Meta.ID, "client", name)
 				}
 			}(n)
 
@@ -146,7 +166,7 @@ func (p *ClusterProvider) Refresh() error {
 		wg.Wait()
 
 		p.nomadClient.SetConfig(fmt.Sprintf("http://%s", p.config.ExternalIP), p.config.APIPort, p.config.ClientNodes+1)
-		err := p.nomadClient.HealthCheckAPI(startTimeout)
+		err := p.nomadClient.HealthCheckAPI(ctx, startTimeout)
 		if err != nil {
 			return err
 		}
@@ -154,28 +174,34 @@ func (p *ClusterProvider) Refresh() error {
 		return nil
 	}
 
+	// create the docker config
+	dockerConfigPath, err := p.createDockerConfig()
+	if err != nil {
+		return fmt.Errorf("unable to create docker config: %s", err)
+	}
+
 	// do we need to scale the cluster up
 	if p.config.ClientNodes > len(p.config.ClientContainerName) {
 		// need to scale up
-		p.log.Info("Scaling cluster up", "ref", p.config.ID, "current_scale", len(p.config.ClientContainerName), "new_scale", p.config.ClientNodes)
+		p.log.Info("Scaling cluster up", "ref", p.config.Meta.ID, "current_scale", len(p.config.ClientContainerName), "new_scale", p.config.ClientNodes)
 
 		for i := len(p.config.ClientContainerName); i < p.config.ClientNodes; i++ {
-			id := utils.FQDN(fmt.Sprintf("%s.client.%s", randomID(), p.config.Name), p.config.Module, p.config.Type)
+			id := utils.FQDN(fmt.Sprintf("%s.client.%s", randomID(), p.config.Meta.Name), p.config.Meta.Module, p.config.Meta.Type)
 
-			p.log.Debug("Create client node", "ref", p.config.ID, "client", id)
+			p.log.Debug("Create client node", "ref", p.config.Meta.ID, "client", id)
 
-			fqdn, _, err := p.createClientNode(randomID(), p.config.Image.Name, utils.ImageVolumeName, p.config.ServerContainerName)
+			fqdn, _, err := p.createClientNode(randomID(), p.config.Image.Name, utils.ImageVolumeName, p.config.ServerContainerName, dockerConfigPath)
 			if err != nil {
 				return fmt.Errorf(`unable to recreate client node "%s", %s`, id, err)
 			}
 
 			p.config.ClientContainerName = append(p.config.ClientContainerName, fqdn)
 
-			p.log.Debug("Successfully created client node", "ref", p.config.ID, "client", fqdn)
+			p.log.Debug("Successfully created client node", "ref", p.config.Meta.ID, "client", fqdn)
 		}
 
 		p.nomadClient.SetConfig(fmt.Sprintf("http://%s", p.config.ExternalIP), p.config.APIPort, p.config.ClientNodes+1)
-		err := p.nomadClient.HealthCheckAPI(startTimeout)
+		err := p.nomadClient.HealthCheckAPI(ctx, startTimeout)
 		if err != nil {
 			return err
 		}
@@ -188,7 +214,7 @@ func (p *ClusterProvider) Refresh() error {
 	}
 
 	if len(ci) > 0 {
-		p.log.Info("Copied images changed, pushing new copy to the cluster", "ref", p.config.ID)
+		p.log.Info("Copied images changed, pushing new copy to the cluster", "ref", p.config.Meta.ID)
 		err := p.ImportLocalDockerImages(ci, false)
 		if err != nil {
 			return err
@@ -199,7 +225,7 @@ func (p *ClusterProvider) Refresh() error {
 }
 
 func (p *ClusterProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.ID)
+	p.log.Debug("Checking changes", "ref", p.config.Meta.ID)
 
 	// check to see if the any of the copied images have changed
 	i, err := p.getChangedImages()
@@ -251,14 +277,14 @@ func (p *ClusterProvider) ImportLocalDockerImages(images []ctypes.Image, force b
 			// execute the command to import the image
 			// write any command output to the logger
 			for _, i := range images {
-				p.log.Debug("Importing docker images", "ref", p.config.ID, "id", id, "image", i)
+				p.log.Debug("Importing docker images", "ref", p.config.Meta.ID, "id", id, "image", i)
 				_, err = p.client.ExecuteCommand(id, []string{"docker", "load", "-i", i}, nil, "/", "", "", 300, p.log.StandardWriter())
 				if err != nil {
 					p.log.Error("Unable to import docker images", "error", err)
 				}
 			}
 			clWait.Done()
-		}(p.config.ID, id, imagesFile)
+		}(p.config.Meta.ID, id, imagesFile)
 	}
 
 	// wait until all images have been imported
@@ -294,12 +320,12 @@ func (p *ClusterProvider) pruneBuildImages() error {
 	return nil
 }
 
-func (p *ClusterProvider) createNomad() error {
-	p.log.Info("Creating Cluster", "ref", p.config.ID)
+func (p *ClusterProvider) createNomad(ctx context.Context) error {
+	p.log.Info("Creating Cluster", "ref", p.config.Meta.ID)
 
 	// check the client nodes do not already exist
 	for i := 0; i < p.config.ClientNodes; i++ {
-		ids, err := p.client.FindContainerIDs(utils.FQDN(fmt.Sprintf("%d.client.%s", i+1, p.config.Name), p.config.Module, p.config.Type))
+		ids, err := p.client.FindContainerIDs(utils.FQDN(fmt.Sprintf("%d.client.%s", i+1, p.config.Meta.Name), p.config.Meta.Module, p.config.Meta.Type))
 		if len(ids) > 0 {
 			return fmt.Errorf("client already exists")
 		}
@@ -310,7 +336,7 @@ func (p *ClusterProvider) createNomad() error {
 	}
 
 	// check the server does not already exist
-	ids, err := p.client.FindContainerIDs(utils.FQDN(fmt.Sprintf("server.%s", p.config.Name), p.config.Module, p.config.Type))
+	ids, err := p.client.FindContainerIDs(utils.FQDN(fmt.Sprintf("server.%s", p.config.Meta.Name), p.config.Meta.Module, p.config.Meta.Type))
 	if len(ids) > 0 {
 		return fmt.Errorf("cluster already exists")
 	}
@@ -338,16 +364,31 @@ func (p *ClusterProvider) createNomad() error {
 
 	// set the API server port to a random number
 	p.config.ConnectorPort = rand.Intn(utils.MaxRandomPort-utils.MinRandomPort) + utils.MinRandomPort
-	p.config.ConfigDir = path.Join(utils.JumppadHome(), p.config.Name, "config")
+	p.config.ConfigDir = path.Join(utils.JumppadHome(), strings.Replace(p.config.Meta.ID, ".", "_", -1), "config")
+
+	// set the external IP to the address where the docker daemon is running
 	p.config.ExternalIP = utils.GetDockerIP()
 
-	_, err = p.createServerNode(p.config.Image.ToClientImage(), volID, isClient)
+	// if we are using podman on windows set the external ip to localhost as podman does not bind to the main nic
+	if p.client.EngineInfo().EngineType == "podman" && runtime.GOOS == "windows" {
+		p.config.ExternalIP = "127.0.0.1"
+	}
+
+	p.log.Debug("External IP for server node", "ref", p.config.Meta.ID, "ip", p.config.ExternalIP)
+
+	// create the docker config
+	dockerConfigPath, err := p.createDockerConfig()
+	if err != nil {
+		return fmt.Errorf("unable to create docker config: %s", err)
+	}
+
+	_, err = p.createServerNode(p.config.Image.ToClientImage(), volID, isClient, dockerConfigPath)
 	if err != nil {
 		return err
 	}
 
-	name := fmt.Sprintf("server.%s", p.config.Name)
-	p.config.ServerContainerName = utils.FQDN(name, p.config.Module, p.config.Type)
+	name := fmt.Sprintf("server.%s", p.config.Meta.Name)
+	p.config.ServerContainerName = utils.FQDN(name, p.config.Meta.Module, p.config.Meta.Type)
 
 	cMutex := sync.Mutex{}
 	clientFQDN := []string{}
@@ -358,7 +399,7 @@ func (p *ClusterProvider) createNomad() error {
 	for i := 0; i < p.config.ClientNodes; i++ {
 		// create client node asynchronously
 		go func(id string, image, volID, name string) {
-			fqdn, _, err := p.createClientNode(id, image, volID, name)
+			fqdn, _, err := p.createClientNode(id, image, volID, name, dockerConfigPath)
 			if err != nil {
 				clientError = err
 			}
@@ -392,7 +433,7 @@ func (p *ClusterProvider) createNomad() error {
 
 	// ensure all client nodes are up
 	p.nomadClient.SetConfig(fmt.Sprintf("http://%s", p.config.ExternalIP), p.config.APIPort, clientNodes)
-	err = p.nomadClient.HealthCheckAPI(startTimeout)
+	err = p.nomadClient.HealthCheckAPI(ctx, startTimeout)
 	if err != nil {
 		return err
 	}
@@ -414,10 +455,12 @@ func (p *ClusterProvider) createNomad() error {
 	return nil
 }
 
-func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, isClient bool) (string, error) {
+func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, isClient bool, dockerConfig string) (string, error) {
 	// set the resources for CPU, if not a client set the resources low
 	// so that we can only deploy the connector to the server
-	cpu := ""
+	info := p.client.EngineInfo()
+	cpu := fmt.Sprintf("cpu_total_compute = %d", info.CPU*1000)
+
 	if !isClient {
 		cpu = "cpu_total_compute = 500"
 	}
@@ -428,12 +471,12 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 	// write the nomad config to a file
 	os.MkdirAll(p.config.ConfigDir, os.ModePerm)
 	serverConfigPath := path.Join(p.config.ConfigDir, "server_config.hcl")
-	ioutil.WriteFile(serverConfigPath, []byte(sc), os.ModePerm)
+	os.WriteFile(serverConfigPath, []byte(sc), os.ModePerm)
 
 	// create the server
 	// since the server is just a container create the container config and provider
-	name := fmt.Sprintf("server.%s", p.config.Name)
-	fqrn := utils.FQDN(name, p.config.Module, p.config.Type)
+	name := fmt.Sprintf("server.%s", p.config.Meta.Name)
+	fqrn := utils.FQDN(name, p.config.Meta.Module, p.config.Meta.Type)
 
 	cc := &ctypes.Container{
 		Name: fqrn,
@@ -454,13 +497,18 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 			Type:        "volume",
 		},
 		{
+			Source:      dockerConfig,
+			Destination: "/etc/docker/daemon.json",
+			Type:        "bind",
+		},
+		{
 			Source:      serverConfigPath,
 			Destination: "/etc/nomad.d/config.hcl",
 			Type:        "bind",
 		},
 	}
 
-	// Add any user config if set
+	// Add any server user config if set
 	if p.config.ServerConfig != "" {
 		vol := ctypes.Volume{
 			Source:      p.config.ServerConfig,
@@ -471,7 +519,7 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 		cc.Volumes = append(cc.Volumes, vol)
 	}
 
-	// Add any user config if set
+	// Add any client user config if set
 	if p.config.ClientConfig != "" {
 		vol := ctypes.Volume{
 			Source:      p.config.ClientConfig,
@@ -498,8 +546,6 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 		cc.Volumes = append(cc.Volumes, v.ToClientVolume())
 	}
 
-	cc.Environment = p.config.Environment
-
 	// expose the API server port
 	cc.Ports = []ctypes.Port{
 		{
@@ -522,11 +568,13 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 	cc.Ports = append(cc.Ports, p.config.Ports.ToClientPorts()...)
 	cc.PortRanges = append(cc.PortRanges, p.config.PortRanges.ToClientPortRanges()...)
 
-	cc.Environment = map[string]string{}
-	err := p.appendProxyEnv(cc)
-	if err != nil {
-		return "", err
+	cc.Environment = p.config.Environment
+	if cc.Environment == nil {
+		cc.Environment = map[string]string{}
 	}
+
+	// add the ca for the proxy
+	p.appendProxyEnv(cc)
 
 	id, err := p.client.CreateContainer(cc)
 	if err != nil {
@@ -538,18 +586,22 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 
 // createClient node creates a Nomad client node
 // returns the fqdn, docker id, and an error if unsuccessful
-func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID string) (string, string, error) {
+func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID string, dockerConfig string) (string, string, error) {
+
+	info := p.client.EngineInfo()
+	cpu := fmt.Sprintf("cpu_total_compute = %d", info.CPU*1000)
+
 	// generate the client config
-	sc := dataDir + "\n" + fmt.Sprintf(clientConfig, p.config.Datacenter, serverID)
+	sc := dataDir + "\n" + fmt.Sprintf(clientConfig, p.config.Datacenter, serverID, cpu)
 
 	// write the default config to a file
 	clientConfigPath := path.Join(p.config.ConfigDir, "client_config.hcl")
-	ioutil.WriteFile(clientConfigPath, []byte(sc), os.ModePerm)
+	os.WriteFile(clientConfigPath, []byte(sc), os.ModePerm)
 
 	// create the server
 	// since the server is just a container create the container config and provider
-	name := fmt.Sprintf("%s.client.%s", id, p.config.Name)
-	fqrn := utils.FQDN(name, p.config.Module, p.config.Type)
+	name := fmt.Sprintf("%s.client.%s", id, p.config.Meta.Name)
+	fqrn := utils.FQDN(name, p.config.Meta.Module, p.config.Meta.Type)
 	cc := &ctypes.Container{
 		Name: fqrn,
 	}
@@ -566,6 +618,11 @@ func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID 
 			Source:      volumeID,
 			Destination: "/cache",
 			Type:        "volume",
+		},
+		{
+			Source:      dockerConfig,
+			Destination: "/etc/docker/daemon.json",
+			Type:        "bind",
 		},
 		{
 			Source:      clientConfigPath,
@@ -600,12 +657,12 @@ func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID 
 	cc.Volumes = append(cc.Volumes, p.config.Volumes.ToClientVolumes()...)
 
 	cc.Environment = p.config.Environment
-
-	cc.Environment = map[string]string{}
-	err := p.appendProxyEnv(cc)
-	if err != nil {
-		return "", "", err
+	if cc.Environment == nil {
+		cc.Environment = map[string]string{}
 	}
+
+	// add the ca for the proxy
+	p.appendProxyEnv(cc)
 
 	cid, err := p.client.CreateContainer(cc)
 
@@ -622,36 +679,75 @@ func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID 
 	return fqrn, cid, err
 }
 
+type dockerConfig struct {
+	Proxies            dockerProxies `json:"proxies,omitempty"`
+	InsecureRegistries []string      `json:"insecure-registries,omitempty"`
+}
+
+type dockerProxies struct {
+	HTTP    string `json:"http-proxy,omitempty"`
+	HTTPS   string `json:"https-proxy,omitempty"`
+	NOPROXY string `json:"no-proxy,omitempty"`
+}
+
+// createDockerConfig creates the docker daemon config for the cluster
+func (p *ClusterProvider) createDockerConfig() (string, error) {
+	daemonConfigPath := path.Join(p.config.ConfigDir, "daemon.json")
+
+	// remove any existing files, fail silently
+	os.RemoveAll(daemonConfigPath)
+
+	// create the config folder
+	os.MkdirAll(p.config.ConfigDir, os.ModePerm)
+
+	// create the docker config
+	dc := dockerConfig{
+		Proxies: dockerProxies{},
+	}
+
+	// set the insecure registries
+	if p.config.Config != nil &&
+		p.config.Config.DockerConfig != nil &&
+		len(p.config.Config.DockerConfig.InsecureRegistries) > 0 {
+		dc.InsecureRegistries = p.config.Config.DockerConfig.InsecureRegistries
+	}
+
+	// set the no proxy
+	if p.config.Config != nil &&
+		p.config.Config.DockerConfig != nil &&
+		len(p.config.Config.DockerConfig.NoProxy) > 0 {
+		dc.Proxies.NOPROXY = strings.TrimSuffix(strings.Join(p.config.Config.DockerConfig.NoProxy, ","), ",")
+	}
+
+	// set the cache details
+	dc.Proxies.HTTP = utils.ImageCacheAddress()
+	dc.Proxies.HTTPS = utils.ImageCacheAddress()
+
+	// write the config to a file
+	data, err := json.MarshalIndent(dc, "", "  ")
+	if err != nil {
+		return "", err
+	}
+
+	err = os.WriteFile(daemonConfigPath, data, os.ModePerm)
+
+	return daemonConfigPath, err
+}
+
 func (p *ClusterProvider) appendProxyEnv(cc *ctypes.Container) error {
 	// load the CA from a file
-	ca, err := ioutil.ReadFile(filepath.Join(utils.CertsDir(""), "/root.cert"))
+	ca, err := os.ReadFile(filepath.Join(utils.CertsDir(""), "/root.cert"))
 	if err != nil {
 		return fmt.Errorf("unable to read root CA for proxy: %s", err)
 	}
 
-	// add the netmask from the network to the proxy bypass
-	networkSubmasks := []string{}
-	for _, n := range p.config.Networks {
-		net, err := p.client.FindNetwork(n.ID)
-		if err != nil {
-			return fmt.Errorf("network not found: %w", err)
-		}
-
-		networkSubmasks = append(networkSubmasks, net.Subnet)
-	}
-
-	proxyBypass := utils.ProxyBypass + "," + strings.Join(networkSubmasks, ",")
-
-	cc.Environment["HTTP_PROXY"] = utils.HTTPProxyAddress()
-	cc.Environment["HTTPS_PROXY"] = utils.HTTPSProxyAddress()
-	cc.Environment["NO_PROXY"] = proxyBypass
 	cc.Environment["PROXY_CA"] = string(ca)
 
 	return nil
 }
 
 func (p *ClusterProvider) deployConnector() error {
-	p.log.Debug("Deploying connector", "ref", p.config.ID)
+	p.log.Debug("Deploying connector", "ref", p.config.Meta.ID)
 
 	// generate the certificates
 	// generate the certificates for the service
@@ -670,7 +766,7 @@ func (p *ClusterProvider) deployConnector() error {
 			fmt.Sprintf("%s:%d", utils.GetDockerIP(), p.config.ConnectorPort),
 		},
 		[]string{utils.GetDockerIP()},
-		utils.CertsDir(p.config.ID),
+		utils.CertsDir(p.config.Meta.ID),
 	)
 
 	// load the certs into a string so that they can be embedded into the config
@@ -742,8 +838,8 @@ func (p *ClusterProvider) deployConnector() error {
 	return lastError
 }
 
-func (p *ClusterProvider) destroyNomad() error {
-	p.log.Info("Destroy Nomad Cluster", "ref", p.config.ID)
+func (p *ClusterProvider) destroyNomad(ctx context.Context, force bool) error {
+	p.log.Info("Destroy Nomad Cluster", "ref", p.config.Meta.ID)
 
 	// destroy the clients
 	wg := sync.WaitGroup{}
@@ -753,7 +849,7 @@ func (p *ClusterProvider) destroyNomad() error {
 		go func(name string) {
 			defer wg.Done()
 
-			err := p.destroyNode(name)
+			err := p.destroyNode(name, force)
 			if err != nil {
 				p.log.Error("unable to remove cluster client", "client", name)
 			}
@@ -763,7 +859,7 @@ func (p *ClusterProvider) destroyNomad() error {
 	wg.Wait()
 
 	// destroy the server
-	err := p.destroyNode(p.config.ServerContainerName)
+	err := p.destroyNode(p.config.ServerContainerName, force)
 	if err != nil {
 		return err
 	}
@@ -774,7 +870,7 @@ func (p *ClusterProvider) destroyNomad() error {
 	return nil
 }
 
-func (p *ClusterProvider) destroyNode(id string) error {
+func (p *ClusterProvider) destroyNode(id string, force bool) error {
 	// FindContainerIDs works on absolute addresses, we need to append the server
 	ids, _ := p.client.FindContainerIDs(id)
 	if len(ids) == 0 {
@@ -785,14 +881,14 @@ func (p *ClusterProvider) destroyNode(id string) error {
 	for _, i := range ids {
 		// remove from the networks
 		for _, n := range p.config.Networks {
-			p.log.Debug("Detaching container from network", "ref", p.config.ID, "id", i, "network", n.Name)
+			p.log.Debug("Detaching container from network", "ref", p.config.Meta.ID, "id", i, "network", n.Name)
 			err := p.client.DetachNetwork(n.Name, i)
 			if err != nil {
-				p.log.Error("Unable to detach network", "ref", p.config.ID, "network", n.Name, "error", err)
+				p.log.Error("Unable to detach network", "ref", p.config.Meta.ID, "network", n.Name, "error", err)
 			}
 		}
 
-		err := p.client.RemoveContainer(i, false)
+		err := p.client.RemoveContainer(i, force)
 		if err != nil {
 			return err
 		}
@@ -808,14 +904,14 @@ func (p *ClusterProvider) getChangedImages() ([]ctypes.Image, error) {
 		// has the image id changed
 		id, err := p.client.FindImageInLocalRegistry(i.ToClientImage())
 		if err != nil {
-			p.log.Error("Unable to lookup image in local registry", "ref", p.config.ID, "error", err)
+			p.log.Error("Unable to lookup image in local registry", "ref", p.config.Meta.ID, "error", err)
 			return nil, err
 		}
 
 		// check that the current registry id for the image is the same
 		// as the image that was used to create this container
 		if id != i.ID {
-			p.log.Debug("Container image changed, needs refresh", "ref", p.config.Name, "image", i.Name)
+			p.log.Debug("Container image changed, needs refresh", "ref", p.config.Meta.Name, "image", i.Name)
 			changed = append(changed, i.ToClientImage())
 		}
 	}
@@ -1018,6 +1114,8 @@ client {
 	server_join {
 		retry_join = ["%s"]
 	}
+
+	%s
 }
 
 plugin "raw_exec" {

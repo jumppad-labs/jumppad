@@ -25,7 +25,7 @@ import (
 	"github.com/cucumber/godog/colors"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
-	hcltypes "github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/hclconfig/resources"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/config"
@@ -167,6 +167,8 @@ func (cr *CucumberRunner) start() {
 }
 
 func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
+	sb := &strings.Builder{}
+
 	ctx.BeforeScenario(func(gs *godog.Scenario) {
 		// ensure the variables are not carried over from a previous scenario
 		envVars = map[string]string{}
@@ -174,17 +176,17 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 		commandExitCode = 0
 		cr.variables = cr.baseVariables
 
-		logger := createLogger()
+		cl := logger.NewLogger(sb, logger.LogLevelDebug)
 
-		cli, _ := clients.GenerateClients(logger)
-		engine, vm, err := createEngine(logger, cli)
+		cli, _ := clients.GenerateClients(cl)
+		engine, vm, err := createEngine(cl, cli)
 		if err != nil {
 			fmt.Printf("Unable to setup tests: %s\n", err)
 			return
 		}
 
 		cr.e = engine
-		cr.l = logger
+		cr.l = cl
 		cr.cli = cli
 		cr.vm = vm
 
@@ -196,9 +198,8 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 	})
 
 	ctx.AfterScenario(func(gs *godog.Scenario, err error) {
-		// only destroy when the dont-destroy flag is false
-
 		if err != nil {
+			fmt.Println(sb.String())
 			fmt.Println(output.String())
 		}
 
@@ -211,14 +212,22 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 			}
 		}
 
+		// only destroy when the dont-destroy flag is false
 		if *cr.dontDestroy {
 			fmt.Println("Not automatically destroying resources, run the command 'jumppad destroy' manually")
 			return
 		}
 
-		dest := newDestroyCmd(cr.cli.Connector)
-		dest.SetArgs([]string{})
-		dest.Execute()
+		sb := strings.Builder{}
+		l := logger.NewLogger(&sb, logger.LogLevelDebug)
+		dest := newDestroyCmd(cr.cli.Connector, l)
+		dest.SetArgs([]string{"--force"})
+
+		err = dest.Execute()
+		if err != nil {
+			fmt.Println(sb.String())
+			os.Exit(1)
+		}
 	})
 
 	ctx.Step(`^I have a running blueprint$`, cr.iRunApply)
@@ -676,7 +685,7 @@ func (cr *CucumberRunner) theFollowingOutputVaraiblesShouldBeSet(arg1 *godog.Tab
 			return fmt.Errorf("expected output variable %s to be set but was nil", row.Cells[0].Value)
 		}
 
-		o := r.(*hcltypes.Output)
+		o := r.(*resources.Output)
 
 		switch v := o.Value.(type) {
 		case int:
@@ -773,7 +782,7 @@ func (cr *CucumberRunner) executeCommand(cmd string) error {
 }
 
 func (cr *CucumberRunner) getJSONPath(path, resource string) (string, error) {
-	fqdn, err := hcltypes.ParseFQRN(resource)
+	fqdn, err := resources.ParseFQRN(resource)
 	if err != nil {
 		return "", fmt.Errorf("invalid resource name: %s", err)
 	}

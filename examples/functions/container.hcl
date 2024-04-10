@@ -2,7 +2,7 @@ variable "version" {
   default = "consul:1.10.6"
 }
 
-network "onprem" {
+resource "network" "onprem" {
   subnet = "10.6.0.0/16"
 }
 
@@ -10,20 +10,20 @@ variable "test_var" {
   default = [1, 2]
 }
 
-container "consul" {
+resource "container" "consul" {
   image {
-    name = var.version
+    name = variable.version
   }
 
   command = ["consul", "agent", "-dev", "-client", "0.0.0.0"]
 
   network {
-    name       = "network.onprem"
+    id         = resource.network.onprem.meta.id
     ip_address = "10.6.0.200"
   }
 
-  env_var = {
-    file_dir          = file_dir()
+  environment = {
+    file_dir          = dir()
     env               = env("HOME")
     k8s_config        = k8s_config("dc1")
     k8s_config_docker = k8s_config_docker("dc1")
@@ -36,6 +36,6 @@ container "consul" {
     shipyard_ip       = shipyard_ip()
     cluster_api       = cluster_api("nomad_cluster.dc1")
     cluster_port      = cluster_port("nomad_cluster.dc1")
-    var_len           = len(var.test_var)
+    var_len           = len(variable.test_var)
   }
 }

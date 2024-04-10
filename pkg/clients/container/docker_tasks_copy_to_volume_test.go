@@ -97,6 +97,9 @@ func testSetupCopyLocal(t *testing.T) (*DockerTasks, *mocks.Docker) {
 func TestCopyToVolumeDoesNothingWhenCached(t *testing.T) {
 	dt, mk := testSetupCopyLocal(t)
 
+	// when force is set ContainerStop is called
+	//mk.On("ContainerStop",mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
 	_, err := dt.CopyLocalDockerImagesToVolume(testCopyLocalImages, testCopyLocalVolume, false)
 	assert.NoError(t, err)
 
@@ -117,7 +120,7 @@ func TestCopyToVolumeDoesNothingWhenCached(t *testing.T) {
 
 func TestCopyToVolumeDoesNotChecksVolumeCacheWhenGlobalForce(t *testing.T) {
 	dt, mk := testSetupCopyLocal(t)
-	dt.SetForcePull(true) // set force pull to avoid execute command block
+	dt.SetForce(true) // set force pull to avoid execute command block
 
 	_, err := dt.CopyLocalDockerImagesToVolume(testCopyLocalImages, testCopyLocalVolume, false)
 	assert.NoError(t, err)
@@ -128,7 +131,7 @@ func TestCopyToVolumeDoesNotChecksVolumeCacheWhenGlobalForce(t *testing.T) {
 
 func TestCopyToVolumeDoesNotChecksVolumeCacheWhenLocalForce(t *testing.T) {
 	dt, mk := testSetupCopyLocal(t)
-	dt.SetForcePull(false) // set force pull to avoid execute command block
+	dt.SetForce(false) // set force pull to avoid execute command block
 
 	_, err := dt.CopyLocalDockerImagesToVolume(testCopyLocalImages, testCopyLocalVolume, true)
 	assert.NoError(t, err)
@@ -139,7 +142,7 @@ func TestCopyToVolumeDoesNotChecksVolumeCacheWhenLocalForce(t *testing.T) {
 
 func TestCopyToVolumeSavesImages(t *testing.T) {
 	dt, mk := testSetupCopyLocal(t)
-	dt.SetForcePull(true) // set force pull to avoid execute command block
+	dt.SetForce(true) // set force pull to avoid execute command block
 
 	_, err := dt.CopyLocalDockerImagesToVolume(testCopyLocalImages, testCopyLocalVolume, false)
 	assert.NoError(t, err)
@@ -153,7 +156,7 @@ func TestCopyToVolumeSavesImageFailReturnsError(t *testing.T) {
 		nil,
 		fmt.Errorf("blah"),
 	)
-	dt.SetForcePull(true) // set force pull to avoid execute command block
+	dt.SetForce(true) // set force pull to avoid execute command block
 
 	_, err := dt.CopyLocalDockerImagesToVolume(testCopyLocalImages, testCopyLocalVolume, false)
 	assert.Error(t, err)
@@ -161,7 +164,7 @@ func TestCopyToVolumeSavesImageFailReturnsError(t *testing.T) {
 
 func TestCopyToVolumeCreatesTempContainer(t *testing.T) {
 	dt, mk := testSetupCopyLocal(t)
-	dt.SetForcePull(true) // set force pull to avoid execute command block
+	dt.SetForce(true) // set force pull to avoid execute command block
 
 	_, err := dt.CopyLocalDockerImagesToVolume(testCopyLocalImages, testCopyLocalVolume, false)
 	assert.NoError(t, err)
@@ -183,7 +186,7 @@ func TestCopyToVolumeCreatesTempContainer(t *testing.T) {
 
 func TestCopyToVolumeChecksTempContainerStart(t *testing.T) {
 	dt, mk := testSetupCopyLocal(t)
-	dt.SetForcePull(true) // set force pull to avoid execute command block
+	dt.SetForce(true) // set force pull to avoid execute command block
 
 	_, err := dt.CopyLocalDockerImagesToVolume(testCopyLocalImages, testCopyLocalVolume, false)
 	assert.NoError(t, err)
@@ -201,7 +204,7 @@ func TestCopyToVolumeReturnsErrorOnFailedContainerStart(t *testing.T) {
 		},
 		nil)
 
-	dt.SetForcePull(true) // set force pull to avoid execute command block
+	dt.SetForce(true) // set force pull to avoid execute command block
 
 	_, err := dt.CopyLocalDockerImagesToVolume(testCopyLocalImages, testCopyLocalVolume, false)
 	assert.Error(t, err)
@@ -215,7 +218,7 @@ func TestCopyToVolumeTempContainerFailsReturnError(t *testing.T) {
 	mk.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(container.CreateResponse{}, fmt.Errorf("boom"))
 
-	dt.SetForcePull(true) // set force pull to avoid execute command block
+	dt.SetForce(true) // set force pull to avoid execute command block
 
 	_, err := dt.CopyLocalDockerImagesToVolume(testCopyLocalImages, testCopyLocalVolume, false)
 	assert.Error(t, err)
@@ -223,7 +226,7 @@ func TestCopyToVolumeTempContainerFailsReturnError(t *testing.T) {
 
 func TestCopyToVolumePullsImportImage(t *testing.T) {
 	dt, mk := testSetupCopyLocal(t)
-	dt.SetForcePull(true) // set force pull to avoid execute command block
+	dt.SetForce(true) // set force pull to avoid execute command block
 
 	_, err := dt.CopyLocalDockerImagesToVolume(testCopyLocalImages, testCopyLocalVolume, false)
 	assert.NoError(t, err)
@@ -232,7 +235,7 @@ func TestCopyToVolumePullsImportImage(t *testing.T) {
 
 func TestCopyToVolumeCreatesDestinationDirectory(t *testing.T) {
 	dt, mk := testSetupCopyLocal(t)
-	dt.SetForcePull(true) // set force pull to avoid execute command block
+	dt.SetForce(true) // set force pull to avoid execute command block
 
 	_, err := dt.CopyLocalDockerImagesToVolume(testCopyLocalImages, testCopyLocalVolume, false)
 	assert.NoError(t, err)
@@ -245,7 +248,7 @@ func TestCopyToVolumeCreatesDestinationDirectory(t *testing.T) {
 
 func TestCopyToVolumeCopiesArchive(t *testing.T) {
 	dt, mk := testSetupCopyLocal(t)
-	dt.SetForcePull(true) // set force pull to avoid execute command block
+	dt.SetForce(true) // set force pull to avoid execute command block
 
 	_, err := dt.CopyLocalDockerImagesToVolume(testCopyLocalImages, testCopyLocalVolume, false)
 	assert.NoError(t, err)
@@ -257,7 +260,7 @@ func TestCopyToVolumeCopiesArchiveFailReturnsError(t *testing.T) {
 	testutils.RemoveOn(&mk.Mock, "CopyToContainer")
 	mk.On("CopyToContainer", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
-	dt.SetForcePull(true) // set force pull to avoid execute command block
+	dt.SetForce(true) // set force pull to avoid execute command block
 
 	_, err := dt.CopyLocalDockerImagesToVolume(testCopyLocalImages, testCopyLocalVolume, false)
 	assert.Error(t, err)
@@ -265,7 +268,7 @@ func TestCopyToVolumeCopiesArchiveFailReturnsError(t *testing.T) {
 
 func TestCopyToVolumeRemovesTempContainer(t *testing.T) {
 	dt, mk := testSetupCopyLocal(t)
-	dt.SetForcePull(true) // set force pull to avoid execute command block
+	dt.SetForce(true) // set force pull to avoid execute command block
 
 	_, err := dt.CopyLocalDockerImagesToVolume(testCopyLocalImages, testCopyLocalVolume, false)
 	assert.NoError(t, err)
