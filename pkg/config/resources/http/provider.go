@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 
 type Provider struct {
@@ -17,7 +19,7 @@ type Provider struct {
 	client http.Client
 }
 
-func (p *Provider) Init(cfg types.Resource, l logger.Logger) error {
+func (p *Provider) Init(cfg types.Resource, l sdk.Logger) error {
 	c, ok := cfg.(*HTTP)
 	if !ok {
 		return fmt.Errorf("unable to initialize provider, resource is not of type HTTP")
@@ -34,7 +36,7 @@ func (p *Provider) Init(cfg types.Resource, l logger.Logger) error {
 	return nil
 }
 
-func (p *Provider) Create() error {
+func (p *Provider) Create(ctx context.Context) error {
 	p.log.Info(fmt.Sprintf("Creating %s", p.config.Metadata().Type), "ref", p.config.Metadata().ID)
 
 	// If a timeout was specified, set it
@@ -82,7 +84,7 @@ func (p *Provider) Create() error {
 	return nil
 }
 
-func (p *Provider) Destroy() error {
+func (p *Provider) Destroy(ctx context.Context, force bool) error {
 	return nil
 }
 
@@ -90,7 +92,7 @@ func (p *Provider) Lookup() ([]string, error) {
 	return nil, nil
 }
 
-func (p *Provider) Refresh() error {
+func (p *Provider) Refresh(ctx context.Context) error {
 	return nil
 }
 

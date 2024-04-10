@@ -8,7 +8,7 @@ import (
 const TypeHTTP string = "http"
 
 type HTTP struct {
-	types.ResourceMetadata `hcl:",remain"`
+	types.ResourceBase `hcl:",remain"`
 
 	Method string `hcl:"method" json:"method"`
 	URL    string `hcl:"url" json:"url"`
@@ -26,7 +26,7 @@ func (t *HTTP) Process() error {
 	cfg, err := config.LoadState()
 	if err == nil {
 		// try and find the resource in the state
-		r, _ := cfg.FindResource(t.ID)
+		r, _ := cfg.FindResource(t.Meta.ID)
 		if r != nil {
 			state := r.(*HTTP)
 			t.Status = state.Status
