@@ -3,6 +3,12 @@ resource "copy" "local" {
   destination = "${data("copy")}/local"
 }
 
+resource "copy" "local_relative" {
+  source = "./files/foo"
+  destination = "${data("copy")}/local_relative"
+}
+
+
 resource "copy" "http" {
   source = "https://www.foundanimals.org/wp-content/uploads/2023/02/twenty20_b4e89a76-af70-4567-b92a-9c3bbf335cb3.jpg"
   destination = "${data("copy")}/http"
