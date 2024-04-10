@@ -1,0 +1,32 @@
+{
+  "name": "jumppad-ci",
+  "sdk": "go",
+  "dependencies": [
+    {
+      "name": "brew",
+      "source": "github.com/jumppad-labs/daggerverse/brew@f6572111270cdfa7367f672d5ef3fec2e10dba0d"
+    },
+    {
+      "name": "checksum",
+      "source": "github.com/jumppad-labs/daggerverse/checksum@1ee5ef843939f88d2da4fadf8ad3ffb2c3d6b01d"
+    },
+    {
+      "name": "deb",
+      "source": "github.com/jumppad-labs/daggerverse/deb@351e2ff5105e7d4240cb886db5746e89699b3e25"
+    },
+    {
+      "name": "github",
+      "source": "github.com/jumppad-labs/daggerverse/github@5dc7f2bdfb6aea009ae1da3e59ab26b990afa1db"
+    },
+    {
+      "name": "jumppad",
+      "source": "github.com/jumppad-labs/daggerverse/jumppad@ba68da26819c10be04a1be421820cf21d9b7cc30"
+    },
+    {
+      "name": "notorize",
+      "source": "github.com/jumppad-labs/daggerverse/notorize@351e2ff5105e7d4240cb886db5746e89699b3e25"
+    }
+  ],
+  "source": ".",
+  "engineVersion": "v0.11.0"
+}
