@@ -61,22 +61,52 @@ func (p *Provider) Create(ctx context.Context) error {
 
 	p.log.Info("executing script", "ref", p.config.Meta.ID, "script", p.config.Script)
 
+	outPath := fmt.Sprintf("%s/%s.out", os.TempDir(), p.config.Meta.ID)
+
+	// cleanup the local output file
+	defer os.Remove(outPath)
+
 	// check if we have a target or image specified
 	if p.config.Image != nil || p.config.Target != nil {
 		// remote exec
-		err := p.createRemoteExec()
+		err := p.createRemoteExec(outPath)
 		if err != nil {
 			return fmt.Errorf("unable to create remote exec: %w", err)
 		}
 	} else {
 		// local exec
-		pid, err := p.createLocalExec()
+		pid, err := p.createLocalExec(outPath)
 		if err != nil {
 			return fmt.Errorf("unable to create local exec: %w", err)
 		}
 
 		p.config.PID = pid
 	}
+
+	// parse any output from the script
+	if _, err := os.Stat(outPath); err != nil {
+		p.log.Debug("output file not found", "ref", p.config.Meta.ID, "path", outPath)
+		return nil
+	}
+
+	d, err := os.ReadFile(outPath)
+	if err != nil {
+		return fmt.Errorf("unable to read output file: %w", err)
+	}
+
+	output := map[string]string{}
+
+	outs := strings.Split(string(d), "\n")
+	for _, v := range outs {
+		parts := strings.Split(v, "=")
+		if len(parts) != 2 {
+			continue
+		}
+
+		output[parts[0]] = parts[1]
+	}
+
+	p.config.Output = output
 
 	return nil
 }
@@ -125,7 +155,7 @@ func (p *Provider) Changed() (bool, error) {
 	return false, nil
 }
 
-func (p *Provider) createRemoteExec() error {
+func (p *Provider) createRemoteExec(outputPath string) error {
 	// execution target id
 	targetID := ""
 	if p.config.Target == nil {
@@ -152,8 +182,10 @@ func (p *Provider) createRemoteExec() error {
 	// execute the script in the container
 	script := p.config.Script
 
+	containerOut := "/tmp/exec.out"
+
 	// build the environment variables
-	envs := []string{}
+	envs := []string{"EXEC_OUTPUT=" + containerOut}
 
 	for k, v := range p.config.Environment {
 		envs = append(envs, fmt.Sprintf("%s=%s", k, v))
@@ -171,8 +203,16 @@ func (p *Provider) createRemoteExec() error {
 	if err != nil {
 		p.log.Error("error executing command", "ref", p.config.Meta.Name, "image", p.config.Image, "script", p.config.Script)
 		return fmt.Errorf("unable to execute command: in remote container: %w", err)
-
 	}
+
+	// copy the output file
+	err = p.container.CopyFromContainer(targetID, containerOut, outputPath)
+	if err != nil {
+		// copy might fail as the file does not exist, only log
+		p.log.Debug("error copying output file", "ref", p.config.Meta.Name, "output", outputPath, "container", targetID)
+	}
+	// remove the output file
+	p.container.ExecuteCommand(targetID, []string{"rm", containerOut}, nil, "", "", "", 30, p.log.StandardWriter())
 
 	// destroy the container if we created one
 	if p.config.Target == nil {
@@ -233,7 +273,7 @@ func (p *Provider) createRemoteExecContainer() (string, error) {
 	return id, err
 }
 
-func (p *Provider) createLocalExec() (int, error) {
+func (p *Provider) createLocalExec(outputPath string) (int, error) {
 	// depending on the OS, we might need to replace line endings
 	// just in case the script was created on a different OS
 	contents := p.config.Script
@@ -270,6 +310,9 @@ func (p *Provider) createLocalExec() (int, error) {
 			p.log.Warn("timeout will be ignored when exec is running in daemon mode")
 		}
 	}
+
+	// inject the output file into the environment
+	envs = append(envs, fmt.Sprintf("EXEC_OUTPUT=%s", outputPath))
 
 	// create the config
 	cc := cmdTypes.CommandConfig{
