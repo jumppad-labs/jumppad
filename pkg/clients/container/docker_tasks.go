@@ -741,7 +741,7 @@ func (d *DockerTasks) CopyFromContainer(id, src, dst string) error {
 	defer reader.Close()
 
 	// untar the file to a temporary folder
-	dir, err := os.MkdirTemp(os.TempDir(), "")
+	dir, err := os.MkdirTemp(utils.JumppadTemp(), id)
 	if err != nil {
 		return fmt.Errorf("unable to create temporary directory, %s", err)
 	}
@@ -968,7 +968,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 // CreateFileInContainer creates a file with the given contents and name in the container containerID and
 // stores it in the container at the directory path.
 func (d *DockerTasks) CreateFileInContainer(containerID, contents, filename, path string) error {
-	tmpFile := filepath.Join(os.TempDir(), filename)
+	tmpFile := filepath.Join(utils.JumppadTemp(), filename)
 
 	err := os.WriteFile(tmpFile, []byte(contents), 0755)
 	if err != nil {
