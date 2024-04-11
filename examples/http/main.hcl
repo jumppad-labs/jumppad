@@ -43,9 +43,17 @@ resource "http" "post" {
 }
 
 output "get_body" {
-  value = resource.http.get.status == 200 ? resource.http.get.body : "error"
+  value = jsondecode(resource.http.get.body)
+}
+
+output "get_status" {
+  value = resource.http.get.status
 }
 
 output "post_body" {
-  value = resource.http.post.status == 200 ? resource.http.post.body : "error"
+  value = jsondecode(resource.http.post.body)
+}
+
+output "post_status" {
+  value = resource.http.post.status
 }
