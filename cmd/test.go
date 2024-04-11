@@ -327,7 +327,7 @@ func getLookupAddress(resourceName string) (string, string, int, error) {
 	case network.TypeNetwork:
 		return res.Metadata().Name, res.Metadata().Type, 1, nil
 	case k8s.TypeK8sCluster:
-		return res.(*k8s.K8sCluster).ContainerName, res.Metadata().Type, 1, nil
+		return res.(*k8s.Cluster).ContainerName, res.Metadata().Type, 1, nil
 	case nomad.TypeNomadCluster:
 		cl := res.(*nomad.NomadCluster)
 		return cl.ServerContainerName, res.Metadata().Type, cl.ClientNodes + 1, nil

@@ -12,10 +12,10 @@ const TypeK8sConfig string = "k8s_config"
 const TypeKubernetesConfig string = "kubernetes_config"
 
 // K8sConfig applies and deletes and deletes Kubernetes configuration
-type K8sConfig struct {
+type Config struct {
 	types.ResourceBase `hcl:",remain"`
 
-	Cluster K8sCluster `hcl:"cluster" json:"cluster"`
+	Cluster Cluster `hcl:"cluster" json:"cluster"`
 
 	// Path of a file or directory of Kubernetes config files to apply
 	Paths []string `hcl:"paths" validator:"filepath" json:"paths"`
@@ -27,11 +27,12 @@ type K8sConfig struct {
 
 	// output
 
-	// JobChecksums stores a checksum of the files or paths
-	JobChecksums []string `hcl:"job_checksums,optional" json:"job_checksums,omitempty"`
+	// JobChecksums store a checksum of the files or paths referenced in the Paths field
+	// this is used to detect when a file changes so that it can be re-applied
+	JobChecksums map[string]string `hcl:"job_checksums,optional" json:"job_checksums,omitempty"`
 }
 
-func (k *K8sConfig) Process() error {
+func (k *Config) Process() error {
 	// make all the paths absolute
 	for i, p := range k.Paths {
 		k.Paths[i] = utils.EnsureAbsolute(p, k.Meta.File)
@@ -42,7 +43,7 @@ func (k *K8sConfig) Process() error {
 		// try and find the resource in the state
 		r, _ := cfg.FindResource(k.Meta.ID)
 		if r != nil {
-			state := r.(*K8sConfig)
+			state := r.(*Config)
 			k.JobChecksums = state.JobChecksums
 		}
 	}

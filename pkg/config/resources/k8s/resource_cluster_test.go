@@ -12,14 +12,14 @@ import (
 )
 
 func init() {
-	config.RegisterResource(TypeK8sCluster, &K8sCluster{}, &ClusterProvider{})
+	config.RegisterResource(TypeK8sCluster, &Cluster{}, &ClusterProvider{})
 }
 
 func TestK8sClusterProcessSetsAbsolute(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(t, err)
 
-	c := &K8sCluster{
+	c := &Cluster{
 		ResourceBase: types.ResourceBase{Meta: types.Meta{File: "./"}},
 		Volumes: []ctypes.Volume{
 			{
@@ -59,7 +59,7 @@ func TestK8sClusterSetsOutputsFromState(t *testing.T) {
   }]
 }`)
 
-	c := &K8sCluster{
+	c := &Cluster{
 		ResourceBase: types.ResourceBase{
 			Meta: types.Meta{
 				ID: "resource.k8s_cluster.test",

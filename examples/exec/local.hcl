@@ -10,6 +10,8 @@ resource "exec" "install" {
 
   curl -L -o ${data("test")}/consul.zip https://releases.hashicorp.com/consul/1.16.2/consul_1.16.2_$${OS}_$${ARCH}.zip
   cd ${data("test")} && unzip ./consul.zip
+
+  echo "TEST=
   EOF
 
   timeout = "30s"
