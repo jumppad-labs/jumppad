@@ -35,7 +35,7 @@ type Exec struct {
 	// output
 	PID      int               `hcl:"pid,optional" json:"pid,omitempty"`             // PID stores the ID of the created connector service if it is a local exec
 	ExitCode int               `hcl:"exit_code,optional" json:"exit_code,omitempty"` // Exit code of the process
-	Output   map[string]string `hcl:"output,optional" json:"output,omitempty"`       // output values returned from Terraform
+	Output   map[string]string `hcl:"output,optional" json:"output,omitempty"`       // output values returned from exec
 }
 
 func (e *Exec) Process() error {

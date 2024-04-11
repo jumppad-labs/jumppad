@@ -61,7 +61,7 @@ func (p *Provider) Create(ctx context.Context) error {
 
 	p.log.Info("executing script", "ref", p.config.Meta.ID, "script", p.config.Script)
 
-	outPath := fmt.Sprintf("%s/%s.out", os.TempDir(), p.config.Meta.ID)
+	outPath := fmt.Sprintf("%s/%s.out", utils.JumppadTemp(), p.config.Meta.ID)
 
 	// cleanup the local output file
 	defer os.Remove(outPath)

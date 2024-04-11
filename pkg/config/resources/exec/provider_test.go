@@ -12,6 +12,7 @@ import (
 	containerMocks "github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -42,7 +43,7 @@ func TestInjectsOutputEnvIntoLocal(t *testing.T) {
 
 	ac := testutils.GetCalls(&cm.Mock, "Execute")[0].Arguments[0].(cmdTypes.CommandConfig)
 
-	td := os.TempDir()
+	td := utils.JumppadTemp()
 	require.Contains(t, ac.Env, fmt.Sprintf("EXEC_OUTPUT=%s/resource.exec.test.out", td))
 }
 
@@ -51,7 +52,8 @@ func TestParsesOutput(t *testing.T) {
 	e.Script = "echo FOO=BAR >> $EXEC_OUTPUT"
 
 	// write the output for the test
-	td := os.TempDir()
+
+	td := utils.JumppadTemp()
 	os.WriteFile(fmt.Sprintf("%s/resource.exec.test.out", td), []byte("FOO=BAR"), 0644)
 	t.Cleanup(func() {
 		os.Remove(fmt.Sprintf("%s/resource.exec.test.out", td))
@@ -68,7 +70,7 @@ func TestDeletesOutput(t *testing.T) {
 	e.Script = "echo FOO=BAR >> $EXEC_OUTPUT"
 
 	// write the output for the test
-	td := os.TempDir()
+	td := utils.JumppadTemp()
 	os.WriteFile(fmt.Sprintf("%s/resource.exec.test.out", td), []byte("FOO=BAR"), 0644)
 
 	err := p.Create(context.Background())
@@ -85,7 +87,7 @@ func TestCopiesOutputInExec(t *testing.T) {
 	e.Script = "echo FOO=BAR >> $EXEC_OUTPUT"
 
 	// write the output for the test
-	td := os.TempDir()
+	td := utils.JumppadTemp()
 	os.WriteFile(fmt.Sprintf("%s/resource.exec.test.out", td), []byte("FOO=BAR"), 0644)
 	t.Cleanup(func() {
 		os.Remove(fmt.Sprintf("%s/resource.exec.test.out", td))
