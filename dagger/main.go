@@ -19,9 +19,8 @@ func New() *JumppadCI {
 }
 
 type JumppadCI struct {
-	lastError         error
-	goCacheVolume     *CacheVolume
-	dockerCacheVolume *CacheVolume
+	lastError     error
+	goCacheVolume *CacheVolume
 }
 
 func (d *JumppadCI) WithGoCache(cache *CacheVolume) *JumppadCI {
@@ -575,14 +574,6 @@ func (d *JumppadCI) goCache() *CacheVolume {
 	}
 
 	return d.goCacheVolume
-}
-
-func (d *JumppadCI) dockerCache() *CacheVolume {
-	if d.dockerCacheVolume == nil {
-		d.dockerCacheVolume = dag.CacheVolume("docker-cache")
-	}
-
-	return d.dockerCacheVolume
 }
 
 func (d *JumppadCI) hasError() bool {

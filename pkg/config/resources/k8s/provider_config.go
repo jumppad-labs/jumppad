@@ -17,13 +17,13 @@ import (
 var _ sdk.Provider = &ConfigProvider{}
 
 type ConfigProvider struct {
-	config *K8sConfig
+	config *Config
 	client k8s.Kubernetes
 	log    sdk.Logger
 }
 
 func (p *ConfigProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
-	c, ok := cfg.(*K8sConfig)
+	c, ok := cfg.(*Config)
 	if !ok {
 		return fmt.Errorf("unable to initialize Config provider, resource is not of type K8sConfig")
 	}
@@ -48,7 +48,10 @@ func (p *ConfigProvider) Create(ctx context.Context) error {
 	}
 
 	p.log.Info("Applying Kubernetes configuration", "ref", p.config.Meta.Name, "config", p.config.Paths)
+	return p.create(ctx)
+}
 
+func (p *ConfigProvider) create(ctx context.Context) error {
 	err := p.setup()
 	if err != nil {
 		return err
@@ -91,7 +94,10 @@ func (p *ConfigProvider) Destroy(ctx context.Context, force bool) error {
 	}
 
 	p.log.Info("Destroy Kubernetes configuration", "ref", p.config.Meta.ID, "config", p.config.Paths)
+	return p.destroy(ctx, force)
+}
 
+func (p *ConfigProvider) destroy(ctx context.Context, force bool) error {
 	err := p.setup()
 	if err != nil {
 		return err
@@ -110,35 +116,36 @@ func (p *ConfigProvider) Lookup() ([]string, error) {
 }
 
 func (p *ConfigProvider) Refresh(ctx context.Context) error {
-	cp, err := p.getChangedPaths()
+	cp, dp, err := p.getChangedAndDeletedPaths()
 	if err != nil {
 		return err
 	}
 
-	if len(cp) < 1 {
+	if len(cp) < 1 && len(dp) < 1 {
 		return nil
 	}
 
 	p.log.Info("Refresh Kubernetes config", "ref", p.config.Meta.ID, "paths", cp)
 
-	err = p.Destroy(ctx, false)
+	err = p.client.Delete(dp)
 	if err != nil {
-		return err
+		p.log.Debug("There was a problem destroying Kubernetes config, logging message but ignoring error", "ref", p.config.Meta.ID, "error", err)
 	}
 
-	return p.Create(ctx)
+	return p.create(ctx)
 }
 
 func (p *ConfigProvider) Changed() (bool, error) {
-	cp, err := p.getChangedPaths()
+	cp, dp, err := p.getChangedAndDeletedPaths()
 	if err != nil {
 		return false, err
 	}
 
-	if len(cp) > 0 {
+	if len(cp) > 0 || len(dp) > 0 {
 		p.log.Debug("Kubernetes jobs changed, needs refresh", "ref", p.config.Meta.ID)
 		return true, nil
 	}
+
 	return false, nil
 }
 
@@ -153,8 +160,8 @@ func (p *ConfigProvider) setup() error {
 }
 
 // generateChecksums generates a sha256 checksum for each of the the paths
-func (p *ConfigProvider) generateChecksums() ([]string, error) {
-	checksums := []string{}
+func (p *ConfigProvider) generateChecksums() (map[string]string, error) {
+	checksums := map[string]string{}
 
 	for _, p := range p.config.Paths {
 		f, err := os.Open(p)
@@ -179,34 +186,44 @@ func (p *ConfigProvider) generateChecksums() ([]string, error) {
 			return nil, err
 		}
 
-		checksums = append(checksums, hash)
+		checksums[p] = hash
 	}
 
 	return checksums, nil
 }
 
-// getChangedPaths returns the paths that have changed since the nomad jobs
-// were last applied
-func (p *ConfigProvider) getChangedPaths() ([]string, error) {
+// getChangedAndDeletedPaths returns the paths that have changed since the kubernetes
+// jobs were last applied, also returns the jobs that have been deleted
+func (p *ConfigProvider) getChangedAndDeletedPaths() ([]string, []string, error) {
+	changed := []string{}
+	deleted := []string{}
+
 	// get the checksums
 	cs, err := p.generateChecksums()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+
+	// check changed paths
+	for k, v := range cs {
+		oldV, ok := p.config.JobChecksums[k]
+		if !ok || oldV != v {
+			changed = append(changed, k)
+		}
+	}
+
+	// check deleted paths
+	for k, _ := range p.config.JobChecksums {
+		_, ok := cs[k]
+		if !ok {
+			deleted = append(deleted, k)
+		}
 	}
 
 	// if we have more checksums than previous assume everything has changed
 	if len(p.config.JobChecksums) != len(cs) {
-		return p.config.Paths, nil
+		return p.config.Paths, nil, nil
 	}
 
-	// compare the checksums
-	diff := []string{}
-	for i, c := range p.config.JobChecksums {
-
-		if c != cs[i] {
-			diff = append(diff, p.config.Paths[i])
-		}
-	}
-
-	return diff, nil
+	return changed, deleted, nil
 }
