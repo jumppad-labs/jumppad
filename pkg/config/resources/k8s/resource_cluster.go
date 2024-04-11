@@ -13,8 +13,8 @@ import (
 const TypeK8sCluster string = "k8s_cluster"
 const TypeKubernetesCluster string = "kubernetes_cluster"
 
-// K8sCluster is a config stanza which defines a Kubernetes or a Nomad cluster
-type K8sCluster struct {
+// Cluster is a config stanza which defines a Kubernetes or a Nomad cluster
+type Cluster struct {
 	// embedded type holding name, etc.
 	types.ResourceBase `hcl:",remain"`
 
@@ -32,7 +32,7 @@ type K8sCluster struct {
 
 	Environment map[string]string `hcl:"environment,optional" json:"environment,omitempty"` // environment variables to set when starting the container
 
-	Config *Config `hcl:"config,block" json:"config,omitempty"`
+	Config *ClusterConfig `hcl:"config,block" json:"config,omitempty"`
 
 	// output parameters
 
@@ -54,7 +54,7 @@ type K8sCluster struct {
 	ExternalIP string `hcl:"external_ip,optional" json:"external_ip,omitempty"`
 }
 
-type Config struct {
+type ClusterConfig struct {
 	// Specifies configuration for the Docker driver.
 	DockerConfig *DockerConfig `hcl:"docker,block" json:"docker,omitempty"`
 }
@@ -77,7 +77,7 @@ type KubeConfig struct {
 const k3sBaseImage = "shipyardrun/k3s"
 const k3sBaseVersion = "v1.27.4"
 
-func (k *K8sCluster) Process() error {
+func (k *Cluster) Process() error {
 	if k.APIPort == 0 {
 		k.APIPort = 443
 	}
@@ -97,7 +97,7 @@ func (k *K8sCluster) Process() error {
 		// try and find the resource in the state
 		r, _ := c.FindResource(k.Meta.ID)
 		if r != nil {
-			kstate := r.(*K8sCluster)
+			kstate := r.(*Cluster)
 			k.KubeConfig = kstate.KubeConfig
 			k.ContainerName = kstate.ContainerName
 			k.APIPort = kstate.APIPort

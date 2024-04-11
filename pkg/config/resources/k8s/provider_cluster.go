@@ -40,7 +40,7 @@ var startTimeout = (300 * time.Second)
 
 // K8sCluster defines a provider which can create Kubernetes clusters
 type ClusterProvider struct {
-	config     *K8sCluster
+	config     *Cluster
 	client     cclient.ContainerTasks
 	kubeClient k8s.Kubernetes
 	httpClient http.HTTP
@@ -49,7 +49,7 @@ type ClusterProvider struct {
 }
 
 func (p *ClusterProvider) Init(cfg htypes.Resource, l sdk.Logger) error {
-	c, ok := cfg.(*K8sCluster)
+	c, ok := cfg.(*Cluster)
 	if !ok {
 		return fmt.Errorf("unable to initialize Kubernetes cluster provider, resource is not of type K8sCluster")
 	}

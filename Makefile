@@ -1,30 +1,30 @@
 git_commit = $(shell git log -1 --pretty=format:"%H")
 
-WORKING_DIRECTORY ?= "registries"
+test_folder ?= container
 
 test_unit:
-	dagger call -m "./.dagger" unit-test \
+	dagger call --mod=dagger unit-test \
 		--src=. \
 		--with-race=false
 
 test_functional_all:
-	dagger call --mod=.dagger functional-test-all \
+	dagger call --mod=dagger functional-test-all \
 		--src=$(shell pwd)/examples \
 		--jumppad=$(which jumppad)
 
 test_functional_podman:
-	go build -ldflags "-X main.version=${git_commit}" -gcflags=all="-N -l" -o bin/jumppad main.go
-	dagger call --mod=.dagger functional-test \
+	GOOS=linux go build -ldflags "-X main.version=${git_commit}" -gcflags=all="-N -l" -o bin/jumppad main.go
+	dagger call --mod=dagger functional-test \
 		--src=$(shell pwd)/examples \
-		--working-directory=registries \
+		--working-directory=$(test_folder) \
 		--runtime=podman \
 		--jumppad=./bin/jumppad
 
 test_functional_docker:
-	go build -ldflags "-X main.version=${git_commit}" -gcflags=all="-N -l" -o bin/jumppad main.go
-	dagger call --mod=.dagger functional-test \
+	GOOS=linux go build -ldflags "-X main.version=${git_commit}" -gcflags=all="-N -l" -o bin/jumppad main.go
+	dagger call --mod=dagger functional-test \
 		--src=$(shell pwd)/examples \
-		--working-directory=$(WORKING_DIRECTORY) \
+		--working-directory=$(test_folder) \
 		--runtime=docker \
 		--jumppad=./bin/jumppad
 
@@ -33,7 +33,7 @@ test_e2e_cmd: install_local
 	jumppad down
 
 dagger_build:
-	dagger call -m "./.dagger" all \
+	dagger call -m dagger all \
 		--output=./all_archive \
 		--src=. \
 		--notorize-cert=${QUILL_SIGN_P12} \
@@ -43,7 +43,7 @@ dagger_build:
 		--notorize-issuer=${QUILL_NOTARY_ISSUER}
 
 dagger_release:
-	dagger call -m "./.dagger" release \
+	dagger call -m dagger release \
 		--github-token=GITHUB_TOKEN \
 		--archives=./all_archive \
 		--src=.  

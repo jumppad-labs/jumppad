@@ -1,6 +1,0 @@
-FROM golang:latest
-
-RUN mkdir -p /go/src/github.com/jumppad-labs/jumppad
-COPY ./ /go/src/github.com/jumppad-labs/jumppad
-
-WORKDIR /go/src/github.com/jumppad-labs/jumppad

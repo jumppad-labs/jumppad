@@ -31,7 +31,7 @@ import (
 
 // setupClusterMocks sets up a happy path for mocks
 func setupClusterMocks(t *testing.T) (
-	*K8sCluster, *cmocks.ContainerTasks, *k8s.MockKubernetes, *conmocks.Connector) {
+	*Cluster, *cmocks.ContainerTasks, *k8s.MockKubernetes, *conmocks.Connector) {
 
 	md := &cmocks.ContainerTasks{}
 	md.On("FindContainerIDs", mock.Anything, mock.Anything).Return([]string{}, nil).Once()
@@ -95,7 +95,7 @@ func setupClusterMocks(t *testing.T) (
 	).Return(&contypes.CertBundle{}, nil)
 
 	// copy the config
-	cc := deepcopy.Copy(clusterConfig).(*K8sCluster)
+	cc := deepcopy.Copy(clusterConfig).(*Cluster)
 
 	t.Cleanup(func() {
 		os.Setenv(utils.HomeEnvName(), currentHome)
@@ -149,7 +149,7 @@ func TestClusterK3DoesNotSetProxyEnvironmentWithWrongVersion(t *testing.T) {
 
 func TestClusterK3NoProxyIsSet(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
-	cc.Config = &Config{DockerConfig: &DockerConfig{NoProxy: []string{"test.com", "test2.com"}}}
+	cc.Config = &ClusterConfig{DockerConfig: &DockerConfig{NoProxy: []string{"test.com", "test2.com"}}}
 
 	p := ClusterProvider{cc, md, mk, nil, mc, logger.NewTestLogger(t)}
 
@@ -675,7 +675,7 @@ func TestLookupReturnsIDs(t *testing.T) {
 	assert.Equal(t, []string{"found"}, ids)
 }
 
-var clusterConfig = &K8sCluster{
+var clusterConfig = &Cluster{
 	ResourceBase: htypes.ResourceBase{Meta: htypes.Meta{Name: "test", Type: TypeK8sCluster}},
 	Image:        &container.Image{Name: "shipyardrun/k3s:v1.27.4"},
 	Networks:     []container.NetworkAttachment{container.NetworkAttachment{ID: "cloud"}},
