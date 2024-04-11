@@ -18,6 +18,8 @@ resource "exec" "in_container" {
   #!/bin/sh -e
 
   touch /data/container.txt
+
+  echo "exec=container" >> $EXEC_OUTPUT
   EOF
 }
 
@@ -30,10 +32,20 @@ resource "exec" "standalone" {
   #!/bin/sh -e
 
   touch /data/standalone.txt
+  
+  echo "exec=standalone" >> $EXEC_OUTPUT
   EOF
 
   volume {
     source      = data("test")
     destination = "/data"
   }
+}
+
+output "remote_exec_container" {
+  value = resource.exec.in_container.output.exec
+}
+
+output "remote_exec_standalone" {
+  value = resource.exec.standalone.output.exec
 }

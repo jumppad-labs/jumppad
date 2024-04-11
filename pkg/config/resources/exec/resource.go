@@ -8,7 +8,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/config"
 	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"github.com/zclconf/go-cty/cty"
 )
 
 // TypeExec is the resource string for an Exec resource
@@ -34,9 +33,9 @@ type Exec struct {
 	RunAs    *ctypes.User               `hcl:"run_as,block" json:"run_as,omitempty"`    // User block for mapping the user id and group id inside the container
 
 	// output
-	PID      int       `hcl:"pid,optional" json:"pid,omitempty"`             // PID stores the ID of the created connector service if it is a local exec
-	ExitCode int       `hcl:"exit_code,optional" json:"exit_code,omitempty"` // Exit code of the process
-	Output   cty.Value `hcl:"output,optional"`                               // output values returned from Terraform
+	PID      int               `hcl:"pid,optional" json:"pid,omitempty"`             // PID stores the ID of the created connector service if it is a local exec
+	ExitCode int               `hcl:"exit_code,optional" json:"exit_code,omitempty"` // Exit code of the process
+	Output   map[string]string `hcl:"output,optional" json:"output,omitempty"`       // output values returned from exec
 }
 
 func (e *Exec) Process() error {
@@ -67,6 +66,7 @@ func (e *Exec) Process() error {
 			kstate := r.(*Exec)
 			e.PID = kstate.PID
 			e.ExitCode = kstate.ExitCode
+			e.Output = kstate.Output
 		}
 	}
 
