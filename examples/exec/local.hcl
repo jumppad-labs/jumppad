@@ -12,7 +12,6 @@ resource "exec" "install" {
   cd ${data("test")} && unzip ./consul.zip
 
   # Add the output
-  echo "$EXEC_OUTPUT" >> /tmp/output.var
   echo "exec=install" >> $EXEC_OUTPUT
   EOF
 
