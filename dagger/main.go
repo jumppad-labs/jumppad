@@ -19,12 +19,18 @@ func New() *JumppadCI {
 }
 
 type JumppadCI struct {
-	lastError     error
-	goCacheVolume *CacheVolume
+	lastError          error
+	goModCacheVolume   *CacheVolume
+	goBuildCacheVolume *CacheVolume
 }
 
-func (d *JumppadCI) WithGoCache(cache *CacheVolume) *JumppadCI {
-	d.goCacheVolume = cache
+func (d *JumppadCI) WithGoModCache(cache *CacheVolume) *JumppadCI {
+	d.goModCacheVolume = cache
+	return d
+}
+
+func (d *JumppadCI) WithGoBuildCache(cache *CacheVolume) *JumppadCI {
+	d.goBuildCacheVolume = cache
 	return d
 }
 
@@ -114,6 +120,38 @@ func (d *JumppadCI) Release(
 	return version, d.lastError
 }
 
+func (d *JumppadCI) UnitTest(
+	ctx context.Context,
+	src *Directory,
+	withRace bool,
+) error {
+	if d.hasError() {
+		return d.lastError
+	}
+
+	cli := dag.Pipeline("unit-test")
+
+	raceFlag := ""
+	if withRace {
+		raceFlag = "-race"
+	}
+
+	golang := cli.Container().
+		From("golang:latest").
+		WithDirectory("/src", src).
+		WithMountedCache("/go/pkg/mod", d.goModCache()).
+		WithMountedCache("/root/.cache/go-build", d.goBuildCache()).
+		WithWorkdir("/src").
+		WithExec([]string{"go", "test", "-v", raceFlag, "./..."})
+
+	_, err := golang.Sync(ctx)
+	if err != nil {
+		d.lastError = err
+	}
+
+	return err
+}
+
 func (d *JumppadCI) Build(
 	ctx context.Context,
 	src *Directory,
@@ -134,7 +172,8 @@ func (d *JumppadCI) Build(
 		From("golang:latest").
 		WithDirectory("/src", src).
 		WithWorkdir("/src").
-		WithMountedCache("/go/pkg/mod", d.goCache())
+		WithMountedCache("/root/.cache/go-build", d.goBuildCache()).
+		WithMountedCache("/go/pkg/mod", d.goModCache())
 
 	for _, goos := range oses {
 		for _, goarch := range arches {
@@ -166,37 +205,6 @@ func (d *JumppadCI) Build(
 	}
 
 	return outputs, nil
-}
-
-func (d *JumppadCI) UnitTest(
-	ctx context.Context,
-	src *Directory,
-	withRace bool,
-) error {
-	if d.hasError() {
-		return d.lastError
-	}
-
-	cli := dag.Pipeline("unit-test")
-
-	raceFlag := ""
-	if withRace {
-		raceFlag = "-race"
-	}
-
-	golang := cli.Container().
-		From("golang:latest").
-		WithDirectory("/src", src).
-		WithMountedCache("/go/pkg/mod", d.goCache()).
-		WithWorkdir("/src").
-		WithExec([]string{"go", "test", "-v", raceFlag, "./..."})
-
-	_, err := golang.Sync(ctx)
-	if err != nil {
-		d.lastError = err
-	}
-
-	return err
 }
 
 func (d *JumppadCI) Package(
@@ -524,6 +532,116 @@ func (d *JumppadCI) UpdateWebsite(
 	return nil
 }
 
+var functionalTests = []string{
+	"/build",
+	"/certificates",
+	"/container",
+	"/docs",
+	"/exec",
+	"/multiple_k3s_clusters",
+	"/nomad",
+	"/single_file",
+	"/single_k3s_cluster",
+	"/terraform",
+}
+
+var runtimes = []string{"docker", "podman"}
+
+type job struct {
+	workingDirectory string
+	runtime          string
+}
+
+func (d *JumppadCI) FunctionalTestAll(
+	ctx context.Context,
+	jumppad *File,
+	src *Directory,
+) error {
+	if d.hasError() {
+		return d.lastError
+	}
+
+	cli := dag.Pipeline("functional-test-all")
+
+	// get the architecture of the current machine
+	platform, err := cli.DefaultPlatform(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	jobCount := len(functionalTests) * len(runtimes)
+	arch := strings.Split(string(platform), "/")[1]
+	jobs := make(chan job, jobCount)
+	errors := make(chan error, jobCount)
+
+	// start the workers
+	for w := 0; w < 3; w++ {
+		go startTestWorker(ctx, w+1, cli, jumppad, src, arch, jobs, errors)
+	}
+
+	// add the jobs
+	for _, runtime := range runtimes {
+		for _, ft := range functionalTests {
+			jobs <- job{workingDirectory: ft, runtime: runtime}
+		}
+	}
+	close(jobs)
+
+	for i := 0; i < jobCount; i++ {
+		err := <-errors
+		if err != nil {
+			d.lastError = err
+		}
+	}
+
+	return d.lastError
+}
+
+// FunctionalTest runs the functional tests for the jumppad binary
+//
+// example usage: dagger call functional-test --jumppad /path/to/jumppad --src /path/to/tests --working-directory /simple --runtime docker
+func (d *JumppadCI) FunctionalTest(
+	ctx context.Context,
+	// path to the jumppad binary
+	jumppad *File,
+	// source directory containing the tests
+	src *Directory,
+	// working directory for the tests, relative to the source directory
+	WorkingDirectory,
+	// runtime to use for the tests, either docker or podman
+	Runtime string,
+) error {
+	if d.hasError() {
+		return d.lastError
+	}
+
+	wd := strings.TrimPrefix(WorkingDirectory, "/")
+	pl := dag.Pipeline("functional-test-" + wd + "-" + Runtime)
+
+	// get the architecture of the current machine
+	platform, err := pl.DefaultPlatform(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	arch := strings.Split(string(platform), "/")[1]
+
+	_, err = pl.Jumppad().
+		TestBlueprintWithBinary(
+			ctx,
+			src,
+			jumppad,
+			JumppadTestBlueprintWithBinaryOpts{WorkingDirectory: WorkingDirectory, Architecture: arch, Runtime: Runtime, Cache: Runtime},
+		)
+
+	if err != nil {
+		d.lastError = err
+		return err
+	}
+
+	return nil
+}
+
 func (d *JumppadCI) getVersion(ctx context.Context, token *Secret, src *Directory) (string, string, error) {
 	if d.hasError() {
 		return "", "", d.lastError
@@ -568,12 +686,21 @@ func (d *JumppadCI) getVersion(ctx context.Context, token *Secret, src *Director
 	return v, ref, nil
 }
 
-func (d *JumppadCI) goCache() *CacheVolume {
-	if d.goCacheVolume == nil {
-		d.goCacheVolume = dag.CacheVolume("go-cache")
+// gets the go build cache volume, if it doesn't exist it creates it
+func (d *JumppadCI) goBuildCache() *CacheVolume {
+	if d.goBuildCacheVolume == nil {
+		d.goBuildCacheVolume = dag.CacheVolume("go-build-cache")
 	}
 
-	return d.goCacheVolume
+	return d.goBuildCacheVolume
+}
+
+func (d *JumppadCI) goModCache() *CacheVolume {
+	if d.goModCacheVolume == nil {
+		d.goModCacheVolume = dag.CacheVolume("go-mod-cache")
+	}
+
+	return d.goModCacheVolume
 }
 
 func (d *JumppadCI) hasError() bool {
@@ -623,134 +750,25 @@ func (d *JumppadCI) setArchLocalMachine(ctx context.Context) {
 	}
 }
 
-var functionalTests = []string{
-	"/build",
-	"/certificates",
-	"/container",
-	"/docs",
-	"/exec",
-	"/multiple_k3s_clusters",
-	"/nomad",
-	"/single_file",
-	"/single_k3s_cluster",
-	"/terraform",
-}
-
-var runtimes = []string{"docker", "podman"}
-
-func (d *JumppadCI) FunctionalTestAll(
-	ctx context.Context,
-	jumppad *File,
-	src *Directory,
-) error {
-	if d.hasError() {
-		return d.lastError
-	}
-
-	cli := dag.Pipeline("functional-test-all")
-
-	// get the architecture of the current machine
-	platform, err := cli.DefaultPlatform(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	jobCount := len(functionalTests) * len(runtimes)
-	arch := strings.Split(string(platform), "/")[1]
-	jobs := make(chan job, jobCount)
-	errors := make(chan error, jobCount)
-
-	// start the workers
-	for w := 0; w < 1; w++ {
-		go startTestWorker(ctx, cli, jumppad, src, arch, jobs, errors)
-	}
-
-	// add the jobs
-	for _, runtime := range runtimes {
-		for _, ft := range functionalTests {
-			jobs <- job{workingDirectory: ft, runtime: runtime}
-		}
-	}
-	close(jobs)
-
-	for i := 0; i < jobCount; i++ {
-		err := <-errors
-		if err != nil {
-			d.lastError = err
-			return err
-		}
-	}
-
-	return nil
-}
-
-type job struct {
-	workingDirectory string
-	runtime          string
-}
-
-func startTestWorker(ctx context.Context, cli *Client, jumppad *File, src *Directory, arch string, jobs <-chan job, errors chan<- error) {
+func startTestWorker(ctx context.Context, worker int, cli *Client, jumppad *File, src *Directory, arch string, jobs <-chan job, errors chan<- error) {
 	for j := range jobs {
 		wd := strings.TrimPrefix(j.workingDirectory, "/")
-		pl := cli.Pipeline("functional-test-" + wd + "-" + j.runtime)
+		//pl := cli.Pipeline("functional-test-" + wd + "-" + j.runtime)
+		fmt.Println("Running test", worker, wd, j.runtime)
 
-		_, err := pl.Jumppad().
+		// unique cache for the worker and the runtime, otherwise the cache will be shared
+		// between the workers and when running in parallel this causes concurrency issues
+		cache_name := fmt.Sprintf("%d_%s", worker, j.runtime)
+
+		//time.Sleep(1 * time.Second)
+		_, err := cli.Jumppad().
 			TestBlueprintWithBinary(
 				ctx,
 				src,
 				jumppad,
-				JumppadTestBlueprintWithBinaryOpts{WorkingDirectory: j.workingDirectory, Architecture: arch, Runtime: j.runtime, Cache: j.runtime},
+				JumppadTestBlueprintWithBinaryOpts{WorkingDirectory: j.workingDirectory, Architecture: arch, Runtime: j.runtime, Cache: cache_name},
 			)
 
-		if err != nil {
-			errors <- err
-		}
-
-		errors <- nil
+		errors <- err
 	}
-}
-
-// FunctionalTest runs the functional tests for the jumppad binary
-//
-// example usage: dagger call functional-test --jumppad /path/to/jumppad --src /path/to/tests --working-directory /simple --runtime docker
-func (d *JumppadCI) FunctionalTest(
-	ctx context.Context,
-	// path to the jumppad binary
-	jumppad *File,
-	// source directory containing the tests
-	src *Directory,
-	// working directory for the tests, relative to the source directory
-	WorkingDirectory,
-	// runtime to use for the tests, either docker or podman
-	Runtime string,
-) error {
-	if d.hasError() {
-		return d.lastError
-	}
-
-	wd := strings.TrimPrefix(WorkingDirectory, "/")
-	pl := dag.Pipeline("functional-test-" + wd + "-" + Runtime)
-
-	// get the architecture of the current machine
-	platform, err := pl.DefaultPlatform(ctx)
-	if err != nil {
-		panic(err)
-	}
-
-	arch := strings.Split(string(platform), "/")[1]
-
-	_, err = pl.Jumppad().
-		TestBlueprintWithBinary(
-			ctx,
-			src,
-			jumppad,
-			JumppadTestBlueprintWithBinaryOpts{WorkingDirectory: WorkingDirectory, Architecture: arch, Runtime: Runtime, Cache: Runtime},
-		)
-
-	if err != nil {
-		d.lastError = err
-		return err
-	}
-
-	return nil
 }

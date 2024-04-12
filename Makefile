@@ -1,6 +1,13 @@
 git_commit = $(shell git log -1 --pretty=format:"%H")
-
+jumppad_bin = $(shell which jumppad)
 test_folder ?= container
+
+build_all:
+	dagger call --mod=dagger build \
+		--src=. \
+		--version="dev" \
+		--sha=${git_commit} \
+		--output=./bin
 
 test_unit:
 	dagger call --mod=dagger unit-test \
@@ -8,9 +15,10 @@ test_unit:
 		--with-race=false
 
 test_functional_all:
-	dagger call --mod=dagger functional-test-all \
+	GOOS=linux go build -ldflags "-X main.version=${git_commit}" -gcflags=all="-N -l" -o bin/jumppad main.go
+	dagger call --mod=dagger --progress plain functional-test-all \
 		--src=$(shell pwd)/examples \
-		--jumppad=$(which jumppad)
+		--jumppad=./bin/jumppad
 
 test_functional_podman:
 	GOOS=linux go build -ldflags "-X main.version=${git_commit}" -gcflags=all="-N -l" -o bin/jumppad main.go
