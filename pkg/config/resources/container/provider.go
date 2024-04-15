@@ -249,6 +249,13 @@ func (c *Provider) internalCreate(ctx context.Context, sidecar bool) error {
 			CPUPin: c.config.Resources.CPUPin,
 			Memory: c.config.Resources.Memory,
 		}
+
+		if c.config.Resources.GPU != nil {
+			new.Resources.GPU = &types.GPU{
+				Driver:    c.config.Resources.GPU.Driver,
+				DeviceIDs: c.config.Resources.GPU.DeviceIDs,
+			}
+		}
 	}
 
 	if c.config.RunAs != nil {
@@ -333,7 +340,7 @@ func (c *Provider) internalCreate(ctx context.Context, sidecar bool) error {
 func (c *Provider) runExecHealthCheck(ctx context.Context, id string, command []string, script string, exitCode int, timeout time.Duration) error {
 	if len(script) > 0 {
 		// write the script to a temp file
-		dir, err := os.MkdirTemp(os.TempDir(), "script*")
+		dir, err := os.MkdirTemp(utils.JumppadTemp(), "script*")
 		if err != nil {
 			return fmt.Errorf("unable to create temporary directory for script: %s", err)
 		}

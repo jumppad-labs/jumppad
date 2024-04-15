@@ -71,6 +71,10 @@ var containerConfig = &dtypes.Container{
 		CPU:    1000,
 		Memory: 1000,
 		CPUPin: []int{1, 4},
+		GPU: &dtypes.GPU{
+			Driver:    "nvidia",
+			DeviceIDs: []string{"1"},
+		},
 	},
 	Networks: []dtypes.NetworkAttachment{
 		dtypes.NetworkAttachment{ID: "network.testnet"},
@@ -487,6 +491,21 @@ func TestContainerConfiguresResources(t *testing.T) {
 	assert.Equal(t, hc.Resources.Memory, int64(1000000000))
 	assert.Equal(t, hc.Resources.CPUQuota, int64(100000))
 	assert.Equal(t, hc.Resources.CpusetCpus, "1,4")
+}
+
+func TestContainerConfiguresGPU(t *testing.T) {
+	cc, md, mic := createContainerConfig()
+
+	err := setupContainer(t, cc, md, mic)
+	assert.NoError(t, err)
+
+	params := testutils.GetCalls(&md.Mock, "ContainerCreate")[0].Arguments
+	hc := params[2].(*container.HostConfig)
+	assert.NotEmpty(t, hc.Resources)
+
+	assert.Equal(t, hc.DeviceRequests[0].Driver, "nvidia")
+	assert.Equal(t, hc.DeviceRequests[0].DeviceIDs[0], "1")
+	assert.Equal(t, hc.DeviceRequests[0].Capabilities, [][]string{[]string{"gpu", "nvidia", "compute"}})
 }
 
 func TestContainerConfiguresRetryWhenCountGreater0(t *testing.T) {

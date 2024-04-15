@@ -19,9 +19,13 @@ func New() *JumppadCI {
 }
 
 type JumppadCI struct {
-	lastError         error
-	goCacheVolume     *CacheVolume
-	dockerCacheVolume *CacheVolume
+	lastError     error
+	goCacheVolume *CacheVolume
+}
+
+func (d *JumppadCI) WithGoCache(cache *CacheVolume) *JumppadCI {
+	d.goCacheVolume = cache
+	return d
 }
 
 func (d *JumppadCI) All(
@@ -88,7 +92,13 @@ func (d *JumppadCI) All(
 	return output, d.lastError
 }
 
-func (d *JumppadCI) Release(ctx context.Context, src *Directory, archives *Directory, githubToken *Secret, gemfuryToken *Secret) (string, error) {
+func (d *JumppadCI) Release(
+	ctx context.Context,
+	src *Directory,
+	archives *Directory,
+	githubToken *Secret,
+	gemfuryToken *Secret,
+) (string, error) {
 	// create a new github release
 	version, _ := d.GithubRelease(ctx, src, archives, githubToken)
 
@@ -104,7 +114,12 @@ func (d *JumppadCI) Release(ctx context.Context, src *Directory, archives *Direc
 	return version, d.lastError
 }
 
-func (d *JumppadCI) Build(ctx context.Context, src *Directory, version, sha string) (*Directory, error) {
+func (d *JumppadCI) Build(
+	ctx context.Context,
+	src *Directory,
+	version,
+	sha string,
+) (*Directory, error) {
 	if d.hasError() {
 		return nil, d.lastError
 	}
@@ -153,7 +168,11 @@ func (d *JumppadCI) Build(ctx context.Context, src *Directory, version, sha stri
 	return outputs, nil
 }
 
-func (d *JumppadCI) UnitTest(ctx context.Context, src *Directory, withRace bool) error {
+func (d *JumppadCI) UnitTest(
+	ctx context.Context,
+	src *Directory,
+	withRace bool,
+) error {
 	if d.hasError() {
 		return d.lastError
 	}
@@ -180,7 +199,11 @@ func (d *JumppadCI) UnitTest(ctx context.Context, src *Directory, withRace bool)
 	return err
 }
 
-func (d *JumppadCI) Package(ctx context.Context, binaries *Directory, version string) (*Directory, error) {
+func (d *JumppadCI) Package(
+	ctx context.Context,
+	binaries *Directory,
+	version string,
+) (*Directory, error) {
 	if d.hasError() {
 		return nil, d.lastError
 	}
@@ -224,7 +247,11 @@ var archives = []Archive{
 }
 
 // Archive creates zipped and tar archives of the binaries
-func (d *JumppadCI) Archive(ctx context.Context, binaries *Directory, version string) (*Directory, error) {
+func (d *JumppadCI) Archive(
+	ctx context.Context,
+	binaries *Directory,
+	version string,
+) (*Directory, error) {
 	if d.hasError() {
 		return nil, d.lastError
 	}
@@ -283,7 +310,11 @@ func (d *JumppadCI) Archive(ctx context.Context, binaries *Directory, version st
 	return out, nil
 }
 
-func (d JumppadCI) GenerateChecksums(ctx context.Context, files *Directory, version string) (*Directory, error) {
+func (d JumppadCI) GenerateChecksums(
+	ctx context.Context,
+	files *Directory,
+	version string,
+) (*Directory, error) {
 	cli := dag.Pipeline("generate-checksums")
 	checksums := strings.Builder{}
 
@@ -314,7 +345,16 @@ var notorize = []Archive{
 }
 
 // SignAndNotorize signs and notorizes the osx binaries using the Apple notary service
-func (d JumppadCI) SignAndNotorize(ctx context.Context, version string, archives *Directory, cert *File, password *Secret, key *File, keyId, keyIssuer string) (*Directory, error) {
+func (d JumppadCI) SignAndNotorize(
+	ctx context.Context,
+	version string,
+	archives *Directory,
+	cert *File,
+	password *Secret,
+	key *File,
+	keyId,
+	keyIssuer string,
+) (*Directory, error) {
 	if d.hasError() {
 		return nil, d.lastError
 	}
@@ -352,7 +392,12 @@ func (d JumppadCI) SignAndNotorize(ctx context.Context, version string, archives
 	return out, nil
 }
 
-func (d *JumppadCI) GithubRelease(ctx context.Context, src *Directory, archives *Directory, githubToken *Secret) (string, error) {
+func (d *JumppadCI) GithubRelease(
+	ctx context.Context,
+	src *Directory,
+	archives *Directory,
+	githubToken *Secret,
+) (string, error) {
 	if d.hasError() {
 		return "", d.lastError
 	}
@@ -382,7 +427,11 @@ func (d *JumppadCI) GithubRelease(ctx context.Context, src *Directory, archives 
 	return version, err
 }
 
-func (d *JumppadCI) UpdateBrew(ctx context.Context, version string, githubToken *Secret) error {
+func (d *JumppadCI) UpdateBrew(
+	ctx context.Context,
+	version string,
+	githubToken *Secret,
+) error {
 	if d.hasError() {
 		return d.lastError
 	}
@@ -418,7 +467,12 @@ var gemFury = []Archive{
 	{Path: "/pkg/linux/arm64/jumppad.deb", Type: "copy", Output: "jumppad_%%VERSION%%_linux_arm64.deb"},
 }
 
-func (d *JumppadCI) UpdateGemFury(ctx context.Context, version string, gemFuryToken *Secret, archives *Directory) error {
+func (d *JumppadCI) UpdateGemFury(
+	ctx context.Context,
+	version string,
+	gemFuryToken *Secret,
+	archives *Directory,
+) error {
 	cli := dag.Pipeline("update-gem-fury")
 
 	tkn, _ := gemFuryToken.Plaintext(ctx)
@@ -442,7 +496,11 @@ func (d *JumppadCI) UpdateGemFury(ctx context.Context, version string, gemFuryTo
 	return nil
 }
 
-func (d *JumppadCI) UpdateWebsite(ctx context.Context, version string, githubToken *Secret) error {
+func (d *JumppadCI) UpdateWebsite(
+	ctx context.Context,
+	version string,
+	githubToken *Secret,
+) error {
 	cli := dag.Pipeline("update-website")
 
 	f := cli.Directory().WithNewFile("version", version).File("version")
@@ -464,11 +522,6 @@ func (d *JumppadCI) UpdateWebsite(ctx context.Context, version string, githubTok
 	}
 
 	return nil
-}
-
-func (d *JumppadCI) WithGoCache(cache *CacheVolume) *JumppadCI {
-	d.goCacheVolume = cache
-	return d
 }
 
 func (d *JumppadCI) getVersion(ctx context.Context, token *Secret, src *Directory) (string, string, error) {
@@ -523,14 +576,6 @@ func (d *JumppadCI) goCache() *CacheVolume {
 	return d.goCacheVolume
 }
 
-func (d *JumppadCI) dockerCache() *CacheVolume {
-	if d.dockerCacheVolume == nil {
-		d.dockerCacheVolume = dag.CacheVolume("docker-cache")
-	}
-
-	return d.dockerCacheVolume
-}
-
 func (d *JumppadCI) hasError() bool {
 	return d.lastError != nil
 }
@@ -579,39 +624,132 @@ func (d *JumppadCI) setArchLocalMachine(ctx context.Context) {
 }
 
 var functionalTests = []string{
-	//	"/examples/build",
-	//	"/examples/certificates",
-	//	"/examples/container",
-	//	"/examples/docs",
-	//	"/examples/exec",
-	"/examples/multiple_k3s_clusters",
-	// "/examples/nomad",
-	// "/examples/single_file",
-	// "/examples/single_k3s_cluster",
-	// "/examples/terraform",
+	"/build",
+	"/certificates",
+	"/container",
+	"/docs",
+	"/exec",
+	"/multiple_k3s_clusters",
+	"/nomad",
+	"/single_file",
+	"/single_k3s_cluster",
+	"/terraform",
 }
 
-func (d *JumppadCI) FunctionalTestAll(ctx context.Context, jumppad *File, src *Directory, architecture, runtime string) error {
+var runtimes = []string{"docker", "podman"}
+
+func (d *JumppadCI) FunctionalTestAll(
+	ctx context.Context,
+	jumppad *File,
+	src *Directory,
+) error {
 	if d.hasError() {
 		return d.lastError
 	}
 
-	for _, ft := range functionalTests {
-		testDir := src.Directory(ft)
+	cli := dag.Pipeline("functional-test-all")
 
-		_, err := dag.Jumppad().
-			WithCache(d.dockerCache()).
-			TestBlueprintWithBinary(
-				ctx,
-				testDir,
-				jumppad,
-				JumppadTestBlueprintWithBinaryOpts{Architecture: architecture, Runtime: runtime},
-			)
+	// get the architecture of the current machine
+	platform, err := cli.DefaultPlatform(ctx)
+	if err != nil {
+		panic(err)
+	}
 
+	jobCount := len(functionalTests) * len(runtimes)
+	arch := strings.Split(string(platform), "/")[1]
+	jobs := make(chan job, jobCount)
+	errors := make(chan error, jobCount)
+
+	// start the workers
+	for w := 0; w < 1; w++ {
+		go startTestWorker(ctx, cli, jumppad, src, arch, jobs, errors)
+	}
+
+	// add the jobs
+	for _, runtime := range runtimes {
+		for _, ft := range functionalTests {
+			jobs <- job{workingDirectory: ft, runtime: runtime}
+		}
+	}
+	close(jobs)
+
+	for i := 0; i < jobCount; i++ {
+		err := <-errors
 		if err != nil {
 			d.lastError = err
 			return err
 		}
+	}
+
+	return nil
+}
+
+type job struct {
+	workingDirectory string
+	runtime          string
+}
+
+func startTestWorker(ctx context.Context, cli *Client, jumppad *File, src *Directory, arch string, jobs <-chan job, errors chan<- error) {
+	for j := range jobs {
+		wd := strings.TrimPrefix(j.workingDirectory, "/")
+		pl := cli.Pipeline("functional-test-" + wd + "-" + j.runtime)
+
+		_, err := pl.Jumppad().
+			TestBlueprintWithBinary(
+				ctx,
+				src,
+				jumppad,
+				JumppadTestBlueprintWithBinaryOpts{WorkingDirectory: j.workingDirectory, Architecture: arch, Runtime: j.runtime, Cache: j.runtime},
+			)
+
+		if err != nil {
+			errors <- err
+		}
+
+		errors <- nil
+	}
+}
+
+// FunctionalTest runs the functional tests for the jumppad binary
+//
+// example usage: dagger call functional-test --jumppad /path/to/jumppad --src /path/to/tests --working-directory /simple --runtime docker
+func (d *JumppadCI) FunctionalTest(
+	ctx context.Context,
+	// path to the jumppad binary
+	jumppad *File,
+	// source directory containing the tests
+	src *Directory,
+	// working directory for the tests, relative to the source directory
+	WorkingDirectory,
+	// runtime to use for the tests, either docker or podman
+	Runtime string,
+) error {
+	if d.hasError() {
+		return d.lastError
+	}
+
+	wd := strings.TrimPrefix(WorkingDirectory, "/")
+	pl := dag.Pipeline("functional-test-" + wd + "-" + Runtime)
+
+	// get the architecture of the current machine
+	platform, err := pl.DefaultPlatform(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	arch := strings.Split(string(platform), "/")[1]
+
+	_, err = pl.Jumppad().
+		TestBlueprintWithBinary(
+			ctx,
+			src,
+			jumppad,
+			JumppadTestBlueprintWithBinaryOpts{WorkingDirectory: WorkingDirectory, Architecture: arch, Runtime: Runtime, Cache: Runtime},
+		)
+
+	if err != nil {
+		d.lastError = err
+		return err
 	}
 
 	return nil

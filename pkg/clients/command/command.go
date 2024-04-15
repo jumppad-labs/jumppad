@@ -2,7 +2,6 @@ package command
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -10,6 +9,7 @@ import (
 	"github.com/jumppad-labs/gohup"
 	"github.com/jumppad-labs/jumppad/pkg/clients/command/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 var ErrorCommandTimeout = fmt.Errorf("Command timed out before completing")
@@ -122,7 +122,7 @@ func (c *CommandImpl) Execute(config types.CommandConfig) (int, error) {
 // Kill a process with the given pid
 func (c *CommandImpl) Kill(pid int) error {
 	lp := gohup.LocalProcess{}
-	pidPath := filepath.Join(os.TempDir(), fmt.Sprintf("%d.pid", pid))
+	pidPath := filepath.Join(utils.JumppadTemp(), fmt.Sprintf("%d.pid", pid))
 
 	if s, _ := lp.QueryStatus(pidPath); s == gohup.StatusRunning {
 		return lp.Stop(pidPath)

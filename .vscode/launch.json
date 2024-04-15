@@ -52,6 +52,21 @@
       ],
     },
     {
+      "name": "Debug - Up Podman",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}",
+      "env": {
+        "LOG_LEVEL": "debug",
+        "DOCKER_HOST": "unix:///mnt/wsl/podman.sock"
+      },
+      "args": [
+        "up",
+        "${input:blueprint}",
+      ],
+    },
+    {
       "name": "Debug - Up2",
       "type": "go",
       "request": "launch",

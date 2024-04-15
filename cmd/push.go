@@ -62,7 +62,7 @@ func newPushCmd(ct container.ContainerTasks, kc ck8s.Kubernetes, ht http.HTTP, n
 
 			switch r.Metadata().Type {
 			case k8s.TypeK8sCluster:
-				return pushK8sCluster(image, r.(*k8s.K8sCluster), ct, kc, ht, l, true)
+				return pushK8sCluster(image, r.(*k8s.Cluster), ct, kc, ht, l, true)
 			case nomad.TypeNomadCluster:
 				return pushNomadCluster(image, r.(*nomad.NomadCluster), ct, nc, l, true)
 			}
@@ -76,7 +76,7 @@ func newPushCmd(ct container.ContainerTasks, kc ck8s.Kubernetes, ht http.HTTP, n
 	return pushCmd
 }
 
-func pushK8sCluster(image string, c *k8s.K8sCluster, ct container.ContainerTasks, kc ck8s.Kubernetes, ht http.HTTP, log logger.Logger, force bool) error {
+func pushK8sCluster(image string, c *k8s.Cluster, ct container.ContainerTasks, kc ck8s.Kubernetes, ht http.HTTP, log logger.Logger, force bool) error {
 	cli, _ := clients.GenerateClients(log)
 	p := config.NewProviders(cli)
 	cl := p.GetProvider(c).(*k8s.ClusterProvider)

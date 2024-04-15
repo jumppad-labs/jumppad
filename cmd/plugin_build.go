@@ -73,7 +73,7 @@ var pluginCmd = &cobra.Command{
 		}
 
 		// create a temp output folder
-		tmp := os.TempDir()
+		tmp := utils.JumppadTemp()
 		output := filepath.Join(tmp, "jumppad_build")
 
 		os.RemoveAll(output)

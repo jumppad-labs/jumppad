@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"strings"
 
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/jumppad-labs/hclconfig/convert"
@@ -246,12 +247,16 @@ func (p *TerraformProvider) createContainer() (string, error) {
 	tf.Volumes = append(tf.Volumes, ctypes.Volume{
 		Source:      statePath,
 		Destination: "/var/lib/terraform",
+		Type:        "bind",
+		ReadOnly:    false,
 	})
 
 	// Add the plugin cache
 	tf.Volumes = append(tf.Volumes, ctypes.Volume{
 		Source:      cachePath,
 		Destination: "/var/lib/terraform.d",
+		Type:        "bind",
+		ReadOnly:    false,
 	})
 
 	// Add any additional volumes
@@ -267,8 +272,8 @@ func (p *TerraformProvider) createContainer() (string, error) {
 		})
 	}
 
-	tf.Entrypoint = []string{}
-	tf.Command = []string{"tail", "-f", "/dev/null"} // ensure container does not immediately exit
+	tf.Entrypoint = []string{"tail"}
+	tf.Command = []string{"-f", "/dev/null"} // ensure container does not immediately exit
 
 	// pull any images needed for this container
 	err := p.client.PullImage(*tf.Image, false)
@@ -457,6 +462,9 @@ func getTerraformVarsFlag(r *Terraform) string {
 // GetTerraformFolder creates the terraform directory used by the application
 func terraformStateFolder(r *Terraform) string {
 	p := sanitize.Path(resources.FQRNFromResource(r).String())
+	p = strings.Replace(p, ".", "_", -1)
+	p = strings.Replace(p, "-", "_", -1)
+
 	data := filepath.Join(utils.JumppadHome(), "terraform", "state", p)
 
 	// create the folder if it does not exist
