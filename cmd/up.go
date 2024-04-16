@@ -98,13 +98,27 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 			variablesFile = &vf
 		}
 
+		/*
+			RootCertPath: filepath.Join(out, "root.cert"),
+			RootKeyPath:  filepath.Join(out, "root.key"),
+			LeafCertPath: filepath.Join(out, "leaf.cert"),
+			LeafKeyPath:  filepath.Join(out, "leaf.key"),
+		*/
+
 		// create the certificates for the connector
 		if cb, err := cc.GetLocalCertBundle(utils.CertsDir("")); err != nil || cb == nil {
-			// generate certs
-			l.Debug("Generating TLS Certificates for Ingress", "path", utils.CertsDir(""))
-			_, err := cc.GenerateLocalCertBundle(utils.CertsDir(""))
-			if err != nil {
-				return fmt.Errorf("unable to generate connector certificates: %s", err)
+			// fetch the generated certificates from jumppad.dev
+			errRootCert := bp.Get("https://jumppad.dev/certificates/fullchain.pem", utils.CertsDir("root.cert"))
+			errRootKey := bp.Get("https://jumppad.dev/certificates/key.pem", utils.CertsDir("root.key"))
+			errLeafCert := bp.Get("https://jumppad.dev/certificates/cert.pem", utils.CertsDir("leaf.cert"))
+			errLeafKey := bp.Get("https://jumppad.dev/certificates/key.pem", utils.CertsDir("leaf.key"))
+			if errRootCert != nil || errRootKey != nil || errLeafCert != nil || errLeafKey != nil {
+				// generate certs
+				l.Debug("Generating TLS Certificates for Ingress", "path", utils.CertsDir(""))
+				_, err := cc.GenerateLocalCertBundle(utils.CertsDir(""))
+				if err != nil {
+					return fmt.Errorf("unable to generate connector certificates: %s", err)
+				}
 			}
 		}
 
