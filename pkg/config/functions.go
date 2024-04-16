@@ -29,7 +29,7 @@ func customHCLFuncDataFolderWithPermissions(name string, permissions int) (strin
 
 	// convert the permissions to an octal e.g. 777 to 0777
 	strInt := fmt.Sprintf("0%d", permissions)
-	oInt, _ := strconv.ParseInt(strInt, 8, 64)
+	oInt, _ := strconv.ParseInt(strInt, 8, 32)
 
 	perms := os.FileMode(oInt)
 	return utils.DataFolder(name, perms), nil
