@@ -12,6 +12,7 @@ import (
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/build"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 	cp "github.com/otiai10/copy"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/modfile"
@@ -64,7 +65,7 @@ var pluginCmd = &cobra.Command{
 		engineClients, _ := clients.GenerateClients(l)
 
 		// create a temp output folder
-		tmp := os.TempDir()
+		tmp := utils.JumppadTemp()
 		output := filepath.Join(tmp, "jumppad_build")
 
 		os.RemoveAll(output)

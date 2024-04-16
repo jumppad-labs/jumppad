@@ -1,5 +1,29 @@
 # Change Log
 
+## version v0.10.5
+
+## New Features:
+Adds outputs for `exec` resources
+
+Exec resources now have a new parameter `output` which is a map of key value pairs.
+Values for output can be set by echoing a key value to the file `${EXEC_OUTPUT}` in 
+the defined script for either remote or local exec.
+
+```hcl
+resource "exec" "install" {
+  # Add the output
+  echo "exec=install" >> $EXEC_OUTPUT
+  echo "foo=bar" >> $EXEC_OUTPUT
+  EOF
+
+  timeout = "30s"
+}
+
+output "local_exec_install" {
+  value = resource.exec.install.output.exec
+}
+```
+
 ## version v0.10.4
 
 ## New Features:
