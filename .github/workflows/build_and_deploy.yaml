@@ -28,7 +28,6 @@ jobs:
           module: ./dagger
           args: all --output=./output --src=. --github-token=GITHUB_TOKEN --notorize-cert=./cert.p12 --notorize-cert-password=QUILL_SIGN_PASSWORD --notorize-key=./key.p8 --notorize-id=${{secrets.QUILL_NOTARY_KEY_ID}} --notorize-issuer=${{secrets.QUILL_NOTARY_ISSUER}}
           version: "0.11.0"
-          cloud-token: ${{ secrets.DAGGER_TOKEN }}
       
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
@@ -91,7 +90,6 @@ jobs:
           module: ./dagger
           args: functional-test --src=./examples --working-directory=${{matrix.folder}} --jumppad=/usr/local/bin/jumppad --runtime=docker
           version: "0.11.0"
-          cloud-token: ${{ secrets.DAGGER_TOKEN }}
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
@@ -145,7 +143,6 @@ jobs:
           module: ./dagger
           args: functional-test --src=./examples --working-directory=${{matrix.folder}} --jumppad=/usr/local/bin/jumppad --runtime=podman
           version: "0.11.0"
-          cloud-token: ${{ secrets.DAGGER_TOKEN }}
       
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
@@ -186,7 +183,6 @@ jobs:
           module: ./dagger
           args: release --src=. --github-token=GITHUB_TOKEN --gemfury-token=GEMFURY_TOKEN --archives=./build_artifacts --output=./version.txt
           version: "0.11.0"
-          cloud-token: ${{ secrets.DAGGER_TOKEN }}
     
       - name: Set output
         id: setoutput
