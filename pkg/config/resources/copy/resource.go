@@ -1,6 +1,8 @@
 package copy
 
 import (
+	"os"
+
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
@@ -17,7 +19,7 @@ type Copy struct {
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
 
-	Source      string `hcl:"source" json:"source"`                              // Source file, folder or glob
+	Source      string `hcl:"source" json:"source"`                              // Source file, folder, url, git repo, etc
 	Destination string `hcl:"destination" json:"destination"`                    // Destination to write file or files to
 	Permissions string `hcl:"permissions,optional" json:"permissions,omitempty"` // Permissions 0777 to set for written file
 
@@ -26,7 +28,12 @@ type Copy struct {
 }
 
 func (t *Copy) Process() error {
-	t.Source = utils.EnsureAbsolute(t.Source, t.Meta.File)
+	// If the source is a local file, ensure it is absolute
+	tempSource := utils.EnsureAbsolute(t.Source, t.Meta.File)
+	if _, err := os.Stat(tempSource); err == nil {
+		t.Source = tempSource
+	}
+
 	t.Destination = utils.EnsureAbsolute(t.Destination, t.Meta.File)
 
 	cfg, err := config.LoadState()
