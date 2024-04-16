@@ -31,7 +31,7 @@ func customHCLFuncDataFolderWithPermissions(name string, permissions int) (strin
 	strInt := fmt.Sprintf("0%d", permissions)
 	oInt, _ := strconv.ParseInt(strInt, 8, 32)
 
-	perms := os.FileMode(oInt)
+	perms := os.FileMode(uint32(oInt))
 	return utils.DataFolder(name, perms), nil
 }
 
