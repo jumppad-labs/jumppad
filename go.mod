@@ -4,9 +4,9 @@ module github.com/jumppad-labs/jumppad
 // https://github.com/docker/cli/issues/4437
 // fixed it by using docker v23.0.7-0.20230714215826-f00e7af96042+incompatible
 // switch to v24.0.4+incompatible once github actions updates their docker version
-go 1.21
+go 1.22
 
-toolchain go1.21.5
+toolchain go1.22.2
 
 require (
 	github.com/Masterminds/semver v1.5.0
