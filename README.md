@@ -38,7 +38,7 @@ The following snippets are examples of things you can build with Jumppad, for mo
 
 ```hcl
 resource "network" "cloud" {
-  subnet = "10.5.0.0/16"
+  subnet = "10.5.0.0/24"
 }
 
 resource "k8s_cluster" "k3s" {
@@ -56,7 +56,7 @@ resource "k8s_cluster" "k3s" {
 }
 
 resource "k8s_config" "fake_service" {
-  cluster = resource.k8s_cluster.k3s.id
+  cluster = resource.k8s_cluster.k3s
 
   paths = ["./fake_service.yaml"]
 
@@ -67,7 +67,7 @@ resource "k8s_config" "fake_service" {
 }
 
 resource "helm" "vault" {
-  cluster = resource.k8s_cluster.k3s.id
+  cluster = resource.k8s_cluster.k3s
 
   repository {
     name = "hashicorp"
@@ -89,7 +89,7 @@ resource "ingress" "vault_http" {
   port = 18200
 
   target {
-    id   = resource.k8s_cluster.k3s.id
+    resource = resource.k8s_cluster.k3s
     port = 8200
 
     config = {
@@ -103,7 +103,7 @@ resource "ingress" "fake_service" {
   port = 19090
 
   target {
-    id   = resource.k8s_cluster.k3s.id
+    resource = resource.k8s_cluster.k3s
     port = 9090
 
     config = {
@@ -139,7 +139,7 @@ resource "nomad_cluster" "dev" {
 }
 
 resource "nomad_job" "example_1" {
-  cluster = resource.nomad_cluster.dev.id
+  cluster = resource.nomad_cluster.dev
 
   paths = ["./app_config/example1.nomad"]
 
@@ -153,7 +153,7 @@ resource "ingress" "fake_service_1" {
   port = 19090
 
   target {
-    id         = resource.nomad_cluster.dev.id
+    resource   = resource.nomad_cluster.dev
     named_port = "http"
 
     config = {
