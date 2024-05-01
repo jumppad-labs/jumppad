@@ -34,10 +34,6 @@ func RegisterResource(name string, r types.Resource, p sdk.Provider) {
 func NewParser(callback hclconfig.WalkCallback, variables map[string]string, variablesFiles []string, defaultRegistry string, registryCredentials map[string]string) *hclconfig.Parser {
 	cfg := hclconfig.DefaultOptions()
 
-	if defaultRegistry == "" {
-		defaultRegistry = "https://registry.jumppad.dev"
-	}
-
 	cfg.DefaultRegistry = defaultRegistry
 	cfg.RegistryCredentials = registryCredentials
 	cfg.Callback = callback

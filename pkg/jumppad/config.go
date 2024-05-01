@@ -3,7 +3,12 @@ package jumppad
 import "github.com/spf13/viper"
 
 func GetDefaultRegistry() string {
-	return viper.GetString("default_registry")
+	registry := viper.GetString("default_registry")
+	if registry == "" {
+		return "https://registry.jumppad.dev"
+	}
+
+	return registry
 }
 
 func GetRegistryCredentials() map[string]string {
