@@ -3,7 +3,7 @@ git_commit = $(shell git log -1 --pretty=format:"%H")
 test_folder ?= container
 
 test_unit:
-	dagger call --mod=dagger unit-test \
+	dagger call --mod=dagger --progress=plain unit-test \
 		--src=. \
 		--with-race=false
 
