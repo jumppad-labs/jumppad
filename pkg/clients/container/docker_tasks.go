@@ -316,6 +316,7 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 	}
 
 	// are we attaching the container to a sidecar network?
+	ipv6Enabled := false
 	for _, n := range c.Networks {
 		if n.IsContainer {
 			d.l.Debug("Attaching as sidecar", "ref", c.Name, "container", n.ID)
@@ -324,7 +325,22 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 			hc.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", n.ID))
 			// when using container networking can not use a hostname
 			dc.Hostname = ""
+		} else {
+			// Do we need to disable ipV6 networking
+			net, err := d.FindNetwork(n.ID)
+			if err != nil {
+				return "", fmt.Errorf("unable to create container network does not exist: %s", err)
+			}
+
+			if net.IPv6Enabled {
+				ipv6Enabled = true
+			}
 		}
+	}
+
+	// disable ipv6 networking
+	if !ipv6Enabled {
+		hc.Sysctls = map[string]string{"net.ipv6.conf.all.disable_ipv6": "1"}
 	}
 
 	cont, err := d.c.ContainerCreate(context.Background(), dc, hc, nc, nil, c.Name)
@@ -1343,9 +1359,10 @@ func (d *DockerTasks) FindNetwork(id string) (dtypes.NetworkAttachment, error) {
 	for _, n := range nets {
 		if n.Labels["id"] == id {
 			return dtypes.NetworkAttachment{
-				ID:     n.ID,
-				Name:   n.Name,
-				Subnet: n.IPAM.Config[0].Subnet,
+				ID:          n.ID,
+				Name:        n.Name,
+				Subnet:      n.IPAM.Config[0].Subnet,
+				IPv6Enabled: n.EnableIPv6,
 			}, nil
 		}
 	}
