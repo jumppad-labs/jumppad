@@ -32,6 +32,8 @@ type Jumppad struct {
 	Plugins []Plugin `hcl:"plugin,block"`
 }
 
+var outputPath string
+
 var pluginCmd = &cobra.Command{
 	Use:   "build",
 	Short: "Checks the system to ensure required dependencies are installed",
@@ -64,13 +66,21 @@ var pluginCmd = &cobra.Command{
 		l := createLogger()
 		engineClients, _ := clients.GenerateClients(l)
 
+		// create binary output folder
+		err = os.MkdirAll(filepath.Dir(outputPath), 0755)
+		if err != nil {
+			panic(err)
+		}
+
 		// create a temp output folder
 		tmp := utils.JumppadTemp()
 		output := filepath.Join(tmp, "jumppad_build")
 
 		os.RemoveAll(output)
-
-		os.MkdirAll(output, 0755)
+		err = os.MkdirAll(output, 0755)
+		if err != nil {
+			panic(err)
+		}
 
 		src := filepath.Join(output, "src")
 
@@ -182,9 +192,9 @@ var pluginCmd = &cobra.Command{
 				},
 			},
 			Outputs: []build.Output{
-				build.Output{
+				{
 					Source:      "/src/bin/jumppad",
-					Destination: filepath.Join(bin, "jumppad"),
+					Destination: outputPath,
 				},
 			},
 		}, l)
@@ -193,6 +203,8 @@ var pluginCmd = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
+
+		os.Chmod(outputPath, 0755)
 	},
 }
 
@@ -211,3 +223,7 @@ COPY ./local /local
 RUN go mod tidy
 RUN CGO_ENABLED=0 GOOS=${OS} GOARCH=${ARCH} go build -ldflags "-X main.version=custom" -o bin/jumppad main.go
 `
+
+func init() {
+	pluginCmd.Flags().StringVarP(&outputPath, "output", "o", filepath.Join(utils.JumppadTemp(), "jumppad"), "Output the binary to a specific path")
+}
