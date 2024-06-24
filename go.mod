@@ -36,7 +36,7 @@ require (
 	github.com/infinytum/raymond/v2 v2.0.5
 	github.com/jumppad-labs/connector v0.3.0
 	github.com/jumppad-labs/gohup v0.4.0
-	github.com/jumppad-labs/hclconfig v0.22.1
+	github.com/jumppad-labs/hclconfig v0.23.0
 	github.com/jumppad-labs/plugin-sdk v0.1.1-0.20240306185853-c09f71f81b8a
 	github.com/kennygrant/sanitize v1.2.4
 	github.com/mattn/go-isatty v0.0.20
@@ -263,6 +263,6 @@ replace github.com/charmbracelet/log => github.com/jumppad-labs/log v0.0.0-20230
 
 replace github.com/zclconf/go-cty => github.com/jumppad-labs/go-cty v0.0.0-20230804061424-9e985cb751f6
 
-replace github.com/jumppad-labs/hclconfig => ../hclconfig/
+//replace github.com/jumppad-labs/hclconfig => ../hclconfig/
 
 //replace github.com/jumppad-labs/gohup => ../gohup/
