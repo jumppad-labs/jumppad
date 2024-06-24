@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
@@ -13,10 +15,11 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
+	"github.com/mohae/deepcopy"
 )
 
 const docsImageName = "ghcr.io/jumppad-labs/docs"
-const docsVersion = "v0.4.0"
+const docsVersion = "v0.4.1"
 
 type DocsConfig struct {
 	DefaultPath string `json:"defaultPath"`
@@ -60,6 +63,21 @@ type ProgressCondition struct {
 	Status      string `json:"status"`
 }
 
+type BookIndex struct {
+	Title    string         `hcl:"title,optional" json:"title"`
+	Chapters []ChapterIndex `hcl:"chapters,optional" json:"chapters"`
+}
+
+type ChapterIndex struct {
+	Title string             `hcl:"title,optional" json:"title,omitempty"`
+	Pages []ChapterIndexPage `hcl:"pages" json:"pages"`
+}
+
+type ChapterIndexPage struct {
+	Title string `hcl:"title" json:"title"`
+	URI   string `hcl:"uri" json:"uri"`
+}
+
 // Docs defines a provider for creating documentation containers
 type DocsProvider struct {
 	config *Docs
@@ -93,15 +111,13 @@ func (p *DocsProvider) Create(ctx context.Context) error {
 	}
 
 	p.log.Info("Creating Documentation", "ref", p.config.Meta.ID)
-
-	// create the documentation container
-	err := p.createDocsContainer()
+	err := p.generateDocs()
 	if err != nil {
 		return err
 	}
 
 	// write the content
-	return p.Refresh(ctx)
+	return p.createDocsContainer()
 }
 
 // Destroy the documentation container
@@ -144,6 +160,8 @@ func (p *DocsProvider) Refresh(ctx context.Context) error {
 		return nil
 	}
 
+	p.log.Debug("Refresh Docs", "ref", p.config.Meta.ID, "checksum", p.config.ContentChecksum)
+
 	changed, err := p.checkChanged()
 	if err != nil {
 		return fmt.Errorf("unable to check if content has changed: %s", err)
@@ -154,71 +172,11 @@ func (p *DocsProvider) Refresh(ctx context.Context) error {
 		return nil
 	}
 
-	p.log.Info("Refresh Docs", "ref", p.config.Meta.ID)
-
-	// refresh content on disk
-	configPath := utils.LibraryFolder("config", 0775)
-
-	// jumppad.config.js
-	frontendConfigPath := filepath.Join(configPath, "jumppad.config.js")
-	err = p.writeConfig(frontendConfigPath)
-	if err != nil {
-		return err
-	}
-
-	// navigation.jsx
-	navigationPath := filepath.Join(configPath, "navigation.jsx")
-	err = p.writeNavigation(navigationPath)
-	if err != nil {
-		return err
-	}
-
-	// progress.jsx
-	progressPath := filepath.Join(configPath, "progress.jsx")
-	err = p.writeProgress(progressPath)
-	if err != nil {
-		return err
-	}
-
-	// /content
-	contentPath := utils.LibraryFolder("content", 0775)
-
-	for _, book := range p.config.Content {
-		bookPath := filepath.Join(contentPath, book.Meta.Name)
-
-		for _, chapter := range book.Chapters {
-			chapterPath := filepath.Join(bookPath, chapter.Meta.Name)
-			os.MkdirAll(chapterPath, 0755)
-			os.Chmod(chapterPath, 0755)
-
-			for _, page := range chapter.Pages {
-				pageFile := fmt.Sprintf("%s.mdx", page.Name)
-				pagePath := filepath.Join(chapterPath, pageFile)
-				err := os.WriteFile(pagePath, []byte(page.Content), 0755)
-				if err != nil {
-					return fmt.Errorf("unable to write page %s to disk at %s", page.Name, pagePath)
-				}
-			}
-		}
-	}
-
-	// store a checksum of the content
-	cs, err := p.generateContentChecksum()
-	if err != nil {
-		return fmt.Errorf("unable to generate checksum for content: %s", err)
-	}
-
-	p.config.ContentChecksum = cs
-
-	return nil
+	return p.generateDocs()
 }
 
 func (p *DocsProvider) Changed() (bool, error) {
-	p.log.Debug("Checking changes", "ref", p.config.Meta.ID)
-
-	// since the content has not been processed we can not reliably determine
-	// if the content has changed, so we will assume it has
-	return true, nil
+	return p.checkChanged()
 }
 
 // check if the content has changed
@@ -232,30 +190,32 @@ func (p *DocsProvider) checkChanged() (bool, error) {
 		return true, fmt.Errorf("unable to generate checksum for content: %s", err)
 	}
 
-	return cs != p.config.ContentChecksum, nil
+	if cs != p.config.ContentChecksum {
+		p.log.Debug("Content changed", "ref", p.config.Meta.ID, "checksum", cs, "old", p.config.ContentChecksum)
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func (p *DocsProvider) generateContentChecksum() (string, error) {
-	cs, err := utils.ChecksumFromInterface(p.config.Content)
+	books := deepcopy.Copy(p.config.Content).([]Book)
+
+	// replace the processed checksum as this will cause the content
+	// to always be different
+	for i := range books {
+		books[i].Meta.Checksum.Processed = ""
+		for c := range books[i].Chapters {
+			books[i].Chapters[c].Meta.Checksum.Processed = ""
+		}
+	}
+
+	cs, err := utils.ChecksumFromInterface(books)
 	if err != nil {
 		return "", fmt.Errorf("unable to generate checksum for content: %s", err)
 	}
 
 	return cs, nil
-}
-
-func (p *DocsProvider) getDefaultPage() string {
-	if len(p.config.Content) > 0 {
-		book := p.config.Content[0]
-		if len(book.Index.Chapters) > 0 {
-			chapter := book.Index.Chapters[0]
-			if len(chapter.Pages) > 0 {
-				page := chapter.Pages[0]
-				return page.URI
-			}
-		}
-	}
-	return "/"
 }
 
 func (p *DocsProvider) createDocsContainer() error {
@@ -269,8 +229,8 @@ func (p *DocsProvider) createDocsContainer() error {
 	}
 
 	cc.Networks = p.config.Networks.ToClientNetworkAttachments()
-
 	cc.Image = &types.Image{Name: fmt.Sprintf("%s:%s", docsImageName, docsVersion)}
+	cc.MaxRestartCount = -1
 
 	// if image is set override defaults
 	if p.config.Image != nil {
@@ -327,12 +287,8 @@ func (p *DocsProvider) createDocsContainer() error {
 		},
 	)
 
-	// write the frontend config
-	frontendConfigPath := filepath.Join(utils.LibraryFolder("", 0775), "jumppad.config.js")
-	err = p.writeConfig(frontendConfigPath)
-	if err != nil {
-		return err
-	}
+	// write the temp file for the config
+	frontendConfigPath := filepath.Join(configPath, "jumppad.config.js")
 
 	cc.Volumes = append(
 		cc.Volumes,
@@ -356,6 +312,89 @@ func (p *DocsProvider) createDocsContainer() error {
 
 	_, err = p.client.CreateContainer(cc)
 	return err
+}
+
+func (p *DocsProvider) generateDocs() error {
+	p.log.Info("Refresh Docs", "ref", p.config.Meta.ID)
+
+	// refresh content on disk
+	configPath := utils.LibraryFolder("config", 0775)
+
+	// jumppad.config.js
+
+	// navigation.jsx
+	navigationPath := filepath.Join(configPath, "navigation.jsx")
+	indexPage, err := p.writeNavigation(navigationPath)
+	if err != nil {
+		return err
+	}
+
+	// progress.jsx
+	progressPath := filepath.Join(configPath, "progress.jsx")
+	err = p.writeProgress(progressPath)
+	if err != nil {
+		return err
+	}
+
+	frontendConfigPath := filepath.Join(configPath, "jumppad.config.js")
+	err = p.writeConfig(frontendConfigPath, indexPage)
+	if err != nil {
+		return err
+	}
+
+	// /content
+	contentPath := utils.LibraryFolder("content", 0775)
+
+	for _, book := range p.config.Content {
+		bookPath := filepath.Join(contentPath, book.Meta.Name)
+
+		for _, chapter := range book.Chapters {
+			chapterPath := filepath.Join(bookPath, chapter.Meta.Name)
+			os.MkdirAll(chapterPath, 0755)
+			os.Chmod(chapterPath, 0755)
+
+			for _, page := range chapter.Pages {
+				err := p.processPage(chapterPath, chapter, page)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	// store a checksum of the content
+	cs, err := p.generateContentChecksum()
+	if err != nil {
+		return fmt.Errorf("unable to generate checksum for content: %s", err)
+	}
+
+	p.config.ContentChecksum = cs
+
+	p.log.Debug("Content written", "ref", p.config.Meta.ID, "checksum", p.config.ContentChecksum)
+
+	return nil
+}
+
+func (p *DocsProvider) processPage(chapterPath string, chapter Chapter, page Page) error {
+	content := strings.Replace(page.Content, "\r\n", "\n", -1)
+
+	// replace task ids
+	taskRegex, _ := regexp.Compile("<Task id=\"(?P<id>.*)\">")
+	taskMatch := taskRegex.FindAllStringSubmatch(page.Content, -1)
+	for _, match := range taskMatch {
+		taskID := match[1]
+		resourceID := fmt.Sprintf("<Task id=\"%s\">", chapter.Tasks[taskID].Meta.ID)
+		content = taskRegex.ReplaceAllString(page.Content, resourceID)
+	}
+
+	pageFile := fmt.Sprintf("%s.mdx", page.Name)
+	pagePath := filepath.Join(chapterPath, pageFile)
+	err := os.WriteFile(pagePath, []byte(content), 0755)
+	if err != nil {
+		return fmt.Errorf("unable to write page %s to disk at %s", page.Name, pagePath)
+	}
+
+	return nil
 }
 
 func (p *DocsProvider) writeProgress(path string) error {
@@ -402,30 +441,69 @@ func (p *DocsProvider) writeProgress(path string) error {
 	return nil
 }
 
-func (p *DocsProvider) writeNavigation(path string) error {
+// writes the navigation config and returns the index page for the config
+func (p *DocsProvider) writeNavigation(path string) (string, error) {
+	indexPage := "/"
+
 	indices := []BookIndex{}
-	for _, book := range p.config.Content {
-		indices = append(indices, book.Index)
+	for b, book := range p.config.Content {
+		bookIndex := BookIndex{
+			Title:    book.Title,
+			Chapters: []ChapterIndex{},
+		}
+
+		for c, chapter := range book.Chapters {
+			chapterIndex := ChapterIndex{
+				Title: chapter.Title,
+				Pages: []ChapterIndexPage{},
+			}
+
+			for p, page := range chapter.Pages {
+				pageIndex := ChapterIndexPage{
+					Title: page.Name,
+					URI:   fmt.Sprintf("/docs/%s/%s/%s", book.Meta.Name, chapter.Meta.Name, page.Name),
+				}
+
+				// if this is the first book and chapter and page
+				// set the index page
+				if b == 0 && c == 0 && p == 0 {
+					indexPage = pageIndex.URI
+				}
+
+				// get the title from the heading of the page
+				titleRegex, _ := regexp.Compile(`^#\s?(?P<title>.*)`)
+				titleMatch := titleRegex.FindStringSubmatch(page.Content)
+				if len(titleMatch) > 0 {
+					pageIndex.Title = titleMatch[1]
+				}
+
+				chapterIndex.Pages = append(chapterIndex.Pages, pageIndex)
+			}
+
+			bookIndex.Chapters = append(bookIndex.Chapters, chapterIndex)
+		}
+
+		indices = append(indices, bookIndex)
 	}
 
 	indexJSON, err := json.MarshalIndent(indices, "", " ")
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	content := fmt.Sprintf(`export const navigation = %s`, indexJSON)
 	err = os.WriteFile(path, []byte(content), 0755)
 	if err != nil {
-		return fmt.Errorf("unable to write navigation to disk at %s", path)
+		return "", fmt.Errorf("unable to write navigation to disk at %s", path)
 	}
 
-	return nil
+	return indexPage, nil
 }
 
-func (p *DocsProvider) writeConfig(configPath string) error {
+func (p *DocsProvider) writeConfig(configPath, indexPage string) error {
 	config := DocsConfig{
 		Logo:        p.config.Logo,
-		DefaultPath: p.getDefaultPage(),
+		DefaultPath: indexPage,
 	}
 
 	configJSON, err := json.MarshalIndent(config, "", " ")

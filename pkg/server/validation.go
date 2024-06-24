@@ -91,6 +91,8 @@ func (a *API) executeScript(target string, script string, workdir string, user s
 
 	var message string
 	exitCode, err := ct.ExecuteScript(id[0], script, env, workdir, user, group, timeout, output)
+	a.log.Info("executing script", "fqdn", fqdn)
+	a.log.Debug("script", "content", script)
 	if err != nil {
 		if exitCode != 1 {
 			a.log.Error("exec failed", "error", err.Error(), "message", message)
@@ -98,6 +100,7 @@ func (a *API) executeScript(target string, script string, workdir string, user s
 		}
 	}
 
+	a.log.Info("output", "exitCode", exitCode, "output", output.String())
 	return exitCode, message
 }
 
@@ -207,96 +210,4 @@ func (a *API) validation(w http.ResponseWriter, r *http.Request) {
 		Conditions: conditions,
 		Status:     status,
 	})
-
-	// var target string
-	// var message string
-	// var script string
-	// var timeout int
-	// var user string
-	// var group string
-	// var workdir string
-
-	// for _, c := range task.Conditions {
-	// 	if c.Name == req.Condition {
-	// 		defaultTarget := task.Config.Target
-	// 		if c.Target != "" {
-	// 			defaultTarget = c.Target
-	// 		}
-
-	// 		fqrn, err := types.ParseFQRN(defaultTarget)
-	// 		if err != nil {
-	// 			w.WriteHeader(http.StatusInternalServerError)
-	// 			json.NewEncoder(w).Encode(err.Error())
-	// 			return
-	// 		}
-
-	// 		target = utils.FQDN(fqrn.Resource, fqrn.Module, fqrn.Type)
-
-	// 		message = c.FailureMessage
-	// 		user = c.User
-	// 		group = c.Group
-	// 		workdir = c.WorkingDirectory
-
-	// 		if req.Action == "solve" {
-	// 			script = c.Solve
-	// 			timeout = c.SolveTimeout
-	// 		} else {
-	// 			script = c.Check
-	// 			timeout = c.CheckTimeout
-	// 		}
-
-	// 		break
-	// 	}
-	// }
-
-	// if script == "" {
-	// 	w.WriteHeader(http.StatusOK)
-	// 	json.NewEncoder(w).Encode(ValidationResponse{
-	// 		Task:      req.Task,
-	// 		Condition: req.Condition,
-	// 		ExitCode:  0,
-	// 	})
-	// 	return
-	// }
-
-	// dc, err := container.NewDocker()
-	// if err != nil {
-	// 	a.log.Error("Could not create docker client", "error", err.Error())
-	// 	w.WriteHeader(http.StatusInternalServerError)
-	// 	json.NewEncoder(w).Encode(err.Error())
-	// 	return
-	// }
-
-	// il := images.NewImageFileLog(utils.ImageCacheLog())
-	// tz := &tar.TarGz{}
-	// ct := container.NewDockerTasks(dc, il, tz, a.log)
-
-	// id, err := ct.FindContainerIDs(target)
-	// if err != nil || len(id) == 0 {
-	// 	a.log.Error("Could not find container for target", "target", target)
-	// 	w.WriteHeader(http.StatusInternalServerError)
-	// 	json.NewEncoder(w).Encode("Could not find container for target")
-	// 	return
-	// }
-
-	// env := os.Environ()
-	// env = append(env, "TERM=xterm")
-
-	// output := bytes.NewBufferString("")
-
-	// exitCode, err := ct.ExecuteScript(id[0], script, env, workdir, user, group, timeout, output)
-	// if err != nil {
-	// 	if exitCode != 1 {
-	// 		a.log.Error("exec failed", "error", err.Error(), "message", message)
-	// 		message = err.Error()
-	// 	}
-	// }
-
-	// w.WriteHeader(http.StatusOK)
-	// json.NewEncoder(w).Encode(ValidationResponse{
-	// 	Task:      req.Task,
-	// 	Condition: req.Condition,
-	// 	ExitCode:  exitCode,
-	// 	Message:   message,
-	// })
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/jumppad-labs/jumppad/cmd/view"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
@@ -151,19 +152,24 @@ func doUpdates(v view.View, e jumppad.Engine, source string, variables map[strin
 	v.Logger().Debug("W_Init: shareware version...............................")
 	v.Logger().Debug("startskill: 2 deathmatch: 0 startepisode: 1")
 
-	v.UpdateStatus("Checking for changes...", false)
+	// first check if the state exists
+	// if not we need to do an apply then we can go into the check loop
+	_, err := config.LoadState()
+	if err != nil {
+		v.UpdateStatus("Applying initial configuration...", false)
+		_, err := e.ApplyWithVariables(context.Background(), source, variables, variableFile)
+		if err != nil {
+			v.Logger().Error(err.Error())
+		}
+	}
 
+	v.UpdateStatus("Checking for changes...", false)
 	for {
 		time.Sleep(interval)
 
 		new, changed, removed, _, err := e.Diff(source, variables, variableFile)
 		if err != nil {
 			v.Logger().Error(err.Error())
-		}
-
-		v.Logger().Debug("Changes detected", "new", len(new), "changed", len(changed), "removed", len(removed))
-		for _, n := range changed {
-			v.Logger().Debug("Changed", "resource", n.Metadata().ID)
 		}
 
 		if len(new) > 0 || len(changed) > 0 || len(removed) > 0 {
@@ -173,7 +179,11 @@ func doUpdates(v view.View, e jumppad.Engine, source string, variables map[strin
 					len(new),
 					len(changed),
 					len(removed),
-				), true)
+				), false)
+
+			for _, n := range changed {
+				v.Logger().Debug("Changed", "resource", n.Metadata().ID)
+			}
 
 			_, err := e.ApplyWithVariables(context.Background(), source, variables, variableFile)
 			if err != nil {
