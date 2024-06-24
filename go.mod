@@ -263,6 +263,6 @@ replace github.com/charmbracelet/log => github.com/jumppad-labs/log v0.0.0-20230
 
 replace github.com/zclconf/go-cty => github.com/jumppad-labs/go-cty v0.0.0-20230804061424-9e985cb751f6
 
-//replace github.com/jumppad-labs/hclconfig => ../hclconfig/
+replace github.com/jumppad-labs/hclconfig => ../hclconfig/
 
 //replace github.com/jumppad-labs/gohup => ../gohup/

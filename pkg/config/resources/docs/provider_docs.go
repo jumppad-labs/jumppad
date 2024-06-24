@@ -13,10 +13,11 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
+	"github.com/mohae/deepcopy"
 )
 
 const docsImageName = "ghcr.io/jumppad-labs/docs"
-const docsVersion = "v0.4.0"
+const docsVersion = "v0.4.1"
 
 type DocsConfig struct {
 	DefaultPath string `json:"defaultPath"`
@@ -194,11 +195,9 @@ func (p *DocsProvider) Refresh(ctx context.Context) error {
 			os.Chmod(chapterPath, 0755)
 
 			for _, page := range chapter.Pages {
-				pageFile := fmt.Sprintf("%s.mdx", page.Name)
-				pagePath := filepath.Join(chapterPath, pageFile)
-				err := os.WriteFile(pagePath, []byte(page.Content), 0755)
+				err := p.processPage(chapterPath, page)
 				if err != nil {
-					return fmt.Errorf("unable to write page %s to disk at %s", page.Name, pagePath)
+					return err
 				}
 			}
 		}
@@ -211,6 +210,18 @@ func (p *DocsProvider) Refresh(ctx context.Context) error {
 	}
 
 	p.config.ContentChecksum = cs
+
+	p.log.Debug("Content written", "ref", p.config.Meta.ID, "checksum", p.config.ContentChecksum)
+	return nil
+}
+
+func (p *DocsProvider) processPage(chapterPath string, page Page) error {
+	pageFile := fmt.Sprintf("%s.mdx", page.Name)
+	pagePath := filepath.Join(chapterPath, pageFile)
+	err := os.WriteFile(pagePath, []byte(page.Content), 0755)
+	if err != nil {
+		return fmt.Errorf("unable to write page %s to disk at %s", page.Name, pagePath)
+	}
 
 	return nil
 }
@@ -232,13 +243,27 @@ func (p *DocsProvider) checkChanged() (bool, error) {
 		return true, fmt.Errorf("unable to generate checksum for content: %s", err)
 	}
 
-	p.log.Info("Generate checksum", "ref", p.config.Meta.ID, "checksum", cs, "old", p.config.ContentChecksum)
+	if cs != p.config.ContentChecksum {
+		p.log.Debug("Content changed", "ref", p.config.Meta.ID, "checksum", cs, "old", p.config.ContentChecksum)
+		return true, nil
+	}
 
-	return cs != p.config.ContentChecksum, nil
+	return false, nil
 }
 
 func (p *DocsProvider) generateContentChecksum() (string, error) {
-	cs, err := utils.ChecksumFromInterface(p.config.Content)
+	books := deepcopy.Copy(p.config.Content).([]Book)
+
+	// replace the processed checksum as this will cause the content
+	// to always be different
+	for i := range books {
+		books[i].Meta.Checksum.Processed = ""
+		for c := range books[i].Chapters {
+			books[i].Chapters[c].Meta.Checksum.Processed = ""
+		}
+	}
+
+	cs, err := utils.ChecksumFromInterface(books)
 	if err != nil {
 		return "", fmt.Errorf("unable to generate checksum for content: %s", err)
 	}

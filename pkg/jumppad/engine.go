@@ -119,6 +119,7 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 	res, parseErr := e.ParseConfigWithVariables(path, variables, variablesFile)
 
 	if parseErr != nil {
+		fmt.Println("Error parsing config", parseErr)
 		// cast the error to a config error
 		ce := parseErr.(*hclerrors.ConfigError)
 
