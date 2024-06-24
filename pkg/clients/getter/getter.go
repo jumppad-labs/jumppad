@@ -62,7 +62,7 @@ func (g *GetterImpl) Get(uri, dst string) error {
 	_, err := os.Stat(dst)
 	if err == nil {
 		// we already have files at the destination do we want to overwrite?
-		if g.force == false {
+		if !g.force {
 			return nil
 		}
 

@@ -59,7 +59,7 @@ func (p *Provider) Create(ctx context.Context) error {
 		return nil
 	}
 
-	p.log.Info("executing script", "ref", p.config.Meta.ID, "script", p.config.Script)
+	p.log.Info("Executing script", "ref", p.config.Meta.ID, "script", p.config.Script)
 
 	outPath := fmt.Sprintf("%s/%s.out", utils.JumppadTemp(), p.config.Meta.ID)
 
@@ -85,7 +85,7 @@ func (p *Provider) Create(ctx context.Context) error {
 
 	// parse any output from the script
 	if _, err := os.Stat(outPath); err != nil {
-		p.log.Debug("output file not found", "ref", p.config.Meta.ID, "path", outPath)
+		p.log.Debug("Output file not found", "ref", p.config.Meta.ID, "path", outPath)
 		return nil
 	}
 
@@ -144,13 +144,13 @@ func (p *Provider) Refresh(ctx context.Context) error {
 		return nil
 	}
 
-	p.log.Debug("refresh Exec", "ref", p.config.Meta.Name)
+	p.log.Debug("Refresh Exec", "ref", p.config.Meta.Name)
 
 	return nil
 }
 
 func (p *Provider) Changed() (bool, error) {
-	p.log.Debug("checking changes", "ref", p.config.Meta.ID)
+	p.log.Debug("Checking changes", "ref", p.config.Meta.ID)
 
 	return false, nil
 }
@@ -201,7 +201,7 @@ func (p *Provider) createRemoteExec(outputPath string) error {
 
 	_, err := p.container.ExecuteScript(targetID, script, envs, p.config.WorkingDirectory, user, group, 300, p.log.StandardWriter())
 	if err != nil {
-		p.log.Error("error executing command", "ref", p.config.Meta.Name, "image", p.config.Image, "script", p.config.Script)
+		p.log.Error("Unable to execute command", "ref", p.config.Meta.Name, "image", p.config.Image, "script", p.config.Script)
 		return fmt.Errorf("unable to execute command: in remote container: %w", err)
 	}
 
@@ -209,7 +209,7 @@ func (p *Provider) createRemoteExec(outputPath string) error {
 	err = p.container.CopyFromContainer(targetID, containerOut, outputPath)
 	if err != nil {
 		// copy might fail as the file does not exist, only log
-		p.log.Debug("error copying output file", "ref", p.config.Meta.Name, "output", outputPath, "container", targetID)
+		p.log.Debug("Error copying output file", "ref", p.config.Meta.Name, "output", outputPath, "container", targetID)
 	}
 	// remove the output file
 	p.container.ExecuteCommand(targetID, []string{"rm", containerOut}, nil, "", "", "", 30, p.log.StandardWriter())
@@ -259,14 +259,14 @@ func (p *Provider) createRemoteExecContainer() (string, error) {
 	// pull any images needed for this container
 	err := p.container.PullImage(*new.Image, false)
 	if err != nil {
-		p.log.Error("error pulling container image", "ref", p.config.Meta.ID, "image", new.Image.Name)
+		p.log.Error("Unable to pull container image", "ref", p.config.Meta.ID, "image", new.Image.Name)
 
 		return "", err
 	}
 
 	id, err := p.container.CreateContainer(&new)
 	if err != nil {
-		p.log.Error("error creating container for remote exec", "ref", p.config.Meta.Name, "image", p.config.Image, "networks", p.config.Networks, "volumes", p.config.Volumes)
+		p.log.Error("Unable to create container for remote exec", "ref", p.config.Meta.Name, "image", p.config.Image, "networks", p.config.Networks, "volumes", p.config.Volumes)
 		return "", err
 	}
 
@@ -307,7 +307,7 @@ func (p *Provider) createLocalExec(outputPath string) (int, error) {
 		}
 
 		if p.config.Daemon {
-			p.log.Warn("timeout will be ignored when exec is running in daemon mode")
+			p.log.Warn("Timeout will be ignored when exec is running in daemon mode")
 		}
 	}
 

@@ -1,17 +1,18 @@
 package copy
 
 import (
-	"io/ioutil"
+	"context"
 	"os"
 	"path"
 	"testing"
 
-	"github.com/hashicorp/go-hclog"
-	"github.com/jumppad-labs/jumppad/pkg/config"
+	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/clients/getter"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/stretchr/testify/require"
 )
 
-func setupCopy(t *testing.T) (*config.Copy, *Copy) {
+func setupCopy(t *testing.T) (*Copy, *Provider) {
 	dir := t.TempDir()
 	inDir := path.Join(dir, "in")
 	outDir := path.Join(dir, "out")
@@ -21,14 +22,14 @@ func setupCopy(t *testing.T) (*config.Copy, *Copy) {
 	require.NoError(t, err)
 
 	// add some example files
-	ioutil.WriteFile(path.Join(inDir, "file1.txt"), []byte("data"), 0755)
-	ioutil.WriteFile(path.Join(inDir, "file2.txt"), []byte("data"), 0755)
+	os.WriteFile(path.Join(inDir, "file1.txt"), []byte("file1"), 0755)
+	os.WriteFile(path.Join(inDir, "file2.txt"), []byte("file2"), 0755)
 
-	cc := config.NewCopy("tests")
+	cc := &Copy{ResourceBase: types.ResourceBase{Meta: types.Meta{ID: "tests"}}}
 	cc.Source = inDir
 	cc.Destination = outDir
 
-	p := NewCopy(cc, hclog.New(&logger.LoggerOptions{Level: hclog.Debug}))
+	p := &Provider{logger.NewTestLogger(t), cc, getter.NewGetter(true)}
 
 	return cc, p
 }
@@ -86,9 +87,22 @@ func TestRemovesFiles(t *testing.T) {
 	err := p.Create(context.Background())
 	require.NoError(t, err)
 
-	err = p.Destroy(context.Background(),false)
+	err = p.Destroy(context.Background(), false)
 	require.NoError(t, err)
 
 	require.NoFileExists(t, path.Join(c.Destination, "file1.txt"))
 	require.NoFileExists(t, path.Join(c.Destination, "file2.txt"))
+}
+
+func TestFetchesRemoteFiles(t *testing.T) {
+	c, p := setupCopy(t)
+	c.Source = "https://raw.githubusercontent.com/jumppad-labs/jumppad/main/README.md"
+
+	err := p.Create(context.Background())
+	require.NoError(t, err)
+
+	err = p.Destroy(context.Background(), false)
+	require.NoError(t, err)
+
+	require.FileExists(t, path.Join(c.Destination, "README.md"))
 }

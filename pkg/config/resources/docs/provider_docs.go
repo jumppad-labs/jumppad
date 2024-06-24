@@ -144,6 +144,8 @@ func (p *DocsProvider) Refresh(ctx context.Context) error {
 		return nil
 	}
 
+	p.log.Debug("Refresh Docs", "ref", p.config.Meta.ID, "checksum", p.config.ContentChecksum)
+
 	changed, err := p.checkChanged()
 	if err != nil {
 		return fmt.Errorf("unable to check if content has changed: %s", err)
@@ -216,9 +218,7 @@ func (p *DocsProvider) Refresh(ctx context.Context) error {
 func (p *DocsProvider) Changed() (bool, error) {
 	p.log.Debug("Checking changes", "ref", p.config.Meta.ID)
 
-	// since the content has not been processed we can not reliably determine
-	// if the content has changed, so we will assume it has
-	return true, nil
+	return p.checkChanged()
 }
 
 // check if the content has changed
@@ -231,6 +231,8 @@ func (p *DocsProvider) checkChanged() (bool, error) {
 	if err != nil {
 		return true, fmt.Errorf("unable to generate checksum for content: %s", err)
 	}
+
+	p.log.Info("Generate checksum", "ref", p.config.Meta.ID, "checksum", cs, "old", p.config.ContentChecksum)
 
 	return cs != p.config.ContentChecksum, nil
 }
@@ -269,8 +271,8 @@ func (p *DocsProvider) createDocsContainer() error {
 	}
 
 	cc.Networks = p.config.Networks.ToClientNetworkAttachments()
-
 	cc.Image = &types.Image{Name: fmt.Sprintf("%s:%s", docsImageName, docsVersion)}
+	cc.MaxRestartCount = -1
 
 	// if image is set override defaults
 	if p.config.Image != nil {
