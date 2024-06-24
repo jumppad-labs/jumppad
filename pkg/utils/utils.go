@@ -496,11 +496,7 @@ func ChecksumFromInterface(i interface{}) (string, error) {
 		return "", fmt.Errorf("unable to marshal interface: %w", err)
 	}
 
-	str, err := HashString(string(json))
-	fmt.Println("hash:", str)
-	fmt.Println(string(json))
-
-	return str, err
+	return HashString(string(json))
 }
 
 // RandomAvailablePort returns a random free port in the given range
