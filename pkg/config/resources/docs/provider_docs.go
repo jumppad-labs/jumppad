@@ -19,7 +19,7 @@ import (
 )
 
 const docsImageName = "ghcr.io/jumppad-labs/docs"
-const docsVersion = "v0.4.1"
+const docsVersion = "v0.5.1"
 
 type DocsConfig struct {
 	DefaultPath string `json:"defaultPath"`
