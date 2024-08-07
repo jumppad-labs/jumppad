@@ -1,6 +1,10 @@
 package build
 
 import (
+	"fmt"
+	"os"
+	"path"
+
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
@@ -47,6 +51,16 @@ type Output struct {
 
 func (b *Build) Process() error {
 	b.Container.Context = utils.EnsureAbsolute(b.Container.Context, b.Meta.File)
+
+	// check that the Dockerfile exists inside the context folder
+	// if not raise an error
+	if b.Container.DockerFile != "" {
+		path := path.Join(b.Container.Context, b.Container.DockerFile)
+		_, err := os.Stat(path)
+		if err != nil {
+			return fmt.Errorf("Dockerfile must located in the context folder, the file %s, does not exist in the context path %s", b.Container.DockerFile, b.Container.Context)
+		}
+	}
 
 	cfg, err := config.LoadState()
 	if err == nil {
