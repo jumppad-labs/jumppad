@@ -1053,7 +1053,7 @@ job "connector" {
       }
 
       config {
-        image = "ghcr.io/jumppad-labs/connector:v0.2.1"
+        image = "ghcr.io/jumppad-labs/connector:v0.4.0"
 
         ports   = ["http", "grpc"]
         command = "/connector"

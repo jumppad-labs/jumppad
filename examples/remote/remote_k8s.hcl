@@ -6,39 +6,39 @@ container "remote_k8s" {
   command = "terraform apply -auto-approve"
 
   volume {
-    source = "${data("/terraform/.state/")}"
+    source      = "${data("/terraform/.state/")}"
     destination = "/terraform"
   }
-  
+
   volume {
-    source = "./modules/k8s_doks"
+    source      = "./modules/k8s_doks"
     destination = "/terraform"
   }
-  
+
   volume {
-    source = "${shipyard()}/.config/doks"
+    source      = "${shipyard()}/.config/doks"
     destination = "/terraform/kubeconfig.yaml"
   }
 }
 
 container "local_connector" {
   image {
-    name = "shipyardrun/connector:v0.0.1"
+    name = "shipyardrun/connector:v0.4.0"
   }
 
   env_var = {
-    "BIND_ADDR_GRPC": "0.0.0.0:9090"
-    "BIND_ADDR_HTTP": "0.0.0.0:9091"
-    "LOG_LEVEL": "debug"
+    "BIND_ADDR_GRPC" : "0.0.0.0:9090"
+    "BIND_ADDR_HTTP" : "0.0.0.0:9091"
+    "LOG_LEVEL" : "debug"
   }
-  
+
   port_range {
-    range = "9090-9091"
+    range       = "9090-9091"
     enable_host = true
   }
 
   port_range {
-    range = "12000-12100"
+    range       = "12000-12100"
     enable_host = true
   }
 
