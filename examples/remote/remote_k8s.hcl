@@ -23,7 +23,7 @@ container "remote_k8s" {
 
 container "local_connector" {
   image {
-    name = "shipyardrun/connector:v0.4.0"
+    name = "ghcr.io/jumppad-labs/connector:v0.4.0"
   }
 
   env_var = {
