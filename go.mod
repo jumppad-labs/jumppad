@@ -34,7 +34,7 @@ require (
 	github.com/hashicorp/hcl/v2 v2.21.0
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	github.com/infinytum/raymond/v2 v2.0.5
-	github.com/jumppad-labs/connector v0.3.0
+	github.com/jumppad-labs/connector v0.4.0
 	github.com/jumppad-labs/gohup v0.4.0
 	github.com/jumppad-labs/hclconfig v0.24.0
 	github.com/jumppad-labs/plugin-sdk v0.1.1-0.20240306185853-c09f71f81b8a
@@ -70,7 +70,6 @@ require (
 	cloud.google.com/go v0.115.0 // indirect
 	cloud.google.com/go/auth v0.7.3 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.3 // indirect
-	cloud.google.com/go/compute v1.27.4 // indirect
 	cloud.google.com/go/compute/metadata v0.5.0 // indirect
 	cloud.google.com/go/iam v1.1.12 // indirect
 	cloud.google.com/go/storage v1.43.0 // indirect
@@ -236,7 +235,6 @@ require (
 	golang.org/x/time v0.6.0 // indirect
 	golang.org/x/tools v0.24.0 // indirect
 	google.golang.org/api v0.190.0 // indirect
-	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20240805194559-2c9e96a0b5d4 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240805194559-2c9e96a0b5d4 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240805194559-2c9e96a0b5d4 // indirect

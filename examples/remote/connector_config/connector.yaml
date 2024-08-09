@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: connector
-        image: shipyardrun/connector:v0.0.1
+        image: ghcr.io/jumppad-labs/connector:v0.4.0
         env:
           - name: BIND_ADDR_GRPC 
             value: "0.0.0.0:30000"
