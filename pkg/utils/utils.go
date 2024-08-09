@@ -385,7 +385,7 @@ func GetHostname() string {
 		return ""
 	}
 
-	return hn
+	return sanitize.Accents(hn)
 }
 
 // GetLocalIPAddress returns a list of ip addressses for the local machine
