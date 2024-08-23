@@ -10,6 +10,7 @@ import (
 
 // Getter is an interface which defines interations for
 // downloading remote folders
+//go:generate mockery --name Getter --filename getter.go
 type Getter interface {
 	Get(uri, dst string) error
 	SetForce(force bool)
