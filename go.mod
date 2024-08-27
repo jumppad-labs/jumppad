@@ -14,7 +14,7 @@ require (
 	github.com/charmbracelet/bubbles v0.16.1
 	github.com/charmbracelet/bubbletea v0.24.2
 	github.com/charmbracelet/glamour v0.6.0
-	github.com/charmbracelet/lipgloss v0.7.1
+	github.com/charmbracelet/lipgloss v0.12.1
 	github.com/charmbracelet/log v0.2.2
 	github.com/creack/pty v1.1.18
 	github.com/cucumber/godog v0.12.4
@@ -96,6 +96,7 @@ require (
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
+	github.com/charmbracelet/x/ansi v0.1.4 // indirect
 	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
 	github.com/containerd/containerd v1.7.11 // indirect
 	github.com/containerd/log v0.1.0 // indirect
@@ -176,7 +177,7 @@ require (
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
-	github.com/mattn/go-runewidth v0.0.14 // indirect
+	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.21 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
@@ -203,7 +204,7 @@ require (
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.10.1 // indirect
-	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rubenv/sql-migrate v1.5.2 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
@@ -225,6 +226,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.28.0 // indirect
 	go.opentelemetry.io/otel/trace v1.28.0 // indirect
 	go.starlark.net v0.0.0-20230525235612-a134d8f9ddca // indirect
+	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
 	golang.org/x/image v0.10.0 // indirect
 	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/oauth2 v0.22.0 // indirect
@@ -259,7 +261,7 @@ require (
 
 replace github.com/creack/pty => github.com/photostorm/pty v1.1.18
 
-replace github.com/charmbracelet/log => github.com/jumppad-labs/log v0.0.0-20230711151418-55bbc87954b7
+replace github.com/charmbracelet/log => github.com/jumppad-labs/log v0.0.0-20240827082827-4404884e31a7
 
 replace github.com/zclconf/go-cty => github.com/jumppad-labs/go-cty v0.0.0-20230804061424-9e985cb751f6
 
