@@ -68,6 +68,11 @@ func (h *HTTPImpl) HealthCheckHTTP(address, method string, headers map[string][]
 
 		rq.Header = headers
 
+		hosts, ok := headers["Host"]
+		if ok && len(hosts) > 0 {
+			rq.Host = hosts[0]
+		}
+
 		if len(codes) == 0 {
 			codes = []int{200}
 		}
