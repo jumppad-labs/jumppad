@@ -355,7 +355,7 @@ Feature: Docmentation
 
 3 scenarios (3 passed)
 16 steps (16 passed)
-3m6.79622s
+3m6.79621s
 testing: warning: no tests to run
 PASS
 ```
