@@ -5,6 +5,7 @@ import (
 	// "fmt"
 
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -39,7 +40,7 @@ type Engine interface {
 	Destroy(ctx context.Context, force bool) error
 	Config() *hclconfig.Config
 	Diff(path string, variables map[string]string, variablesFile string) (new []types.Resource, changed []types.Resource, removed []types.Resource, cfg *hclconfig.Config, err error)
-	Events() <-chan Event
+	Events() (<-chan Event, error)
 }
 
 type Event struct {
@@ -62,8 +63,6 @@ func New(p config.Providers, l logger.Logger) (Engine, error) {
 	e := &EngineImpl{}
 	e.log = l
 	e.providers = p
-
-	e.events = make(chan Event)
 
 	// Set the standard writer to our logger as the DAG uses the standard library log.
 	log.SetOutput(l.StandardWriter())
@@ -107,10 +106,10 @@ func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]strin
 
 	err = e.readAndProcessConfig(path, vars, variablesFile, func(r types.Resource) error {
 		e.config.AppendResource(r)
-		e.events <- Event{
+		e.emitLifecycleEvent(Event{
 			Resource: r,
 			Status:   constants.LifecycleEventParsed,
-		}
+		})
 		return nil
 	})
 
@@ -374,8 +373,12 @@ func (e *EngineImpl) ResourceCountForType(t string) int {
 }
 
 // Events returns the events channels to broadcast resource lifecycle events
-func (e *EngineImpl) Events() <-chan Event {
-	return e.events
+func (e *EngineImpl) Events() (<-chan Event, error) {
+	if e.events != nil {
+		return nil, errors.New("events channel already created")
+	}
+	e.events = make(chan Event)
+	return e.events, nil
 }
 
 func (e *EngineImpl) readAndProcessConfig(path string, variables map[string]string, variablesFile string, callback hclconfig.WalkCallback) error {
@@ -486,16 +489,16 @@ func (e *EngineImpl) appendDisabledResources(c *hclconfig.Config) error {
 }
 
 func (e *EngineImpl) createCallback(r types.Resource) error {
-	e.events <- Event{
+	e.emitLifecycleEvent(Event{
 		Resource: r,
 		Status:   constants.LifecycleEventCreating,
-	}
+	})
 	lifecycleStatus := constants.LifecycleEventCreated
 	defer func() {
-		e.events <- Event{
+		e.emitLifecycleEvent(Event{
 			Resource: r,
 			Status:   lifecycleStatus,
-		}
+		})
 	}()
 
 	// if the context is cancelled skip
@@ -631,16 +634,16 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 }
 
 func (e *EngineImpl) destroyCallback(r types.Resource) error {
-	e.events <- Event{
+	e.emitLifecycleEvent(Event{
 		Resource: r,
 		Status:   constants.LifecycleEventDestroying,
-	}
+	})
 	lifecycleStatus := constants.LifecycleEventDestroyed
 	defer func() {
-		e.events <- Event{
+		e.emitLifecycleEvent(Event{
 			Resource: r,
 			Status:   lifecycleStatus,
-		}
+		})
 	}()
 
 	// if the context is cancelled skip
@@ -677,6 +680,12 @@ func (e *EngineImpl) destroyCallback(r types.Resource) error {
 	e.config.RemoveResource(r)
 
 	return nil
+}
+
+func (e *EngineImpl) emitLifecycleEvent(event Event) {
+	if e.events != nil {
+		e.events <- event
+	}
 }
 
 // checks if a string exists in an array if not it appends and returns a new
