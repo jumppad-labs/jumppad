@@ -61,8 +61,8 @@ type NomadCluster struct {
 	ExternalIP string `hcl:"external_ip,optional" json:"external_ip,omitempty"`
 }
 
-const nomadBaseImage = "shipyardrun/nomad"
-const nomadBaseVersion = "1.7.5"
+const nomadBaseImage = "ghcr.io/jumppad-labs/nomad"
+const nomadBaseVersion = "v1.8.4"
 
 type Config struct {
 	// Specifies configuration for the Docker driver.
