@@ -419,7 +419,8 @@ func (p *ClusterProvider) createK3s(ctx context.Context) error {
 		"--kube-proxy-arg=conntrack-max-per-core=0",
 		disableArgs,
 		fmt.Sprintf("--snapshotter=%s", snapShotter),
-		fmt.Sprintf("--tls-san=%s", FQDN),
+		fmt.Sprintf("--tls-san=%s", FQDN),                // add the FQDN for the server
+		fmt.Sprintf("--tls-san=%s", utils.GetDockerIP()), // add the docker host IP
 		clusterToken,
 	}
 

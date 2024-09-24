@@ -14,7 +14,7 @@ Scenario: Build Image and Create Docker Container
   Then the following resources should be running
     | name                                       |
     | module.container.resource.container.app  |
-  And a HTTP call to "http://app.local.jumppad.dev:19090/" should result in status 200
+  And a HTTP call to "http://app.local.jmpd.in:19090/" should result in status 200
 
 Scenario: Build Image and Load to Nomad Cluster
   Given the following jumppad variables are set
@@ -27,7 +27,7 @@ Scenario: Build Image and Load to Nomad Cluster
   Then the following resources should be running
     | name                      |
     | module.nomad.resource.nomad_cluster.dev  |
-  And a HTTP call to "http://app.local.jumppad.dev:19090/" should result in status 200
+  And a HTTP call to "http://app.local.jmpd.in:19090/" should result in status 200
 
 Scenario: Build Image and Load to Kubernetes Cluster
   Given the following jumppad variables are set
@@ -40,4 +40,4 @@ Scenario: Build Image and Load to Kubernetes Cluster
   Then the following resources should be running
     | name                      |
     | module.kubernetes.resource.k8s_cluster.dev  |
-  And a HTTP call to "http://app.local.jumppad.dev:19090/" should result in status 200
+  And a HTTP call to "http://app.local.jmpd.in:19090/" should result in status 200
