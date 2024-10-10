@@ -19,7 +19,7 @@ var bridgeNetwork = dtypes.NetworkResource{
 	ID:   "bridge",
 	Name: "bridge",
 	IPAM: network.IPAM{
-		Config: []network.IPAMConfig{network.IPAMConfig{Subnet: "10.8.2.0/24"}},
+		Config: []network.IPAMConfig{{Subnet: "10.8.2.0/24"}},
 	},
 }
 
@@ -45,10 +45,10 @@ func TestLookupReturnsID(t *testing.T) {
 	md, p := setupNetworkTests(t, c)
 	testutils.RemoveOn(&md.Mock, "NetworkList")
 	md.On("NetworkList", mock.Anything, mock.Anything).Return([]dtypes.NetworkResource{
-		dtypes.NetworkResource{
+		{
 			ID: "testnet",
 			IPAM: network.IPAM{
-				Config: []network.IPAMConfig{network.IPAMConfig{Subnet: "10.1.2.0/24"}},
+				Config: []network.IPAMConfig{{Subnet: "10.1.2.0/24"}},
 			},
 		},
 		bridgeNetwork,
@@ -128,10 +128,10 @@ func TestNetworkDoesNOTCreateWhenExists(t *testing.T) {
 	md, p := setupNetworkTests(t, c)
 	testutils.RemoveOn(&md.Mock, "NetworkList")
 	md.On("NetworkList", mock.Anything, mock.Anything).Return([]dtypes.NetworkResource{
-		dtypes.NetworkResource{
+		{
 			ID: "testnet",
 			IPAM: network.IPAM{
-				Config: []network.IPAMConfig{network.IPAMConfig{Subnet: "10.1.2.0/24"}},
+				Config: []network.IPAMConfig{{Subnet: "10.1.2.0/24"}},
 			},
 		}, bridgeNetwork,
 	}, nil)
@@ -150,10 +150,10 @@ func TestCreateWithCorrectNameAndDifferentSubnetReturnsError(t *testing.T) {
 	md, p := setupNetworkTests(t, c)
 	testutils.RemoveOn(&md.Mock, "NetworkList")
 	md.On("NetworkList", mock.Anything, mock.Anything).Return([]dtypes.NetworkResource{
-		dtypes.NetworkResource{
+		{
 			ID: "testnet",
 			IPAM: network.IPAM{
-				Config: []network.IPAMConfig{network.IPAMConfig{Subnet: "10.1.1.0/24"}},
+				Config: []network.IPAMConfig{{Subnet: "10.1.1.0/24"}},
 			},
 		}, bridgeNetwork,
 	}, nil)
@@ -171,10 +171,10 @@ func TestCreateWithOverlappingSubnetReturnsError(t *testing.T) {
 	md, p := setupNetworkTests(t, c)
 	testutils.RemoveOn(&md.Mock, "NetworkList")
 	md.On("NetworkList", mock.Anything, mock.Anything).Return([]dtypes.NetworkResource{
-		dtypes.NetworkResource{
+		{
 			ID: "abc",
 			IPAM: network.IPAM{
-				Config: []network.IPAMConfig{network.IPAMConfig{Subnet: "10.2.0.0/24"}},
+				Config: []network.IPAMConfig{{Subnet: "10.2.0.0/24"}},
 			},
 		}, bridgeNetwork,
 	}, nil)
