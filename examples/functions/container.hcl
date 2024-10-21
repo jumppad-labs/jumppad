@@ -23,21 +23,17 @@ resource "container" "consul" {
   }
 
   environment = {
-    file_dir          = dir()
-    env               = env("HOME")
-    k8s_config        = k8s_config("dc1")
-    k8s_config_docker = k8s_config_docker("dc1")
-    home              = home()
-    shipyard          = shipyard()
-    file              = file("./default.vars")
-    data              = data("mine")
-    docker_ip         = docker_ip()
-    docker_host       = docker_host()
-    shipyard_ip       = shipyard_ip()
-    cluster_api       = cluster_api("nomad_cluster.dc1")
-    cluster_port      = cluster_port("nomad_cluster.dc1")
-    var_len           = len(variable.test_var)
-    os                = system("os")
-    arch              = system("arch")   
+    file_dir              = dir()
+    env                   = env("HOME")
+    home                  = home()
+    file                  = file("./default.vars")
+    data                  = data("mine")
+    data_with_permissions = data_with_permissions("mine", 755)
+    docker_ip             = docker_ip()
+    docker_host           = docker_host()
+    var_len               = len(variable.test_var)
+    os                    = system("os")
+    arch                  = system("arch")
+    exists                = exists("file")
   }
 }

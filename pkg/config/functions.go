@@ -23,7 +23,7 @@ func customHCLFuncDockerHost() (string, error) {
 }
 
 func customHCLFuncDataFolderWithPermissions(name string, permissions int) (string, error) {
-	if permissions > 0 && permissions < 778 {
+	if permissions < 0 || permissions > 777 {
 		return "", fmt.Errorf("permissions must be a three digit number less than 777")
 	}
 
@@ -49,4 +49,12 @@ func customHCLFuncSystem(property string) (string, error) {
 	default:
 		return "", fmt.Errorf("unknown system property %s", property)
 	}
+}
+
+func customHCLFuncExists(path string) (bool, error) {
+	if _, err := os.Stat(path); err != nil {
+		return false, nil
+	}
+
+	return true, nil
 }

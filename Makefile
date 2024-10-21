@@ -54,8 +54,8 @@ generate_mocks:
 
 install_local:
 	go build -ldflags "-X main.version=${git_commit}" -gcflags=all="-N -l" -o bin/jumppad main.go
-	sudo mv /usr/bin/jumppad /usr/bin/jumppad-old || true
-	sudo cp bin/jumppad /usr/bin/jumppad
+	sudo mv /usr/bin/jumppad /usr/local/bin/jumppad-old || true
+	sudo cp bin/jumppad /usr/local/bin/jumppad
 
 remove_local:
-	sudo mv /usr/bin/jumppad-old /usr/bin/jumppad || true
+	sudo mv /usr/local/bin/jumppad-old /usr/local/bin/jumppad || true
