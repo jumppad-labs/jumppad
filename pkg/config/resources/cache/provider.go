@@ -20,7 +20,7 @@ import (
 )
 
 const cacheImage = "ghcr.io/jumppad-labs/docker-registry-proxy:v1.0.0"
-const defaultRegistries = "docker.io k8s.gcr.io gcr.io asia.gcr.io eu.gcr.io us.gcr.io quay.io ghcr.io docker.pkg.github.com"
+const defaultRegistries = "docker.io k8s.gcr.io gcr.io asia.gcr.io eu.gcr.io us.gcr.io quay.io ghcr.io docker.pkg.github.com pkg.dev registry.k8s.io"
 
 type Provider struct {
 	config *ImageCache
@@ -59,7 +59,9 @@ func (p *Provider) Create(ctx context.Context) error {
 		return err
 	}
 
-	var registries []string
+	// ensure that the cache is created with the default registries so that the engine
+	// can use this list to filter any defaults that have been added by the user
+	var registries = strings.Split(defaultRegistries, " ")
 	var authRegistries []string
 
 	for _, reg := range p.config.Registries {
@@ -187,7 +189,7 @@ func (p *Provider) createImageCache(registries []string, authRegistries []string
 		"DEBUG_HUB":               "false",
 		"DOCKER_MIRROR_CACHE":     "/cache/docker",
 		"ENABLE_MANIFEST_CACHE":   "true",
-		"REGISTRIES":              strings.Trim(defaultRegistries+" "+strings.Join(registries, " "), " "),
+		"REGISTRIES":              strings.Trim(strings.Join(registries, " "), " "),
 		"AUTH_REGISTRY_DELIMITER": ":::",
 		"AUTH_REGISTRIES":         strings.Trim(strings.Join(authRegistries, " "), " "),
 		"ALLOW_PUSH":              "true",

@@ -14,7 +14,8 @@ type Network struct {
 	// embedded type holding name, etc
 	types.ResourceBase `hcl:",remain"`
 
-	Subnet string `hcl:"subnet" json:"subnet"`
+	Subnet     string `hcl:"subnet" json:"subnet"`
+	EnableIPv6 bool   `hcl:"enable_ipv6,optional" json:"enable_ipv6"`
 }
 
 func (c *Network) Parse(conf types.Findable) error {

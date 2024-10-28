@@ -37,5 +37,7 @@ resource "container" "consul" {
     cluster_api       = cluster_api("nomad_cluster.dc1")
     cluster_port      = cluster_port("nomad_cluster.dc1")
     var_len           = len(variable.test_var)
+    os                = system("os")
+    arch              = system("arch")   
   }
 }

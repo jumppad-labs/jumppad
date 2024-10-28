@@ -23,6 +23,8 @@ const (
 )
 
 // System handles interactions between Shipyard and the OS
+//
+//go:generate mockery --name System --filename system.go
 type System interface {
 	OpenBrowser(string) error
 	Preflight() (string, error)

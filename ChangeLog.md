@@ -1,5 +1,10 @@
 # Change Log
 
+## version v0.11.2
+
+Require ipv6 networking to be manually enabled via the network config. If
+ipv6 is disabled all containers are started with ipv6 disabled.
+
 ## version v0.10.5
 
 ## New Features:

@@ -73,6 +73,16 @@ resource "container" "consul" {
     destination = "/cache"
     type        = "volume"
   }
+
+  health_check {
+    timeout = "30s"
+
+    http {
+      address       = "http://localhost:8500/v1/status/leader"
+      success_codes = [200]
+      method        = "POST"
+    }
+  }
 }
 
 output "consul_addr" {

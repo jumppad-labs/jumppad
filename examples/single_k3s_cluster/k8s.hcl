@@ -4,7 +4,7 @@ resource "k8s_cluster" "k3s" {
   }
 
   copy_image {
-    name = "shipyardrun/connector:v0.1.0"
+    name = "ghcr.io/jumppad-labs/connector:v0.4.0"
   }
 }
 

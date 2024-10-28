@@ -74,8 +74,8 @@ type KubeConfig struct {
 	ClientKey         string `hcl:"client_key" json:"client_key"`                 // base64 encoded client key
 }
 
-const k3sBaseImage = "shipyardrun/k3s"
-const k3sBaseVersion = "v1.27.4"
+const k3sBaseImage = "ghcr.io/jumppad-labs/kubernetes"
+const k3sBaseVersion = "v1.31.1"
 
 func (k *Cluster) Process() error {
 	if k.APIPort == 0 {
