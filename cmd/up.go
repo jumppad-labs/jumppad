@@ -81,9 +81,13 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 		// parse the vars into a map
 		vars := map[string]string{}
 		for _, v := range *variables {
+			// if the variable is wrapped in single quotes remove them
+			v = strings.TrimPrefix(v, "'")
+			v = strings.TrimSuffix(v, "'")
+
 			parts := strings.Split(v, "=")
-			if len(parts) == 2 {
-				vars[parts[0]] = parts[1]
+			if len(parts) >= 2 {
+				vars[parts[0]] = strings.Join(parts[1:], "=")
 			}
 		}
 
@@ -173,7 +177,7 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 			cancel()
 		}()
 
-		res, err := e.ApplyWithVariables(ctx, dst, vars, *variablesFile)
+		config, err := e.ApplyWithVariables(ctx, dst, vars, *variablesFile)
 		if err != nil {
 			return err
 		}
@@ -184,30 +188,26 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 			browserList := []string{}
 			checkDuration := 30 * time.Second
 
-			for _, r := range res.Resources {
-				switch r.Metadata().Type {
-				case container.TypeContainer:
-					c := r.(*container.Container)
-					for _, p := range c.Ports {
+			for _, r := range config.Resources {
+				switch v := r.(type) {
+				case *container.Container:
+					for _, p := range v.Ports {
 						if p.Host != "" && p.OpenInBrowser != "" {
 							browserList = append(browserList, buildBrowserPath(r.Metadata().Name, p.Host, r.Metadata().Type, p.OpenInBrowser))
 						}
 					}
-				case ingress.TypeIngress:
-					c := r.(*ingress.Ingress)
-					if c.OpenInBrowser != "" {
-						browserList = append(browserList, buildBrowserPath(r.Metadata().Name, fmt.Sprintf("%d", c.Port), r.Metadata().Type, c.OpenInBrowser))
+				case *ingress.Ingress:
+					if v.OpenInBrowser != "" {
+						browserList = append(browserList, buildBrowserPath(r.Metadata().Name, fmt.Sprintf("%d", v.Port), r.Metadata().Type, v.OpenInBrowser))
 					}
-				case nomad.TypeNomadCluster:
-					c := r.(*nomad.NomadCluster)
-					if c.OpenInBrowser {
+				case *nomad.NomadCluster:
+					if v.OpenInBrowser {
 						// get the API port
-						browserList = append(browserList, buildBrowserPath("server."+r.Metadata().Name, fmt.Sprintf("%d", c.APIPort), r.Metadata().Type, "/"))
+						browserList = append(browserList, buildBrowserPath("server."+r.Metadata().Name, fmt.Sprintf("%d", v.APIPort), r.Metadata().Type, "/"))
 					}
-				case docs.TypeDocs:
-					c := r.(*docs.Docs)
-					if c.OpenInBrowser {
-						port := strconv.Itoa(c.Port)
+				case *docs.Docs:
+					if v.OpenInBrowser {
+						port := strconv.Itoa(v.Port)
 						if port == "0" {
 							port = "80"
 						}
@@ -225,7 +225,7 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 			for _, b := range browserList {
 				go func(uri string) {
 					// health check the URL
-					err := hc.HealthCheckHTTP(uri, "", nil, "", []int{200}, checkDuration)
+					err := hc.HealthCheckHTTP(uri, "", map[string][]string{}, "", []int{200}, checkDuration)
 					if err == nil {
 						be := bc.OpenBrowser(uri)
 						if be != nil {
@@ -246,7 +246,7 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 
 		// if we have a blueprint show the header
 		var b *blueprint.Blueprint
-		bps, _ := e.Config().FindResourcesByType(blueprint.TypeBlueprint)
+		bps, _ := config.FindResourcesByType(blueprint.TypeBlueprint)
 		for _, bp := range bps {
 			// pick the first blueprint in the root
 			if bp.Metadata().Module == "" {

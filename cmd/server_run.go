@@ -102,7 +102,7 @@ func newConnectorRunCommand() *cobra.Command {
 
 			// start the http server in the background
 			l.Info("Starting HTTP server", "bind_addr", httpBindAddr)
-			httpS := http.NewLocalServer(pathCertRoot, pathCertServer, pathKeyServer, grpcBindAddr, httpBindAddr, logger.LoggerAsHCLogger(l))
+			httpS := http.NewLocalServer(pathCertRoot, "", pathCertServer, pathKeyServer, grpcBindAddr, httpBindAddr, logger.LoggerAsHCLogger(l))
 
 			err = httpS.Serve()
 			l.Info("Started")

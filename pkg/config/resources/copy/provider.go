@@ -50,18 +50,35 @@ func (p *Provider) Create(ctx context.Context) error {
 
 	p.log.Info("Creating Copy", "ref", p.config.Meta.Name, "source", p.config.Source, "destination", p.config.Destination, "perms", p.config.Permissions)
 
-	tempPath := filepath.Join(utils.JumppadTemp(), "copy", p.config.Meta.Name)
+	srcPath := p.config.Source
 
-	err := p.getter.Get(p.config.Source, tempPath)
-	if err != nil {
-		return fmt.Errorf("error getting source from %s: %v", p.config.Source, err)
-	}
+	// are we copying an existing directory or downloading?
+	_, err := os.Stat(srcPath)
 
-	// Check source exists
-	_, err = os.Stat(tempPath)
 	if err != nil {
-		p.log.Debug("Error discovering source directory", "ref", p.config.Meta.Name, "source", tempPath, "error", err)
-		return xerrors.Errorf("unable to find source directory for copy resource, ref=%s: %w", p.config.Meta.Name, err)
+		tempPath := filepath.Join(utils.JumppadTemp(), "copy", p.config.Meta.ID)
+
+		defer func() {
+			// clean up temporary files
+			err := os.RemoveAll(tempPath)
+			if err != nil {
+				p.log.Warn("Error removing temporary files", "ref", p.config.Meta.Name, "path", tempPath, "error", err)
+			}
+		}()
+
+		err := p.getter.Get(p.config.Source, tempPath)
+		if err != nil {
+			return fmt.Errorf("error getting source from %s: %v", p.config.Source, err)
+		}
+
+		// Check source exists
+		_, err = os.Stat(tempPath)
+		if err != nil {
+			p.log.Debug("Error fetching source directory", "ref", p.config.Meta.ID, "source", tempPath, "error", err)
+			return xerrors.Errorf("unable to find source directory for copy resource, ref=%s: %w", p.config.Meta.ID, err)
+		}
+
+		srcPath = tempPath
 	}
 
 	// Check the dest exists, if so grab the existing perms
@@ -85,9 +102,9 @@ func (p *Provider) Create(ctx context.Context) error {
 		return false, nil
 	}
 
-	err = cp.Copy(tempPath, p.config.Destination, opts)
+	err = cp.Copy(srcPath, p.config.Destination, opts)
 	if err != nil {
-		p.log.Debug("Error copying source directory", "ref", p.config.Meta.Name, "source", tempPath, "error", err)
+		p.log.Debug("Error copying source directory", "ref", p.config.Meta.Name, "source", srcPath, "error", err)
 
 		return xerrors.Errorf("unable to copy files, ref=%s: %w", p.config.Meta.Name, err)
 	}
@@ -103,7 +120,7 @@ func (p *Provider) Create(ctx context.Context) error {
 		}
 
 		for _, f := range p.config.CopiedFiles {
-			fn := strings.Replace(f, tempPath, p.config.Destination, -1)
+			fn := strings.Replace(f, srcPath, p.config.Destination, -1)
 			p.log.Debug("Setting permissions for file", "ref", p.config.Meta.Name, "file", fn, "permissions", p.config.Permissions)
 
 			os.Chmod(fn, os.FileMode(perms))
@@ -113,12 +130,6 @@ func (p *Provider) Create(ctx context.Context) error {
 	if originalPerms != os.FileMode(0) {
 		p.log.Debug("Restore original permissions", "ref", p.config.Meta.Name, "perms", originalPerms.String())
 		os.Chmod(p.config.Destination, originalPerms)
-	}
-
-	// clean up temporary files
-	err = os.RemoveAll(tempPath)
-	if err != nil {
-		p.log.Debug("Error removing temporary files", "ref", p.config.Meta.Name, "path", tempPath, "error", err)
 	}
 
 	return nil

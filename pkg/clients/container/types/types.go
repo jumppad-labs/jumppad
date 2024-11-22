@@ -37,6 +37,7 @@ type NetworkAttachment struct {
 	Aliases     []string
 	Subnet      string
 	IsContainer bool // is the network attachment a container or normal network
+	IPv6Enabled bool
 }
 
 type Capabilities struct {

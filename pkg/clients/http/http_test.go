@@ -3,6 +3,7 @@ package http
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -65,4 +66,42 @@ func TestHTTPHealthErrorsOnClientError(t *testing.T) {
 	err := c.HealthCheckHTTP("http://127.0.0.2:19091", "", nil, "", []int{200}, 10*time.Millisecond)
 	assert.Error(t, err)
 	assert.Len(t, *reqs, 0)
+}
+
+func TestHTTPHealthSetsHostOnHostHeader(t *testing.T) {
+	url, reqs, cleanup := testSetupHTTPBasicServer(http.StatusOK, "")
+	defer cleanup()
+
+	c := NewHTTP(1*time.Millisecond, logger.NewTestLogger(t))
+
+	err := c.HealthCheckHTTP(url, "", map[string][]string{"Host": {"example.com"}}, "", []int{200}, 10*time.Millisecond)
+	assert.NoError(t, err)
+	assert.Len(t, *reqs, 1)
+	assert.Equal(t, "example.com", (*reqs)[0].Host)
+}
+
+func TestHTTPHealthSetsHostOnHostHeaderWithMultipleValues(t *testing.T) {
+	url, reqs, cleanup := testSetupHTTPBasicServer(http.StatusOK, "")
+	defer cleanup()
+
+	c := NewHTTP(1*time.Millisecond, logger.NewTestLogger(t))
+
+	err := c.HealthCheckHTTP(url, "", map[string][]string{"Host": {"example.com", "example.org"}}, "", []int{200}, 10*time.Millisecond)
+	assert.NoError(t, err)
+	assert.Len(t, *reqs, 1)
+	assert.Equal(t, "example.com", (*reqs)[0].Host)
+}
+
+func TestHTTPHealthSetsHostOnHostHeaderWithNoValues(t *testing.T) {
+	url, reqs, cleanup := testSetupHTTPBasicServer(http.StatusOK, "")
+	defer cleanup()
+
+	host := strings.TrimPrefix(url, "http://")
+
+	c := NewHTTP(1*time.Millisecond, logger.NewTestLogger(t))
+
+	err := c.HealthCheckHTTP(url, "", map[string][]string{}, "", []int{200}, 10*time.Millisecond)
+	assert.NoError(t, err)
+	assert.Len(t, *reqs, 1)
+	assert.Equal(t, host, (*reqs)[0].Host)
 }

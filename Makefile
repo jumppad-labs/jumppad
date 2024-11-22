@@ -3,7 +3,7 @@ git_commit = $(shell git log -1 --pretty=format:"%H")
 test_folder ?= container
 
 test_unit:
-	dagger call --mod=dagger unit-test \
+	dagger call --mod=dagger --progress=plain unit-test \
 		--src=. \
 		--with-race=false
 
@@ -54,5 +54,8 @@ generate_mocks:
 
 install_local:
 	go build -ldflags "-X main.version=${git_commit}" -gcflags=all="-N -l" -o bin/jumppad main.go
-	sudo mv /usr/local/bin/jumppad /usr/local/bin/jumppad-old || true
-	sudo cp bin/jumppad /usr/local/bin/jumppad
+	sudo mv /usr/bin/jumppad /usr/bin/jumppad-old || true
+	sudo cp bin/jumppad /usr/bin/jumppad
+
+remove_local:
+	sudo mv /usr/bin/jumppad-old /usr/bin/jumppad || true

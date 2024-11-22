@@ -10,6 +10,7 @@ import (
 
 // Getter is an interface which defines interations for
 // downloading remote folders
+//go:generate mockery --name Getter --filename getter.go
 type Getter interface {
 	Get(uri, dst string) error
 	SetForce(force bool)
@@ -62,7 +63,7 @@ func (g *GetterImpl) Get(uri, dst string) error {
 	_, err := os.Stat(dst)
 	if err == nil {
 		// we already have files at the destination do we want to overwrite?
-		if g.force == false {
+		if !g.force {
 			return nil
 		}
 

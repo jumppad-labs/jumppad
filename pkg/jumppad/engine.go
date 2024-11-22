@@ -105,13 +105,10 @@ func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]strin
 		return nil
 	})
 
-	if err != nil && err.(*hclerrors.ConfigError).ContainsErrors() {
-		e.log.Error("Error parsing configuration", "error", err)
-	}
-
 	return e.config, err
 }
 
+// Diff compares the current configuration with the state and returns the resources that are new, changed or removed
 func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFile string) (
 	[]types.Resource, []types.Resource, []types.Resource, *hclconfig.Config, error) {
 
@@ -126,6 +123,7 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 	res, parseErr := e.ParseConfigWithVariables(path, variables, variablesFile)
 
 	if parseErr != nil {
+		fmt.Println("Error parsing config", parseErr)
 		// cast the error to a config error
 		ce := parseErr.(*hclerrors.ConfigError)
 
@@ -557,31 +555,38 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 		// get the image cache
 		ic, err := e.config.FindResource("resource.image_cache.default")
 		if err == nil {
-			// append the registry if not all ready present
-			bfound := false
-			for _, reg := range ic.(*cache.ImageCache).Registries {
+			// append the registry if not all ready present and not in the default list
+
+			foundIndex := -1
+			for i, reg := range ic.(*cache.ImageCache).Registries {
 				if reg.Hostname == r.(*cache.Registry).Hostname {
-					bfound = true
+					foundIndex = i
+					//
 					break
 				}
 			}
 
-			if !bfound {
+			// check if the registry is already in the registry list
+			// if so replace it as we may be overriting the authentication
+			if foundIndex >= 0 {
+				ic.(*cache.ImageCache).Registries[foundIndex] = *r.(*cache.Registry)
+			} else {
 				ic.(*cache.ImageCache).Registries = append(ic.(*cache.ImageCache).Registries, *r.(*cache.Registry))
-				e.log.Debug("Adding registy to image cache", "registry", r.(*cache.Registry).Hostname)
+			}
 
-				// we now need to stop and restart the container to pick up the new registry changes
-				np := e.providers.GetProvider(ic)
+			e.log.Debug("Adding registy to image cache", "registry", r.(*cache.Registry).Hostname)
 
-				err := np.Destroy(e.ctx, e.force)
-				if err != nil {
-					e.log.Error("Unable to destroy Image Cache", "error", err)
-				}
+			// we now need to stop and restart the container to pick up the new registry changes
+			np := e.providers.GetProvider(ic)
 
-				err = np.Create(e.ctx)
-				if err != nil {
-					e.log.Error("Unable to create Image Cache", "error", err)
-				}
+			err := np.Destroy(e.ctx, e.force)
+			if err != nil {
+				e.log.Error("Unable to destroy Image Cache", "error", err)
+			}
+
+			err = np.Create(e.ctx)
+			if err != nil {
+				e.log.Error("Unable to create Image Cache", "error", err)
 			}
 		} else {
 			e.log.Error("Unable to find Image Cache", "error", err)

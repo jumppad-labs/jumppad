@@ -171,6 +171,7 @@ func (p *Provider) createWithDriver(driver string) error {
 	opts := types.NetworkCreate{
 		CheckDuplicate: true,
 		Driver:         driver,
+		EnableIPv6:     p.config.EnableIPv6,
 		IPAM: &network.IPAM{
 			Driver: "default",
 			Config: []network.IPAMConfig{

@@ -9,54 +9,64 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
+	"github.com/jumppad-labs/hclconfig"
+	hcltypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
-	"github.com/jumppad-labs/jumppad/pkg/config"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources"
+	conmock "github.com/jumppad-labs/jumppad/pkg/clients/connector/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/connector/types"
+	cmock "github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
+	gettermock "github.com/jumppad-labs/jumppad/pkg/clients/getter/mocks"
+	httpmock "github.com/jumppad-labs/jumppad/pkg/clients/http/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	systemmock "github.com/jumppad-labs/jumppad/pkg/clients/system/mocks"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/blueprint"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/docs"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/ingress"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/nomad"
 	enginemocks "github.com/jumppad-labs/jumppad/pkg/jumppad/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/jumppad-labs/jumppad/testutils"
-	gvm "github.com/shipyard-run/version-manager"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	assert "github.com/stretchr/testify/require"
 )
 
 type runMocks struct {
 	engine    *enginemocks.Engine
-	getter    *mocks.Getter
-	http      *mocks.HTTP
-	system    *mocks.System
-	vm        *gvm.MockVersions
-	connector *clients.ConnectorMock
+	getter    *gettermock.Getter
+	http      *httpmock.HTTP
+	system    *systemmock.System
+	tasks     *cmock.ContainerTasks
+	connector *conmock.Connector
 }
 
 func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
-	mockHTTP := &mocks.HTTP{}
-	mockHTTP.On("HealthCheckHTTP", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	mockContainer := &cmock.ContainerTasks{}
+	mockContainer.On("SetForce", mock.Anything)
 
-	mockGetter := &mocks.Getter{}
+	mockHTTP := &httpmock.HTTP{}
+	mockHTTP.On("HealthCheckHTTP", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	mockGetter := &gettermock.Getter{}
 	mockGetter.On("Get", mock.Anything, mock.Anything).Return(nil)
 	mockGetter.On("SetForce", mock.Anything)
 
-	mockSystem := &mocks.System{}
+	mockSystem := &systemmock.System{}
 	mockSystem.On("OpenBrowser", mock.Anything).Return(nil)
 	mockSystem.On("Preflight").Return(nil)
 	mockSystem.On("PromptInput", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("")
 	mockSystem.On("CheckVersion", mock.Anything).Return("", false)
 
-	mockTasks := &mocks.ContainerTasks{}
-	mockTasks.On("SetForce", mock.Anything)
-
-	mockConnector := &clients.ConnectorMock{}
+	mockConnector := &conmock.Connector{}
 	mockConnector.On("GetLocalCertBundle", mock.Anything).Return(
-		&clients.CertBundle{},
+		&types.CertBundle{},
 		nil,
 	)
 
 	mockConnector.On("GenerateLocalCertBundle", mock.Anything).Return(
-		&clients.CertBundle{},
+		&types.CertBundle{},
 		nil,
 	)
 
@@ -69,20 +79,20 @@ func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
 	)
 
 	clients := &clients.Clients{
-		HTTP:           mockHTTP,
-		Getter:         mockGetter,
-		Browser:        mockSystem,
-		ContainerTasks: mockTasks,
-		Connector:      mockConnector,
+		HTTP:      mockHTTP,
+		Getter:    mockGetter,
+		Connector: mockConnector,
 	}
+
+	hclconfig := hclconfig.Config{}
 
 	mockEngine := &enginemocks.Engine{}
 	mockEngine.On("ParseConfigWithVariables", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	mockEngine.On("ApplyWithVariables", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+	mockEngine.On("ApplyWithVariables", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&hclconfig, nil)
 	mockEngine.On("GetClients", mock.Anything).Return(clients)
 	mockEngine.On("ResourceCountForType", mock.Anything).Return(0)
 
-	bp := resources.Blueprint{}
+	bp := blueprint.Blueprint{}
 
 	mockEngine.On("Blueprint").Return(&bp)
 
@@ -92,58 +102,25 @@ func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
 		http:      mockHTTP,
 		system:    mockSystem,
 		connector: mockConnector,
+		tasks:     mockContainer,
 	}
 
-	cmd := newRunCmd(mockEngine, mockGetter, mockHTTP, mockSystem, vm, mockConnector, hclog.Default())
+	cmd := newRunCmd(mockEngine, mockContainer, mockGetter, mockHTTP, mockSystem, nil, mockConnector, logger.NewTestLogger(t))
 	cmd.SetOut(bytes.NewBuffer([]byte("")))
 
 	return cmd, rm
 }
 
-func TestRunSetsForceOnGetter(t *testing.T) {
+func TestRunSetsForceOnClients(t *testing.T) {
 	rf, rm := setupRun(t, "")
+	rf.Flags().Set("no-browser", "true")
 	rf.Flags().Set("force-update", "true")
 
 	err := rf.Execute()
 	assert.NoError(t, err)
 
 	rm.getter.AssertCalled(t, "SetForce", true)
-}
-
-func TestRunPreflightsSystem(t *testing.T) {
-	rf, rm := setupRun(t, "")
-	rf.SetArgs([]string{"/tmp"})
-
-	err := rf.Execute()
-	assert.NoError(t, err)
-
-	rm.system.AssertCalled(t, "Preflight")
-}
-
-func TestRunOtherVersionChecksInstalledVersions(t *testing.T) {
-	version := "v0.0.99"
-	rf, rm := setupRun(t, "")
-	rf.SetArgs([]string{"/tmp"})
-	rf.Flags().Set("version", version)
-
-	err := rf.Execute()
-	assert.NoError(t, err)
-
-	rm.vm.AssertCalled(t, "ListInstalledVersions", version)
-	rm.vm.AssertCalled(t, "GetLatestReleaseURL", version)
-}
-
-func TestRunOtherVersionPromptsInstallWhenNotInstalled(t *testing.T) {
-	version := "v0.0.99"
-	rf, rm := setupRun(t, "")
-	rf.SetArgs([]string{"/tmp"})
-	rf.Flags().Set("version", version)
-
-	err := rf.Execute()
-	assert.NoError(t, err)
-
-	rm.vm.AssertCalled(t, "ListInstalledVersions", version)
-	rm.vm.AssertCalled(t, "GetLatestReleaseURL", version)
+	rm.tasks.AssertCalled(t, "SetForce", true)
 }
 
 func TestRunChecksForCertBundle(t *testing.T) {
@@ -172,7 +149,7 @@ func TestRunGeneratesCertBundleWhenNotExist(t *testing.T) {
 
 	testutils.RemoveOn(&rm.connector.Mock, "GetLocalCertBundle")
 	rm.connector.On("GetLocalCertBundle", mock.Anything).Return(nil, fmt.Errorf("boom")).Once()
-	rm.connector.On("GetLocalCertBundle", mock.Anything).Return(clients.CertBundle{}, nil).Once()
+	rm.connector.On("GetLocalCertBundle", mock.Anything).Return(&types.CertBundle{}, nil).Once()
 
 	err := rf.Execute()
 	assert.NoError(t, err)
@@ -208,7 +185,7 @@ func TestRunConnectorStartErrorWhenGetCertBundleFails(t *testing.T) {
 	rf.SetArgs([]string{"/tmp"})
 
 	testutils.RemoveOn(&rm.connector.Mock, "GetLocalCertBundle")
-	rm.connector.On("GetLocalCertBundle", mock.Anything).Return(clients.CertBundle{}, nil).Once()
+	rm.connector.On("GetLocalCertBundle", mock.Anything).Return(&types.CertBundle{}, nil).Once()
 	rm.connector.On("GetLocalCertBundle", mock.Anything).Return(nil, fmt.Errorf("boom")).Once()
 
 	err := rf.Execute()
@@ -224,7 +201,30 @@ func TestRunSetsDestinationFromArgsWhenPresent(t *testing.T) {
 	err := rf.Execute()
 	assert.NoError(t, err)
 
-	rm.engine.AssertCalled(t, "ApplyWithVariables", "/tmp", mock.Anything, mock.Anything)
+	rm.engine.AssertCalled(t, "ApplyWithVariables", mock.Anything, "/tmp", mock.Anything, mock.Anything)
+}
+
+func TestRunSetsVariablesFromFlag(t *testing.T) {
+	rf, rm := setupRun(t, "")
+	rf.SetArgs([]string{
+		"--var=abc=1234",
+		"--var='foo=bar'",
+		"--var=\"erik=smells\"",
+		"--var=nic=cool=beans",
+		"/tmp",
+	})
+
+	err := rf.Execute()
+	assert.NoError(t, err)
+
+	args := rm.engine.Calls[0].Arguments[2]
+
+	require.Equal(t, map[string]string{
+		"abc":  "1234",
+		"foo":  "bar",
+		"erik": "smells",
+		"nic":  "cool=beans",
+	}, args)
 }
 
 func TestRunSetsVariablesFileReturnsErrorWhenMissing(t *testing.T) {
@@ -249,7 +249,7 @@ func TestRunSetsVariablesFileWhenPresent(t *testing.T) {
 	err = rf.Execute()
 	assert.NoError(t, err)
 
-	rm.engine.AssertCalled(t, "ApplyWithVariables", "/tmp", mock.Anything, tmpFile.Name())
+	rm.engine.AssertCalled(t, "ApplyWithVariables", mock.Anything, "/tmp", mock.Anything, tmpFile.Name())
 }
 
 func TestRunSetsDestinationToDownloadedBlueprintFromArgsWhenRemote(t *testing.T) {
@@ -259,7 +259,7 @@ func TestRunSetsDestinationToDownloadedBlueprintFromArgsWhenRemote(t *testing.T)
 	err := rf.Execute()
 	assert.NoError(t, err)
 
-	rm.engine.AssertCalled(t, "ApplyWithVariables", filepath.Join(utils.JumppadHome(), "blueprints/github.com/shipyard-run/blueprints/vault-k8s"), mock.Anything, mock.Anything)
+	rm.engine.AssertCalled(t, "ApplyWithVariables", mock.Anything, filepath.Join(utils.JumppadHome(), "blueprints/github.com/shipyard-run/blueprints/vault-k8s"), mock.Anything, mock.Anything)
 }
 
 func TestRunFetchesBlueprint(t *testing.T) {
@@ -285,48 +285,6 @@ func TestRunFetchesBlueprintErrorReturnsError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestRunOpensBrowserWindow(t *testing.T) {
-	rf, rm := setupRun(t, "")
-	rf.SetArgs([]string{"/tmp"})
-
-	err := rf.Execute()
-	assert.NoError(t, err)
-
-	rm.http.AssertNumberOfCalls(t, "HealthCheckHTTP", 2)
-	rm.system.AssertNumberOfCalls(t, "OpenBrowser", 2)
-
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost", []int{200}, 30*time.Second)
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", []int{200}, 30*time.Second)
-}
-
-func TestRunOpensBrowserWindowWithCustomTimeout(t *testing.T) {
-	rf, rm := setupRun(t, "60s")
-	rf.SetArgs([]string{"/tmp"})
-
-	err := rf.Execute()
-	assert.NoError(t, err)
-
-	rm.http.AssertNumberOfCalls(t, "HealthCheckHTTP", 2)
-	rm.system.AssertNumberOfCalls(t, "OpenBrowser", 2)
-
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost", []int{200}, 60*time.Second)
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", []int{200}, 60*time.Second)
-}
-
-func TestRunOpensBrowserWindowWithInvalidTimeout(t *testing.T) {
-	rf, rm := setupRun(t, "6e")
-	rf.SetArgs([]string{"/tmp"})
-
-	err := rf.Execute()
-	assert.NoError(t, err)
-
-	rm.http.AssertNumberOfCalls(t, "HealthCheckHTTP", 2)
-	rm.system.AssertNumberOfCalls(t, "OpenBrowser", 2)
-
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost", []int{200}, 30*time.Second)
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", []int{200}, 30*time.Second)
-}
-
 func TestRunOpensBrowserWindowForResources(t *testing.T) {
 	rf, rm := setupRun(t, "")
 	rf.SetArgs([]string{"/tmp"})
@@ -334,53 +292,53 @@ func TestRunOpensBrowserWindowForResources(t *testing.T) {
 	testutils.RemoveOn(&rm.engine.Mock, "ApplyWithVariables")
 
 	// should open
-	d := config.NewDocs("test")
+	d := &docs.Docs{ResourceBase: hcltypes.ResourceBase{Meta: hcltypes.Meta{Name: "test", Type: "docs"}}}
 	d.OpenInBrowser = true
 
 	// should open
-	i := config.NewIngress("test")
-	i.Source.Driver = config.IngressSourceLocal
-	i.Source.Config.Port = "8080"
-	i.Source.Config.OpenInBrowser = "/"
+	i := &ingress.Ingress{ResourceBase: hcltypes.ResourceBase{Meta: hcltypes.Meta{Name: "test", Type: "ingress"}}}
+	i.Port = 8080
+	i.OpenInBrowser = "/"
 
 	// should open
-	c := config.NewContainer("test")
-	c.Ports = []config.Port{config.Port{Host: "8080", OpenInBrowser: "https://test.container.jumppad.dev:8080"}}
+	c := &container.Container{ResourceBase: hcltypes.ResourceBase{Meta: hcltypes.Meta{Name: "test", Type: "container"}}}
+	c.Ports = []container.Port{container.Port{Host: "8080", OpenInBrowser: "https://test.container.jumppad.dev:8080"}}
 
 	// should not be opened
-	c2 := config.NewContainer("test2")
-	c2.Ports = []config.Port{config.Port{OpenInBrowser: ""}}
+	c2 := &container.Container{}
+	c2.Ports = []container.Port{container.Port{OpenInBrowser: ""}}
 
 	// should not be opened
-	i2 := config.NewIngress("test")
-	i.Source.Driver = config.IngressSourceLocal
-	i2.Source.Config.Port = "8080"
+	i2 := &ingress.Ingress{}
+	i2.Port = 8080
 
 	// should not be opened
-	d2 := config.NewDocs("test2")
+	d2 := &docs.Docs{}
 
 	// should be opened
-	n1 := config.NewNomadCluster("test")
+	n1 := &nomad.NomadCluster{ResourceBase: hcltypes.ResourceBase{Meta: hcltypes.Meta{Name: "test", Type: "nomad_cluster"}}}
 	n1.OpenInBrowser = true
-	nomadConfig, _ := utils.GetClusterConfig("nomad_cluster.test")
+	n1.APIPort = 4646
 
-	rm.engine.On("ApplyWithVariables", mock.Anything, mock.Anything, mock.Anything).Return(
-		[]config.Resource{d, i, c, d2, i2, c2, n1},
+	hclconfig := hclconfig.Config{}
+	hclconfig.Resources = []hcltypes.Resource{d, i, c, d2, i2, c2, n1}
+
+	testutils.RemoveOn(&rm.engine.Mock, "ApplyWithVariables")
+	rm.engine.On("ApplyWithVariables", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(
+		&hclconfig,
 		nil,
 	)
 
 	err := rf.Execute()
 	assert.NoError(t, err)
 
-	rm.http.AssertNumberOfCalls(t, "HealthCheckHTTP", 6)
-	rm.system.AssertNumberOfCalls(t, "OpenBrowser", 6)
+	rm.http.AssertNumberOfCalls(t, "HealthCheckHTTP", 4)
+	rm.system.AssertNumberOfCalls(t, "OpenBrowser", 4)
 
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://test.ingress.jumppad.dev:8080/", []int{200}, 30*time.Second)
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "https://test.container.jumppad.dev:8080", []int{200}, 30*time.Second)
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost", []int{200}, 30*time.Second)
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://localhost2", []int{200}, 30*time.Second)
-	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://test.docs.jumppad.dev:80", []int{200}, 30*time.Second)
-	rm.http.AssertCalled(t, "HealthCheckHTTP", fmt.Sprintf("http://server.test.nomad-cluster.jumppad.dev:%d/", nomadConfig.APIPort), []int{200}, 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://test.ingress.local.jmpd.in:8080/", "", map[string][]string{}, "", []int{200}, 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "https://test.container.jumppad.dev:8080", "", map[string][]string{}, "", []int{200}, 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://test.docs.local.jmpd.in:80", "", map[string][]string{}, "", []int{200}, 30*time.Second)
+	rm.http.AssertCalled(t, "HealthCheckHTTP", "http://server.test.nomad-cluster.local.jmpd.in:4646/", "", map[string][]string{}, "", []int{200}, 30*time.Second)
 }
 
 func TestRunDoesNotOpensBrowserWindowWhenCheckError(t *testing.T) {
@@ -388,7 +346,7 @@ func TestRunDoesNotOpensBrowserWindowWhenCheckError(t *testing.T) {
 	rf.SetArgs([]string{"/tmp"})
 
 	testutils.RemoveOn(&rm.http.Mock, "HealthCheckHTTP")
-	rm.http.On("HealthCheckHTTP", mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
+	rm.http.On("HealthCheckHTTP", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
 	err := rf.Execute()
 	assert.NoError(t, err)

@@ -61,7 +61,11 @@ type CharmLogger struct {
 
 func NewLogger(w io.Writer, level string) Logger {
 	l := log.New(w)
-	l.SetLevel(log.ParseLevel(level))
+	ll, err := log.ParseLevel(level)
+	if err != nil {
+		ll = log.InfoLevel
+	}
+	l.SetLevel(ll)
 
 	return &CharmLogger{l, w, level}
 }
@@ -109,7 +113,11 @@ func (l *CharmLogger) IsTrace() bool {
 
 func (l *CharmLogger) SetLevel(level string) {
 	l.level = level
-	l.internal.SetLevel(log.ParseLevel(level))
+	ll, err := log.ParseLevel(level)
+	if err != nil {
+		ll = log.InfoLevel
+	}
+	l.internal.SetLevel(ll)
 }
 
 func (l *CharmLogger) Level() string {
