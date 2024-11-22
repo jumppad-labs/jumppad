@@ -9,16 +9,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jumppad-labs/hclconfig/convert"
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	cmdClient "github.com/jumppad-labs/jumppad/pkg/clients/command"
 	cmdTypes "github.com/jumppad-labs/jumppad/pkg/clients/command/types"
 	contClient "github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	contTypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
+	"github.com/zclconf/go-cty/cty"
 )
 
 // checks Provider implements the sdk.Provider interface
@@ -63,6 +64,13 @@ func (p *Provider) Create(ctx context.Context) error {
 
 	outPath := fmt.Sprintf("%s/%s.out", utils.JumppadTemp(), p.config.Meta.ID)
 
+	if _, err := os.Stat(outPath); err != nil {
+		err := os.WriteFile(outPath, []byte{}, 0755)
+		if err != nil {
+			return fmt.Errorf("unable to create output file: %w", err)
+		}
+	}
+
 	// cleanup the local output file
 	defer os.Remove(outPath)
 
@@ -83,30 +91,10 @@ func (p *Provider) Create(ctx context.Context) error {
 		p.config.PID = pid
 	}
 
-	// parse any output from the script
-	if _, err := os.Stat(outPath); err != nil {
-		p.log.Debug("Output file not found", "ref", p.config.Meta.ID, "path", outPath)
-		return nil
-	}
-
-	d, err := os.ReadFile(outPath)
+	err := p.generateOutput()
 	if err != nil {
-		return fmt.Errorf("unable to read output file: %w", err)
+		return fmt.Errorf("unable to generate output: %w", err)
 	}
-
-	output := map[string]string{}
-
-	outs := strings.Split(string(d), "\n")
-	for _, v := range outs {
-		parts := strings.Split(v, "=")
-		if len(parts) != 2 {
-			continue
-		}
-
-		output[parts[0]] = parts[1]
-	}
-
-	p.config.Output = output
 
 	return nil
 }
@@ -145,6 +133,11 @@ func (p *Provider) Refresh(ctx context.Context) error {
 	}
 
 	p.log.Debug("Refresh Exec", "ref", p.config.Meta.Name)
+
+	err := p.generateOutput()
+	if err != nil {
+		return fmt.Errorf("unable to generate output: %w", err)
+	}
 
 	return nil
 }
@@ -226,9 +219,9 @@ func (p *Provider) createRemoteExecContainer() (string, error) {
 	// generate the ID for the new container based on the clock time and a string
 	fqdn := utils.FQDN(p.config.Meta.Name, p.config.Meta.Module, p.config.Meta.Type)
 
-	new := contTypes.Container{
+	new := types.Container{
 		Name:        fqdn,
-		Image:       &contTypes.Image{Name: p.config.Image.Name, Username: p.config.Image.Username, Password: p.config.Image.Password},
+		Image:       &types.Image{Name: p.config.Image.Name, Username: p.config.Image.Username, Password: p.config.Image.Password},
 		Environment: p.config.Environment,
 	}
 
@@ -330,4 +323,44 @@ func (p *Provider) createLocalExec(outputPath string) (int, error) {
 	}
 
 	return pid, nil
+}
+
+func (p *Provider) generateOutput() error {
+	outPath := fmt.Sprintf("%s/%s.out", utils.JumppadTemp(), p.config.Meta.ID)
+
+	// parse any output from the script
+	if _, err := os.Stat(outPath); err != nil {
+		p.log.Debug("Output file not found", "ref", p.config.Meta.ID, "path", outPath)
+		return nil
+	}
+
+	d, err := os.ReadFile(outPath)
+	if err != nil {
+		return fmt.Errorf("unable to read output file: %w", err)
+	}
+
+	output := map[string]string{}
+	outs := strings.Split(string(d), "\n")
+	for _, v := range outs {
+		parts := strings.Split(v, "=")
+		if len(parts) != 2 {
+			continue
+		}
+
+		output[parts[0]] = parts[1]
+	}
+
+	values := map[string]cty.Value{}
+	for k, v := range output {
+		value, err := convert.GoToCtyValue(v)
+		if err != nil {
+			return fmt.Errorf("unable to convert output value to cty: %w", err)
+		}
+
+		values[k] = value
+	}
+
+	p.config.Output = cty.ObjectVal(values)
+
+	return nil
 }
