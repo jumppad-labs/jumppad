@@ -105,7 +105,7 @@ func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
 		tasks:     mockContainer,
 	}
 
-	cmd := newRunCmd(mockEngine, mockContainer, mockGetter, mockHTTP, mockSystem, nil, mockConnector, logger.NewTestLogger(t))
+	cmd := newRunCmd(mockEngine, mockContainer, mockGetter, mockHTTP, mockSystem, mockConnector, logger.NewTestLogger(t))
 	cmd.SetOut(bytes.NewBuffer([]byte("")))
 
 	return cmd, rm

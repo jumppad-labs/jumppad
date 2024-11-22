@@ -51,7 +51,7 @@ resource "k8s_cluster" "k3s" {
   }
 
   copy_image {
-    name = "shipyardrun/connector:v0.1.0"
+    name = "ghcr.io/jumppad-labs/connector:v0.4.0"
   }
 }
 
@@ -355,7 +355,7 @@ Feature: Docmentation
 
 3 scenarios (3 passed)
 16 steps (16 passed)
-3m6.79622s
+3m6.79621s
 testing: warning: no tests to run
 PASS
 ```
