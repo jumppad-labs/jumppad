@@ -20,6 +20,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/jumppad-labs/jumppad/testutils"
 
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -35,6 +36,29 @@ func setupTestsWithState(t *testing.T, returnVals map[string]error, state string
 }
 
 func setupTestsBase(t *testing.T, returnVals map[string]error, state string) (*EngineImpl, *mocks.Providers) {
+	l := logger.NewTestLogger(t)
+
+	log.SetOutput(l.StandardWriter())
+
+	defaultRegistry := GetDefaultRegistry()
+	credentials := GetRegistryCredentials()
+
+	pm := mocks.NewProviders(returnVals)
+	pm.On("GetProvider", mock.Anything)
+
+	e := &EngineImpl{
+		log:                 l,
+		providers:           pm,
+		defaultRegistry:     defaultRegistry,
+		registryCredentials: credentials,
+	}
+
+	testutils.SetupState(t, state)
+
+	return e, pm
+}
+
+func setupTestsBaseWithConfig(t *testing.T, returnVals map[string]error, state string) (*EngineImpl, *mocks.Providers) {
 	l := logger.NewTestLogger(t)
 
 	log.SetOutput(l.StandardWriter())
@@ -82,11 +106,11 @@ func TestApplyWithSingleFile(t *testing.T) {
 	require.ElementsMatch(t,
 		[]string{
 			"default",
+			"version",
+			"port_range",
 			"onprem",
 			"default",
 			"consul_config",
-			"port_range",
-			"version",
 		},
 		[]string{
 			getMetaFromMock(mp, 0).Name,
@@ -512,6 +536,39 @@ func testAssertMethodCalled(t *testing.T, p *mocks.Providers, method string, n i
 	callString := strings.Join(callStrings, " ")
 
 	require.Equal(t, n, callCount, fmt.Sprintf("expected %d calls, actual calls %d: %s", n, callCount, callString))
+}
+
+// Test that the default registry is set when set in the config
+func TestDefaultRegistryWhenProvided(t *testing.T) {
+	// e, _ := setupTests(t, nil)
+}
+
+// Test that the default registry is set when not set in the config
+func TestDefaultRegistryFallbackWhenNotProvided(t *testing.T) {
+	viper.Set("default_registry", "")
+
+	e, _ := setupTests(t, nil)
+
+	require.Equal(t, "https://registry.jumppad.dev", e.defaultRegistry)
+}
+
+// Test that the credentials for the registry are set when provided
+func TestRegistryCredentialsWhenProvided(t *testing.T) {
+	viper.Set("default_registry", "https://my.registry.com")
+	viper.Set("credentials", []map[string]interface{}{
+		{
+			"my.registry.com": []map[string]interface{}{
+				{
+					"token": "mytoken",
+				},
+			},
+		},
+	})
+
+	e, _ := setupTests(t, nil)
+
+	require.Equal(t, "https://my.registry.com", e.defaultRegistry)
+	require.Equal(t, "mytoken", e.registryCredentials["my.registry.com"])
 }
 
 var failedState = `

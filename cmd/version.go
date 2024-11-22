@@ -1,11 +1,10 @@
 package cmd
 
 import (
-	gvm "github.com/shipyard-run/version-manager"
 	"github.com/spf13/cobra"
 )
 
-func newVersionCmd(vm gvm.Versions) *cobra.Command {
+func newVersionCmd() *cobra.Command {
 	var versionCmd = &cobra.Command{
 		Use:           "version",
 		Short:         "jumppad version manager commands",

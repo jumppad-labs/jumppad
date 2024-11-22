@@ -41,6 +41,11 @@ type BuildContainer struct {
 	Args       map[string]string `hcl:"args,optional" json:"args,omitempty"`             // Build args to pass  to the container
 }
 
+type Cache struct {
+	Name string `hcl:"name,label" json:"name"`
+	Path string `hcl:"path" json:"path"`
+}
+
 type Registry struct {
 }
 
