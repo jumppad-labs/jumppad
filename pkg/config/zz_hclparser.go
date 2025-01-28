@@ -1,8 +1,11 @@
 package config
 
 import (
+	"path"
+
 	"github.com/jumppad-labs/hclconfig"
 	"github.com/jumppad-labs/hclconfig/types"
+	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 
@@ -38,6 +41,7 @@ func NewParser(callback hclconfig.WalkCallback, variables map[string]string, var
 	cfg.VariableEnvPrefix = "JUMPPAD_VAR_"
 	cfg.Variables = variables
 	cfg.VariablesFiles = variablesFiles
+	cfg.ModuleCache = path.Join(utils.JumppadHome(), "modules")
 
 	p := hclconfig.NewParser(cfg)
 
@@ -53,6 +57,7 @@ func NewParser(callback hclconfig.WalkCallback, variables map[string]string, var
 	p.RegisterFunction("data", customHCLFuncDataFolder)
 	p.RegisterFunction("data_with_permissions", customHCLFuncDataFolderWithPermissions)
 	p.RegisterFunction("system", customHCLFuncSystem)
+	p.RegisterFunction("exists", customHCLFuncExists)
 
 	return p
 }

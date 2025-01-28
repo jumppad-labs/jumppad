@@ -72,7 +72,7 @@ func TestCreatesTerraformContainerWithTheCorrectValues(t *testing.T) {
 				ID: "Abc123",
 			},
 		},
-		Version: "1.16.2",
+		Version: "1.9.8",
 		Source:  "../../../../examples/terraform/workspace",
 	}
 
@@ -87,7 +87,7 @@ func TestCreatesTerraformContainerWithTheCorrectValues(t *testing.T) {
 	require.Equal(t, c.Environment["TF_PLUGIN_CACHE_DIR"], "/var/lib/terraform.d")
 
 	// check the correct image is used
-	require.Equal(t, c.Image.Name, "hashicorp/terraform:1.16.2")
+	require.Equal(t, c.Image.Name, "hashicorp/terraform:1.9.8")
 
 	// check the networks have been added
 	require.Equal(t, c.Networks[0].ID, "Abc123")

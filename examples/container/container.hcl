@@ -112,6 +112,11 @@ resource "container" "consul" {
     memory = 1024
   }
 
+  port {
+    local  = 8507
+    remote = 8507
+  }
+
   port_range {
     range       = "8500-8502"
     enable_host = true
@@ -145,6 +150,10 @@ resource "sidecar" "envoy" {
 
   image {
     name = "envoyproxy/envoy:v${variable.envoy_version}"
+  }
+
+  environment = {
+    PORT = "${resource.container.consul.port.0.local}"
   }
 
   command = ["tail", "-f", "/dev/null"]

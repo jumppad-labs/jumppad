@@ -55,7 +55,7 @@ func (h *HTTPImpl) HealthCheckHTTP(address, method string, headers map[string][]
 			return fmt.Errorf("timeout waiting for HTTP health check %s", address)
 		}
 
-		if method != "" {
+		if method == "" {
 			method = http.MethodGet
 		}
 
