@@ -17,10 +17,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/distribution/reference"
+	"github.com/distribution/reference"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	registrytypes "github.com/docker/docker/api/types/registry"
@@ -395,7 +396,7 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 		}
 	}
 
-	err = d.c.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
+	err = d.c.ContainerStart(context.Background(), cont.ID, container.StartOptions{})
 	if err != nil {
 		return "", err
 	}
@@ -435,7 +436,7 @@ func (d *DockerTasks) FindImagesInLocalRegistry(filter string) ([]string, error)
 	args := filters.NewArgs()
 	args.Add("reference", filter)
 
-	sum, err := d.c.ImageList(context.Background(), types.ImageListOptions{Filters: args})
+	sum, err := d.c.ImageList(context.Background(), image.ListOptions{Filters: args})
 	if err != nil {
 		return nil, xerrors.Errorf("unable to list images in local Docker cache: %w", err)
 	}
@@ -454,7 +455,7 @@ func (d *DockerTasks) FindImagesInLocalRegistry(filter string) ([]string, error)
 	args = filters.NewArgs()
 	args.Add("reference", in)
 
-	sum, err = d.c.ImageList(context.Background(), types.ImageListOptions{Filters: args})
+	sum, err = d.c.ImageList(context.Background(), image.ListOptions{Filters: args})
 	if err != nil {
 		return nil, xerrors.Errorf("unable to list images in local Docker cache: %w", err)
 	}
@@ -472,18 +473,18 @@ func (d *DockerTasks) FindImagesInLocalRegistry(filter string) ([]string, error)
 }
 
 // PullImage pulls a Docker image from a remote repo
-func (d *DockerTasks) PullImage(image dtypes.Image, force bool) error {
+func (d *DockerTasks) PullImage(img dtypes.Image, force bool) error {
 	// if image is local, do not try to pull jumppad.dev/localcache
-	if strings.HasPrefix(image.Name, utils.BuildImagePrefix) {
+	if strings.HasPrefix(img.Name, utils.BuildImagePrefix) {
 		return nil
 	}
 
-	in := makeImageCanonical(image.Name)
+	in := makeImageCanonical(img.Name)
 
 	// only pull if image is not in current registry so check to see if the image is present
 	// if force then skip this check
 	if !force && !d.force {
-		id, err := d.FindImageInLocalRegistry(image)
+		id, err := d.FindImageInLocalRegistry(img)
 		if err != nil {
 			return err
 		}
@@ -494,12 +495,12 @@ func (d *DockerTasks) PullImage(image dtypes.Image, force bool) error {
 		}
 	}
 
-	ipo := types.ImagePullOptions{}
+	ipo := image.PullOptions{}
 
 	// if the username and password is not null make an authenticated
 	// image pull
-	if image.Username != "" && image.Password != "" {
-		ipo.RegistryAuth = createRegistryAuth(image.Username, image.Password)
+	if img.Username != "" && img.Password != "" {
+		ipo.RegistryAuth = createRegistryAuth(img.Username, img.Password)
 	}
 
 	d.l.Debug("Pulling image", "image", in)
@@ -521,15 +522,15 @@ func (d *DockerTasks) PullImage(image dtypes.Image, force bool) error {
 	return nil
 }
 
-func (d *DockerTasks) PushImage(image dtypes.Image) error {
-	ipo := types.ImagePushOptions{}
+func (d *DockerTasks) PushImage(img dtypes.Image) error {
+	ipo := image.PushOptions{}
 	// if the username and password is not null make an authenticated
 	// image pull
-	if image.Username != "" && image.Password != "" {
-		ipo.RegistryAuth = createRegistryAuth(image.Username, image.Password)
+	if img.Username != "" && img.Password != "" {
+		ipo.RegistryAuth = createRegistryAuth(img.Username, img.Password)
 	}
 
-	ref, err := reference.ParseNormalizedNamed(image.Name)
+	ref, err := reference.ParseNormalizedNamed(img.Name)
 	if err != nil {
 		return xerrors.Errorf("error parsing image name: %w", err)
 	}
@@ -558,8 +559,8 @@ func (d *DockerTasks) PushImage(image dtypes.Image) error {
 	return nil
 }
 
-func RegistryAuthenticationPrivilegedFunc(server, username, password string) types.RequestPrivilegeFunc {
-	return func() (string, error) {
+func RegistryAuthenticationPrivilegedFunc(server, username, password string) registrytypes.RequestAuthConfig {
+	return func(context.Context) (string, error) {
 		ac := registrytypes.AuthConfig{}
 		ac.ServerAddress = server
 
@@ -573,7 +574,7 @@ func (d *DockerTasks) FindContainerIDs(fqdn string) ([]string, error) {
 	// By default Docker will wildcard searches, use regex to return the absolute
 	args.Add("name", fmt.Sprintf("^%s$", fqdn))
 
-	opts := types.ContainerListOptions{Filters: args, All: true}
+	opts := container.ListOptions{Filters: args, All: true}
 
 	cl, err := d.c.ContainerList(context.Background(), opts)
 	if err != nil || cl == nil {
@@ -603,7 +604,7 @@ func (d *DockerTasks) RemoveContainer(id string, force bool) error {
 		if err == nil {
 			d.l.Debug("Container stopped gracefully, removing", "container", id)
 
-			err = d.c.ContainerRemove(context.Background(), id, types.ContainerRemoveOptions{Force: false, RemoveVolumes: true})
+			err = d.c.ContainerRemove(context.Background(), id, container.RemoveOptions{Force: false, RemoveVolumes: true})
 			if err == nil {
 				return nil
 			}
@@ -614,11 +615,11 @@ func (d *DockerTasks) RemoveContainer(id string, force bool) error {
 
 	// unable to shutdown graceful try force
 	d.l.Debug("Forcefully remove", "container", id)
-	return d.c.ContainerRemove(context.Background(), id, types.ContainerRemoveOptions{Force: true, RemoveVolumes: true})
+	return d.c.ContainerRemove(context.Background(), id, container.RemoveOptions{Force: true, RemoveVolumes: true})
 }
 
 func (d *DockerTasks) RemoveImage(id string) error {
-	_, err := d.c.ImageRemove(context.Background(), id, types.ImageRemoveOptions{Force: true})
+	_, err := d.c.ImageRemove(context.Background(), id, image.RemoveOptions{Force: true})
 
 	return err
 }
@@ -642,7 +643,7 @@ func (d *DockerTasks) BuildContainer(config *dtypes.Build, force bool) (string, 
 
 	// check if the image already exists, if so do not rebuild unless force
 	if !force && !d.force {
-		sum, err := d.c.ImageList(context.Background(), types.ImageListOptions{Filters: args})
+		sum, err := d.c.ImageList(context.Background(), image.ListOptions{Filters: args})
 		if err != nil {
 			return "", xerrors.Errorf("unable to list images in local Docker cache: %w", err)
 		}
@@ -662,7 +663,7 @@ func (d *DockerTasks) BuildContainer(config *dtypes.Build, force bool) (string, 
 
 	// configure the build args
 	buildArgs := map[string]*string{}
-	for k, _ := range config.Args {
+	for k := range config.Args {
 		v := config.Args[k]
 		buildArgs[k] = &v
 	}
@@ -743,7 +744,7 @@ func (d *DockerTasks) RemoveVolume(name string) error {
 
 // ContainerLogs streams the logs for the container to the returned io.ReadCloser
 func (d *DockerTasks) ContainerLogs(id string, stdOut, stdErr bool) (io.ReadCloser, error) {
-	return d.c.ContainerLogs(context.Background(), id, types.ContainerLogsOptions{ShowStderr: stdErr, ShowStdout: stdOut})
+	return d.c.ContainerLogs(context.Background(), id, container.LogsOptions{ShowStderr: stdErr, ShowStdout: stdOut})
 }
 
 // CopyFromContainer copies a file from a container
@@ -827,7 +828,7 @@ func (d *DockerTasks) CopyLocalDockerImagesToVolume(images []string, volume stri
 		args := filters.NewArgs()
 		args.Add("reference", i)
 
-		sum, err := d.c.ImageList(context.Background(), types.ImageListOptions{Filters: args})
+		sum, err := d.c.ImageList(context.Background(), image.ListOptions{Filters: args})
 		if err != nil {
 			return nil, xerrors.Errorf("unable to list images in local Docker cache: %w", err)
 		}
@@ -843,7 +844,7 @@ func (d *DockerTasks) CopyLocalDockerImagesToVolume(images []string, volume stri
 		args = filters.NewArgs()
 		args.Add("reference", in)
 
-		sum, err = d.c.ImageList(context.Background(), types.ImageListOptions{Filters: args})
+		sum, err = d.c.ImageList(context.Background(), image.ListOptions{Filters: args})
 		if err != nil {
 			return nil, xerrors.Errorf("unable to list images in local Docker cache: %w", err)
 		}
@@ -1053,7 +1054,7 @@ func (d *DockerTasks) CopyFileToContainer(containerID, filename, path string) er
 	// reset the file seek so we can copy to the container
 	tmpTarFile.Seek(0, 0)
 
-	err = d.c.CopyToContainer(context.Background(), containerID, path, tmpTarFile, types.CopyToContainerOptions{})
+	err = d.c.CopyToContainer(context.Background(), containerID, path, tmpTarFile, container.CopyToContainerOptions{})
 	if err != nil {
 		return xerrors.Errorf("unable to copy file to container: %w", err)
 	}
@@ -1071,7 +1072,7 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 		user = fmt.Sprintf("%s:%s", user, group)
 	}
 
-	execid, err := d.c.ContainerExecCreate(context.Background(), id, types.ExecConfig{
+	execid, err := d.c.ContainerExecCreate(context.Background(), id, container.ExecOptions{
 		Cmd:          command,
 		AttachStdout: true,
 		AttachStderr: true,
@@ -1085,7 +1086,7 @@ func (d *DockerTasks) ExecuteCommand(id string, command []string, env []string, 
 	}
 
 	// get logs from an attach
-	stream, err := d.c.ContainerExecAttach(context.Background(), execid.ID, types.ExecStartCheck{})
+	stream, err := d.c.ContainerExecAttach(context.Background(), execid.ID, container.ExecAttachOptions{})
 	if err != nil {
 		return defaultExitCode, xerrors.Errorf("unable to attach logging to exec process: %w", err)
 	}
@@ -1170,7 +1171,7 @@ func (d *DockerTasks) ExecuteScript(id string, contents string, env []string, wo
 // CreateShell creates an interactive shell inside a container
 // https://github.com/docker/cli/blob/ae1618713f83e7da07317d579d0675f578de22fa/cli/command/container/exec.go
 func (d *DockerTasks) CreateShell(id string, command []string, stdin io.ReadCloser, stdout io.Writer, stderr io.Writer) error {
-	execid, err := d.c.ContainerExecCreate(context.Background(), id, types.ExecConfig{
+	execid, err := d.c.ContainerExecCreate(context.Background(), id, container.ExecOptions{
 		Cmd:          command,
 		WorkingDir:   "/",
 		AttachStdin:  true,
@@ -1188,7 +1189,7 @@ func (d *DockerTasks) CreateShell(id string, command []string, stdin io.ReadClos
 	// 	return xerrors.Errorf("unable to start exec process: %w", err)
 	// }
 
-	resp, err := d.c.ContainerExecAttach(context.Background(), execid.ID, types.ExecStartCheck{Tty: true})
+	resp, err := d.c.ContainerExecAttach(context.Background(), execid.ID, container.ExecAttachOptions{Tty: true})
 	if err != nil {
 		return err
 	}
@@ -1275,7 +1276,7 @@ func (d *DockerTasks) resizeTTY(id string, out *streams.Out) error {
 		return nil
 	}
 
-	options := types.ResizeOptions{
+	options := container.ResizeOptions{
 		Height: uint(h),
 		Width:  uint(w),
 	}
@@ -1309,12 +1310,12 @@ func (d *DockerTasks) AttachNetwork(net, containerID string, aliases []string, i
 
 // ListNetworks lists the networks a container is attached to
 func (d *DockerTasks) ListNetworks(id string) []dtypes.NetworkAttachment {
-	nets, _ := d.c.NetworkList(context.Background(), types.NetworkListOptions{})
+	nets, _ := d.c.NetworkList(context.Background(), network.ListOptions{})
 
 	attachments := []dtypes.NetworkAttachment{}
 	for _, n := range nets {
 		// get the network destails
-		n, err := d.c.NetworkInspect(context.Background(), n.ID, types.NetworkInspectOptions{})
+		n, err := d.c.NetworkInspect(context.Background(), n.ID, network.InspectOptions{})
 
 		if err == nil {
 			// loop the network and find an address
@@ -1351,7 +1352,7 @@ func (d *DockerTasks) DetachNetwork(network, containerID string) error {
 
 // FindNetwork returns a network using the unique resource id
 func (d *DockerTasks) FindNetwork(id string) (dtypes.NetworkAttachment, error) {
-	nets, err := d.c.NetworkList(context.Background(), types.NetworkListOptions{})
+	nets, err := d.c.NetworkList(context.Background(), network.ListOptions{})
 	if err != nil {
 		return dtypes.NetworkAttachment{}, err
 	}

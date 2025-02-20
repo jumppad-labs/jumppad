@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/system"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/clients/tar"
@@ -16,7 +18,7 @@ import (
 func TestFindContainerIDsReturnsID(t *testing.T) {
 	md := &mocks.Docker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
-	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	md.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
 	md.On("ContainerList", mock.Anything, mock.Anything).Return(
 		[]types.Container{
 			types.Container{ID: "abc"},
@@ -34,7 +36,7 @@ func TestFindContainerIDsReturnsID(t *testing.T) {
 	md.AssertNumberOfCalls(t, "ContainerList", 1)
 
 	// ensure that the FQDN was passed as an argument
-	args := testutils.GetCalls(&md.Mock, "ContainerList")[0].Arguments[1].(types.ContainerListOptions)
+	args := testutils.GetCalls(&md.Mock, "ContainerList")[0].Arguments[1].(container.ListOptions)
 	assert.Equal(t, "^test.cloud.jumppad.dev$", args.Filters.Get("name")[0])
 
 	// ensure that the id has been returned
@@ -46,7 +48,7 @@ func TestFindContainerIDsReturnsID(t *testing.T) {
 func TestFindContainerIDsReturnsErrorWhenDockerFail(t *testing.T) {
 	md := &mocks.Docker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
-	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	md.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
 	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
 	dt, _ := NewDockerTasks(md, nil, &tar.TarGz{}, logger.NewTestLogger(t))
@@ -58,7 +60,7 @@ func TestFindContainerIDsReturnsErrorWhenDockerFail(t *testing.T) {
 func TestFindContainerIDsReturnsNilWhenNoIDs(t *testing.T) {
 	md := &mocks.Docker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
-	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	md.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
 	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, nil)
 
 	dt, _ := NewDockerTasks(md, nil, &tar.TarGz{}, logger.NewTestLogger(t))
@@ -71,7 +73,7 @@ func TestFindContainerIDsReturnsNilWhenNoIDs(t *testing.T) {
 func TestFindContainerIDsReturnsNilWhenEmpty(t *testing.T) {
 	md := &mocks.Docker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
-	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	md.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
 	md.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{}, nil)
 
 	dt, _ := NewDockerTasks(md, nil, &tar.TarGz{}, logger.NewTestLogger(t))

@@ -4,13 +4,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/docker/docker/pkg/ioutils"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 func SetupState(t *testing.T, state string) {
 	// set the home folder to a tmpFolder for the tests
-	dir, err := ioutils.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		panic(err)
 	}

@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/system"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
 	imocks "github.com/jumppad-labs/jumppad/pkg/clients/images/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
@@ -25,7 +27,7 @@ func testExecCommandSetup(t *testing.T) (*DockerTasks, *mocks.Docker, *imocks.Im
 
 	mk := &mocks.Docker{}
 	mk.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
-	mk.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	mk.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
 	mk.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(types.IDResponse{ID: "abc"}, nil)
 	mk.On("ContainerExecAttach", mock.Anything, mock.Anything, mock.Anything).Return(
 		types.HijackedResponse{
@@ -37,7 +39,7 @@ func testExecCommandSetup(t *testing.T) (*DockerTasks, *mocks.Docker, *imocks.Im
 		nil,
 	)
 	mk.On("ContainerExecStart", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	mk.On("ContainerExecInspect", mock.Anything, mock.Anything, mock.Anything).Return(types.ContainerExecInspect{Running: false, ExitCode: 0}, nil)
+	mk.On("ContainerExecInspect", mock.Anything, mock.Anything, mock.Anything).Return(container.ExecInspect{Running: false, ExitCode: 0}, nil)
 
 	il := &imocks.ImageLog{}
 
@@ -59,7 +61,7 @@ func TestExecuteCommandCreatesExec(t *testing.T) {
 	assert.NoError(t, err)
 
 	mk.AssertCalled(t, "ContainerExecCreate", mock.Anything, "testcontainer", mock.Anything)
-	params := testutils.GetCalls(&mk.Mock, "ContainerExecCreate")[0].Arguments[2].(types.ExecConfig)
+	params := testutils.GetCalls(&mk.Mock, "ContainerExecCreate")[0].Arguments[2].(container.ExecOptions)
 
 	// test the command
 	assert.Equal(t, params.Cmd[0], command[0])
@@ -159,7 +161,7 @@ func TestExecuteCommandInspectsExecAndReturnsErrorOnFail(t *testing.T) {
 
 	md, mk, _ := testExecCommandSetup(t)
 	testutils.RemoveOn(&mk.Mock, "ContainerExecInspect")
-	mk.On("ContainerExecInspect", mock.Anything, mock.Anything, mock.Anything).Return(types.ContainerExecInspect{Running: false, ExitCode: 1}, nil)
+	mk.On("ContainerExecInspect", mock.Anything, mock.Anything, mock.Anything).Return(container.ExecInspect{Running: false, ExitCode: 1}, nil)
 	writer := bytes.NewBufferString("")
 
 	command := []string{"ls", "-las"}

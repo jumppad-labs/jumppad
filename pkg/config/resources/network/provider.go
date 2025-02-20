@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
 	htypes "github.com/jumppad-labs/hclconfig/types"
@@ -168,10 +167,10 @@ func (p *Provider) Changed() (bool, error) {
 }
 
 func (p *Provider) createWithDriver(driver string) error {
-	opts := types.NetworkCreate{
-		CheckDuplicate: true,
-		Driver:         driver,
-		EnableIPv6:     p.config.EnableIPv6,
+	opts := network.CreateOptions{
+		// CheckDuplicate: true,
+		Driver:     driver,
+		EnableIPv6: &p.config.EnableIPv6,
 		IPAM: &network.IPAM{
 			Driver: "default",
 			Config: []network.IPAMConfig{
@@ -192,10 +191,10 @@ func (p *Provider) createWithDriver(driver string) error {
 	return err
 }
 
-func (p *Provider) getNetworks(name string) ([]types.NetworkResource, error) {
+func (p *Provider) getNetworks(name string) ([]network.Summary, error) {
 	args := filters.NewArgs()
 	args.Add("name", name)
-	return p.client.NetworkList(context.Background(), types.NetworkListOptions{Filters: args})
+	return p.client.NetworkList(context.Background(), network.ListOptions{Filters: args})
 }
 
 func (p *Provider) getHostIPs() ([]net.IP, error) {

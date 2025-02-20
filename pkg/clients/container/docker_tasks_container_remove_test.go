@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/system"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
 	imocks "github.com/jumppad-labs/jumppad/pkg/clients/images/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
@@ -15,7 +17,7 @@ import (
 func setupRemoveTests(t *testing.T) (*DockerTasks, *mocks.Docker) {
 	md := &mocks.Docker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
-	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	md.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
 
 	mic := &imocks.ImageLog{}
 	dt, _ := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
@@ -25,7 +27,7 @@ func setupRemoveTests(t *testing.T) (*DockerTasks, *mocks.Docker) {
 
 func TestContainerRemoveCallsRemoveGently(t *testing.T) {
 	dt, md := setupRemoveTests(t)
-	md.On("ContainerRemove", mock.Anything, "test", types.ContainerRemoveOptions{Force: false, RemoveVolumes: true}).Return(nil)
+	md.On("ContainerRemove", mock.Anything, "test", container.RemoveOptions{Force: false, RemoveVolumes: true}).Return(nil)
 	md.On("ContainerStop", mock.Anything, "test", mock.Anything).Return(nil)
 
 	dt.RemoveContainer("test", false)
@@ -37,7 +39,7 @@ func TestContainerRemoveCallsRemoveGently(t *testing.T) {
 func TestContainerRemoveCallsRemoveGentlyOnStopFailForces(t *testing.T) {
 	dt, md := setupRemoveTests(t)
 	md.On("ContainerStop", mock.Anything, "test", mock.Anything).Return(fmt.Errorf("boom"))
-	md.On("ContainerRemove", mock.Anything, "test", types.ContainerRemoveOptions{Force: true, RemoveVolumes: true}).Return(nil)
+	md.On("ContainerRemove", mock.Anything, "test", container.RemoveOptions{Force: true, RemoveVolumes: true}).Return(nil)
 
 	dt.RemoveContainer("test", false)
 
@@ -48,8 +50,8 @@ func TestContainerRemoveCallsRemoveGentlyOnStopFailForces(t *testing.T) {
 func TestContainerRemoveCallsRemoveGentlyOnRemoveFailForces(t *testing.T) {
 	dt, md := setupRemoveTests(t)
 	md.On("ContainerStop", mock.Anything, "test", mock.Anything).Return(nil)
-	md.On("ContainerRemove", mock.Anything, "test", types.ContainerRemoveOptions{Force: false, RemoveVolumes: true}).Return(fmt.Errorf("boom"))
-	md.On("ContainerRemove", mock.Anything, "test", types.ContainerRemoveOptions{Force: true, RemoveVolumes: true}).Return(nil)
+	md.On("ContainerRemove", mock.Anything, "test", container.RemoveOptions{Force: false, RemoveVolumes: true}).Return(fmt.Errorf("boom"))
+	md.On("ContainerRemove", mock.Anything, "test", container.RemoveOptions{Force: true, RemoveVolumes: true}).Return(nil)
 
 	dt.RemoveContainer("test", false)
 
@@ -59,11 +61,11 @@ func TestContainerRemoveCallsRemoveGentlyOnRemoveFailForces(t *testing.T) {
 
 func TestContainerRemoveFailsCallsRemoveForcefully(t *testing.T) {
 	dt, md := setupRemoveTests(t)
-	md.On("ContainerRemove", mock.Anything, "test", types.ContainerRemoveOptions{Force: false, RemoveVolumes: true}).Return(nil)
-	md.On("ContainerRemove", mock.Anything, "test", types.ContainerRemoveOptions{Force: true, RemoveVolumes: true}).Return(nil)
+	md.On("ContainerRemove", mock.Anything, "test", container.RemoveOptions{Force: false, RemoveVolumes: true}).Return(nil)
+	md.On("ContainerRemove", mock.Anything, "test", container.RemoveOptions{Force: true, RemoveVolumes: true}).Return(nil)
 
 	dt.RemoveContainer("test", true)
-	md.AssertCalled(t, "ContainerRemove", mock.Anything, "test", types.ContainerRemoveOptions{Force: true, RemoveVolumes: true})
+	md.AssertCalled(t, "ContainerRemove", mock.Anything, "test", container.RemoveOptions{Force: true, RemoveVolumes: true})
 
 	md.AssertNumberOfCalls(t, "ContainerRemove", 1)
 }

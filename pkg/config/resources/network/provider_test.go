@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	dtypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/network"
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
@@ -15,7 +14,7 @@ import (
 	assert "github.com/stretchr/testify/require"
 )
 
-var bridgeNetwork = dtypes.NetworkResource{
+var bridgeNetwork = network.Summary{
 	ID:   "bridge",
 	Name: "bridge",
 	IPAM: network.IPAM{
@@ -25,8 +24,8 @@ var bridgeNetwork = dtypes.NetworkResource{
 
 func setupNetworkTests(t *testing.T, c *Network) (*mocks.Docker, *Provider) {
 	md := &mocks.Docker{}
-	md.On("NetworkCreate", mock.Anything, mock.Anything, mock.Anything).Return(dtypes.NetworkCreateResponse{}, nil)
-	md.On("NetworkList", mock.Anything, mock.Anything).Return([]dtypes.NetworkResource{bridgeNetwork}, nil)
+	md.On("NetworkCreate", mock.Anything, mock.Anything, mock.Anything).Return(network.CreateResponse{}, nil)
+	md.On("NetworkList", mock.Anything, mock.Anything).Return([]network.Summary{bridgeNetwork}, nil)
 
 	return md, &Provider{
 		config: c,
@@ -44,7 +43,7 @@ func TestLookupReturnsID(t *testing.T) {
 
 	md, p := setupNetworkTests(t, c)
 	testutils.RemoveOn(&md.Mock, "NetworkList")
-	md.On("NetworkList", mock.Anything, mock.Anything).Return([]dtypes.NetworkResource{
+	md.On("NetworkList", mock.Anything, mock.Anything).Return([]network.Summary{
 		{
 			ID: "testnet",
 			IPAM: network.IPAM{
@@ -88,7 +87,7 @@ func TestNetworkCreatesCorrectly(t *testing.T) {
 
 	params := md.Calls[1].Arguments
 	name := params[1].(string)
-	nco := params[2].(dtypes.NetworkCreate)
+	nco := params[2].(network.CreateOptions)
 
 	assert.Equal(t, c.Meta.Name, name)
 	assert.True(t, nco.Attachable)
@@ -107,14 +106,14 @@ func TestNetworkCreatesNatWhenNoBridge(t *testing.T) {
 	testutils.RemoveOn(&md.Mock, "NetworkList")
 	testutils.RemoveOn(&md.Mock, "NetworkCreate")
 	md.On("NetworkList", mock.Anything, mock.Anything).Return(nil, nil)
-	md.On("NetworkCreate", mock.Anything, mock.Anything, mock.Anything).Once().Return(dtypes.NetworkCreateResponse{}, fmt.Errorf("boom"))
-	md.On("NetworkCreate", mock.Anything, mock.Anything, mock.Anything).Once().Return(dtypes.NetworkCreateResponse{}, nil)
+	md.On("NetworkCreate", mock.Anything, mock.Anything, mock.Anything).Once().Return(network.CreateResponse{}, fmt.Errorf("boom"))
+	md.On("NetworkCreate", mock.Anything, mock.Anything, mock.Anything).Once().Return(network.CreateResponse{}, nil)
 
 	p.Create(context.Background())
 
 	md.AssertNumberOfCalls(t, "NetworkCreate", 2)
 	params := md.Calls[2].Arguments
-	nco := params[2].(dtypes.NetworkCreate)
+	nco := params[2].(network.CreateOptions)
 
 	assert.Equal(t, "nat", nco.Driver)
 }
@@ -127,7 +126,7 @@ func TestNetworkDoesNOTCreateWhenExists(t *testing.T) {
 
 	md, p := setupNetworkTests(t, c)
 	testutils.RemoveOn(&md.Mock, "NetworkList")
-	md.On("NetworkList", mock.Anything, mock.Anything).Return([]dtypes.NetworkResource{
+	md.On("NetworkList", mock.Anything, mock.Anything).Return([]network.Summary{
 		{
 			ID: "testnet",
 			IPAM: network.IPAM{
@@ -149,7 +148,7 @@ func TestCreateWithCorrectNameAndDifferentSubnetReturnsError(t *testing.T) {
 
 	md, p := setupNetworkTests(t, c)
 	testutils.RemoveOn(&md.Mock, "NetworkList")
-	md.On("NetworkList", mock.Anything, mock.Anything).Return([]dtypes.NetworkResource{
+	md.On("NetworkList", mock.Anything, mock.Anything).Return([]network.Summary{
 		{
 			ID: "testnet",
 			IPAM: network.IPAM{
@@ -170,7 +169,7 @@ func TestCreateWithOverlappingSubnetReturnsError(t *testing.T) {
 
 	md, p := setupNetworkTests(t, c)
 	testutils.RemoveOn(&md.Mock, "NetworkList")
-	md.On("NetworkList", mock.Anything, mock.Anything).Return([]dtypes.NetworkResource{
+	md.On("NetworkList", mock.Anything, mock.Anything).Return([]network.Summary{
 		{
 			ID: "abc",
 			IPAM: network.IPAM{
