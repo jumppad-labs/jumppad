@@ -12,6 +12,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/go-connections/nat"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
@@ -110,16 +111,16 @@ func setupContainerMocks() (*mocks.Docker, *imocks.ImageLog) {
 	md.On("NetworkConnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("NetworkDisconnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("NetworkList", mock.Anything, mock.Anything).Return(
-		[]types.NetworkResource{
-			types.NetworkResource{ID: "abc", Labels: map[string]string{"id": "network.testnet"}, IPAM: network.IPAM{Config: []network.IPAMConfig{{Subnet: "10.0.0.0/24"}}}},
-			types.NetworkResource{ID: "123", Labels: map[string]string{"id": "network.wan"}, IPAM: network.IPAM{Config: []network.IPAMConfig{{Subnet: "10.2.0.0/24"}}}},
+		[]network.Summary{
+			network.Summary{ID: "abc", Labels: map[string]string{"id": "network.testnet"}, IPAM: network.IPAM{Config: []network.IPAMConfig{{Subnet: "10.0.0.0/24"}}}},
+			network.Summary{ID: "123", Labels: map[string]string{"id": "network.wan"}, IPAM: network.IPAM{Config: []network.IPAMConfig{{Subnet: "10.2.0.0/24"}}}},
 		}, nil)
 
 	md.On("VolumeList", mock.Anything, mock.Anything).Return(volume.ListResponse{}, nil)
 	md.On("VolumeCreate", mock.Anything, mock.Anything).Return(volume.Volume{Name: "test_volume"}, nil)
 	md.On("VolumeRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	md.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
 
 	mic := &imocks.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
@@ -520,7 +521,7 @@ func TestContainerConfiguresRetryWhenCountGreater0(t *testing.T) {
 	assert.NotEmpty(t, hc.Resources)
 
 	assert.Equal(t, hc.RestartPolicy.MaximumRetryCount, 10)
-	assert.Equal(t, hc.RestartPolicy.Name, "on-failure")
+	assert.Equal(t, hc.RestartPolicy.Name, container.RestartPolicyMode("on-failure"))
 }
 
 func TestContainerConfiguresRetryWhenCountMinusOne(t *testing.T) {
@@ -535,7 +536,7 @@ func TestContainerConfiguresRetryWhenCountMinusOne(t *testing.T) {
 	assert.NotEmpty(t, hc.Resources)
 
 	assert.Equal(t, hc.RestartPolicy.MaximumRetryCount, 0)
-	assert.Equal(t, hc.RestartPolicy.Name, "always")
+	assert.Equal(t, hc.RestartPolicy.Name, container.RestartPolicyMode("always"))
 }
 
 func TestContainerNotConfiguresRetryWhen0(t *testing.T) {

@@ -1,6 +1,7 @@
 package http
 
 import (
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -61,7 +62,13 @@ func TestHTTPHealthErrorsOnClientError(t *testing.T) {
 	_, reqs, cleanup := testSetupHTTPBasicServer(http.StatusBadRequest, "")
 	defer cleanup()
 
-	c := NewHTTP(1*time.Millisecond, logger.NewTestLogger(t))
+	c := NewHTTP(1*time.Millisecond, logger.NewTestLogger(t), WithTransport(&http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout:   10 * time.Millisecond,
+			KeepAlive: 10 * time.Millisecond,
+		}).DialContext,
+		TLSHandshakeTimeout: 10 * time.Millisecond,
+	}))
 
 	err := c.HealthCheckHTTP("http://127.0.0.2:19091", "", nil, "", []int{200}, 10*time.Millisecond)
 	assert.Error(t, err)

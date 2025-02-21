@@ -13,6 +13,8 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
 	imocks "github.com/jumppad-labs/jumppad/pkg/clients/images/mocks"
@@ -30,7 +32,7 @@ var testCopyLocalVolume = "images"
 func testSetupCopyLocal(t *testing.T) (*DockerTasks, *mocks.Docker) {
 	mk := &mocks.Docker{}
 	mk.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
-	mk.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	mk.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
 	mk.On("ContainerInspect", mock.Anything, mock.Anything).Return(
 		types.ContainerJSON{
 			ContainerJSONBase: &types.ContainerJSONBase{State: &types.ContainerState{Running: true}},
@@ -59,7 +61,7 @@ func testSetupCopyLocal(t *testing.T) (*DockerTasks, *mocks.Docker) {
 	mk.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	// always return a local image
-	mk.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return([]types.ImageSummary{types.ImageSummary{}}, nil)
+	mk.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return([]image.Summary{image.Summary{}}, nil)
 
 	mk.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).
 		Return(ioutil.NopCloser(strings.NewReader("hello world")), nil)
@@ -80,7 +82,7 @@ func testSetupCopyLocal(t *testing.T) (*DockerTasks, *mocks.Docker) {
 	mk.On("ContainerExecStart", mock.Anything, "abc", mock.Anything).Return(nil)
 
 	mk.On("ContainerExecInspect", mock.Anything, "abc", mock.Anything).
-		Return(types.ContainerExecInspect{Running: false, ExitCode: 0}, nil)
+		Return(container.ExecInspect{Running: false, ExitCode: 0}, nil)
 
 	mk.On("VolumeList", mock.Anything, mock.Anything).
 		Return(volume.ListResponse{Volumes: []*volume.Volume{&volume.Volume{}}})
@@ -103,7 +105,7 @@ func TestCopyToVolumeDoesNothingWhenCached(t *testing.T) {
 	_, err := dt.CopyLocalDockerImagesToVolume(testCopyLocalImages, testCopyLocalVolume, false)
 	assert.NoError(t, err)
 
-	args := types.ExecConfig{
+	args := container.ExecOptions{
 		Cmd: []string{
 			"find",
 			"/cache/images/" +
@@ -242,7 +244,7 @@ func TestCopyToVolumeCreatesDestinationDirectory(t *testing.T) {
 
 	mk.AssertCalled(t, "ContainerExecCreate", mock.Anything, "myid", mock.Anything)
 
-	params := testutils.GetCalls(&mk.Mock, "ContainerExecCreate")[0].Arguments[2].(types.ExecConfig)
+	params := testutils.GetCalls(&mk.Mock, "ContainerExecCreate")[0].Arguments[2].(container.ExecOptions)
 	assert.Equal(t, []string{"mkdir", "-p", "/cache/images"}, params.Cmd)
 }
 

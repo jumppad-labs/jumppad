@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/api/types/system"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
 	dtypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
@@ -23,13 +25,13 @@ func testBuildSetup(t *testing.T) (*mocks.Docker, *DockerTasks) {
 
 	mk := &mocks.Docker{}
 	mk.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
-	mk.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return([]types.ImageSummary{{ID: "abc"}}, nil)
+	mk.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return([]image.Summary{{ID: "abc"}}, nil)
 	mk.On("ImageBuild", mock.Anything, mock.Anything, mock.Anything).Return(
 		types.ImageBuildResponse{
 			Body: ioutil.NopCloser(strings.NewReader("")),
 		}, nil)
 
-	mk.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	mk.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
 
 	dt, _ := NewDockerTasks(mk, nil, &tar.TarGz{}, logger.NewTestLogger(t))
 

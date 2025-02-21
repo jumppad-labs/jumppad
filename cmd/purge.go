@@ -6,8 +6,8 @@ import (
 	"os"
 	"path"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
+	dimage "github.com/docker/docker/api/types/image"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/images"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
@@ -40,7 +40,7 @@ func newPurgeCmdFunc(dt container.Docker, il images.ImageLog, l logger.Logger) f
 		for _, i := range images {
 			l.Info("Removing image", "image", i)
 
-			_, err := dt.ImageRemove(context.Background(), i, types.ImageRemoveOptions{Force: true, PruneChildren: true})
+			_, err := dt.ImageRemove(context.Background(), i, dimage.RemoveOptions{Force: true, PruneChildren: true})
 			if err != nil {
 				l.Error("Unable to delete", "image", i, "error", err)
 			}
@@ -52,7 +52,7 @@ func newPurgeCmdFunc(dt container.Docker, il images.ImageLog, l logger.Logger) f
 		filter.Add("reference", "jumppad.dev/localcache/*")
 
 		// check if the image already exists, if so do not rebuild unless force
-		sum, err := dt.ImageList(context.Background(), types.ImageListOptions{Filters: filter})
+		sum, err := dt.ImageList(context.Background(), dimage.ListOptions{Filters: filter})
 		if err != nil {
 			l.Error("Unable to check image cache", "error", err)
 			bHasError = true
@@ -61,7 +61,7 @@ func newPurgeCmdFunc(dt container.Docker, il images.ImageLog, l logger.Logger) f
 		for _, i := range sum {
 			l.Info("Removing image", "image", i.ID)
 
-			_, err := dt.ImageRemove(context.Background(), i.ID, types.ImageRemoveOptions{Force: true, PruneChildren: true})
+			_, err := dt.ImageRemove(context.Background(), i.ID, dimage.RemoveOptions{Force: true, PruneChildren: true})
 			if err != nil {
 				l.Error("Unable to delete", "image", i.ID, "error", err)
 				bHasError = true

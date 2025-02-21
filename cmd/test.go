@@ -23,8 +23,9 @@ import (
 
 	"github.com/cucumber/godog"
 	"github.com/cucumber/godog/colors"
-	"github.com/docker/docker/api/types"
+	dcontainer "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	dnetwork "github.com/docker/docker/api/types/network"
 	"github.com/jumppad-labs/hclconfig/resources"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
@@ -387,7 +388,7 @@ func (cr *CucumberRunner) thereShouldBeAResourceRunningCalled(id string) error {
 	for i := 0; i < 100; i++ {
 		args := filters.NewArgs()
 		args.Add("name", id)
-		opts := types.ContainerListOptions{Filters: args, All: true}
+		opts := dcontainer.ListOptions{Filters: args, All: true}
 
 		cl, err := cr.cli.Docker.ContainerList(context.Background(), opts)
 		if err != nil {
@@ -419,7 +420,7 @@ func (cr *CucumberRunner) thereShouldBeAResourceRunningCalled(id string) error {
 func (cr *CucumberRunner) thereShouldBe1NetworkCalled(arg1 string) error {
 	args := filters.NewArgs()
 	args.Add("name", arg1)
-	n, err := cr.cli.Docker.NetworkList(context.Background(), types.NetworkListOptions{Filters: args})
+	n, err := cr.cli.Docker.NetworkList(context.Background(), dnetwork.ListOptions{Filters: args})
 
 	if err != nil {
 		return err
