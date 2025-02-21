@@ -521,7 +521,7 @@ func TestContainerConfiguresRetryWhenCountGreater0(t *testing.T) {
 	assert.NotEmpty(t, hc.Resources)
 
 	assert.Equal(t, hc.RestartPolicy.MaximumRetryCount, 10)
-	assert.Equal(t, hc.RestartPolicy.Name, "on-failure")
+	assert.Equal(t, hc.RestartPolicy.Name, container.RestartPolicyMode("on-failure"))
 }
 
 func TestContainerConfiguresRetryWhenCountMinusOne(t *testing.T) {
@@ -536,7 +536,7 @@ func TestContainerConfiguresRetryWhenCountMinusOne(t *testing.T) {
 	assert.NotEmpty(t, hc.Resources)
 
 	assert.Equal(t, hc.RestartPolicy.MaximumRetryCount, 0)
-	assert.Equal(t, hc.RestartPolicy.Name, "always")
+	assert.Equal(t, hc.RestartPolicy.Name, container.RestartPolicyMode("always"))
 }
 
 func TestContainerNotConfiguresRetryWhen0(t *testing.T) {
