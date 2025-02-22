@@ -484,6 +484,14 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 
 	cc.Image = &img
 	cc.Networks = p.config.Networks.ToClientNetworkAttachments()
+
+	if len(cc.Networks) == 0 {
+		cc.Networks = append(cc.Networks, ctypes.NetworkAttachment{
+			ID:   "resource.network.main",
+			Name: "main",
+		})
+	}
+
 	cc.Privileged = true // nomad must run Privileged as Docker needs to manipulate ip tables and stuff
 
 	// Add Consul DNS
@@ -608,6 +616,14 @@ func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID 
 
 	cc.Image = &ctypes.Image{Name: image}
 	cc.Networks = p.config.Networks.ToClientNetworkAttachments()
+
+	if len(cc.Networks) == 0 {
+		cc.Networks = append(cc.Networks, ctypes.NetworkAttachment{
+			ID:   "resource.network.main",
+			Name: "main",
+		})
+	}
+
 	cc.Privileged = true // nomad must run Privileged as Docker needs to manipulate ip tables and stuff
 
 	//cc.DNS = []string{"127.0.0.1"}

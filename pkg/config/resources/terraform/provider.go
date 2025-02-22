@@ -235,6 +235,13 @@ func (p *TerraformProvider) createContainer() (string, error) {
 		})
 	}
 
+	if len(tf.Networks) == 0 {
+		tf.Networks = append(tf.Networks, ctypes.NetworkAttachment{
+			ID:   "resource.network.main",
+			Name: "main",
+		})
+	}
+
 	// Add the config folder
 	tf.Volumes = append(tf.Volumes, ctypes.Volume{
 		Source:      p.config.Source,

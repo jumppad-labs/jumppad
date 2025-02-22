@@ -234,6 +234,13 @@ func (p *Provider) createRemoteExecContainer() (string, error) {
 		})
 	}
 
+	if len(new.Networks) == 0 {
+		new.Networks = append(new.Networks, types.NetworkAttachment{
+			ID:   "resource.network.main",
+			Name: "main",
+		})
+	}
+
 	for _, v := range p.config.Volumes {
 		new.Volumes = append(new.Volumes, types.Volume{
 			Source:                      v.Source,

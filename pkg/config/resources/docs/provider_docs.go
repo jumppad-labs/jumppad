@@ -229,6 +229,14 @@ func (p *DocsProvider) createDocsContainer() error {
 	}
 
 	cc.Networks = p.config.Networks.ToClientNetworkAttachments()
+
+	if len(cc.Networks) == 0 {
+		cc.Networks = append(cc.Networks, types.NetworkAttachment{
+			ID:   "resource.network.main",
+			Name: "main",
+		})
+	}
+
 	cc.Image = &types.Image{Name: fmt.Sprintf("%s:%s", docsImageName, docsVersion)}
 	cc.MaxRestartCount = -1
 

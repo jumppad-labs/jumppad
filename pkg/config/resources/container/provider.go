@@ -206,6 +206,14 @@ func (c *Provider) internalCreate(ctx context.Context, sidecar bool) error {
 		})
 	}
 
+	if len(new.Networks) == 0 {
+		new.Networks = append(new.Networks, types.NetworkAttachment{
+			ID:          "resource.network.main",
+			Name:        "main",
+			IsContainer: sidecar,
+		})
+	}
+
 	for _, v := range c.config.Volumes {
 		new.Volumes = append(new.Volumes, types.Volume{
 			Source:                      v.Source,

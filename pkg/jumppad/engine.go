@@ -163,6 +163,11 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 			continue
 		}
 
+		// if this is the default network continue as this is always added
+		if r.Metadata().Type == network.TypeNetwork && r.Metadata().ID == "resource.network.main" {
+			continue
+		}
+
 		found := false
 		for _, r2 := range res.Resources {
 			if r.Metadata().ID == r2.Metadata().ID {
@@ -280,6 +285,62 @@ func (e *EngineImpl) ApplyWithVariables(ctx context.Context, path string, vars m
 
 		if err != nil {
 			return nil, fmt.Errorf("unable to create image cache %s", err)
+		}
+	}
+
+	// check if we already have a default network
+	_, err = c.FindResource("resource.network.main")
+	if err != nil {
+		// create a new network
+		n := &network.Network{
+			ResourceBase: types.ResourceBase{
+				Meta: types.Meta{
+					Name:       "main",
+					Type:       network.TypeNetwork,
+					ID:         "resource.network.main",
+					Properties: map[string]interface{}{},
+				},
+			},
+			Subnet: "10.0.10.0/24",
+		}
+
+		e.log.Debug("Creating default Network", "id", n.Meta.ID)
+
+		p := e.providers.GetProvider(n)
+		if p == nil {
+			// this should never happen
+			panic("Unable to find provider for Network, Nic assured me that you should never see this message. Sorry, the monkey has broken something again")
+		}
+
+		// create the network
+		err := p.Create(ctx)
+		if err != nil {
+			n.Meta.Properties[constants.PropertyStatus] = constants.StatusFailed
+		} else {
+			n.Meta.Properties[constants.PropertyStatus] = constants.StatusCreated
+		}
+
+		// add the new network to the config
+		e.config.AppendResource(n)
+
+		// save the state
+		config.SaveState(e.config)
+
+		if err != nil {
+			return nil, fmt.Errorf("unable to create network %s", err)
+		}
+
+		// if the network was created we need to attach the image cache to the network
+		ic, err := e.config.FindResource("resource.image_cache.default")
+		if err == nil {
+			e.log.Debug("Attaching image cache to network", "network", ic.Metadata().ID)
+			ic.AddDependency(n.Metadata().ID)
+
+			// reload the networks
+			np := e.providers.GetProvider(ic)
+			np.Refresh(e.ctx)
+		} else {
+			e.log.Error("Unable to find Image Cache", "error", err)
 		}
 	}
 
