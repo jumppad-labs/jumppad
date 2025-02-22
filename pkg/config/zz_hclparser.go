@@ -57,6 +57,7 @@ func NewParser(callback hclconfig.WalkCallback, variables map[string]string, var
 	p.RegisterFunction("data", customHCLFuncDataFolder)
 	p.RegisterFunction("data_with_permissions", customHCLFuncDataFolderWithPermissions)
 	p.RegisterFunction("system", customHCLFuncSystem)
+	p.RegisterFunction("exists", customHCLFuncExists)
 
 	return p
 }

@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/system"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
 	imocks "github.com/jumppad-labs/jumppad/pkg/clients/images/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
@@ -25,7 +27,7 @@ func TestCopyFromContainerCopiesFile(t *testing.T) {
 
 	md := &mocks.Docker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
-	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	md.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
 
 	tmpDir := t.TempDir()
 	tgz := &tar.TarGz{}
@@ -43,7 +45,7 @@ func TestCopyFromContainerCopiesFile(t *testing.T) {
 	mic := &imocks.ImageLog{}
 	md.On("CopyFromContainer", mock.Anything, id, src).Return(
 		io.NopCloser(bytes.NewBuffer(buf.Bytes())),
-		types.ContainerPathStat{},
+		container.PathStat{},
 		nil,
 	)
 
@@ -64,12 +66,12 @@ func TestCopyFromContainerReturnsErrorOnDockerError(t *testing.T) {
 
 	md := &mocks.Docker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
-	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	md.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
 
 	mic := &imocks.ImageLog{}
 	md.On("CopyFromContainer", mock.Anything, id, src).Return(
 		nil,
-		types.ContainerPathStat{},
+		container.PathStat{},
 		fmt.Errorf("boom"),
 	)
 	dt, _ := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))

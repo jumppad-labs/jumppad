@@ -11,11 +11,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/docker/docker/api/types"
 	"github.com/fatih/color"
 	hcltypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/spf13/cobra"
 
+	dcontainer "github.com/docker/docker/api/types/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/config"
@@ -102,7 +102,7 @@ func newLogCmdFunc(dc container.Docker, stdout, stderr io.Writer) func(cmd *cobr
 			rc, err := dc.ContainerLogs(
 				ctx,
 				r,
-				types.ContainerLogsOptions{
+				dcontainer.LogsOptions{
 					ShowStdout: true,
 					ShowStderr: true,
 					Follow:     true,

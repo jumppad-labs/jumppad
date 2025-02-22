@@ -58,7 +58,7 @@ func (t *Terraform) Process() error {
 
 	// set the base version
 	if t.Version == "" {
-		t.Version = "1.16.2"
+		t.Version = "1.9.8"
 	}
 
 	// restore the applyoutput from the state

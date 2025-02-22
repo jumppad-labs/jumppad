@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/system"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
 	imocks "github.com/jumppad-labs/jumppad/pkg/clients/images/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
@@ -23,7 +24,7 @@ func TestContainerLogsCalled(t *testing.T) {
 		fmt.Errorf("boom"),
 	)
 
-	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	md.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
 
 	mic := &imocks.ImageLog{}
 

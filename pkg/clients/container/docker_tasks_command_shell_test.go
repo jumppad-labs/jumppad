@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/system"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
 	imocks "github.com/jumppad-labs/jumppad/pkg/clients/images/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
@@ -28,9 +30,9 @@ func setupShellMocks(t *testing.T) (*DockerTasks, *mocks.Docker) {
 				bytes.NewReader([]byte("log output")),
 			),
 		}, nil)
-	md.On("ContainerExecInspect", mock.Anything, mock.Anything).Return(types.ContainerExecInspect{ExitCode: 0}, nil)
+	md.On("ContainerExecInspect", mock.Anything, mock.Anything).Return(container.ExecInspect{ExitCode: 0}, nil)
 
-	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	md.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
 
 	mic := &imocks.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
