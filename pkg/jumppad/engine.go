@@ -309,6 +309,8 @@ func (e *EngineImpl) ApplyWithVariables(ctx context.Context, path string, vars m
 			},
 		}
 
+		ca.AddDependency(network.DefaultNetworkID)
+
 		e.log.Debug("Creating new Image Cache", "id", ca.Meta.ID)
 
 		p := e.providers.GetProvider(ca)

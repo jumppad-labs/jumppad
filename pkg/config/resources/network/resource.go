@@ -8,7 +8,7 @@ import (
 const TypeNetwork string = "network"
 
 const (
-	DefaultNetworkID     string = "resource.network.default"
+	DefaultNetworkID     string = "resource.network.jumppad"
 	DefaultNetworkName   string = "jumppad"
 	DefaultNetworkSubnet string = "10.0.10.0/24"
 )

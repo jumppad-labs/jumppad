@@ -397,7 +397,7 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 	}
 
 	if len(c.Networks) == 0 {
-		net, err := d.FindNetwork("resource.network.default")
+		net, err := d.FindNetwork("resource.network.jumppad")
 		if err != nil {
 			return "", err
 		}
