@@ -2,7 +2,7 @@ package container
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strings"
 	"testing"
 
@@ -28,7 +28,7 @@ func testBuildSetup(t *testing.T) (*mocks.Docker, *DockerTasks) {
 	mk.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return([]image.Summary{{ID: "abc"}}, nil)
 	mk.On("ImageBuild", mock.Anything, mock.Anything, mock.Anything).Return(
 		types.ImageBuildResponse{
-			Body: ioutil.NopCloser(strings.NewReader("")),
+			Body: io.NopCloser(strings.NewReader("")),
 		}, nil)
 
 	mk.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)

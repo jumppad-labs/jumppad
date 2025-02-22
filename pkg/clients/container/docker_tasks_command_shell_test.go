@@ -3,7 +3,7 @@ package container
 import (
 	"bufio"
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net"
 	"testing"
 	"time"
@@ -44,9 +44,9 @@ func setupShellMocks(t *testing.T) (*DockerTasks, *mocks.Docker) {
 
 func TestCreateShellCreatesExec(t *testing.T) {
 	p, md := setupShellMocks(t)
-	in := ioutil.NopCloser(bytes.NewReader([]byte("abc")))
-	out := ioutil.Discard
-	errW := ioutil.Discard
+	in := io.NopCloser(bytes.NewReader([]byte("abc")))
+	out := io.Discard
+	errW := io.Discard
 
 	err := p.CreateShell("abc", []string{"sh"}, in, out, errW)
 	assert.NoError(t, err)

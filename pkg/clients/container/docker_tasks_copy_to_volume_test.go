@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"strings"
 	"testing"
@@ -40,7 +40,7 @@ func testSetupCopyLocal(t *testing.T) (*DockerTasks, *mocks.Docker) {
 		nil)
 
 	mk.On("ImageSave", mock.Anything, mock.Anything).Return(
-		ioutil.NopCloser(bytes.NewBufferString("test")),
+		io.NopCloser(bytes.NewBufferString("test")),
 		nil,
 	)
 
@@ -61,10 +61,10 @@ func testSetupCopyLocal(t *testing.T) (*DockerTasks, *mocks.Docker) {
 	mk.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	// always return a local image
-	mk.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return([]image.Summary{image.Summary{}}, nil)
+	mk.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return([]image.Summary{{}}, nil)
 
 	mk.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).
-		Return(ioutil.NopCloser(strings.NewReader("hello world")), nil)
+		Return(io.NopCloser(strings.NewReader("hello world")), nil)
 
 	mk.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).
 		Return(types.IDResponse{ID: "abc"}, nil)
@@ -85,7 +85,7 @@ func testSetupCopyLocal(t *testing.T) (*DockerTasks, *mocks.Docker) {
 		Return(container.ExecInspect{Running: false, ExitCode: 0}, nil)
 
 	mk.On("VolumeList", mock.Anything, mock.Anything).
-		Return(volume.ListResponse{Volumes: []*volume.Volume{&volume.Volume{}}})
+		Return(volume.ListResponse{Volumes: []*volume.Volume{{}}})
 
 	mic := &imocks.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)

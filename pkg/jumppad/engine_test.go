@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/jumppad-labs/hclconfig"
@@ -24,8 +23,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
-
-var lock = sync.Mutex{}
 
 func setupTests(t *testing.T, returnVals map[string]error) (*EngineImpl, *mocks.Providers) {
 	return setupTestsBase(t, returnVals, "")
@@ -53,7 +50,7 @@ func setupTestsBase(t *testing.T, returnVals map[string]error, state string) (*E
 	return e, pm
 }
 
-func testLoadState(t *testing.T, e *EngineImpl) *hclconfig.Config {
+func testLoadState(t *testing.T) *hclconfig.Config {
 	c, err := config.LoadState()
 	require.NoError(t, err)
 
@@ -195,7 +192,7 @@ func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
 	testAssertMethodCalled(t, mp, "Refresh", 2)
 
 	// the state should also contain 11 resources
-	sf := testLoadState(t, e)
+	sf := testLoadState(t)
 	require.Equal(t, 12, sf.ResourceCount())
 }
 
@@ -209,7 +206,7 @@ func TestApplyDoesNotCallsProviderCreateWhenInState(t *testing.T) {
 	testAssertMethodCalled(t, mp, "Create", 5)
 
 	// the state should also contain 7 resources
-	sf := testLoadState(t, e)
+	sf := testLoadState(t)
 	require.Equal(t, 8, sf.ResourceCount())
 }
 
@@ -226,7 +223,7 @@ func TestApplyRemovesItemsInStateWhenNotInFiles(t *testing.T) {
 	testAssertMethodCalled(t, mp, "Destroy", 2)
 
 	// the state should also contain 7 resources
-	sf := testLoadState(t, e)
+	sf := testLoadState(t)
 	require.Equal(t, 8, sf.ResourceCount())
 }
 
@@ -241,7 +238,7 @@ func TestApplyNotCallsProviderCreateForDisabledResources(t *testing.T) {
 	testAssertMethodCalled(t, mp, "Create", 4) // ImageCache and default network are always created
 
 	// disabled resources should still be added to the state
-	sf := testLoadState(t, e)
+	sf := testLoadState(t)
 
 	// should contain 3 from the config plus the image cache and default network
 	require.Equal(t, 5, sf.ResourceCount())
@@ -263,7 +260,7 @@ func TestApplyShouldNotAddDuplicateDisabledResources(t *testing.T) {
 	testAssertMethodCalled(t, mp, "Create", 1) // ImageCache and default network are always created
 
 	// disabled resources should still be added to the state
-	sf := testLoadState(t, e)
+	sf := testLoadState(t)
 
 	// should contain 3 from the config plus the image cache and default network
 	// should not duplicate the disabled container as this already exists in the
@@ -287,7 +284,7 @@ func TestApplySetsCreatedStatusForEachResource(t *testing.T) {
 	// should only call create and destroy for the cache as this is pending update
 	testAssertMethodCalled(t, mp, "Create", 8) // ImageCache and default network are always created
 
-	sf := testLoadState(t, e)
+	sf := testLoadState(t)
 
 	r, err := sf.FindResource("resource.container.consul")
 	require.NoError(t, err)
@@ -314,7 +311,7 @@ func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 	// ImageCache and default network should always be created
 	testAssertMethodCalled(t, mp, "Create", 6)
 
-	sf := testLoadState(t, e)
+	sf := testLoadState(t)
 
 	// should set failed status for network
 	r, err := sf.FindResource("resource.network.onprem")
