@@ -14,6 +14,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
@@ -34,8 +35,8 @@ func testSetupCopyLocal(t *testing.T) (*DockerTasks, *mocks.Docker) {
 	mk.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 	mk.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
 	mk.On("ContainerInspect", mock.Anything, mock.Anything).Return(
-		types.ContainerJSON{
-			ContainerJSONBase: &types.ContainerJSONBase{State: &types.ContainerState{Running: true}},
+		container.InspectResponse{
+			ContainerJSONBase: &container.ContainerJSONBase{State: &container.State{Running: true}},
 		},
 		nil)
 
@@ -67,7 +68,7 @@ func testSetupCopyLocal(t *testing.T) (*DockerTasks, *mocks.Docker) {
 		Return(io.NopCloser(strings.NewReader("hello world")), nil)
 
 	mk.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).
-		Return(types.IDResponse{ID: "abc"}, nil)
+		Return(container.ExecCreateResponse{ID: "abc"}, nil)
 
 	mk.On("ContainerExecAttach", mock.Anything, "abc", mock.Anything).Return(
 		types.HijackedResponse{
@@ -86,6 +87,26 @@ func testSetupCopyLocal(t *testing.T) (*DockerTasks, *mocks.Docker) {
 
 	mk.On("VolumeList", mock.Anything, mock.Anything).
 		Return(volume.ListResponse{Volumes: []*volume.Volume{{}}})
+
+	mk.On("NetworkList", mock.Anything, mock.Anything).
+		Return([]network.Inspect{{
+			Name: "jumppad",
+			ID:   "resource.network.jumppad",
+			Labels: map[string]string{
+				"id": "resource.network.jumppad",
+			},
+			IPAM: network.IPAM{
+				Driver: "default",
+				Config: []network.IPAMConfig{
+					{
+						Subnet: "10.0.10.0/24",
+					},
+				},
+			},
+			EnableIPv6: false,
+		}}, nil)
+
+	mk.On("NetworkConnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	mic := &imocks.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)

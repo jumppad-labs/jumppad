@@ -19,9 +19,9 @@ import (
 )
 
 func testBuildSetup(t *testing.T) (*mocks.Docker, *DockerTasks) {
-	// we need to add the stream index (stdout) as the first byte for the hijacker
-	writerOutput := []byte("log output")
-	writerOutput = append([]byte{1}, writerOutput...)
+	// // we need to add the stream index (stdout) as the first byte for the hijacker
+	// writerOutput := []byte("log output")
+	// writerOutput = append([]byte{1}, writerOutput...)
 
 	mk := &mocks.Docker{}
 	mk.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)

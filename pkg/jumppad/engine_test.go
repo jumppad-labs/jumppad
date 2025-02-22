@@ -81,7 +81,6 @@ func TestApplyWithSingleFile(t *testing.T) {
 		[]string{
 			"default",       // image cache
 			"jumppad",       // default network
-			"default",       // image cache = refresh after adding network
 			"version",       // variable
 			"port_range",    // variable
 			"consul_config", // template
@@ -100,7 +99,6 @@ func TestApplyWithSingleFile(t *testing.T) {
 			getMetaFromMock(mp, 6).Name,
 			getMetaFromMock(mp, 7).Name,
 			getMetaFromMock(mp, 8).Name,
-			getMetaFromMock(mp, 9).Name,
 		},
 	)
 }
@@ -168,13 +166,13 @@ func TestApplyWithSingleFileAndVariables(t *testing.T) {
 	require.Len(t, e.config.Resources, 8) // 6 resources in the file plus the image cache and default network
 
 	// then the container should be created
-	require.Equal(t, "consul", getMetaFromMock(mp, 8).Name)
+	require.Equal(t, "consul", getMetaFromMock(mp, 7).Name)
 
 	// finally the provider for the image cache should be updated
-	require.Equal(t, "consul_addr", getMetaFromMock(mp, 9).Name)
+	require.Equal(t, "consul_addr", getMetaFromMock(mp, 8).Name)
 
 	// check the variable has overridden the image
-	cont := getResourceFromMock(mp, 8).(*container.Container)
+	cont := getResourceFromMock(mp, 7).(*container.Container)
 	require.Equal(t, "consul:1.8.1", cont.Image.Name)
 }
 
@@ -189,7 +187,7 @@ func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
 	// for every network that is created refresh is called on the image cache
 	rc := len(e.config.Resources)
 	testAssertMethodCalled(t, mp, "Create", rc)
-	testAssertMethodCalled(t, mp, "Refresh", 2)
+	testAssertMethodCalled(t, mp, "Refresh", 1)
 
 	// the state should also contain 11 resources
 	sf := testLoadState(t)
