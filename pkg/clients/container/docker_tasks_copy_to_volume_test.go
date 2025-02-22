@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"strings"
 	"testing"
@@ -14,6 +14,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
@@ -34,13 +35,13 @@ func testSetupCopyLocal(t *testing.T) (*DockerTasks, *mocks.Docker) {
 	mk.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 	mk.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
 	mk.On("ContainerInspect", mock.Anything, mock.Anything).Return(
-		types.ContainerJSON{
-			ContainerJSONBase: &types.ContainerJSONBase{State: &types.ContainerState{Running: true}},
+		container.InspectResponse{
+			ContainerJSONBase: &container.ContainerJSONBase{State: &container.State{Running: true}},
 		},
 		nil)
 
 	mk.On("ImageSave", mock.Anything, mock.Anything).Return(
-		ioutil.NopCloser(bytes.NewBufferString("test")),
+		io.NopCloser(bytes.NewBufferString("test")),
 		nil,
 	)
 
@@ -61,13 +62,13 @@ func testSetupCopyLocal(t *testing.T) (*DockerTasks, *mocks.Docker) {
 	mk.On("ContainerRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	// always return a local image
-	mk.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return([]image.Summary{image.Summary{}}, nil)
+	mk.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return([]image.Summary{{}}, nil)
 
 	mk.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).
-		Return(ioutil.NopCloser(strings.NewReader("hello world")), nil)
+		Return(io.NopCloser(strings.NewReader("hello world")), nil)
 
 	mk.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).
-		Return(types.IDResponse{ID: "abc"}, nil)
+		Return(container.ExecCreateResponse{ID: "abc"}, nil)
 
 	mk.On("ContainerExecAttach", mock.Anything, "abc", mock.Anything).Return(
 		types.HijackedResponse{
@@ -85,7 +86,27 @@ func testSetupCopyLocal(t *testing.T) (*DockerTasks, *mocks.Docker) {
 		Return(container.ExecInspect{Running: false, ExitCode: 0}, nil)
 
 	mk.On("VolumeList", mock.Anything, mock.Anything).
-		Return(volume.ListResponse{Volumes: []*volume.Volume{&volume.Volume{}}})
+		Return(volume.ListResponse{Volumes: []*volume.Volume{{}}})
+
+	mk.On("NetworkList", mock.Anything, mock.Anything).
+		Return([]network.Inspect{{
+			Name: "jumppad",
+			ID:   "resource.network.jumppad",
+			Labels: map[string]string{
+				"id": "resource.network.jumppad",
+			},
+			IPAM: network.IPAM{
+				Driver: "default",
+				Config: []network.IPAMConfig{
+					{
+						Subnet: "10.0.10.0/24",
+					},
+				},
+			},
+			EnableIPv6: false,
+		}}, nil)
+
+	mk.On("NetworkConnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	mic := &imocks.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
@@ -201,8 +222,8 @@ func TestCopyToVolumeReturnsErrorOnFailedContainerStart(t *testing.T) {
 
 	testutils.RemoveOn(&mk.Mock, "ContainerInspect")
 	mk.On("ContainerInspect", mock.Anything, mock.Anything).Return(
-		types.ContainerJSON{
-			ContainerJSONBase: &types.ContainerJSONBase{State: &types.ContainerState{Running: false}},
+		container.InspectResponse{
+			ContainerJSONBase: &container.ContainerJSONBase{State: &container.State{Running: false}},
 		},
 		nil)
 

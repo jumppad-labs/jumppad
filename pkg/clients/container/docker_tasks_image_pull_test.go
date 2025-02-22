@@ -2,7 +2,7 @@ package container
 
 import (
 	"encoding/base64"
-	"io/ioutil"
+	"io"
 	"strings"
 	"testing"
 
@@ -26,7 +26,7 @@ func setupImagePullMocks() (*mocks.Docker, *imocks.ImageLog) {
 	md.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
 	md.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 	md.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).Return(
-		ioutil.NopCloser(strings.NewReader("hello world")),
+		io.NopCloser(strings.NewReader("hello world")),
 		nil,
 	)
 
@@ -52,8 +52,6 @@ func setupImagePull(t *testing.T, cc dtypes.Image, md *mocks.Docker, mic *imocks
 	// create the container
 	err := p.PullImage(cc, force)
 	assert.NoError(t, err)
-
-	return
 }
 
 func TestPullImageWhenNOTCached(t *testing.T) {
@@ -117,7 +115,7 @@ func TestDoNOtPullImageWhenCached(t *testing.T) {
 
 	// remove the default image list which returns 0 cached images
 	testutils.RemoveOn(&md.Mock, "ImageList")
-	md.On("ImageList", mock.Anything, mock.Anything).Return([]image.Summary{image.Summary{ID: "abc"}}, nil)
+	md.On("ImageList", mock.Anything, mock.Anything).Return([]image.Summary{{ID: "abc"}}, nil)
 
 	setupImagePull(t, cc, md, mic, false)
 

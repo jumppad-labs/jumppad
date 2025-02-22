@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -55,7 +54,7 @@ func TestCopyFromContainerCopiesFile(t *testing.T) {
 	require.NoError(t, err)
 
 	// check the file was written correctly
-	d, err := ioutil.ReadFile(filepath.Join(tmpDir, "output", "file.txt"))
+	d, err := os.ReadFile(filepath.Join(tmpDir, "output", "file.txt"))
 	require.NoError(t, err)
 	require.Equal(t, "test content", string(d))
 }

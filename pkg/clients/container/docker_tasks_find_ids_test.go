@@ -20,9 +20,9 @@ func TestFindContainerIDsReturnsID(t *testing.T) {
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 	md.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
 	md.On("ContainerList", mock.Anything, mock.Anything).Return(
-		[]types.Container{
-			types.Container{ID: "abc"},
-			types.Container{ID: "123"},
+		[]container.Summary{
+			{ID: "abc"},
+			{ID: "123"},
 		},
 		nil,
 	)
@@ -74,7 +74,7 @@ func TestFindContainerIDsReturnsNilWhenEmpty(t *testing.T) {
 	md := &mocks.Docker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 	md.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
-	md.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{}, nil)
+	md.On("ContainerList", mock.Anything, mock.Anything).Return([]container.Summary{}, nil)
 
 	dt, _ := NewDockerTasks(md, nil, &tar.TarGz{}, logger.NewTestLogger(t))
 

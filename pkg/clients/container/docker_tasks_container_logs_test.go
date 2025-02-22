@@ -3,7 +3,7 @@ package container
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/docker/docker/api/types"
@@ -20,7 +20,7 @@ func TestContainerLogsCalled(t *testing.T) {
 	md := &mocks.Docker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 	md.On("ContainerLogs", mock.Anything, mock.Anything, mock.Anything).Return(
-		ioutil.NopCloser(bytes.NewBufferString("test")),
+		io.NopCloser(bytes.NewBufferString("test")),
 		fmt.Errorf("boom"),
 	)
 
