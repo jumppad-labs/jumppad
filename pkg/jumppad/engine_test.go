@@ -83,7 +83,7 @@ func TestApplyWithSingleFile(t *testing.T) {
 	require.ElementsMatch(t,
 		[]string{
 			"default",       // image cache
-			"main",          // default network
+			"jumppad",       // default network
 			"default",       // image cache = refresh after adding network
 			"version",       // variable
 			"port_range",    // variable
@@ -584,7 +584,7 @@ var existingState = `
   },
 	{
       "meta": {
-        "name": "main",
+        "name": "jumppad",
         "properties": {
           "status": "created"
         },
@@ -631,7 +631,7 @@ var singleFileState = `
   "resources": [
 	{
       "meta": {
-        "name": "main",
+        "name": "jumppad",
         "properties": {
           "status": "created"
         },
@@ -697,7 +697,7 @@ var complexState = `
   "resources": [
 	{
       "meta": {
-        "name": "main",
+        "name": "jumppad",
         "properties": {
           "status": "created"
         },
@@ -754,7 +754,7 @@ var disabledState = `
   "resources": [
 	{
       "meta": {
-        "name": "main",
+        "name": "jumppad",
         "properties": {
           "status": "created"
         },
@@ -798,7 +798,7 @@ var disabledAndCreatedState = `
   "resources": [
 	{
       "meta": {
-        "name": "main",
+        "name": "jumppad",
         "properties": {
           "status": "created"
         },
