@@ -222,8 +222,8 @@ func TestCopyToVolumeReturnsErrorOnFailedContainerStart(t *testing.T) {
 
 	testutils.RemoveOn(&mk.Mock, "ContainerInspect")
 	mk.On("ContainerInspect", mock.Anything, mock.Anything).Return(
-		types.ContainerJSON{
-			ContainerJSONBase: &types.ContainerJSONBase{State: &types.ContainerState{Running: false}},
+		container.InspectResponse{
+			ContainerJSONBase: &container.ContainerJSONBase{State: &container.State{Running: false}},
 		},
 		nil)
 

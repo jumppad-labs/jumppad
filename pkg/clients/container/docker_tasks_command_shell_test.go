@@ -22,7 +22,7 @@ import (
 func setupShellMocks(t *testing.T) (*DockerTasks, *mocks.Docker) {
 	md := &mocks.Docker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
-	md.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(types.IDResponse{ID: "123"}, nil)
+	md.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(container.ExecCreateResponse{ID: "123"}, nil)
 	md.On("ContainerExecAttach", mock.Anything, "123", mock.Anything).Return(
 		types.HijackedResponse{
 			Conn: &net.TCPConn{},

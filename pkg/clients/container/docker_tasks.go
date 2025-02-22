@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	gosignal "os/signal"
 	"path"
@@ -1508,7 +1507,7 @@ func (d *DockerTasks) saveImageToTempFile(image, filename string) (string, error
 	}
 	defer ir.Close()
 
-	tmpDir, err := ioutil.TempDir("", "")
+	tmpDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return "", xerrors.Errorf("unable to create temporary file: %w", err)
 	}
@@ -1554,7 +1553,7 @@ func copyDir(src string, dest string) error {
 		return err
 	}
 
-	files, err := ioutil.ReadDir(src)
+	files, err := os.ReadDir(src)
 	if err != nil {
 		return err
 	}
@@ -1572,7 +1571,7 @@ func copyDir(src string, dest string) error {
 
 		if !f.IsDir() {
 
-			content, err := ioutil.ReadFile(src + "/" + f.Name())
+			content, err := os.ReadFile(src + "/" + f.Name())
 			if err != nil {
 				return err
 
