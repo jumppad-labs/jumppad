@@ -18,6 +18,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	cclient "github.com/jumppad-labs/jumppad/pkg/clients/container"
 	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/network"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 	"github.com/kennygrant/sanitize"
@@ -237,8 +238,8 @@ func (p *TerraformProvider) createContainer() (string, error) {
 
 	if len(tf.Networks) == 0 {
 		tf.Networks = append(tf.Networks, ctypes.NetworkAttachment{
-			ID:   "resource.network.main",
-			Name: "main",
+			ID:   network.DefaultNetworkID,
+			Name: network.DefaultNetworkName,
 		})
 	}
 

@@ -24,6 +24,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/http"
 	"github.com/jumppad-labs/jumppad/pkg/clients/k8s"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/network"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 	"golang.org/x/xerrors"
@@ -293,8 +294,8 @@ func (p *ClusterProvider) createK3s(ctx context.Context) error {
 
 	if len(cc.Networks) == 0 {
 		cc.Networks = append(cc.Networks, ctypes.NetworkAttachment{
-			ID:   "resource.network.main",
-			Name: "main",
+			ID:   network.DefaultNetworkID,
+			Name: network.DefaultNetworkName,
 		})
 	}
 

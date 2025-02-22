@@ -132,7 +132,7 @@ func TestApplyAddsNetworksToImageCache(t *testing.T) {
 
 	// network should be added as a dependency
 	require.Len(t, r.GetDependencies(), 2)
-	require.Equal(t, "resource.network.main", r.GetDependencies()[0])
+	require.Equal(t, network.DefaultNetworkID, r.GetDependencies()[0])
 	require.Equal(t, "resource.network.onprem", r.GetDependencies()[1])
 }
 

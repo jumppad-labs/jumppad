@@ -164,7 +164,7 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 		}
 
 		// if this is the default network continue as this is always added
-		if r.Metadata().Type == network.TypeNetwork && r.Metadata().ID == "resource.network.main" {
+		if r.Metadata().Type == network.TypeNetwork && r.Metadata().ID == network.DefaultNetworkID {
 			continue
 		}
 
@@ -289,19 +289,19 @@ func (e *EngineImpl) ApplyWithVariables(ctx context.Context, path string, vars m
 	}
 
 	// check if we already have a default network
-	_, err = c.FindResource("resource.network.main")
+	_, err = c.FindResource(network.DefaultNetworkID)
 	if err != nil {
 		// create a new network
 		n := &network.Network{
 			ResourceBase: types.ResourceBase{
 				Meta: types.Meta{
-					Name:       "main",
+					ID:         network.DefaultNetworkID,
+					Name:       network.DefaultNetworkName,
 					Type:       network.TypeNetwork,
-					ID:         "resource.network.main",
 					Properties: map[string]interface{}{},
 				},
 			},
-			Subnet: "10.0.10.0/24",
+			Subnet: network.DefaultNetworkSubnet,
 		}
 
 		e.log.Debug("Creating default Network", "id", n.Meta.ID)

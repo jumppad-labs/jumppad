@@ -23,6 +23,7 @@ import (
 	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/clients/nomad"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/network"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 	"golang.org/x/xerrors"
@@ -487,8 +488,8 @@ func (p *ClusterProvider) createServerNode(img ctypes.Image, volumeID string, is
 
 	if len(cc.Networks) == 0 {
 		cc.Networks = append(cc.Networks, ctypes.NetworkAttachment{
-			ID:   "resource.network.main",
-			Name: "main",
+			ID:   network.DefaultNetworkID,
+			Name: network.DefaultNetworkName,
 		})
 	}
 
@@ -619,8 +620,8 @@ func (p *ClusterProvider) createClientNode(id string, image, volumeID, serverID 
 
 	if len(cc.Networks) == 0 {
 		cc.Networks = append(cc.Networks, ctypes.NetworkAttachment{
-			ID:   "resource.network.main",
-			Name: "main",
+			ID:   network.DefaultNetworkID,
+			Name: network.DefaultNetworkName,
 		})
 	}
 

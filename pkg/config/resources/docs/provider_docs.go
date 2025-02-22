@@ -13,6 +13,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/network"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 	"github.com/mohae/deepcopy"
@@ -232,8 +233,8 @@ func (p *DocsProvider) createDocsContainer() error {
 
 	if len(cc.Networks) == 0 {
 		cc.Networks = append(cc.Networks, types.NetworkAttachment{
-			ID:   "resource.network.main",
-			Name: "main",
+			ID:   network.DefaultNetworkID,
+			Name: network.DefaultNetworkName,
 		})
 	}
 
