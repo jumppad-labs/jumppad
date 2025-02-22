@@ -17,6 +17,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/cache"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/network"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad/constants"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
@@ -244,50 +245,6 @@ func (e *EngineImpl) ApplyWithVariables(ctx context.Context, path string, vars m
 
 	e.config = c
 
-	// check to see we already have an image cache
-	_, err = c.FindResourcesByType(cache.TypeImageCache)
-	if err != nil {
-		// create a new cache with the correct registries
-		ca := &cache.ImageCache{
-			ResourceBase: types.ResourceBase{
-				Meta: types.Meta{
-					Name:       "default",
-					Type:       cache.TypeImageCache,
-					ID:         "resource.image_cache.default",
-					Properties: map[string]interface{}{},
-				},
-			},
-		}
-
-		e.log.Debug("Creating new Image Cache", "id", ca.Meta.ID)
-
-		p := e.providers.GetProvider(ca)
-		if p == nil {
-			// this should never happen
-			panic("Unable to find provider for Image Cache, Nic assured me that you should never see this message. Sorry, the monkey has broken something again")
-		}
-
-		// create the cache
-		err := p.Create(ctx)
-		if err != nil {
-			ca.Meta.Properties[constants.PropertyStatus] = constants.StatusFailed
-		} else {
-			ca.Meta.Properties[constants.PropertyStatus] = constants.StatusCreated
-		}
-
-		ca.Meta.Properties[constants.PropertyStatus] = constants.StatusCreated
-
-		// add the new cache to the config
-		e.config.AppendResource(ca)
-
-		// save the state
-		config.SaveState(e.config)
-
-		if err != nil {
-			return nil, fmt.Errorf("unable to create image cache %s", err)
-		}
-	}
-
 	// check if we already have a default network
 	_, err = c.FindResource(network.DefaultNetworkID)
 	if err != nil {
@@ -329,18 +286,55 @@ func (e *EngineImpl) ApplyWithVariables(ctx context.Context, path string, vars m
 		if err != nil {
 			return nil, fmt.Errorf("unable to create network %s", err)
 		}
+	}
 
-		// if the network was created we need to attach the image cache to the network
-		ic, err := e.config.FindResource("resource.image_cache.default")
-		if err == nil {
-			e.log.Debug("Attaching image cache to network", "network", ic.Metadata().ID)
-			ic.AddDependency(n.Metadata().ID)
+	// check to see we already have an image cache
+	_, err = c.FindResourcesByType(cache.TypeImageCache)
+	if err != nil {
+		// create a new cache with the correct registries
+		ca := &cache.ImageCache{
+			ResourceBase: types.ResourceBase{
+				Meta: types.Meta{
+					Name:       "default",
+					Type:       cache.TypeImageCache,
+					ID:         "resource.image_cache.default",
+					Properties: map[string]interface{}{},
+				},
+			},
+			Networks: container.NetworkAttachments{
+				{
+					ID:   network.DefaultNetworkID,
+					Name: network.DefaultNetworkName,
+				},
+			},
+		}
 
-			// reload the networks
-			np := e.providers.GetProvider(ic)
-			np.Refresh(e.ctx)
+		e.log.Debug("Creating new Image Cache", "id", ca.Meta.ID)
+
+		p := e.providers.GetProvider(ca)
+		if p == nil {
+			// this should never happen
+			panic("Unable to find provider for Image Cache, Nic assured me that you should never see this message. Sorry, the monkey has broken something again")
+		}
+
+		// create the cache
+		err := p.Create(ctx)
+		if err != nil {
+			ca.Meta.Properties[constants.PropertyStatus] = constants.StatusFailed
 		} else {
-			e.log.Error("Unable to find Image Cache", "error", err)
+			ca.Meta.Properties[constants.PropertyStatus] = constants.StatusCreated
+		}
+
+		ca.Meta.Properties[constants.PropertyStatus] = constants.StatusCreated
+
+		// add the new cache to the config
+		e.config.AppendResource(ca)
+
+		// save the state
+		config.SaveState(e.config)
+
+		if err != nil {
+			return nil, fmt.Errorf("unable to create image cache %s", err)
 		}
 	}
 
@@ -686,16 +680,4 @@ func (e *EngineImpl) destroyCallback(r types.Resource) error {
 	e.config.RemoveResource(r)
 
 	return nil
-}
-
-// checks if a string exists in an array if not it appends and returns a new
-// copy
-func appendIfNotContains(existing []string, s string) []string {
-	for _, v := range existing {
-		if v == s {
-			return existing
-		}
-	}
-
-	return append(existing, s)
 }

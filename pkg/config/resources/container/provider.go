@@ -15,7 +15,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/http"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/network"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 )
@@ -203,14 +202,6 @@ func (c *Provider) internalCreate(ctx context.Context, sidecar bool) error {
 			Name:        v.Name,
 			IPAddress:   v.IPAddress,
 			Aliases:     v.Aliases,
-			IsContainer: sidecar,
-		})
-	}
-
-	if len(new.Networks) == 0 {
-		new.Networks = append(new.Networks, types.NetworkAttachment{
-			ID:          network.DefaultNetworkID,
-			Name:        network.DefaultNetworkName,
 			IsContainer: sidecar,
 		})
 	}

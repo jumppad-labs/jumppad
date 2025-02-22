@@ -13,7 +13,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/network"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 	"github.com/mohae/deepcopy"
@@ -230,14 +229,6 @@ func (p *DocsProvider) createDocsContainer() error {
 	}
 
 	cc.Networks = p.config.Networks.ToClientNetworkAttachments()
-
-	if len(cc.Networks) == 0 {
-		cc.Networks = append(cc.Networks, types.NetworkAttachment{
-			ID:   network.DefaultNetworkID,
-			Name: network.DefaultNetworkName,
-		})
-	}
-
 	cc.Image = &types.Image{Name: fmt.Sprintf("%s:%s", docsImageName, docsVersion)}
 	cc.MaxRestartCount = -1
 

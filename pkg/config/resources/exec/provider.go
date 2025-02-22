@@ -17,7 +17,6 @@ import (
 	contClient "github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/network"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 	"github.com/zclconf/go-cty/cty"
@@ -232,13 +231,6 @@ func (p *Provider) createRemoteExecContainer() (string, error) {
 			Name:      v.Name,
 			IPAddress: v.IPAddress,
 			Aliases:   v.Aliases,
-		})
-	}
-
-	if len(new.Networks) == 0 {
-		new.Networks = append(new.Networks, types.NetworkAttachment{
-			ID:   network.DefaultNetworkID,
-			Name: network.DefaultNetworkName,
 		})
 	}
 
