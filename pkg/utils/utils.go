@@ -396,10 +396,10 @@ func GetLocalIPAddresses() []string {
 	}
 
 	addresses := []string{}
-	for _, a := range addrs {
-		ip, _, err := net.ParseCIDR(a.String())
-		if err == nil {
-			addresses = append(addresses, string(ip))
+	for _, addr := range addrs {
+		ipNet, ok := addr.(*net.IPNet)
+		if ok && !ipNet.IP.IsLoopback() && ipNet.IP.To4() != nil {
+			addresses = append(addresses, ipNet.IP.To4().String())
 		}
 	}
 
