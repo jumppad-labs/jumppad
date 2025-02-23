@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -15,7 +16,6 @@ import (
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	sdk "github.com/jumppad-labs/plugin-sdk"
-	"github.com/pkg/errors"
 	"github.com/sethvargo/go-retry"
 	"golang.org/x/crypto/ssh"
 )
