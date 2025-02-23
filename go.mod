@@ -55,7 +55,6 @@ require (
 	github.com/zclconf/go-cty v1.15.0
 	golang.org/x/crypto v0.33.0
 	golang.org/x/mod v0.23.0
-	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da
 	google.golang.org/grpc v1.70.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.17.1
