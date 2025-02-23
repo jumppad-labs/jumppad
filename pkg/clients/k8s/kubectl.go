@@ -302,7 +302,7 @@ func deleteFile(path string, kc *kube.Client) error {
 	_, errs := kc.Delete(r)
 	if errs != nil {
 		//TODO need to handle this better
-		return fmt.Errorf("error deleting configuration for file %s: %w", path, errs)
+		return fmt.Errorf("error deleting configuration for file %s: %v", path, errs)
 	}
 
 	return nil
