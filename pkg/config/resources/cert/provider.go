@@ -188,13 +188,13 @@ func (p *LeafProvider) Create(ctx context.Context) error {
 	ca := &crypto.X509{}
 	err := ca.ReadFile(p.config.CACert)
 	if err != nil {
-		return retry.RetryableError(fmt.Errorf("Unable to read root certificate %s: %w", p.config.CACert, err))
+		return retry.RetryableError(fmt.Errorf("unable to read root certificate %s: %w", p.config.CACert, err))
 	}
 
 	rk := crypto.NewKeyPair()
 	err = rk.Private.ReadFile(p.config.CAKey)
 	if err != nil {
-		return retry.RetryableError(fmt.Errorf("Unable to read root key %s: %w", p.config.CAKey, err))
+		return retry.RetryableError(fmt.Errorf("unable to read root key %s: %w", p.config.CAKey, err))
 	}
 
 	k, err := crypto.GenerateKeyPair()

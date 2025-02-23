@@ -257,7 +257,7 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 		}
 
 		if vc.SelinuxRelabel != "" && vc.BindPropagationNonRecursive {
-			return "", errors.New("cannot apply selinux relabeling and non-recursive bind mounts with docker.")
+			return "", errors.New("cannot apply selinux relabeling and non-recursive bind mounts with docker")
 		}
 
 		// Cannot use mounts if selinux relabeling is requested
@@ -524,7 +524,7 @@ func (d *DockerTasks) PullImage(img dtypes.Image, force bool) error {
 
 	out, err := d.c.ImagePull(context.Background(), in, ipo)
 	if err != nil {
-		return fmt.Errorf("Error pulling image: %w", err)
+		return fmt.Errorf("error pulling image: %w", err)
 	}
 
 	// update the image log
@@ -568,7 +568,7 @@ func (d *DockerTasks) PushImage(img dtypes.Image) error {
 
 	out, err := d.c.ImagePush(context.Background(), name, ipo)
 	if err != nil {
-		return fmt.Errorf("Error pushing image: %w", err)
+		return fmt.Errorf("error pushing image: %w", err)
 	}
 
 	// write the output to the debug log

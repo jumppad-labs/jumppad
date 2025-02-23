@@ -29,7 +29,7 @@ func newPushCmd(ct container.ContainerTasks, l logger.Logger) *cobra.Command {
 		SilenceUsage:          true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 2 {
-				return errors.New("Push requires two arguments [image] [cluster]")
+				return errors.New("push requires two arguments [image] [cluster]")
 			}
 
 			if force {

@@ -70,7 +70,7 @@ func (g *GetterImpl) Get(uri, dst string) error {
 
 		err := os.RemoveAll(dst)
 		if err != nil {
-			return fmt.Errorf("Destination folder exists, unable to delete: %w", err)
+			return fmt.Errorf("destination folder exists, unable to delete: %w", err)
 		}
 	}
 
