@@ -25,7 +25,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
-	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -492,7 +491,7 @@ func (p *ClusterProvider) createK3s(ctx context.Context) error {
 	// get the Kubernetes config file and drop it in a temp folder
 	kc, err := p.copyKubeConfig(id)
 	if err != nil {
-		return xerrors.Errorf("unable to copy Kubernetes config: %w", err)
+		return fmt.Errorf("unable to copy Kubernetes config: %w", err)
 	}
 
 	// replace the server location in the kubeconfig file
@@ -500,7 +499,7 @@ func (p *ClusterProvider) createK3s(ctx context.Context) error {
 	// we need to do this as Shipyard might be using a remote Docker engine
 	config, err := p.createLocalKubeConfig(kc)
 	if err != nil {
-		return xerrors.Errorf("unable to create local Kubernetes config: %w", err)
+		return fmt.Errorf("unable to create local Kubernetes config: %w", err)
 	}
 
 	p.config.KubeConfig.ConfigPath = config
@@ -508,13 +507,13 @@ func (p *ClusterProvider) createK3s(ctx context.Context) error {
 	// parse the kubeconfig and get the details
 	data, err := os.ReadFile(config)
 	if err != nil {
-		return xerrors.Errorf("unable to read Kubernetes config: %w", err)
+		return fmt.Errorf("unable to read Kubernetes config: %w", err)
 	}
 
 	cfg := &Configuration{}
 	err = yaml.Unmarshal(data, &cfg)
 	if err != nil {
-		return xerrors.Errorf("unable to unmarshal Kubernetes config: %w", err)
+		return fmt.Errorf("unable to unmarshal Kubernetes config: %w", err)
 	}
 
 	p.config.KubeConfig.CA = cfg.Clusters[0].Cluster.CertificateAuthorityData
@@ -542,7 +541,7 @@ func (p *ClusterProvider) createK3s(ctx context.Context) error {
 		// copy the logs to the output
 		io.Copy(p.log.StandardWriter(), lr)
 
-		return xerrors.Errorf("timeout waiting for Kubernetes default pods: %w", err)
+		return fmt.Errorf("timeout waiting for Kubernetes default pods: %w", err)
 	}
 
 	// import the images to the servers container d instance
@@ -560,7 +559,7 @@ func (p *ClusterProvider) createK3s(ctx context.Context) error {
 
 		err := p.ImportLocalDockerImages(imgs, false)
 		if err != nil {
-			return xerrors.Errorf("unable to importing Docker images: %w", err)
+			return fmt.Errorf("unable to importing Docker images: %w", err)
 		}
 	}
 
@@ -574,7 +573,7 @@ func (p *ClusterProvider) waitForStart(ctx context.Context, id string) error {
 
 	for {
 		if ctx.Err() != nil {
-			return xerrors.Errorf("context cancelled, the cluster may be in an incoplete state")
+			return errors.New("context cancelled, the cluster may be in an incoplete state")
 		}
 
 		// not running after timeout exceeded? Rollback and delete everything.

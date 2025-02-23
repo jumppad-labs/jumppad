@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -13,7 +14,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/k8s"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/nomad"
 	"github.com/spf13/cobra"
-	"golang.org/x/xerrors"
 )
 
 func newPushCmd(ct container.ContainerTasks, l logger.Logger) *cobra.Command {
@@ -29,7 +29,7 @@ func newPushCmd(ct container.ContainerTasks, l logger.Logger) *cobra.Command {
 		SilenceUsage:          true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 2 {
-				return xerrors.Errorf("Push requires two arguments [image] [cluster]")
+				return errors.New("Push requires two arguments [image] [cluster]")
 			}
 
 			if force {
@@ -43,7 +43,7 @@ func newPushCmd(ct container.ContainerTasks, l logger.Logger) *cobra.Command {
 
 			// check the resource is of the allowed type
 			if !strings.Contains(cluster, "nomad_cluster") && !strings.Contains(cluster, "k8s_cluster") {
-				return xerrors.Errorf("Invalid resource type, only resources type nomad_cluster and k8s_cluster are supported")
+				return errors.New("invalid resource type, only resources type nomad_cluster and k8s_cluster are supported")
 			}
 
 			c, err := config.LoadState()
@@ -54,7 +54,7 @@ func newPushCmd(ct container.ContainerTasks, l logger.Logger) *cobra.Command {
 
 			r, err := c.FindResource(cluster)
 			if err != nil {
-				return xerrors.Errorf("Cluster %s is not running", cluster)
+				return fmt.Errorf("cluster %s is not running", cluster)
 			}
 
 			switch r.Metadata().Type {
@@ -81,14 +81,14 @@ func pushK8sCluster(image string, c *k8s.Cluster, log logger.Logger, force bool)
 	// get the id of the cluster
 	ids, err := cl.Lookup()
 	if err != nil {
-		return xerrors.Errorf("Error getting id for cluster")
+		return errors.New("error getting id for cluster")
 	}
 
 	for _, id := range ids {
 		log.Info("Pushing to container", "id", id, "image", image)
 		err = cl.ImportLocalDockerImages([]types.Image{{Name: strings.Trim(image, " ")}}, force)
 		if err != nil {
-			return xerrors.Errorf("Error pushing image: %w ", err)
+			return fmt.Errorf("error pushing image: %w ", err)
 		}
 	}
 
@@ -105,7 +105,7 @@ func pushNomadCluster(image string, c *nomad.NomadCluster, log logger.Logger, fo
 	log.Info("Pushing to container", "ref", c.Meta.ID, "image", image)
 	err := cl.ImportLocalDockerImages([]types.Image{{Name: strings.Trim(image, " ")}}, force)
 	if err != nil {
-		return xerrors.Errorf("Error pushing image: %w ", err)
+		return fmt.Errorf("error pushing image: %w ", err)
 	}
 
 	return nil

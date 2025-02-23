@@ -11,7 +11,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	sdk "github.com/jumppad-labs/plugin-sdk"
-	"golang.org/x/xerrors"
 )
 
 var _ sdk.Provider = &Provider{}
@@ -123,7 +122,7 @@ func (p *Provider) Destroy(ctx context.Context, force bool) error {
 	// check network exists if so remove
 	ids, err := p.Lookup()
 	if err != nil {
-		return xerrors.Errorf("Unable to list networks: %w", err)
+		return fmt.Errorf("unable to list networks: %w", err)
 	}
 
 	if len(ids) == 1 {

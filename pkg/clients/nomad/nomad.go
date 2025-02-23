@@ -12,7 +12,6 @@ import (
 
 	chttp "github.com/jumppad-labs/jumppad/pkg/clients/http"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	"golang.org/x/xerrors"
 )
 
 // Nomad defines an interface for a Nomad client
@@ -174,19 +173,19 @@ func (n *NomadImpl) Create(files []string) error {
 
 		r, err := http.NewRequest(http.MethodPost, addr, bytes.NewReader([]byte(cr)))
 		if err != nil {
-			return xerrors.Errorf("Unable to create http request: %w", err)
+			return fmt.Errorf("unable to create http request: %w", err)
 		}
 
 		resp, err := n.httpClient.Do(r)
 		if err != nil {
-			return xerrors.Errorf("Unable to submit job: %w", err)
+			return fmt.Errorf("unable to submit job: %w", err)
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
 			// try to read the body for the error
 			d, _ := io.ReadAll(resp.Body)
-			return xerrors.Errorf("Error submitting job, got status code %d, error: %s", resp.StatusCode, string(d))
+			return fmt.Errorf("error submitting job, got status code %d, error: %s", resp.StatusCode, string(d))
 		}
 	}
 
@@ -204,16 +203,16 @@ func (n *NomadImpl) Stop(files []string) error {
 		// stop the job
 		r, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s:%d/v1/job/%s", n.address, n.port, id), nil)
 		if err != nil {
-			return xerrors.Errorf("Unable to create http request: %w", err)
+			return fmt.Errorf("unable to create http request: %w", err)
 		}
 
 		resp, err := n.httpClient.Do(r)
 		if err != nil {
-			return xerrors.Errorf("Unable to submit job: %w", err)
+			return fmt.Errorf("unable to submit job: %w", err)
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			return xerrors.Errorf("Error submitting job, got status code %d", resp.StatusCode)
+			return fmt.Errorf("error submitting job, got status code %d", resp.StatusCode)
 		}
 	}
 
@@ -226,7 +225,7 @@ func (n *NomadImpl) ParseJob(file string) ([]byte, error) {
 	// load the file
 	d, err := os.ReadFile(file)
 	if err != nil {
-		return nil, xerrors.Errorf("Unable to read file %s: %w", file, err)
+		return nil, fmt.Errorf("unable to read file %s: %w", file, err)
 	}
 
 	// build the request object
@@ -238,27 +237,27 @@ func (n *NomadImpl) ParseJob(file string) ([]byte, error) {
 	// validate the config with the Nomad API
 	r, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s:%d/v1/jobs/parse", n.address, n.port), bytes.NewReader(jobData))
 	if err != nil {
-		return nil, xerrors.Errorf("Unable to create http request: %w", err)
+		return nil, fmt.Errorf("unable to create http request: %w", err)
 	}
 
 	resp, err := n.httpClient.Do(r)
 	if err != nil {
-		return nil, xerrors.Errorf("Unable to validate job: %w", err)
+		return nil, fmt.Errorf("unable to validate job: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusBadRequest && resp.StatusCode != http.StatusOK {
-		return nil, xerrors.Errorf("Error validating job Nomad API returned an internal error")
+		return nil, fmt.Errorf("error validating job Nomad API returned an internal error")
 	}
 
 	defer resp.Body.Close()
 
 	jsonJob, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, xerrors.Errorf("Unable to read response from Nomad API: %w", err)
+		return nil, fmt.Errorf("unable to read response from Nomad API: %w", err)
 	}
 
 	if resp.StatusCode == http.StatusBadRequest {
-		return nil, xerrors.Errorf("Error validating job, job file contains errors: %s", jsonJob)
+		return nil, fmt.Errorf("error validating job, job file contains errors: %s", jsonJob)
 	}
 
 	return jsonJob, nil
@@ -316,16 +315,16 @@ func (n *NomadImpl) Endpoints(job, group, task string) ([]map[string]string, err
 
 		r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s:%d/v1/allocation/%s", n.address, n.port, j["ID"]), nil)
 		if err != nil {
-			return nil, xerrors.Errorf("Unable to create http request: %w", err)
+			return nil, fmt.Errorf("unable to create http request: %w", err)
 		}
 
 		resp, err := n.httpClient.Do(r)
 		if err != nil {
-			return nil, xerrors.Errorf("Unable to get allocation: %w", err)
+			return nil, fmt.Errorf("unable to get allocation: %w", err)
 		}
 
 		if resp.Body == nil {
-			return nil, xerrors.Errorf("No body returned from Nomad API")
+			return nil, fmt.Errorf("no body returned from Nomad API")
 		}
 
 		defer resp.Body.Close()
@@ -396,16 +395,16 @@ func (n *NomadImpl) getJobAllocations(job string) ([]map[string]interface{}, err
 	// get the allocations for the job
 	r, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s:%d/v1/job/%s/allocations", n.address, n.port, job), nil)
 	if err != nil {
-		return nil, xerrors.Errorf("Unable to create http request: %w", err)
+		return nil, fmt.Errorf("unable to create http request: %w", err)
 	}
 
 	resp, err := n.httpClient.Do(r)
 	if err != nil {
-		return nil, xerrors.Errorf("Unable to query job: %w", err)
+		return nil, fmt.Errorf("unable to query job: %w", err)
 	}
 
 	if resp.Body == nil {
-		return nil, xerrors.Errorf("No body returned from Nomad API")
+		return nil, fmt.Errorf("no body returned from Nomad API")
 	}
 
 	defer resp.Body.Close()

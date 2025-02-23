@@ -11,7 +11,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/nomad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
-	"golang.org/x/xerrors"
 )
 
 var _ sdk.Provider = &JobProvider{}
@@ -58,7 +57,7 @@ func (p *JobProvider) Create(ctx context.Context) error {
 
 	err := p.client.Create(p.config.Paths)
 	if err != nil {
-		return xerrors.Errorf("Unable to create Nomad jobs: %w", err)
+		return fmt.Errorf("unable to create Nomad jobs: %w", err)
 	}
 
 	// if health check defined wait for jobs
@@ -76,7 +75,7 @@ func (p *JobProvider) Create(ctx context.Context) error {
 				}
 
 				if time.Since(st) >= dur {
-					return xerrors.Errorf("timeout waiting for job '%s' to start", j)
+					return fmt.Errorf("timeout waiting for job '%s' to start", j)
 				}
 
 				p.log.Debug("Checking health for", "ref", p.config.Meta.ID, "job", j)
@@ -96,7 +95,7 @@ func (p *JobProvider) Create(ctx context.Context) error {
 	// set the checksums
 	cs, err := p.generateChecksums()
 	if err != nil {
-		return xerrors.Errorf("unable to generate checksums: %w", err)
+		return fmt.Errorf("unable to generate checksums: %w", err)
 	}
 
 	p.config.JobChecksums = cs

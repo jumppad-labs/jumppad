@@ -11,7 +11,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/k8s"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
-	"golang.org/x/xerrors"
 )
 
 var _ sdk.Provider = &ConfigProvider{}
@@ -66,19 +65,19 @@ func (p *ConfigProvider) create(ctx context.Context) error {
 	if p.config.HealthCheck != nil && len(p.config.HealthCheck.Pods) > 0 {
 		to, err := time.ParseDuration(p.config.HealthCheck.Timeout)
 		if err != nil {
-			return xerrors.Errorf("unable to parse healthcheck duration: %w", err)
+			return fmt.Errorf("unable to parse healthcheck duration: %w", err)
 		}
 
 		err = p.client.HealthCheckPods(ctx, p.config.HealthCheck.Pods, to)
 		if err != nil {
-			return xerrors.Errorf("healthcheck failed after helm chart setup: %w", err)
+			return fmt.Errorf("healthcheck failed after helm chart setup: %w", err)
 		}
 	}
 
 	// set the checksums
 	cs, err := p.generateChecksums()
 	if err != nil {
-		return xerrors.Errorf("unable to generate checksums: %w", err)
+		return fmt.Errorf("unable to generate checksums: %w", err)
 	}
 
 	p.config.JobChecksums = cs
@@ -153,7 +152,7 @@ func (p *ConfigProvider) setup() error {
 	var err error
 	p.client, err = p.client.SetConfig(p.config.Cluster.KubeConfig.ConfigPath)
 	if err != nil {
-		return xerrors.Errorf("unable to create Kubernetes client: %w", err)
+		return fmt.Errorf("unable to create Kubernetes client: %w", err)
 	}
 
 	return nil

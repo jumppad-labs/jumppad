@@ -24,7 +24,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/nomad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
-	"golang.org/x/xerrors"
 )
 
 var _ sdk.Provider = &ClusterProvider{}
@@ -330,7 +329,7 @@ func (p *ClusterProvider) createNomad(ctx context.Context) error {
 		}
 
 		if err != nil {
-			return xerrors.Errorf("unable to lookup cluster id: %w", err)
+			return fmt.Errorf("unable to lookup cluster id: %w", err)
 		}
 	}
 
@@ -341,7 +340,7 @@ func (p *ClusterProvider) createNomad(ctx context.Context) error {
 	}
 
 	if err != nil {
-		return xerrors.Errorf("unable to lookup cluster id: %w", err)
+		return fmt.Errorf("unable to lookup cluster id: %w", err)
 	}
 
 	// pull the container image
@@ -418,7 +417,7 @@ func (p *ClusterProvider) createNomad(ctx context.Context) error {
 	p.config.ClientContainerName = clientFQDN
 
 	if clientError != nil {
-		return xerrors.Errorf("Unable to create client nodes: %w", clientError)
+		return fmt.Errorf("unable to create client nodes: %w", clientError)
 	}
 
 	// if client nodes is 0 then the server acts as both client and server

@@ -14,7 +14,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/nomad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
-	"golang.org/x/xerrors"
 )
 
 var _ sdk.Provider = &Provider{}
@@ -162,7 +161,7 @@ func (p *Provider) exposeLocal() error {
 	)
 
 	if err != nil {
-		return xerrors.Errorf("unable to expose remote service on cluster :%w", err)
+		return fmt.Errorf("unable to expose remote service on cluster :%w", err)
 	}
 
 	addr := fmt.Sprintf("%s:%d", utils.GetDockerIP(), p.config.Port)
@@ -237,7 +236,7 @@ func (p *Provider) exposeRemote() error {
 	)
 
 	if err != nil {
-		return xerrors.Errorf("unable to expose remote service on cluster :%w", err)
+		return fmt.Errorf("unable to expose remote service on cluster :%w", err)
 	}
 
 	addr := fmt.Sprintf("%s:%d", utils.GetDockerIP(), p.config.Port)
