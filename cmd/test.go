@@ -37,7 +37,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/nomad"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	gvm "github.com/shipyard-run/version-manager"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/util/jsonpath"
 )
@@ -118,7 +117,6 @@ type CucumberRunner struct {
 	args          []string
 	e             jumppad.Engine
 	cli           *clients.Clients
-	vm            gvm.Versions
 	testFolder    string
 	testPath      string
 	basePath      string
@@ -179,7 +177,7 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 		cl := logger.NewLogger(sb, logger.LogLevelDebug)
 
 		cli, _ := clients.GenerateClients(cl)
-		engine, vm, err := createEngine(cl, cli)
+		engine, err := createEngine(cl, cli)
 		if err != nil {
 			fmt.Printf("Unable to setup tests: %s\n", err)
 			return ctx, err
@@ -188,7 +186,6 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 		cr.e = engine
 		cr.l = cl
 		cr.cli = cli
-		cr.vm = vm
 
 		// do we need to pure the cache
 		if *cr.purge {

@@ -25,7 +25,7 @@ func newDestroyCmd(cc connector.Connector, l logger.Logger) *cobra.Command {
 			engineClients, _ := clients.GenerateClients(l)
 			engineClients.ContainerTasks.SetForce(force)
 
-			engine, _, err := createEngine(l, engineClients)
+			engine, err := createEngine(l, engineClients)
 			if err != nil {
 				l.Error("Unable to create engine", "error", err)
 				return

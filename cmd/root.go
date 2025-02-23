@@ -5,14 +5,11 @@ import (
 	"os"
 	"strings"
 
-	gvm "github.com/shipyard-run/version-manager"
-
 	"github.com/jumppad-labs/jumppad/cmd/changelog"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
 
 	"github.com/spf13/cobra"
 )
@@ -27,49 +24,15 @@ var version string //lint:ignore U1000 set at runtime
 var date string    //lint:ignore U1000 set at runtime
 var commit string  //lint:ignore U1000 set at runtime
 
-func createEngine(l logger.Logger, c *clients.Clients) (jumppad.Engine, gvm.Versions, error) {
+func createEngine(l logger.Logger, c *clients.Clients) (jumppad.Engine, error) {
 	providers := config.NewProviders(c)
 
 	engine, err := jumppad.New(providers, l)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	o := gvm.Options{
-		Organization: "jumppad-labs",
-		Repo:         "jumppad",
-		ReleasesPath: utils.ReleasesFolder(),
-	}
-
-	o.AssetNameFunc = func(version, goos, goarch string) string {
-		// No idea why we set the release architecture for the binary like this
-		if goarch == "amd64" {
-			goarch = "x86_64"
-		}
-
-		switch goos {
-		case "linux":
-			return fmt.Sprintf("jumppad_%s_%s_%s.tar.gz", version, goos, goarch)
-		case "darwin":
-			return fmt.Sprintf("jumppad_%s_%s_%s.zip", version, goos, goarch)
-		case "windows":
-			return fmt.Sprintf("jumppad_%s_%s_%s.zip", version, goos, goarch)
-		}
-
-		return ""
-	}
-
-	o.ExeNameFunc = func(version, goos, goarch string) string {
-		if goos == "windows" {
-			return "jumppad.exe"
-		}
-
-		return "jumppad"
-	}
-
-	vm := gvm.New(o)
-
-	return engine, vm, nil
+	return engine, nil
 }
 
 func createLogger() logger.Logger {
@@ -92,7 +55,7 @@ func Execute(v, c, d string) error {
 
 	engineClients, _ := clients.GenerateClients(l)
 
-	engine, _, _ := createEngine(l, engineClients)
+	engine, _ := createEngine(l, engineClients)
 
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(outputCmd)
