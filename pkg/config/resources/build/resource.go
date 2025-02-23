@@ -58,7 +58,7 @@ func (b *Build) Process() error {
 		path := path.Join(b.Container.Context, b.Container.DockerFile)
 		_, err := os.Stat(path)
 		if err != nil {
-			return fmt.Errorf("Dockerfile must located in the context folder, the file %s, does not exist in the context path %s", b.Container.DockerFile, b.Container.Context)
+			return fmt.Errorf("the Dockerfile must located in the context folder, the file %s, does not exist in the context path %s", b.Container.DockerFile, b.Container.Context)
 		}
 	}
 

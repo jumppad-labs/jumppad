@@ -8,7 +8,7 @@ import (
 
 	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 
-	dtypes "github.com/docker/docker/api/types"
+	dcontainer "github.com/docker/docker/api/types/container"
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
@@ -272,7 +272,7 @@ func (p *Provider) reConfigureNetworks(dependentNetworks []string) error {
 	}
 
 	// flatten the docker object into a simple slice
-	for k := range info.(dtypes.ContainerJSON).NetworkSettings.Networks {
+	for k := range info.(dcontainer.InspectResponse).NetworkSettings.Networks {
 		currentNetworks = append(currentNetworks, k)
 	}
 

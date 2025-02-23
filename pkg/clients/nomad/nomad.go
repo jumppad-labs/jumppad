@@ -5,8 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"time"
 
 	chttp "github.com/jumppad-labs/jumppad/pkg/clients/http"
@@ -56,10 +57,6 @@ type validateRequest struct {
 	Canonicalize bool
 }
 
-type createRequest struct {
-	Job string
-}
-
 // SetConfig loads the Nomad config from a file
 func (n *NomadImpl) SetConfig(address string, port, nodes int) error {
 	n.address = address
@@ -78,10 +75,10 @@ func (n *NomadImpl) HealthCheckAPI(ctx context.Context, timeout time.Duration) e
 			return fmt.Errorf("context cancelled, cluster health check aborted")
 		}
 
-		if time.Now().Sub(st) > timeout {
+		if time.Since(st) > timeout {
 			n.l.Error("Timeout wating for Nomad healthcheck", "address", n.address)
 
-			return fmt.Errorf("Timeout waiting for Nomad healthcheck %s", n.address)
+			return fmt.Errorf("timeout waiting for Nomad healthcheck %s", n.address)
 		}
 
 		rq, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s:%d/v1/nodes", n.address, n.port), nil)
@@ -188,7 +185,7 @@ func (n *NomadImpl) Create(files []string) error {
 
 		if resp.StatusCode != http.StatusOK {
 			// try to read the body for the error
-			d, _ := ioutil.ReadAll(resp.Body)
+			d, _ := io.ReadAll(resp.Body)
 			return xerrors.Errorf("Error submitting job, got status code %d, error: %s", resp.StatusCode, string(d))
 		}
 	}
@@ -227,7 +224,7 @@ func (n *NomadImpl) Stop(files []string) error {
 // bytes representing the JSON payload.
 func (n *NomadImpl) ParseJob(file string) ([]byte, error) {
 	// load the file
-	d, err := ioutil.ReadFile(file)
+	d, err := os.ReadFile(file)
 	if err != nil {
 		return nil, xerrors.Errorf("Unable to read file %s: %w", file, err)
 	}
@@ -255,7 +252,7 @@ func (n *NomadImpl) ParseJob(file string) ([]byte, error) {
 
 	defer resp.Body.Close()
 
-	jsonJob, err := ioutil.ReadAll(resp.Body)
+	jsonJob, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, xerrors.Errorf("Unable to read response from Nomad API: %w", err)
 	}
@@ -336,7 +333,7 @@ func (n *NomadImpl) Endpoints(job, group, task string) ([]map[string]string, err
 		allocDetail := allocation{}
 		err = json.NewDecoder(resp.Body).Decode(&allocDetail)
 		if err != nil {
-			return nil, fmt.Errorf("Error getting endpoints from server: %s: err: %s", n.address, err)
+			return nil, fmt.Errorf("error getting endpoints from server: %s: err: %s", n.address, err)
 		}
 
 		ports := []string{}
@@ -416,7 +413,7 @@ func (n *NomadImpl) getJobAllocations(job string) ([]map[string]interface{}, err
 	jobDetail := make([]map[string]interface{}, 0)
 	err = json.NewDecoder(resp.Body).Decode(&jobDetail)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to query jobs in Nomad server: %s: %s", n.address, err)
+		return nil, fmt.Errorf("unable to query jobs in Nomad server: %s: %s", n.address, err)
 	}
 
 	return jobDetail, err

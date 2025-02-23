@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path"
@@ -78,7 +77,7 @@ func (p *ClusterProvider) Destroy(ctx context.Context, force bool) error {
 		return nil
 	}
 
-	return p.destroyNomad(ctx, force)
+	return p.destroyNomad(force)
 }
 
 // Lookup the a clusters current state
@@ -770,16 +769,16 @@ func (p *ClusterProvider) deployConnector() error {
 	)
 
 	// load the certs into a string so that they can be embedded into the config
-	ca, _ := ioutil.ReadFile(lf.RootCertPath)
-	cert, _ := ioutil.ReadFile(lf.LeafCertPath)
-	key, _ := ioutil.ReadFile(lf.LeafKeyPath)
+	ca, _ := os.ReadFile(lf.RootCertPath)
+	cert, _ := os.ReadFile(lf.LeafCertPath)
+	key, _ := os.ReadFile(lf.LeafKeyPath)
 
 	if err != nil {
 		return fmt.Errorf("unable to generate leaf certificates for ingress: %s", err)
 	}
 
 	// create a temp directory to write config to
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return fmt.Errorf("unable to create temporary directory: %s", err)
 	}
@@ -803,7 +802,7 @@ func (p *ClusterProvider) deployConnector() error {
 	)
 
 	connectorDeployment := filepath.Join(dir, "connector.nomad")
-	ioutil.WriteFile(connectorDeployment, []byte(config), os.ModePerm)
+	os.WriteFile(connectorDeployment, []byte(config), os.ModePerm)
 
 	// deploy the file
 	err = p.nomadClient.Create([]string{connectorDeployment})
@@ -822,7 +821,7 @@ func (p *ClusterProvider) deployConnector() error {
 			break
 		}
 
-		ok, lastError = p.nomadClient.JobRunning("connector")
+		ok, err = p.nomadClient.JobRunning("connector")
 		if err != nil {
 			lastError = fmt.Errorf("unable to check Connector deployment health: %s", err)
 			continue
@@ -838,7 +837,7 @@ func (p *ClusterProvider) deployConnector() error {
 	return lastError
 }
 
-func (p *ClusterProvider) destroyNomad(ctx context.Context, force bool) error {
+func (p *ClusterProvider) destroyNomad(force bool) error {
 	p.log.Info("Destroy Nomad Cluster", "ref", p.config.Meta.ID)
 
 	// destroy the clients

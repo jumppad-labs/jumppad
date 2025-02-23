@@ -28,8 +28,6 @@ type ClusterConfig struct {
 
 	// Does the API use SSL?
 	SSL bool `json:"ssl"`
-
-	context Context
 }
 
 // Context is a type which stores the context for the cluster

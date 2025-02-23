@@ -120,7 +120,7 @@ func (p *Provider) Create(ctx context.Context) error {
 			// context is cancelled do not retry
 			if ctx.Err() != nil {
 				p.log.Debug("Skipping create, context cancelled", "ref", p.config.Meta.ID)
-				err := xerrors.Errorf("context cancelled, skipping helm chart creation", "ref", p.config.Meta.ID)
+				err := fmt.Errorf("context cancelled, skipping helm chart creation, ref: %s", p.config.Meta.ID)
 				errChan <- err
 			}
 

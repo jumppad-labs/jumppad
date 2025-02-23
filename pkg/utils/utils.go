@@ -65,13 +65,13 @@ func CreateFolders() {
 func ValidateName(name string) (bool, error) {
 	// check the length
 	if len(name) > 128 {
-		return false, NameExceedsMaxLengthError
+		return false, ErrNameExceedsMaxLength
 	}
 
 	r := regexp.MustCompile(`^[a-zA-Z0-9\-_]+$`)
 	ok := r.MatchString(name)
 	if !ok {
-		return false, NameContainsInvalidCharactersError
+		return false, ErrNameContainsInvalidCharacters
 	}
 
 	return true, nil
@@ -258,7 +258,7 @@ func BlueprintFolder(blueprint string) (string, error) {
 	parts := strings.Split(blueprint, "//")
 
 	if parts == nil || len(parts) != 2 {
-		return "", InvalidBlueprintURIError
+		return "", ErrInvalidBlueprintURI
 	}
 
 	// first replace any ?
@@ -399,7 +399,7 @@ func GetLocalIPAddresses() []string {
 	for _, a := range addrs {
 		ip, _, err := net.ParseCIDR(a.String())
 		if err == nil {
-			addresses = append(addresses, fmt.Sprintf("%s", ip))
+			addresses = append(addresses, string(ip))
 		}
 	}
 
@@ -526,7 +526,7 @@ func incIP(ip net.IP) net.IP {
 	byteIp := []byte(newIp)
 	l := len(byteIp)
 	var i int
-	for k, _ := range byteIp {
+	for k := range byteIp {
 		// start with the rightmost index first
 		// increment it
 		// if the index is < 256, then no overflow happened and we increment and break

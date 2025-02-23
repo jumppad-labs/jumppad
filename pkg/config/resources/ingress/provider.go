@@ -250,13 +250,6 @@ func (p *Provider) exposeRemote() error {
 	return nil
 }
 
-type connectorDetails struct {
-	serviceName        string
-	destinationAddress string
-	sourceAddress      string
-	connectorAddress   string
-}
-
 // exposeK8sRemote exposes a remote kubernetes service to the local machine
 //func (c *Ingress) exposeK8sRemote() error {
 //	// get the target

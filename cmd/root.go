@@ -15,10 +15,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
-
-var configFile = ""
 
 var rootCmd = &cobra.Command{
 	Use:   "jumppad",
@@ -26,17 +23,9 @@ var rootCmd = &cobra.Command{
 	Long:  `Jumppad is a tool that helps you create and run development, demo, and tutorial environments`,
 }
 
-var version string // set by build process
-var date string    // set by build process
-var commit string  // set by build process
-
-// globalFlags are flags that are set for every command
-func globalFlags() *pflag.FlagSet {
-	flags := pflag.NewFlagSet("global", pflag.ContinueOnError)
-	flags.Bool("non-interactive", false, "Run in non-interactive mode")
-
-	return flags
-}
+var version string //lint:ignore U1000 set at runtime
+var date string    //lint:ignore U1000 set at runtime
+var commit string  //lint:ignore U1000 set at runtime
 
 func createEngine(l logger.Logger, c *clients.Clients) (jumppad.Engine, gvm.Versions, error) {
 	providers := config.NewProviders(c)
@@ -98,29 +87,27 @@ func Execute(v, c, d string) error {
 	commit = c
 	date = d
 
-	var vm gvm.Versions
-
 	// setup dependencies
 	l := createLogger()
 
 	engineClients, _ := clients.GenerateClients(l)
 
-	engine, vm, _ := createEngine(l, engineClients)
+	engine, _, _ := createEngine(l, engineClients)
 
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(outputCmd)
 	rootCmd.AddCommand(newDevCmd())
-	rootCmd.AddCommand(newEnvCmd(engine))
-	rootCmd.AddCommand(newRunCmd(engine, engineClients.ContainerTasks, engineClients.Getter, engineClients.HTTP, engineClients.System, vm, engineClients.Connector, l))
+	rootCmd.AddCommand(newEnvCmd())
+	rootCmd.AddCommand(newRunCmd(engine, engineClients.ContainerTasks, engineClients.Getter, engineClients.HTTP, engineClients.System, engineClients.Connector, l))
 	rootCmd.AddCommand(newTestCmd())
 	rootCmd.AddCommand(newDestroyCmd(engineClients.Connector, l))
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(newPurgeCmd(engineClients.Docker, engineClients.ImageLog, l))
 	rootCmd.AddCommand(taintCmd)
-	rootCmd.AddCommand(newVersionCmd(vm))
+	rootCmd.AddCommand(newVersionCmd())
 	rootCmd.AddCommand(uninstallCmd)
-	rootCmd.AddCommand(newPushCmd(engineClients.ContainerTasks, engineClients.Kubernetes, engineClients.HTTP, engineClients.Nomad, l))
-	rootCmd.AddCommand(newLogCmd(engine, engineClients.Docker, os.Stdout, os.Stderr), completionCmd)
+	rootCmd.AddCommand(newPushCmd(engineClients.ContainerTasks, l))
+	rootCmd.AddCommand(newLogCmd(engineClients.Docker, os.Stdout, os.Stderr), completionCmd)
 	rootCmd.AddCommand(changelogCmd)
 
 	// add the server commands

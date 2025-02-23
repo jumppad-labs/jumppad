@@ -7,7 +7,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -102,7 +101,7 @@ func (p *CAProvider) Create(ctx context.Context) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(publicSSHFile, []byte(ssh), os.ModePerm)
+	err = os.WriteFile(publicSSHFile, []byte(ssh), os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -232,7 +231,7 @@ func (p *LeafProvider) Create(ctx context.Context) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(pubsshFile, []byte(ssh), os.ModePerm)
+	err = os.WriteFile(pubsshFile, []byte(ssh), os.ModePerm)
 	if err != nil {
 		return err
 	}

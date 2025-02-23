@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path"
@@ -86,7 +85,7 @@ func (p *ClusterProvider) Destroy(ctx context.Context, force bool) error {
 		return nil
 	}
 
-	return p.destroyK3s(ctx, force)
+	return p.destroyK3s(force)
 }
 
 // Lookup the a clusters current state
@@ -644,7 +643,7 @@ func (p *ClusterProvider) changeServerAddressInK8sConfig(addr, origFile, newFile
 	}
 	defer f.Close()
 
-	readBytes, err := ioutil.ReadAll(f)
+	readBytes, err := io.ReadAll(f)
 	if err != nil {
 		return fmt.Errorf("unable to read kubeconfig, %v", err)
 	}
@@ -695,7 +694,7 @@ func (p *ClusterProvider) deployConnector(ctx context.Context, grpcPort, httpPor
 	}
 
 	// create a temp directory to write config to
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return fmt.Errorf("unable to create temporary directory: %s", err)
 	}
@@ -753,7 +752,7 @@ func (p *ClusterProvider) deployConnector(ctx context.Context, grpcPort, httpPor
 	return nil
 }
 
-func (p *ClusterProvider) destroyK3s(ctx context.Context, force bool) error {
+func (p *ClusterProvider) destroyK3s(force bool) error {
 	p.log.Info("Destroy Cluster", "ref", p.config.Meta.ID)
 
 	ids, err := p.Lookup()
@@ -812,13 +811,13 @@ func (p *ClusterProvider) createRegistriesConfig() (string, error) {
 }
 
 func writeConnectorNamespace(path string) error {
-	return ioutil.WriteFile(path, []byte(connectorNamespace), os.ModePerm)
+	return os.WriteFile(path, []byte(connectorNamespace), os.ModePerm)
 }
 
 // writeK8sSecret writes a Kubernetes secret yaml to a file
 func writeConnectorK8sSecret(path, root, key, cert string) error {
 	// load the key and base64 encode
-	kd, err := ioutil.ReadFile(key)
+	kd, err := os.ReadFile(key)
 	if err != nil {
 		return err
 	}
@@ -826,7 +825,7 @@ func writeConnectorK8sSecret(path, root, key, cert string) error {
 	kb := base64.StdEncoding.EncodeToString(kd)
 
 	// load the cert and base64 encode
-	cd, err := ioutil.ReadFile(cert)
+	cd, err := os.ReadFile(cert)
 	if err != nil {
 		return err
 	}
@@ -834,26 +833,26 @@ func writeConnectorK8sSecret(path, root, key, cert string) error {
 	cb := base64.StdEncoding.EncodeToString(cd)
 
 	// load the root cert and base64 encode
-	rd, err := ioutil.ReadFile(root)
+	rd, err := os.ReadFile(root)
 	if err != nil {
 		return err
 	}
 
 	rb := base64.StdEncoding.EncodeToString(rd)
 
-	return ioutil.WriteFile(path, []byte(
+	return os.WriteFile(path, []byte(
 		fmt.Sprintf(connectorSecret, rb, cb, kb),
 	), os.ModePerm)
 }
 
 func writeConnectorDeployment(path string, grpc, http int, logLevel string) error {
-	return ioutil.WriteFile(path, []byte(
+	return os.WriteFile(path, []byte(
 		fmt.Sprintf(connectorDeployment, grpc, http, logLevel),
 	), os.ModePerm)
 }
 
 func writeConnectorRBAC(path string) error {
-	return ioutil.WriteFile(path, []byte(connectorRBAC), os.ModePerm)
+	return os.WriteFile(path, []byte(connectorRBAC), os.ModePerm)
 }
 
 type dockerConfig struct {

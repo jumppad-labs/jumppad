@@ -196,6 +196,9 @@ func (h *HelmImpl) Destroy(kubeConfig, name, namespace string) error {
 	err := cfg.Init(s, namespace, "", func(format string, v ...interface{}) {
 		h.log.Debug("Helm debug message", "message", fmt.Sprintf(format, v...))
 	})
+	if err != nil {
+		return xerrors.Errorf("unable to initialize configuration: %w", err)
+	}
 
 	//settings := cli.EnvSettings{}
 	//p := getter.All(&settings)

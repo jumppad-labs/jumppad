@@ -213,7 +213,7 @@ func (p *ConfigProvider) getChangedAndDeletedPaths() ([]string, []string, error)
 	}
 
 	// check deleted paths
-	for k, _ := range p.config.JobChecksums {
+	for k := range p.config.JobChecksums {
 		_, ok := cs[k]
 		if !ok {
 			deleted = append(deleted, k)

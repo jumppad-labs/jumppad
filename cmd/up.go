@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/jumppad-labs/hclconfig/resources"
-	gvm "github.com/shipyard-run/version-manager"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients/connector"
 	cclients "github.com/jumppad-labs/jumppad/pkg/clients/container"
@@ -34,11 +33,9 @@ import (
 	markdown "github.com/MichaelMure/go-term-markdown"
 )
 
-func newRunCmd(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Getter, hc http.HTTP, bc system.System, vm gvm.Versions, cc connector.Connector, l logger.Logger) *cobra.Command {
+func newRunCmd(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Getter, hc http.HTTP, bc system.System, cc connector.Connector, l logger.Logger) *cobra.Command {
 	var noOpen bool
 	var force bool
-	var y bool
-	var runVersion string
 	var variables []string
 	var variablesFile string
 
@@ -57,7 +54,7 @@ func newRunCmd(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Getter, h
   jumppad up github.com/jumppad-labs/blueprints/kubernetes-vault
 	`,
 		Args:         cobra.ArbitraryArgs,
-		RunE:         newRunCmdFunc(e, dt, bp, hc, bc, vm, cc, &noOpen, &force, &runVersion, &y, &variables, &variablesFile, l),
+		RunE:         newRunCmdFunc(e, dt, bp, hc, bc, cc, &noOpen, &force, &variables, &variablesFile, l),
 		SilenceUsage: true,
 	}
 
@@ -69,7 +66,7 @@ func newRunCmd(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Getter, h
 	return runCmd
 }
 
-func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Getter, hc http.HTTP, bc system.System, vm gvm.Versions, cc connector.Connector, noOpen *bool, force *bool, runVersion *string, autoApprove *bool, variables *[]string, variablesFile *string, l logger.Logger) func(cmd *cobra.Command, args []string) error {
+func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Getter, hc http.HTTP, bc system.System, cc connector.Connector, noOpen *bool, force *bool, variables *[]string, variablesFile *string, l logger.Logger) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		// create the shipyard and sub folders in the users home directory
 		utils.CreateFolders()

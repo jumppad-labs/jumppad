@@ -8,10 +8,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/http"
-	ck8s "github.com/jumppad-labs/jumppad/pkg/clients/k8s"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	cnomad "github.com/jumppad-labs/jumppad/pkg/clients/nomad"
 	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/k8s"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/nomad"
@@ -19,7 +16,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func newPushCmd(ct container.ContainerTasks, kc ck8s.Kubernetes, ht http.HTTP, nc cnomad.Nomad, l logger.Logger) *cobra.Command {
+func newPushCmd(ct container.ContainerTasks, l logger.Logger) *cobra.Command {
 	var force bool
 
 	pushCmd := &cobra.Command{
@@ -35,7 +32,7 @@ func newPushCmd(ct container.ContainerTasks, kc ck8s.Kubernetes, ht http.HTTP, n
 				return xerrors.Errorf("Push requires two arguments [image] [cluster]")
 			}
 
-			if force == true {
+			if force {
 				ct.SetForce(true)
 			}
 
@@ -62,9 +59,9 @@ func newPushCmd(ct container.ContainerTasks, kc ck8s.Kubernetes, ht http.HTTP, n
 
 			switch r.Metadata().Type {
 			case k8s.TypeK8sCluster:
-				return pushK8sCluster(image, r.(*k8s.Cluster), ct, kc, ht, l, true)
+				return pushK8sCluster(image, r.(*k8s.Cluster), l, true)
 			case nomad.TypeNomadCluster:
-				return pushNomadCluster(image, r.(*nomad.NomadCluster), ct, nc, l, true)
+				return pushNomadCluster(image, r.(*nomad.NomadCluster), l, true)
 			}
 
 			return nil
@@ -76,7 +73,7 @@ func newPushCmd(ct container.ContainerTasks, kc ck8s.Kubernetes, ht http.HTTP, n
 	return pushCmd
 }
 
-func pushK8sCluster(image string, c *k8s.Cluster, ct container.ContainerTasks, kc ck8s.Kubernetes, ht http.HTTP, log logger.Logger, force bool) error {
+func pushK8sCluster(image string, c *k8s.Cluster, log logger.Logger, force bool) error {
 	cli, _ := clients.GenerateClients(log)
 	p := config.NewProviders(cli)
 	cl := p.GetProvider(c).(*k8s.ClusterProvider)
@@ -89,7 +86,7 @@ func pushK8sCluster(image string, c *k8s.Cluster, ct container.ContainerTasks, k
 
 	for _, id := range ids {
 		log.Info("Pushing to container", "id", id, "image", image)
-		err = cl.ImportLocalDockerImages([]types.Image{types.Image{Name: strings.Trim(image, " ")}}, force)
+		err = cl.ImportLocalDockerImages([]types.Image{{Name: strings.Trim(image, " ")}}, force)
 		if err != nil {
 			return xerrors.Errorf("Error pushing image: %w ", err)
 		}
@@ -98,7 +95,7 @@ func pushK8sCluster(image string, c *k8s.Cluster, ct container.ContainerTasks, k
 	return nil
 }
 
-func pushNomadCluster(image string, c *nomad.NomadCluster, ct container.ContainerTasks, ht cnomad.Nomad, log logger.Logger, force bool) error {
+func pushNomadCluster(image string, c *nomad.NomadCluster, log logger.Logger, force bool) error {
 	cli, _ := clients.GenerateClients(log)
 	p := config.NewProviders(cli)
 	cl := p.GetProvider(c).(*nomad.ClusterProvider)
@@ -106,7 +103,7 @@ func pushNomadCluster(image string, c *nomad.NomadCluster, ct container.Containe
 	// get the id of the cluster
 
 	log.Info("Pushing to container", "ref", c.Meta.ID, "image", image)
-	err := cl.ImportLocalDockerImages([]types.Image{types.Image{Name: strings.Trim(image, " ")}}, force)
+	err := cl.ImportLocalDockerImages([]types.Image{{Name: strings.Trim(image, " ")}}, force)
 	if err != nil {
 		return xerrors.Errorf("Error pushing image: %w ", err)
 	}

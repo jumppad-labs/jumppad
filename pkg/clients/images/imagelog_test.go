@@ -1,7 +1,6 @@
 package images
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -9,7 +8,7 @@ import (
 )
 
 func setupImageLogTests(t *testing.T, data string) string {
-	f, err := ioutil.TempFile("", "*.cache")
+	f, err := os.CreateTemp("", "*.cache")
 	if err != nil {
 		t.Fatal(err)
 	}
