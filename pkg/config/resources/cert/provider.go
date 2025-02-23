@@ -366,19 +366,19 @@ func publicPEMtoOpenSSH(pemBytes []byte) (string, error) {
 
 	// Confirm we got the PUBLIC KEY block type
 	if pemBlock.Type != "RSA PUBLIC KEY" {
-		return "", errors.Errorf("ssh: unsupported key type %q", pemBlock.Type)
+		return "", fmt.Errorf("ssh: unsupported key type %q", pemBlock.Type)
 	}
 
 	// Convert to rsa
 	rsaPubKey, err := x509.ParsePKCS1PublicKey(pemBlock.Bytes)
 	if err != nil {
-		return "", errors.Wrap(err, "x509.parse pki public key")
+		return "", fmt.Errorf("x509.parse pki public key: %w", err)
 	}
 
 	// Generate the ssh public key
 	pub, err := ssh.NewPublicKey(rsaPubKey)
 	if err != nil {
-		return "", errors.Wrap(err, "new ssh public key from pem converted to rsa")
+		return "", fmt.Errorf("new ssh public key from pem converted to rsa: %w", err)
 	}
 
 	// Encode to store to file
