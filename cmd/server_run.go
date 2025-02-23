@@ -5,10 +5,10 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/signal"
+	"syscall"
 
 	"github.com/jumppad-labs/connector/http"
 	"github.com/jumppad-labs/connector/protos/shipyard"
@@ -67,7 +67,7 @@ func newConnectorRunCommand() *cobra.Command {
 
 				// Create a certificate pool from the certificate authority
 				certPool := x509.NewCertPool()
-				ca, err := ioutil.ReadFile(pathCertRoot)
+				ca, err := os.ReadFile(pathCertRoot)
 				if err != nil {
 					return fmt.Errorf("could not read ca certificate: %s", err)
 				}
@@ -119,7 +119,7 @@ func newConnectorRunCommand() *cobra.Command {
 
 			c := make(chan os.Signal, 1)
 			signal.Notify(c, os.Interrupt)
-			signal.Notify(c, os.Kill)
+			signal.Notify(c, syscall.SIGTERM)
 
 			// Block until a signal is received.
 			sig := <-c

@@ -126,9 +126,7 @@ func (k *Cluster) Process() error {
 			}
 
 			// the network name is set
-			for x, net := range kstate.Networks {
-				k.Networks[x] = net
-			}
+			copy(k.Networks, kstate.Networks)
 		}
 	}
 

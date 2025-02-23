@@ -15,7 +15,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 	cp "github.com/otiai10/copy"
-	"golang.org/x/xerrors"
 )
 
 type Provider struct {
@@ -75,7 +74,7 @@ func (p *Provider) Create(ctx context.Context) error {
 		_, err = os.Stat(tempPath)
 		if err != nil {
 			p.log.Debug("Error fetching source directory", "ref", p.config.Meta.ID, "source", tempPath, "error", err)
-			return xerrors.Errorf("unable to find source directory for copy resource, ref=%s: %w", p.config.Meta.ID, err)
+			return fmt.Errorf("unable to find source directory for copy resource, ref=%s: %w", p.config.Meta.ID, err)
 		}
 
 		srcPath = tempPath
@@ -106,7 +105,7 @@ func (p *Provider) Create(ctx context.Context) error {
 	if err != nil {
 		p.log.Debug("Error copying source directory", "ref", p.config.Meta.Name, "source", srcPath, "error", err)
 
-		return xerrors.Errorf("unable to copy files, ref=%s: %w", p.config.Meta.Name, err)
+		return fmt.Errorf("unable to copy files, ref=%s: %w", p.config.Meta.Name, err)
 	}
 
 	p.config.CopiedFiles = files
@@ -116,7 +115,7 @@ func (p *Provider) Create(ctx context.Context) error {
 		perms, err := strconv.ParseInt(p.config.Permissions, 8, 64)
 		if err != nil {
 			p.log.Debug("Invalid destination permissions", "ref", p.config.Meta.Name, "permissions", p.config.Permissions, "error", err)
-			return xerrors.Errorf("invalid destination permissions for copy resource, ref=%s %s: %w", p.config.Meta.Name, p.config.Permissions, err)
+			return fmt.Errorf("invalid destination permissions for copy resource, ref=%s %s: %w", p.config.Meta.Name, p.config.Permissions, err)
 		}
 
 		for _, f := range p.config.CopiedFiles {

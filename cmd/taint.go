@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/jumppad-labs/jumppad/pkg/config"
@@ -45,6 +44,6 @@ var taintCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		ioutil.WriteFile(utils.StatePath(), d, os.ModePerm)
+		os.WriteFile(utils.StatePath(), d, os.ModePerm)
 	},
 }

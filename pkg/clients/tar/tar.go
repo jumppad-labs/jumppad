@@ -66,6 +66,10 @@ func (tg *TarGz) Create(buf io.Writer, options *TarGzOptions, src []string, igno
 		// walk through every file in the folder
 		// Go's filepath walk does not represent symlinks
 		symwalk.Walk(path, func(file string, fi os.FileInfo, err error) error {
+			if err != nil {
+				return nil
+			}
+
 			// check if the file is in the ignore list
 			for _, i := range ignore {
 				ignore := glob.Glob(i, file)
@@ -173,7 +177,7 @@ func (tg *TarGz) Extract(src io.Reader, gziped bool, dst string) error {
 
 		// validate name against path traversal
 		if !tg.validRelPath(header.Name) {
-			return fmt.Errorf("tar contained invalid name error %q\n", target)
+			return fmt.Errorf("tar contained invalid name error %q", target)
 		}
 
 		// add dst + re-format slashes according to system

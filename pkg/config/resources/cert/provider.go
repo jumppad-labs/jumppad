@@ -5,9 +5,9 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -16,10 +16,8 @@ import (
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	sdk "github.com/jumppad-labs/plugin-sdk"
-	"github.com/pkg/errors"
 	"github.com/sethvargo/go-retry"
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/xerrors"
 )
 
 type CAProvider struct {
@@ -102,7 +100,7 @@ func (p *CAProvider) Create(ctx context.Context) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(publicSSHFile, []byte(ssh), os.ModePerm)
+	err = os.WriteFile(publicSSHFile, []byte(ssh), os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -190,13 +188,13 @@ func (p *LeafProvider) Create(ctx context.Context) error {
 	ca := &crypto.X509{}
 	err := ca.ReadFile(p.config.CACert)
 	if err != nil {
-		return retry.RetryableError(xerrors.Errorf("Unable to read root certificate %s: %w", p.config.CACert, err))
+		return retry.RetryableError(fmt.Errorf("unable to read root certificate %s: %w", p.config.CACert, err))
 	}
 
 	rk := crypto.NewKeyPair()
 	err = rk.Private.ReadFile(p.config.CAKey)
 	if err != nil {
-		return retry.RetryableError(xerrors.Errorf("Unable to read root key %s: %w", p.config.CAKey, err))
+		return retry.RetryableError(fmt.Errorf("unable to read root key %s: %w", p.config.CAKey, err))
 	}
 
 	k, err := crypto.GenerateKeyPair()
@@ -232,7 +230,7 @@ func (p *LeafProvider) Create(ctx context.Context) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(pubsshFile, []byte(ssh), os.ModePerm)
+	err = os.WriteFile(pubsshFile, []byte(ssh), os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -368,19 +366,19 @@ func publicPEMtoOpenSSH(pemBytes []byte) (string, error) {
 
 	// Confirm we got the PUBLIC KEY block type
 	if pemBlock.Type != "RSA PUBLIC KEY" {
-		return "", errors.Errorf("ssh: unsupported key type %q", pemBlock.Type)
+		return "", fmt.Errorf("ssh: unsupported key type %q", pemBlock.Type)
 	}
 
 	// Convert to rsa
 	rsaPubKey, err := x509.ParsePKCS1PublicKey(pemBlock.Bytes)
 	if err != nil {
-		return "", errors.Wrap(err, "x509.parse pki public key")
+		return "", fmt.Errorf("x509.parse pki public key: %w", err)
 	}
 
 	// Generate the ssh public key
 	pub, err := ssh.NewPublicKey(rsaPubKey)
 	if err != nil {
-		return "", errors.Wrap(err, "new ssh public key from pem converted to rsa")
+		return "", fmt.Errorf("new ssh public key from pem converted to rsa: %w", err)
 	}
 
 	// Encode to store to file

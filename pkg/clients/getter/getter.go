@@ -2,14 +2,15 @@ package getter
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/hashicorp/go-getter"
-	"golang.org/x/xerrors"
 )
 
 // Getter is an interface which defines interations for
 // downloading remote folders
+//
 //go:generate mockery --name Getter --filename getter.go
 type Getter interface {
 	Get(uri, dst string) error
@@ -69,7 +70,7 @@ func (g *GetterImpl) Get(uri, dst string) error {
 
 		err := os.RemoveAll(dst)
 		if err != nil {
-			return xerrors.Errorf("Destination folder exists, unable to delete: %w", err)
+			return fmt.Errorf("destination folder exists, unable to delete: %w", err)
 		}
 	}
 
@@ -80,7 +81,7 @@ func (g *GetterImpl) Get(uri, dst string) error {
 
 	err = g.get(uri, dst, pwd)
 	if err != nil {
-		return xerrors.Errorf("unable to fetch files from %s: %w", uri, err)
+		return fmt.Errorf("unable to fetch files from %s: %w", uri, err)
 	}
 
 	return nil

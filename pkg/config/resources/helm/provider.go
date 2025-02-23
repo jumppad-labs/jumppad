@@ -13,7 +13,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
-	"golang.org/x/xerrors"
 )
 
 var _ sdk.Provider = &Provider{}
@@ -69,7 +68,7 @@ func (p *Provider) Create(ctx context.Context) error {
 
 		err := p.helmClient.UpsertChartRepository(p.config.Repository.Name, p.config.Repository.URL)
 		if err != nil {
-			return xerrors.Errorf("unable to initialize chart repository: %w", err)
+			return fmt.Errorf("unable to initialize chart repository: %w", err)
 		}
 	}
 
@@ -81,7 +80,7 @@ func (p *Provider) Create(ctx context.Context) error {
 
 		err := p.getterClient.Get(p.config.Chart, helmFolder)
 		if err != nil {
-			return xerrors.Errorf("Unable to download remote chart: %w", err)
+			return fmt.Errorf("unable to download remote chart: %w", err)
 		}
 
 		// set the config to the local path
@@ -94,7 +93,7 @@ func (p *Provider) Create(ctx context.Context) error {
 	p.log.Debug("Using Kubernetes config", "ref", p.config.Meta.ID, "path", p.config.Cluster.KubeConfig)
 	p.kubeClient, err = p.kubeClient.SetConfig(p.config.Cluster.KubeConfig.ConfigPath)
 	if err != nil {
-		return xerrors.Errorf("unable to create Kubernetes client: %w", err)
+		return fmt.Errorf("unable to create Kubernetes client: %w", err)
 	}
 
 	// sanitize the chart name
@@ -106,7 +105,7 @@ func (p *Provider) Create(ctx context.Context) error {
 	if p.config.Timeout != "" {
 		to, err = time.ParseDuration(p.config.Timeout)
 		if err != nil {
-			return xerrors.Errorf("unable to parse timeout duration: %w", err)
+			return fmt.Errorf("unable to parse timeout duration: %w", err)
 		}
 	}
 
@@ -120,7 +119,7 @@ func (p *Provider) Create(ctx context.Context) error {
 			// context is cancelled do not retry
 			if ctx.Err() != nil {
 				p.log.Debug("Skipping create, context cancelled", "ref", p.config.Meta.ID)
-				err := xerrors.Errorf("context cancelled, skipping helm chart creation", "ref", p.config.Meta.ID)
+				err := fmt.Errorf("context cancelled, skipping helm chart creation, ref: %s", p.config.Meta.ID)
 				errChan <- err
 			}
 
@@ -153,7 +152,7 @@ func (p *Provider) Create(ctx context.Context) error {
 
 	select {
 	case <-timeout:
-		return xerrors.Errorf("timeout waiting for helm chart to complete")
+		return fmt.Errorf("timeout waiting for helm chart to complete")
 	case createErr := <-errChan:
 		return createErr
 	case <-doneChan:
@@ -164,12 +163,12 @@ func (p *Provider) Create(ctx context.Context) error {
 	if p.config.HealthCheck != nil && len(p.config.HealthCheck.Pods) > 0 {
 		to, err := time.ParseDuration(p.config.HealthCheck.Timeout)
 		if err != nil {
-			return xerrors.Errorf("unable to parse health check duration: %w", err)
+			return fmt.Errorf("unable to parse health check duration: %w", err)
 		}
 
 		err = p.kubeClient.HealthCheckPods(ctx, p.config.HealthCheck.Pods, to)
 		if err != nil {
-			return xerrors.Errorf("health check failed after helm chart setup: %w", err)
+			return fmt.Errorf("health check failed after helm chart setup: %w", err)
 		}
 	}
 

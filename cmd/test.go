@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -37,7 +37,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/nomad"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	gvm "github.com/shipyard-run/version-manager"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/util/jsonpath"
 )
@@ -118,7 +117,6 @@ type CucumberRunner struct {
 	args          []string
 	e             jumppad.Engine
 	cli           *clients.Clients
-	vm            gvm.Versions
 	testFolder    string
 	testPath      string
 	basePath      string
@@ -170,8 +168,7 @@ func (cr *CucumberRunner) start() {
 func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 	sb := &strings.Builder{}
 
-	ctx.BeforeScenario(func(gs *godog.Scenario) {
-		// ensure the variables are not carried over from a previous scenario
+	ctx.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		envVars = map[string]string{}
 		commandOutput = bytes.NewBufferString("")
 		commandExitCode = 0
@@ -180,28 +177,30 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 		cl := logger.NewLogger(sb, logger.LogLevelDebug)
 
 		cli, _ := clients.GenerateClients(cl)
-		engine, vm, err := createEngine(cl, cli)
+		engine, err := createEngine(cl, cli)
 		if err != nil {
 			fmt.Printf("Unable to setup tests: %s\n", err)
-			return
+			return ctx, err
 		}
 
 		cr.e = engine
 		cr.l = cl
 		cr.cli = cli
-		cr.vm = vm
 
 		// do we need to pure the cache
 		if *cr.purge {
 			pc := newPurgeCmdFunc(cr.cli.Docker, cr.cli.ImageLog, cr.cli.Logger)
 			pc(cr.cmd, cr.args)
 		}
+
+		return ctx, nil
 	})
 
-	ctx.AfterScenario(func(gs *godog.Scenario, err error) {
+	ctx.After(func(ctx context.Context, sc *godog.Scenario, err error) (context.Context, error) {
 		if err != nil {
 			fmt.Println(sb.String())
 			fmt.Println(output.String())
+			return ctx, err
 		}
 
 		// unset environment vars
@@ -216,7 +215,7 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 		// only destroy when the dont-destroy flag is false
 		if *cr.dontDestroy {
 			fmt.Println("Not automatically destroying resources, run the command 'jumppad destroy' manually")
-			return
+			return ctx, nil
 		}
 
 		sb := strings.Builder{}
@@ -229,6 +228,8 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 			fmt.Println(sb.String())
 			os.Exit(1)
 		}
+
+		return ctx, nil
 	})
 
 	ctx.Step(`^I have a running blueprint$`, cr.iRunApply)
@@ -253,27 +254,18 @@ func (cr *CucumberRunner) initializeSuite(ctx *godog.ScenarioContext) {
 }
 
 func (cr *CucumberRunner) iRunApply() error {
-	return cr.iRunApplyWithVersion("")
-}
-
-func (cr *CucumberRunner) iRunApplyWithVersion(version string) error {
-	return cr.iRunApplyAtPathWithVersion("", version)
+	return cr.iRunApplyAtPath("")
 }
 
 func (cr *CucumberRunner) iRunApplyAtPath(path string) error {
-	return cr.iRunApplyAtPathWithVersion(path, "")
-}
-
-func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
 	output = bytes.NewBufferString("")
 
 	// if filepath is not absolute then it will be relative to args
-	absPath := filepath.Join(cr.basePath, fp)
+	absPath := filepath.Join(cr.basePath, path)
 
 	args := []string{absPath}
 
 	noOpen := true
-	approve := true
 
 	// re-use the run command
 	rc := newRunCmdFunc(
@@ -282,12 +274,9 @@ func (cr *CucumberRunner) iRunApplyAtPathWithVersion(fp, version string) error {
 		cr.cli.Getter,
 		cr.cli.HTTP,
 		cr.cli.System,
-		cr.vm,
 		cr.cli.Connector,
 		&noOpen,
 		cr.force,
-		&version,
-		&approve,
 		&cr.variables,
 		&cr.variablesFile,
 		cr.l,
@@ -456,7 +445,7 @@ func (cr *CucumberRunner) aCallToShouldResultInStatus(arg1 string, arg2 int) err
 		resp, err = netClient.Get(arg1)
 
 		if err == nil && resp.StatusCode == arg2 {
-			d, _ := ioutil.ReadAll(resp.Body)
+			d, _ := io.ReadAll(resp.Body)
 			respBody = string(d)
 
 			return nil
@@ -584,7 +573,7 @@ func (cr *CucumberRunner) theResourceInfoShouldExist(path, resource string) erro
 
 func (cr *CucumberRunner) whenIRunTheScript(arg1 *godog.DocString) error {
 	// copy the script into a temp file and try to execute it
-	tmpFile, err := ioutil.TempFile(utils.JumppadTemp(), "*.sh")
+	tmpFile, err := os.CreateTemp(utils.JumppadTemp(), "*.sh")
 	if err != nil {
 		return err
 	}
@@ -802,7 +791,7 @@ func (cr *CucumberRunner) getJSONPath(path, resource string) (string, error) {
 	jp := jsonpath.New("test")
 	err = jp.Parse(path)
 	if err != nil {
-		return "", fmt.Errorf("Unable to parse JSONPath: %s", err)
+		return "", fmt.Errorf("unable to parse JSONPath: %s", err)
 	}
 
 	buf := new(bytes.Buffer)

@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -16,7 +15,6 @@ import (
 	conmocks "github.com/jumppad-labs/jumppad/pkg/clients/connector/mocks"
 	contypes "github.com/jumppad-labs/jumppad/pkg/clients/connector/types"
 	cmocks "github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
-	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/k8s"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
@@ -50,9 +48,9 @@ func setupClusterMocks(t *testing.T) (
 	md.On("RemoveContainer", mock.Anything, mock.Anything).Return(nil)
 	md.On("RemoveVolume", mock.Anything).Return(nil)
 	md.On("DetachNetwork", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	md.On("ListNetworks", mock.Anything).Return([]types.NetworkAttachment{})
+	md.On("ListNetworks", mock.Anything).Return([]ctypes.NetworkAttachment{})
 
-	md.On("EngineInfo").Return(&types.EngineInfo{StorageDriver: "overlay2"})
+	md.On("EngineInfo").Return(&ctypes.EngineInfo{StorageDriver: "overlay2"})
 
 	// set the home folder to a temp folder
 	tmpDir := t.TempDir()
@@ -124,7 +122,7 @@ func TestClusterK3SetsEnvironment(t *testing.T) {
 	err := p.Create(context.Background())
 	assert.NoError(t, err)
 
-	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*types.Container)
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*ctypes.Container)
 
 	assert.Equal(t, params.Environment["K3S_KUBECONFIG_OUTPUT"], "/output/kubeconfig.yaml")
 	assert.Equal(t, params.Environment["CONTAINERD_HTTP_PROXY"], utils.ImageCacheAddress())
@@ -142,7 +140,7 @@ func TestClusterK3DoesNotSetProxyEnvironmentWithWrongVersion(t *testing.T) {
 	err := p.Create(context.Background())
 	assert.NoError(t, err)
 
-	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*types.Container)
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*ctypes.Container)
 
 	assert.Empty(t, params.Environment["CONTAINERD_HTTP_PROXY"])
 }
@@ -156,7 +154,7 @@ func TestClusterK3NoProxyIsSet(t *testing.T) {
 	err := p.Create(context.Background())
 	assert.NoError(t, err)
 
-	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*types.Container)
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*ctypes.Container)
 	assert.Equal(t, "test.com,test2.com", params.Environment["CONTAINERD_NO_PROXY"])
 }
 
@@ -177,7 +175,7 @@ func TestClusterK3PullsImage(t *testing.T) {
 
 	err := p.Create(context.Background())
 	assert.NoError(t, err)
-	md.AssertCalled(t, "PullImage", types.Image{Name: "shipyardrun/k3s:v1.27.4"}, false)
+	md.AssertCalled(t, "PullImage", ctypes.Image{Name: "shipyardrun/k3s:v1.27.4"}, false)
 }
 
 func TestClusterK3CreatesNewVolume(t *testing.T) {
@@ -211,7 +209,7 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 	err := p.Create(context.Background())
 	assert.NoError(t, err)
 
-	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*types.Container)
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*ctypes.Container)
 
 	// validate the basic details for the server container
 	assert.Contains(t, params.Name, "server")
@@ -265,7 +263,7 @@ func TestClusterK3CreatesAServerWithAdditionalPorts(t *testing.T) {
 	err := p.Create(context.Background())
 	assert.NoError(t, err)
 
-	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*types.Container)
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*ctypes.Container)
 
 	localPort, _ := strconv.Atoi(params.Ports[3].Local)
 	hostPort, _ := strconv.Atoi(params.Ports[3].Host)
@@ -281,7 +279,7 @@ func TestClusterK3sErrorsIfServerNOTStart(t *testing.T) {
 
 	testutils.RemoveOn(&md.Mock, "ContainerLogs")
 	md.On("ContainerLogs", mock.Anything, true, true).Return(
-		ioutil.NopCloser(bytes.NewBufferString("Not running")),
+		io.NopCloser(bytes.NewBufferString("Not running")),
 		nil,
 	)
 
@@ -343,7 +341,7 @@ func TestClusterK3sSetsServerInConfig(t *testing.T) {
 	defer f.Close()
 
 	// check file contains docker ip
-	d, err := ioutil.ReadAll(f)
+	d, err := io.ReadAll(f)
 	assert.NoError(t, err)
 	assert.Contains(t, string(d), "https://"+utils.GetDockerIP())
 }

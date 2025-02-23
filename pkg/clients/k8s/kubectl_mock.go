@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"io/ioutil"
 	"time"
 
 	"github.com/stretchr/testify/mock"
@@ -33,7 +32,7 @@ func (m *MockKubernetes) GetPods(selector string) (*v1.PodList, error) {
 
 func (m *MockKubernetes) GetPodLogs(ctx context.Context, podName, nameSpace string) (io.ReadCloser, error) {
 	args := m.Called(ctx, podName, nameSpace)
-	ior := ioutil.NopCloser(bytes.NewBufferString("Running pod ..."))
+	ior := io.NopCloser(bytes.NewBufferString("Running pod ..."))
 	return ior, args.Error(1)
 }
 

@@ -9,11 +9,10 @@ import (
 
 	"github.com/jumppad-labs/hclconfig/resources"
 	"github.com/jumppad-labs/jumppad/pkg/config"
-	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/spf13/cobra"
 )
 
-func newEnvCmd(e jumppad.Engine) *cobra.Command {
+func newEnvCmd() *cobra.Command {
 	var unset bool
 
 	envCmd := &cobra.Command{

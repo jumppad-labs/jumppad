@@ -95,10 +95,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(sCmd, m.tick())
 
 	case tea.MouseMsg:
-		switch msg.Type {
-		case tea.MouseWheelDown:
+		switch tea.MouseEvent(msg).Button {
+		case tea.MouseButtonWheelDown:
 			fallthrough
-		case tea.MouseWheelUp:
+		case tea.MouseButtonWheelUp:
 			m.follow = false
 
 			var cmd tea.Cmd

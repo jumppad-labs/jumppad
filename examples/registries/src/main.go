@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 )
@@ -31,7 +31,7 @@ func main() {
 				return
 			}
 
-			b, _ := ioutil.ReadAll(resp.Body)
+			b, _ := io.ReadAll(resp.Body)
 			fmt.Fprintf(rw, "Response from upstream: %s", string(b))
 		}
 	})

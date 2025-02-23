@@ -8,7 +8,7 @@ import (
 
 	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 
-	dtypes "github.com/docker/docker/api/types"
+	dcontainer "github.com/docker/docker/api/types/container"
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container"
@@ -16,7 +16,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
-	"golang.org/x/xerrors"
 )
 
 const cacheImage = "ghcr.io/jumppad-labs/docker-registry-proxy:v1.0.0"
@@ -159,7 +158,7 @@ func (p *Provider) createImageCache(registries []string, authRegistries []string
 
 	_, err = p.client.CopyFilesToVolume(volID, []string{cert, key}, "/ca", true)
 	if err != nil {
-		return "", xerrors.Errorf("unable to copy certificates for image cache: %w", err)
+		return "", fmt.Errorf("unable to copy certificates for image cache: %w", err)
 	}
 
 	// pull the container image
@@ -268,11 +267,11 @@ func (p *Provider) reConfigureNetworks(dependentNetworks []string) error {
 	// get a list of the current networks the container is attached to
 	info, err := p.client.ContainerInfo(ids[0])
 	if err != nil {
-		return xerrors.Errorf("unable to remove container from the default network: %w", err)
+		return fmt.Errorf("unable to remove container from the default network: %w", err)
 	}
 
 	// flatten the docker object into a simple slice
-	for k := range info.(dtypes.ContainerJSON).NetworkSettings.Networks {
+	for k := range info.(dcontainer.InspectResponse).NetworkSettings.Networks {
 		currentNetworks = append(currentNetworks, k)
 	}
 

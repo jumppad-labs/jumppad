@@ -8,8 +8,6 @@ import (
 
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"github.com/pkg/errors"
-	"golang.org/x/xerrors"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
@@ -86,7 +84,7 @@ func (h *HelmImpl) Create(kubeConfig, name, namespace string, createNamespace bo
 	})
 
 	if err != nil {
-		return xerrors.Errorf("unable to initialize Helm: %w", err)
+		return fmt.Errorf("unable to initialize Helm: %w", err)
 	}
 
 	client := action.NewInstall(cfg)
@@ -104,7 +102,7 @@ func (h *HelmImpl) Create(kubeConfig, name, namespace string, createNamespace bo
 
 	cp, err := cpa.LocateChart(chart, &settings)
 	if err != nil {
-		return xerrors.Errorf("Error locating chart: %w", err)
+		return fmt.Errorf("error locating chart: %w", err)
 	}
 
 	p := getter.All(&settings)
@@ -123,7 +121,7 @@ func (h *HelmImpl) Create(kubeConfig, name, namespace string, createNamespace bo
 
 	vals, err := vo.MergeValues(p)
 	if err != nil {
-		return xerrors.Errorf("Error merging Helm values: %w", err)
+		return fmt.Errorf("error merging Helm values: %w", err)
 	}
 
 	h.log.Debug("Using Values", "ref", name, "values", vals)
@@ -131,11 +129,11 @@ func (h *HelmImpl) Create(kubeConfig, name, namespace string, createNamespace bo
 	h.log.Debug("Loading chart", "ref", name, "path", cp)
 	chartRequested, err := loader.Load(cp)
 	if err != nil {
-		return xerrors.Errorf("Error loading chart: %w", err)
+		return fmt.Errorf("error loading chart: %w", err)
 	}
 
 	if err := checkIfInstallable(chartRequested); err != nil {
-		return xerrors.Errorf("Chart is not installable: %w", err)
+		return fmt.Errorf("chart is not installable: %w", err)
 	}
 
 	if req := chartRequested.Metadata.Dependencies; req != nil {
@@ -158,7 +156,7 @@ func (h *HelmImpl) Create(kubeConfig, name, namespace string, createNamespace bo
 				}
 
 				if chartRequested, err = loader.Load(cp); err != nil {
-					return xerrors.Errorf("Failed reloading chart after repo update: %w", err)
+					return fmt.Errorf("failed reloading chart after repo update: %w", err)
 				}
 			} else {
 				return err
@@ -169,13 +167,13 @@ func (h *HelmImpl) Create(kubeConfig, name, namespace string, createNamespace bo
 	h.log.Debug("Validate chart", "ref", name)
 	err = chartRequested.Validate()
 	if err != nil {
-		return xerrors.Errorf("Error validating chart: %w", err)
+		return fmt.Errorf("error validating chart: %w", err)
 	}
 
 	h.log.Debug("Run chart", "ref", name)
 	_, err = client.Run(chartRequested, vals)
 	if err != nil {
-		return xerrors.Errorf("Error running chart: %w", err)
+		return fmt.Errorf("error running chart: %w", err)
 	}
 
 	return nil
@@ -186,7 +184,7 @@ func checkIfInstallable(ch *chart.Chart) error {
 	case "", "application":
 		return nil
 	}
-	return errors.Errorf("%s charts are not installable", ch.Metadata.Type)
+	return fmt.Errorf("%s charts are not installable", ch.Metadata.Type)
 }
 
 // Destroy removes an installed Helm chart from the system
@@ -196,6 +194,9 @@ func (h *HelmImpl) Destroy(kubeConfig, name, namespace string) error {
 	err := cfg.Init(s, namespace, "", func(format string, v ...interface{}) {
 		h.log.Debug("Helm debug message", "message", fmt.Sprintf(format, v...))
 	})
+	if err != nil {
+		return fmt.Errorf("unable to initialize configuration: %w", err)
+	}
 
 	//settings := cli.EnvSettings{}
 	//p := getter.All(&settings)
