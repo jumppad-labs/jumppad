@@ -13,7 +13,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
-	"golang.org/x/xerrors"
 )
 
 var _ sdk.Provider = &Provider{}
@@ -164,12 +163,12 @@ func (p *Provider) Create(ctx context.Context) error {
 	if p.config.HealthCheck != nil && len(p.config.HealthCheck.Pods) > 0 {
 		to, err := time.ParseDuration(p.config.HealthCheck.Timeout)
 		if err != nil {
-			return xerrors.Errorf("unable to parse health check duration: %w", err)
+			return fmt.Errorf("unable to parse health check duration: %w", err)
 		}
 
 		err = p.kubeClient.HealthCheckPods(ctx, p.config.HealthCheck.Pods, to)
 		if err != nil {
-			return xerrors.Errorf("health check failed after helm chart setup: %w", err)
+			return fmt.Errorf("health check failed after helm chart setup: %w", err)
 		}
 	}
 
