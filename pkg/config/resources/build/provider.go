@@ -10,7 +10,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
-	"golang.org/x/xerrors"
 )
 
 // Null is a noop provider
@@ -48,7 +47,7 @@ func (b *Provider) Create(ctx context.Context) error {
 	// calculate the hash
 	hash, err := utils.HashDir(b.config.Container.Context, b.config.Container.Ignore...)
 	if err != nil {
-		return xerrors.Errorf("unable to hash directory: %w", err)
+		return fmt.Errorf("unable to hash directory: %w", err)
 	}
 
 	tag, _ := utils.ReplaceNonURIChars(hash[3:11])
@@ -75,7 +74,7 @@ func (b *Provider) Create(ctx context.Context) error {
 
 	name, err := b.client.BuildContainer(build, force)
 	if err != nil {
-		return xerrors.Errorf("unable to build image: %w", err)
+		return fmt.Errorf("unable to build image: %w", err)
 	}
 
 	// set the image to be loaded and continue with the container creation
@@ -85,13 +84,13 @@ func (b *Provider) Create(ctx context.Context) error {
 	// do we need to copy any files?
 	err = b.copyOutputs()
 	if err != nil {
-		return xerrors.Errorf("unable to copy files from build container: %w", err)
+		return fmt.Errorf("unable to copy files from build container: %w", err)
 	}
 
 	// clean up the previous builds only leaving the last 3
 	ids, err := b.client.FindImagesInLocalRegistry(fmt.Sprintf("jumppad.dev/localcache/%s", b.config.Meta.Name))
 	if err != nil {
-		return xerrors.Errorf("unable to query local registry for images: %w", err)
+		return fmt.Errorf("unable to query local registry for images: %w", err)
 	}
 
 	for i := 3; i < len(ids); i++ {
@@ -99,7 +98,7 @@ func (b *Provider) Create(ctx context.Context) error {
 
 		err := b.client.RemoveImage(ids[i])
 		if err != nil {
-			return xerrors.Errorf("unable to remove old build images: %w", err)
+			return fmt.Errorf("unable to remove old build images: %w", err)
 		}
 	}
 
@@ -109,14 +108,14 @@ func (b *Provider) Create(ctx context.Context) error {
 		b.log.Debug("Tag image", "ref", b.config.Meta.ID, "name", b.config.Image, "tag", r.Name)
 		err = b.client.TagImage(b.config.Image, r.Name)
 		if err != nil {
-			return xerrors.Errorf("unable to tag image: %w", err)
+			return fmt.Errorf("unable to tag image: %w", err)
 		}
 
 		// push the image
 		b.log.Debug("Push image", "ref", b.config.Meta.ID, "tag", r.Name)
 		err = b.client.PushImage(types.Image{Name: r.Name, Username: r.Username, Password: r.Password})
 		if err != nil {
-			return xerrors.Errorf("unable to push image: %w", err)
+			return fmt.Errorf("unable to push image: %w", err)
 		}
 	}
 
@@ -149,7 +148,7 @@ func (b *Provider) Refresh(ctx context.Context) error {
 		b.log.Info("Build status changed, rebuild")
 		err := b.Destroy(ctx, false)
 		if err != nil {
-			return xerrors.Errorf("unable to destroy existing container: %w", err)
+			return fmt.Errorf("unable to destroy existing container: %w", err)
 		}
 
 		return b.Create(ctx)
@@ -174,7 +173,7 @@ func (b *Provider) Changed() (bool, error) {
 func (b *Provider) hasChanged() (bool, error) {
 	hash, err := utils.HashDir(b.config.Container.Context, b.config.Container.Ignore...)
 	if err != nil {
-		return false, xerrors.Errorf("unable to hash directory: %w", err)
+		return false, fmt.Errorf("unable to hash directory: %w", err)
 	}
 
 	if hash != b.config.BuildChecksum {

@@ -182,7 +182,7 @@ var pluginCmd = &cobra.Command{
 				},
 			},
 			Outputs: []build.Output{
-				build.Output{
+				{
 					Source:      "/src/bin/jumppad",
 					Destination: filepath.Join(bin, "jumppad"),
 				},

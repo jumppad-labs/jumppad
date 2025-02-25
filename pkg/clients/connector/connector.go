@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -65,11 +64,6 @@ type Connector interface {
 
 	// ListServices returns a slice of active services
 	ListServices() ([]*shipyard.Service, error)
-}
-
-var defaultArgs = []string{
-	"connector",
-	"--help",
 }
 
 // ConnectorImpl is a concrete implementation of the Connector interface
@@ -415,7 +409,7 @@ func getClient(cert *types.CertBundle, uri string) (shipyard.RemoteConnectionCli
 
 	// Create a certificate pool from the certificate authority
 	certPool := x509.NewCertPool()
-	ca, err := ioutil.ReadFile(cert.RootCertPath)
+	ca, err := os.ReadFile(cert.RootCertPath)
 	if err != nil {
 		return nil, err
 	}
@@ -434,7 +428,7 @@ func getClient(cert *types.CertBundle, uri string) (shipyard.RemoteConnectionCli
 	_ = creds
 
 	// Create a connection with the TLS credentials
-	conn, err := grpc.Dial(uri, grpc.WithTransportCredentials(creds))
+	conn, err := grpc.NewClient(uri, grpc.WithTransportCredentials(creds))
 	if err != nil {
 		return nil, err
 	}

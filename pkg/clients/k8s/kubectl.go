@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	"golang.org/x/xerrors"
 	"helm.sh/helm/v3/pkg/kube"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -55,8 +54,8 @@ func (k *KubernetesImpl) SetConfig(kubeconfig string) (Kubernetes, error) {
 			break
 		}
 
-		if time.Now().Sub(st) > kc.timeout {
-			return nil, xerrors.Errorf("error waiting for kubernetes client, config: %s error: %w", kubeconfig, err)
+		if time.Since(st) > kc.timeout {
+			return nil, fmt.Errorf("error waiting for kubernetes client, config: %s error: %w", kubeconfig, err)
 		}
 
 		// backoff
@@ -189,8 +188,8 @@ func (k *KubernetesImpl) healthCheckSingle(ctx context.Context, selector string,
 		// backoff
 		time.Sleep(2 * time.Second)
 
-		if time.Now().Sub(st) > timeout {
-			return fmt.Errorf("Timeout waiting for pods %s to start", selector)
+		if time.Since(st) > timeout {
+			return fmt.Errorf("timeout waiting for pods %s to start", selector)
 		}
 
 		// GetPods may return an error if the API server is not available
@@ -267,18 +266,18 @@ func buildFileList(files []string) ([]string, error) {
 func applyFile(path string, waitUntilReady bool, kc *kube.Client) error {
 	f, err := os.Open(path)
 	if err != nil {
-		return xerrors.Errorf("Unable to open file: %w", err)
+		return fmt.Errorf("unable to open file: %w", err)
 	}
 	defer f.Close()
 
 	r, err := kc.Build(f, true)
 	if err != nil {
-		return xerrors.Errorf("Unable to build resources for file %s: %w", path, err)
+		return fmt.Errorf("unable to build resources for file %s: %w", path, err)
 	}
 
 	_, err = kc.Create(r)
 	if err != nil {
-		return xerrors.Errorf("Unable to create resources for file %s: %w", path, err)
+		return fmt.Errorf("unable to create resources for file %s: %w", path, err)
 	}
 
 	if waitUntilReady {
@@ -303,7 +302,7 @@ func deleteFile(path string, kc *kube.Client) error {
 	_, errs := kc.Delete(r)
 	if errs != nil {
 		//TODO need to handle this better
-		return xerrors.Errorf("Error deleting configuration for file %s: %w", path, errs)
+		return fmt.Errorf("error deleting configuration for file %s: %v", path, errs)
 	}
 
 	return nil

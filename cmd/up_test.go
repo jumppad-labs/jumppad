@@ -3,7 +3,6 @@ package cmd
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -30,7 +29,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	assert "github.com/stretchr/testify/require"
 )
 
 type runMocks struct {
@@ -42,7 +40,7 @@ type runMocks struct {
 	connector *conmock.Connector
 }
 
-func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
+func setupRun(t *testing.T) (*cobra.Command, *runMocks) {
 	mockContainer := &cmock.ContainerTasks{}
 	mockContainer.On("SetForce", mock.Anything)
 
@@ -105,46 +103,46 @@ func setupRun(t *testing.T, timeout string) (*cobra.Command, *runMocks) {
 		tasks:     mockContainer,
 	}
 
-	cmd := newRunCmd(mockEngine, mockContainer, mockGetter, mockHTTP, mockSystem, nil, mockConnector, logger.NewTestLogger(t))
+	cmd := newRunCmd(mockEngine, mockContainer, mockGetter, mockHTTP, mockSystem, mockConnector, logger.NewTestLogger(t))
 	cmd.SetOut(bytes.NewBuffer([]byte("")))
 
 	return cmd, rm
 }
 
 func TestRunSetsForceOnClients(t *testing.T) {
-	rf, rm := setupRun(t, "")
+	rf, rm := setupRun(t)
 	rf.Flags().Set("no-browser", "true")
 	rf.Flags().Set("force-update", "true")
 
 	err := rf.Execute()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	rm.getter.AssertCalled(t, "SetForce", true)
 	rm.tasks.AssertCalled(t, "SetForce", true)
 }
 
 func TestRunChecksForCertBundle(t *testing.T) {
-	rf, rm := setupRun(t, "")
+	rf, rm := setupRun(t)
 	rf.SetArgs([]string{"/tmp"})
 
 	err := rf.Execute()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	rm.connector.AssertCalled(t, "GetLocalCertBundle", mock.Anything)
 }
 
 func TestRunNotGeneratesCertBundleWhenExist(t *testing.T) {
-	rf, rm := setupRun(t, "")
+	rf, rm := setupRun(t)
 	rf.SetArgs([]string{"/tmp"})
 
 	err := rf.Execute()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	rm.connector.AssertNotCalled(t, "GenerateLocalCertBundle", mock.Anything)
 }
 
 func TestRunGeneratesCertBundleWhenNotExist(t *testing.T) {
-	rf, rm := setupRun(t, "")
+	rf, rm := setupRun(t)
 	rf.SetArgs([]string{"/tmp"})
 
 	testutils.RemoveOn(&rm.connector.Mock, "GetLocalCertBundle")
@@ -152,36 +150,36 @@ func TestRunGeneratesCertBundleWhenNotExist(t *testing.T) {
 	rm.connector.On("GetLocalCertBundle", mock.Anything).Return(&types.CertBundle{}, nil).Once()
 
 	err := rf.Execute()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	rm.connector.AssertCalled(t, "GenerateLocalCertBundle", mock.Anything)
 }
 
 func TestRunStartsConnectorWhenNotRunning(t *testing.T) {
-	rf, rm := setupRun(t, "")
+	rf, rm := setupRun(t)
 	rf.SetArgs([]string{"/tmp"})
 
 	err := rf.Execute()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	rm.connector.AssertCalled(t, "Start", mock.Anything)
 }
 
 func TestRunDoesNotStartsConnectorWhenRunning(t *testing.T) {
-	rf, rm := setupRun(t, "")
+	rf, rm := setupRun(t)
 	rf.SetArgs([]string{"/tmp"})
 
 	testutils.RemoveOn(&rm.connector.Mock, "IsRunning")
 	rm.connector.On("IsRunning", mock.Anything).Return(true).Once()
 
 	err := rf.Execute()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	rm.connector.AssertNotCalled(t, "Start", mock.Anything)
 }
 
 func TestRunConnectorStartErrorWhenGetCertBundleFails(t *testing.T) {
-	rf, rm := setupRun(t, "")
+	rf, rm := setupRun(t)
 	rf.SetArgs([]string{"/tmp"})
 
 	testutils.RemoveOn(&rm.connector.Mock, "GetLocalCertBundle")
@@ -189,23 +187,23 @@ func TestRunConnectorStartErrorWhenGetCertBundleFails(t *testing.T) {
 	rm.connector.On("GetLocalCertBundle", mock.Anything).Return(nil, fmt.Errorf("boom")).Once()
 
 	err := rf.Execute()
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	rm.connector.AssertNotCalled(t, "Start", mock.Anything)
 }
 
 func TestRunSetsDestinationFromArgsWhenPresent(t *testing.T) {
-	rf, rm := setupRun(t, "")
+	rf, rm := setupRun(t)
 	rf.SetArgs([]string{"/tmp"})
 
 	err := rf.Execute()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	rm.engine.AssertCalled(t, "ApplyWithVariables", mock.Anything, "/tmp", mock.Anything, mock.Anything)
 }
 
 func TestRunSetsVariablesFromFlag(t *testing.T) {
-	rf, rm := setupRun(t, "")
+	rf, rm := setupRun(t)
 	rf.SetArgs([]string{
 		"--var=abc=1234",
 		"--var='foo=bar'",
@@ -215,7 +213,7 @@ func TestRunSetsVariablesFromFlag(t *testing.T) {
 	})
 
 	err := rf.Execute()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	args := rm.engine.Calls[0].Arguments[2]
 
@@ -228,65 +226,65 @@ func TestRunSetsVariablesFromFlag(t *testing.T) {
 }
 
 func TestRunSetsVariablesFileReturnsErrorWhenMissing(t *testing.T) {
-	rf, _ := setupRun(t, "")
+	rf, _ := setupRun(t)
 	rf.SetArgs([]string{"--vars-file=./vars.file", "/tmp"})
 
 	err := rf.Execute()
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestRunSetsVariablesFileWhenPresent(t *testing.T) {
-	tmpFile, err := ioutil.TempFile("", "*.vars")
-	assert.NoError(t, err)
+	tmpFile, err := os.CreateTemp("", "*.vars")
+	require.NoError(t, err)
 
 	t.Cleanup(func() {
 		os.Remove(tmpFile.Name())
 	})
 
-	rf, rm := setupRun(t, "")
+	rf, rm := setupRun(t)
 	rf.SetArgs([]string{"--vars-file=" + tmpFile.Name(), "/tmp"})
 
 	err = rf.Execute()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	rm.engine.AssertCalled(t, "ApplyWithVariables", mock.Anything, "/tmp", mock.Anything, tmpFile.Name())
 }
 
 func TestRunSetsDestinationToDownloadedBlueprintFromArgsWhenRemote(t *testing.T) {
-	rf, rm := setupRun(t, "")
+	rf, rm := setupRun(t)
 	rf.SetArgs([]string{"github.com/shipyard-run/blueprints//vault-k8s"})
 
 	err := rf.Execute()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	rm.engine.AssertCalled(t, "ApplyWithVariables", mock.Anything, filepath.Join(utils.JumppadHome(), "blueprints/github.com/shipyard-run/blueprints/vault-k8s"), mock.Anything, mock.Anything)
 }
 
 func TestRunFetchesBlueprint(t *testing.T) {
 	bpf := "github.com/shipyard-run/blueprints//vault-k8s"
-	rf, rm := setupRun(t, "")
+	rf, rm := setupRun(t)
 	rf.SetArgs([]string{bpf})
 
 	err := rf.Execute()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	rm.getter.AssertCalled(t, "Get", bpf, mock.Anything)
 }
 
 func TestRunFetchesBlueprintErrorReturnsError(t *testing.T) {
 	bpf := "github.com/shipyard-run/blueprints//vault-k8s"
-	rf, rm := setupRun(t, "")
+	rf, rm := setupRun(t)
 	rf.SetArgs([]string{bpf})
 
 	testutils.RemoveOn(&rm.getter.Mock, "Get")
 	rm.getter.On("Get", mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
 	err := rf.Execute()
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestRunOpensBrowserWindowForResources(t *testing.T) {
-	rf, rm := setupRun(t, "")
+	rf, rm := setupRun(t)
 	rf.SetArgs([]string{"/tmp"})
 
 	testutils.RemoveOn(&rm.engine.Mock, "ApplyWithVariables")
@@ -302,11 +300,11 @@ func TestRunOpensBrowserWindowForResources(t *testing.T) {
 
 	// should open
 	c := &container.Container{ResourceBase: hcltypes.ResourceBase{Meta: hcltypes.Meta{Name: "test", Type: "container"}}}
-	c.Ports = []container.Port{container.Port{Host: "8080", OpenInBrowser: "https://test.container.jumppad.dev:8080"}}
+	c.Ports = []container.Port{{Host: "8080", OpenInBrowser: "https://test.container.jumppad.dev:8080"}}
 
 	// should not be opened
 	c2 := &container.Container{}
-	c2.Ports = []container.Port{container.Port{OpenInBrowser: ""}}
+	c2.Ports = []container.Port{{OpenInBrowser: ""}}
 
 	// should not be opened
 	i2 := &ingress.Ingress{}
@@ -330,7 +328,7 @@ func TestRunOpensBrowserWindowForResources(t *testing.T) {
 	)
 
 	err := rf.Execute()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	rm.http.AssertNumberOfCalls(t, "HealthCheckHTTP", 4)
 	rm.system.AssertNumberOfCalls(t, "OpenBrowser", 4)
@@ -342,14 +340,14 @@ func TestRunOpensBrowserWindowForResources(t *testing.T) {
 }
 
 func TestRunDoesNotOpensBrowserWindowWhenCheckError(t *testing.T) {
-	rf, rm := setupRun(t, "")
+	rf, rm := setupRun(t)
 	rf.SetArgs([]string{"/tmp"})
 
 	testutils.RemoveOn(&rm.http.Mock, "HealthCheckHTTP")
 	rm.http.On("HealthCheckHTTP", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("boom"))
 
 	err := rf.Execute()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	rm.system.AssertNumberOfCalls(t, "OpenBrowser", 0)
 }

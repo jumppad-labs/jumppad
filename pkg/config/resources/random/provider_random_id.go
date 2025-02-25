@@ -9,7 +9,6 @@ import (
 
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	sdk "github.com/jumppad-labs/plugin-sdk"
-	"golang.org/x/xerrors"
 )
 
 var _ sdk.Provider = &RandomIDProvider{}
@@ -38,10 +37,10 @@ func (p *RandomIDProvider) Create(ctx context.Context) error {
 
 	b, err := rand.Reader.Read(bytes)
 	if int64(b) != byteLength {
-		return xerrors.Errorf("Unable generate random bytes: %w", err)
+		return fmt.Errorf("unable generate random bytes: %w", err)
 	}
 	if err != nil {
-		return xerrors.Errorf("Unable generate random bytes: %w", err)
+		return fmt.Errorf("unable generate random bytes: %w", err)
 	}
 
 	hex := hex.EncodeToString(bytes)

@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path"
@@ -25,7 +24,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/nomad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
-	"golang.org/x/xerrors"
 )
 
 var _ sdk.Provider = &ClusterProvider{}
@@ -78,7 +76,7 @@ func (p *ClusterProvider) Destroy(ctx context.Context, force bool) error {
 		return nil
 	}
 
-	return p.destroyNomad(ctx, force)
+	return p.destroyNomad(force)
 }
 
 // Lookup the a clusters current state
@@ -331,7 +329,7 @@ func (p *ClusterProvider) createNomad(ctx context.Context) error {
 		}
 
 		if err != nil {
-			return xerrors.Errorf("unable to lookup cluster id: %w", err)
+			return fmt.Errorf("unable to lookup cluster id: %w", err)
 		}
 	}
 
@@ -342,7 +340,7 @@ func (p *ClusterProvider) createNomad(ctx context.Context) error {
 	}
 
 	if err != nil {
-		return xerrors.Errorf("unable to lookup cluster id: %w", err)
+		return fmt.Errorf("unable to lookup cluster id: %w", err)
 	}
 
 	// pull the container image
@@ -419,7 +417,7 @@ func (p *ClusterProvider) createNomad(ctx context.Context) error {
 	p.config.ClientContainerName = clientFQDN
 
 	if clientError != nil {
-		return xerrors.Errorf("Unable to create client nodes: %w", clientError)
+		return fmt.Errorf("unable to create client nodes: %w", clientError)
 	}
 
 	// if client nodes is 0 then the server acts as both client and server
@@ -770,16 +768,16 @@ func (p *ClusterProvider) deployConnector() error {
 	)
 
 	// load the certs into a string so that they can be embedded into the config
-	ca, _ := ioutil.ReadFile(lf.RootCertPath)
-	cert, _ := ioutil.ReadFile(lf.LeafCertPath)
-	key, _ := ioutil.ReadFile(lf.LeafKeyPath)
+	ca, _ := os.ReadFile(lf.RootCertPath)
+	cert, _ := os.ReadFile(lf.LeafCertPath)
+	key, _ := os.ReadFile(lf.LeafKeyPath)
 
 	if err != nil {
 		return fmt.Errorf("unable to generate leaf certificates for ingress: %s", err)
 	}
 
 	// create a temp directory to write config to
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return fmt.Errorf("unable to create temporary directory: %s", err)
 	}
@@ -803,7 +801,7 @@ func (p *ClusterProvider) deployConnector() error {
 	)
 
 	connectorDeployment := filepath.Join(dir, "connector.nomad")
-	ioutil.WriteFile(connectorDeployment, []byte(config), os.ModePerm)
+	os.WriteFile(connectorDeployment, []byte(config), os.ModePerm)
 
 	// deploy the file
 	err = p.nomadClient.Create([]string{connectorDeployment})
@@ -818,27 +816,33 @@ func (p *ClusterProvider) deployConnector() error {
 	var lastError error
 
 	for {
+		p.log.Debug("Checking Connector deployment health", "ref", p.config.Meta.ID)
+
 		if timeout.Err() != nil {
+			p.log.Error("Connector deployment timeout", "ref", p.config.Meta.ID)
 			break
 		}
 
-		ok, lastError = p.nomadClient.JobRunning("connector")
+		ok, err = p.nomadClient.JobRunning("connector")
 		if err != nil {
 			lastError = fmt.Errorf("unable to check Connector deployment health: %s", err)
 			continue
 		}
 
 		if ok {
+			lastError = nil
 			break
 		}
 
 		lastError = fmt.Errorf("connector not healthy")
+
+		time.Sleep(5 * time.Second)
 	}
 
 	return lastError
 }
 
-func (p *ClusterProvider) destroyNomad(ctx context.Context, force bool) error {
+func (p *ClusterProvider) destroyNomad(force bool) error {
 	p.log.Info("Destroy Nomad Cluster", "ref", p.config.Meta.ID)
 
 	// destroy the clients
