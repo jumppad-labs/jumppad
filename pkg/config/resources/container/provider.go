@@ -51,7 +51,7 @@ func (p *Provider) Init(cfg htypes.Resource, l sdk.Logger) error {
 		co.Labels = cs.Labels
 		co.Environment = cs.Environment
 		co.HealthCheck = cs.HealthCheck
-		co.Image = &cs.Image
+		co.Image = cs.Image
 		co.Privileged = cs.Privileged
 		co.Resources = cs.Resources
 		co.MaxRestartCount = cs.MaxRestartCount
@@ -155,10 +155,6 @@ func (c *Provider) internalCreate(ctx context.Context, sidecar bool) error {
 	// set the fqdn
 	fqdn := utils.FQDN(c.config.Meta.Name, c.config.Meta.Module, c.config.Meta.Type)
 	c.config.ContainerName = fqdn
-
-	if c.config.Image == nil {
-		return fmt.Errorf("need to specify an image")
-	}
 
 	// pull any images needed for this container
 	img := types.Image{

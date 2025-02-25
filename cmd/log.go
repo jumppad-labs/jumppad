@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -23,11 +24,10 @@ import (
 	ct "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/k8s"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/nomad"
-	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
-func newLogCmd(engine jumppad.Engine, dc container.Docker, stdout, stderr io.Writer) *cobra.Command {
+func newLogCmd(dc container.Docker, stdout, stderr io.Writer) *cobra.Command {
 	logCmd := &cobra.Command{
 		Use:     "logs [resource]",
 		Short:   "Tails logs for running jumppad resources",
@@ -79,7 +79,7 @@ func newLogCmdFunc(dc container.Docker, stdout, stderr io.Writer) func(cmd *cobr
 		if len(args) == 1 {
 			cfg, err := config.LoadState()
 			if err != nil {
-				return fmt.Errorf("Unable to read state file")
+				return errors.New("unable to read state file")
 			}
 
 			r, err := cfg.FindResource(args[0])
@@ -140,7 +140,7 @@ func newLogCmdFunc(dc container.Docker, stdout, stderr io.Writer) func(cmd *cobr
 func getLoggable() ([]string, error) {
 	cfg, err := config.LoadState()
 	if err != nil {
-		return nil, fmt.Errorf("Unable to read state file")
+		return nil, errors.New("unable to read state file")
 	}
 
 	loggable := []string{}
@@ -205,6 +205,10 @@ func writeLogOutput(rc io.ReadCloser, stdout, stderr io.Writer, name string, c c
 		count := binary.BigEndian.Uint32(hdr[4:])
 		dat := make([]byte, count)
 		_, err = rc.Read(dat)
+		if err != nil {
+			log.Error("Unable to read from log stream", "name", name, "error", err)
+			return
+		}
 
 		name = strings.TrimSuffix(name, utils.LocalTLD)
 		colorWriter.Fprintf(w, "[%s]   %s", name, string(dat))

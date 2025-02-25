@@ -59,7 +59,7 @@ func newDevCmdFunc(variables *[]string, variablesFile, interval *string, ttyFlag
 		}
 
 		engineClients, _ := clients.GenerateClients(v.Logger())
-		engine, _, err := createEngine(v.Logger(), engineClients)
+		engine, err := createEngine(v.Logger(), engineClients)
 		if err != nil {
 			return fmt.Errorf("unable to create engine: %s", err)
 		}

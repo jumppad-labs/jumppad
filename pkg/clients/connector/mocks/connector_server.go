@@ -6,8 +6,8 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
+	"os"
 
 	"github.com/jumppad-labs/connector/protos/shipyard"
 	"github.com/stretchr/testify/mock"
@@ -34,7 +34,7 @@ func (m *MockConnectorServer) Start(addr, rootCertPath, rootKeyPath, leafCertPat
 
 	// Create a certificate pool from the certificate authority
 	certPool := x509.NewCertPool()
-	ca, err := ioutil.ReadFile(rootCertPath)
+	ca, err := os.ReadFile(rootCertPath)
 	if err != nil {
 		return "", fmt.Errorf("could not read ca certificate: %s", err)
 	}
@@ -54,7 +54,7 @@ func (m *MockConnectorServer) Start(addr, rootCertPath, rootKeyPath, leafCertPat
 
 	m.listener, err = net.Listen("tcp", addr)
 	if err != nil {
-		return "", fmt.Errorf("Unable to listen on address: %s error: %s", addr, err)
+		return "", fmt.Errorf("unable to listen on address: %s error: %s", addr, err)
 	}
 
 	shipyard.RegisterRemoteConnectionServer(m.server, m)

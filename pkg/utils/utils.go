@@ -65,13 +65,13 @@ func CreateFolders() {
 func ValidateName(name string) (bool, error) {
 	// check the length
 	if len(name) > 128 {
-		return false, NameExceedsMaxLengthError
+		return false, ErrNameExceedsMaxLength
 	}
 
 	r := regexp.MustCompile(`^[a-zA-Z0-9\-_]+$`)
 	ok := r.MatchString(name)
 	if !ok {
-		return false, NameContainsInvalidCharactersError
+		return false, ErrNameContainsInvalidCharacters
 	}
 
 	return true, nil
@@ -258,7 +258,7 @@ func BlueprintFolder(blueprint string) (string, error) {
 	parts := strings.Split(blueprint, "//")
 
 	if parts == nil || len(parts) != 2 {
-		return "", InvalidBlueprintURIError
+		return "", ErrInvalidBlueprintURI
 	}
 
 	// first replace any ?
@@ -396,10 +396,10 @@ func GetLocalIPAddresses() []string {
 	}
 
 	addresses := []string{}
-	for _, a := range addrs {
-		ip, _, err := net.ParseCIDR(a.String())
-		if err == nil {
-			addresses = append(addresses, fmt.Sprintf("%s", ip))
+	for _, addr := range addrs {
+		ipNet, ok := addr.(*net.IPNet)
+		if ok && !ipNet.IP.IsLoopback() && ipNet.IP.To4() != nil {
+			addresses = append(addresses, ipNet.IP.To4().String())
 		}
 	}
 
@@ -416,7 +416,7 @@ func GetLocalIPAndHostname() (string, string) {
 	for _, netInterfaceAddress := range netInterfaceAddresses {
 		networkIP, ok := netInterfaceAddress.(*net.IPNet)
 		if ok && !networkIP.IP.IsLoopback() && networkIP.IP.To4() != nil {
-			ip := networkIP.IP.String()
+			ip := networkIP.IP.To4().String()
 			return ip, GetHostname()
 		}
 	}
@@ -442,7 +442,7 @@ func SubnetIPs(subnet string) ([]string, error) {
 	var ipList []string
 	ip := ipnet.IP
 	for ; ipnet.Contains(ip); ip = incIP(ip) {
-		ipList = append(ipList, ip.String())
+		ipList = append(ipList, ip.To4().String())
 	}
 
 	return ipList, nil
@@ -526,7 +526,7 @@ func incIP(ip net.IP) net.IP {
 	byteIp := []byte(newIp)
 	l := len(byteIp)
 	var i int
-	for k, _ := range byteIp {
+	for k := range byteIp {
 		// start with the rightmost index first
 		// increment it
 		// if the index is < 256, then no overflow happened and we increment and break
