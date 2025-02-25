@@ -816,7 +816,10 @@ func (p *ClusterProvider) deployConnector() error {
 	var lastError error
 
 	for {
+		p.log.Debug("Checking Connector deployment health", "ref", p.config.Meta.ID)
+
 		if timeout.Err() != nil {
+			p.log.Error("Connector deployment timeout", "ref", p.config.Meta.ID)
 			break
 		}
 
@@ -827,13 +830,13 @@ func (p *ClusterProvider) deployConnector() error {
 		}
 
 		if ok {
+			lastError = nil
 			break
 		}
 
 		lastError = fmt.Errorf("connector not healthy")
 
-		// backoff
-		time.Sleep(1 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 
 	return lastError
