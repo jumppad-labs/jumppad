@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	gosignal "os/signal"
 	"path"
@@ -194,7 +193,7 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 				{
 					Driver:       c.Resources.GPU.Driver,
 					DeviceIDs:    c.Resources.GPU.DeviceIDs,
-					Capabilities: [][]string{[]string{"gpu", c.Resources.GPU.Driver, "compute"}},
+					Capabilities: [][]string{{"gpu", c.Resources.GPU.Driver, "compute"}},
 				},
 			}
 		}
@@ -360,7 +359,7 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 
 		// get all default attached networks, we will disconnect these later
 		defaultNets := []string{}
-		for k, _ := range info.NetworkSettings.Networks {
+		for k := range info.NetworkSettings.Networks {
 			defaultNets = append(defaultNets, k)
 		}
 
@@ -393,6 +392,24 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 			if err != nil {
 				d.l.Warn("Unable to remove container from the network", "name", n, "ref", c.Name, "error", err)
 			}
+		}
+	}
+
+	if len(c.Networks) == 0 {
+		net, err := d.FindNetwork("resource.network.jumppad")
+		if err != nil {
+			return "", err
+		}
+
+		err = d.AttachNetwork(net.Name, cont.ID, []string{}, "")
+		if err != nil {
+			// if we fail to connect to the network roll back the container
+			errRemove := d.RemoveContainer(cont.ID, false)
+			if errRemove != nil {
+				return "", xerrors.Errorf("failed to attach network %s to container %s, unable to roll back container: %w", "jumppad", cont.ID, err)
+			}
+
+			return "", xerrors.Errorf("unable to connect container to network %s, successfully rolled back container: %w", "jumppad", err)
 		}
 	}
 
@@ -893,7 +910,7 @@ func (d *DockerTasks) CopyFilesToVolume(volumeID string, filenames []string, pat
 
 	cc.Image = &dtypes.Image{Name: "alpine:latest"}
 	cc.Volumes = []dtypes.Volume{
-		dtypes.Volume{
+		{
 			Source:      volumeID,
 			Destination: "/cache",
 			Type:        "volume",
@@ -1044,7 +1061,7 @@ func (d *DockerTasks) CopyFileToContainer(containerID, filename, path string) er
 		return xerrors.Errorf("unable to write tar header: %w", err)
 	}
 
-	io.Copy(ta, f)
+	_, err = io.Copy(ta, f)
 	if err != nil {
 		return xerrors.Errorf("unable to copy image to tar file: %w", err)
 	}
@@ -1397,7 +1414,7 @@ func createPublishedPorts(ps []dtypes.Port) publishedPorts {
 		pp.ExposedPorts[dp] = struct{}{}
 
 		pb := []nat.PortBinding{
-			nat.PortBinding{
+			{
 				HostIP:   "0.0.0.0",
 				HostPort: p.Host,
 			},
@@ -1444,7 +1461,7 @@ func createPublishedPortRanges(ps []dtypes.PortRange) (publishedPorts, error) {
 
 			if p.EnableHost {
 				pb := []nat.PortBinding{
-					nat.PortBinding{
+					{
 						HostIP:   "0.0.0.0",
 						HostPort: port,
 					},
@@ -1490,7 +1507,7 @@ func (d *DockerTasks) saveImageToTempFile(image, filename string) (string, error
 	}
 	defer ir.Close()
 
-	tmpDir, err := ioutil.TempDir("", "")
+	tmpDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return "", xerrors.Errorf("unable to create temporary file: %w", err)
 	}
@@ -1515,7 +1532,7 @@ func (d *DockerTasks) saveImageToTempFile(image, filename string) (string, error
 func copyDir(src string, dest string) error {
 
 	if dest == src {
-		return fmt.Errorf("cannot copy a folder into the folder itself!")
+		return fmt.Errorf("cannot copy a folder into the folder itself")
 	}
 
 	f, err := os.Open(src)
@@ -1536,7 +1553,7 @@ func copyDir(src string, dest string) error {
 		return err
 	}
 
-	files, err := ioutil.ReadDir(src)
+	files, err := os.ReadDir(src)
 	if err != nil {
 		return err
 	}
@@ -1554,13 +1571,13 @@ func copyDir(src string, dest string) error {
 
 		if !f.IsDir() {
 
-			content, err := ioutil.ReadFile(src + "/" + f.Name())
+			content, err := os.ReadFile(src + "/" + f.Name())
 			if err != nil {
 				return err
 
 			}
 
-			err = ioutil.WriteFile(dest+"/"+f.Name(), content, 0755)
+			err = os.WriteFile(dest+"/"+f.Name(), content, 0755)
 			if err != nil {
 				return err
 

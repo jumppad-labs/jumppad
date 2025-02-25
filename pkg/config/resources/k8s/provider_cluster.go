@@ -293,7 +293,7 @@ func (p *ClusterProvider) createK3s(ctx context.Context) error {
 
 	// set the volume mount for the images
 	cc.Volumes = []ctypes.Volume{
-		ctypes.Volume{
+		{
 			Source:      volID,
 			Destination: "/cache",
 			Type:        "volume",
@@ -426,17 +426,17 @@ func (p *ClusterProvider) createK3s(ctx context.Context) error {
 
 	// expose the API server and Connector ports
 	cc.Ports = []ctypes.Port{
-		ctypes.Port{
+		{
 			Local:    fmt.Sprintf("%d", p.config.APIPort),
 			Host:     fmt.Sprintf("%d", p.config.APIPort),
 			Protocol: "tcp",
 		},
-		ctypes.Port{
+		{
 			Local:    fmt.Sprintf("%d", p.config.ConnectorPort),
 			Host:     fmt.Sprintf("%d", p.config.ConnectorPort),
 			Protocol: "tcp",
 		},
-		ctypes.Port{
+		{
 			Local:    fmt.Sprintf("%d", p.config.ConnectorPort+1),
 			Host:     fmt.Sprintf("%d", p.config.ConnectorPort+1),
 			Protocol: "tcp",
@@ -745,7 +745,7 @@ func (p *ClusterProvider) deployConnector(ctx context.Context, grpcPort, httpPor
 	}
 
 	// wait for it to start
-	p.kubeClient.HealthCheckPods(ctx, []string{"app=connector"}, 60*time.Second)
+	err = p.kubeClient.HealthCheckPods(ctx, []string{"app=connector"}, 60*time.Second)
 	if err != nil {
 		return fmt.Errorf("timeout waiting for connector to start: %s", err)
 	}

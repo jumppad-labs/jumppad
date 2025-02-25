@@ -28,7 +28,7 @@ func testExecCommandSetup(t *testing.T) (*DockerTasks, *mocks.Docker, *imocks.Im
 	mk := &mocks.Docker{}
 	mk.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 	mk.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
-	mk.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(types.IDResponse{ID: "abc"}, nil)
+	mk.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(container.ExecCreateResponse{ID: "abc"}, nil)
 	mk.On("ContainerExecAttach", mock.Anything, mock.Anything, mock.Anything).Return(
 		types.HijackedResponse{
 			Conn: &net.TCPConn{},
@@ -83,7 +83,7 @@ func TestExecuteCommandExecFailReturnError(t *testing.T) {
 
 	md, mk, _ := testExecCommandSetup(t)
 	testutils.RemoveOn(&mk.Mock, "ContainerExecCreate")
-	mk.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(types.IDResponse{}, fmt.Errorf("boom"))
+	mk.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(container.ExecCreateResponse{}, fmt.Errorf("boom"))
 
 	writer := bytes.NewBufferString("")
 
