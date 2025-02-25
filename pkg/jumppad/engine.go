@@ -120,7 +120,6 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 	res, parseErr := e.ParseConfigWithVariables(path, variables, variablesFile)
 
 	if parseErr != nil {
-		fmt.Println("Error parsing config", parseErr)
 		// cast the error to a config error
 		ce := parseErr.(*hclerrors.ConfigError)
 
@@ -129,6 +128,7 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 		// callbacks have not been called for the providers, any referenced
 		// resources will not be found, it is ok to ignore these errors
 		if ce.ContainsErrors() {
+			fmt.Println("Error parsing config", parseErr)
 			return nil, nil, nil, nil, parseErr
 		}
 	}

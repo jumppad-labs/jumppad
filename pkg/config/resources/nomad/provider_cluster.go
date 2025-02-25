@@ -831,6 +831,9 @@ func (p *ClusterProvider) deployConnector() error {
 		}
 
 		lastError = fmt.Errorf("connector not healthy")
+
+		// backoff
+		time.Sleep(1 * time.Second)
 	}
 
 	return lastError

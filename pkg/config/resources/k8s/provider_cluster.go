@@ -711,14 +711,14 @@ func (p *ClusterProvider) deployConnector(ctx context.Context, grpcPort, httpPor
 
 	files = append(files, path.Join(dir, "secret.yaml"))
 	p.log.Debug("Writing secret config", "file", files[1])
-	writeConnectorK8sSecret(files[1], lf.RootCertPath, lf.LeafKeyPath, lf.LeafCertPath)
+	err = writeConnectorK8sSecret(files[1], lf.RootCertPath, lf.LeafKeyPath, lf.LeafCertPath)
 	if err != nil {
 		return fmt.Errorf("unable to create secret for connector: %s", err)
 	}
 
 	files = append(files, path.Join(dir, "rbac.yaml"))
 	p.log.Debug("Writing RBAC config", "file", files[2])
-	writeConnectorRBAC(files[2])
+	err = writeConnectorRBAC(files[2])
 	if err != nil {
 		return fmt.Errorf("unable to create RBAC for connector: %s", err)
 	}
@@ -731,7 +731,7 @@ func (p *ClusterProvider) deployConnector(ctx context.Context, grpcPort, httpPor
 
 	files = append(files, path.Join(dir, "deployment.yaml"))
 	p.log.Debug("Writing deployment config", "file", files[3])
-	writeConnectorDeployment(files[3], grpcPort, httpPort, ll)
+	err = writeConnectorDeployment(files[3], grpcPort, httpPort, ll)
 	if err != nil {
 		return fmt.Errorf("unable to create deployment for connector: %s", err)
 	}

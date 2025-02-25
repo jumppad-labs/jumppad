@@ -416,7 +416,7 @@ func GetLocalIPAndHostname() (string, string) {
 	for _, netInterfaceAddress := range netInterfaceAddresses {
 		networkIP, ok := netInterfaceAddress.(*net.IPNet)
 		if ok && !networkIP.IP.IsLoopback() && networkIP.IP.To4() != nil {
-			ip := networkIP.IP.String()
+			ip := networkIP.IP.To4().String()
 			return ip, GetHostname()
 		}
 	}
@@ -442,7 +442,7 @@ func SubnetIPs(subnet string) ([]string, error) {
 	var ipList []string
 	ip := ipnet.IP
 	for ; ipnet.Contains(ip); ip = incIP(ip) {
-		ipList = append(ipList, ip.String())
+		ipList = append(ipList, ip.To4().String())
 	}
 
 	return ipList, nil
