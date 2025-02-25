@@ -82,15 +82,42 @@ func setupClusterMocks(t *testing.T) (
 	mk.Mock.On("Apply", mock.Anything, mock.Anything).Return(nil)
 	mk.Mock.On("GetPodLogs", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 
+	rc, err := os.CreateTemp(tmpDir, "root.cert")
+	if err != nil {
+		panic(err)
+	}
+
+	rk, err := os.CreateTemp(tmpDir, "root.key")
+	if err != nil {
+		panic(err)
+	}
+
+	lc, err := os.CreateTemp(tmpDir, "leaf.cert")
+	if err != nil {
+		panic(err)
+	}
+
+	lk, err := os.CreateTemp(tmpDir, "leaf.key")
+	if err != nil {
+		panic(err)
+	}
+
+	bundle := &contypes.CertBundle{
+		RootCertPath: rc.Name(),
+		RootKeyPath:  rk.Name(),
+		LeafCertPath: lc.Name(),
+		LeafKeyPath:  lk.Name(),
+	}
+
 	mc := &conmocks.Connector{}
-	mc.On("GetLocalCertBundle", mock.Anything).Return(&contypes.CertBundle{}, nil)
+	mc.On("GetLocalCertBundle", mock.Anything).Return(bundle, nil)
 	mc.On("GenerateLeafCert",
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
-	).Return(&contypes.CertBundle{}, nil)
+	).Return(bundle, nil)
 
 	// copy the config
 	cc := deepcopy.Copy(clusterConfig).(*Cluster)
