@@ -122,7 +122,17 @@ func Execute(v, c, d string) error {
 	err := rootCmd.Execute()
 
 	if err != nil {
+		// c, ok := err.(*jerrors.ConfigError)
+		// if !ok {
+		// 	showErr(err)
+		// } else {
+		// 	if c.ContainsErrors() {
+		// 		_, ok := err.(*jerrors.ParserError)
+		// 		if !ok {
 		showErr(err)
+		// 		}
+		// 	}
+		// }
 	}
 
 	return err
@@ -131,7 +141,7 @@ func Execute(v, c, d string) error {
 func showErr(err error) {
 	fmt.Println("")
 	fmt.Println(err)
-	fmt.Println(discordHelp)
+	// fmt.Println(discordHelp)
 }
 
 var discordHelp = `

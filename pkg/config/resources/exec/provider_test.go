@@ -62,7 +62,8 @@ func TestParsesOutput(t *testing.T) {
 	err := p.Create(context.Background())
 	require.NoError(t, err)
 
-	require.True(t, e.Output["FOO"] == "BAR")
+	require.True(t, e.ExecOutput["FOO"] == "BAR")
+	require.True(t, e.Output.AsValueMap()["FOO"].AsString() == "BAR")
 }
 
 func TestDeletesOutput(t *testing.T) {

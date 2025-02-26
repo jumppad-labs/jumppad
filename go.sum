@@ -1172,8 +1172,6 @@ github.com/jumppad-labs/go-cty v0.0.0-20230804061424-9e985cb751f6 h1:1ADItCWr5pr
 github.com/jumppad-labs/go-cty v0.0.0-20230804061424-9e985cb751f6/go.mod h1:YKQzy/7pZ7iq2jNFzy5go57xdxdWoLLpaEp4u238AE0=
 github.com/jumppad-labs/gohup v0.4.0 h1:0OplHvnKnOLkqWm417sRHLSiJ4xGeb8LiSSAJ51QrYg=
 github.com/jumppad-labs/gohup v0.4.0/go.mod h1:JYvZnemxJlWDyx8RbDNcCBLZSvIrYlYLnkQqR1BKFW4=
-github.com/jumppad-labs/hclconfig v0.26.0 h1:Qg/tC2WlhKwoTW0acAY/vyUXHwCuyr4NmshKLS81How=
-github.com/jumppad-labs/hclconfig v0.26.0/go.mod h1:AOzW0btnKiqUKYVi3ioGzSPNCWsTzsJxKcqzVORccvk=
 github.com/jumppad-labs/log v0.0.0-20240827082827-4404884e31a7 h1:tuoFYWXAqT5BheDlQNumY1DxvkW8bjG9JOzoxpFneZs=
 github.com/jumppad-labs/log v0.0.0-20240827082827-4404884e31a7/go.mod h1:S9jhxE2C1+jv2PlLTAow3h+ZILzvXRhd6eBjFAUcfgI=
 github.com/jumppad-labs/plugin-sdk v0.4.0 h1:deNk7h8W+6dsxj2ADP63o07Dv313vcBI8C4d1aBUO/c=
@@ -1532,8 +1530,6 @@ golang.org/x/crypto v0.13.0/go.mod h1:y6Z2r+Rw4iayiXXAIxJIDAJ1zMW4yaTpebo8fPOliY
 golang.org/x/crypto v0.19.0/go.mod h1:Iy9bg/ha4yyC70EfRS8jz+B6ybOBKMaSxLj6P6oBDfU=
 golang.org/x/crypto v0.23.0/go.mod h1:CKFgDieR+mRhux2Lsu27y0fO304Db0wZe70UKqHu0v8=
 golang.org/x/crypto v0.32.0/go.mod h1:ZnnJkOaASj8g0AjIduWNlq2NRxL0PlBrbKVyZ6V/Ugc=
-golang.org/x/crypto v0.33.0 h1:IOBPskki6Lysi0lo9qQvbxiQ+FvsCC/YWOecCHAixus=
-golang.org/x/crypto v0.33.0/go.mod h1:bVdXmD7IV/4GdElGPozy6U7lWdRXA4qyRVGJV57uQ5M=
 golang.org/x/crypto v0.34.0 h1:+/C6tk6rf/+t5DhUketUbD1aNGqiSX3j15Z6xuIDlBA=
 golang.org/x/crypto v0.34.0/go.mod h1:dy7dXNW32cAb/6/PRuTNsix8T+vJAqvuIy5Bli/x0YQ=
 golang.org/x/exp v0.0.0-20180321215751-8460e604b9de/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
