@@ -45,7 +45,7 @@ Any outputs set in the script are automatically parsed into a map and are availa
 The following example demonstrates how to set an output variable in a script.
 
 @example
-```hcl
+```
 
 	resource "exec" "inline" {
 	  script = <<-EOF
@@ -63,7 +63,7 @@ The following example demonstrates how to set an output variable in a script.
 ```
 
 @example Local
-```hcl
+```
 
 	resource "exec" "install" {
 	  script = <<-EOF
@@ -93,7 +93,7 @@ The following example demonstrates how to set an output variable in a script.
 ```
 
 @example Remote
-```hcl
+```
 
 	resource "container" "alpine" {
 	  image {
@@ -139,7 +139,7 @@ type Exec struct {
 		The script to execute.
 
 		@example
-		```hcl
+		```
 		resource "exec" "inline" {
 		  script = <<-EOF
 		  #!/bin/bash
@@ -173,7 +173,7 @@ type Exec struct {
 		Environment variables to set for the script.
 
 		@example
-		```hcl
+		```
 		resource "exec" "env" {
 		  environment = {
 		    FOO = "bar"
@@ -199,7 +199,7 @@ type Exec struct {
 		Only valid for remote execution in an existing container.
 
 		@example
-		```hcl
+		```
 		resource "container" "alpine" {
 		  image {
 		    name = "alpine"

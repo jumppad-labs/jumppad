@@ -7,7 +7,7 @@ There are three different types of healthcheck `http`, `tcp`, and `exec`, these 
 Health checks are executed sequentially, if one health check fails, the following checks are not executed. The execution order is `http`, `tcp`, `exec`.
 
 @example
-```hcl
+```
 
 	health_check {
 	    timeout = "30s"
@@ -69,7 +69,7 @@ A HTTP health check executes an HTTP request for the given address and evaluates
 If the reponse matches any of the given codes the check passes.
 
 @example
-```hcl
+```
 
 	http {
 	  address = "http://localhost:8500/v1/status/leader"
@@ -106,7 +106,7 @@ A TCP health check attempts to open a connection to the given address.
 If a connection can be opened then the check passes.
 
 @example
-```hcl
+```
 
 	tcp {
 	  address = "localhost:8500"
@@ -128,7 +128,7 @@ type HealthCheckExec struct {
 		The command to execute, the command is run in the target container.
 
 		@example
-		```hcl
+		```
 		exec {
 			command = ["pg_isready"]
 		}
@@ -139,7 +139,7 @@ type HealthCheckExec struct {
 		A script to execute in the target container, the script is coppied to the container into the /tmp directory and is then executed.
 
 		@example
-		```hcl
+		```
 		exec {
 		  script = <<-EOF
 		    #!/bin/bash

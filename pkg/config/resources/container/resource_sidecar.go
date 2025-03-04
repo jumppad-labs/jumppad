@@ -34,7 +34,7 @@ type Sidecar struct {
 		For example, to start a container and follow logs at /dev/null the following command could be used.
 
 		@example
-		```hcl
+		```
 		command = [
 			"tail",
 			"-f",
@@ -47,7 +47,7 @@ type Sidecar struct {
 		Allows you to set environment variables in the container.
 
 		@example
-		```hcl
+		```
 		environment = {
 			PATH = "/user/local/bin"
 		}
@@ -61,7 +61,7 @@ type Sidecar struct {
 		This stanza can be specified multiple times.
 
 		@example
-		```hcl
+		```
 		volume {
 			source      = "./"
 			destination = "/files"
@@ -77,7 +77,7 @@ type Sidecar struct {
 		Define a health check for the container, the resource will only be marked as successfully created when the health check passes.
 
 		@example
-		```hcl
+		```
 		health_check {
 		  timeout = "30s"
 		  http {
@@ -105,7 +105,7 @@ type Sidecar struct {
 		Fully qualified resource name for the container the sidecar is linked to, this can be used to access the sidecar from other sources.
 
 		@example
-		```hcl
+		```
 		name.container.local.jmpd.in
 		```
 

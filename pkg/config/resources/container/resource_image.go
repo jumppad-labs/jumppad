@@ -18,7 +18,7 @@ type Image struct {
 		and password interpolated environment variables can be used in place of static values.
 
 		@example
-		```hcl
+		```
 		image {
 		  name = "myregistry.io/myimage:latest"
 		  username = env("REGISTRY_USERNAME")

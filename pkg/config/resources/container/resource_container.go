@@ -18,7 +18,7 @@ Container defines a structure for creating Docker containers
 @resource
 
 @example Minimal Example
-```hcl
+```
 
 	resource "container" "unique_name" {
 	    network {
@@ -35,7 +35,7 @@ Container defines a structure for creating Docker containers
 ```
 
 @example Full Example
-```hcl
+```
 
 	resource "container" "unique_name" {
 	    depends_on = ["resource.container.another"]
@@ -105,7 +105,7 @@ type Container struct {
 		For example, to start a container and follow logs at /dev/null the following command could be used.
 
 		@example
-		```hcl
+		```
 		command = [
 			"tail",
 			"-f",
@@ -118,7 +118,7 @@ type Container struct {
 		Allows you to set environment variables in the container.
 
 		@example
-		```hcl
+		```
 		environment = {
 			PATH = "/user/local/bin"
 		}
@@ -132,7 +132,7 @@ type Container struct {
 		This stanza can be specified multiple times.
 
 		@example
-		```hcl
+		```
 		volume {
 			source      = "./"
 			destination = "/files"
@@ -145,7 +145,7 @@ type Container struct {
 		This stanza can be specified multiple times.
 
 		@example
-		```hcl
+		```
 		port {
 			local = 80
 			remote = 80
@@ -161,7 +161,7 @@ type Container struct {
 		The following example would create 11 ports from 80 to 90 (inclusive) and expose them to the host machine.
 
 		@example
-		```hcl
+		```
 		port_range {
 			range       = "80-90"
 			enable_host = true
@@ -181,7 +181,7 @@ type Container struct {
 		Define a health check for the container, the resource will only be marked as successfully created when the health check passes.
 
 		@example
-		```hcl
+		```
 		health_check {
 		  timeout = "30s"
 		  http {
@@ -210,7 +210,7 @@ type Container struct {
 		`container_name` is also the name of the created Docker container.
 
 		@example
-		```hcl
+		```
 		name.container.local.jmpd.in
 		```
 
@@ -248,7 +248,7 @@ type NetworkAttachment struct {
 		resolution using the primary assigned name `[name].container.shipyard.run` and the aliases.
 
 		@example
-		```hcl
+		```
 		network {
 		  name    = "network.cloud"
 		  aliases = [
@@ -285,7 +285,7 @@ type Resources struct {
 		Pin the container CPU consumption to one or more logical CPUs. For example to pin the container to the core 1 and 4.
 
 		@example
-		```hcl
+		```
 		resources {
 		  cpi_pin = [1,4]
 		}
@@ -310,7 +310,7 @@ type GPU struct {
 		The GPUs to pass to the container, i.e "0", "1", "2".
 
 		@example
-		```hcl
+		```
 		resources {
 			gpu {
 				driver = "nvidia"
