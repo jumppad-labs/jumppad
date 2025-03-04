@@ -9,23 +9,46 @@ import (
 // TypeCertificateCA is the resource string for a self-signed CA
 const TypeCertificateCA string = "certificate_ca"
 
-// CertificateCA allows the generate of CA certificates
+/*
+CertificateCA allows the generate of CA certificates
+
+@resource
+*/
 type CertificateCA struct {
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
 
 	// Output directory to write the certificate and key too
 	Output string `hcl:"output" json:"output"`
 
-	// output parameters
+	/*
+		Key is the value related to the certificate key
 
-	// Key is the value related to the certificate key
+		@computed
+	*/
 	PrivateKey File `hcl:"private_key,optional" json:"private_key"`
+	/*
+		Key is the value related to the certificate key
 
-	// Key is the value related to the certificate key
+		@computed
+	*/
 	PublicKeyPEM File `hcl:"public_key_pem,optional" json:"public_key_pem"`
+	/*
+		Key is the value related to the certificate key
+
+		@computed
+	*/
 	PublicKeySSH File `hcl:"public_key_ssh,optional" json:"public_key_ssh"`
 
-	// Cert is the value related to the certificate
+	/*
+		Cert is the value related to the certificate
+
+		@computed
+	*/
 	Cert File `hcl:"certificate,optional" json:"certificate"`
 }
 

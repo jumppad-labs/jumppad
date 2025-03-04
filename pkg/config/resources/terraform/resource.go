@@ -14,8 +14,17 @@ import (
 // TypeTerraform is the resource string for a Terraform resource
 const TypeTerraform string = "terraform"
 
-// ExecRemote allows commands to be executed in remote containers
+/*
+ExecRemote allows commands to be executed in remote containers
+
+@resource
+*/
 type Terraform struct {
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
 
 	Networks []ctypes.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified

@@ -6,7 +6,15 @@ import (
 
 const TypeBook string = "book"
 
+/*
+@resource
+*/
 type Book struct {
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
 
 	Title    string    `hcl:"title" json:"title"`

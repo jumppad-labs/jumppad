@@ -11,19 +11,31 @@ import (
 // TypeCopy copies files from one location to another
 const TypeCopy string = "copy"
 
-// Docs allows the running of a Docusaurus container which can be used for
-// online tutorials or documentation
+/*
+The copy resource allows files and directories to be copied from one location to another.
+
+@resource
+*/
 type Copy struct {
-	// embedded type holding name, etc
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
-
+	// Any explicit dependencies that this resource has
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
+	// Source file, folder, url, git repo, etc
+	Source string `hcl:"source" json:"source"`
+	// Destination file or directory to write file or files to.
+	Destination string `hcl:"destination" json:"destination"`
+	// Unix file permissions to apply to coppied files and direcories.
+	Permissions string `hcl:"permissions,optional" json:"permissions,omitempty" default:"0777"`
+	/*
+		List of the full paths of copied files.
 
-	Source      string `hcl:"source" json:"source"`                              // Source file, folder, url, git repo, etc
-	Destination string `hcl:"destination" json:"destination"`                    // Destination to write file or files to
-	Permissions string `hcl:"permissions,optional" json:"permissions,omitempty"` // Permissions 0777 to set for written file
-
-	// outputs
+		@computed
+	*/
 	CopiedFiles []string `hcl:"copied_files,optional" json:"copied_files"`
 }
 
