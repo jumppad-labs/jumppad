@@ -13,9 +13,17 @@ const (
 	DefaultNetworkSubnet string = "10.0.10.0/24"
 )
 
-// Network defines a Docker network
+/*
+Network defines a Docker network
+
+@resource
+*/
 type Network struct {
-	// embedded type holding name, etc
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
 
 	Subnet     string `hcl:"subnet" json:"subnet"`

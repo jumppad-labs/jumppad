@@ -11,8 +11,17 @@ import (
 const TypeK8sConfig string = "k8s_config"
 const TypeKubernetesConfig string = "kubernetes_config"
 
-// K8sConfig applies and deletes and deletes Kubernetes configuration
+/*
+K8sConfig applies and deletes and deletes Kubernetes configuration
+
+@resource
+*/
 type Config struct {
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
 
 	Cluster Cluster `hcl:"cluster" json:"cluster"`

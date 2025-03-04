@@ -13,30 +13,240 @@ import (
 // TypeExec is the resource string for an Exec resource
 const TypeExec string = "exec"
 
-// Exec allows commands to be executed either locally or remotely
+/*
+The exec resource allows the execution of arbitrary commands and scripts. Depending on the parameters specified, the
+commands are executed either on the local machine or inside of a container.
+
+When either the `image` or `target` fields are specified, the command is executed inside of a container.
+When neither of these fields are specified, the command is executed on the local machine.
+
+## Local execution
+
+When running on the local machine, the command runs in the local user space, and has access to all the environment
+variables that the user executing jumppad run has access too. Additional environment variables, and the working directory
+for the command can be specified as part of the resource.
+
+Log files for an exec running on the local machine are written to `$HOME/.jumppad/logs/exec_[name].log` and the rendered
+script can be found in the jumppad temp directory `$HOME/.jumppad/tmp/exec[name].sh`.
+
+## Remote execution
+
+Execution can either be in a stand alone container or can target an existing and running container.
+When targeting an existing container, the `target` field must be specified.
+When running in a stand alone container, the `image` block must be specified.
+
+## Setting outputs
+
+Output variables for the exec resource can be set by echoing a key value pair to the output file inside the script.
+An environment variable `${EXEC_OUTPUT}` is automatically added to the environment of the script and points to the output.
+
+Any outputs set in the script are automatically parsed into a map and are available via the output parameter.
+
+The following example demonstrates how to set an output variable in a script.
+
+@example
+```hcl
+
+	resource "exec" "inline" {
+	  script = <<-EOF
+	  #!/bin/bash
+	  ls -lha
+
+	  echo "FOO=BAR" > ${EXEC_OUTPUT}
+	  EOF
+	}
+
+	output "foo" {
+	  value = resource.exec.inline.output.FOO
+	}
+
+```
+
+@example Local
+```hcl
+
+	resource "exec" "install" {
+	  script = <<-EOF
+	  #!/bin/sh
+	  OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+	  ARCH=$(uname -m | tr '[:upper:]' '[:lower:]')
+
+	  if [ ! -f /tmp/consul ]; then
+	    curl -L -o /tmp/consul.zip \
+	      https://releases.hashicorp.com/consul/1.16.2/consul_1.16.2_$${OS}_$${ARCH}.zip
+	    cd /tmp && unzip ./consul.zip
+	  fi
+	  EOF
+	}
+
+	resource "exec" "run" {
+	  depends_on = ["resource.exec.install"]
+
+	  script = <<-EOF
+	  #!/bin/sh
+	  /tmp/consul agent -dev
+	  EOF
+
+	  daemon = true
+	}
+
+```
+
+@example Remote
+```hcl
+
+	resource "container" "alpine" {
+	  image {
+	    name = "alpine"
+	  }
+
+	  command = ["tail", "-f", "/dev/null"]
+	}
+
+	resource "exec" "in_container" {
+	  target = resource.container.alpine
+
+	  script = <<-EOF
+	  #/bin/sh
+	  ls -las
+	  EOF
+	}
+
+	resource "exec" "standalone" {
+	  image {
+	    name = "alpine"
+	  }
+
+	  script = <<-EOF
+	  #/bin/sh
+	  ls -las
+	  EOF
+	}
+
+```
+
+@resource
+*/
 type Exec struct {
-	// embedded type holding name, etc
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
 
-	Script           string            `hcl:"script" json:"script"`                                          // script to execute
-	WorkingDirectory string            `hcl:"working_directory,optional" json:"working_directory,omitempty"` // Working directory to execute commands
-	Daemon           bool              `hcl:"daemon,optional" json:"daemon,omitempty"`                       // Should the process run as a daemon
-	Timeout          string            `hcl:"timeout,optional" json:"timeout,omitempty"`                     // Set the timeout for the command
-	Environment      map[string]string `hcl:"environment,optional" json:"environment,omitempty"`             // environment variables to set
+	/*
+		The script to execute.
 
-	// If remote, either Image or Target must be specified
-	Image  *ctypes.Image     `hcl:"image,block" json:"image,omitempty"`      // Create a new container and exec
-	Target *ctypes.Container `hcl:"target,optional" json:"target,omitempty"` // Attach to a running target and exec
+		@example
+		```hcl
+		resource "exec" "inline" {
+		  script = <<-EOF
+		  #!/bin/bash
+		  ls -lha
+		  EOF
+		}
 
-	Networks []ctypes.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
-	Volumes  []ctypes.Volume            `hcl:"volume,block" json:"volumes,omitempty"`   // Volumes to mount to container
-	RunAs    *ctypes.User               `hcl:"run_as,block" json:"run_as,omitempty"`    // User block for mapping the user id and group id inside the container
+		resource "exec" "file" {
+		  script = file("script.sh")
+		}
 
-	// output
-	PID      int               `hcl:"pid,optional" json:"pid,omitempty"`             // PID stores the ID of the created connector service if it is a local exec
-	ExitCode int               `hcl:"exit_code,optional" json:"exit_code,omitempty"` // Exit code of the process
-	Output   map[string]string `hcl:"output,optional" json:"output,omitempty"`       // output values returned from exec
-	Checksum string            `hcl:"checksum,optional" json:"checksum,omitempty"`   // Checksum of the script
+		resource "exec" "template" {
+		  script = template_file("script.sh.tpl", {
+		    foo = "bar"
+		  })
+		}
+		```
+	*/
+	Script string `hcl:"script" json:"script"`
+	// The working directory to execute the script in.
+	WorkingDirectory string `hcl:"working_directory,optional" json:"working_directory,omitempty"`
+	/*
+		The process will be run as a daemon if set to true.
+
+		Only valid for local execution.
+	*/
+	Daemon bool `hcl:"daemon,optional" json:"daemon,omitempty"`
+	// The timeout for the script to execute as a duration e.g. 30s.
+	Timeout string `hcl:"timeout,optional" json:"timeout,omitempty"`
+	/*
+		Environment variables to set for the script.
+
+		@example
+		```hcl
+		resource "exec" "env" {
+		  environment = {
+		    FOO = "bar"
+		  }
+
+		  script = <<-EOF
+		  #!/bin/bash
+		  echo $${FOO}
+		  EOF
+		}
+		```
+	*/
+	Environment map[string]string `hcl:"environment,optional" json:"environment,omitempty"`
+	/*
+		The image to use for the container.
+
+		Only valid for remote execution in a standalone container.
+	*/
+	Image *ctypes.Image `hcl:"image,block" json:"image,omitempty"`
+	/*
+		A reference to a target container resource to execute the script in.
+
+		Only valid for remote execution in an existing container.
+
+		@example
+		```hcl
+		resource "container" "alpine" {
+		  image {
+		    name = "alpine"
+		  }
+		}
+
+		resource "exec" "uname" {
+		  target = resource.container.alpine
+
+		  script = <<-EOF
+		  #!/bin/bash
+		  uname -a
+		  EOF
+		}
+
+		```
+	*/
+	Target *ctypes.Container `hcl:"target,optional" json:"target,omitempty"`
+	/*
+		The network to attach the container to.
+
+		Only valid for remote execution in an existing container.
+	*/
+	Networks []ctypes.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"`
+	/*
+		The volumes to mount to the container.
+
+		Only valid for remote execution in an existing container.
+	*/
+	Volumes []ctypes.Volume `hcl:"volume,block" json:"volumes,omitempty"`
+	/*
+		The user to run the script as.
+
+		Only valid for remote execution in an existing container.
+	*/
+	RunAs *ctypes.User `hcl:"run_as,block" json:"run_as,omitempty"`
+	/*
+		This is the pid of the parent process.
+
+		Only valid for local execution.
+
+		@computed
+	*/
+	PID      int               `hcl:"pid,optional" json:"pid,omitempty"`
+	ExitCode int               `hcl:"exit_code,optional" json:"exit_code,omitempty"`
+	Output   map[string]string `hcl:"output,optional" json:"output,omitempty"`
+	Checksum string            `hcl:"checksum,optional" json:"checksum,omitempty"`
 }
 
 func (e *Exec) Process() error {

@@ -10,8 +10,17 @@ import (
 // TypeHelm is the string representation of the Meta.Type
 const TypeHelm string = "helm"
 
-// Helm defines configuration for running Helm charts
+/*
+Helm defines configuration for running Helm charts
+
+@resource
+*/
 type Helm struct {
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
 
 	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`

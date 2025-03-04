@@ -8,8 +8,17 @@ import (
 // TypeRandomID is the resource for generating random IDs
 const TypeRandomID string = "random_id"
 
-// allows the generation of random IDs
+/*
+allows the generation of random IDs
+
+@resource
+*/
 type RandomID struct {
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
 
 	ByteLength int64 `hcl:"byte_length" json:"byte_length"`

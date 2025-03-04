@@ -13,8 +13,17 @@ import (
 // TypeTemplate is the resource string for a Template resource
 const TypeTemplate string = "template"
 
-// Template allows the process of user defined templates
+/*
+Template allows the process of user defined templates
+
+@resource
+*/
 type Template struct {
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
 
 	Source      string               `hcl:"source" json:"source"`                          // Source template to be processed as string

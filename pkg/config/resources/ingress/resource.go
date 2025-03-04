@@ -11,8 +11,17 @@ import (
 // TypeIngress is the resource string for the type
 const TypeIngress string = "ingress"
 
-// Ingress defines an ingress service mapping ports between local host and resources like containers and kube cluster
+/*
+Ingress defines an ingress service mapping ports between local host and resources like containers and kube cluster
+
+@resource
+*/
 type Ingress struct {
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
 
 	// local port to expose the service on

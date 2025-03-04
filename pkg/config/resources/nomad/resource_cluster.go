@@ -12,9 +12,17 @@ import (
 // TypeCluster is the resource string for a Cluster resource
 const TypeNomadCluster string = "nomad_cluster"
 
-// Cluster is a config stanza which defines a Kubernetes or a Nomad cluster
+/*
+Cluster is a config stanza which defines a Kubernetes or a Nomad cluster
+
+@resource
+*/
 type NomadCluster struct {
-	// embedded type holding name, etc
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
 
 	Networks      ctypes.NetworkAttachments `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified

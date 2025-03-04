@@ -10,9 +10,17 @@ import (
 // TypeNomadJob defines the string type for the Kubernetes config resource
 const TypeNomadJob string = "nomad_job"
 
-// NomadJob applies and deletes and deletes Nomad cluster jobs
+/*
+NomadJob applies and deletes and deletes Nomad cluster jobs
+
+@resource
+*/
 type NomadJob struct {
-	// embedded type holding name, etc
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
 
 	// Cluster is the name of the cluster to apply configuration to

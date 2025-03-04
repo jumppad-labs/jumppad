@@ -6,7 +6,15 @@ import (
 
 const TypeChapter string = "chapter"
 
+/*
+@resource
+*/
 type Chapter struct {
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
 
 	Prerequisites []string `hcl:"prerequisites,optional" json:"prerequisites"`

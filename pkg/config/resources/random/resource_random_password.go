@@ -8,8 +8,17 @@ import (
 // TypeRandomPassword is the resource for generating random passwords
 const TypeRandomPassword string = "random_password"
 
-// allows the generation of random Passwords
+/*
+allows the generation of random Passwords
+
+@resource
+*/
 type RandomPassword struct {
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
 
 	Length int64 `hcl:"length" json:"lenght"`

@@ -8,8 +8,17 @@ import (
 // TypeRandomUUID is the resource for generating random UUIDs
 const TypeRandomUUID string = "random_uuid"
 
-// allows the generation of random UUIDs
+/*
+allows the generation of random UUIDs
+
+@resource
+*/
 type RandomUUID struct {
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
 
 	// Output parameters

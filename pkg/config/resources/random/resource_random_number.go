@@ -8,8 +8,17 @@ import (
 // TypeRandomNumber is the resource for generating random numbers
 const TypeRandomNumber string = "random_number"
 
-// allows the generation of random numbers
+/*
+allows the generation of random numbers
+
+@resource
+*/
 type RandomNumber struct {
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
 
 	Minimum int `hcl:"minimum" json:"minimum"`
