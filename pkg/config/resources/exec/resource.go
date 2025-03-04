@@ -42,8 +42,6 @@ An environment variable `${EXEC_OUTPUT}` is automatically added to the environme
 
 Any outputs set in the script are automatically parsed into a map and are available via the output parameter.
 
-The following example demonstrates how to set an output variable in a script.
-
 @example
 ```
 

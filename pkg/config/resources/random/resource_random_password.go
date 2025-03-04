@@ -9,7 +9,20 @@ import (
 const TypeRandomPassword string = "random_password"
 
 /*
-allows the generation of random Passwords
+The `random_password` resource allows the creation of random passwords.
+
+@example
+```
+
+	resource "random_password" "password" {
+	    length = 32
+	}
+
+	output "password" {
+	    value = resource.random_password.password.value
+	}
+
+```
 
 @resource
 */
@@ -21,20 +34,40 @@ type RandomPassword struct {
 	*/
 	types.ResourceBase `hcl:",remain"`
 
+	/*
+		The length of the string desired.
+		The minimum value for length is 1 and, length must also be >= (`min_upper` + `min_lower` + `min_numeric` + `min_special`).
+	*/
 	Length int64 `hcl:"length" json:"lenght"`
-
+	/*
+		Supply your own list of special characters to use for string generation.
+		This overrides the default character list in the special argument.
+		The special argument must still be set to `true` for any overwritten characters to be used in generation.
+	*/
 	OverrideSpecial string `hcl:"override_special,optional" json:"override_special"`
+	/*
+		Include special characters in the result. These are `!@#$%&*()-_=+[]{}<>:?`.
+	*/
+	Special *bool `hcl:"special,optional" json:"special" default:"true"`
+	// Include numeric characters in the result.
+	Numeric *bool `hcl:"numeric,optional" json:"numeric" default:"true"`
+	// Include lowercase alphabet characters in the result.
+	Lower *bool `hcl:"lower,optional" json:"lower" default:"true"`
+	// Include uppercase alphabet characters in the result.
+	Upper *bool `hcl:"upper,optional" json:"upper" default:"true"`
+	// Minimum number of special characters in the result.
+	MinSpecial int64 `hcl:"min_special,optional" json:"min_special" default:"0"`
+	// Minimum number of numeric characters in the result.
+	MinNumeric int64 `hcl:"min_numeric,optional" json:"min_numeric" default:"0"`
+	// Minimum number of lowercase alphabet characters in the result.
+	MinLower int64 `hcl:"min_lower,optional" json:"min_lower" default:"0"`
+	// Minimum number of uppercase alphabet characters in the result.
+	MinUpper int64 `hcl:"min_upper,optional" json:"min_upper" default:"0"`
+	/*
+		The generated random password.
 
-	Special    *bool `hcl:"special,optional" json:"special"`
-	Numeric    *bool `hcl:"numeric,optional" json:"numeric"`
-	Lower      *bool `hcl:"lower,optional" json:"lower"`
-	Upper      *bool `hcl:"upper,optional" json:"upper"`
-	MinSpecial int64 `hcl:"min_special,optional" json:"min_special"`
-	MinNumeric int64 `hcl:"min_numeric,optional" json:"min_numeric"`
-	MinLower   int64 `hcl:"min_lower,optional" json:"min_lower"`
-	MinUpper   int64 `hcl:"min_upper,optional" json:"min_upper"`
-
-	// Output parameters
+		@computed
+	*/
 	Value string `hcl:"value,optional" json:"value"`
 }
 

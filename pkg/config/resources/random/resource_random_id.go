@@ -9,7 +9,28 @@ import (
 const TypeRandomID string = "random_id"
 
 /*
-allows the generation of random IDs
+The `random_id` resource allows the creation of random IDs.
+
+@example
+```
+
+	resource "random_id" "id" {
+	    byte_length = 4
+	}
+
+	output "id_base64" {
+	    value = resource.random_id.meta.id.base64
+	}
+
+	output "id_hex" {
+	    value = resource.random_id.meta.id.hex
+	}
+
+	output "id_dec" {
+	    value = resource.random_id.meta.id.dec
+	}
+
+```
 
 @resource
 */
@@ -21,12 +42,27 @@ type RandomID struct {
 	*/
 	types.ResourceBase `hcl:",remain"`
 
+	// The number of random bytes to produce. The minimum value is 1, which produces eight bits of randomness.
 	ByteLength int64 `hcl:"byte_length" json:"byte_length"`
+	/*
+		The generated ID presented in base64.
 
-	// Output parameters
+		@computed
+	*/
 	Base64 string `hcl:"base64,optional" json:"base64"`
-	Hex    string `hcl:"hex,optional" json:"hex"`
-	Dec    string `hcl:"dec,optional" json:"dec"`
+	/*
+		The generated ID presented in padded hexadecimal digits.
+		This result will always be twice as long as the requested byte length.
+
+		@computed
+	*/
+	Hex string `hcl:"hex,optional" json:"hex"`
+	/*
+		The generated ID presented in non-padded decimal digits.
+
+		@computed
+	*/
+	Dec string `hcl:"dec,optional" json:"dec"`
 }
 
 func (c *RandomID) Process() error {

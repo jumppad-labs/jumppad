@@ -157,10 +157,32 @@ type HealthCheckExec struct {
 	ExitCode int `hcl:"exit_code,optional" json:"exit_code,omitempty"`
 }
 
+/*
+A `health_check` stanza allows the definition of a health check which must pass before the resource is marked as successfully created.
+
+@example
+```
+
+	health_check {
+		timeout = "60s"
+		pods = [
+			"component=server,app=consul",
+			"component=client,app=consul"
+		]
+	}
+
+```
+*/
 type HealthCheckKubernetes struct {
-	// Timeout expressed as a go duration i.e 10s
+	/*
+		The maximum duration to wait before marking the health check as failed.
+		Expressed as a Go duration, e.g. `1s` = 1 second, `100ms` = 100 milliseconds.
+	*/
 	Timeout string `hcl:"timeout" json:"timeout"`
-	//	pods = ["component=server,app=consul", "component=client,app=consul"] // is the pod running and healthy
+	/*
+		An array of kubernetes selector syntax.
+		The healthcheck ensures that all containers defined by the selector are running before passing the healthcheck.
+	*/
 	Pods []string `hcl:"pods" json:"pods,omitempty"`
 }
 

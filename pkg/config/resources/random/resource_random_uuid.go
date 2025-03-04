@@ -9,7 +9,17 @@ import (
 const TypeRandomUUID string = "random_uuid"
 
 /*
-allows the generation of random UUIDs
+The `random_uuid` resource allows the creation of random UUIDs.
+
+@example
+```
+resource "random_uuid" "uuid" {}
+
+	output "uuid" {
+	    value = resource.random_uuid.uuid.value
+	}
+
+```
 
 @resource
 */
@@ -20,8 +30,11 @@ type RandomUUID struct {
 	 @ignore
 	*/
 	types.ResourceBase `hcl:",remain"`
+	/*
+		The generated random UUID.
 
-	// Output parameters
+		@computed
+	*/
 	Value string `hcl:"value,optional" json:"value"`
 }
 

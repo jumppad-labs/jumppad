@@ -12,7 +12,9 @@ import (
 const TypeIngress string = "ingress"
 
 /*
-Ingress defines an ingress service mapping ports between local host and resources like containers and kube cluster
+The ingress resource allows you to expose services in Kubernetes and Nomad tasks to the local machine.
+
+It also allows you to expose applications that are running to the local machine to a Kubernetes or Nomad cluster.
 
 @resource
 */
@@ -24,30 +26,43 @@ type Ingress struct {
 	*/
 	types.ResourceBase `hcl:",remain"`
 
-	// local port to expose the service on
+	/*
+		If the application to be exposed exists on the target then this is the port that will be opened on the local machine that will direct traffic to the remote service.
+
+		If the application exists on the local machine then this is the port where the application is running.
+	*/
 	Port int `hcl:"port" json:"port"`
-
-	// Are we exposing a local serve to the target
-	// if
+	/*
+		If set to `true` a service running on the local machine will be exposed to the target cluster.
+		If `false` then a service running on the target cluster will be exposed to the local machine.
+	*/
 	ExposeLocal bool `hcl:"expose_local,optional" json:"expose_local"`
-
-	// details for the destination service
+	// The target for the ingress.
 	Target TrafficTarget `hcl:"target,block" json:"target"`
 
 	// path to open in the browser
 	OpenInBrowser string `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"`
+	/*
+		The unique identifier for the created ingress.
 
-	// --- Output Params ----
-
-	// IngressId stores the ID of the created connector service
+		@computed
+	*/
 	IngressID string `hcl:"ingress_id,optional" json:"ingress_id,omitempty"`
+	/*
+		The full address where the exposed application can be reached from the local network.
 
-	// LocalAddress is the fully qualified uri for accessing the resource from
-	// the local machine
+		Generally this is the local ip address of the machine running Jumppad and the port where the application is exposed.
+
+		@computed
+	*/
 	LocalAddress string `hcl:"local_address,optional" json:"local_address,omitempty"`
+	/*
+		The address of the exposed service as it would be rechable from the target cluster.
 
-	// RemoteAddress is the fully qualified uri for accessing the resource
-	// in the remote machine
+		This is generally a kubernetes service reference and port or for Nomad a rechable IP address and port.
+
+		@computed
+	*/
 	RemoteAddress string `hcl:"remote_address,optional" json:"remote_address,omitempty"`
 }
 
@@ -59,12 +74,58 @@ type TargetConfig struct {
 
 // Traffic defines either a source or a destination block for ingress traffic
 type TrafficTarget struct {
+	/*
+		A reference to the `nomad_cluster` or `kubernetes_cluster` resource.
+
+		@example
+		```
+		resource "k8s_cluster" "dev" {
+		}
+
+		resource "ingress" "consul_http" {
+		  port = 18500
+
+		  target {
+		    resource = resource.k8s_cluster.dev
+		    port     = 8500
+
+		    config = {
+		      service   = "consul-consul-server"
+		      namespace = "default"
+		    }
+		  }
+		}
+		```
+	*/
 	Resource TargetConfig `hcl:"resource" json:"resource,omitempty"`
+	/*
+		The numerical reference for the target service port.
 
-	Port      int    `hcl:"port,optional" json:"port,omitempty"`
+		Either `port` or `named_port` must be specified.
+	*/
+	Port int `hcl:"port,optional" json:"port,omitempty"`
+	/*
+		The string reference for the target service port.
+
+		Either `port` or `named_port` must be specified.
+	*/
 	NamedPort string `hcl:"named_port,optional" json:"named_port,omitempty"`
+	/*
+		The configuration parameters for the ingress, configuration parameters differ depending on the target type.
 
-	// Config is an collection which has driver specific content
+		@example Kubernetes target config
+		```
+			service   = "Kubernetes service name"
+			namespace = "Kubernetes namespace where the service is deployed"
+		```
+
+		@example Nomad target config
+		```
+			job   = "Name of the Nomad job"
+			group = "Group in the job"
+			task  = "Name of the task in the group"
+		```
+	*/
 	Config map[string]string `hcl:"config" json:"config"`
 }
 
