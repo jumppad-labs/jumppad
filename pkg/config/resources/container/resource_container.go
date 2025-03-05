@@ -18,7 +18,7 @@ type Container struct {
 	types.ResourceBase `hcl:",remain"`
 
 	Networks        []NetworkAttachment `hcl:"network,block" json:"networks,omitempty"`           // Attach to the correct network // only when Image is specified
-	Image           *Image              `hcl:"image,block" json:"image"`                          // Image to use for the container
+	Image           Image               `hcl:"image,block" json:"image"`                          // Image to use for the container
 	Entrypoint      []string            `hcl:"entrypoint,optional" json:"entrypoint,omitempty"`   // Entrypoint to use when starting the container
 	Command         []string            `hcl:"command,optional" json:"command,omitempty"`         // Command to use when starting the container
 	Environment     map[string]string   `hcl:"environment,optional" json:"environment,omitempty"` // Environment variables to set when starting the container

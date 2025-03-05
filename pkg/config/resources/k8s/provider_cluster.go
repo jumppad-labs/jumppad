@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path"
@@ -26,7 +25,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
-	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -86,7 +84,7 @@ func (p *ClusterProvider) Destroy(ctx context.Context, force bool) error {
 		return nil
 	}
 
-	return p.destroyK3s(ctx, force)
+	return p.destroyK3s(force)
 }
 
 // Lookup the a clusters current state
@@ -293,7 +291,7 @@ func (p *ClusterProvider) createK3s(ctx context.Context) error {
 
 	// set the volume mount for the images
 	cc.Volumes = []ctypes.Volume{
-		ctypes.Volume{
+		{
 			Source:      volID,
 			Destination: "/cache",
 			Type:        "volume",
@@ -426,17 +424,17 @@ func (p *ClusterProvider) createK3s(ctx context.Context) error {
 
 	// expose the API server and Connector ports
 	cc.Ports = []ctypes.Port{
-		ctypes.Port{
+		{
 			Local:    fmt.Sprintf("%d", p.config.APIPort),
 			Host:     fmt.Sprintf("%d", p.config.APIPort),
 			Protocol: "tcp",
 		},
-		ctypes.Port{
+		{
 			Local:    fmt.Sprintf("%d", p.config.ConnectorPort),
 			Host:     fmt.Sprintf("%d", p.config.ConnectorPort),
 			Protocol: "tcp",
 		},
-		ctypes.Port{
+		{
 			Local:    fmt.Sprintf("%d", p.config.ConnectorPort+1),
 			Host:     fmt.Sprintf("%d", p.config.ConnectorPort+1),
 			Protocol: "tcp",
@@ -493,7 +491,7 @@ func (p *ClusterProvider) createK3s(ctx context.Context) error {
 	// get the Kubernetes config file and drop it in a temp folder
 	kc, err := p.copyKubeConfig(id)
 	if err != nil {
-		return xerrors.Errorf("unable to copy Kubernetes config: %w", err)
+		return fmt.Errorf("unable to copy Kubernetes config: %w", err)
 	}
 
 	// replace the server location in the kubeconfig file
@@ -501,7 +499,7 @@ func (p *ClusterProvider) createK3s(ctx context.Context) error {
 	// we need to do this as Shipyard might be using a remote Docker engine
 	config, err := p.createLocalKubeConfig(kc)
 	if err != nil {
-		return xerrors.Errorf("unable to create local Kubernetes config: %w", err)
+		return fmt.Errorf("unable to create local Kubernetes config: %w", err)
 	}
 
 	p.config.KubeConfig.ConfigPath = config
@@ -509,13 +507,13 @@ func (p *ClusterProvider) createK3s(ctx context.Context) error {
 	// parse the kubeconfig and get the details
 	data, err := os.ReadFile(config)
 	if err != nil {
-		return xerrors.Errorf("unable to read Kubernetes config: %w", err)
+		return fmt.Errorf("unable to read Kubernetes config: %w", err)
 	}
 
 	cfg := &Configuration{}
 	err = yaml.Unmarshal(data, &cfg)
 	if err != nil {
-		return xerrors.Errorf("unable to unmarshal Kubernetes config: %w", err)
+		return fmt.Errorf("unable to unmarshal Kubernetes config: %w", err)
 	}
 
 	p.config.KubeConfig.CA = cfg.Clusters[0].Cluster.CertificateAuthorityData
@@ -543,7 +541,7 @@ func (p *ClusterProvider) createK3s(ctx context.Context) error {
 		// copy the logs to the output
 		io.Copy(p.log.StandardWriter(), lr)
 
-		return xerrors.Errorf("timeout waiting for Kubernetes default pods: %w", err)
+		return fmt.Errorf("timeout waiting for Kubernetes default pods: %w", err)
 	}
 
 	// import the images to the servers container d instance
@@ -561,7 +559,7 @@ func (p *ClusterProvider) createK3s(ctx context.Context) error {
 
 		err := p.ImportLocalDockerImages(imgs, false)
 		if err != nil {
-			return xerrors.Errorf("unable to importing Docker images: %w", err)
+			return fmt.Errorf("unable to importing Docker images: %w", err)
 		}
 	}
 
@@ -575,7 +573,7 @@ func (p *ClusterProvider) waitForStart(ctx context.Context, id string) error {
 
 	for {
 		if ctx.Err() != nil {
-			return xerrors.Errorf("context cancelled, the cluster may be in an incoplete state")
+			return errors.New("context cancelled, the cluster may be in an incoplete state")
 		}
 
 		// not running after timeout exceeded? Rollback and delete everything.
@@ -644,7 +642,7 @@ func (p *ClusterProvider) changeServerAddressInK8sConfig(addr, origFile, newFile
 	}
 	defer f.Close()
 
-	readBytes, err := ioutil.ReadAll(f)
+	readBytes, err := io.ReadAll(f)
 	if err != nil {
 		return fmt.Errorf("unable to read kubeconfig, %v", err)
 	}
@@ -695,7 +693,7 @@ func (p *ClusterProvider) deployConnector(ctx context.Context, grpcPort, httpPor
 	}
 
 	// create a temp directory to write config to
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return fmt.Errorf("unable to create temporary directory: %s", err)
 	}
@@ -713,14 +711,14 @@ func (p *ClusterProvider) deployConnector(ctx context.Context, grpcPort, httpPor
 
 	files = append(files, path.Join(dir, "secret.yaml"))
 	p.log.Debug("Writing secret config", "file", files[1])
-	writeConnectorK8sSecret(files[1], lf.RootCertPath, lf.LeafKeyPath, lf.LeafCertPath)
+	err = writeConnectorK8sSecret(files[1], lf.RootCertPath, lf.LeafKeyPath, lf.LeafCertPath)
 	if err != nil {
 		return fmt.Errorf("unable to create secret for connector: %s", err)
 	}
 
 	files = append(files, path.Join(dir, "rbac.yaml"))
 	p.log.Debug("Writing RBAC config", "file", files[2])
-	writeConnectorRBAC(files[2])
+	err = writeConnectorRBAC(files[2])
 	if err != nil {
 		return fmt.Errorf("unable to create RBAC for connector: %s", err)
 	}
@@ -733,7 +731,7 @@ func (p *ClusterProvider) deployConnector(ctx context.Context, grpcPort, httpPor
 
 	files = append(files, path.Join(dir, "deployment.yaml"))
 	p.log.Debug("Writing deployment config", "file", files[3])
-	writeConnectorDeployment(files[3], grpcPort, httpPort, ll)
+	err = writeConnectorDeployment(files[3], grpcPort, httpPort, ll)
 	if err != nil {
 		return fmt.Errorf("unable to create deployment for connector: %s", err)
 	}
@@ -745,7 +743,7 @@ func (p *ClusterProvider) deployConnector(ctx context.Context, grpcPort, httpPor
 	}
 
 	// wait for it to start
-	p.kubeClient.HealthCheckPods(ctx, []string{"app=connector"}, 60*time.Second)
+	err = p.kubeClient.HealthCheckPods(ctx, []string{"app=connector"}, 60*time.Second)
 	if err != nil {
 		return fmt.Errorf("timeout waiting for connector to start: %s", err)
 	}
@@ -753,7 +751,7 @@ func (p *ClusterProvider) deployConnector(ctx context.Context, grpcPort, httpPor
 	return nil
 }
 
-func (p *ClusterProvider) destroyK3s(ctx context.Context, force bool) error {
+func (p *ClusterProvider) destroyK3s(force bool) error {
 	p.log.Info("Destroy Cluster", "ref", p.config.Meta.ID)
 
 	ids, err := p.Lookup()
@@ -812,13 +810,13 @@ func (p *ClusterProvider) createRegistriesConfig() (string, error) {
 }
 
 func writeConnectorNamespace(path string) error {
-	return ioutil.WriteFile(path, []byte(connectorNamespace), os.ModePerm)
+	return os.WriteFile(path, []byte(connectorNamespace), os.ModePerm)
 }
 
 // writeK8sSecret writes a Kubernetes secret yaml to a file
 func writeConnectorK8sSecret(path, root, key, cert string) error {
 	// load the key and base64 encode
-	kd, err := ioutil.ReadFile(key)
+	kd, err := os.ReadFile(key)
 	if err != nil {
 		return err
 	}
@@ -826,7 +824,7 @@ func writeConnectorK8sSecret(path, root, key, cert string) error {
 	kb := base64.StdEncoding.EncodeToString(kd)
 
 	// load the cert and base64 encode
-	cd, err := ioutil.ReadFile(cert)
+	cd, err := os.ReadFile(cert)
 	if err != nil {
 		return err
 	}
@@ -834,26 +832,26 @@ func writeConnectorK8sSecret(path, root, key, cert string) error {
 	cb := base64.StdEncoding.EncodeToString(cd)
 
 	// load the root cert and base64 encode
-	rd, err := ioutil.ReadFile(root)
+	rd, err := os.ReadFile(root)
 	if err != nil {
 		return err
 	}
 
 	rb := base64.StdEncoding.EncodeToString(rd)
 
-	return ioutil.WriteFile(path, []byte(
+	return os.WriteFile(path, []byte(
 		fmt.Sprintf(connectorSecret, rb, cb, kb),
 	), os.ModePerm)
 }
 
 func writeConnectorDeployment(path string, grpc, http int, logLevel string) error {
-	return ioutil.WriteFile(path, []byte(
+	return os.WriteFile(path, []byte(
 		fmt.Sprintf(connectorDeployment, grpc, http, logLevel),
 	), os.ModePerm)
 }
 
 func writeConnectorRBAC(path string) error {
-	return ioutil.WriteFile(path, []byte(connectorRBAC), os.ModePerm)
+	return os.WriteFile(path, []byte(connectorRBAC), os.ModePerm)
 }
 
 type dockerConfig struct {

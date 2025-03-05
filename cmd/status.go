@@ -122,10 +122,10 @@ var statusCmd = &cobra.Command{
 						fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(fmt.Sprintf("%s.%s", "server", utils.FQDN(r.Metadata().Name, r.Metadata().Module, r.Metadata().Type))))
 					case container.TypeContainer:
 						fmt.Printf("%s %s\n", status, r.Metadata().ID)
-						fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(fmt.Sprintf("%s", utils.FQDN(r.Metadata().Name, r.Metadata().Module, string(r.Metadata().Type)))))
+						fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(utils.FQDN(r.Metadata().Name, r.Metadata().Module, string(r.Metadata().Type))))
 					case container.TypeSidecar:
 						fmt.Printf("%s %s\n", status, r.Metadata().ID)
-						fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(fmt.Sprintf("%s", utils.FQDN(r.Metadata().Name, r.Metadata().Module, string(r.Metadata().Type)))))
+						fmt.Printf("    %s %s\n", grayText.Render("└─"), whiteText.Render(utils.FQDN(r.Metadata().Name, r.Metadata().Module, string(r.Metadata().Type))))
 					case cache.TypeImageCache:
 						fmt.Printf("%s %s\n", status, r.Metadata().ID)
 					default:

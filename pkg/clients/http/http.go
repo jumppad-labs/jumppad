@@ -36,12 +36,35 @@ type HTTPImpl struct {
 	l       logger.Logger
 }
 
-func NewHTTP(backoff time.Duration, l logger.Logger) HTTP {
-	httpc := &http.Client{}
-	httpc.Transport = http.DefaultTransport.(*http.Transport).Clone()
-	httpc.Transport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+type option func(h *HTTPImpl)
 
-	return &HTTPImpl{backoff, httpc, l}
+func WithTransport(transport *http.Transport) option {
+	return func(h *HTTPImpl) {
+		h.httpc.Transport = transport
+	}
+}
+
+func NewHTTP(backoff time.Duration, l logger.Logger, opts ...option) HTTP {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.DialContext = (&net.Dialer{
+		Timeout:   5 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}).DialContext
+	transport.TLSHandshakeTimeout = 5 * time.Second
+	transport.ResponseHeaderTimeout = 30 * time.Second
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+
+	httpc := &http.Client{
+		Transport: transport,
+	}
+
+	h := &HTTPImpl{backoff, httpc, l}
+
+	for _, opt := range opts {
+		opt(h)
+	}
+
+	return h
 }
 
 // HealthCheckHTTP checks a http or HTTPS endpoint for a status 200

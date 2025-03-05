@@ -3,12 +3,14 @@ package container
 import (
 	"bufio"
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net"
 	"testing"
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/system"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
 	imocks "github.com/jumppad-labs/jumppad/pkg/clients/images/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
@@ -20,7 +22,7 @@ import (
 func setupShellMocks(t *testing.T) (*DockerTasks, *mocks.Docker) {
 	md := &mocks.Docker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
-	md.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(types.IDResponse{ID: "123"}, nil)
+	md.On("ContainerExecCreate", mock.Anything, mock.Anything, mock.Anything).Return(container.ExecCreateResponse{ID: "123"}, nil)
 	md.On("ContainerExecAttach", mock.Anything, "123", mock.Anything).Return(
 		types.HijackedResponse{
 			Conn: &net.TCPConn{},
@@ -28,9 +30,9 @@ func setupShellMocks(t *testing.T) (*DockerTasks, *mocks.Docker) {
 				bytes.NewReader([]byte("log output")),
 			),
 		}, nil)
-	md.On("ContainerExecInspect", mock.Anything, mock.Anything).Return(types.ContainerExecInspect{ExitCode: 0}, nil)
+	md.On("ContainerExecInspect", mock.Anything, mock.Anything).Return(container.ExecInspect{ExitCode: 0}, nil)
 
-	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	md.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
 
 	mic := &imocks.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
@@ -42,9 +44,9 @@ func setupShellMocks(t *testing.T) (*DockerTasks, *mocks.Docker) {
 
 func TestCreateShellCreatesExec(t *testing.T) {
 	p, md := setupShellMocks(t)
-	in := ioutil.NopCloser(bytes.NewReader([]byte("abc")))
-	out := ioutil.Discard
-	errW := ioutil.Discard
+	in := io.NopCloser(bytes.NewReader([]byte("abc")))
+	out := io.Discard
+	errW := io.Discard
 
 	err := p.CreateShell("abc", []string{"sh"}, in, out, errW)
 	assert.NoError(t, err)

@@ -18,6 +18,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/cache"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/network"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad/constants"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
@@ -131,7 +132,6 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 	res, parseErr := e.ParseConfigWithVariables(path, variables, variablesFile)
 
 	if parseErr != nil {
-		fmt.Println("Error parsing config", parseErr)
 		// cast the error to a config error
 		ce := parseErr.(*hclerrors.ConfigError)
 
@@ -140,6 +140,7 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 		// callbacks have not been called for the providers, any referenced
 		// resources will not be found, it is ok to ignore these errors
 		if ce.ContainsErrors() {
+			fmt.Println("Error parsing config", parseErr)
 			return nil, nil, nil, nil, parseErr
 		}
 	}
@@ -172,6 +173,11 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 	for _, r := range past.Resources {
 		// if this is the image cache continue as this is always added
 		if r.Metadata().Type == cache.TypeImageCache {
+			continue
+		}
+
+		// if this is the default network continue as this is always added
+		if r.Metadata().Type == network.TypeNetwork && r.Metadata().ID == network.DefaultNetworkID {
 			continue
 		}
 
@@ -251,6 +257,49 @@ func (e *EngineImpl) ApplyWithVariables(ctx context.Context, path string, vars m
 
 	e.config = c
 
+	// check if we already have a default network
+	_, err = c.FindResource(network.DefaultNetworkID)
+	if err != nil {
+		// create a new network
+		n := &network.Network{
+			ResourceBase: types.ResourceBase{
+				Meta: types.Meta{
+					ID:         network.DefaultNetworkID,
+					Name:       network.DefaultNetworkName,
+					Type:       network.TypeNetwork,
+					Properties: map[string]interface{}{},
+				},
+			},
+			Subnet: network.DefaultNetworkSubnet,
+		}
+
+		e.log.Debug("Creating default Network", "id", n.Meta.ID)
+
+		p := e.providers.GetProvider(n)
+		if p == nil {
+			// this should never happen
+			panic("Unable to find provider for Network, Nic assured me that you should never see this message. Sorry, the monkey has broken something again")
+		}
+
+		// create the network
+		err := p.Create(ctx)
+		if err != nil {
+			n.Meta.Properties[constants.PropertyStatus] = constants.StatusFailed
+		} else {
+			n.Meta.Properties[constants.PropertyStatus] = constants.StatusCreated
+		}
+
+		// add the new network to the config
+		e.config.AppendResource(n)
+
+		// save the state
+		config.SaveState(e.config)
+
+		if err != nil {
+			return nil, fmt.Errorf("unable to create network %s", err)
+		}
+	}
+
 	// check to see we already have an image cache
 	_, err = c.FindResourcesByType(cache.TypeImageCache)
 	if err != nil {
@@ -264,7 +313,15 @@ func (e *EngineImpl) ApplyWithVariables(ctx context.Context, path string, vars m
 					Properties: map[string]interface{}{},
 				},
 			},
+			Networks: container.NetworkAttachments{
+				{
+					ID:   network.DefaultNetworkID,
+					Name: network.DefaultNetworkName,
+				},
+			},
 		}
+
+		ca.AddDependency(network.DefaultNetworkID)
 
 		e.log.Debug("Creating new Image Cache", "id", ca.Meta.ID)
 
@@ -686,16 +743,4 @@ func (e *EngineImpl) emitLifecycleEvent(event Event) {
 	if e.events != nil {
 		e.events <- event
 	}
-}
-
-// checks if a string exists in an array if not it appends and returns a new
-// copy
-func appendIfNotContains(existing []string, s string) []string {
-	for _, v := range existing {
-		if v == s {
-			return existing
-		}
-	}
-
-	return append(existing, s)
 }

@@ -20,7 +20,7 @@ func TestCreateVolumeDoesNothingWhenVolumeExists(t *testing.T) {
 
 	args := volume.ListOptions{Filters: filters.NewArgs()}
 	args.Filters.Add("name", "test.volume.jmpd.in")
-	md.On("VolumeList", mock.Anything, args).Return(volume.ListResponse{Volumes: []*volume.Volume{&volume.Volume{}}}, nil)
+	md.On("VolumeList", mock.Anything, args).Return(volume.ListResponse{Volumes: []*volume.Volume{{}}}, nil)
 
 	p, _ := NewDockerTasks(md, mic, &tar.TarGz{}, logger.NewTestLogger(t))
 	_, err := p.CreateVolume("test")

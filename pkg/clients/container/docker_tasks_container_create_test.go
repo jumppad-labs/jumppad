@@ -2,7 +2,8 @@ package container
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
+
 	"os"
 	"strings"
 	"testing"
@@ -12,6 +13,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/go-connections/nat"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
@@ -32,7 +34,7 @@ var containerConfig = &dtypes.Container{
 	Image:   &dtypes.Image{Name: "consul:v1.6.1"},
 	Command: []string{"tail", "-f", "/dev/null"},
 	Volumes: []dtypes.Volume{
-		dtypes.Volume{
+		{
 			Source:                      "/tmp",
 			Destination:                 "/data",
 			ReadOnly:                    false,
@@ -44,24 +46,24 @@ var containerConfig = &dtypes.Container{
 		"key": "value",
 	},
 	Ports: []dtypes.Port{
-		dtypes.Port{
+		{
 			Local:    "8080",
 			Host:     "9080",
 			Protocol: "tcp",
 		},
-		dtypes.Port{
+		{
 			Local:    "8081",
 			Host:     "9081",
 			Protocol: "udp",
 		},
 	},
 	PortRanges: []dtypes.PortRange{
-		dtypes.PortRange{
+		{
 			Range:      "9000-9002",
 			Protocol:   "tcp",
 			EnableHost: true,
 		},
-		dtypes.PortRange{
+		{
 			Range:      "9100-9102",
 			Protocol:   "udp",
 			EnableHost: false,
@@ -77,8 +79,8 @@ var containerConfig = &dtypes.Container{
 		},
 	},
 	Networks: []dtypes.NetworkAttachment{
-		dtypes.NetworkAttachment{ID: "network.testnet"},
-		dtypes.NetworkAttachment{ID: "network.wan"},
+		{ID: "network.testnet"},
+		{ID: "network.wan"},
 	},
 }
 
@@ -96,10 +98,10 @@ func createContainerConfig() (*dtypes.Container, *mocks.Docker, *imocks.ImageLog
 func setupContainerMocks() (*mocks.Docker, *imocks.ImageLog) {
 	md := &mocks.Docker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
-	md.On("ContainerInspect", mock.Anything, mock.Anything).Return(types.ContainerJSON{NetworkSettings: &types.NetworkSettings{Networks: map[string]*network.EndpointSettings{"bridge": nil}}}, nil)
+	md.On("ContainerInspect", mock.Anything, mock.Anything).Return(container.InspectResponse{NetworkSettings: &container.NetworkSettings{Networks: map[string]*network.EndpointSettings{"bridge": nil}}}, nil)
 	md.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 	md.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).Return(
-		ioutil.NopCloser(strings.NewReader("hello world")),
+		io.NopCloser(strings.NewReader("hello world")),
 		nil,
 	)
 	md.On("ContainerCreate", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -110,16 +112,17 @@ func setupContainerMocks() (*mocks.Docker, *imocks.ImageLog) {
 	md.On("NetworkConnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("NetworkDisconnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	md.On("NetworkList", mock.Anything, mock.Anything).Return(
-		[]types.NetworkResource{
-			types.NetworkResource{ID: "abc", Labels: map[string]string{"id": "network.testnet"}, IPAM: network.IPAM{Config: []network.IPAMConfig{{Subnet: "10.0.0.0/24"}}}},
-			types.NetworkResource{ID: "123", Labels: map[string]string{"id": "network.wan"}, IPAM: network.IPAM{Config: []network.IPAMConfig{{Subnet: "10.2.0.0/24"}}}},
+		[]network.Summary{
+			{ID: "abc", Labels: map[string]string{"id": "network.testnet"}, IPAM: network.IPAM{Config: []network.IPAMConfig{{Subnet: "10.0.0.0/24"}}}},
+			{ID: "123", Labels: map[string]string{"id": "network.wan"}, IPAM: network.IPAM{Config: []network.IPAMConfig{{Subnet: "10.2.0.0/24"}}}},
+			{ID: "jumppad", Labels: map[string]string{"id": "resource.network.jumppad"}, IPAM: network.IPAM{Config: []network.IPAMConfig{{Subnet: "10.0.10.0/24"}}}},
 		}, nil)
 
 	md.On("VolumeList", mock.Anything, mock.Anything).Return(volume.ListResponse{}, nil)
 	md.On("VolumeCreate", mock.Anything, mock.Anything).Return(volume.Volume{Name: "test_volume"}, nil)
 	md.On("VolumeRemove", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	md.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
 
 	mic := &imocks.ImageLog{}
 	mic.On("Log", mock.Anything, mock.Anything).Return(nil)
@@ -224,7 +227,7 @@ func TestContainerAttachesToUserNetwork(t *testing.T) {
 
 func TestSidecarContainerAttachesToContainerNetwork(t *testing.T) {
 	cc, md, mic := createContainerConfig()
-	cc.Networks = []dtypes.NetworkAttachment{dtypes.NetworkAttachment{ID: "abc", Name: "container.testcontainer2", IsContainer: true}}
+	cc.Networks = []dtypes.NetworkAttachment{{ID: "abc", Name: "container.testcontainer2", IsContainer: true}}
 
 	err := setupContainer(t, cc, md, mic)
 	assert.NoError(t, err)
@@ -239,7 +242,7 @@ func TestSidecarContainerAttachesToContainerNetwork(t *testing.T) {
 
 func TestContainerAttachesToContainerNetworkReturnsErrorWhenListError(t *testing.T) {
 	cc, md, mic := createContainerConfig()
-	cc.Networks = []dtypes.NetworkAttachment{dtypes.NetworkAttachment{Name: "container.testcontainer2"}}
+	cc.Networks = []dtypes.NetworkAttachment{{Name: "container.testcontainer2"}}
 	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("boom"))
 
 	err := setupContainer(t, cc, md, mic)
@@ -248,7 +251,7 @@ func TestContainerAttachesToContainerNetworkReturnsErrorWhenListError(t *testing
 
 func TestContainerAttachesToContainerNetworkReturnsErrorWhenContainerNotFound(t *testing.T) {
 	cc, md, mic := createContainerConfig()
-	cc.Networks = []dtypes.NetworkAttachment{dtypes.NetworkAttachment{Name: "container.testcontainer2"}}
+	cc.Networks = []dtypes.NetworkAttachment{{Name: "container.testcontainer2"}}
 	md.On("ContainerList", mock.Anything, mock.Anything).Return(nil, nil)
 
 	err := setupContainer(t, cc, md, mic)
@@ -266,14 +269,14 @@ func TestContainerRollsbackWhenUnableToConnectToNetwork(t *testing.T) {
 	md.AssertCalled(t, "ContainerRemove", mock.Anything, mock.Anything, mock.Anything)
 }
 
-func TestContainerDoesNOTAttachesToUserNetworkWhenNil(t *testing.T) {
+func TestContainerOnlyAttachesToDefaultNetworkWhenNil(t *testing.T) {
 	cc, md, mic := createContainerConfig()
 	cc.Networks = []dtypes.NetworkAttachment{}
 
 	err := setupContainer(t, cc, md, mic)
 	assert.NoError(t, err)
 
-	md.AssertNumberOfCalls(t, "NetworkConnect", 0)
+	md.AssertNumberOfCalls(t, "NetworkConnect", 1)
 }
 
 func TestContainerAssignsIPToUserNetwork(t *testing.T) {
@@ -505,7 +508,7 @@ func TestContainerConfiguresGPU(t *testing.T) {
 
 	assert.Equal(t, hc.DeviceRequests[0].Driver, "nvidia")
 	assert.Equal(t, hc.DeviceRequests[0].DeviceIDs[0], "1")
-	assert.Equal(t, hc.DeviceRequests[0].Capabilities, [][]string{[]string{"gpu", "nvidia", "compute"}})
+	assert.Equal(t, hc.DeviceRequests[0].Capabilities, [][]string{{"gpu", "nvidia", "compute"}})
 }
 
 func TestContainerConfiguresRetryWhenCountGreater0(t *testing.T) {
@@ -520,7 +523,7 @@ func TestContainerConfiguresRetryWhenCountGreater0(t *testing.T) {
 	assert.NotEmpty(t, hc.Resources)
 
 	assert.Equal(t, hc.RestartPolicy.MaximumRetryCount, 10)
-	assert.Equal(t, hc.RestartPolicy.Name, "on-failure")
+	assert.Equal(t, hc.RestartPolicy.Name, container.RestartPolicyMode("on-failure"))
 }
 
 func TestContainerConfiguresRetryWhenCountMinusOne(t *testing.T) {
@@ -535,7 +538,7 @@ func TestContainerConfiguresRetryWhenCountMinusOne(t *testing.T) {
 	assert.NotEmpty(t, hc.Resources)
 
 	assert.Equal(t, hc.RestartPolicy.MaximumRetryCount, 0)
-	assert.Equal(t, hc.RestartPolicy.Name, "always")
+	assert.Equal(t, hc.RestartPolicy.Name, container.RestartPolicyMode("always"))
 }
 
 func TestContainerNotConfiguresRetryWhen0(t *testing.T) {

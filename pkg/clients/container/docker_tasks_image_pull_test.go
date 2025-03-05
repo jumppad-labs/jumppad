@@ -2,12 +2,14 @@ package container
 
 import (
 	"encoding/base64"
-	"io/ioutil"
+	"io"
 	"strings"
 	"testing"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/api/types/system"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
 	dtypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	imocks "github.com/jumppad-labs/jumppad/pkg/clients/images/mocks"
@@ -21,10 +23,10 @@ import (
 func setupImagePullMocks() (*mocks.Docker, *imocks.ImageLog) {
 	md := &mocks.Docker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
-	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	md.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
 	md.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 	md.On("ImagePull", mock.Anything, mock.Anything, mock.Anything).Return(
-		ioutil.NopCloser(strings.NewReader("hello world")),
+		io.NopCloser(strings.NewReader("hello world")),
 		nil,
 	)
 
@@ -50,8 +52,6 @@ func setupImagePull(t *testing.T, cc dtypes.Image, md *mocks.Docker, mic *imocks
 	// create the container
 	err := p.PullImage(cc, force)
 	assert.NoError(t, err)
-
-	return
 }
 
 func TestPullImageWhenNOTCached(t *testing.T) {
@@ -60,10 +60,10 @@ func TestPullImageWhenNOTCached(t *testing.T) {
 
 	// test calls list image with a canonical image reference
 	args := filters.NewArgs(filters.KeyValuePair{Key: "reference", Value: cc.Name})
-	md.AssertCalled(t, "ImageList", mock.Anything, types.ImageListOptions{Filters: args})
+	md.AssertCalled(t, "ImageList", mock.Anything, image.ListOptions{Filters: args})
 
 	// test pulls image replacing the short name with the canonical registry name
-	md.AssertCalled(t, "ImagePull", mock.Anything, makeImageCanonical(cc.Name), types.ImagePullOptions{})
+	md.AssertCalled(t, "ImagePull", mock.Anything, makeImageCanonical(cc.Name), image.PullOptions{})
 
 	// test adds to the cache log
 	mic.AssertCalled(t, "Log", mock.Anything, mock.Anything)
@@ -78,11 +78,11 @@ func TestPullImageWithCredentialsWhenNOTCached(t *testing.T) {
 
 	// test calls list image with a canonical image reference
 	args := filters.NewArgs(filters.KeyValuePair{Key: "reference", Value: cc.Name})
-	md.AssertCalled(t, "ImageList", mock.Anything, types.ImageListOptions{Filters: args})
+	md.AssertCalled(t, "ImageList", mock.Anything, image.ListOptions{Filters: args})
 
 	// test pulls image replacing the short name with the canonical registry name
 	// adding credentials to image pull
-	ipo := types.ImagePullOptions{RegistryAuth: createRegistryAuth(cc.Username, cc.Password)}
+	ipo := image.PullOptions{RegistryAuth: createRegistryAuth(cc.Username, cc.Password)}
 	md.AssertCalled(t, "ImagePull", mock.Anything, makeImageCanonical(cc.Name), ipo)
 
 }
@@ -94,7 +94,7 @@ func TestPullImageWithValidCredentials(t *testing.T) {
 
 	setupImagePull(t, cc, md, mic, false)
 
-	ipo := testutils.GetCalls(&md.Mock, "ImagePull")[0].Arguments[2].(types.ImagePullOptions)
+	ipo := testutils.GetCalls(&md.Mock, "ImagePull")[0].Arguments[2].(image.PullOptions)
 
 	d, err := base64.StdEncoding.DecodeString(ipo.RegistryAuth)
 	assert.NoError(t, err)
@@ -115,7 +115,7 @@ func TestDoNOtPullImageWhenCached(t *testing.T) {
 
 	// remove the default image list which returns 0 cached images
 	testutils.RemoveOn(&md.Mock, "ImageList")
-	md.On("ImageList", mock.Anything, mock.Anything).Return([]types.ImageSummary{types.ImageSummary{ID: "abc"}}, nil)
+	md.On("ImageList", mock.Anything, mock.Anything).Return([]image.Summary{{ID: "abc"}}, nil)
 
 	setupImagePull(t, cc, md, mic, false)
 

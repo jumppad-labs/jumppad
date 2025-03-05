@@ -6,10 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	dtypes "github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	cmocks "github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
-	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
@@ -18,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setupImageCacheTests(t *testing.T) (*ImageCache, *cmocks.ContainerTasks) {
+func setupImageCacheTests() (*ImageCache, *cmocks.ContainerTasks) {
 	cc := &ImageCache{ResourceBase: htypes.ResourceBase{Meta: htypes.Meta{Name: "test"}}}
 
 	md := &cmocks.ContainerTasks{}
@@ -37,7 +36,7 @@ func setupImageCacheTests(t *testing.T) (*ImageCache, *cmocks.ContainerTasks) {
 }
 
 func TestImageCacheCreateDoesNotCreateContainerWhenExists(t *testing.T) {
-	cc, md := setupImageCacheTests(t)
+	cc, md := setupImageCacheTests()
 
 	c := Provider{cc, md, logger.NewTestLogger(t)}
 	err := c.Create(context.Background())
@@ -50,7 +49,7 @@ func TestImageCacheCreateDoesNotCreateContainerWhenExists(t *testing.T) {
 }
 
 func TestImageCacheCreateCreatesVolume(t *testing.T) {
-	cc, md := setupImageCacheTests(t)
+	cc, md := setupImageCacheTests()
 
 	c := Provider{cc, md, logger.NewTestLogger(t)}
 	err := c.Create(context.Background())
@@ -60,7 +59,7 @@ func TestImageCacheCreateCreatesVolume(t *testing.T) {
 }
 
 func TestImageCachePullsImage(t *testing.T) {
-	cc, md := setupImageCacheTests(t)
+	cc, md := setupImageCacheTests()
 
 	c := Provider{cc, md, logger.NewTestLogger(t)}
 	err := c.Create(context.Background())
@@ -70,7 +69,7 @@ func TestImageCachePullsImage(t *testing.T) {
 }
 
 func TestImageCacheCreateAddsVolumes(t *testing.T) {
-	cc, md := setupImageCacheTests(t)
+	cc, md := setupImageCacheTests()
 
 	c := Provider{cc, md, logger.NewTestLogger(t)}
 	err := c.Create(context.Background())
@@ -88,7 +87,7 @@ func TestImageCacheCreateAddsVolumes(t *testing.T) {
 }
 
 func TestImageCacheCreateAddsEnvironmentVariables(t *testing.T) {
-	cc, md := setupImageCacheTests(t)
+	cc, md := setupImageCacheTests()
 
 	c := Provider{cc, md, logger.NewTestLogger(t)}
 	err := c.Create(context.Background())
@@ -115,12 +114,12 @@ func TestImageCacheCreateAddsEnvironmentVariables(t *testing.T) {
 }
 
 func TestImageCacheCreateAddsUnauthenticatedRegistries(t *testing.T) {
-	cc, md := setupImageCacheTests(t)
+	cc, md := setupImageCacheTests()
 	cc.Registries = []Registry{
-		Registry{
+		{
 			Hostname: "my.registry",
 		},
-		Registry{
+		{
 			Hostname: "my.other.registry",
 		},
 	}
@@ -137,16 +136,16 @@ func TestImageCacheCreateAddsUnauthenticatedRegistries(t *testing.T) {
 }
 
 func TestImageCacheCreateAddsAuthenticatedRegistries(t *testing.T) {
-	cc, md := setupImageCacheTests(t)
+	cc, md := setupImageCacheTests()
 	cc.Registries = []Registry{
-		Registry{
+		{
 			Hostname: "my.registry",
 			Auth: &RegistryAuth{
 				Username: "user1",
 				Password: "password1",
 			},
 		},
-		Registry{
+		{
 			Hostname: "my.other.registry",
 			Auth: &RegistryAuth{
 				Hostname: "alt.domain.registry",
@@ -168,7 +167,7 @@ func TestImageCacheCreateAddsAuthenticatedRegistries(t *testing.T) {
 }
 
 func TestImageCacheCreateCopiesCerts(t *testing.T) {
-	cc, md := setupImageCacheTests(t)
+	cc, md := setupImageCacheTests()
 
 	c := Provider{cc, md, logger.NewTestLogger(t)}
 	err := c.Create(context.Background())
@@ -191,11 +190,11 @@ func TestImageCacheCreateCopiesCerts(t *testing.T) {
 }
 
 func TestImageCacheAttachesAndDetatchesNetworks(t *testing.T) {
-	cc, md := setupImageCacheTests(t)
+	cc, md := setupImageCacheTests()
 
 	cc.DependsOn = []string{"resource.network.one", "resource.network.two"}
 
-	containerJSON := &dtypes.ContainerJSON{}
+	containerJSON := &container.InspectResponse{}
 	json.Unmarshal([]byte(cacheContainerInfoWithNetworks), containerJSON)
 
 	testutils.RemoveOn(&md.Mock, "FindContainerIDs")
@@ -203,8 +202,8 @@ func TestImageCacheAttachesAndDetatchesNetworks(t *testing.T) {
 	md.On("ContainerInfo", "abc").Once().Return(*containerJSON, nil)
 	md.On("FindContainerIDs", mock.Anything).Once().Return([]string{"abc"}, nil)
 
-	md.On("FindNetwork", "resource.network.one").Once().Return(types.NetworkAttachment{Name: "one"}, nil)
-	md.On("FindNetwork", "resource.network.two").Once().Return(types.NetworkAttachment{Name: "two"}, nil)
+	md.On("FindNetwork", "resource.network.one").Once().Return(ctypes.NetworkAttachment{Name: "one"}, nil)
+	md.On("FindNetwork", "resource.network.two").Once().Return(ctypes.NetworkAttachment{Name: "two"}, nil)
 
 	c := Provider{cc, md, logger.NewTestLogger(t)}
 	err := c.Create(context.Background())

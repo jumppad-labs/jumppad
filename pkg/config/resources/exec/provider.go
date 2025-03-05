@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jumppad-labs/hclconfig/convert"
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	cmdClient "github.com/jumppad-labs/jumppad/pkg/clients/command"
@@ -19,7 +18,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
-	"github.com/zclconf/go-cty/cty"
 )
 
 // checks Provider implements the sdk.Provider interface
@@ -132,11 +130,14 @@ func (p *Provider) Refresh(ctx context.Context) error {
 		return nil
 	}
 
-	p.log.Debug("Refresh Exec", "ref", p.config.Meta.Name)
-
-	err := p.generateOutput()
+	changed, err := p.Changed()
 	if err != nil {
-		return fmt.Errorf("unable to generate output: %w", err)
+		return err
+	}
+
+	if changed {
+		p.log.Debug("Refresh Exec", "ref", p.config.Meta.Name)
+		return p.Create(ctx)
 	}
 
 	return nil
@@ -144,6 +145,16 @@ func (p *Provider) Refresh(ctx context.Context) error {
 
 func (p *Provider) Changed() (bool, error) {
 	p.log.Debug("Checking changes", "ref", p.config.Meta.ID)
+
+	cs, err := utils.ChecksumFromInterface(p.config.Script)
+	if err != nil {
+		return false, fmt.Errorf("unable to generate checksum for script: %s", err)
+	}
+
+	if cs != p.config.Checksum {
+		p.log.Debug("Script has changed", "ref", p.config.Meta.ID)
+		return true, nil
+	}
 
 	return false, nil
 }
@@ -350,17 +361,7 @@ func (p *Provider) generateOutput() error {
 		output[parts[0]] = parts[1]
 	}
 
-	values := map[string]cty.Value{}
-	for k, v := range output {
-		value, err := convert.GoToCtyValue(v)
-		if err != nil {
-			return fmt.Errorf("unable to convert output value to cty: %w", err)
-		}
-
-		values[k] = value
-	}
-
-	p.config.Output = cty.ObjectVal(values)
+	p.config.Output = output
 
 	return nil
 }

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"testing"
@@ -17,10 +17,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	assert "github.com/stretchr/testify/require"
 )
-
-func setupNomadClient() {
-
-}
 
 func setupNomadTests(t *testing.T) (Nomad, string, *mocks.HTTP) {
 	tmpDir := t.TempDir()
@@ -35,7 +31,7 @@ func setupNomadTests(t *testing.T) (Nomad, string, *mocks.HTTP) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(validateResponse))),
+			Body:       io.NopCloser(bytes.NewReader([]byte(validateResponse))),
 		},
 		nil,
 	)
@@ -89,7 +85,7 @@ func TestNomadCreateValidateInvalidReturnsError(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusBadRequest,
-			Body:       ioutil.NopCloser(bytes.NewBufferString("oops")),
+			Body:       io.NopCloser(bytes.NewBufferString("oops")),
 		}, nil)
 
 	err := c.Create([]string{"../../../examples/nomad/app_config/example.nomad"})
@@ -113,7 +109,7 @@ func TestNomadCreateSubmitErrorReturnsError(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte("testing"))),
+			Body:       io.NopCloser(bytes.NewReader([]byte("testing"))),
 		},
 		nil,
 	).Once()
@@ -131,7 +127,7 @@ func TestNomadCreateSubmitNot200ReturnsError(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte("testing"))),
+			Body:       io.NopCloser(bytes.NewReader([]byte("testing"))),
 		},
 		nil,
 	).Once()
@@ -139,7 +135,7 @@ func TestNomadCreateSubmitNot200ReturnsError(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusInternalServerError,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte("testing"))),
+			Body:       io.NopCloser(bytes.NewReader([]byte("testing"))),
 		},
 		nil,
 	)
@@ -183,7 +179,7 @@ func TestNomadStopErrorReturnsError(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte("testing"))),
+			Body:       io.NopCloser(bytes.NewReader([]byte("testing"))),
 		},
 		nil,
 	).Once()
@@ -200,7 +196,7 @@ func TestNomadStopNoStatus200ReturnsError(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte("testing"))),
+			Body:       io.NopCloser(bytes.NewReader([]byte("testing"))),
 		},
 		nil,
 	).Once()
@@ -218,7 +214,7 @@ func TestNomadJobStatusReturnsNoErrorOnRunning(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(jobAllocationsResponse))),
+			Body:       io.NopCloser(bytes.NewReader([]byte(jobAllocationsResponse))),
 		},
 		nil,
 	)
@@ -236,7 +232,7 @@ func TestNomadJobStatusReturnsErrorWhenPending(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(jobAllocationsPendingResponse))),
+			Body:       io.NopCloser(bytes.NewReader([]byte(jobAllocationsPendingResponse))),
 		},
 		nil,
 	)
@@ -254,7 +250,7 @@ func TestNomadHealthCallsAPI(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(aliveResponse))),
+			Body:       io.NopCloser(bytes.NewReader([]byte(aliveResponse))),
 		},
 		nil,
 	).Once()
@@ -274,7 +270,7 @@ func TestNomadHealthWithNotReadyNodeRetries(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(pendingResponse))),
+			Body:       io.NopCloser(bytes.NewReader([]byte(pendingResponse))),
 		},
 		nil,
 	).Once()
@@ -282,7 +278,7 @@ func TestNomadHealthWithNotReadyNodeRetries(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(aliveResponse))),
+			Body:       io.NopCloser(bytes.NewReader([]byte(aliveResponse))),
 		},
 		nil,
 	).Once()
@@ -301,7 +297,7 @@ func TestNomadHealthWithNotReadyDockerRetries(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(unhealthyDockerResponse))),
+			Body:       io.NopCloser(bytes.NewReader([]byte(unhealthyDockerResponse))),
 		},
 		nil,
 	).Once()
@@ -309,7 +305,7 @@ func TestNomadHealthWithNotReadyDockerRetries(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(aliveResponse))),
+			Body:       io.NopCloser(bytes.NewReader([]byte(aliveResponse))),
 		},
 		nil,
 	).Once()
@@ -354,7 +350,7 @@ func TestNomadEndpointsReturnsTwoEndpoints(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusBadRequest,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(jobAllocationsResponse2Running))),
+			Body:       io.NopCloser(bytes.NewReader([]byte(jobAllocationsResponse2Running))),
 		},
 		nil,
 	).Once()
@@ -362,7 +358,7 @@ func TestNomadEndpointsReturnsTwoEndpoints(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusBadRequest,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(allocationsResponse1))),
+			Body:       io.NopCloser(bytes.NewReader([]byte(allocationsResponse1))),
 		},
 		nil,
 	).Once()
@@ -370,7 +366,7 @@ func TestNomadEndpointsReturnsTwoEndpoints(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusBadRequest,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(allocationsResponse2))),
+			Body:       io.NopCloser(bytes.NewReader([]byte(allocationsResponse2))),
 		},
 		nil,
 	).Once()
@@ -390,7 +386,7 @@ func TestNomadEndpointsReturnsRunningEndpoints(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusBadRequest,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(jobAllocationsResponse))),
+			Body:       io.NopCloser(bytes.NewReader([]byte(jobAllocationsResponse))),
 		},
 		nil,
 	).Once()
@@ -398,7 +394,7 @@ func TestNomadEndpointsReturnsRunningEndpoints(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusBadRequest,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(allocationsResponse1))),
+			Body:       io.NopCloser(bytes.NewReader([]byte(allocationsResponse1))),
 		},
 		nil,
 	).Once()
@@ -416,7 +412,7 @@ func TestNomadEndpointsReturnsConnectEndpoints(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusBadRequest,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(jobAllocationsConnectResponse))),
+			Body:       io.NopCloser(bytes.NewReader([]byte(jobAllocationsConnectResponse))),
 		},
 		nil,
 	).Once()
@@ -424,7 +420,7 @@ func TestNomadEndpointsReturnsConnectEndpoints(t *testing.T) {
 	mh.On("Do", mock.Anything, mock.Anything, mock.Anything).Return(
 		&http.Response{
 			StatusCode: http.StatusBadRequest,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(allocationsConnectResponse))),
+			Body:       io.NopCloser(bytes.NewReader([]byte(allocationsConnectResponse))),
 		},
 		nil,
 	).Once()

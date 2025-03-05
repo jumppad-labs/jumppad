@@ -3,10 +3,11 @@ package container
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/system"
 	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
 	imocks "github.com/jumppad-labs/jumppad/pkg/clients/images/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
@@ -19,11 +20,11 @@ func TestContainerLogsCalled(t *testing.T) {
 	md := &mocks.Docker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 	md.On("ContainerLogs", mock.Anything, mock.Anything, mock.Anything).Return(
-		ioutil.NopCloser(bytes.NewBufferString("test")),
+		io.NopCloser(bytes.NewBufferString("test")),
 		fmt.Errorf("boom"),
 	)
 
-	md.On("Info", mock.Anything).Return(types.Info{Driver: StorageDriverOverlay2}, nil)
+	md.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
 
 	mic := &imocks.ImageLog{}
 
