@@ -181,11 +181,45 @@ type Template struct {
 	*/
 	types.ResourceBase `hcl:",remain"`
 
-	Source      string               `hcl:"source" json:"source"`                          // Source template to be processed as string
-	Destination string               `hcl:"destination" json:"destination"`                // Destination filename to write
-	Variables   map[string]cty.Value `hcl:"variables,optional" json:"variables,omitempty"` // Variables to be processed in the template
+	/*
+		Local path to the template source file
 
-	Checksum string `hcl:"checksum,optional" json:"checksum,omitempty"` // Checksum of the parsed template
+		```
+		@example Local path
+		```
+		source = "myfile.txt"
+		```
+
+		@example HereDoc
+		```
+		source = <<-EOF
+		My inline content
+		EOF
+		```
+	*/
+	Source string `hcl:"source" json:"source"`
+	// The destination to write the processed template to.
+	Destination string `hcl:"destination" json:"destination"`
+	/*
+		Variables to use with the template, variables are available to be used within the template using the `go template` syntax.
+
+		```hcl
+		variables = {
+		  data_dir = "/tmp"
+		}
+		```
+
+		Given the above variables, these could be used within a template with the following convention.
+
+		```hcl
+		data_dir = "{{data_dir}}"
+		```
+
+		@type map[string]any
+	*/
+	Variables map[string]cty.Value `hcl:"variables,optional" json:"variables,omitempty"`
+	// @ignore
+	Checksum string `hcl:"checksum,optional" json:"checksum,omitempty"`
 }
 
 func (t *Template) Process() error {
