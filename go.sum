@@ -787,6 +787,8 @@ github.com/coreos/go-systemd/v22 v22.5.0 h1:RrqgGjYQKalulkV8NGVIfkXQf6YYmOyiJKk8
 github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
 github.com/cpuguy83/go-md2man/v2 v2.0.2/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
+github.com/creasty/defaults v1.8.0 h1:z27FJxCAa0JKt3utc0sCImAEb+spPucmKoOdLHvHYKk=
+github.com/creasty/defaults v1.8.0/go.mod h1:iGzKe6pbEHnpMPtfDXZEr0NVxWnPTjb1bbDy08fPzYM=
 github.com/cucumber/gherkin/go/v26 v26.2.0 h1:EgIjePLWiPeslwIWmNQ3XHcypPsWAHoMCz/YEBKP4GI=
 github.com/cucumber/gherkin/go/v26 v26.2.0/go.mod h1:t2GAPnB8maCT4lkHL99BDCVNzCh1d7dBhCLt150Nr/0=
 github.com/cucumber/godog v0.15.0 h1:51AL8lBXF3f0cyA5CV4TnJFCTHpgiy+1x1Hb3TtZUmo=
@@ -1174,8 +1176,8 @@ github.com/jumppad-labs/go-cty v0.0.0-20230804061424-9e985cb751f6 h1:1ADItCWr5pr
 github.com/jumppad-labs/go-cty v0.0.0-20230804061424-9e985cb751f6/go.mod h1:YKQzy/7pZ7iq2jNFzy5go57xdxdWoLLpaEp4u238AE0=
 github.com/jumppad-labs/gohup v0.4.0 h1:0OplHvnKnOLkqWm417sRHLSiJ4xGeb8LiSSAJ51QrYg=
 github.com/jumppad-labs/gohup v0.4.0/go.mod h1:JYvZnemxJlWDyx8RbDNcCBLZSvIrYlYLnkQqR1BKFW4=
-github.com/jumppad-labs/hclconfig v0.26.0 h1:Qg/tC2WlhKwoTW0acAY/vyUXHwCuyr4NmshKLS81How=
-github.com/jumppad-labs/hclconfig v0.26.0/go.mod h1:AOzW0btnKiqUKYVi3ioGzSPNCWsTzsJxKcqzVORccvk=
+github.com/jumppad-labs/hclconfig v0.28.0 h1:6V6dMrTufkLHgyFdtJHiEcDM5hp9ItVNDZf98wGpVKs=
+github.com/jumppad-labs/hclconfig v0.28.0/go.mod h1:mrKi8iCDAqLwmhbOa5k1K56R4+ctsVuYveQ/sMaWYio=
 github.com/jumppad-labs/plugin-sdk v0.4.0 h1:deNk7h8W+6dsxj2ADP63o07Dv313vcBI8C4d1aBUO/c=
 github.com/jumppad-labs/plugin-sdk v0.4.0/go.mod h1:z6KXPc/DhDVU+eRx3MLznVXmh9mZ50IaapfcOX//noA=
 github.com/jung-kurt/gofpdf v1.0.0/go.mod h1:7Id9E/uU8ce6rXgefFLlgrJj/GYY22cpxn+r32jIOes=

@@ -8,6 +8,7 @@ test_unit:
 		--with-race=false
 
 test_functional_all:
+	GOOS=linux go build -ldflags "-X main.version=${git_commit}" -gcflags=all="-N -l" -o bin/jumppad main.go
 	dagger call --mod=dagger functional-test-all \
 		--src=$(shell pwd)/examples \
 		--jumppad=./bin/jumppad
