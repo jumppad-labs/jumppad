@@ -6,7 +6,7 @@ import (
 
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
-	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -14,24 +14,81 @@ import (
 // TypeTerraform is the resource string for a Terraform resource
 const TypeTerraform string = "terraform"
 
-// ExecRemote allows commands to be executed in remote containers
+/*
+ExecRemote allows commands to be executed in remote containers
+
+```hcl
+
+	resource "terraform" "name" {
+	  ...
+	}
+
+```
+
+@include container.NetworkAttachment
+@include container.Volume
+
+@resource
+*/
 type Terraform struct {
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
+	/*
+		Network attaches the container to an existing network defined in a separate stanza.
+		This block can be specified multiple times to attach the container to multiple networks.
+	*/
+	Networks []container.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"`
+	// The source directory containing the Terraform config to provision.
+	Source string `hcl:"source" json:"source"`
+	// The version of Terraform to use.
+	Version string `hcl:"version,optional" json:"version,omitempty"`
+	// The working directory to run the Terraform commands.
+	WorkingDirectory string `hcl:"working_directory,optional" json:"working_directory,omitempty"`
+	// Environment variables to set.
+	Environment map[string]string `hcl:"environment,optional" json:"environment,omitempty"`
+	/*
+		Terraform variables to pass to Terraform.
 
-	Networks []ctypes.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
+		@type map[string]any
+	*/
+	Variables cty.Value `hcl:"variables,optional" json:"-"`
+	/*
+		A volume allows you to specify a local volume which is mounted to the container when it is created.
+		This stanza can be specified multiple times.
 
-	Source           string            `hcl:"source" json:"source"`                                          // Source directory containing Terraform config
-	Version          string            `hcl:"version,optional" json:"version,omitempty"`                     // Version of terraform to use
-	WorkingDirectory string            `hcl:"working_directory,optional" json:"working_directory,omitempty"` // Working directory to run terraform commands
-	Environment      map[string]string `hcl:"environment,optional" json:"environment,omitempty"`             // environment variables to set when starting the container
-	Variables        cty.Value         `hcl:"variables,optional" json:"-"`                                   // variables to pass to terraform
-	Volumes          []ctypes.Volume   `hcl:"volume,block" json:"volumes,omitempty"`                         // Volumes to attach to the container
+		@example
+		```
+		volume {
+			source      = "./"
+			destination = "/files"
+		}
+		```
+	*/
+	Volumes []container.Volume `hcl:"volume,block" json:"volumes,omitempty"`
+	/*
+		Any outputs defined in the Terraform configuration will be exposed as output
+		values on the Terraform resource.
 
-	// Computed values
+		@computed
+	*/
+	Output cty.Value `hcl:"output,optional"`
+	/*
+		checksum of the source directory
 
-	Output         cty.Value `hcl:"output,optional"`                                           // output values returned from Terraform
-	SourceChecksum string    `hcl:"source_checksum,optional" json:"source_checksum,omitempty"` // checksum of the source directory
-	ApplyOutput    string    `hcl:"apply_output,optional"`                                     // output from the terraform apply
+		@ignore
+		@computed
+	*/
+	SourceChecksum string `hcl:"source_checksum,optional" json:"source_checksum,omitempty"`
+	/*
+		Console output from the Terraform apply.
+
+		@computed
+	*/
+	ApplyOutput string `hcl:"apply_output,optional"`
 }
 
 func (t *Terraform) Process() error {
