@@ -32,6 +32,9 @@ Container defines a structure for creating Docker containers
 @include container.Capabilities
 @include container.User
 @include healthcheck.HealthCheckContainer
+@include healthcheck.HealthCheckHTTP
+@include healthcheck.HealthCheckTCP
+@include healthcheck.HealthCheckExec
 
 @resource
 
