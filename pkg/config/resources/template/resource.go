@@ -19,6 +19,14 @@ The Template resource allows the processing of templates, outputing the result a
 Templating uses the Handlebars language which is Mustache template language can be found at the following location:
 [Mustache templating language details](https://mustache.github.io/mustache.5.html).
 
+```hcl
+
+	resource "template" "name" {
+	  ...
+	}
+
+```
+
 ## Template Functions
 
 The template resource provides custom functions that can be used inside your templates as shown in the example below.

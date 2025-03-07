@@ -13,6 +13,14 @@ const TypeSidecar string = "sidecar"
 /*
 Sidecar defines a structure for creating Docker containers
 
+```hcl
+
+	resource "sidecar" "name" {
+	  ...
+	}
+
+```
+
 @resource
 */
 type Sidecar struct {

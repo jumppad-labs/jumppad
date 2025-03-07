@@ -5,7 +5,7 @@ import (
 
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
-	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -15,6 +15,14 @@ const TypeKubernetesCluster string = "kubernetes_cluster"
 
 /*
 The `kubernetes_cluster` resource allows you to create immutable Kubernetes clusters running in Docker containers using K3s.
+
+```hcl
+
+	resource "kubernetes_cluster" "name" {
+	  ...
+	}
+
+```
 
 ## Image Caching
 
@@ -144,12 +152,12 @@ type Cluster struct {
 		Network attaches the container to an existing network defined in a separate stanza.
 		 This block can be specified multiple times to attach the container to multiple networks.
 	*/
-	Networks []ctypes.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
+	Networks []container.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 	/*
 		Image defines a Docker image to use when creating the container.
 		By default the kubernetes cluster resource will be created using the latest Jumppad container image.
 	*/
-	Image *ctypes.Image `hcl:"image,block" json:"images,omitempty"`
+	Image *container.Image `hcl:"image,block" json:"images,omitempty"`
 	// The number of nodes to create in the cluster.
 	Nodes int `hcl:"nodes,optional" json:"nodes,omitempty"`
 	/*
@@ -163,7 +171,7 @@ type Cluster struct {
 		}
 		```
 	*/
-	Volumes []ctypes.Volume `hcl:"volume,block" json:"volumes,omitempty"`
+	Volumes []container.Volume `hcl:"volume,block" json:"volumes,omitempty"`
 	/*
 		   Docker image in the local Docker image cache to copy to the cluster on creation.
 			 This image is added to the Kubernetes clients docker cache enabling jobs to use images that may not be in the local registry.
@@ -177,7 +185,7 @@ type Cluster struct {
 		   }
 		   ```
 	*/
-	CopyImages []ctypes.Image `hcl:"copy_image,block" json:"copy_images,omitempty"`
+	CopyImages []container.Image `hcl:"copy_image,block" json:"copy_images,omitempty"`
 	/*
 		   A `port` stanza allows you to expose container ports on the local network or host.
 			 This stanza can be specified multiple times.
@@ -190,7 +198,7 @@ type Cluster struct {
 		   }
 		   ```
 	*/
-	Ports []ctypes.Port `hcl:"port,block" json:"ports,omitempty"`
+	Ports []container.Port `hcl:"port,block" json:"ports,omitempty"`
 	/*
 		   A `port_range` stanza allows you to expose a range of container ports on the local network or host.
 			 This stanza can be specified multiple times.
@@ -205,7 +213,7 @@ type Cluster struct {
 		   }
 		   ```
 	*/
-	PortRanges []ctypes.PortRange `hcl:"port_range,block" json:"port_ranges,omitempty"`
+	PortRanges []container.PortRange `hcl:"port_range,block" json:"port_ranges,omitempty"`
 	/*
 		An env stanza allows you to set environment variables in the container. This stanza can be specified multiple times.
 
@@ -265,6 +273,14 @@ type Cluster struct {
 
 /*
 Specifies the configuration for the Kubernetes cluster.
+
+```hcl
+
+	config {
+	  ...
+	}
+
+```
 */
 type ClusterConfig struct {
 	/*
@@ -285,6 +301,14 @@ type ClusterConfig struct {
 
 /*
 Specifies the configuration for the Docker engine in the cluster.
+
+```hcl
+
+	docker {
+	  ...
+	}
+
+```
 */
 type DockerConfig struct {
 	// A list of docker registries that should not be proxied.
@@ -316,7 +340,7 @@ func (k *Cluster) Process() error {
 	}
 
 	if k.Image == nil {
-		k.Image = &ctypes.Image{Name: fmt.Sprintf("%s:%s", k3sBaseImage, k3sBaseVersion)}
+		k.Image = &container.Image{Name: fmt.Sprintf("%s:%s", k3sBaseImage, k3sBaseVersion)}
 	}
 
 	for i, v := range k.Volumes {

@@ -17,6 +17,14 @@ const (
 Network resources allow you to create isolated networks for your resources.
 There is no limit to the number of Network resources you can create, the only limitation is that they must not have overlapping subnets.
 
+```hcl
+
+	resource "network" "name" {
+	  ...
+	}
+
+```
+
 @example
 ```
 
@@ -39,6 +47,7 @@ type Network struct {
 	/*
 		Subnet to use for the network, must not overlap any other existing networks.
 	*/
-	Subnet     string `hcl:"subnet" json:"subnet"`
-	EnableIPv6 bool   `hcl:"enable_ipv6,optional" json:"enable_ipv6"`
+	Subnet string `hcl:"subnet" json:"subnet"`
+	// Enable IPv6 on the network
+	EnableIPv6 bool `hcl:"enable_ipv6,optional" json:"enable_ipv6"`
 }

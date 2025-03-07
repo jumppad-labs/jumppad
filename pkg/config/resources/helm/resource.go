@@ -13,6 +13,14 @@ const TypeHelm string = "helm"
 /*
 The `helm` resource allows Helm charts to be provisioned to k8s_cluster resources.
 
+```hcl
+
+	resource "helm" "name" {
+	  ...
+	}
+
+```
+
 @resource
 */
 type Helm struct {
@@ -93,6 +101,14 @@ type Helm struct {
 
 /*
 A `helm_repository` stanza defines the details for a remote helm repository.
+
+```hcl
+
+	helm_repository {
+	  ...
+	}
+
+```
 */
 type HelmRepository struct {
 	// The name of the repository.

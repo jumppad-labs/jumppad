@@ -15,6 +15,14 @@ The `nomad_job` resource allows you to apply one or more Nomad job files to a cl
 
 Jumppad monitors changes to the jobs defined in the paths property and automatically recreates this resource when jumppad up is called.
 
+```hcl
+
+	resource "nomad_job" "name" {
+	  ...
+	}
+
+```
+
 @resource
 */
 type NomadJob struct {

@@ -11,6 +11,14 @@ const TypeRandomNumber string = "random_number"
 /*
 The `random_number` resource allows the creation of random numbers.
 
+```hcl
+
+	resource "random_number" "name" {
+	  ...
+	}
+
+```
+
 @example
 ```
 

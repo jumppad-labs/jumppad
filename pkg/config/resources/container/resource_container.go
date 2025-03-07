@@ -15,6 +15,14 @@ const TypeContainer string = "container"
 /*
 Container defines a structure for creating Docker containers
 
+```hcl
+
+	resource "container" "name" {
+	  ...
+	}
+
+```
+
 @resource
 
 @example Minimal Example
@@ -221,6 +229,14 @@ type Container struct {
 
 /*
 User and Group configuration to be used when running a container, by default Docker runs commands in the container as root id 0.
+
+```hcl
+
+	user {
+	  ...
+	}
+
+```
 */
 type User struct {
 	// Linux user ID or user name to run the container as, this overrides the default user configured in the container image.
@@ -231,6 +247,14 @@ type User struct {
 
 /*
 Network attachment defines a network to which the container is attached.
+
+```hcl
+
+	network {
+	  ...
+	}
+
+```
 */
 type NetworkAttachment struct {
 	/*
@@ -277,6 +301,14 @@ type NetworkAttachments []NetworkAttachment
 
 /*
 A resources type allows you to configure the maximum resources which can be consumed.
+
+```hcl
+
+	resources {
+	  ...
+	}
+
+```
 */
 type Resources struct {
 	// Set the maximum CPU which can be consumed by the container in MHz, 1 CPU == 1000MHz.
@@ -302,6 +334,14 @@ type Resources struct {
 GPU support allows you to pass through GPU devices to the container, this is useful for running GPU accelerated workloads.
 
 For more information on GPU support in Docker see the [official documentation](https://docs.docker.com/desktop/gpu/).
+
+```hcl
+
+	gpu {
+	  ...
+	}
+
+```
 */
 type GPU struct {
 	// The GPU driver to use, i.e "nvidia", note: This has not been tested this with AMD or other GPUs.
@@ -322,6 +362,15 @@ type GPU struct {
 	DeviceIDs []string `hcl:"device_ids" json:"device_ids"`
 }
 
+/*
+```hcl
+
+	capabilities {
+	  ...
+	}
+
+```
+*/
 type Capabilities struct {
 	Add  []string `hcl:"add,optional" json:"add"`   // CapAdd is a list of kernel capabilities to add to the container
 	Drop []string `hcl:"drop,optional" json:"drop"` // CapDrop is a list of kernel capabilities to remove from the container
@@ -329,6 +378,14 @@ type Capabilities struct {
 
 /*
 A volume type allows the specification of an attached volume.
+
+```hcl
+
+	volume {
+	  ...
+	}
+
+```
 */
 type Volume struct {
 	/*

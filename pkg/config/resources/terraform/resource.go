@@ -6,7 +6,7 @@ import (
 
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
-	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -16,6 +16,14 @@ const TypeTerraform string = "terraform"
 
 /*
 ExecRemote allows commands to be executed in remote containers
+
+```hcl
+
+	resource "terraform" "name" {
+	  ...
+	}
+
+```
 
 @resource
 */
@@ -29,10 +37,8 @@ type Terraform struct {
 	/*
 		Network attaches the container to an existing network defined in a separate stanza.
 		This block can be specified multiple times to attach the container to multiple networks.
-
-		@type container.NetworkAttachment
 	*/
-	Networks []ctypes.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"`
+	Networks []container.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"`
 	// The source directory containing the Terraform config to provision.
 	Source string `hcl:"source" json:"source"`
 	// The version of Terraform to use.
@@ -59,7 +65,7 @@ type Terraform struct {
 		}
 		```
 	*/
-	Volumes []ctypes.Volume `hcl:"volume,block" json:"volumes,omitempty"`
+	Volumes []container.Volume `hcl:"volume,block" json:"volumes,omitempty"`
 	/*
 		Any outputs defined in the Terraform configuration will be exposed as output
 		values on the Terraform resource.

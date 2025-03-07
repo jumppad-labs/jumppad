@@ -14,6 +14,14 @@ const TypeCopy string = "copy"
 /*
 The copy resource allows files and directories to be copied from one location to another.
 
+```hcl
+
+	resource "copy" "name" {
+	  ...
+	}
+
+```
+
 @resource
 */
 type Copy struct {

@@ -2,6 +2,14 @@ package container
 
 /*
 A port stanza defines host to container communications
+
+```hcl
+
+	port {
+	  ...
+	}
+
+```
 */
 type Port struct {
 	// The local port in the container.
@@ -23,6 +31,14 @@ type Ports []Port
 
 /*
 A port_range stanza defines host to container communications by exposing a range of ports for the container.
+
+```hcl
+
+	port_range {
+	  ...
+	}
+
+```
 */
 type PortRange struct {
 	/*

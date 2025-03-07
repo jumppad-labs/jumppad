@@ -20,6 +20,14 @@ commands are executed either on the local machine or inside of a container.
 When either the `image` or `target` fields are specified, the command is executed inside of a container.
 When neither of these fields are specified, the command is executed on the local machine.
 
+```hcl
+
+	resource "exec" "name" {
+	  ...
+	}
+
+```
+
 ## Local execution
 
 When running on the local machine, the command runs in the local user space, and has access to all the environment

@@ -11,6 +11,14 @@ const TypeRandomUUID string = "random_uuid"
 /*
 The `random_uuid` resource allows the creation of random UUIDs.
 
+```hcl
+
+	resource "random_uuid" "name" {
+	  ...
+	}
+
+```
+
 @example
 ```
 resource "random_uuid" "uuid" {}

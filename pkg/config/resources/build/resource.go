@@ -14,6 +14,14 @@ import (
 /*
 TypeBuild builds containers and other resources
 
+```hcl
+
+	resource "build" "name" {
+	  ...
+	}
+
+```
+
 @resource
 */
 const TypeBuild string = "build"
@@ -46,6 +54,15 @@ type Build struct {
 	BuildChecksum string `hcl:"build_checksum,optional" json:"build_checksum,omitempty"`
 }
 
+/*
+```hcl
+
+	container {
+	  ...
+	}
+
+```
+*/
 type BuildContainer struct {
 	// Location of build file inside build context defaults to ./Dockerfile
 	DockerFile string `hcl:"dockerfile,optional" json:"dockerfile,omitempty"`
@@ -57,6 +74,15 @@ type BuildContainer struct {
 	Args map[string]string `hcl:"args,optional" json:"args,omitempty"`
 }
 
+/*
+```hcl
+
+	output {
+	  ...
+	}
+
+```
+*/
 type Output struct {
 	// Source file or directory in container
 	Source string `hcl:"source" json:"source"`

@@ -16,6 +16,14 @@ The ingress resource allows you to expose services in Kubernetes and Nomad tasks
 
 It also allows you to expose applications that are running to the local machine to a Kubernetes or Nomad cluster.
 
+```hcl
+
+	resource "ingress" "name" {
+	  ...
+	}
+
+```
+
 @resource
 */
 type Ingress struct {
@@ -72,7 +80,17 @@ type TargetConfig struct {
 	ConnectorPort int        `hcl:"connector_port,optional" json:"connector_port,omitempty"`
 }
 
-// Traffic defines either a source or a destination block for ingress traffic
+/*
+Traffic defines either a source or a destination block for ingress traffic
+
+```hcl
+
+	target {
+	  ...
+	}
+
+```
+*/
 type TrafficTarget struct {
 	/*
 		A reference to the `nomad_cluster` or `kubernetes_cluster` resource.

@@ -3,6 +3,14 @@ package container
 /*
 Image defines a Docker image used when creating this container.
 An Image can be stored in a public or a private repository.
+
+```hcl
+
+	image {
+	  ...
+	}
+
+```
 */
 type Image struct {
 	/*

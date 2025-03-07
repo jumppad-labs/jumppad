@@ -5,7 +5,7 @@ import (
 
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
-	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -15,6 +15,14 @@ const TypeNomadCluster string = "nomad_cluster"
 /*
 The `nomad_cluster` resource allows you to create Nomad clusters as Docker containers.
 Clusters can either be a single node combined server and client, or comprised of a dedicated server and client nodes.
+
+```hcl
+
+	resource "nomad_cluster" "name" {
+	  ...
+	}
+
+```
 
 ## Image Caching
 
@@ -98,12 +106,12 @@ type NomadCluster struct {
 		Network attaches the container to an existing network defined in a separate stanza.
 		This block can be specified multiple times to attach the container to multiple networks.
 	*/
-	Networks ctypes.NetworkAttachments `hcl:"network,block" json:"networks,omitempty"`
+	Networks container.NetworkAttachments `hcl:"network,block" json:"networks,omitempty"`
 	/*
 		Image defines a Docker image to use when creating the container.
 		By default the nomad cluster resource will be created using the latest container image.
 	*/
-	Image *ctypes.Image `hcl:"image,block" json:"images,omitempty"`
+	Image *container.Image `hcl:"image,block" json:"images,omitempty"`
 	/*
 		Number of client nodes to create, if set to `0` a combined server and client will be created.
 		If greater than `0`, the system will create a dedicated server with `n` clients.
@@ -179,18 +187,24 @@ type NomadCluster struct {
 	// Path to a file containing custom Consul agent config to use when creating the client.
 	ConsulConfig string `hcl:"consul_config,optional" json:"consul_config,omitempty"`
 	/*
-	   Additional volume to mount to the server and client nodes.
+		   Additional volume to mount to the server and client nodes.
 
-	   @example
-	   ```
-	   volume {
-	     source = "./mydirectory"
-	     destination = "/path_in_container"
-	   }
-	   ```
+		   @example
+		   ```
+		   volume {
+		     source = "./mydirectory"
+		     destination = "/path_in_container"
+		   }
+		   ```
+
+			 @type []container.Volume
 	*/
-	Volumes       ctypes.Volumes `hcl:"volume,block" json:"volumes,omitempty"`
-	OpenInBrowser bool           `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"`
+	Volumes container.Volumes `hcl:"volume,block" json:"volumes,omitempty"`
+	/*
+		Should a browser window be automatically opened when this resource is created.
+		Browser windows will open at the path specified by this property.
+	*/
+	OpenInBrowser bool `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"`
 	// Nomad datacenter for the clients, defaults to `dc1`
 	Datacenter string `hcl:"datacenter,optional" json:"datacenter"`
 	/*
@@ -207,7 +221,7 @@ type NomadCluster struct {
 		   }
 		   ```
 	*/
-	CopyImages ctypes.Images `hcl:"copy_image,block" json:"copy_images,omitempty"`
+	CopyImages container.Images `hcl:"copy_image,block" json:"copy_images,omitempty"`
 	/*
 		   A `port` stanza allows you to expose container ports on the local network or host.
 			 This stanza can be specified multiple times.
@@ -220,7 +234,7 @@ type NomadCluster struct {
 		   }
 		   ```
 	*/
-	Ports ctypes.Ports `hcl:"port,block" json:"ports,omitempty"`
+	Ports container.Ports `hcl:"port,block" json:"ports,omitempty"`
 	/*
 		   A `port_range` stanza allows you to expose a range of container ports on the local network or host.
 			 This stanza can be specified multiple times.
@@ -235,8 +249,8 @@ type NomadCluster struct {
 		   }
 		   ```
 	*/
-	PortRanges ctypes.PortRanges `hcl:"port_range,block" json:"port_ranges,omitempty"`
-
+	PortRanges container.PortRanges `hcl:"port_range,block" json:"port_ranges,omitempty"`
+	// Specifies the configuration for the Nomad cluster.
 	Config *Config `hcl:"config,block" json:"config,omitempty"`
 	/*
 		   Port to expose the Nomad API on the host.
@@ -303,11 +317,29 @@ type NomadCluster struct {
 const nomadBaseImage = "ghcr.io/jumppad-labs/nomad"
 const nomadBaseVersion = "v1.8.4"
 
+/*
+```hcl
+
+	config {
+	  ...
+	}
+
+```
+*/
 type Config struct {
 	// Specifies configuration for the Docker driver.
 	DockerConfig *DockerConfig `hcl:"docker,block" json:"docker,omitempty"`
 }
 
+/*
+```hcl
+
+	docker {
+	  ...
+	}
+
+```
+*/
 type DockerConfig struct {
 	// NoProxy is a list of docker registires that should be excluded from the image cache
 	NoProxy []string `hcl:"no_proxy,optional" json:"no-proxy,omitempty"`
@@ -318,7 +350,7 @@ type DockerConfig struct {
 
 func (n *NomadCluster) Process() error {
 	if n.Image == nil {
-		n.Image = &ctypes.Image{Name: fmt.Sprintf("%s:%s", nomadBaseImage, nomadBaseVersion)}
+		n.Image = &container.Image{Name: fmt.Sprintf("%s:%s", nomadBaseImage, nomadBaseVersion)}
 	}
 
 	if n.ServerConfig != "" {

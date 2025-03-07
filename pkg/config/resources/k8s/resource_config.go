@@ -21,6 +21,14 @@ This allows you to create complex dependencies for your applications.
 The system monitors changes to the config defined in the paths property and automatically recreates this resource when the
 configuration is applied.
 
+```hcl
+
+	resource "kubernetes_config" "name" {
+	  ...
+	}
+
+```
+
 @resource
 */
 type Config struct {

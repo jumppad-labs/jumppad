@@ -8,7 +8,17 @@ import (
 // TypeImageCache is the resource string for a ImageCache resource
 const TypeImageCache string = "image_cache"
 
-// ImageCache defines a structure for creating ImageCache containers
+/*
+ImageCache defines a structure for creating ImageCache containers
+
+```hcl
+
+	resource "image_cache" "name" {
+	  ...
+	}
+
+```
+*/
 type ImageCache struct {
 	// embedded type holding name, etc
 	types.ResourceBase `hcl:",remain"`

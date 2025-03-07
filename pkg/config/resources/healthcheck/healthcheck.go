@@ -6,6 +6,14 @@ There are three different types of healthcheck `http`, `tcp`, and `exec`, these 
 
 Health checks are executed sequentially, if one health check fails, the following checks are not executed. The execution order is `http`, `tcp`, `exec`.
 
+```hcl
+
+	health_check {
+	  ...
+	}
+
+```
+
 @example
 ```
 
@@ -68,6 +76,14 @@ type HealthCheckContainer struct {
 A HTTP health check executes an HTTP request for the given address and evaluates the response against the expected `success_codes`.
 If the reponse matches any of the given codes the check passes.
 
+```hcl
+
+	http {
+	  ...
+	}
+
+```
+
 @example
 ```
 
@@ -105,6 +121,14 @@ type HealthCheckHTTP struct {
 A TCP health check attempts to open a connection to the given address.
 If a connection can be opened then the check passes.
 
+```hcl
+
+	tcp {
+	  ...
+	}
+
+```
+
 @example
 ```
 
@@ -122,6 +146,14 @@ type HealthCheckTCP struct {
 /*
 Exec health checks allow you to execute a command or script in the current container.
 If the command or script receives an exit code 0 the check passes.
+
+```hcl
+
+	exec {
+	  ...
+	}
+
+```
 */
 type HealthCheckExec struct {
 	/*
@@ -160,6 +192,14 @@ type HealthCheckExec struct {
 /*
 A `health_check` stanza allows the definition of a health check which must pass before the resource is marked as successfully created.
 
+```hcl
+
+	health_check {
+	  ...
+	}
+
+```
+
 @example
 ```
 
@@ -186,6 +226,15 @@ type HealthCheckKubernetes struct {
 	Pods []string `hcl:"pods" json:"pods,omitempty"`
 }
 
+/*
+```hcl
+
+	health_check {
+	  ...
+	}
+
+```
+*/
 type HealthCheckNomad struct {
 	// Timeout expressed as a go duration i.e 10s
 	Timeout string `hcl:"timeout" json:"timeout"`

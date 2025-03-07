@@ -11,6 +11,14 @@ const TypeRandomPassword string = "random_password"
 /*
 The `random_password` resource allows the creation of random passwords.
 
+```hcl
+
+	resource "random_password" "name" {
+	  ...
+	}
+
+```
+
 @example
 ```
 

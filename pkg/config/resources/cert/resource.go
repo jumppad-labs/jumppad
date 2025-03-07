@@ -12,6 +12,14 @@ const TypeCertificateCA string = "certificate_ca"
 /*
 CertificateCA allows the generate of CA certificates
 
+```hcl
+
+	resource "certificate_ca" "name" {
+	  ...
+	}
+
+```
+
 @resource
 */
 type CertificateCA struct {
@@ -50,6 +58,22 @@ type CertificateCA struct {
 		@computed
 	*/
 	Cert File `hcl:"certificate,optional" json:"certificate"`
+}
+
+/*
+```hcl
+
+	file {
+	  ...
+	}
+
+```
+*/
+type File struct {
+	Filename  string `hcl:"filename,optional" json:"filename"`
+	Directory string `hcl:"directory,optional" json:"directory"`
+	Path      string `hcl:"path,optional" json:"path"`
+	Contents  string `hcl:"contents,optional" json:"contents"`
 }
 
 func (c *CertificateCA) Process() error {
@@ -130,11 +154,4 @@ func (c *CertificateLeaf) Process() error {
 	}
 
 	return nil
-}
-
-type File struct {
-	Filename  string `hcl:"filename,optional" json:"filename"`
-	Directory string `hcl:"directory,optional" json:"directory"`
-	Path      string `hcl:"path,optional" json:"path"`
-	Contents  string `hcl:"contents,optional" json:"contents"`
 }

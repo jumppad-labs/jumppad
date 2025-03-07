@@ -11,6 +11,14 @@ const TypeRandomID string = "random_id"
 /*
 The `random_id` resource allows the creation of random IDs.
 
+```hcl
+
+	resource "random_id" "name" {
+	  ...
+	}
+
+```
+
 @example
 ```
 

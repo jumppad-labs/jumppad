@@ -11,6 +11,14 @@ const TypeRandomCreature string = "random_creature"
 /*
 allows the generation of random creatures
 
+```hcl
+
+	resource "random_creature" "name" {
+	  ...
+	}
+
+```
+
 @resource
 */
 type RandomCreature struct {

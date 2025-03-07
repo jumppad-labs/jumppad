@@ -7,6 +7,14 @@ const TypeRegistry string = "container_registry"
 /*
 Registry defines a structure for registering additional registries for the image cache
 
+```hcl
+
+	resource "container_registry" "name" {
+	  ...
+	}
+
+```
+
 @resource
 */
 type Registry struct {
@@ -23,7 +31,17 @@ type Registry struct {
 	Auth *RegistryAuth `hcl:"auth,block" json:"auth,omitempty"`
 }
 
-// RegistryAuth defines a structure for authenticating against a docker registry
+/*
+RegistryAuth defines a structure for authenticating against a docker registry
+
+```hcl
+
+	auth {
+	  ...
+	}
+
+```
+*/
 type RegistryAuth struct {
 	// Hostname for authentication, can be different from registry hostname
 	Hostname string `hcl:"hostname,optional" json:"hostname,omitempty"`
