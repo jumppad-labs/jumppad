@@ -23,6 +23,8 @@ Jumppad monitors changes to the jobs defined in the paths property and automatic
 
 ```
 
+@include healthcheck.HealthCheckNomad
+
 @resource
 */
 type NomadJob struct {
@@ -43,6 +45,8 @@ type NomadJob struct {
 		...
 		}
 		```
+
+		@reference nomad.Cluster
 	*/
 	Cluster NomadCluster `hcl:"cluster" json:"cluster"`
 	// Paths to the Nomad job files to apply to the cluster.

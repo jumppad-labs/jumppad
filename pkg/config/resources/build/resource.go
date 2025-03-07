@@ -22,6 +22,10 @@ TypeBuild builds containers and other resources
 
 ```
 
+@include build.BuildContainer
+@include build.Output
+@include container.Image
+
 @resource
 */
 const TypeBuild string = "build"

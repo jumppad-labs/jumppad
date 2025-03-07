@@ -34,6 +34,17 @@ This cache is global to all Nomad and Kubernetes clusters created with Jumppad.
 
 For more information on the image cache see the `container_registry` resource.
 
+@include container.Image
+@include container.NetworkAttachment
+@include container.Port
+@include container.PortRange
+@include container.Volume
+@include k8s.ClusterConfig
+@include k8s.DockerConfig
+@include k8s.KubeConfig
+
+@resource
+
 @example Simple cluster
 ```
 
@@ -137,8 +148,6 @@ For more information on the image cache see the `container_registry` resource.
 	}
 
 ```
-
-@resource
 */
 type Cluster struct {
 	/*

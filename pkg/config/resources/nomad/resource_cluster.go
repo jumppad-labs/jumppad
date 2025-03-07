@@ -34,6 +34,16 @@ This cache is global to all Nomad and Kubernetes clusters created with Jumppad.
 
 For more information on the image cache see the `container_registry` resource.
 
+@include container.Image
+@include container.NetworkAttachment
+@include container.Port
+@include container.PortRange
+@include container.Volume
+@include nomad.Config
+@include nomad.DockerConfig
+
+@resource
+
 @example Minimal Example
 ```
 
@@ -91,8 +101,6 @@ For more information on the image cache see the `container_registry` resource.
 	}
 
 ```
-
-@resource
 */
 type NomadCluster struct {
 	/*
@@ -220,6 +228,8 @@ type NomadCluster struct {
 		     name = "mylocalimage:versoin"
 		   }
 		   ```
+
+			 @type []container.Image
 	*/
 	CopyImages container.Images `hcl:"copy_image,block" json:"copy_images,omitempty"`
 	/*
@@ -233,6 +243,8 @@ type NomadCluster struct {
 		     host  = 8080
 		   }
 		   ```
+
+			 @type []container.Port
 	*/
 	Ports container.Ports `hcl:"port,block" json:"ports,omitempty"`
 	/*
@@ -248,6 +260,8 @@ type NomadCluster struct {
 		     enable_host = true
 		   }
 		   ```
+
+			 @type []container.PortRange
 	*/
 	PortRanges container.PortRanges `hcl:"port_range,block" json:"port_ranges,omitempty"`
 	// Specifies the configuration for the Nomad cluster.

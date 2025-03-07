@@ -24,6 +24,8 @@ It also allows you to expose applications that are running to the local machine 
 
 ```
 
+@include ingress.TrafficTarget
+
 @resource
 */
 type Ingress struct {
@@ -45,7 +47,9 @@ type Ingress struct {
 		If `false` then a service running on the target cluster will be exposed to the local machine.
 	*/
 	ExposeLocal bool `hcl:"expose_local,optional" json:"expose_local"`
-	// The target for the ingress.
+	/*
+		The target for the ingress.
+	*/
 	Target TrafficTarget `hcl:"target,block" json:"target"`
 
 	// path to open in the browser
@@ -72,12 +76,6 @@ type Ingress struct {
 		@computed
 	*/
 	RemoteAddress string `hcl:"remote_address,optional" json:"remote_address,omitempty"`
-}
-
-type TargetConfig struct {
-	Meta          types.Meta `hcl:"meta" json:"meta"`
-	ExternalIP    string     `hcl:"external_ip,optional" json:"external_ip,omitempty"`
-	ConnectorPort int        `hcl:"connector_port,optional" json:"connector_port,omitempty"`
 }
 
 /*
@@ -114,6 +112,10 @@ type TrafficTarget struct {
 		  }
 		}
 		```
+
+		@reference nomad.Cluster
+		@reference k8s.Cluster
+		@reference container.Container
 	*/
 	Resource TargetConfig `hcl:"resource" json:"resource,omitempty"`
 	/*
@@ -145,6 +147,12 @@ type TrafficTarget struct {
 		```
 	*/
 	Config map[string]string `hcl:"config" json:"config"`
+}
+
+type TargetConfig struct {
+	Meta          types.Meta `hcl:"meta" json:"meta"`
+	ExternalIP    string     `hcl:"external_ip,optional" json:"external_ip,omitempty"`
+	ConnectorPort int        `hcl:"connector_port,optional" json:"connector_port,omitempty"`
 }
 
 func (i *Ingress) Process() error {

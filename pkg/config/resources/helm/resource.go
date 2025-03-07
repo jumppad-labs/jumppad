@@ -21,6 +21,9 @@ The `helm` resource allows Helm charts to be provisioned to k8s_cluster resource
 
 ```
 
+@include helm.HelmRepository
+@include healthcheck.HealthCheckKubernetes
+
 @resource
 */
 type Helm struct {
@@ -43,6 +46,8 @@ type Helm struct {
 			cluster = resource.k8s_cluster.k3s
 		}
 		```
+
+		@reference k8s.Cluster
 	*/
 	Cluster k8s.Cluster `hcl:"cluster" json:"cluster"`
 	/*

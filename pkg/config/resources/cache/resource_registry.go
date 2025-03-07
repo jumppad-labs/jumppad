@@ -13,6 +13,9 @@ Registry defines a structure for registering additional registries for the image
 	  ...
 	}
 
+@include cache.RegistryAuth
+
+@resource
 ```
 
 @resource

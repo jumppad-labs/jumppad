@@ -18,6 +18,11 @@ ImageCache defines a structure for creating ImageCache containers
 	}
 
 ```
+
+@include cache.Registry
+@include container.NetworkAttachment
+
+@resource
 */
 type ImageCache struct {
 	// embedded type holding name, etc

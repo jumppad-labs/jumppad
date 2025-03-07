@@ -25,6 +25,9 @@ ExecRemote allows commands to be executed in remote containers
 
 ```
 
+@include container.NetworkAttachment
+@include container.Volume
+
 @resource
 */
 type Terraform struct {

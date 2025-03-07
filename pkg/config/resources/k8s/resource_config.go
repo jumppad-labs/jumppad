@@ -29,6 +29,8 @@ configuration is applied.
 
 ```
 
+@include healthcheck.HealthCheckKubernetes
+
 @resource
 */
 type Config struct {

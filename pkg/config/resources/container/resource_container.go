@@ -23,6 +23,16 @@ Container defines a structure for creating Docker containers
 
 ```
 
+@include container.NetworkAttachment
+@include container.Image
+@include container.Volume
+@include container.Port
+@include container.PortRange
+@include container.Resources
+@include container.Capabilities
+@include container.User
+@include healthcheck.HealthCheckContainer
+
 @resource
 
 @example Minimal Example

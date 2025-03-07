@@ -21,6 +21,14 @@ Sidecar defines a structure for creating Docker containers
 
 ```
 
+@include container.Image
+@include container.Volume
+@include container.Resources
+@include healthcheck.HealthCheckContainer
+@include healthcheck.HealthCheckHTTP
+@include healthcheck.HealthCheckTCP
+@include healthcheck.HealthCheckExec
+
 @resource
 */
 type Sidecar struct {
@@ -30,7 +38,9 @@ type Sidecar struct {
 	 @ignore
 	*/
 	types.ResourceBase `hcl:",remain"`
-
+	/*
+		@reference container.Container
+	*/
 	Target Container `hcl:"target" json:"target"`
 	// Image defines a Docker image to use when creating the container.
 	Image Image `hcl:"image,block" json:"image"`

@@ -50,6 +50,13 @@ An environment variable `${EXEC_OUTPUT}` is automatically added to the environme
 
 Any outputs set in the script are automatically parsed into a map and are available via the output parameter.
 
+@include container.Image
+@include container.NetworkAttachment
+@include container.Volume
+@include container.User
+
+@resource
+
 @example
 ```
 
@@ -130,8 +137,6 @@ Any outputs set in the script are automatically parsed into a map and are availa
 	}
 
 ```
-
-@resource
 */
 type Exec struct {
 	/*

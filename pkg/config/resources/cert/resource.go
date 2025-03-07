@@ -20,6 +20,8 @@ CertificateCA allows the generate of CA certificates
 
 ```
 
+@include cert.File
+
 @resource
 */
 type CertificateCA struct {
