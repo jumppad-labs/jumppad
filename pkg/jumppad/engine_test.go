@@ -2,6 +2,7 @@ package jumppad
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/network"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad/constants"
+	"github.com/jumppad-labs/jumppad/pkg/jumppad/events"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/jumppad-labs/jumppad/testutils"
 
@@ -40,9 +42,12 @@ func setupTestsBase(t *testing.T, returnVals map[string]error, state string) (*E
 	pm := mocks.NewProviders(returnVals)
 	pm.On("GetProvider", mock.Anything)
 
+	ev := events.New()
+
 	e := &EngineImpl{
 		log:       l,
 		providers: pm,
+		events:    ev,
 	}
 
 	testutils.SetupState(t, state)
@@ -101,6 +106,106 @@ func TestApplyWithSingleFile(t *testing.T) {
 			getMetaFromMock(mp, 8).Name,
 		},
 	)
+}
+
+func TestApplyEmitsEvents(t *testing.T) {
+	e, _ := setupTests(t, nil)
+
+	parsing, err := e.Events().Subscribe(events.LifecycleEventParsing)
+	require.NoError(t, err)
+
+	parsed, err := e.Events().Subscribe(events.LifecycleEventParsed)
+	require.NoError(t, err)
+
+	creating, err := e.Events().Subscribe(events.LifecycleEventCreating)
+	require.NoError(t, err)
+
+	created, err := e.Events().Subscribe(events.LifecycleEventCreated)
+	require.NoError(t, err)
+
+	expectedResources := []string{
+		"variable.version",
+		"variable.port_range",
+		"resource.network.onprem",
+		"resource.template.consul_config",
+		"resource.container.consul",
+		"output.consul_addr",
+	}
+
+	parsingEventCount := 0
+	parsedEventCount := 0
+	parsedResources := []string{}
+	creatingEventCount := 0
+	creatingResources := []string{}
+	createdEventCount := 0
+	createdResources := []string{}
+
+	go func() {
+		for msg := range parsing {
+			msg.Ack()
+			parsingEventCount += 1
+		}
+	}()
+
+	go func() {
+		for msg := range parsed {
+			msg.Ack()
+
+			var e events.ParsedEvent
+			err := json.Unmarshal(msg.Payload, &e)
+			require.NoError(t, err)
+
+			parsedResources = append(parsedResources, e.Resource.ID)
+
+			parsedEventCount += 1
+		}
+	}()
+
+	go func() {
+		for msg := range creating {
+			msg.Ack()
+
+			var e events.CreatingEvent
+			err := json.Unmarshal(msg.Payload, &e)
+			require.NoError(t, err)
+
+			creatingResources = append(creatingResources, e.Resource.ID)
+
+			creatingEventCount += 1
+		}
+	}()
+
+	go func() {
+		for msg := range created {
+			msg.Ack()
+
+			var e events.CreatedEvent
+			err := json.Unmarshal(msg.Payload, &e)
+			require.NoError(t, err)
+
+			createdResources = append(createdResources, e.Resource.ID)
+
+			createdEventCount += 1
+		}
+	}()
+
+	_, err = e.Apply(context.Background(), "../../examples/single_file/container.hcl")
+	require.NoError(t, err)
+
+	require.Equal(t, 1, parsingEventCount)
+	require.Empty(t, parsing)
+
+	require.Equal(t, 6, parsedEventCount)
+	require.Empty(t, parsed)
+	require.ElementsMatch(t, expectedResources, parsedResources)
+
+	require.Equal(t, 6, creatingEventCount)
+	require.Empty(t, creating)
+	require.ElementsMatch(t, expectedResources, creatingResources)
+
+	require.Equal(t, 6, createdEventCount)
+	require.Empty(t, created)
+	require.ElementsMatch(t, expectedResources, createdResources)
 }
 
 func TestApplyAddsImageCache(t *testing.T) {
