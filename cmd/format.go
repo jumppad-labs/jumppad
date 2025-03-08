@@ -23,6 +23,9 @@ func newFormatCmd() *cobra.Command {
 
   # format configuration in a specific file
   jumppad fmt my-stack/network.hcl
+
+	# format configuration in a specific directory
+  jumppad fmt ./my-stack
 	`,
 		Args:         cobra.ArbitraryArgs,
 		RunE:         newFormatCmdFunc(),
