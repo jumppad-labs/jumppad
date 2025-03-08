@@ -6,13 +6,12 @@ import (
 	"strings"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients/getter"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
-func newValidateCmd(e jumppad.Engine, bp getter.Getter, l logger.Logger) *cobra.Command {
+func newValidateCmd(e jumppad.Engine, bp getter.Getter) *cobra.Command {
 	var variables []string
 	var variablesFile string
 
@@ -31,7 +30,7 @@ func newValidateCmd(e jumppad.Engine, bp getter.Getter, l logger.Logger) *cobra.
   jumppad validate github.com/jumppad-labs/blueprints/kubernetes-vault
 	`,
 		Args:         cobra.ArbitraryArgs,
-		RunE:         newValidateCmdFunc(e, bp, &variables, &variablesFile, l),
+		RunE:         newValidateCmdFunc(e, bp, &variables, &variablesFile),
 		SilenceUsage: true,
 	}
 
@@ -41,7 +40,7 @@ func newValidateCmd(e jumppad.Engine, bp getter.Getter, l logger.Logger) *cobra.
 	return validateCmd
 }
 
-func newValidateCmdFunc(e jumppad.Engine, bp getter.Getter, variables *[]string, variablesFile *string, l logger.Logger) func(cmd *cobra.Command, args []string) error {
+func newValidateCmdFunc(e jumppad.Engine, bp getter.Getter, variables *[]string, variablesFile *string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		// create the jumppad and sub folders in the users home directory
 		utils.CreateFolders()
