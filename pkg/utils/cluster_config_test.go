@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -24,7 +23,7 @@ const configNomad = `
 func setupNomadTests(t *testing.T) string {
 	tmp := t.TempDir()
 	configFile := filepath.Join(tmp, "config.json")
-	ioutil.WriteFile(configFile, []byte(configNomad), os.ModePerm)
+	os.WriteFile(configFile, []byte(configNomad), os.ModePerm)
 
 	return configFile
 }

@@ -2,7 +2,7 @@ package container
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strings"
 	"testing"
 
@@ -19,16 +19,16 @@ import (
 )
 
 func testBuildSetup(t *testing.T) (*mocks.Docker, *DockerTasks) {
-	// we need to add the stream index (stdout) as the first byte for the hijacker
-	writerOutput := []byte("log output")
-	writerOutput = append([]byte{1}, writerOutput...)
+	// // we need to add the stream index (stdout) as the first byte for the hijacker
+	// writerOutput := []byte("log output")
+	// writerOutput = append([]byte{1}, writerOutput...)
 
 	mk := &mocks.Docker{}
 	mk.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
 	mk.On("ImageList", mock.Anything, mock.Anything, mock.Anything).Return([]image.Summary{{ID: "abc"}}, nil)
 	mk.On("ImageBuild", mock.Anything, mock.Anything, mock.Anything).Return(
 		types.ImageBuildResponse{
-			Body: ioutil.NopCloser(strings.NewReader("")),
+			Body: io.NopCloser(strings.NewReader("")),
 		}, nil)
 
 	mk.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)

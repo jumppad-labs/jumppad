@@ -22,7 +22,7 @@ func setupContainerTests(t *testing.T) (*Container, *mocks.ContainerTasks, *hmoc
 		Meta: types.Meta{Name: "tests", Type: TypeContainer},
 	}}
 
-	cc.Image = &Image{Name: "consul"}
+	cc.Image = Image{Name: "consul"}
 
 	md := &mocks.ContainerTasks{}
 	hc := &hmocks.HTTP{}
@@ -84,7 +84,7 @@ func TestContainerSidecarCreatesContainerSuccessfully(t *testing.T) {
 	co.Labels = cs.Labels
 	co.Environment = cs.Environment
 	co.HealthCheck = cs.HealthCheck
-	co.Image = &cs.Image
+	co.Image = cs.Image
 	co.Privileged = cs.Privileged
 	co.Resources = cs.Resources
 	co.MaxRestartCount = cs.MaxRestartCount

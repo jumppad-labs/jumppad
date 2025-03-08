@@ -3,14 +3,12 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/gosuri/uitable/util/strutil"
 	"github.com/stretchr/testify/require"
-	assert "github.com/stretchr/testify/require"
 )
 
 func TestIsLocalFolder(t *testing.T) {
@@ -46,44 +44,44 @@ func TestIsLocalFolder(t *testing.T) {
 func TestIsLocalAbsFolder(t *testing.T) {
 	is := IsLocalFolder("/tmp")
 
-	assert.True(t, is)
+	require.True(t, is)
 }
 
 func TestIsFolderNotExists(t *testing.T) {
 	is := IsLocalFolder("/dfdfdf")
 
-	assert.False(t, is)
+	require.False(t, is)
 }
 
 func TestIsNotFolder(t *testing.T) {
 	is := IsLocalFolder("github.com/")
 
-	assert.False(t, is)
+	require.False(t, is)
 }
 
 func TestGetBlueprintFolderReturnsFolder(t *testing.T) {
 	dir, err := BlueprintFolder("github.com/org/repo?ref=dfdf&foo=bah//folder")
 
-	assert.NoError(t, err)
-	assert.Equal(t, "folder", dir)
+	require.NoError(t, err)
+	require.Equal(t, "folder", dir)
 }
 
 func TestGetBlueprintFolderReturnsError(t *testing.T) {
 	_, err := BlueprintFolder("github.com/org/repo/folder")
 
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestValidatesNameCorrectly(t *testing.T) {
 	ok, err := ValidateName("abc-sdf")
-	assert.NoError(t, err)
-	assert.True(t, ok)
+	require.NoError(t, err)
+	require.True(t, ok)
 }
 
 func TestValidatesNameAndReturnsErrorWhenInvalid(t *testing.T) {
 	ok, err := ValidateName("*$-abcd")
-	assert.Error(t, err)
-	assert.False(t, ok)
+	require.Error(t, err)
+	require.False(t, ok)
 }
 
 func TestValidatesNameAndReturnsErrorWhenTooLong(t *testing.T) {
@@ -91,63 +89,63 @@ func TestValidatesNameAndReturnsErrorWhenTooLong(t *testing.T) {
 
 	ok, err := ValidateName(dn)
 
-	assert.Error(t, err)
-	assert.False(t, ok)
+	require.Error(t, err)
+	require.False(t, ok)
 }
 
 func TestFQDNReturnsCorrectValue(t *testing.T) {
 	fq := FQDN("test", "", "type")
-	assert.Equal(t, "test.type.local.jmpd.in", fq)
+	require.Equal(t, "test.type.local.jmpd.in", fq)
 }
 
 func TestFQDNReplacesInvalidChars(t *testing.T) {
 	fq := FQDN("tes&t", "", "kubernetes_cluster")
-	assert.Equal(t, "tes-t.kubernetes-cluster.local.jmpd.in", fq)
+	require.Equal(t, "tes-t.kubernetes-cluster.local.jmpd.in", fq)
 }
 
 func TestFQDNVolumeReturnsCorrectValue(t *testing.T) {
 	fq := FQDNVolumeName("test")
-	assert.Equal(t, "test.volume.jmpd.in", fq)
+	require.Equal(t, "test.volume.jmpd.in", fq)
 }
 
 func TestHomeReturnsCorrectValue(t *testing.T) {
 	h := HomeFolder()
-	assert.Equal(t, os.Getenv(HomeEnvName()), h)
+	require.Equal(t, os.Getenv(HomeEnvName()), h)
 }
 
 func TestStateReturnsCorrectValue(t *testing.T) {
 	h := StateDir()
 	expected := filepath.Join(os.Getenv(HomeEnvName()), ".jumppad/state")
 
-	assert.Equal(t, expected, h)
+	require.Equal(t, expected, h)
 }
 
 func TestStatePathReturnsCorrectValue(t *testing.T) {
 	h := StatePath()
-	assert.Equal(t, filepath.Join(os.Getenv(HomeEnvName()), ".jumppad/state/state.json"), h)
+	require.Equal(t, filepath.Join(os.Getenv(HomeEnvName()), ".jumppad/state/state.json"), h)
 }
 
 func TestCreateKubeConfigPathReturnsCorrectValues(t *testing.T) {
 	home := os.Getenv(HomeEnvName())
-	tmp, _ := ioutil.TempDir("", "")
+	tmp, _ := os.MkdirTemp("", "")
 	os.Setenv(HomeEnvName(), tmp)
 	defer os.Setenv(HomeEnvName(), home)
 
 	d, f, dp := CreateKubeConfigPath("testing")
 
-	assert.Equal(t, filepath.Join(tmp, ".jumppad", "config", "testing"), d)
-	assert.Equal(t, filepath.Join(tmp, ".jumppad", "config", "testing", "kubeconfig.yaml"), f)
-	assert.Equal(t, filepath.Join(tmp, ".jumppad", "config", "testing", "kubeconfig-docker.yaml"), dp)
+	require.Equal(t, filepath.Join(tmp, ".jumppad", "config", "testing"), d)
+	require.Equal(t, filepath.Join(tmp, ".jumppad", "config", "testing", "kubeconfig.yaml"), f)
+	require.Equal(t, filepath.Join(tmp, ".jumppad", "config", "testing", "kubeconfig-docker.yaml"), dp)
 
 	// check creates folder
 	s, err := os.Stat(d)
-	assert.NoError(t, err)
-	assert.True(t, s.IsDir())
+	require.NoError(t, err)
+	require.True(t, s.IsDir())
 }
 
 func TestShipyardTempReturnsPath(t *testing.T) {
 	home := os.Getenv(HomeEnvName())
-	tmp, _ := ioutil.TempDir("", "")
+	tmp, _ := os.MkdirTemp("", "")
 	os.Setenv(HomeEnvName(), tmp)
 
 	t.Cleanup(func() {
@@ -157,16 +155,16 @@ func TestShipyardTempReturnsPath(t *testing.T) {
 
 	st := JumppadTemp()
 
-	assert.Equal(t, filepath.Join(tmp, ".jumppad", "/tmp"), st)
+	require.Equal(t, filepath.Join(tmp, ".jumppad", "/tmp"), st)
 
 	s, err := os.Stat(st)
-	assert.NoError(t, err)
-	assert.True(t, s.IsDir())
+	require.NoError(t, err)
+	require.True(t, s.IsDir())
 }
 
 func TestShipyardDataReturnsPath(t *testing.T) {
 	home := os.Getenv(HomeEnvName())
-	tmp, _ := ioutil.TempDir("", "")
+	tmp, _ := os.MkdirTemp("", "")
 	os.Setenv(HomeEnvName(), tmp)
 
 	t.Cleanup(func() {
@@ -176,26 +174,26 @@ func TestShipyardDataReturnsPath(t *testing.T) {
 
 	d := DataFolder("test", 0775)
 
-	assert.Equal(t, filepath.Join(tmp, ".jumppad", "/data", "/test"), d)
+	require.Equal(t, filepath.Join(tmp, ".jumppad", "/data", "/test"), d)
 
 	s, err := os.Stat(d)
 	fmt.Println(d, s)
 
-	assert.NoError(t, err)
-	assert.True(t, s.IsDir())
+	require.NoError(t, err)
+	require.True(t, s.IsDir())
 }
 
 func TestHelmLocalFolderReturnsPath(t *testing.T) {
 	chart := "github.com/jetstack/cert-manager?ref=v1.2.0/deploy/charts//cert-manager"
 	h := HelmLocalFolder(chart)
 
-	assert.Equal(t, filepath.Join(os.Getenv(HomeEnvName()), ".jumppad", "/helm_charts", "github.com/jetstack/cert-manager/ref-v1.2.0/deploy/charts/cert-manager"), h)
+	require.Equal(t, filepath.Join(os.Getenv(HomeEnvName()), ".jumppad", "/helm_charts", "github.com/jetstack/cert-manager/ref-v1.2.0/deploy/charts/cert-manager"), h)
 }
 
 func TestShipyardReleasesReturnsPath(t *testing.T) {
 	r := ReleasesFolder()
 
-	assert.Equal(t, filepath.Join(os.Getenv(HomeEnvName()), ".jumppad", "/releases"), r)
+	require.Equal(t, filepath.Join(os.Getenv(HomeEnvName()), ".jumppad", "/releases"), r)
 }
 
 func TestIsHCLFile(t *testing.T) {
@@ -235,7 +233,7 @@ func TestIsHCLFile(t *testing.T) {
 func TestBlueprintLocalFolder(t *testing.T) {
 	dst := BlueprintLocalFolder("github.com/shipyard-run/blueprints?ref=dfdf&foo=bah//vault-k8s")
 
-	assert.Equal(t, filepath.Join(JumppadHome(), "/blueprints/github.com/shipyard-run/blueprints/ref-dfdf-foo-bah/vault-k8s"), dst)
+	require.Equal(t, filepath.Join(JumppadHome(), "/blueprints/github.com/shipyard-run/blueprints/ref-dfdf-foo-bah/vault-k8s"), dst)
 }
 
 func TestDockerHostWithDefaultReturnsCorrectValue(t *testing.T) {
@@ -246,20 +244,20 @@ func TestDockerHostWithDefaultReturnsCorrectValue(t *testing.T) {
 	})
 
 	ds := GetDockerHost()
-	assert.Equal(t, "/var/run/docker.sock", ds)
+	require.Equal(t, "/var/run/docker.sock", ds)
 }
 
 func TestGetLocalIPAndHostnameReturnsCorrectly(t *testing.T) {
 	ip, host := GetLocalIPAndHostname()
 
-	assert.NotEqual(t, ip, "127.0.0.1")
-	assert.NotEqual(t, host, "localhost")
+	require.NotEqual(t, ip, "127.0.0.1")
+	require.NotEqual(t, host, "localhost")
 }
 
 func TestImageCacheAddressReturnsDefaultWhenEnvNotSet(t *testing.T) {
 	proxy := ImageCacheAddress()
 
-	assert.Equal(t, jumppadProxyAddress, proxy)
+	require.Equal(t, jumppadProxyAddress, proxy)
 }
 
 func TestImageCacheAddressReturnsEnvWhenEnvSet(t *testing.T) {
@@ -267,7 +265,7 @@ func TestImageCacheAddressReturnsEnvWhenEnvSet(t *testing.T) {
 	os.Setenv("IMAGE_CACHE_ADDR", httpProxy)
 	proxy := ImageCacheAddress()
 
-	assert.Equal(t, httpProxy, proxy)
+	require.Equal(t, httpProxy, proxy)
 }
 
 var testData = `
@@ -292,5 +290,5 @@ func TestChecksumInterface(t *testing.T) {
 	c, err := ChecksumFromInterface(data)
 	require.NoError(t, err)
 
-	assert.Equal(t, "h1:kpp5xuYieKQMhbtP0+Y6N+dUzx9p9pGq9+WXkgbK6fs=", c)
+	require.Equal(t, "h1:kpp5xuYieKQMhbtP0+Y6N+dUzx9p9pGq9+WXkgbK6fs=", c)
 }

@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os/exec"
 	"runtime"
@@ -130,7 +129,7 @@ func (b *SystemImpl) Preflight() (string, error) {
 	}
 
 	if (!dockerPass && !podmanPass) || !gitPass {
-		return fmt.Sprintf("%s\n\n%s", output, errors), fmt.Errorf("Errors preflighting system")
+		return fmt.Sprintf("%s\n\n%s", output, errors), fmt.Errorf("errors preflighting system")
 	}
 
 	return output, nil
@@ -151,7 +150,7 @@ func (b *SystemImpl) CheckVersion(current string) (string, bool) {
 	defer resp.Body.Close()
 
 	// get the version
-	d, err := ioutil.ReadAll(resp.Body)
+	d, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", true
 	}

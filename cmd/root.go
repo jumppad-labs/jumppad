@@ -5,20 +5,14 @@ import (
 	"os"
 	"strings"
 
-	gvm "github.com/shipyard-run/version-manager"
-
 	"github.com/jumppad-labs/jumppad/cmd/changelog"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
-
-var configFile = ""
 
 var rootCmd = &cobra.Command{
 	Use:   "jumppad",
@@ -26,61 +20,19 @@ var rootCmd = &cobra.Command{
 	Long:  `Jumppad is a tool that helps you create and run development, demo, and tutorial environments`,
 }
 
-var version string // set by build process
-var date string    // set by build process
-var commit string  // set by build process
+var version string //lint:ignore U1000 set at runtime
+var date string    //lint:ignore U1000 set at runtime
+var commit string  //lint:ignore U1000 set at runtime
 
-// globalFlags are flags that are set for every command
-func globalFlags() *pflag.FlagSet {
-	flags := pflag.NewFlagSet("global", pflag.ContinueOnError)
-	flags.Bool("non-interactive", false, "Run in non-interactive mode")
-
-	return flags
-}
-
-func createEngine(l logger.Logger, c *clients.Clients) (jumppad.Engine, gvm.Versions, error) {
+func createEngine(l logger.Logger, c *clients.Clients) (jumppad.Engine, error) {
 	providers := config.NewProviders(c)
 
 	engine, err := jumppad.New(providers, l)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	o := gvm.Options{
-		Organization: "jumppad-labs",
-		Repo:         "jumppad",
-		ReleasesPath: utils.ReleasesFolder(),
-	}
-
-	o.AssetNameFunc = func(version, goos, goarch string) string {
-		// No idea why we set the release architecture for the binary like this
-		if goarch == "amd64" {
-			goarch = "x86_64"
-		}
-
-		switch goos {
-		case "linux":
-			return fmt.Sprintf("jumppad_%s_%s_%s.tar.gz", version, goos, goarch)
-		case "darwin":
-			return fmt.Sprintf("jumppad_%s_%s_%s.zip", version, goos, goarch)
-		case "windows":
-			return fmt.Sprintf("jumppad_%s_%s_%s.zip", version, goos, goarch)
-		}
-
-		return ""
-	}
-
-	o.ExeNameFunc = func(version, goos, goarch string) string {
-		if goos == "windows" {
-			return "jumppad.exe"
-		}
-
-		return "jumppad"
-	}
-
-	vm := gvm.New(o)
-
-	return engine, vm, nil
+	return engine, nil
 }
 
 func createLogger() logger.Logger {
@@ -98,29 +50,27 @@ func Execute(v, c, d string) error {
 	commit = c
 	date = d
 
-	var vm gvm.Versions
-
 	// setup dependencies
 	l := createLogger()
 
 	engineClients, _ := clients.GenerateClients(l)
 
-	engine, vm, _ := createEngine(l, engineClients)
+	engine, _ := createEngine(l, engineClients)
 
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(outputCmd)
 	rootCmd.AddCommand(newDevCmd())
-	rootCmd.AddCommand(newEnvCmd(engine))
-	rootCmd.AddCommand(newRunCmd(engine, engineClients.ContainerTasks, engineClients.Getter, engineClients.HTTP, engineClients.System, vm, engineClients.Connector, l))
+	rootCmd.AddCommand(newEnvCmd())
+	rootCmd.AddCommand(newRunCmd(engine, engineClients.ContainerTasks, engineClients.Getter, engineClients.HTTP, engineClients.System, engineClients.Connector, l))
 	rootCmd.AddCommand(newTestCmd())
 	rootCmd.AddCommand(newDestroyCmd(engineClients.Connector, l))
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(newPurgeCmd(engineClients.Docker, engineClients.ImageLog, l))
 	rootCmd.AddCommand(taintCmd)
-	rootCmd.AddCommand(newVersionCmd(vm))
+	rootCmd.AddCommand(newVersionCmd())
 	rootCmd.AddCommand(uninstallCmd)
-	rootCmd.AddCommand(newPushCmd(engineClients.ContainerTasks, engineClients.Kubernetes, engineClients.HTTP, engineClients.Nomad, l))
-	rootCmd.AddCommand(newLogCmd(engine, engineClients.Docker, os.Stdout, os.Stderr), completionCmd)
+	rootCmd.AddCommand(newPushCmd(engineClients.ContainerTasks, l))
+	rootCmd.AddCommand(newLogCmd(engineClients.Docker, os.Stdout, os.Stderr), completionCmd)
 	rootCmd.AddCommand(changelogCmd)
 
 	// add the server commands
