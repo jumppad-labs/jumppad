@@ -60,6 +60,20 @@
       ],
     },
     {
+      "name": "Debug - Format",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}",
+      "env": {
+        "LOG_LEVEL": "debug"
+      },
+      "args": [
+        "fmt",
+        "${input:blueprint}",
+      ],
+    },
+    {
       "name": "Debug - Up",
       "type": "go",
       "request": "launch",
