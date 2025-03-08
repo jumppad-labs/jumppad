@@ -334,7 +334,7 @@ func TestApplyCallsProviderDestroyAndCreateForFailedResources(t *testing.T) {
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1)
-	testAssertMethodCalled(t, mp, "Create", 8) // ImageCache and default network are always created
+	testAssertMethodCalled(t, mp, "Create", 7) // ImageCache and default network are always created
 }
 
 func TestApplyCallsProviderDestroyForTaintedResources(t *testing.T) {
@@ -345,7 +345,7 @@ func TestApplyCallsProviderDestroyForTaintedResources(t *testing.T) {
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1)
-	testAssertMethodCalled(t, mp, "Create", 8) // ImageCache and default network are always created
+	testAssertMethodCalled(t, mp, "Create", 7) // ImageCache and default network are always created
 }
 
 func TestApplyCallsProviderDestroyForDisabledResources(t *testing.T) {
