@@ -86,6 +86,12 @@ func Execute(v, c, d string) error {
 	// add the plugin commands
 	rootCmd.AddCommand(pluginCmd)
 
+	// add the validate command
+	rootCmd.AddCommand(newValidateCmd(engine, engineClients.Getter))
+
+	// add the fmt command
+	rootCmd.AddCommand(newFormatCmd())
+
 	rootCmd.SilenceErrors = true
 
 	// set a pre run function to show the changelog
@@ -131,9 +137,4 @@ func Execute(v, c, d string) error {
 func showErr(err error) {
 	fmt.Println("")
 	fmt.Println(err)
-	fmt.Println(discordHelp)
 }
-
-var discordHelp = `
-### For help and support join our community on Discord: https://discord.gg/ZuEFPJU69D ###
-`
