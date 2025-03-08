@@ -257,8 +257,8 @@ func (e *EngineImpl) ApplyWithVariables(ctx context.Context, path string, vars m
 
 	e.config = c
 
-	// check if we already have a default network
-	_, err = c.FindResource(network.DefaultNetworkID)
+	// check if there are any networks defined by the user
+	_, err = c.FindResourcesByType(network.TypeNetwork)
 	if err != nil {
 		// create a new network
 		n := &network.Network{
