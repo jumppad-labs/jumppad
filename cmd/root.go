@@ -89,6 +89,9 @@ func Execute(v, c, d string) error {
 	// add the validate command
 	rootCmd.AddCommand(newValidateCmd(engine, engineClients.Getter))
 
+	// add the fmt command
+	rootCmd.AddCommand(newFormatCmd())
+
 	rootCmd.SilenceErrors = true
 
 	// set a pre run function to show the changelog
