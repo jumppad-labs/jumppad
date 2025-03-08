@@ -87,7 +87,7 @@ func Execute(v, c, d string) error {
 	rootCmd.AddCommand(pluginCmd)
 
 	// add the validate command
-	rootCmd.AddCommand(newValidateCmd(engine, engineClients.Getter, l))
+	rootCmd.AddCommand(newValidateCmd(engine, engineClients.Getter))
 
 	rootCmd.SilenceErrors = true
 
