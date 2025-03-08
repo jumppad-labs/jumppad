@@ -313,15 +313,21 @@ func (e *EngineImpl) ApplyWithVariables(ctx context.Context, path string, vars m
 					Properties: map[string]interface{}{},
 				},
 			},
-			Networks: container.NetworkAttachments{
+		}
+
+		// if the default network was created,
+		// add the default network as a dependency
+		_, err = c.FindResource(network.DefaultNetworkID)
+		if err == nil {
+			ca.Networks = container.NetworkAttachments{
 				{
 					ID:   network.DefaultNetworkID,
 					Name: network.DefaultNetworkName,
 				},
-			},
-		}
+			}
 
-		ca.AddDependency(network.DefaultNetworkID)
+			ca.AddDependency(network.DefaultNetworkID)
+		}
 
 		e.log.Debug("Creating new Image Cache", "id", ca.Meta.ID)
 
