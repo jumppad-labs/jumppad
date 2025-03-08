@@ -258,7 +258,7 @@ func (p *Provider) createRemoteExecContainer() (string, error) {
 	}
 
 	new.Entrypoint = []string{}
-	new.Command = []string{"tail", "-f", "/dev/null"} // ensure container does not immediately exit
+	new.Command = []string{"/bin/sh"} // ensure container does not immediately exit
 
 	// pull any images needed for this container
 	err := p.container.PullImage(*new.Image, false)
