@@ -2,6 +2,7 @@ package container
 
 // Port is a port mapping
 type Port struct {
+	Name          string `hcl:"name,label" json:"name"`                                                         // Name of the port
 	Local         string `hcl:"local" json:"local"`                                                             // Local port in the container
 	Remote        string `hcl:"remote,optional" json:"remote,omitempty"`                                        // Remote port of the service
 	Host          string `hcl:"host,optional" json:"host,omitempty"`                                            // Host port
