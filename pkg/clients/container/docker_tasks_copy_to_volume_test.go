@@ -89,22 +89,7 @@ func testSetupCopyLocal(t *testing.T) (*DockerTasks, *mocks.Docker) {
 		Return(volume.ListResponse{Volumes: []*volume.Volume{{}}})
 
 	mk.On("NetworkList", mock.Anything, mock.Anything).
-		Return([]network.Inspect{{
-			Name: "jumppad",
-			ID:   "resource.network.jumppad",
-			Labels: map[string]string{
-				"id": "resource.network.jumppad",
-			},
-			IPAM: network.IPAM{
-				Driver: "default",
-				Config: []network.IPAMConfig{
-					{
-						Subnet: "10.0.10.0/24",
-					},
-				},
-			},
-			EnableIPv6: false,
-		}}, nil)
+		Return([]network.Inspect{}, nil)
 
 	mk.On("NetworkConnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
