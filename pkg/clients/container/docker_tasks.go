@@ -397,24 +397,6 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 		}
 	}
 
-	if len(c.Networks) == 0 {
-		net, err := d.FindNetwork("resource.network.jumppad")
-		if err != nil {
-			return "", err
-		}
-
-		err = d.AttachNetwork(net.Name, cont.ID, []string{}, "")
-		if err != nil {
-			// if we fail to connect to the network roll back the container
-			errRemove := d.RemoveContainer(cont.ID, false)
-			if errRemove != nil {
-				return "", fmt.Errorf("failed to attach network %s to container %s, unable to roll back container: %w", "jumppad", cont.ID, err)
-			}
-
-			return "", fmt.Errorf("unable to connect container to network %s, successfully rolled back container: %w", "jumppad", err)
-		}
-	}
-
 	err = d.c.ContainerStart(context.Background(), cont.ID, container.StartOptions{})
 	if err != nil {
 		return "", err

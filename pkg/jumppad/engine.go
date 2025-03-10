@@ -14,7 +14,6 @@ import (
 	"github.com/instruqt/jumppad/pkg/clients/logger"
 	"github.com/instruqt/jumppad/pkg/config"
 	"github.com/instruqt/jumppad/pkg/config/resources/cache"
-	"github.com/instruqt/jumppad/pkg/config/resources/container"
 	"github.com/instruqt/jumppad/pkg/config/resources/network"
 	"github.com/instruqt/jumppad/pkg/jumppad/constants"
 	"github.com/instruqt/jumppad/pkg/utils"
@@ -176,11 +175,6 @@ func (e *EngineImpl) Diff(path string, variables map[string]string, variablesFil
 			continue
 		}
 
-		// if this is the default network continue as this is always added
-		if r.Metadata().Type == network.TypeNetwork && r.Metadata().ID == network.DefaultNetworkID {
-			continue
-		}
-
 		found := false
 		for _, r2 := range res.Resources {
 			if r.Metadata().ID == r2.Metadata().ID {
@@ -257,49 +251,6 @@ func (e *EngineImpl) ApplyWithVariables(ctx context.Context, path string, vars m
 
 	e.config = c
 
-	// check if there are any networks defined by the user
-	_, err = c.FindResourcesByType(network.TypeNetwork)
-	if err != nil {
-		// create a new network
-		n := &network.Network{
-			ResourceBase: types.ResourceBase{
-				Meta: types.Meta{
-					ID:         network.DefaultNetworkID,
-					Name:       network.DefaultNetworkName,
-					Type:       network.TypeNetwork,
-					Properties: map[string]interface{}{},
-				},
-			},
-			Subnet: network.DefaultNetworkSubnet,
-		}
-
-		e.log.Debug("Creating default Network", "id", n.Meta.ID)
-
-		p := e.providers.GetProvider(n)
-		if p == nil {
-			// this should never happen
-			panic("Unable to find provider for Network, Nic assured me that you should never see this message. Sorry, the monkey has broken something again")
-		}
-
-		// create the network
-		err := p.Create(ctx)
-		if err != nil {
-			n.Meta.Properties[constants.PropertyStatus] = constants.StatusFailed
-		} else {
-			n.Meta.Properties[constants.PropertyStatus] = constants.StatusCreated
-		}
-
-		// add the new network to the config
-		e.config.AppendResource(n)
-
-		// save the state
-		config.SaveState(e.config)
-
-		if err != nil {
-			return nil, fmt.Errorf("unable to create network %s", err)
-		}
-	}
-
 	// check to see we already have an image cache
 	_, err = c.FindResourcesByType(cache.TypeImageCache)
 	if err != nil {
@@ -313,20 +264,6 @@ func (e *EngineImpl) ApplyWithVariables(ctx context.Context, path string, vars m
 					Properties: map[string]interface{}{},
 				},
 			},
-		}
-
-		// if the default network was created,
-		// add the default network as a dependency
-		_, err = c.FindResource(network.DefaultNetworkID)
-		if err == nil {
-			ca.Networks = container.NetworkAttachments{
-				{
-					ID:   network.DefaultNetworkID,
-					Name: network.DefaultNetworkName,
-				},
-			}
-
-			ca.AddDependency(network.DefaultNetworkID)
 		}
 
 		e.log.Debug("Creating new Image Cache", "id", ca.Meta.ID)
