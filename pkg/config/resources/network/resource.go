@@ -13,11 +13,41 @@ const (
 	DefaultNetworkSubnet string = "10.0.10.0/24"
 )
 
-// Network defines a Docker network
+/*
+Network resources allow you to create isolated networks for your resources.
+There is no limit to the number of Network resources you can create, the only limitation is that they must not have overlapping subnets.
+
+```hcl
+
+	resource "network" "name" {
+	  ...
+	}
+
+```
+
+@example
+```
+
+	resource "network" "local" {
+	  subnet = "10.10.0.0/16"
+	}
+
+```
+
+@resource
+*/
 type Network struct {
-	// embedded type holding name, etc
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
 
-	Subnet     string `hcl:"subnet" json:"subnet"`
-	EnableIPv6 bool   `hcl:"enable_ipv6,optional" json:"enable_ipv6"`
+	/*
+		Subnet to use for the network, must not overlap any other existing networks.
+	*/
+	Subnet string `hcl:"subnet" json:"subnet"`
+	// Enable IPv6 on the network
+	EnableIPv6 bool `hcl:"enable_ipv6,optional" json:"enable_ipv6"`
 }

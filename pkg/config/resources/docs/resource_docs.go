@@ -10,9 +10,18 @@ import (
 // TypeDocs is the resource string for a Docs resource
 const TypeDocs string = "docs"
 
-// Docs allows the running of a Docusaurus container which can be used for
-// online tutorials or documentation
+/*
+Docs allows the running of a Docusaurus container which can be used for
+online tutorials or documentation
+
+@resource
+*/
 type Docs struct {
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
 
 	Networks ctypes.NetworkAttachments `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified

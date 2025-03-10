@@ -6,7 +6,15 @@ import (
 
 const TypeTask string = "task"
 
+/*
+@resource
+*/
 type Task struct {
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
 
 	Prerequisites []string    `hcl:"prerequisites,optional" json:"prerequisites"`
