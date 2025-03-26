@@ -31,13 +31,37 @@ type Copy struct {
 	 @ignore
 	*/
 	types.ResourceBase `hcl:",remain"`
-	// Any explicit dependencies that this resource has
-	Depends []string `hcl:"depends_on,optional" json:"depends,omitempty"`
-	// Source file, folder, url, git repo, etc
+	/*
+		Source file, folder, url, git repo, etc
+
+		```hcl
+		source = "http://example.com/archive.zip"
+		```
+
+		```hcl
+		source = "./files/config.cfg"
+		```
+
+		```hcl
+		source = "github.com/jumppad-labs/jumppad//examples?ref=main"
+		```
+	*/
 	Source string `hcl:"source" json:"source"`
-	// Destination file or directory to write file or files to.
+	/*
+		Destination file or directory to write file or files to.
+
+		```hcl
+		destination = "${data("copied")}/files"
+		```
+	*/
 	Destination string `hcl:"destination" json:"destination"`
-	// Unix file permissions to apply to coppied files and direcories.
+	/*
+		Unix file permissions to apply to coppied files and direcories.
+
+		```hcl
+		permissions = "0644"
+		```
+	*/
 	Permissions string `hcl:"permissions,optional" json:"permissions,omitempty" default:"0777"`
 	/*
 		List of the full paths of copied files.

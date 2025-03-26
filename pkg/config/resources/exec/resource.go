@@ -149,42 +149,54 @@ type Exec struct {
 	/*
 		The script to execute.
 
-		@example
+		```hcl
+		script = <<-EOF
+		#!/bin/bash
+		ls -lha
+		EOF
 		```
-		resource "exec" "inline" {
-		  script = <<-EOF
-		  #!/bin/bash
-		  ls -lha
-		  EOF
-		}
 
-		resource "exec" "file" {
-		  script = file("script.sh")
-		}
+		```hcl
+		script = file("script.sh")
+		```
 
-		resource "exec" "template" {
-		  script = template_file("script.sh.tpl", {
-		    foo = "bar"
-		  })
-		}
+		```hcl
+		script = template_file("script.sh.tpl", {
+		  foo = "bar"
+		})
 		```
 	*/
 	Script string `hcl:"script" json:"script"`
-	// The working directory to execute the script in.
+	/*
+		The working directory to execute the script in.
+
+		```hcl
+		working_directory = "/tmp"
+		```
+	*/
 	WorkingDirectory string `hcl:"working_directory,optional" json:"working_directory,omitempty"`
 	/*
 		The process will be run as a daemon if set to true.
 
 		Only valid for local execution.
+
+		```hcl
+		daemon = true
+		```
 	*/
 	Daemon bool `hcl:"daemon,optional" json:"daemon,omitempty"`
-	// The timeout for the script to execute as a duration e.g. 30s.
+	/*
+		The timeout for the script to execute as a duration e.g. 30s.
+
+		```hcl
+		timeout = "60s"
+		```
+	*/
 	Timeout string `hcl:"timeout,optional" json:"timeout,omitempty"`
 	/*
 		Environment variables to set for the script.
 
-		@example
-		```
+		```hcl
 		resource "exec" "env" {
 		  environment = {
 		    FOO = "bar"
@@ -202,6 +214,12 @@ type Exec struct {
 		The image to use for the container.
 
 		Only valid for remote execution in a standalone container.
+
+		```hcl
+		image {
+		  name = "redis:latest"
+		}
+		```
 	*/
 	Image *ctypes.Image `hcl:"image,block" json:"image,omitempty"`
 	/*
@@ -209,23 +227,8 @@ type Exec struct {
 
 		Only valid for remote execution in an existing container.
 
-		@example
-		```
-		resource "container" "alpine" {
-		  image {
-		    name = "alpine"
-		  }
-		}
-
-		resource "exec" "uname" {
-		  target = resource.container.alpine
-
-		  script = <<-EOF
-		  #!/bin/bash
-		  uname -a
-		  EOF
-		}
-
+		```hcl
+		target = resource.container.alpine
 		```
 	*/
 	Target *ctypes.Container `hcl:"target,optional" json:"target,omitempty"`
@@ -233,18 +236,35 @@ type Exec struct {
 		The network to attach the container to.
 
 		Only valid for remote execution in an existing container.
+
+		```hcl
+		network {
+		  id = resource.network.main.meta.id
+		}
+		```
 	*/
 	Networks []ctypes.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"`
 	/*
 		The volumes to mount to the container.
 
 		Only valid for remote execution in an existing container.
+
+		```hcl
+		volume {
+		  source = "./files"
+		  destination = "/tmp/files"
+		}
+		```
 	*/
 	Volumes []ctypes.Volume `hcl:"volume,block" json:"volumes,omitempty"`
 	/*
 		The user to run the script as.
 
 		Only valid for remote execution in an existing container.
+
+		```hcl
+		run_as = "root"
+		```
 	*/
 	RunAs *ctypes.User `hcl:"run_as,block" json:"run_as,omitempty"`
 	/*
@@ -254,10 +274,17 @@ type Exec struct {
 
 		@computed
 	*/
-	PID      int               `hcl:"pid,optional" json:"pid,omitempty"`
-	ExitCode int               `hcl:"exit_code,optional" json:"exit_code,omitempty"`
-	Output   map[string]string `hcl:"output,optional" json:"output,omitempty"`
-	Checksum string            `hcl:"checksum,optional" json:"checksum,omitempty"`
+	PID int `hcl:"pid,optional" json:"pid,omitempty"`
+	/*
+		The exit code the script completed with.
+	*/
+	ExitCode int `hcl:"exit_code,optional" json:"exit_code,omitempty"`
+	/*
+		Any console output that the script outputs.
+	*/
+	Output map[string]string `hcl:"output,optional" json:"output,omitempty"`
+	// @ignore
+	Checksum string `hcl:"checksum,optional" json:"checksum,omitempty"`
 }
 
 func (e *Exec) Process() error {

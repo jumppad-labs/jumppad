@@ -6,32 +6,49 @@ An Image can be stored in a public or a private repository.
 
 ```hcl
 
-	image {
-	  ...
+	container {
+	  image {
+	    ...
+	  }
 	}
 
 ```
+
+@example
+
+	```
+	image {
+	  name = "myregistry.io/myimage:latest"
+	  username = env("REGISTRY_USERNAME")
+	  password = env("REGISTRY_PASSWORD")
+	}
+	```
 */
 type Image struct {
 	/*
 		Name of the image to use when creating the container, can either be the full
 		canonical name or short name for Docker official images. e.g. `consul:v1.6.1` or
 		`docker.io/consul:v1.6.1`.
+
+		```hcl
+		name = "redis:latest"
+		```
 	*/
 	Name string `hcl:"name" json:"name"`
-	// Username to use when connecting to a private image repository
+	/*
+		Username to use when connecting to a private image repository
+
+		```hcl
+		username = "my_username"
+		```
+	*/
 	Username string `hcl:"username,optional" json:"username,omitempty"`
 	/*
 		Password to use when connecting to a private image repository, for both username
 		and password interpolated environment variables can be used in place of static values.
 
-		@example
-		```
-		image {
-		  name = "myregistry.io/myimage:latest"
-		  username = env("REGISTRY_USERNAME")
-		  password = env("REGISTRY_PASSWORD")
-		}
+		```hcl
+		password = "my_password"
 		```
 	*/
 	Password string `hcl:"password,optional" json:"password,omitempty"`

@@ -39,20 +39,37 @@ type Sidecar struct {
 	*/
 	types.ResourceBase `hcl:",remain"`
 	/*
+		```hcl
+		target = resource.container.ubuntu
+		```
+
 		@reference container.Container
 	*/
 	Target Container `hcl:"target" json:"target"`
-	// Image defines a Docker image to use when creating the container.
+	/*
+		Image defines a Docker image to use when creating the container.
+
+		```hcl
+		image {
+		  name = "envoy:latest"
+		}
+		```
+	*/
 	Image Image `hcl:"image,block" json:"image"`
-	// Entrypoint for the container, if not set, Jumppad starts the container using the entrypoint defined in the Docker image.
+	/*
+		Entrypoint for the container, if not set, Jumppad starts the container using the entrypoint defined in the Docker image.
+
+		```hcl
+		entrypoint = "/bin/bash"
+		```
+	*/
 	Entrypoint []string `hcl:"entrypoint,optional" json:"entrypoint,omitempty"`
 	/*
 		Command allows you to specify a command to execute when starting a container. Command is specified as an array of strings, each part of the command is a separate string.
 
 		For example, to start a container and follow logs at /dev/null the following command could be used.
 
-		@example
-		```
+		```hcl
 		command = [
 			"tail",
 			"-f",
@@ -64,7 +81,6 @@ type Sidecar struct {
 	/*
 		Allows you to set environment variables in the container.
 
-		@example
 		```
 		environment = {
 			PATH = "/user/local/bin"
@@ -72,13 +88,19 @@ type Sidecar struct {
 		```
 	*/
 	Environment map[string]string `hcl:"environment,optional" json:"environment,omitempty"`
-	// Labels to apply to the container
+	/*
+		Labels to apply to the container
+
+		```hcl
+		labels = {
+		  key = "value"
+		}
+	*/
 	Labels map[string]string `hcl:"labels,optional" json:"labels,omitempty"`
 	/*
 		A volume allows you to specify a local volume which is mounted to the container when it is created.
 		This stanza can be specified multiple times.
 
-		@example
 		```
 		volume {
 			source      = "./"
@@ -87,15 +109,29 @@ type Sidecar struct {
 		```
 	*/
 	Volumes []Volume `hcl:"volume,block" json:"volumes,omitempty"`
-	// Should the container run in Docker privileged mode?
+	/*
+		Should the container run in Docker privileged mode?
+
+		```hcl
+		privileged = true
+		```
+	*/
 	Privileged bool `hcl:"privileged,optional" json:"privileged,omitempty"`
-	// Define resource constraints for the container
+	/*
+		Define resource constraints for the container
+
+		```hcl
+		resources {
+		  cpu = 100
+		  memory = 1024
+		}
+		```
+	*/
 	Resources *Resources `hcl:"resources,block" json:"resources,omitempty"`
 	/*
 		Define a health check for the container, the resource will only be marked as successfully created when the health check passes.
 
-		@example
-		```
+		```hcl
 		health_check {
 		  timeout = "30s"
 		  http {
@@ -110,27 +146,30 @@ type Sidecar struct {
 		  exec {
 		    script = <<-EOF
 		      #!/bin/bash
-
 		      curl "http://localhost:9090"
 		    EOF
 		  }
 		}
+		```
 	*/
 	HealthCheck *healthcheck.HealthCheckContainer `hcl:"health_check,block" json:"health_check,omitempty"`
-	// The maximum number of times a container will be restarted when it exits with a status code other than 0
+	/*
+		The maximum number of times a container will be restarted when it exits with a status code other than 0
+
+		```hcl
+		max_restart_count = 3
+		```
+	*/
 	MaxRestartCount int `hcl:"max_restart_count,optional" json:"max_restart_count,omitempty"`
 	/*
 		Fully qualified resource name for the container the sidecar is linked to, this can be used to access the sidecar from other sources.
 
-		@example
-		```
+		```hcl
 		name.container.local.jmpd.in
 		```
 
 		@computed
 	*/
-	// ContainerName is the fully qualified domain name for the container the sidecar is linked to, this can be used
-	// to access the sidecar from other sources
 	ContainerName string `hcl:"container_name,optional" json:"container_name,omitempty"`
 }
 

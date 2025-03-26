@@ -36,7 +36,6 @@ Health checks are executed sequentially, if one health check fails, the followin
 	   exec {
 	      script = <<-EOF
 	        #!/bin/bash
-
 	        curl "http://localhost:9090"
 	      EOF
 	    }
@@ -50,24 +49,46 @@ type HealthCheckContainer struct {
 	/*
 		The maximum duration to wait before marking the health check as failed. Expressed as a Go duration, e.g. `1s` = 1 second,
 		`100ms` = 100 milliseconds.
+
+		```hcl
+		timeout = "60s"
+		```
 	*/
 	Timeout string `hcl:"timeout" json:"timeout"`
 	/*
 		HTTP Health Check block defining the address to check and expected status codes.
 
 		Can be specified more than once.
+
+		```hcl
+		http {
+		  address = "localhost:8500"
+		}
+		```
 	*/
 	HTTP []HealthCheckHTTP `hcl:"http,block" json:"http,omitempty"`
 	/*
 		TCP Health Check block defining the address to test.
 
 		Can be specified more than once.
+
+		```hcl
+		tcp {
+		  address = "localhost:8500"
+		}
+		```
 	*/
 	TCP []HealthCheckTCP `hcl:"tcp,block" json:"tcp,omitempty"`
 	/*
 		Exec Health Check block defining either a command to run in the current container, or a script to execute.
 
 		Can be specified more than once.
+
+		```hcl
+		exec {
+		  command = ["pg_isready"]
+		}
+		```
 	*/
 	Exec []HealthCheckExec `hcl:"exec,block" json:"exec,omitempty"`
 }
@@ -78,8 +99,10 @@ If the reponse matches any of the given codes the check passes.
 
 ```hcl
 
-	http {
-	  ...
+	health_check {
+	  http {
+	    ...
+	  }
 	}
 
 ```
@@ -87,32 +110,68 @@ If the reponse matches any of the given codes the check passes.
 @example
 ```
 
-	http {
-	  address = "http://localhost:8500/v1/status/leader"
-	  method  = "GET"
-	  body    = <<-EOF
-	    {"test": "123"}
-	  EOF
-	  headers = {
-	    "X-Auth-Token": ["abc123"]
+	health_check {
+	  http {
+	    address = "http://localhost:8500/v1/status/leader"
+	    method  = "GET"
+	    body    = <<-EOF
+	      {"test": "123"}
+	    EOF
+	    headers = {
+	      "X-Auth-Token": ["abc123"]
+	    }
+	    success_codes = [200]
 	  }
-	  success_codes = [200]
 	}
 
 ```
 */
 type HealthCheckHTTP struct {
-	// The URL to check, health check expects a HTTP status code to be returned by the URL in order to pass the health check.
+	/*
+		The URL to check, health check expects a HTTP status code to be returned by the URL in order to pass the health check.
+
+		```hcl
+		address = "http://localhost:8500/v1/status/leader"
+		```
+	*/
 	Address string `hcl:"address" json:"address,omitempty"`
-	// HTTP method to use when executing the check
+	/*
+		HTTP method to use when executing the check
+
+		```hcl
+		method = "POST"
+		```
+	*/
 	Method string `hcl:"method,optional" json:"method,omitempty"`
-	// HTTP body to send with the request
+	/*
+		HTTP body to send with the request
+
+		```hcl
+		body = <<-EOF
+		{
+		  {"test": "123"}
+		}
+		EOF
+		```
+	*/
 	Body string `hcl:"body,optional" json:"body,omitempty"`
-	// HTTP headers to send with the check
+	/*
+		HTTP headers to send with the check
+
+		```hcl
+		headers = {
+		  "X-Auth-Token": ["abc123"]
+		}
+		```
+	*/
 	Headers map[string][]string `hcl:"headers,optional" json:"headers,omitempty"`
 	/*
 		HTTP status codes returned from the endpoint when called.
 		If the returned status code matches any in the array then the health check will pass.
+
+		```hcl
+		success_codes = [200, 403]
+		```
 	*/
 	SuccessCodes []int `hcl:"success_codes,optional" json:"success_codes,omitempty"`
 }
@@ -123,8 +182,10 @@ If a connection can be opened then the check passes.
 
 ```hcl
 
-	tcp {
-	  ...
+	health_check {
+	  tcp {
+	    ...
+	  }
 	}
 
 ```
@@ -132,14 +193,22 @@ If a connection can be opened then the check passes.
 @example
 ```
 
-	tcp {
-	  address = "localhost:8500"
+	health_check {
+	  tcp {
+	    address = "localhost:8500"
+	  }
 	}
 
 ```
 */
 type HealthCheckTCP struct {
-	// The adress to check.
+	/*
+		The adress to check.
+
+		```hcl
+		address = "localhost:8500"
+		```
+	*/
 	Address string `hcl:"address" json:"address,omitempty"`
 }
 
@@ -149,8 +218,10 @@ If the command or script receives an exit code 0 the check passes.
 
 ```hcl
 
-	exec {
-	  ...
+	health_check {
+	  exec {
+	    ...
+	  }
 	}
 
 ```
@@ -159,33 +230,32 @@ type HealthCheckExec struct {
 	/*
 		The command to execute, the command is run in the target container.
 
-		@example
-		```
-		exec {
-			command = ["pg_isready"]
-		}
+		```hcl
+		command = ["pg_isready"]
 		```
 	*/
 	Command []string `hcl:"command,optional" json:"command,omitempty"`
 	/*
 		A script to execute in the target container, the script is coppied to the container into the /tmp directory and is then executed.
 
-		@example
-		```
-		exec {
-		  script = <<-EOF
-		    #!/bin/bash
-
-		    FILE=/etc/resolv.conf
-		    if [ -f "$FILE" ]; then
-		        echo "$FILE exists."
-		    fi
-		  EOF
-		}
+		```hcl
+		script = <<-EOF
+		  #!/bin/bash
+		  FILE=/etc/resolv.conf
+		  if [ -f "$FILE" ]; then
+		    echo "$FILE exists."
+		  fi
+		EOF
 		```
 	*/
 	Script string `hcl:"script,optional" json:"script,omitempty"`
-	// ExitCode to mark a successful check, default 0
+	/*
+		ExitCode to mark a successful check, default 0
+
+		```hcl
+		exit_code = 0
+		```
+	*/
 	ExitCode int `hcl:"exit_code,optional" json:"exit_code,omitempty"`
 }
 
@@ -217,11 +287,19 @@ type HealthCheckKubernetes struct {
 	/*
 		The maximum duration to wait before marking the health check as failed.
 		Expressed as a Go duration, e.g. `1s` = 1 second, `100ms` = 100 milliseconds.
+
+		```hcl
+		timeout = "60s"
+		```
 	*/
 	Timeout string `hcl:"timeout" json:"timeout"`
 	/*
 		An array of kubernetes selector syntax.
 		The healthcheck ensures that all containers defined by the selector are running before passing the healthcheck.
+
+		```hcl
+		pods = ["app.kubernetes.io/name=vault"]
+		```
 	*/
 	Pods []string `hcl:"pods" json:"pods,omitempty"`
 }
@@ -236,8 +314,20 @@ type HealthCheckKubernetes struct {
 ```
 */
 type HealthCheckNomad struct {
-	// Timeout expressed as a go duration i.e 10s
+	/*
+		Timeout expressed as a go duration i.e 10s
+
+		```hcl
+		timeout = "60s"
+		```
+	*/
 	Timeout string `hcl:"timeout" json:"timeout"`
-	//	jobs = ["redis"] // are the Nomad jobs running and healthy
+	/*
+		The jobs to check the status of.
+
+		```hcl
+		jobs = ["redis"]
+		```
+	*/
 	Jobs []string `hcl:"jobs" json:"jobs,omitempty"`
 }
