@@ -52,14 +52,14 @@ For more information on the image cache see the `container_registry` resource.
 	  subnet = "10.5.0.0/16"
 	}
 
-	resource "k8s_cluster" "k3s" {
+	resource "kubernetes_cluster" "cluster" {
 	  network {
 	    id = resource.network.cloud.meta.id
 	  }
 	}
 
 	output "KUBECONFIG" {
-	  value = resource.k8s_cluster.k3s.kube_config.path
+	  value = resource.kubernetes_cluster.cluster.kube_config.path
 	}
 
 ```
@@ -71,7 +71,7 @@ For more information on the image cache see the `container_registry` resource.
 	  subnet = "10.5.0.0/16"
 	}
 
-	resource "k8s_cluster" "k3s" {
+	resource "kubernetes_cluster" "cluster" {
 	  network {
 	    id = resource.network.cloud.meta.id
 	  }
@@ -82,7 +82,7 @@ For more information on the image cache see the `container_registry` resource.
 	}
 
 	resource "k8s_config" "fake_service" {
-	  cluster = resource.k8s_cluster.k3s
+	  cluster = resource.kubernetes_cluster.cluster
 
 	  paths = ["./fake_service.yaml"]
 
@@ -93,7 +93,7 @@ For more information on the image cache see the `container_registry` resource.
 	}
 
 	resource "helm" "vault" {
-	  cluster = resource.k8s_cluster.k3s
+	  cluster = resource.kubernetes_cluster.cluster
 
 	  repository {
 	    name = "hashicorp"
@@ -115,7 +115,7 @@ For more information on the image cache see the `container_registry` resource.
 	  port = 18200
 
 	  target {
-	    resource = resource.k8s_cluster.k3s
+	    resource = resource.kubernetes_cluster.cluster
 	    port = 8200
 
 	    config = {
@@ -129,7 +129,7 @@ For more information on the image cache see the `container_registry` resource.
 	  port = 19090
 
 	  target {
-	    resource = resource.k8s_cluster.k3s
+	    resource = resource.kubernetes_cluster.cluster
 	    port = 9090
 
 	    config = {
@@ -144,7 +144,7 @@ For more information on the image cache see the `container_registry` resource.
 	}
 
 	output "KUBECONFIG" {
-	  value = resource.k8s_cluster.k3s.kube_config.path
+	  value = resource.kubernetes_cluster.cluster.kube_config.path
 	}
 
 ```
@@ -159,21 +159,38 @@ type Cluster struct {
 
 	/*
 		Network attaches the container to an existing network defined in a separate stanza.
-		 This block can be specified multiple times to attach the container to multiple networks.
+		This block can be specified multiple times to attach the container to multiple networks.
+
+		```hcl
+		network {
+		  id = resource.network.main.meta.id
+		}
+		```
 	*/
 	Networks []container.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 	/*
 		Image defines a Docker image to use when creating the container.
 		By default the kubernetes cluster resource will be created using the latest Jumppad container image.
+
+		```hcl
+		image {
+		  name = "example/kubernetes:latest"
+		}
+		```
 	*/
 	Image *container.Image `hcl:"image,block" json:"images,omitempty"`
-	// The number of nodes to create in the cluster.
+	/*
+		The number of nodes to create in the cluster.
+
+		```hcl
+		nodes = 3
+		```
+	*/
 	Nodes int `hcl:"nodes,optional" json:"nodes,omitempty"`
 	/*
 		Additional volume to mount to the server and client nodes.
 
-		@example
-		```
+		```hcl
 		volume {
 		  source = "./mydirectory"
 		  destination = "/path_in_container"
@@ -182,52 +199,48 @@ type Cluster struct {
 	*/
 	Volumes []container.Volume `hcl:"volume,block" json:"volumes,omitempty"`
 	/*
-		   Docker image in the local Docker image cache to copy to the cluster on creation.
-			 This image is added to the Kubernetes clients docker cache enabling jobs to use images that may not be in the local registry.
+		Docker image in the local Docker image cache to copy to the cluster on creation.
+		This image is added to the Kubernetes clients docker cache enabling jobs to use images that may not be in the local registry.
 
-		   Jumppad tracks changes to copied images, should the image change running jumppad up would push any changes to the cluster automatically.
+		Jumppad tracks changes to copied images, should the image change running jumppad up would push any changes to the cluster automatically.
 
-		   @example
-		   ```
-		   copy_image {
-		     name = "mylocalimage:versoin"
-		   }
-		   ```
+		```hcl
+		copy_image {
+		  name = "mylocalimage:version"
+		}
+		```
 	*/
 	CopyImages []container.Image `hcl:"copy_image,block" json:"copy_images,omitempty"`
 	/*
-		   A `port` stanza allows you to expose container ports on the local network or host.
-			 This stanza can be specified multiple times.
+		A `port` stanza allows you to expose container ports on the local network or host.
+		This stanza can be specified multiple times.
 
-		   @example
-		   ```
-		   port {
-		     local = 80
-		     host  = 8080
-		   }
-		   ```
+		```hcl
+		port {
+		  local = 80
+		  host  = 8080
+		}
+		```
 	*/
 	Ports []container.Port `hcl:"port,block" json:"ports,omitempty"`
 	/*
-		   A `port_range` stanza allows you to expose a range of container ports on the local network or host.
-			 This stanza can be specified multiple times.
+		A `port_range` stanza allows you to expose a range of container ports on the local network or host.
+		This stanza can be specified multiple times.
 
-		   The following example would create 11 ports from 80 to 90 (inclusive) and expose them to the host machine.
+		The following example would create 11 ports from 80 to 90 (inclusive) and expose them to the host machine.
 
-		   @example
-		   ```
-		   port {
-		     range       = "80-90"
-		     enable_host = true
-		   }
-		   ```
+		```hcl
+		port {
+		  range       = "80-90"
+		  enable_host = true
+		}
+		```
 	*/
 	PortRanges []container.PortRange `hcl:"port_range,block" json:"port_ranges,omitempty"`
 	/*
 		An env stanza allows you to set environment variables in the container. This stanza can be specified multiple times.
 
-		@example
-		```
+		```hcl
 		env {
 		  key   = "PATH"
 		  value = "/usr/local/bin"
@@ -235,7 +248,9 @@ type Cluster struct {
 		```
 	*/
 	Environment map[string]string `hcl:"environment,optional" json:"environment,omitempty"` // environment variables to set when starting the container
-	// Specifies the configuration for the Kubernetes cluster.
+	/*
+		Specifies the configuration for the Kubernetes cluster.
+	*/
 	Config *ClusterConfig `hcl:"config,block" json:"config,omitempty"`
 	/*
 		Details for the Kubenetes config file that can be used to interact with the cluster.
@@ -271,7 +286,7 @@ type Cluster struct {
 		@example
 		```
 		output "K8S_ADDR" {
-		value = "https://${resource.k8s_cluster.dev.external_ip}:${resource.k8s_cluster.dev.api_port}"
+		value = "https://${resource.kubernetes_cluster.dev.external_ip}:${resource.kubernetes_cluster.dev.api_port}"
 		}
 		```
 
@@ -285,25 +300,24 @@ Specifies the configuration for the Kubernetes cluster.
 
 ```hcl
 
-	config {
-	  ...
+	resource "kubernetes_cluster" "cluster" {
+	  config {
+	    ...
+	  }
 	}
 
 ```
 */
 type ClusterConfig struct {
 	/*
-	   Docker configuration for the Kubernetes cluster.
+		Docker configuration for the Kubernetes cluster.
 
-	   @example
-	   ```
-	   config {
-	   	docker {
-	   		no_proxy            = ["insecure.container.local.jmpd.in"]
-	   		insecure_registries = ["insecure.container.local.jmpd.in:5003"]
-	   	}
-	   }
-	   ````
+		```hcl
+		docker {
+		  no_proxy            = ["insecure.container.local.jmpd.in"]
+		  insecure_registries = ["insecure.container.local.jmpd.in:5003"]
+		}
+		````
 	*/
 	DockerConfig *DockerConfig `hcl:"docker,block" json:"docker,omitempty"`
 }
@@ -313,16 +327,32 @@ Specifies the configuration for the Docker engine in the cluster.
 
 ```hcl
 
-	docker {
-	  ...
+	resource "kubernetes_cluster" "cluster" {
+	  config {
+	    docker {
+	      ...
+	    }
+	  }
 	}
 
 ```
 */
 type DockerConfig struct {
-	// A list of docker registries that should not be proxied.
+	/*
+		A list of docker registries that should not be proxied.
+
+		```hcl
+		no_proxy = ["insecure.container.local.jmpd.in"]
+		```
+	*/
 	NoProxy []string `hcl:"no_proxy,optional" json:"no-proxy,omitempty"`
-	// A list of insecure docker registries.
+	/*
+		A list of insecure docker registries.
+
+		```hcl
+		insecure_registries = ["insecure.container.local.jmpd.in:5003"]
+		```
+	*/
 	InsecureRegistries []string `hcl:"insecure_registries,optional" json:"insecure-registries,omitempty"`
 }
 
@@ -330,13 +360,29 @@ type DockerConfig struct {
 Details for the Kubenetes config file that can be used to interact with the cluster.
 */
 type KubeConfig struct {
-	// The path to the kubeconfig file
+	/*
+		The path to the kubeconfig file
+
+		@computed
+	*/
 	ConfigPath string `hcl:"path" json:"path"`
-	// The base64 encoded ca certificate
+	/*
+		The base64 encoded ca certificate
+
+		@computed
+	*/
 	CA string `hcl:"ca" json:"ca"`
-	// The base64 encoded client certificate
+	/*
+		The base64 encoded client certificate
+
+		@computed
+	*/
 	ClientCertificate string `hcl:"client_certificate" json:"client_certificate"`
-	// The base64 encoded client key
+	/*
+		The base64 encoded client key
+
+		@computed
+	*/
 	ClientKey string `hcl:"client_key" json:"client_key"`
 }
 

@@ -45,25 +45,41 @@ type Config struct {
 		The reference to a cluster to apply the jobs to.
 		Kubernetes config is only applied when the referenced cluster is created and healthy.
 
-		@example
-		```
-		resource "kubernetes_config" "example" {
-			cluster = resource.kubernetes_cluster.dev
-			...
-		}
+		```hcl
+		cluster = resource.kubernetes_cluster.dev
 		```
 	*/
 	Cluster Cluster `hcl:"cluster" json:"cluster"`
-	// Paths to the Kubernetes config files to apply to the cluster.
+	/*
+		Paths to the Kubernetes config files to apply to the cluster.
+
+		```hcl
+		paths = ["./files/kubernetes", "./k8s/pods.yaml"]
+		```
+	*/
 	Paths []string `hcl:"paths" validator:"filepath" json:"paths"`
 	/*
 		Determines if the resource waits until all config defined in the paths has been accepted and started by the server.
 		If set to `false` the resource returns immediately after submitting the job.
+
+		```hcl
+		wait_until_ready = true
+		```
 	*/
 	WaitUntilReady bool `hcl:"wait_until_ready" json:"wait_until_ready"`
 	/*
 		Optional health check to perform after the jobs have been applied, this resource will not complete until the health
 		checks are passing.
+
+		```hcl
+		health_check {
+		  timeout = "60s"
+		  pods = [
+		    "component=server,app=consul",
+		    "component=client,app=consul"
+		  ]
+		}
+		```
 	*/
 	HealthCheck *healthcheck.HealthCheckKubernetes `hcl:"health_check,block" json:"health_check,omitempty"`
 	/*

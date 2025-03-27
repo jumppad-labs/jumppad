@@ -29,7 +29,11 @@ type RandomCreature struct {
 	*/
 	types.ResourceBase `hcl:",remain"`
 
-	// Output parameters
+	/*
+		Output parameters
+
+		@computed
+	*/
 	Value string `hcl:"value,optional" json:"value"`
 }
 

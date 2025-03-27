@@ -50,7 +50,13 @@ type RandomID struct {
 	*/
 	types.ResourceBase `hcl:",remain"`
 
-	// The number of random bytes to produce. The minimum value is 1, which produces eight bits of randomness.
+	/*
+		The number of random bytes to produce. The minimum value is 1, which produces eight bits of randomness.
+
+		```hcl
+		byte_length = 4
+		```
+	*/
 	ByteLength int64 `hcl:"byte_length" json:"byte_length"`
 	/*
 		The generated ID presented in base64.

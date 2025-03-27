@@ -40,19 +40,43 @@ type Ingress struct {
 		If the application to be exposed exists on the target then this is the port that will be opened on the local machine that will direct traffic to the remote service.
 
 		If the application exists on the local machine then this is the port where the application is running.
+
+		```hcl
+		port = 8080
+		```
 	*/
 	Port int `hcl:"port" json:"port"`
 	/*
 		If set to `true` a service running on the local machine will be exposed to the target cluster.
 		If `false` then a service running on the target cluster will be exposed to the local machine.
+
+		```hcl
+		expose_local = true
+		```
 	*/
 	ExposeLocal bool `hcl:"expose_local,optional" json:"expose_local"`
 	/*
-		The target for the ingress.
+			The target for the ingress.
+
+			```hcl
+			target {
+			  resource = resource.k8s_cluster.dev
+			  port     = 8500
+
+		    config = {
+			    service   = "consul-consul-server"
+			    namespace = "default"
+			  }
+			}
+			```
 	*/
 	Target TrafficTarget `hcl:"target,block" json:"target"`
 
-	// path to open in the browser
+	/*
+		The path to open in the browser.
+
+		@ignore
+	*/
 	OpenInBrowser string `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"`
 	/*
 		The unique identifier for the created ingress.
@@ -83,8 +107,10 @@ Traffic defines either a source or a destination block for ingress traffic
 
 ```hcl
 
-	target {
-	  ...
+	resource "ingress" "name" {
+	  target {
+	    ...
+	  }
 	}
 
 ```
@@ -93,24 +119,8 @@ type TrafficTarget struct {
 	/*
 		A reference to the `nomad_cluster` or `kubernetes_cluster` resource.
 
-		@example
-		```
-		resource "k8s_cluster" "dev" {
-		}
-
-		resource "ingress" "consul_http" {
-		  port = 18500
-
-		  target {
-		    resource = resource.k8s_cluster.dev
-		    port     = 8500
-
-		    config = {
-		      service   = "consul-consul-server"
-		      namespace = "default"
-		    }
-		  }
-		}
+		```hcl
+		resource = resource.k8s_cluster.dev
 		```
 
 		@reference nomad.Cluster
@@ -122,12 +132,20 @@ type TrafficTarget struct {
 		The numerical reference for the target service port.
 
 		Either `port` or `named_port` must be specified.
+
+		```hcl
+		port = 8500
+		```
 	*/
 	Port int `hcl:"port,optional" json:"port,omitempty"`
 	/*
 		The string reference for the target service port.
 
 		Either `port` or `named_port` must be specified.
+
+		```hcl
+		named_port = "http"
+		```
 	*/
 	NamedPort string `hcl:"named_port,optional" json:"named_port,omitempty"`
 	/*
@@ -135,20 +153,25 @@ type TrafficTarget struct {
 
 		@example Kubernetes target config
 		```
-			service   = "Kubernetes service name"
-			namespace = "Kubernetes namespace where the service is deployed"
+		config {
+		  service   = "Kubernetes service name"
+		  namespace = "Kubernetes namespace where the service is deployed"
+		}
 		```
 
 		@example Nomad target config
 		```
-			job   = "Name of the Nomad job"
-			group = "Group in the job"
-			task  = "Name of the task in the group"
+		config {
+		  job   = "Name of the Nomad job"
+		  group = "Group in the job"
+		  task  = "Name of the task in the group"
+		}
 		```
 	*/
 	Config map[string]string `hcl:"config" json:"config"`
 }
 
+// @computed
 type TargetConfig struct {
 	Meta          types.Meta `hcl:"meta" json:"meta"`
 	ExternalIP    string     `hcl:"external_ip,optional" json:"external_ip,omitempty"`

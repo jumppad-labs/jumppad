@@ -46,8 +46,18 @@ type Network struct {
 
 	/*
 		Subnet to use for the network, must not overlap any other existing networks.
+
+		```hcl
+		subnet = "10.100.100.0/24"
+		```
 	*/
 	Subnet string `hcl:"subnet" json:"subnet"`
-	// Enable IPv6 on the network
+	/*
+		Enable IPv6 on the network
+
+		```hcl
+		enable_ipv6 = true
+		```
+	*/
 	EnableIPv6 bool `hcl:"enable_ipv6,optional" json:"enable_ipv6"`
 }

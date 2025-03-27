@@ -43,9 +43,21 @@ type RandomNumber struct {
 	*/
 	types.ResourceBase `hcl:",remain"`
 
-	// The minimum number to generate.
+	/*
+		The minimum number to generate.
+
+		```hcl
+		minimum = 1000
+		```
+	*/
 	Minimum int `hcl:"minimum" json:"minimum"`
-	// The maximum number to generate.
+	/*
+		The maximum number to generate.
+
+		```hcl
+		maximum = 2000
+		```
+	*/
 	Maximum int `hcl:"maximum" json:"maximum"`
 	/*
 		The generated random number.

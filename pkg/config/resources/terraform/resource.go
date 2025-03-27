@@ -40,18 +40,56 @@ type Terraform struct {
 	/*
 		Network attaches the container to an existing network defined in a separate stanza.
 		This block can be specified multiple times to attach the container to multiple networks.
+
+		```hcl
+		network {
+		  id = resource.network.main.meta.id
+		}
+		```
 	*/
 	Networks []container.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"`
-	// The source directory containing the Terraform config to provision.
+	/*
+		The source directory containing the Terraform config to provision.
+
+		```hcl
+		source = "/home/terraform"
+		```
+	*/
 	Source string `hcl:"source" json:"source"`
-	// The version of Terraform to use.
+	/*
+		The version of Terraform to use.
+
+		```hcl
+		version = "1.9.8"
+		```
+	*/
 	Version string `hcl:"version,optional" json:"version,omitempty"`
-	// The working directory to run the Terraform commands.
+	/*
+		The working directory to run the Terraform commands.
+
+		```hcl
+		working_directory = "/home/terraform"
+		```
+	*/
 	WorkingDirectory string `hcl:"working_directory,optional" json:"working_directory,omitempty"`
-	// Environment variables to set.
+	/*
+		Environment variables to set.
+
+		```hcl
+		environment = {
+		  key = "value"
+		}
+		```
+	*/
 	Environment map[string]string `hcl:"environment,optional" json:"environment,omitempty"`
 	/*
 		Terraform variables to pass to Terraform.
+
+		```hcl
+		variables = {
+		  vault_address = "${resource.container.vault.container_name}:8200"
+		}
+		```
 
 		@type map[string]any
 	*/
@@ -60,11 +98,10 @@ type Terraform struct {
 		A volume allows you to specify a local volume which is mounted to the container when it is created.
 		This stanza can be specified multiple times.
 
-		@example
-		```
+		```hcl
 		volume {
-			source      = "./"
-			destination = "/files"
+		  source      = "./"
+		  destination = "/files"
 		}
 		```
 	*/

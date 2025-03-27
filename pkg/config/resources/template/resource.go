@@ -192,21 +192,24 @@ type Template struct {
 	/*
 		Local path to the template source file
 
-		```
-		@example Local path
-		```
+		```hcl
 		source = "myfile.txt"
 		```
 
-		@example HereDoc
-		```
+		```hcl
 		source = <<-EOF
 		My inline content
 		EOF
 		```
 	*/
 	Source string `hcl:"source" json:"source"`
-	// The destination to write the processed template to.
+	/*
+		The destination to write the processed template to.
+
+		```hcl
+		destination = "${data("config")}/config.toml"
+		```
+	*/
 	Destination string `hcl:"destination" json:"destination"`
 	/*
 		Variables to use with the template, variables are available to be used within the template using the `go template` syntax.

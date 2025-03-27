@@ -38,22 +38,31 @@ type NomadJob struct {
 		The reference to a cluster to apply the jobs to.
 		Nomad jobs are only applied when the referenced cluster is created and healthy.
 
-		@example
-		```
-		resource "nomad_job" "example" {
+		```hcl
 		cluster = resource.nomad_cluster.dev
-		...
-		}
 		```
 
 		@reference nomad.Cluster
 	*/
 	Cluster NomadCluster `hcl:"cluster" json:"cluster"`
-	// Paths to the Nomad job files to apply to the cluster.
+	/*
+		Paths to the Nomad job files to apply to the cluster.
+
+		```hcl
+		paths = ["./files/nomad", "./nomad/job.hcl"]
+		```
+	*/
 	Paths []string `hcl:"paths" validator:"filepath" json:"paths"`
 	/*
 		Optional health check to perform after the jobs have been applied, this resource will not complete until the health
 		checks are passing.
+
+		```hcl
+		health_check {
+		  timeout = "60s"
+		  jobs = ["redis"]
+		}
+		```
 	*/
 	HealthCheck *healthcheck.HealthCheckNomad `hcl:"health_check,block" json:"health_check,omitempty"`
 	/*
