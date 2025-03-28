@@ -48,6 +48,8 @@ type Config struct {
 		```hcl
 		cluster = resource.kubernetes_cluster.dev
 		```
+
+		@reference k8s.Cluster
 	*/
 	Cluster Cluster `hcl:"cluster" json:"cluster"`
 	/*

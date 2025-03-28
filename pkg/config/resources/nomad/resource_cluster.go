@@ -131,6 +131,8 @@ type NomadCluster struct {
 		  name = "example/nomad:latest"
 		}
 		```
+
+		@type Image
 	*/
 	Image *container.Image `hcl:"image,block" json:"images,omitempty"`
 	/*
@@ -226,7 +228,7 @@ type NomadCluster struct {
 		}
 		```
 
-		@type []container.Volume
+		@type []Volume
 	*/
 	Volumes container.Volumes `hcl:"volume,block" json:"volumes,omitempty"`
 	/*
@@ -257,7 +259,7 @@ type NomadCluster struct {
 		}
 		```
 
-		@type []container.Image
+		@type []Image
 	*/
 	CopyImages container.Images `hcl:"copy_image,block" json:"copy_images,omitempty"`
 	/*
@@ -271,7 +273,7 @@ type NomadCluster struct {
 		}
 		```
 
-		@type []container.Port
+		@type []Port
 	*/
 	Ports container.Ports `hcl:"port,block" json:"ports,omitempty"`
 	/*
@@ -287,7 +289,7 @@ type NomadCluster struct {
 		}
 		```
 
-		@type []container.PortRange
+		@type []PortRange
 	*/
 	PortRanges container.PortRanges `hcl:"port_range,block" json:"port_ranges,omitempty"`
 	/*

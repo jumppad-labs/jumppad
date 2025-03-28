@@ -166,6 +166,8 @@ type Cluster struct {
 		  id = resource.network.main.meta.id
 		}
 		```
+
+		@type []NetworkAttachment
 	*/
 	Networks []container.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 	/*
@@ -177,6 +179,8 @@ type Cluster struct {
 		  name = "example/kubernetes:latest"
 		}
 		```
+
+		@type Image
 	*/
 	Image *container.Image `hcl:"image,block" json:"images,omitempty"`
 	/*
@@ -196,6 +200,8 @@ type Cluster struct {
 		  destination = "/path_in_container"
 		}
 		```
+
+		@type []Volume
 	*/
 	Volumes []container.Volume `hcl:"volume,block" json:"volumes,omitempty"`
 	/*
@@ -209,6 +215,8 @@ type Cluster struct {
 		  name = "mylocalimage:version"
 		}
 		```
+
+		@type []Image
 	*/
 	CopyImages []container.Image `hcl:"copy_image,block" json:"copy_images,omitempty"`
 	/*
@@ -221,6 +229,8 @@ type Cluster struct {
 		  host  = 8080
 		}
 		```
+
+		@type []Port
 	*/
 	Ports []container.Port `hcl:"port,block" json:"ports,omitempty"`
 	/*
@@ -235,6 +245,8 @@ type Cluster struct {
 		  enable_host = true
 		}
 		```
+
+		@type []PortRange
 	*/
 	PortRanges []container.PortRange `hcl:"port_range,block" json:"port_ranges,omitempty"`
 	/*
