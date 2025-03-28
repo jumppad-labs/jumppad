@@ -155,13 +155,15 @@ A `helm_repository` stanza defines the details for a remote helm repository.
 	  ...
 	}
 
-	@example
-	```hcl
+```
+
+@example
+```hcl
+
 	repository {
 		name = "hashicorp"
 		url  = "https://helm.releases.hashicorp.com"
 	}
-	```
 
 ```
 */

@@ -95,13 +95,14 @@ type Sidecar struct {
 		labels = {
 		  key = "value"
 		}
+		```
 	*/
 	Labels map[string]string `hcl:"labels,optional" json:"labels,omitempty"`
 	/*
 		A volume allows you to specify a local volume which is mounted to the container when it is created.
 		This stanza can be specified multiple times.
 
-		```
+		```hcl
 		volume {
 			source      = "./"
 			destination = "/files"
