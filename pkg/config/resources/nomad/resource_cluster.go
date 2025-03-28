@@ -119,6 +119,7 @@ type NomadCluster struct {
 		  id = resource.network.main.meta.id
 		}
 		```
+		@type []container.NetworkAttachment
 	*/
 	Networks container.NetworkAttachments `hcl:"network,block" json:"networks,omitempty"`
 	/*

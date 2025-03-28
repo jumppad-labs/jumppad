@@ -30,5 +30,11 @@ type ImageCache struct {
 
 	Registries []Registry `hcl:"registry,block" json:"registries,omitempty"`
 
-	Networks ctypes.NetworkAttachments `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
+	/*
+	 Attach to the correct network,
+	 only when Image is specified.
+
+	 @type []container.NetworkAttachment
+	*/
+	Networks ctypes.NetworkAttachments `hcl:"network,block" json:"networks,omitempty"`
 }

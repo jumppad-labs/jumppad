@@ -111,6 +111,7 @@ type Terraform struct {
 		values on the Terraform resource.
 
 		@computed
+		@type any
 	*/
 	Output cty.Value `hcl:"output,optional"`
 	/*

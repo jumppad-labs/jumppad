@@ -242,6 +242,8 @@ type Exec struct {
 		  id = resource.network.main.meta.id
 		}
 		```
+
+		@type []container.NetworkAttachment
 	*/
 	Networks []ctypes.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"`
 	/*
@@ -255,6 +257,8 @@ type Exec struct {
 		  destination = "/tmp/files"
 		}
 		```
+
+		@type []container.Volume
 	*/
 	Volumes []ctypes.Volume `hcl:"volume,block" json:"volumes,omitempty"`
 	/*
@@ -265,6 +269,8 @@ type Exec struct {
 		```hcl
 		run_as = "root"
 		```
+
+		@type container.User
 	*/
 	RunAs *ctypes.User `hcl:"run_as,block" json:"run_as,omitempty"`
 	/*
