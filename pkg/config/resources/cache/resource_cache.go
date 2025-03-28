@@ -34,7 +34,7 @@ type ImageCache struct {
 	 Attach to the correct network,
 	 only when Image is specified.
 
-	 @type []container.NetworkAttachment
+	 @type []NetworkAttachment
 	*/
 	Networks ctypes.NetworkAttachments `hcl:"network,block" json:"networks,omitempty"`
 }

@@ -243,7 +243,7 @@ type Exec struct {
 		}
 		```
 
-		@type []container.NetworkAttachment
+		@type []NetworkAttachment
 	*/
 	Networks []ctypes.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"`
 	/*
@@ -258,7 +258,7 @@ type Exec struct {
 		}
 		```
 
-		@type []container.Volume
+		@type []Volume
 	*/
 	Volumes []ctypes.Volume `hcl:"volume,block" json:"volumes,omitempty"`
 	/*
@@ -270,7 +270,7 @@ type Exec struct {
 		run_as = "root"
 		```
 
-		@type container.User
+		@type User
 	*/
 	RunAs *ctypes.User `hcl:"run_as,block" json:"run_as,omitempty"`
 	/*
