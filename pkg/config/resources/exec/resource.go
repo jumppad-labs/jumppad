@@ -37,7 +37,7 @@ for the command can be specified as part of the resource.
 Log files for an exec running on the local machine are written to `$HOME/.jumppad/logs/exec_[name].log` and the rendered
 script can be found in the jumppad temp directory `$HOME/.jumppad/tmp/exec[name].sh`.
 
-### Remote execution
+#### Remote execution
 
 Execution can either be in a stand alone container or can target an existing and running container.
 When targeting an existing container, the `target` field must be specified.
