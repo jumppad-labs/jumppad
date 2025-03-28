@@ -82,6 +82,8 @@ type Config struct {
 		  ]
 		}
 		```
+
+		@type HealthCheckKubernetes
 	*/
 	HealthCheck *healthcheck.HealthCheckKubernetes `hcl:"health_check,block" json:"health_check,omitempty"`
 	/*

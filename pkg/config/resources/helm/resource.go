@@ -142,6 +142,8 @@ type Helm struct {
 		  pods = ["app.kubernetes.io/name=vault"]
 		}
 		```
+
+		@type HealthCheckKubernetes
 	*/
 	HealthCheck *healthcheck.HealthCheckKubernetes `hcl:"health_check,block" json:"health_check,omitempty"`
 }

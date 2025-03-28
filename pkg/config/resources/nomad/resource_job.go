@@ -63,6 +63,8 @@ type NomadJob struct {
 		  jobs = ["redis"]
 		}
 		```
+
+		@type HealthCheckNomad
 	*/
 	HealthCheck *healthcheck.HealthCheckNomad `hcl:"health_check,block" json:"health_check,omitempty"`
 	/*

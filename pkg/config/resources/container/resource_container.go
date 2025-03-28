@@ -276,6 +276,8 @@ type Container struct {
 		  }
 		}
 		```
+
+		@type HealthCheckContainer
 	*/
 	HealthCheck *healthcheck.HealthCheckContainer `hcl:"health_check,block" json:"health_check,omitempty"`
 	/*
