@@ -37,6 +37,7 @@ type CertificateLeaf struct {
 
 		```hcl
 		ca_key = resource.certificate_ca.root.private_key.path
+		```
 	*/
 	CAKey string `hcl:"ca_key" json:"ca_key"`
 	/*
