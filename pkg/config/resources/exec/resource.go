@@ -220,6 +220,8 @@ type Exec struct {
 		  name = "redis:latest"
 		}
 		```
+
+		@type Image
 	*/
 	Image *ctypes.Image `hcl:"image,block" json:"image,omitempty"`
 	/*
@@ -230,6 +232,8 @@ type Exec struct {
 		```hcl
 		target = resource.container.alpine
 		```
+
+		@type container.Container
 	*/
 	Target *ctypes.Container `hcl:"target,optional" json:"target,omitempty"`
 	/*
