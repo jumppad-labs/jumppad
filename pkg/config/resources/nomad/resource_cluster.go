@@ -345,9 +345,9 @@ type NomadCluster struct {
 
 		```hcl
 		[
-			abse42wsdff.client.name.nomad-cluster.local.jmpd.in,
-			kjdf23123.client.name.nomad-cluster.local.jmpd.in,
-			123dfkjs.client.name.nomad-cluster.local.jmpd.in,
+		  "abse42wsdff.client.name.nomad-cluster.local.jmpd.in",
+		  "kjdf23123.client.name.nomad-cluster.local.jmpd.in",
+		  "123dfkjs.client.name.nomad-cluster.local.jmpd.in",
 		]
 		```
 

@@ -27,11 +27,11 @@ Templating uses the Handlebars language which is Mustache template language can 
 
 ```
 
-## Template Functions
+#### Template Functions
 
 The template resource provides custom functions that can be used inside your templates as shown in the example below.
 
-```
+```hcl
 resource "template" "consul_config" {
 
 	  source = <<-EOF
@@ -47,21 +47,21 @@ resource "template" "consul_config" {
 
 ```
 
-### quote [string]
+##### quote [string]
 
 Returns the original string wrapped in quotations, quote can be used with the Go template pipe modifier.
 
-```
+```hcl
 // given the string abc
 
 quote "abc" // would return the value "abc"
 ```
 
-### trim [string]
+##### trim [string]
 
 Removes whitespace such as carrige returns and spaces from the begining and the end of the string, can be used with the Go template pipe modifier.
 
-```
+```hcl
 // given the string abc
 
 trim " abc " // would return the value "abc"
