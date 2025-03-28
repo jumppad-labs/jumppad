@@ -6,7 +6,7 @@ import (
 
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
-	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -28,7 +28,7 @@ When neither of these fields are specified, the command is executed on the local
 
 ```
 
-## Local execution
+#### Local execution
 
 When running on the local machine, the command runs in the local user space, and has access to all the environment
 variables that the user executing jumppad run has access too. Additional environment variables, and the working directory
@@ -37,13 +37,13 @@ for the command can be specified as part of the resource.
 Log files for an exec running on the local machine are written to `$HOME/.jumppad/logs/exec_[name].log` and the rendered
 script can be found in the jumppad temp directory `$HOME/.jumppad/tmp/exec[name].sh`.
 
-## Remote execution
+### Remote execution
 
 Execution can either be in a stand alone container or can target an existing and running container.
 When targeting an existing container, the `target` field must be specified.
 When running in a stand alone container, the `image` block must be specified.
 
-## Setting outputs
+#### Setting outputs
 
 Output variables for the exec resource can be set by echoing a key value pair to the output file inside the script.
 An environment variable `${EXEC_OUTPUT}` is automatically added to the environment of the script and points to the output.
@@ -223,7 +223,7 @@ type Exec struct {
 
 		@type Image
 	*/
-	Image *ctypes.Image `hcl:"image,block" json:"image,omitempty"`
+	Image *container.Image `hcl:"image,block" json:"image,omitempty"`
 	/*
 		A reference to a target container resource to execute the script in.
 
@@ -233,9 +233,9 @@ type Exec struct {
 		target = resource.container.alpine
 		```
 
-		@type container.Container
+		@reference container.Container
 	*/
-	Target *ctypes.Container `hcl:"target,optional" json:"target,omitempty"`
+	Target *container.Container `hcl:"target,optional" json:"target,omitempty"`
 	/*
 		The network to attach the container to.
 
@@ -249,7 +249,7 @@ type Exec struct {
 
 		@type []NetworkAttachment
 	*/
-	Networks []ctypes.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"`
+	Networks []container.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"`
 	/*
 		The volumes to mount to the container.
 
@@ -264,7 +264,7 @@ type Exec struct {
 
 		@type []Volume
 	*/
-	Volumes []ctypes.Volume `hcl:"volume,block" json:"volumes,omitempty"`
+	Volumes []container.Volume `hcl:"volume,block" json:"volumes,omitempty"`
 	/*
 		The user to run the script as.
 
@@ -276,7 +276,7 @@ type Exec struct {
 
 		@type User
 	*/
-	RunAs *ctypes.User `hcl:"run_as,block" json:"run_as,omitempty"`
+	RunAs *container.User `hcl:"run_as,block" json:"run_as,omitempty"`
 	/*
 		This is the pid of the parent process.
 
