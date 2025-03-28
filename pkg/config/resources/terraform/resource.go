@@ -104,6 +104,8 @@ type Terraform struct {
 		  destination = "/files"
 		}
 		```
+
+		@type []Volume
 	*/
 	Volumes []container.Volume `hcl:"volume,block" json:"volumes,omitempty"`
 	/*
@@ -111,7 +113,7 @@ type Terraform struct {
 		values on the Terraform resource.
 
 		@computed
-		@type any
+		@type map[string]any
 	*/
 	Output cty.Value `hcl:"output,optional"`
 	/*
