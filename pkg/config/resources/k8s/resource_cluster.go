@@ -24,7 +24,7 @@ The `kubernetes_cluster` resource allows you to create immutable Kubernetes clus
 
 ```
 
-## Image Caching
+#### Image Caching
 
 Kubernetes clusters do not share the local machines Docker image cache. Each node in a cluster has it's own unqiue cache.
 

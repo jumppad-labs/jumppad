@@ -24,7 +24,7 @@ Clusters can either be a single node combined server and client, or comprised of
 
 ```
 
-## Image Caching
+#### Image Caching
 
 Nomad clusters do not share the local machines Docker image cache. Each node in a cluster has it's own unqiue cache.
 
