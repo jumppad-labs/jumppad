@@ -10,23 +10,68 @@ import (
 // TypeNomadJob defines the string type for the Kubernetes config resource
 const TypeNomadJob string = "nomad_job"
 
-// NomadJob applies and deletes and deletes Nomad cluster jobs
+/*
+The `nomad_job` resource allows you to apply one or more Nomad job files to a cluster.
+
+Jumppad monitors changes to the jobs defined in the paths property and automatically recreates this resource when jumppad up is called.
+
+```hcl
+
+	resource "nomad_job" "name" {
+	  ...
+	}
+
+```
+
+@include healthcheck.HealthCheckNomad
+
+@resource
+*/
 type NomadJob struct {
-	// embedded type holding name, etc
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
+	/*
+		The reference to a cluster to apply the jobs to.
+		Nomad jobs are only applied when the referenced cluster is created and healthy.
 
-	// Cluster is the name of the cluster to apply configuration to
+		```hcl
+		cluster = resource.nomad_cluster.dev
+		```
+
+		@reference nomad.Cluster
+	*/
 	Cluster NomadCluster `hcl:"cluster" json:"cluster"`
+	/*
+		Paths to the Nomad job files to apply to the cluster.
 
-	// Path of a file or directory of Job files to apply
+		```hcl
+		paths = ["./files/nomad", "./nomad/job.hcl"]
+		```
+	*/
 	Paths []string `hcl:"paths" validator:"filepath" json:"paths"`
+	/*
+		Optional health check to perform after the jobs have been applied, this resource will not complete until the health
+		checks are passing.
 
-	// HealthCheck defines a health check for the resource
+		```hcl
+		health_check {
+		  timeout = "60s"
+		  jobs = ["redis"]
+		}
+		```
+
+		@type HealthCheckNomad
+	*/
 	HealthCheck *healthcheck.HealthCheckNomad `hcl:"health_check,block" json:"health_check,omitempty"`
+	/*
+		JobChecksums stores a checksum of the files or paths
 
-	// output
-
-	// JobChecksums stores a checksum of the files or paths
+		@ignore
+	*/
 	JobChecksums []string `hcl:"job_checksums,optional" json:"job_checksums,omitempty"`
 }
 

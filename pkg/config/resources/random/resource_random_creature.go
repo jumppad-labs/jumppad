@@ -8,11 +8,32 @@ import (
 // TypeRandomCreature is the resource for generating random creatures
 const TypeRandomCreature string = "random_creature"
 
-// allows the generation of random creatures
+/*
+allows the generation of random creatures
+
+```hcl
+
+	resource "random_creature" "name" {
+	  ...
+	}
+
+```
+
+@resource
+*/
 type RandomCreature struct {
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
 
-	// Output parameters
+	/*
+		Output parameters
+
+		@computed
+	*/
 	Value string `hcl:"value,optional" json:"value"`
 }
 

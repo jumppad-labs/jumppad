@@ -5,81 +5,433 @@ import (
 
 	"github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/config"
-	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 // TypeCluster is the resource string for a Cluster resource
 const TypeNomadCluster string = "nomad_cluster"
 
-// Cluster is a config stanza which defines a Kubernetes or a Nomad cluster
+/*
+The `nomad_cluster` resource allows you to create Nomad clusters as Docker containers.
+Clusters can either be a single node combined server and client, or comprised of a dedicated server and client nodes.
+
+```hcl
+
+	resource "nomad_cluster" "name" {
+	  ...
+	}
+
+```
+
+#### Image Caching
+
+Nomad clusters do not share the local machines Docker image cache. Each node in a cluster has it's own unqiue cache.
+
+To save bandwidth all containers launched in the Nomad cluster pulled through an image cache that runs in Docker.
+After the first pull all images are subsequently pulled from the image cache not the public internet.
+This cache is global to all Nomad and Kubernetes clusters created with Jumppad.
+
+For more information on the image cache see the `container_registry` resource.
+
+@include container.Image
+@include container.NetworkAttachment
+@include container.Port
+@include container.PortRange
+@include container.Volume
+@include nomad.Config
+@include nomad.DockerConfig
+
+@resource
+
+@example Minimal Example
+```
+
+	resource "network" "cloud" {
+	  subnet = "10.10.0.0/16"
+	}
+
+	resource "nomad_cluster" "dev" {
+	  network {
+	    id = resource.network.cloud.meta.id
+	  }
+	}
+
+```
+
+@example Full Example
+```
+
+	resource "network" "cloud" {
+	  subnet = "10.10.0.0/16"
+	}
+
+	resource "nomad_cluster" "dev" {
+	  client_nodes=3
+
+	  network {
+	    id = resource.network.cloud.meta.id
+	  }
+	}
+
+	resource "nomad_job" "example_1" {
+	  cluster = resource.nomad_cluster.dev
+
+	  paths = ["./app_config/example1.nomad"]
+
+	  health_check {
+	    timeout    = "60s"
+	    nomad_jobs = ["example_1"]
+	  }
+	}
+
+	resource "ingress" "fake_service_1" {
+	  port = 19090
+
+	  target {
+	    resource   = resource.nomad_cluster.dev
+	    named_port = "http"
+
+	    config = {
+	      job   = "example_1"
+	      group = "fake_service"
+	      task  = "fake_service"
+	    }
+	  }
+	}
+
+```
+*/
 type NomadCluster struct {
-	// embedded type holding name, etc
+	/*
+	 embedded type holding name, etc
+
+	 @ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
 
-	Networks      ctypes.NetworkAttachments `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
-	Image         *ctypes.Image             `hcl:"image,block" json:"images,omitempty"`     // optional image to use for the cluster
-	ClientNodes   int                       `hcl:"client_nodes,optional" json:"client_nodes,omitempty"`
-	Environment   map[string]string         `hcl:"environment,optional" json:"environment,omitempty"`
-	ServerConfig  string                    `hcl:"server_config,optional" json:"server_config,omitempty"`
-	ClientConfig  string                    `hcl:"client_config,optional" json:"client_config,omitempty"`
-	ConsulConfig  string                    `hcl:"consul_config,optional" json:"consul_config,omitempty"`
-	Volumes       ctypes.Volumes            `hcl:"volume,block" json:"volumes,omitempty"`                     // volumes to attach to the cluster
-	OpenInBrowser bool                      `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"` // open the UI in the browser after creation
+	/*
+		Network attaches the container to an existing network defined in a separate stanza.
+		This block can be specified multiple times to attach the container to multiple networks.
 
-	Datacenter string `hcl:"datacenter,optional" json:"datacenter"` // Nomad datacenter, defaults dc1
+		```hcl
+		network {
+		  id = resource.network.main.meta.id
+		}
+		```
+		@type []NetworkAttachment
+	*/
+	Networks container.NetworkAttachments `hcl:"network,block" json:"networks,omitempty"`
+	/*
+		Image defines a Docker image to use when creating the container.
+		By default the nomad cluster resource will be created using the latest container image.
 
-	// Images that will be copied from the local docker cache to the cluster
-	CopyImages ctypes.Images `hcl:"copy_image,block" json:"copy_images,omitempty"`
+		```hcl
+		image {
+		  name = "example/nomad:latest"
+		}
+		```
 
-	// Additional ports to expose on the nomad sever node
-	Ports      ctypes.Ports      `hcl:"port,block" json:"ports,omitempty"`             // ports to expose
-	PortRanges ctypes.PortRanges `hcl:"port_range,block" json:"port_ranges,omitempty"` // range of ports to expose
+		@type Image
+	*/
+	Image *container.Image `hcl:"image,block" json:"images,omitempty"`
+	/*
+		Number of client nodes to create, if set to `0` a combined server and client will be created.
+		If greater than `0`, the system will create a dedicated server with `n` clients.
+		`client_nodes` can be updated, if the value changes and the configuration is applied again, it will attempt to nondestructively
+		scale the cluster.
 
-	// Configuration for the drivers
+		```hcl
+		client_nodes = 3
+		```
+	*/
+	ClientNodes int `hcl:"client_nodes,optional" json:"client_nodes,omitempty"`
+	/*
+	   An environment map allows you to set environment variables in the container.
+
+	   ```hcl
+	   environment = {
+	     something   = "PATH"
+	     other = "/usr/local/bin"
+	   }
+	   ```
+	*/
+	Environment map[string]string `hcl:"environment,optional" json:"environment,omitempty"`
+	/*
+		Path to a file containing custom Nomad server config to use when creating the server.
+		Note: This is only added to server nodes.
+
+		This file extends the default server configuration and is mounted at the path `/etc/nomad.d/server_user_config.hcl` on server nodes.
+
+		```hcl
+		server_config = <<-EOF
+		server {
+		  enabled = true
+		  bootstrap_expect = 1
+		}
+
+		client {
+		  enabled = true
+		  meta {
+		    node_type = "server"
+		  }
+		}
+
+		plugin "raw_exec" {
+		  config {
+		    enabled = true
+		  }
+		}
+		EOF
+		```
+	*/
+	ServerConfig string `hcl:"server_config,optional" json:"server_config,omitempty"`
+	/*
+		Path to a file containing custom Nomad client config to use when creating the server.
+		Note: This file is added to both server and clients nodes.
+
+		This file extends the default client config and is mounted at the path `/etc/nomad.d/client_user_config.hcl`
+
+		```hcl
+		client_config = <<-EOF
+		client {
+		  enabled = true
+		  server_join {
+		    retry_join = ["%s"]
+		  }
+		}
+
+		plugin "raw_exec" {
+		  config {
+		    enabled = true
+		  }
+		}
+		EOF
+		```
+	*/
+	ClientConfig string `hcl:"client_config,optional" json:"client_config,omitempty"`
+	/*
+		Path to a file containing custom Consul agent config to use when creating the client.
+
+		```hcl
+		consul_config = "./files/consul/config.hcl"
+		```
+	*/
+	ConsulConfig string `hcl:"consul_config,optional" json:"consul_config,omitempty"`
+	/*
+		Additional volume to mount to the server and client nodes.
+
+		```hcl
+		volume {
+		  source = "./mydirectory"
+		  destination = "/path_in_container"
+		}
+		```
+
+		@type []Volume
+	*/
+	Volumes container.Volumes `hcl:"volume,block" json:"volumes,omitempty"`
+	/*
+		Should a browser window be automatically opened when this resource is created.
+		Browser windows will open at the path specified by this property.
+
+		@ignore
+	*/
+	OpenInBrowser bool `hcl:"open_in_browser,optional" json:"open_in_browser,omitempty"`
+	/*
+		Nomad datacenter for the clients, defaults to `dc1`
+
+		```hcl
+		datacenter = "east"
+		```
+	*/
+	Datacenter string `hcl:"datacenter,optional" json:"datacenter"`
+	/*
+		Docker image in the local Docker image cache to copy to the cluster on creation.
+		This image is added to the Nomad clients docker cache enabling jobs to use images that may not be in the local registry.
+
+		Changes to copied images are automatically tracked.
+		Should the image change running jumppad up would push any changes to the cluster automatically.
+
+		```hcl
+		copy_image {
+		  name = "mylocalimage:versoin"
+		}
+		```
+
+		@type []Image
+	*/
+	CopyImages container.Images `hcl:"copy_image,block" json:"copy_images,omitempty"`
+	/*
+		A `port` stanza allows you to expose container ports on the local network or host.
+		This stanza can be specified multiple times.
+
+		```
+		port {
+		  local = 80
+		  host  = 8080
+		}
+		```
+
+		@type []Port
+	*/
+	Ports container.Ports `hcl:"port,block" json:"ports,omitempty"`
+	/*
+		A `port_range` stanza allows you to expose a range of container ports on the local network or host.
+		This stanza can be specified multiple times.
+
+		The following example would create 11 ports from `80` to `90` (inclusive) and expose them to the host machine.
+
+		```hcl
+		port {
+		  range       = "80-90"
+		  enable_host = true
+		}
+		```
+
+		@type []PortRange
+	*/
+	PortRanges container.PortRanges `hcl:"port_range,block" json:"port_ranges,omitempty"`
+	/*
+		Specifies the configuration for the Nomad cluster.
+
+		```hcl
+		config {
+		  docker {
+		    no_proxy            = ["insecure.container.local.jmpd.in"]
+		    insecure_registries = ["insecure.container.local.jmpd.in:5003"]
+		  }
+		}
+		```
+	*/
 	Config *Config `hcl:"config,block" json:"config,omitempty"`
+	/*
+		Port to expose the Nomad API on the host.
+		By default this uses the standard nomad port 4646; however, if you are running multiple nomad instances you will need
+		to override this value.
 
-	// Output Parameters
-
-	// The APIPort the server is running on
+		```hcl
+		api_port = 14646
+		```
+	*/
 	APIPort int `hcl:"api_port,optional" json:"api_port,omitempty"`
+	/*
+		The port where the Jumppad connector is exposed to the host, this property is requied by the ingress resource and is not
+		generally needed when building blueprints.
 
-	// The Port where the connector is running
+		@computed
+	*/
 	ConnectorPort int `hcl:"connector_port,optional" json:"connector_port,omitempty"`
+	/*
+		Local directory where the server and client configuration is stored.
 
-	// The directory where the server and client config is written to
+		@computed
+	*/
 	ConfigDir string `hcl:"config_dir,optional" json:"config_dir,omitempty"`
+	/*
+		The fully qualified resource name for the Nomad server, this value can be used to address the server from the Docker network.
+		It is also the name of the Docker container.
 
-	// The fully qualified docker address for the server
+		```hcl
+		server.name.nomad-cluster.local.jmpd.in
+		```
+
+		@computed
+	*/
 	ServerContainerName string `hcl:"server_container_name,optional" json:"server_container_name,omitempty"`
+	/*
+		The fully qualified resource names for the Nomad clients, this value can be used to address the client from the Docker network.
+		It is also the name of the Docker container.
 
-	// The fully qualified docker address for the client nodes
+		When client_nodes is set to `0` this property will have no value.
+
+		```hcl
+		[
+		  "abse42wsdff.client.name.nomad-cluster.local.jmpd.in",
+		  "kjdf23123.client.name.nomad-cluster.local.jmpd.in",
+		  "123dfkjs.client.name.nomad-cluster.local.jmpd.in",
+		]
+		```
+
+		@computed
+	*/
 	ClientContainerName []string `hcl:"client_container_name,optional" json:"client_container_name,omitempty"`
+	/*
+		Local IP address of the Nomad server, this property can be used to set the NOAMD_ADDR on the Jumppad client.
 
-	// ExternalIP is the ip address of the cluster, this generally resolves
-	// to the docker ip
+		```hcl
+		output "NOMAD_ADDR" {
+		  value = "http://${resource.nomad_cluster.dev.external_ip}:${resource.nomad_cluster.dev.api_port}"
+		}
+		```
+	*/
 	ExternalIP string `hcl:"external_ip,optional" json:"external_ip,omitempty"`
 }
 
 const nomadBaseImage = "ghcr.io/jumppad-labs/nomad"
 const nomadBaseVersion = "v1.8.4"
 
+/*
+```hcl
+
+	resource "nomad_cluster" "dev" {
+	  config {
+	    ...
+	  }
+	}
+
+```
+*/
 type Config struct {
-	// Specifies configuration for the Docker driver.
+	/*
+		Specifies configuration for the Docker driver.
+
+		```hcl
+		docker {
+		  no_proxy            = ["insecure.container.local.jmpd.in"]
+		  insecure_registries = ["insecure.container.local.jmpd.in:5003"]
+		}
+		```
+	*/
 	DockerConfig *DockerConfig `hcl:"docker,block" json:"docker,omitempty"`
 }
 
+/*
+```hcl
+
+	resource "nomad_cluster" "dev" {
+	  config {
+	    docker {
+	      ...
+	    }
+	  }
+	}
+
+```
+*/
 type DockerConfig struct {
-	// NoProxy is a list of docker registires that should be excluded from the image cache
+	/*
+		NoProxy is a list of docker registires that should be excluded from the image cache
+
+		```hcl
+		no_proxy = ["insecure.container.local.jmpd.in"]
+		```
+	*/
 	NoProxy []string `hcl:"no_proxy,optional" json:"no-proxy,omitempty"`
 
-	// InsecureRegistries is a list of docker registries that should be treated as insecure
+	/*
+		InsecureRegistries is a list of docker registries that should be treated as insecure
+
+		```hcl
+		insecure_registries = ["insecure.container.local.jmpd.in:5003"]
+		```
+	*/
 	InsecureRegistries []string `hcl:"insecure_registries,optional" json:"insecure-registries,omitempty"`
 }
 
 func (n *NomadCluster) Process() error {
 	if n.Image == nil {
-		n.Image = &ctypes.Image{Name: fmt.Sprintf("%s:%s", nomadBaseImage, nomadBaseVersion)}
+		n.Image = &container.Image{Name: fmt.Sprintf("%s:%s", nomadBaseImage, nomadBaseVersion)}
 	}
 
 	if n.ServerConfig != "" {

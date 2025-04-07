@@ -8,12 +8,33 @@ import (
 // TypeImageCache is the resource string for a ImageCache resource
 const TypeImageCache string = "image_cache"
 
-// ImageCache defines a structure for creating ImageCache containers
+/*
+ImageCache defines a structure for creating ImageCache containers
+
+```hcl
+
+	resource "image_cache" "name" {
+	  ...
+	}
+
+```
+
+@include cache.Registry
+@include container.NetworkAttachment
+
+@resource
+*/
 type ImageCache struct {
 	// embedded type holding name, etc
 	types.ResourceBase `hcl:",remain"`
 
 	Registries []Registry `hcl:"registry,block" json:"registries,omitempty"`
 
-	Networks ctypes.NetworkAttachments `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
+	/*
+	 Attach to the correct network,
+	 only when Image is specified.
+
+	 @type []NetworkAttachment
+	*/
+	Networks ctypes.NetworkAttachments `hcl:"network,block" json:"networks,omitempty"`
 }

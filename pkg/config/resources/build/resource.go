@@ -11,42 +11,87 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
-// TypeBuild builds containers and other resources
+/*
+TypeBuild builds containers and other resources
+
+```hcl
+
+	resource "build" "name" {
+	  ...
+	}
+
+```
+
+@include build.BuildContainer
+@include build.Output
+@include container.Image
+
+@resource
+*/
 const TypeBuild string = "build"
 
 type Build struct {
-	// embedded type holding name, etc
+	/*
+		embedded type holding name, etc
+
+		@ignore
+	*/
 	types.ResourceBase `hcl:",remain"`
 
 	Container BuildContainer `hcl:"container,block" json:"container"`
-
 	// Outputs allow files or directories to be copied from the container
 	Outputs []Output `hcl:"output,block" json:"outputs"`
+	// Optional registry to push the image to
+	Registries []container.Image `hcl:"registry,block" json:"registries"`
 
-	Registries []container.Image `hcl:"registry,block" json:"registries"` // Optional registry to push the image to
+	/*
+		Image is the full local reference of the built image
 
-	// outputs
-
-	// Image is the full local reference of the built image
+		@computed
+	*/
 	Image string `hcl:"image,optional" json:"image"`
+	/*
+		Checksum is calculated from the Context files
 
-	// Checksum is calculated from the Context files
+		@computed
+	*/
 	BuildChecksum string `hcl:"build_checksum,optional" json:"build_checksum,omitempty"`
 }
 
+/*
+```hcl
+
+	container {
+	  ...
+	}
+
+```
+*/
 type BuildContainer struct {
-	DockerFile string            `hcl:"dockerfile,optional" json:"dockerfile,omitempty"` // Location of build file inside build context defaults to ./Dockerfile
-	Context    string            `hcl:"context" json:"context"`                          // Path to build context
-	Ignore     []string          `hcl:"ignore,optional" json:"ignore,omitempty"`         // Files to ignore in the build context, this is the same as .dockerignore
-	Args       map[string]string `hcl:"args,optional" json:"args,omitempty"`             // Build args to pass  to the container
+	// Location of build file inside build context defaults to ./Dockerfile
+	DockerFile string `hcl:"dockerfile,optional" json:"dockerfile,omitempty"`
+	// Path to build context
+	Context string `hcl:"context" json:"context"`
+	// Files to ignore in the build context, this is the same as .dockerignore
+	Ignore []string `hcl:"ignore,optional" json:"ignore,omitempty"`
+	// Build args to pass  to the container
+	Args map[string]string `hcl:"args,optional" json:"args,omitempty"`
 }
 
-type Registry struct {
-}
+/*
+```hcl
 
+	output {
+	  ...
+	}
+
+```
+*/
 type Output struct {
-	Source      string `hcl:"source" json:"source"`           // Source file or directory in container
-	Destination string `hcl:"destination" json:"destination"` // Destination for copied file or directory
+	// Source file or directory in container
+	Source string `hcl:"source" json:"source"`
+	// Destination for copied file or directory
+	Destination string `hcl:"destination" json:"destination"`
 }
 
 func (b *Build) Process() error {
