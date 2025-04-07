@@ -143,6 +143,8 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
+		Tty:          true,
+		OpenStdin:    true,
 		User:         user,
 	}
 

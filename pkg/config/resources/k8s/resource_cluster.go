@@ -35,6 +35,7 @@ This cache is global to all Nomad and Kubernetes clusters created with Jumppad.
 For more information on the image cache see the `container_registry` resource.
 
 @include container.Image
+@include container.Resources
 @include container.NetworkAttachment
 @include container.Port
 @include container.PortRange
@@ -183,6 +184,21 @@ type Cluster struct {
 		@type Image
 	*/
 	Image *container.Image `hcl:"image,block" json:"images,omitempty"`
+
+	/*
+		Define resource constraints for the cluster
+
+		```hcl
+		resources {
+		  cpu = 100
+			memory = 1024
+		}
+		```
+
+		@type Resources
+	*/
+	Resources *container.Resources `hcl:"resources,block" json:"resources,omitempty"`
+
 	/*
 		The number of nodes to create in the cluster.
 
@@ -414,6 +430,13 @@ func (k *Cluster) Process() error {
 		k.Volumes[i].Source = utils.EnsureAbsolute(v.Source, k.Meta.File)
 	}
 
+	if k.Resources == nil {
+		k.Resources = &container.Resources{
+			CPU:    500,
+			Memory: 2024,
+		}
+	}
+
 	// do we have an existing resource in the state?
 	// if so we need to set any computed resources for dependents
 	c, err := config.LoadState()
@@ -428,6 +451,7 @@ func (k *Cluster) Process() error {
 			k.ConnectorPort = kstate.ConnectorPort
 			k.ExternalIP = kstate.ExternalIP
 			k.KubeConfig = kstate.KubeConfig
+			k.Resources = kstate.Resources
 
 			// add the network addresses
 			for _, a := range kstate.Networks {
