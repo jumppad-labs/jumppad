@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/instruqt/jumppad/pkg/config"
-	ctypes "github.com/instruqt/jumppad/pkg/config/resources/container"
+	"github.com/instruqt/jumppad/pkg/config/resources/container"
 	"github.com/instruqt/jumppad/pkg/utils"
 	"github.com/jumppad-labs/hclconfig/types"
 )
@@ -18,17 +18,29 @@ type Cluster struct {
 	// embedded type holding name, etc.
 	types.ResourceBase `hcl:",remain"`
 
-	Networks []ctypes.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
+	Networks []container.NetworkAttachment `hcl:"network,block" json:"networks,omitempty"` // Attach to the correct network // only when Image is specified
 
-	Image   *ctypes.Image   `hcl:"image,block" json:"images,omitempty"` // optional image to use when creating the cluster
-	Nodes   int             `hcl:"nodes,optional" json:"nodes,omitempty"`
-	Volumes []ctypes.Volume `hcl:"volume,block" json:"volumes,omitempty"` // volumes to attach to the cluster
+	Image   *container.Image   `hcl:"image,block" json:"images,omitempty"` // optional image to use when creating the cluster
+	Nodes   int                `hcl:"nodes,optional" json:"nodes,omitempty"`
+	Volumes []container.Volume `hcl:"volume,block" json:"volumes,omitempty"` // volumes to attach to the cluster
 
 	// Images that will be copied from the local docker cache to the cluster
-	CopyImages []ctypes.Image `hcl:"copy_image,block" json:"copy_images,omitempty"`
+	CopyImages []container.Image `hcl:"copy_image,block" json:"copy_images,omitempty"`
 
-	Ports      []ctypes.Port      `hcl:"port,block" json:"ports,omitempty"`             // ports to expose
-	PortRanges []ctypes.PortRange `hcl:"port_range,block" json:"port_ranges,omitempty"` // range of ports to expose
+	Ports      []container.Port      `hcl:"port,block" json:"ports,omitempty"`             // ports to expose
+	PortRanges []container.PortRange `hcl:"port_range,block" json:"port_ranges,omitempty"` // range of ports to expose
+
+	/*
+		Define resource constraints for the cluster
+
+		```hcl
+		resources {
+		  cpu = 100
+			memory = 1024
+		}
+		```
+	*/
+	Resources *container.Resources `hcl:"resources,block" json:"resources,omitempty"`
 
 	Environment map[string]string `hcl:"environment,optional" json:"environment,omitempty"` // environment variables to set when starting the container
 
@@ -83,11 +95,18 @@ func (k *Cluster) Process() error {
 	}
 
 	if k.Image == nil {
-		k.Image = &ctypes.Image{Name: fmt.Sprintf("%s:%s", k3sBaseImage, k3sBaseVersion)}
+		k.Image = &container.Image{Name: fmt.Sprintf("%s:%s", k3sBaseImage, k3sBaseVersion)}
 	}
 
 	for i, v := range k.Volumes {
 		k.Volumes[i].Source = utils.EnsureAbsolute(v.Source, k.Meta.File)
+	}
+
+	if k.Resources == nil {
+		k.Resources = &container.Resources{
+			CPU:    500,
+			Memory: 2024,
+		}
 	}
 
 	// do we have an existing resource in the state?
@@ -104,6 +123,7 @@ func (k *Cluster) Process() error {
 			k.ConnectorPort = kstate.ConnectorPort
 			k.ExternalIP = kstate.ExternalIP
 			k.KubeConfig = kstate.KubeConfig
+			k.Resources = kstate.Resources
 
 			// add the network addresses
 			for _, a := range kstate.Networks {

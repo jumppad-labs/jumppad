@@ -459,6 +459,21 @@ func (p *ClusterProvider) createK3s(ctx context.Context) error {
 		})
 	}
 
+	if p.config.Resources != nil {
+		cc.Resources = &ctypes.Resources{
+			CPU:    p.config.Resources.CPU,
+			CPUPin: p.config.Resources.CPUPin,
+			Memory: p.config.Resources.Memory,
+		}
+
+		if p.config.Resources.GPU != nil {
+			cc.Resources.GPU = &ctypes.GPU{
+				Driver:    p.config.Resources.GPU.Driver,
+				DeviceIDs: p.config.Resources.GPU.DeviceIDs,
+			}
+		}
+	}
+
 	cc.Command = args
 
 	id, err := p.client.CreateContainer(cc)
