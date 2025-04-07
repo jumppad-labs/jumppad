@@ -15,7 +15,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/config/mocks"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/cache"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/network"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad/constants"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/jumppad-labs/jumppad/testutils"
@@ -74,13 +73,12 @@ func TestApplyWithSingleFile(t *testing.T) {
 	_, err := e.Apply(context.Background(), "../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
-	require.Len(t, e.config.Resources, 8) // 6 resources in the file plus the image cache and default network
+	require.Len(t, e.config.Resources, 7) // 6 resources in the file plus the image cache and default network
 
 	// Check the provider was called for each resource
 	require.ElementsMatch(t,
 		[]string{
 			"default",       // image cache
-			"jumppad",       // default network
 			"version",       // variable
 			"port_range",    // variable
 			"consul_config", // template
@@ -98,7 +96,6 @@ func TestApplyWithSingleFile(t *testing.T) {
 			getMetaFromMock(mp, 5).Name,
 			getMetaFromMock(mp, 6).Name,
 			getMetaFromMock(mp, 7).Name,
-			getMetaFromMock(mp, 8).Name,
 		},
 	)
 }
@@ -126,9 +123,8 @@ func TestApplyAddsNetworksToImageCache(t *testing.T) {
 	require.NoError(t, err)
 
 	// network should be added as a dependency
-	require.Len(t, r.GetDependencies(), 2)
-	require.Equal(t, network.DefaultNetworkID, r.GetDependencies()[0])
-	require.Equal(t, "resource.network.onprem", r.GetDependencies()[1])
+	require.Len(t, r.GetDependencies(), 1)
+	require.Equal(t, "resource.network.onprem", r.GetDependencies()[0])
 }
 
 func TestApplyAddsCustomRegistriesToImageCache(t *testing.T) {
@@ -148,31 +144,21 @@ func TestApplyAddsCustomRegistriesToImageCache(t *testing.T) {
 	require.Len(t, r.(*cache.ImageCache).Registries, 2)
 }
 
-func TestApplyAddsDefaultNetwork(t *testing.T) {
-	e, _ := setupTests(t, nil)
-
-	_, err := e.Apply(context.Background(), "../../examples/default_network/main.hcl")
-	require.NoError(t, err)
-
-	dc := e.ResourceCountForType(network.TypeNetwork)
-	require.Equal(t, 1, dc)
-}
-
 func TestApplyWithSingleFileAndVariables(t *testing.T) {
 	e, mp := setupTests(t, nil)
 
 	_, err := e.ApplyWithVariables(context.Background(), "../../examples/single_file/container.hcl", nil, "../../examples/single_file/default.vars")
 	require.NoError(t, err)
-	require.Len(t, e.config.Resources, 8) // 6 resources in the file plus the image cache and default network
+	require.Len(t, e.config.Resources, 7) // 6 resources in the file plus the image cache and default network
 
 	// then the container should be created
-	require.Equal(t, "consul", getMetaFromMock(mp, 7).Name)
+	require.Equal(t, "consul", getMetaFromMock(mp, 6).Name)
 
 	// finally the provider for the image cache should be updated
-	require.Equal(t, "consul_addr", getMetaFromMock(mp, 8).Name)
+	require.Equal(t, "consul_addr", getMetaFromMock(mp, 7).Name)
 
 	// check the variable has overridden the image
-	cont := getResourceFromMock(mp, 7).(*container.Container)
+	cont := getResourceFromMock(mp, 6).(*container.Container)
 	require.Equal(t, "consul:1.8.1", cont.Image.Name)
 }
 
@@ -191,7 +177,7 @@ func TestApplyCallsProviderCreateForEachProvider(t *testing.T) {
 
 	// the state should also contain 11 resources
 	sf := testLoadState(t)
-	require.Equal(t, 12, sf.ResourceCount())
+	require.Equal(t, 11, sf.ResourceCount())
 }
 
 func TestApplyDoesNotCallsProviderCreateWhenInState(t *testing.T) {
@@ -205,7 +191,7 @@ func TestApplyDoesNotCallsProviderCreateWhenInState(t *testing.T) {
 
 	// the state should also contain 7 resources
 	sf := testLoadState(t)
-	require.Equal(t, 8, sf.ResourceCount())
+	require.Equal(t, 7, sf.ResourceCount())
 }
 
 func TestApplyRemovesItemsInStateWhenNotInFiles(t *testing.T) {
@@ -222,7 +208,7 @@ func TestApplyRemovesItemsInStateWhenNotInFiles(t *testing.T) {
 
 	// the state should also contain 7 resources
 	sf := testLoadState(t)
-	require.Equal(t, 8, sf.ResourceCount())
+	require.Equal(t, 7, sf.ResourceCount())
 }
 
 func TestApplyNotCallsProviderCreateForDisabledResources(t *testing.T) {
@@ -233,13 +219,13 @@ func TestApplyNotCallsProviderCreateForDisabledResources(t *testing.T) {
 	require.NoError(t, err)
 
 	// should have call create for non disabled resources
-	testAssertMethodCalled(t, mp, "Create", 4) // ImageCache and default network are always created
+	testAssertMethodCalled(t, mp, "Create", 3) // ImageCache and default network are always created
 
 	// disabled resources should still be added to the state
 	sf := testLoadState(t)
 
 	// should contain 3 from the config plus the image cache and default network
-	require.Equal(t, 5, sf.ResourceCount())
+	require.Equal(t, 4, sf.ResourceCount())
 
 	// the resource should be in the state but there should be no status
 	r, err := sf.FindResource("resource.container.consul_disabled")
@@ -263,7 +249,7 @@ func TestApplyShouldNotAddDuplicateDisabledResources(t *testing.T) {
 	// should contain 3 from the config plus the image cache and default network
 	// should not duplicate the disabled container as this already exists in the
 	// state
-	require.Equal(t, 5, sf.ResourceCount())
+	require.Equal(t, 4, sf.ResourceCount())
 
 	// the status should be set to disabled
 	r, err := sf.FindResource("resource.container.consul_disabled")
@@ -277,10 +263,10 @@ func TestApplySetsCreatedStatusForEachResource(t *testing.T) {
 	_, err := e.Apply(context.Background(), "../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
-	require.Equal(t, 8, e.config.ResourceCount())
+	require.Equal(t, 7, e.config.ResourceCount())
 
 	// should only call create and destroy for the cache as this is pending update
-	testAssertMethodCalled(t, mp, "Create", 8) // ImageCache and default network are always created
+	testAssertMethodCalled(t, mp, "Create", 7) // ImageCache and default network are always created
 
 	sf := testLoadState(t)
 
@@ -307,7 +293,7 @@ func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 	// there are two top level config items, template and network
 	// network will fail
 	// ImageCache and default network should always be created
-	testAssertMethodCalled(t, mp, "Create", 6)
+	testAssertMethodCalled(t, mp, "Create", 5)
 
 	sf := testLoadState(t)
 
@@ -399,7 +385,7 @@ func TestDestroyCallsProviderDestroyForEachProvider(t *testing.T) {
 
 	// should have call create for each provider
 	// and once for the image cache
-	testAssertMethodCalled(t, mp, "Destroy", 5)
+	testAssertMethodCalled(t, mp, "Destroy", 4)
 
 	// state should be removed
 	require.NoFileExists(t, utils.StatePath())
@@ -412,7 +398,7 @@ func TestDestroyNotCallsProviderDestroyForResourcesDisabled(t *testing.T) {
 	require.NoError(t, err)
 
 	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 3)
+	testAssertMethodCalled(t, mp, "Destroy", 2)
 	testAssertMethodCalled(t, mp, "Create", 0) // ImageCache and default network are always created
 
 	// state should be removed
@@ -426,7 +412,7 @@ func TestDestroyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 	require.Error(t, err)
 
 	// should have call destroy for each provider
-	testAssertMethodCalled(t, mp, "Destroy", 3)
+	testAssertMethodCalled(t, mp, "Destroy", 2)
 
 	// state should not be removed
 	require.FileExists(t, utils.StatePath())
@@ -577,16 +563,6 @@ var existingState = `
       },
       "subnet": "10.15.0.0/16"
   },
-	{
-      "meta": {
-        "name": "jumppad",
-        "properties": {
-          "status": "created"
-        },
-        "type": "network"
-      },
-      "subnet": "10.0.10.0/24"
-  },
   {
       "meta": {
         "name": "default",
@@ -624,16 +600,6 @@ var existingState = `
 var singleFileState = `
 {
   "resources": [
-	{
-      "meta": {
-        "name": "jumppad",
-        "properties": {
-          "status": "created"
-        },
-        "type": "network"
-      },
-      "subnet": "10.0.10.0/24"
-  },
   {
       "meta": {
         "name": "onprem",
@@ -690,16 +656,6 @@ var singleFileState = `
 var complexState = `
 {
   "resources": [
-	{
-      "meta": {
-        "name": "jumppad",
-        "properties": {
-          "status": "created"
-        },
-        "type": "network"
-      },
-      "subnet": "10.0.10.0/24"
-  },
   {
       "meta": {
         "name": "cloud",
@@ -747,16 +703,6 @@ var disabledState = `
 {
   "blueprint": null,
   "resources": [
-	{
-      "meta": {
-        "name": "jumppad",
-        "properties": {
-          "status": "created"
-        },
-        "type": "network"
-      },
-      "subnet": "10.0.10.0/24"
-  },
   {
       "meta": {
         "name": "default",
@@ -791,16 +737,6 @@ var disabledAndCreatedState = `
 {
   "blueprint": null,
   "resources": [
-	{
-      "meta": {
-        "name": "jumppad",
-        "properties": {
-          "status": "created"
-        },
-        "type": "network"
-      },
-      "subnet": "10.0.10.0/24"
-  },
   {
       "meta": {
         "name": "default",
