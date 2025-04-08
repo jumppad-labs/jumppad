@@ -523,6 +523,10 @@ func (_m *Docker) ImagePush(ctx context.Context, _a1 string, options image.PushO
 		panic("no return value specified for ImagePush")
 	}
 
+	if len(ret) == 0 {
+		panic("no return value specified for ImagePush")
+	}
+
 	var r0 io.ReadCloser
 	var r1 error
 	if rf, ok := ret.Get(0).(func(context.Context, string, image.PushOptions) (io.ReadCloser, error)); ok {
@@ -585,6 +589,10 @@ func (_m *Docker) ImageSave(ctx context.Context, imageIDs []string, saveOpts ...
 	_ca = append(_ca, ctx, imageIDs)
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ImageSave")
+	}
 
 	if len(ret) == 0 {
 		panic("no return value specified for ImageSave")
