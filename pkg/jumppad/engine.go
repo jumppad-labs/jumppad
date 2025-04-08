@@ -257,8 +257,8 @@ func (e *EngineImpl) ApplyWithVariables(ctx context.Context, path string, vars m
 
 	e.config = c
 
-	// check if we already have a default network
-	_, err = c.FindResource(network.DefaultNetworkID)
+	// check if there are any networks defined by the user
+	_, err = c.FindResourcesByType(network.TypeNetwork)
 	if err != nil {
 		// create a new network
 		n := &network.Network{
@@ -313,15 +313,21 @@ func (e *EngineImpl) ApplyWithVariables(ctx context.Context, path string, vars m
 					Properties: map[string]interface{}{},
 				},
 			},
-			Networks: container.NetworkAttachments{
+		}
+
+		// if the default network was created,
+		// add the default network as a dependency
+		_, err = c.FindResource(network.DefaultNetworkID)
+		if err == nil {
+			ca.Networks = container.NetworkAttachments{
 				{
 					ID:   network.DefaultNetworkID,
 					Name: network.DefaultNetworkName,
 				},
-			},
-		}
+			}
 
-		ca.AddDependency(network.DefaultNetworkID)
+			ca.AddDependency(network.DefaultNetworkID)
+		}
 
 		e.log.Debug("Creating new Image Cache", "id", ca.Meta.ID)
 
