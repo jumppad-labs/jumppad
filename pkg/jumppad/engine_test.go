@@ -73,7 +73,7 @@ func TestApplyWithSingleFile(t *testing.T) {
 	_, err := e.Apply(context.Background(), "../../examples/single_file/container.hcl")
 	require.NoError(t, err)
 
-	require.Len(t, e.config.Resources, 7) // 6 resources in the file plus the image cache and default network
+	require.Len(t, e.config.Resources, 7) // 6 resources in the file plus the image cache
 
 	// Check the provider was called for each resource
 	require.ElementsMatch(t,
@@ -204,7 +204,7 @@ func TestApplyWithSingleFileAndVariables(t *testing.T) {
 
 	_, err := e.ApplyWithVariables(context.Background(), "../../examples/single_file/container.hcl", nil, "../../examples/single_file/default.vars")
 	require.NoError(t, err)
-	require.Len(t, e.config.Resources, 7) // 6 resources in the file plus the image cache and default network
+	require.Len(t, e.config.Resources, 7) // 6 resources in the file plus the image cache
 
 	// then the container should be created
 	require.Equal(t, "consul", getMetaFromMock(mp, 6).Name)
@@ -274,12 +274,12 @@ func TestApplyNotCallsProviderCreateForDisabledResources(t *testing.T) {
 	require.NoError(t, err)
 
 	// should have call create for non disabled resources
-	testAssertMethodCalled(t, mp, "Create", 3) // ImageCache and default network are always created
+	testAssertMethodCalled(t, mp, "Create", 3) // ImageCache are always created
 
 	// disabled resources should still be added to the state
 	sf := testLoadState(t)
 
-	// should contain 3 from the config plus the image cache and default network
+	// should contain 3 from the config plus the image cache
 	require.Equal(t, 4, sf.ResourceCount())
 
 	// the resource should be in the state but there should be no status
@@ -296,12 +296,12 @@ func TestApplyShouldNotAddDuplicateDisabledResources(t *testing.T) {
 	require.NoError(t, err)
 
 	// should have call create for each provider
-	testAssertMethodCalled(t, mp, "Create", 1) // ImageCache and default network are always created
+	testAssertMethodCalled(t, mp, "Create", 1) // ImageCache are always created
 
 	// disabled resources should still be added to the state
 	sf := testLoadState(t)
 
-	// should contain 3 from the config plus the image cache and default network
+	// should contain 3 from the config plus the image cache
 	// should not duplicate the disabled container as this already exists in the
 	// state
 	require.Equal(t, 4, sf.ResourceCount())
@@ -321,7 +321,7 @@ func TestApplySetsCreatedStatusForEachResource(t *testing.T) {
 	require.Equal(t, 7, e.config.ResourceCount())
 
 	// should only call create and destroy for the cache as this is pending update
-	testAssertMethodCalled(t, mp, "Create", 7) // ImageCache and default network are always created
+	testAssertMethodCalled(t, mp, "Create", 7) // ImageCache are always created
 
 	sf := testLoadState(t)
 
@@ -347,7 +347,7 @@ func TestApplyCallsProviderGenerateErrorStopsExecution(t *testing.T) {
 	// should have call create for each provider
 	// there are two top level config items, template and network
 	// network will fail
-	// ImageCache and default network should always be created
+	// ImageCache should always be created
 	testAssertMethodCalled(t, mp, "Create", 5)
 
 	sf := testLoadState(t)
@@ -375,7 +375,7 @@ func TestApplyCallsProviderDestroyAndCreateForFailedResources(t *testing.T) {
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1)
-	testAssertMethodCalled(t, mp, "Create", 7) // ImageCache and default network are always created
+	testAssertMethodCalled(t, mp, "Create", 7) // ImageCache are always created
 }
 
 func TestApplyCallsProviderDestroyForTaintedResources(t *testing.T) {
@@ -386,7 +386,7 @@ func TestApplyCallsProviderDestroyForTaintedResources(t *testing.T) {
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1)
-	testAssertMethodCalled(t, mp, "Create", 7) // ImageCache and default network are always created
+	testAssertMethodCalled(t, mp, "Create", 7) // ImageCache are always created
 }
 
 func TestApplyCallsProviderDestroyForDisabledResources(t *testing.T) {
@@ -407,7 +407,7 @@ func TestApplyCallsProviderDestroyForDisabledResources(t *testing.T) {
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 1, r)
-	testAssertMethodCalled(t, mp, "Create", 0) // ImageCache and default network are always created
+	testAssertMethodCalled(t, mp, "Create", 0) // ImageCache are always created
 }
 
 func TestApplyCallsProviderRefreshForCreatedResources(t *testing.T) {
@@ -489,7 +489,7 @@ func TestDestroyNotCallsProviderDestroyForResourcesDisabled(t *testing.T) {
 
 	// should have call create for each provider
 	testAssertMethodCalled(t, mp, "Destroy", 2)
-	testAssertMethodCalled(t, mp, "Create", 0) // ImageCache and default network are always created
+	testAssertMethodCalled(t, mp, "Create", 0) // ImageCache are always created
 
 	// state should be removed
 	require.NoFileExists(t, utils.StatePath())

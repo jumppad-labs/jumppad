@@ -268,7 +268,7 @@ func TestContainerRollsbackWhenUnableToConnectToNetwork(t *testing.T) {
 	md.AssertCalled(t, "ContainerRemove", mock.Anything, mock.Anything, mock.Anything)
 }
 
-func TestContainerOnlyAttachesToDefaultNetworkWhenNil(t *testing.T) {
+func TestContainerDoesNOTAttachesToUserNetworkWhenNil(t *testing.T) {
 	cc, md, mic := createContainerConfig()
 	cc.Networks = []dtypes.NetworkAttachment{}
 
