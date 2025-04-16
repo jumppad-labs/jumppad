@@ -321,7 +321,12 @@ func (p *TerraformProvider) terraformApply(containerid string) error {
     -auto-approve`
 
 	// add the tf vars flag if we have a file
-	script = script + tfvarFlag
+	// otherwise add a newline to separate the apply and output commands
+	if tfvarFlag != "" {
+		script = script + tfvarFlag
+	} else {
+		script = script + "\n"
+	}
 
 	script = script + `terraform output \
     -no-color \
@@ -429,7 +434,9 @@ func (p *TerraformProvider) terraformDestroy(containerid string) error {
     -auto-approve`
 
 	// add the tf vars flag if we have a file
-	script = script + tfvarFlag
+	if tfvarFlag != "" {
+		script = script + tfvarFlag
+	}
 
 	p.log.Debug("Running terraform destroy", "id", p.config.Meta.ID, "script", script, "envs", envs, "wd", wd)
 
