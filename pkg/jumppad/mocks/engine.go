@@ -6,7 +6,7 @@ import (
 	context "context"
 
 	hclconfig "github.com/jumppad-labs/hclconfig"
-	jumppad "github.com/jumppad-labs/jumppad/pkg/jumppad"
+	jumppad "github.com/instruqt/jumppad/pkg/jumppad"
 
 	mock "github.com/stretchr/testify/mock"
 

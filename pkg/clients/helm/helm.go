@@ -6,8 +6,8 @@ import (
 	"path"
 	"sync"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
+	"github.com/instruqt/jumppad/pkg/clients/logger"
+	"github.com/instruqt/jumppad/pkg/utils"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"

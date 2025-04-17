@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/hokaccha/go-prettyjson"
+	"github.com/instruqt/jumppad/pkg/config"
 	"github.com/jumppad-labs/hclconfig/resources"
-	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/spf13/cobra"
 )
 

@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types/network"
+	"github.com/instruqt/jumppad/pkg/clients/container/mocks"
+	"github.com/instruqt/jumppad/pkg/clients/logger"
+	"github.com/instruqt/jumppad/testutils"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/mock"
 	assert "github.com/stretchr/testify/require"
 )

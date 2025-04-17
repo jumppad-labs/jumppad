@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/jumppad-labs/jumppad/pkg/config"
+	"github.com/instruqt/jumppad/pkg/config"
 	assert "github.com/stretchr/testify/require"
 )
 

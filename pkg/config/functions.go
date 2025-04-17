@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/jumppad-labs/jumppad/pkg/utils"
+	"github.com/instruqt/jumppad/pkg/utils"
 )
 
 func customHCLFuncJumppad() (string, error) {

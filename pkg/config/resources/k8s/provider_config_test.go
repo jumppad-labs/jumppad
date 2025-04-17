@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
+	k8scli "github.com/instruqt/jumppad/pkg/clients/k8s"
+	"github.com/instruqt/jumppad/pkg/clients/logger"
+	"github.com/instruqt/jumppad/pkg/config/resources/healthcheck"
+	"github.com/instruqt/jumppad/testutils"
 	"github.com/jumppad-labs/hclconfig/types"
-	k8scli "github.com/jumppad-labs/jumppad/pkg/clients/k8s"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/healthcheck"
-	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

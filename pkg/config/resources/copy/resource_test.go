@@ -4,9 +4,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/instruqt/jumppad/pkg/config"
+	"github.com/instruqt/jumppad/testutils"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/config"
-	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -36,13 +36,13 @@ func TestCopyProcessSetsAbsoluteIfNotLocal(t *testing.T) {
 
 	c := &Copy{
 		ResourceBase: types.ResourceBase{Meta: types.Meta{File: "./"}},
-		Source:       "github.com/jumppad-labs/jumppad",
+		Source:       "github.com/instruqt/jumppad",
 		Destination:  "./",
 	}
 
 	c.Process()
 
-	require.Equal(t, "github.com/jumppad-labs/jumppad", c.Source)
+	require.Equal(t, "github.com/instruqt/jumppad", c.Source)
 	require.Equal(t, wd, c.Destination)
 }
 

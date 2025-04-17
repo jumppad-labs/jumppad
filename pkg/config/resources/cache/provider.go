@@ -6,15 +6,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
+	ctypes "github.com/instruqt/jumppad/pkg/config/resources/container"
 
 	dcontainer "github.com/docker/docker/api/types/container"
+	"github.com/instruqt/jumppad/pkg/clients"
+	"github.com/instruqt/jumppad/pkg/clients/container"
+	"github.com/instruqt/jumppad/pkg/clients/container/types"
+	"github.com/instruqt/jumppad/pkg/clients/logger"
+	"github.com/instruqt/jumppad/pkg/utils"
 	htypes "github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/clients/container"
-	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 

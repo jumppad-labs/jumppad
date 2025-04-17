@@ -9,7 +9,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/instruqt/jumppad/pkg/clients/logger"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 

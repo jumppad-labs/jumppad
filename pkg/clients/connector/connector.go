@@ -11,11 +11,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/instruqt/jumppad/pkg/clients/connector/types"
+	"github.com/instruqt/jumppad/pkg/utils"
 	"github.com/jumppad-labs/connector/crypto"
 	"github.com/jumppad-labs/connector/protos/shipyard"
 	"github.com/jumppad-labs/gohup"
-	"github.com/jumppad-labs/jumppad/pkg/clients/connector/types"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )

@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/instruqt/jumppad/pkg/clients/container/mocks"
+	"github.com/instruqt/jumppad/pkg/clients/container/types"
+	"github.com/instruqt/jumppad/pkg/clients/logger"
+	"github.com/instruqt/jumppad/pkg/config/resources/container"
 	htypes "github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
-	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )

@@ -5,15 +5,15 @@ import (
 	"os"
 
 	"github.com/hokaccha/go-prettyjson"
+	"github.com/instruqt/jumppad/pkg/config"
+	"github.com/instruqt/jumppad/pkg/config/resources/cache"
+	"github.com/instruqt/jumppad/pkg/config/resources/container"
+	"github.com/instruqt/jumppad/pkg/config/resources/k8s"
+	"github.com/instruqt/jumppad/pkg/config/resources/nomad"
+	"github.com/instruqt/jumppad/pkg/jumppad/constants"
+	"github.com/instruqt/jumppad/pkg/utils"
 	"github.com/jumppad-labs/hclconfig/resources"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/config"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/cache"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/k8s"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/nomad"
-	"github.com/jumppad-labs/jumppad/pkg/jumppad/constants"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
 )
 

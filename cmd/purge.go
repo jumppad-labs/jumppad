@@ -8,10 +8,10 @@ import (
 
 	"github.com/docker/docker/api/types/filters"
 	dimage "github.com/docker/docker/api/types/image"
-	"github.com/jumppad-labs/jumppad/pkg/clients/container"
-	"github.com/jumppad-labs/jumppad/pkg/clients/images"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
+	"github.com/instruqt/jumppad/pkg/clients/container"
+	"github.com/instruqt/jumppad/pkg/clients/images"
+	"github.com/instruqt/jumppad/pkg/clients/logger"
+	"github.com/instruqt/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
 )
 

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
-	"github.com/jumppad-labs/jumppad/testutils"
+	"github.com/instruqt/jumppad/pkg/clients"
+	"github.com/instruqt/jumppad/pkg/clients/mocks"
+	"github.com/instruqt/jumppad/testutils"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

@@ -17,14 +17,14 @@ import (
 	"github.com/spf13/cobra"
 
 	dcontainer "github.com/docker/docker/api/types/container"
-	"github.com/jumppad-labs/jumppad/pkg/clients/container"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	"github.com/jumppad-labs/jumppad/pkg/config"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/cache"
-	ct "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/k8s"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/nomad"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
+	"github.com/instruqt/jumppad/pkg/clients/container"
+	"github.com/instruqt/jumppad/pkg/clients/logger"
+	"github.com/instruqt/jumppad/pkg/config"
+	"github.com/instruqt/jumppad/pkg/config/resources/cache"
+	ct "github.com/instruqt/jumppad/pkg/config/resources/container"
+	"github.com/instruqt/jumppad/pkg/config/resources/k8s"
+	"github.com/instruqt/jumppad/pkg/config/resources/nomad"
+	"github.com/instruqt/jumppad/pkg/utils"
 )
 
 func newLogCmd(dc container.Docker, stdout, stderr io.Writer) *cobra.Command {

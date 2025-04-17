@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/instruqt/jumppad/pkg/utils"
 	"github.com/jumppad-labs/hclconfig"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 func LoadState() (*hclconfig.Config, error) {

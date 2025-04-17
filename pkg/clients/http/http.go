@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/instruqt/jumppad/pkg/clients/logger"
 )
 
 // HTTP defines an interface for a HTTP client

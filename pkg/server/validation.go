@@ -8,13 +8,13 @@ import (
 	"os"
 
 	"github.com/go-chi/chi"
+	"github.com/instruqt/jumppad/pkg/clients/container"
+	"github.com/instruqt/jumppad/pkg/clients/images"
+	"github.com/instruqt/jumppad/pkg/clients/tar"
+	"github.com/instruqt/jumppad/pkg/config"
+	"github.com/instruqt/jumppad/pkg/config/resources/docs"
+	"github.com/instruqt/jumppad/pkg/utils"
 	"github.com/jumppad-labs/hclconfig/resources"
-	"github.com/jumppad-labs/jumppad/pkg/clients/container"
-	"github.com/jumppad-labs/jumppad/pkg/clients/images"
-	"github.com/jumppad-labs/jumppad/pkg/clients/tar"
-	"github.com/jumppad-labs/jumppad/pkg/config"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/docs"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 type ValidationResponse struct {

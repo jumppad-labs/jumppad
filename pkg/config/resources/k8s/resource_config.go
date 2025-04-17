@@ -1,10 +1,10 @@
 package k8s
 
 import (
+	"github.com/instruqt/jumppad/pkg/config"
+	"github.com/instruqt/jumppad/pkg/config/resources/healthcheck"
+	"github.com/instruqt/jumppad/pkg/utils"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/config"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/healthcheck"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 // TypeK8sConfig defines the string type for the Kubernetes config resource

@@ -1,4 +1,4 @@
-module github.com/jumppad-labs/jumppad
+module github.com/instruqt/jumppad
 
 // Only use  version 1,20.5 and lower until the followinis patched
 // https://github.com/docker/cli/issues/4437
@@ -43,8 +43,6 @@ require (
 	github.com/moby/sys/signal v0.7.1
 	github.com/moby/term v0.5.2
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
-	github.com/muesli/reflow v0.3.0
-	github.com/muesli/termenv v0.15.3-0.20240618155329-98d742f6907a
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/otiai10/copy v1.14.1
 	github.com/ryanuber/go-glob v1.0.0
@@ -204,6 +202,8 @@ require (
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
+	github.com/muesli/reflow v0.3.0 // indirect
+	github.com/muesli/termenv v0.15.3-0.20240618155329-98d742f6907a // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
@@ -242,7 +242,6 @@ require (
 	go.opentelemetry.io/otel/sdk v1.34.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.34.0 // indirect
 	go.opentelemetry.io/otel/trace v1.34.0 // indirect
-	golang.org/x/exp v0.0.0-20250218142911-aa4b98e5adaa // indirect
 	golang.org/x/image v0.24.0 // indirect
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/oauth2 v0.26.0 // indirect
@@ -276,8 +275,6 @@ require (
 )
 
 replace github.com/creack/pty => github.com/photostorm/pty v1.1.18
-
-replace github.com/charmbracelet/log => github.com/jumppad-labs/log v0.0.0-20240827082827-4404884e31a7
 
 replace github.com/zclconf/go-cty => github.com/jumppad-labs/go-cty v0.0.0-20230804061424-9e985cb751f6
 

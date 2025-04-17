@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/instruqt/jumppad/pkg/clients/logger"
 	"github.com/stretchr/testify/assert"
 )
 

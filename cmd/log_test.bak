@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients/mocks"
-	"github.com/jumppad-labs/jumppad/testutils"
+	"github.com/instruqt/jumppad/pkg/clients/mocks"
+	"github.com/instruqt/jumppad/testutils"
 )
 
 const (
@@ -272,7 +272,7 @@ var logState = `
       ],
       "volumes": [
         {
-          "source": "/home/nicj/go/src/github.com/jumppad-labs/jumppad/examples/container/consul_config",
+          "source": "/home/nicj/go/src/github.com/instruqt/jumppad/examples/container/consul_config",
           "destination": "/config"
         }
       ],

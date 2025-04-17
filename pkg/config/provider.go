@@ -3,8 +3,8 @@ package config
 import (
 	"reflect"
 
+	"github.com/instruqt/jumppad/pkg/clients"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 

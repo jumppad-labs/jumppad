@@ -6,13 +6,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/clients/container"
-	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	"github.com/jumppad-labs/jumppad/pkg/config"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/k8s"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/nomad"
+	"github.com/instruqt/jumppad/pkg/clients"
+	"github.com/instruqt/jumppad/pkg/clients/container"
+	"github.com/instruqt/jumppad/pkg/clients/container/types"
+	"github.com/instruqt/jumppad/pkg/clients/logger"
+	"github.com/instruqt/jumppad/pkg/config"
+	"github.com/instruqt/jumppad/pkg/config/resources/k8s"
+	"github.com/instruqt/jumppad/pkg/config/resources/nomad"
 	"github.com/spf13/cobra"
 )
 

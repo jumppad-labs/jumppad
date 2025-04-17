@@ -3,7 +3,7 @@ package cmd
 import (
 	"strings"
 
-	"github.com/jumppad-labs/jumppad/cmd/changelog"
+	"github.com/instruqt/jumppad/cmd/changelog"
 	"github.com/spf13/cobra"
 )
 

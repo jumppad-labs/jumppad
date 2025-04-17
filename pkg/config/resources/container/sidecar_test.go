@@ -4,9 +4,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/instruqt/jumppad/pkg/config"
+	"github.com/instruqt/jumppad/testutils"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/config"
-	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/require"
 )
 

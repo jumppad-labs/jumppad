@@ -7,12 +7,12 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types/container"
+	cmocks "github.com/instruqt/jumppad/pkg/clients/container/mocks"
+	ctypes "github.com/instruqt/jumppad/pkg/clients/container/types"
+	"github.com/instruqt/jumppad/pkg/clients/logger"
+	"github.com/instruqt/jumppad/pkg/utils"
+	"github.com/instruqt/jumppad/testutils"
 	htypes "github.com/jumppad-labs/hclconfig/types"
-	cmocks "github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
-	ctypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )

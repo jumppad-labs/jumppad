@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/jumppad-labs/jumppad/pkg/utils"
+	"github.com/instruqt/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
 )
 

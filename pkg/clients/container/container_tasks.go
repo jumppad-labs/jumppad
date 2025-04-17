@@ -3,7 +3,7 @@ package container
 import (
 	"io"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	"github.com/instruqt/jumppad/pkg/clients/container/types"
 )
 
 // ContainerTasks is a task oriented client which abstracts

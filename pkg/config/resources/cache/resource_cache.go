@@ -1,8 +1,8 @@
 package cache
 
 import (
+	ctypes "github.com/instruqt/jumppad/pkg/config/resources/container"
 	"github.com/jumppad-labs/hclconfig/types"
-	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
 )
 
 // TypeImageCache is the resource string for a ImageCache resource

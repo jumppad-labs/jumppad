@@ -5,10 +5,10 @@ import (
 	"path"
 	"testing"
 
+	"github.com/instruqt/jumppad/pkg/config"
+	ctypes "github.com/instruqt/jumppad/pkg/config/resources/container"
+	"github.com/instruqt/jumppad/testutils"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/config"
-	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
-	"github.com/jumppad-labs/jumppad/testutils"
 	"github.com/stretchr/testify/require"
 )
 

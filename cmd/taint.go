@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jumppad-labs/jumppad/pkg/config"
-	"github.com/jumppad-labs/jumppad/pkg/jumppad/constants"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
+	"github.com/instruqt/jumppad/pkg/config"
+	"github.com/instruqt/jumppad/pkg/jumppad/constants"
+	"github.com/instruqt/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
 )
 

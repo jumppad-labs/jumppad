@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients/container"
-	"github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/instruqt/jumppad/pkg/clients/container"
+	"github.com/instruqt/jumppad/pkg/clients/container/types"
+	"github.com/instruqt/jumppad/pkg/clients/logger"
 )
 
 const (

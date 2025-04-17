@@ -10,8 +10,8 @@ import (
 	"os"
 	"time"
 
-	chttp "github.com/jumppad-labs/jumppad/pkg/clients/http"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	chttp "github.com/instruqt/jumppad/pkg/clients/http"
+	"github.com/instruqt/jumppad/pkg/clients/logger"
 )
 
 // Nomad defines an interface for a Nomad client

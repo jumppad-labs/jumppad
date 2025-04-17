@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/infinytum/raymond/v2"
+	"github.com/instruqt/jumppad/pkg/utils"
 	htypes "github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 	"github.com/zclconf/go-cty/cty"
 )

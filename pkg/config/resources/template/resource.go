@@ -4,9 +4,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/instruqt/jumppad/pkg/config"
+	"github.com/instruqt/jumppad/pkg/utils"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/config"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/zclconf/go-cty/cty"
 )
 

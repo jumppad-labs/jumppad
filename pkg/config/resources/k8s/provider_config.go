@@ -6,10 +6,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/instruqt/jumppad/pkg/clients"
+	"github.com/instruqt/jumppad/pkg/clients/k8s"
+	"github.com/instruqt/jumppad/pkg/utils"
 	htypes "github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/clients/k8s"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 

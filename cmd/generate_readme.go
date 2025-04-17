@@ -1,9 +1,9 @@
 package cmd
 
 import (
+	"github.com/instruqt/jumppad/pkg/config/resources/blueprint"
+	"github.com/instruqt/jumppad/pkg/jumppad"
 	"github.com/jumppad-labs/hclconfig/resources"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/blueprint"
-	"github.com/jumppad-labs/jumppad/pkg/jumppad"
 	"github.com/spf13/cobra"
 )
 

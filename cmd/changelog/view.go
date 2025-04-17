@@ -5,7 +5,7 @@ import (
 	"path"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
+	"github.com/instruqt/jumppad/pkg/utils"
 	"github.com/mattn/go-isatty"
 )
 

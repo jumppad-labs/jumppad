@@ -6,9 +6,9 @@ import (
 	"path"
 	"testing"
 
+	"github.com/instruqt/jumppad/pkg/clients/getter"
+	"github.com/instruqt/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/getter"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/stretchr/testify/require"
 )
 

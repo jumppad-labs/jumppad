@@ -12,9 +12,9 @@ import (
 	"path"
 	"strings"
 
+	"github.com/instruqt/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/connector/crypto"
 	htypes "github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 	"github.com/sethvargo/go-retry"
 	"golang.org/x/crypto/ssh"

@@ -9,10 +9,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/instruqt/jumppad/pkg/clients"
+	"github.com/instruqt/jumppad/pkg/clients/getter"
+	"github.com/instruqt/jumppad/pkg/utils"
 	htypes "github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/clients/getter"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 	cp "github.com/otiai10/copy"
 )

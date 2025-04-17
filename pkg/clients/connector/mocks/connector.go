@@ -4,7 +4,7 @@ package mocks
 
 import (
 	shipyard "github.com/jumppad-labs/connector/protos/shipyard"
-	types "github.com/jumppad-labs/jumppad/pkg/clients/connector/types"
+	types "github.com/instruqt/jumppad/pkg/clients/connector/types"
 	mock "github.com/stretchr/testify/mock"
 )
 

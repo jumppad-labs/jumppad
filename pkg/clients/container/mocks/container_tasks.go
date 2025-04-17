@@ -5,7 +5,7 @@ package mocks
 import (
 	io "io"
 
-	types "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+	types "github.com/instruqt/jumppad/pkg/clients/container/types"
 	mock "github.com/stretchr/testify/mock"
 )
 

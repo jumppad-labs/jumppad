@@ -1,10 +1,10 @@
 package helm
 
 import (
+	"github.com/instruqt/jumppad/pkg/config/resources/healthcheck"
+	"github.com/instruqt/jumppad/pkg/config/resources/k8s"
+	"github.com/instruqt/jumppad/pkg/utils"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/healthcheck"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/k8s"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 // TypeHelm is the string representation of the Meta.Type
