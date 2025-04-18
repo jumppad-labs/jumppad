@@ -1,8 +1,8 @@
 package http
 
 import (
+	"github.com/instruqt/jumppad/pkg/config"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/config"
 )
 
 const TypeHTTP string = "http"

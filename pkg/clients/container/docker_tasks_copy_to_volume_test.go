@@ -17,11 +17,11 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/api/types/volume"
-	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
-	imocks "github.com/jumppad-labs/jumppad/pkg/clients/images/mocks"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	"github.com/jumppad-labs/jumppad/pkg/clients/tar"
-	"github.com/jumppad-labs/jumppad/testutils"
+	"github.com/instruqt/jumppad/pkg/clients/container/mocks"
+	imocks "github.com/instruqt/jumppad/pkg/clients/images/mocks"
+	"github.com/instruqt/jumppad/pkg/clients/logger"
+	"github.com/instruqt/jumppad/pkg/clients/tar"
+	"github.com/instruqt/jumppad/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -89,22 +89,7 @@ func testSetupCopyLocal(t *testing.T) (*DockerTasks, *mocks.Docker) {
 		Return(volume.ListResponse{Volumes: []*volume.Volume{{}}})
 
 	mk.On("NetworkList", mock.Anything, mock.Anything).
-		Return([]network.Inspect{{
-			Name: "jumppad",
-			ID:   "resource.network.jumppad",
-			Labels: map[string]string{
-				"id": "resource.network.jumppad",
-			},
-			IPAM: network.IPAM{
-				Driver: "default",
-				Config: []network.IPAMConfig{
-					{
-						Subnet: "10.0.10.0/24",
-					},
-				},
-			},
-			EnableIPv6: false,
-		}}, nil)
+		Return([]network.Inspect{}, nil)
 
 	mk.On("NetworkConnect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 

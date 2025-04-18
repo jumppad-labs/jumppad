@@ -1,8 +1,8 @@
 package random
 
 import (
+	"github.com/instruqt/jumppad/pkg/config"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/config"
 )
 
 // TypeRandomCreature is the resource for generating random creatures

@@ -28,12 +28,12 @@ import (
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/go-connections/nat"
-	dtypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/images"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	"github.com/jumppad-labs/jumppad/pkg/clients/streams"
-	ctar "github.com/jumppad-labs/jumppad/pkg/clients/tar"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
+	dtypes "github.com/instruqt/jumppad/pkg/clients/container/types"
+	"github.com/instruqt/jumppad/pkg/clients/images"
+	"github.com/instruqt/jumppad/pkg/clients/logger"
+	"github.com/instruqt/jumppad/pkg/clients/streams"
+	ctar "github.com/instruqt/jumppad/pkg/clients/tar"
+	"github.com/instruqt/jumppad/pkg/utils"
 	"github.com/moby/sys/signal"
 	"github.com/moby/term"
 )
@@ -394,24 +394,6 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 			if err != nil {
 				d.l.Warn("Unable to remove container from the network", "name", n, "ref", c.Name, "error", err)
 			}
-		}
-	}
-
-	if len(c.Networks) == 0 {
-		net, err := d.FindNetwork("resource.network.jumppad")
-		if err != nil {
-			return "", err
-		}
-
-		err = d.AttachNetwork(net.Name, cont.ID, []string{}, "")
-		if err != nil {
-			// if we fail to connect to the network roll back the container
-			errRemove := d.RemoveContainer(cont.ID, false)
-			if errRemove != nil {
-				return "", fmt.Errorf("failed to attach network %s to container %s, unable to roll back container: %w", "jumppad", cont.ID, err)
-			}
-
-			return "", fmt.Errorf("unable to connect container to network %s, successfully rolled back container: %w", "jumppad", err)
 		}
 	}
 

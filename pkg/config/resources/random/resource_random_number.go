@@ -1,8 +1,8 @@
 package random
 
 import (
+	"github.com/instruqt/jumppad/pkg/config"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/config"
 )
 
 // TypeRandomNumber is the resource for generating random numbers

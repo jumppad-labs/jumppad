@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	types "github.com/jumppad-labs/jumppad/pkg/clients/command/types"
+	types "github.com/instruqt/jumppad/pkg/clients/command/types"
 	mock "github.com/stretchr/testify/mock"
 )
 

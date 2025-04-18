@@ -16,14 +16,14 @@ import (
 	"github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/go-connections/nat"
-	"github.com/jumppad-labs/jumppad/pkg/clients/container/mocks"
-	dtypes "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/images"
-	imocks "github.com/jumppad-labs/jumppad/pkg/clients/images/mocks"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	"github.com/jumppad-labs/jumppad/pkg/clients/tar"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
-	"github.com/jumppad-labs/jumppad/testutils"
+	"github.com/instruqt/jumppad/pkg/clients/container/mocks"
+	dtypes "github.com/instruqt/jumppad/pkg/clients/container/types"
+	"github.com/instruqt/jumppad/pkg/clients/images"
+	imocks "github.com/instruqt/jumppad/pkg/clients/images/mocks"
+	"github.com/instruqt/jumppad/pkg/clients/logger"
+	"github.com/instruqt/jumppad/pkg/clients/tar"
+	"github.com/instruqt/jumppad/pkg/utils"
+	"github.com/instruqt/jumppad/testutils"
 	"github.com/mohae/deepcopy"
 	"github.com/stretchr/testify/mock"
 	assert "github.com/stretchr/testify/require"
@@ -115,7 +115,6 @@ func setupContainerMocks() (*mocks.Docker, *imocks.ImageLog) {
 		[]network.Summary{
 			{ID: "abc", Labels: map[string]string{"id": "network.testnet"}, IPAM: network.IPAM{Config: []network.IPAMConfig{{Subnet: "10.0.0.0/24"}}}},
 			{ID: "123", Labels: map[string]string{"id": "network.wan"}, IPAM: network.IPAM{Config: []network.IPAMConfig{{Subnet: "10.2.0.0/24"}}}},
-			{ID: "jumppad", Labels: map[string]string{"id": "resource.network.jumppad"}, IPAM: network.IPAM{Config: []network.IPAMConfig{{Subnet: "10.0.10.0/24"}}}},
 		}, nil)
 
 	md.On("VolumeList", mock.Anything, mock.Anything).Return(volume.ListResponse{}, nil)
@@ -269,14 +268,14 @@ func TestContainerRollsbackWhenUnableToConnectToNetwork(t *testing.T) {
 	md.AssertCalled(t, "ContainerRemove", mock.Anything, mock.Anything, mock.Anything)
 }
 
-func TestContainerOnlyAttachesToDefaultNetworkWhenNil(t *testing.T) {
+func TestContainerDoesNOTAttachesToUserNetworkWhenNil(t *testing.T) {
 	cc, md, mic := createContainerConfig()
 	cc.Networks = []dtypes.NetworkAttachment{}
 
 	err := setupContainer(t, cc, md, mic)
 	assert.NoError(t, err)
 
-	md.AssertNumberOfCalls(t, "NetworkConnect", 1)
+	md.AssertNumberOfCalls(t, "NetworkConnect", 0)
 }
 
 func TestContainerAssignsIPToUserNetwork(t *testing.T) {

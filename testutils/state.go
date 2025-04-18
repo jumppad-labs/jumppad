@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/jumppad-labs/jumppad/pkg/utils"
+	"github.com/instruqt/jumppad/pkg/utils"
 )
 
 func SetupState(t *testing.T, state string) {

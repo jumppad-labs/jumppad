@@ -7,10 +7,8 @@ import (
 
 	"testing"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
 	"github.com/hashicorp/go-hclog"
-	"github.com/muesli/termenv"
 )
 
 const (
@@ -63,21 +61,10 @@ func NewLogger(w io.Writer, level string) Logger {
 	l := log.New(w)
 	ll, err := log.ParseLevel(level)
 	if err != nil {
+		l.Warn("Failed to parse log level, falling back to INFO", err)
 		ll = log.InfoLevel
 	}
 	l.SetLevel(ll)
-
-	return &CharmLogger{l, w, level}
-}
-
-// NewTTYLogger creates a new logger with full TTY colors
-func NewTTYLogger(w io.Writer, level string) Logger {
-	r := lipgloss.NewRenderer(w, termenv.WithColorCache(true), termenv.WithTTY(true))
-	l := log.NewWithOptions(w, log.Options{
-		Level:           log.InfoLevel,
-		ReportTimestamp: false,
-		Renderer:        r,
-	})
 
 	return &CharmLogger{l, w, level}
 }
@@ -115,6 +102,7 @@ func (l *CharmLogger) SetLevel(level string) {
 	l.level = level
 	ll, err := log.ParseLevel(level)
 	if err != nil {
+		l.Warn("Failed to parse log level, falling back to INFO", err)
 		ll = log.InfoLevel
 	}
 	l.internal.SetLevel(ll)

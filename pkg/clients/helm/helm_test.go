@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
+	"github.com/instruqt/jumppad/pkg/clients/logger"
 	"github.com/stretchr/testify/require"
 )
 

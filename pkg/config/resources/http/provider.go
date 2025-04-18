@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/instruqt/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	sdk "github.com/jumppad-labs/plugin-sdk"
 )
 

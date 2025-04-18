@@ -16,7 +16,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/jumppad-labs/jumppad/pkg/utils/dirhash"
+	"github.com/instruqt/jumppad/pkg/utils/dirhash"
 	"github.com/kennygrant/sanitize"
 )
 

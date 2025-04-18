@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients/system"
+	"github.com/instruqt/jumppad/pkg/clients/system"
 	"github.com/spf13/cobra"
 )
 

@@ -3,19 +3,19 @@ package clients
 import (
 	"time"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients/command"
-	"github.com/jumppad-labs/jumppad/pkg/clients/connector"
-	"github.com/jumppad-labs/jumppad/pkg/clients/container"
-	"github.com/jumppad-labs/jumppad/pkg/clients/getter"
-	"github.com/jumppad-labs/jumppad/pkg/clients/helm"
-	"github.com/jumppad-labs/jumppad/pkg/clients/http"
-	"github.com/jumppad-labs/jumppad/pkg/clients/images"
-	"github.com/jumppad-labs/jumppad/pkg/clients/k8s"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	"github.com/jumppad-labs/jumppad/pkg/clients/nomad"
-	"github.com/jumppad-labs/jumppad/pkg/clients/system"
-	"github.com/jumppad-labs/jumppad/pkg/clients/tar"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
+	"github.com/instruqt/jumppad/pkg/clients/command"
+	"github.com/instruqt/jumppad/pkg/clients/connector"
+	"github.com/instruqt/jumppad/pkg/clients/container"
+	"github.com/instruqt/jumppad/pkg/clients/getter"
+	"github.com/instruqt/jumppad/pkg/clients/helm"
+	"github.com/instruqt/jumppad/pkg/clients/http"
+	"github.com/instruqt/jumppad/pkg/clients/images"
+	"github.com/instruqt/jumppad/pkg/clients/k8s"
+	"github.com/instruqt/jumppad/pkg/clients/logger"
+	"github.com/instruqt/jumppad/pkg/clients/nomad"
+	"github.com/instruqt/jumppad/pkg/clients/system"
+	"github.com/instruqt/jumppad/pkg/clients/tar"
+	"github.com/instruqt/jumppad/pkg/utils"
 )
 
 type Clients struct {

@@ -1,6 +1,6 @@
 package container
 
-import "github.com/jumppad-labs/jumppad/pkg/clients/container/types"
+import "github.com/instruqt/jumppad/pkg/clients/container/types"
 
 func (i Image) ToClientImage() types.Image {
 	return types.Image{

@@ -3,8 +3,8 @@ package build
 import (
 	"testing"
 
+	"github.com/instruqt/jumppad/pkg/config"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/config"
 	"github.com/stretchr/testify/require"
 )
 

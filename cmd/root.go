@@ -5,11 +5,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/jumppad-labs/jumppad/cmd/changelog"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	"github.com/jumppad-labs/jumppad/pkg/config"
-	"github.com/jumppad-labs/jumppad/pkg/jumppad"
+	"github.com/instruqt/jumppad/cmd/changelog"
+	"github.com/instruqt/jumppad/pkg/clients"
+	"github.com/instruqt/jumppad/pkg/clients/logger"
+	"github.com/instruqt/jumppad/pkg/config"
+	"github.com/instruqt/jumppad/pkg/jumppad"
 
 	"github.com/spf13/cobra"
 )
@@ -59,7 +59,6 @@ func Execute(v, c, d string) error {
 
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(outputCmd)
-	rootCmd.AddCommand(newDevCmd())
 	rootCmd.AddCommand(newEnvCmd())
 	rootCmd.AddCommand(newRunCmd(engine, engineClients.ContainerTasks, engineClients.Getter, engineClients.HTTP, engineClients.System, engineClients.Connector, l))
 	rootCmd.AddCommand(newTestCmd())

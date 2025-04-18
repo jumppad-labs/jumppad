@@ -5,9 +5,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/jumppad-labs/jumppad/pkg/clients/getter"
-	"github.com/jumppad-labs/jumppad/pkg/jumppad"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
+	"github.com/instruqt/jumppad/pkg/clients/getter"
+	"github.com/instruqt/jumppad/pkg/jumppad"
+	"github.com/instruqt/jumppad/pkg/utils"
 	"github.com/spf13/cobra"
 )
 

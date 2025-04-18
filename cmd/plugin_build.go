@@ -8,11 +8,11 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/instruqt/jumppad/pkg/clients"
+	"github.com/instruqt/jumppad/pkg/config/resources/build"
+	"github.com/instruqt/jumppad/pkg/utils"
 	"github.com/jumppad-labs/hclconfig"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/build"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
 	cp "github.com/otiai10/copy"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/modfile"
@@ -79,7 +79,7 @@ var pluginCmd = &cobra.Command{
 		if jumppads[0].(*Jumppad).Version != "" {
 			version = jumppads[0].(*Jumppad).Version
 		}
-		engineClients.Getter.Get("github.com/jumppad-labs/jumppad?ref="+version, src)
+		engineClients.Getter.Get("github.com/instruqt/jumppad?ref="+version, src)
 
 		fmt.Println("Downloaded source to", src)
 		d, err := os.ReadFile(filepath.Join(src, "go.mod"))

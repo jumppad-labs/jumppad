@@ -5,10 +5,10 @@ import (
 	"os"
 	"path"
 
+	"github.com/instruqt/jumppad/pkg/config"
+	"github.com/instruqt/jumppad/pkg/config/resources/container"
+	"github.com/instruqt/jumppad/pkg/utils"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/config"
-	"github.com/jumppad-labs/jumppad/pkg/config/resources/container"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 // TypeBuild builds containers and other resources

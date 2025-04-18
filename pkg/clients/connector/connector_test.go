@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/instruqt/jumppad/pkg/clients/connector/mocks"
+	"github.com/instruqt/jumppad/pkg/clients/connector/types"
+	"github.com/instruqt/jumppad/pkg/utils"
 	"github.com/jumppad-labs/connector/protos/shipyard"
-	"github.com/jumppad-labs/jumppad/pkg/clients/connector/mocks"
-	"github.com/jumppad-labs/jumppad/pkg/clients/connector/types"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
 	"github.com/stretchr/testify/mock"
 	assert "github.com/stretchr/testify/require"
 )

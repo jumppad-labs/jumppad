@@ -1,10 +1,10 @@
 package docs
 
 import (
+	"github.com/instruqt/jumppad/pkg/config"
+	ctypes "github.com/instruqt/jumppad/pkg/config/resources/container"
+	"github.com/instruqt/jumppad/pkg/utils"
 	"github.com/jumppad-labs/hclconfig/types"
-	"github.com/jumppad-labs/jumppad/pkg/config"
-	ctypes "github.com/jumppad-labs/jumppad/pkg/config/resources/container"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 // TypeDocs is the resource string for a Docs resource

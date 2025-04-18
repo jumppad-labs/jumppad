@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/instruqt/jumppad/pkg/clients/command/types"
+	"github.com/instruqt/jumppad/pkg/clients/logger"
+	"github.com/instruqt/jumppad/pkg/utils"
 	"github.com/jumppad-labs/gohup"
-	"github.com/jumppad-labs/jumppad/pkg/clients/command/types"
-	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
-	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
 var ErrorCommandTimeout = fmt.Errorf("Command timed out before completing")
