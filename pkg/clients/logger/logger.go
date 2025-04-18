@@ -61,6 +61,7 @@ func NewLogger(w io.Writer, level string) Logger {
 	l := log.New(w)
 	ll, err := log.ParseLevel(level)
 	if err != nil {
+		l.Warn("Failed to parse log level, falling back to INFO", err)
 		ll = log.InfoLevel
 	}
 	l.SetLevel(ll)
@@ -101,6 +102,7 @@ func (l *CharmLogger) SetLevel(level string) {
 	l.level = level
 	ll, err := log.ParseLevel(level)
 	if err != nil {
+		l.Warn("Failed to parse log level, falling back to INFO", err)
 		ll = log.InfoLevel
 	}
 	l.internal.SetLevel(ll)
