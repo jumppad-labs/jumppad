@@ -19,6 +19,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/cache"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/network"
 	"github.com/jumppad-labs/jumppad/pkg/jumppad/constants"
+	"github.com/jumppad-labs/jumppad/pkg/jumppad/events"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 )
 
@@ -39,6 +40,7 @@ type Engine interface {
 	Destroy(ctx context.Context, force bool) error
 	Config() *hclconfig.Config
 	Diff(path string, variables map[string]string, variablesFile string) (new []types.Resource, changed []types.Resource, removed []types.Resource, cfg *hclconfig.Config, err error)
+	Events() events.Events
 }
 
 // EngineImpl is responsible for creating and destroying resources
@@ -46,6 +48,7 @@ type EngineImpl struct {
 	providers config.Providers
 	log       logger.Logger
 	config    *hclconfig.Config
+	events    events.Events
 	ctx       context.Context
 	force     bool
 }
@@ -56,6 +59,8 @@ func New(p config.Providers, l logger.Logger) (Engine, error) {
 	e.log = l
 	e.providers = p
 
+	e.events = events.New()
+
 	// Set the standard writer to our logger as the DAG uses the standard library log.
 	log.SetOutput(l.StandardWriter())
 
@@ -65,6 +70,10 @@ func New(p config.Providers, l logger.Logger) (Engine, error) {
 // Config returns the parsed config
 func (e *EngineImpl) Config() *hclconfig.Config {
 	return e.config
+}
+
+func (e *EngineImpl) Events() events.Events {
+	return e.events
 }
 
 // ParseConfig parses the given Jumppad files and creating the resource types but does
@@ -78,10 +87,28 @@ func (e *EngineImpl) ParseConfig(path string) (*hclconfig.Config, error) {
 // not apply or destroy the resources.
 // This function can be used to check the validity of a configuration without making changes
 func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]string, variablesFile string) (*hclconfig.Config, error) {
+	publishErr := e.events.Publish(events.LifecycleEventParsing, events.ParsingFailedEvent{
+		Path:          path,
+		Variables:     vars,
+		VariablesFile: variablesFile,
+	})
+	if publishErr != nil {
+		return nil, fmt.Errorf("unable to publish event: %s", publishErr)
+	}
+
 	// abs paths
 	var err error
 	path, err = filepath.Abs(path)
 	if err != nil {
+		publishErr := e.events.Publish(events.LifecycleEventParsingFailed, events.ParsingFailedEvent{
+			Path:          path,
+			Variables:     vars,
+			VariablesFile: variablesFile,
+			Error:         err,
+		})
+		if publishErr != nil {
+			return nil, fmt.Errorf("unable to publish event: %s", publishErr)
+		}
 		return nil, err
 	}
 
@@ -90,6 +117,15 @@ func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]strin
 	if variablesFile != "" {
 		variablesFile, err = filepath.Abs(variablesFile)
 		if err != nil {
+			publishErr := e.events.Publish(events.LifecycleEventParsingFailed, events.ParsingFailedEvent{
+				Path:          path,
+				Variables:     vars,
+				VariablesFile: variablesFile,
+				Error:         err,
+			})
+			if publishErr != nil {
+				return nil, fmt.Errorf("unable to publish event: %s", publishErr)
+			}
 			return nil, err
 		}
 	}
@@ -97,9 +133,25 @@ func (e *EngineImpl) ParseConfigWithVariables(path string, vars map[string]strin
 	e.config = hclconfig.NewConfig()
 
 	err = e.readAndProcessConfig(path, vars, variablesFile, func(r types.Resource) error {
-		e.config.AppendResource(r)
-		return nil
+		publishErr := e.events.Publish(events.LifecycleEventParsed, events.ParsedEvent{Resource: r.Metadata()})
+		if publishErr != nil {
+			return fmt.Errorf("unable to publish event: %s", publishErr)
+		}
+
+		return e.config.AppendResource(r)
 	})
+
+	if err != nil {
+		publishErr := e.events.Publish(events.LifecycleEventParsingFailed, events.ParsingFailedEvent{
+			Path:          path,
+			Variables:     vars,
+			VariablesFile: variablesFile,
+			Error:         err,
+		})
+		if publishErr != nil {
+			return nil, fmt.Errorf("unable to publish event: %s", publishErr)
+		}
+	}
 
 	return e.config, err
 }
@@ -468,15 +520,21 @@ func (e *EngineImpl) appendDisabledResources(c *hclconfig.Config) error {
 }
 
 func (e *EngineImpl) createCallback(r types.Resource) error {
+	e.events.Publish(events.LifecycleEventCreating, events.CreatingEvent{Resource: r.Metadata()})
+
 	// if the context is cancelled skip
 	if e.ctx.Err() != nil {
+		e.events.Publish(events.LifecycleEventCreatingFailed, events.CreatingFailedEvent{Resource: r.Metadata(), Error: e.ctx.Err()})
 		return nil
 	}
 
 	p := e.providers.GetProvider(r)
 	if p == nil {
 		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
-		return fmt.Errorf("unable to create provider for resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
+
+		err := fmt.Errorf("unable to create provider for resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
+		e.events.Publish(events.LifecycleEventCreatingFailed, events.CreatingFailedEvent{Resource: r.Metadata(), Error: err})
+		return err
 	}
 
 	// we need to check if a resource exists in the state, if so the status
@@ -489,6 +547,7 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 		// remove the resource, we will add the new version to the state
 		err = e.config.RemoveResource(r)
 		if err != nil {
+			e.events.Publish(events.LifecycleEventCreatingFailed, events.CreatingFailedEvent{Resource: r.Metadata(), Error: err})
 			return fmt.Errorf(`unable to remove resource "%s" from state, %s`, r.Metadata().ID, err)
 		}
 	}
@@ -499,6 +558,7 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 		providerError = p.Refresh(e.ctx)
 		if providerError != nil {
 			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
+			e.events.Publish(events.LifecycleEventCreatingFailed, events.CreatingFailedEvent{Resource: r.Metadata(), Error: providerError})
 		}
 
 	// Normal case for PendingUpdate is do nothing
@@ -512,6 +572,7 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 		providerError = p.Destroy(e.ctx, false)
 		if providerError != nil {
 			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
+			e.events.Publish(events.LifecycleEventCreatingFailed, events.CreatingFailedEvent{Resource: r.Metadata(), Error: providerError})
 		}
 
 		fallthrough // failed resources should always attempt recreation
@@ -521,13 +582,16 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 		providerError = p.Create(e.ctx)
 		if providerError != nil {
 			r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
+			e.events.Publish(events.LifecycleEventCreatingFailed, events.CreatingFailedEvent{Resource: r.Metadata(), Error: providerError})
 		}
 	}
 
 	// add the resource to the state
 	err = e.config.AppendResource(r)
 	if err != nil {
-		return fmt.Errorf(`unable add resource "%s" to state, %s`, r.Metadata().ID, err)
+		appendErr := fmt.Errorf(`unable add resource "%s" to state, %s`, r.Metadata().ID, err)
+		e.events.Publish(events.LifecycleEventCreatingFailed, events.CreatingFailedEvent{Resource: r.Metadata(), Error: appendErr})
+		return appendErr
 	}
 
 	// did we just create a network, if so we need to attach the image cache
@@ -589,12 +653,19 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 		}
 	}
 
+	if providerError == nil {
+		e.events.Publish(events.LifecycleEventCreated, events.CreatedEvent{Resource: r.Metadata()})
+	}
+
 	return providerError
 }
 
 func (e *EngineImpl) destroyCallback(r types.Resource) error {
+	e.events.Publish(events.LifecycleEventDestroying, events.DestroyingEvent{Resource: r.Metadata()})
+
 	// if the context is cancelled skip
 	if e.ctx.Err() != nil {
+		e.events.Publish(events.LifecycleEventDestroyingFailed, events.DestroyingFailedEvent{Resource: r.Metadata(), Error: e.ctx.Err()})
 		return nil
 	}
 
@@ -612,17 +683,23 @@ func (e *EngineImpl) destroyCallback(r types.Resource) error {
 
 	if p == nil {
 		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
-		return fmt.Errorf("unable to create provider for resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
+		err := fmt.Errorf("unable to create provider for resource Name: %s, Type: %s", r.Metadata().Name, r.Metadata().Type)
+		e.events.Publish(events.LifecycleEventDestroyingFailed, events.DestroyingFailedEvent{Resource: r.Metadata(), Error: err})
+		return err
 	}
 
 	err := p.Destroy(e.ctx, e.force)
 	if err != nil && !e.force {
 		r.Metadata().Properties[constants.PropertyStatus] = constants.StatusFailed
-		return fmt.Errorf("unable to destroy resource Name: %s, Type: %s, Error: %s", r.Metadata().Name, r.Metadata().Type, err)
+		destroyErr := fmt.Errorf("unable to destroy resource Name: %s, Type: %s, Error: %s", r.Metadata().Name, r.Metadata().Type, err)
+		e.events.Publish(events.LifecycleEventDestroyingFailed, events.DestroyingFailedEvent{Resource: r.Metadata(), Error: destroyErr})
+		return destroyErr
 	}
 
 	// remove from the state
 	e.config.RemoveResource(r)
+
+	e.events.Publish(events.LifecycleEventDestroyed, events.DestroyedEvent{Resource: r.Metadata()})
 
 	return nil
 }
