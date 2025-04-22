@@ -126,10 +126,39 @@ func (p *Provider) Destroy(ctx context.Context, force bool) error {
 	}
 
 	if len(ids) == 1 {
+		networkID := ids[0]
+		// check if the network has containers attached
+		containers, err := p.getConnectedContainers(networkID)
+		if err != nil {
+			return fmt.Errorf("unable to list connected containers: %w", err)
+		}
+
+		for _, containerID := range containers {
+			err := p.client.NetworkDisconnect(context.Background(), networkID, containerID, true)
+			if err != nil {
+				return fmt.Errorf("unable to disconnect container from network: %w", err)
+			}
+		}
+
 		return p.client.NetworkRemove(context.Background(), p.config.Meta.Name)
 	}
 
 	return nil
+}
+
+func (p *Provider) getConnectedContainers(id string) ([]string, error) {
+	containers := []string{}
+
+	summary, err := p.client.NetworkInspect(context.Background(), id, network.InspectOptions{})
+	if err != nil {
+		return containers, err
+	}
+
+	for containerID := range summary.Containers {
+		containers = append(containers, containerID)
+	}
+
+	return containers, nil
 }
 
 // Lookup the ID for a network
