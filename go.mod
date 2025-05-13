@@ -34,7 +34,7 @@ require (
 	github.com/infinytum/raymond/v2 v2.0.5
 	github.com/jumppad-labs/connector v0.4.0
 	github.com/jumppad-labs/gohup v0.4.0
-	github.com/jumppad-labs/hclconfig v0.28.2-0.20250513065622-4556e0f28745
+	github.com/jumppad-labs/hclconfig v0.29.0
 	github.com/jumppad-labs/plugin-sdk v0.4.0
 	github.com/kennygrant/sanitize v1.2.4
 	github.com/mattn/go-isatty v0.0.20
