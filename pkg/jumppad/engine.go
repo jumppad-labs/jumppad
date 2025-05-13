@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/jumppad-labs/hclconfig"
 	hclerrors "github.com/jumppad-labs/hclconfig/errors"
@@ -43,11 +44,12 @@ type Engine interface {
 
 // EngineImpl is responsible for creating and destroying resources
 type EngineImpl struct {
-	providers config.Providers
-	log       logger.Logger
-	config    *hclconfig.Config
-	ctx       context.Context
-	force     bool
+	providers  config.Providers
+	log        logger.Logger
+	config     *hclconfig.Config
+	ctx        context.Context
+	force      bool
+	cacheMutex sync.Mutex
 }
 
 // New creates a new Jumppad engine
@@ -55,6 +57,7 @@ func New(p config.Providers, l logger.Logger) (Engine, error) {
 	e := &EngineImpl{}
 	e.log = l
 	e.providers = p
+	e.cacheMutex = sync.Mutex{}
 
 	// Set the standard writer to our logger as the DAG uses the standard library log.
 	log.SetOutput(l.StandardWriter())
@@ -534,6 +537,7 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 	// to the network and set the dependency
 	if r.Metadata().Type == network.TypeNetwork && r.Metadata().Properties[constants.PropertyStatus] == constants.StatusCreated {
 		// get the image cache
+		e.cacheMutex.Lock()
 		ic, err := e.config.FindResource("resource.image_cache.default")
 		if err == nil {
 			e.log.Debug("Attaching image cache to network", "network", ic.Metadata().ID)
@@ -545,10 +549,12 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 		} else {
 			e.log.Error("Unable to find Image Cache", "error", err)
 		}
+		e.cacheMutex.Unlock()
 	}
 
 	if r.Metadata().Type == cache.TypeRegistry && r.Metadata().Properties[constants.PropertyStatus] == constants.StatusCreated {
 		// get the image cache
+		e.cacheMutex.Lock()
 		ic, err := e.config.FindResource("resource.image_cache.default")
 		if err == nil {
 			// append the registry if not all ready present and not in the default list
@@ -570,10 +576,12 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 				ic.(*cache.ImageCache).Registries = append(ic.(*cache.ImageCache).Registries, *r.(*cache.Registry))
 			}
 
-			e.log.Debug("Adding registy to image cache", "registry", r.(*cache.Registry).Hostname)
+			e.log.Debug("Adding registry to image cache", "registry", r.(*cache.Registry).Hostname)
 
 			// we now need to stop and restart the container to pick up the new registry changes
 			np := e.providers.GetProvider(ic)
+
+			e.cacheMutex.Unlock()
 
 			err := np.Destroy(e.ctx, e.force)
 			if err != nil {
