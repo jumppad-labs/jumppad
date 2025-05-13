@@ -313,6 +313,8 @@ func (p *TerraformProvider) terraformApply(containerid string) error {
 	wd := path.Join("/config", p.config.WorkingDirectory)
 
 	script := `#!/bin/sh
+	set -e
+
   terraform init \
     -no-color
   terraform apply \
@@ -421,6 +423,8 @@ func (p *TerraformProvider) terraformDestroy(containerid string) error {
 	tfvarFlag := getTerraformVarsFlag(p.config)
 
 	script := `#!/bin/sh
+	set -e
+
   terraform init \
     -no-color
   terraform destroy \

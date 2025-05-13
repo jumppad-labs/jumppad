@@ -42,7 +42,7 @@ jobs:
         if: always()
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          tile: ${{ github.job_id }}
+          title: ${{ github.job_id }}
           description: "Build application"
 
   functional_test_docker:
@@ -98,7 +98,7 @@ jobs:
         if: always()
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          tile: ${{ github.job_id }}
+          title: ${{ github.job_id }}
           description: "Functional tests for docker: ${{matrix.folder}}"
 
   functional_test_podman:
@@ -152,7 +152,7 @@ jobs:
         if: always()
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          tile: ${{ github.job_id }}
+          title: ${{ github.job_id }}
           description: "Functional tests for ${{matrix.folder}}"
   
   release:
@@ -228,6 +228,6 @@ jobs:
       uses: sarisia/actions-status-discord@v1
       if: always()
       with:
-        tile: ${{ github.job_id }}
+        title: ${{ github.job_id }}
         webhook: ${{ secrets.DISCORD_WEBHOOK }}
         description: "Push new version ${{ needs.github_release.outputs.version }} to Winget"
