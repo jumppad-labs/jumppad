@@ -39,7 +39,7 @@ resource "container" "noauth" {
   }
 
   volume {
-    source      = data("certs")
+    source      = resource.certificate_leaf.registry.output
     destination = "/certs"
   }
 }
@@ -75,7 +75,7 @@ resource "container" "auth" {
   }
 
   volume {
-    source      = data("certs")
+    source      = resource.certificate_leaf.registry.output
     destination = "/certs"
   }
 }
