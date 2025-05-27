@@ -37,6 +37,7 @@ func setupProvider(t *testing.T) (*Exec, *Provider, *commandMocks.Command, *cont
 func TestInjectsOutputEnvIntoLocal(t *testing.T) {
 	e, p, cm, _ := setupProvider(t)
 	e.Script = "echo FOO=BAR >> $EXEC_OUTPUT"
+	e.Timeout = "300s"
 
 	err := p.Create(context.Background())
 	require.NoError(t, err)
@@ -50,6 +51,7 @@ func TestInjectsOutputEnvIntoLocal(t *testing.T) {
 func TestParsesOutput(t *testing.T) {
 	e, p, _, _ := setupProvider(t)
 	e.Script = "echo FOO=BAR >> $EXEC_OUTPUT"
+	e.Timeout = "300s"
 
 	// write the output for the test
 
@@ -68,6 +70,7 @@ func TestParsesOutput(t *testing.T) {
 func TestDeletesOutput(t *testing.T) {
 	e, p, _, _ := setupProvider(t)
 	e.Script = "echo FOO=BAR >> $EXEC_OUTPUT"
+	e.Timeout = "300s"
 
 	// write the output for the test
 	td := utils.JumppadTemp()
@@ -85,6 +88,7 @@ func TestCopiesOutputInExec(t *testing.T) {
 	e, p, _, dm := setupProvider(t)
 	e.Target = c
 	e.Script = "echo FOO=BAR >> $EXEC_OUTPUT"
+	e.Timeout = "300s"
 
 	// write the output for the test
 	td := utils.JumppadTemp()
