@@ -205,10 +205,6 @@ func (p *Provider) createRemoteExec(outputPath string) error {
 		group = p.config.RunAs.Group
 	}
 
-	if p.config.Timeout == "" {
-		p.config.Timeout = "300s"
-	}
-
 	timeout, err := time.ParseDuration(p.config.Timeout)
 	if err != nil {
 		p.log.Error("Unable to parse timeout duration", "ref", p.config.Meta.Name, "timeout", p.config.Timeout, "error", err)
@@ -314,13 +310,8 @@ func (p *Provider) createLocalExec(outputPath string) (int, error) {
 	// create the folders for logs and pids
 	logPath := filepath.Join(utils.LogsDir(), fmt.Sprintf("exec_%s.log", p.config.Meta.Name))
 
-	// do we have a duration to parse otherwise set default
-	if p.config.Timeout == "" {
-		p.config.Timeout = "300s"
-	} else {
-		if p.config.Daemon {
-			p.log.Warn("Timeout will be ignored when exec is running in daemon mode")
-		}
+	if p.config.Timeout != "" && p.config.Daemon {
+		p.log.Warn("Timeout will be ignored when exec is running in daemon mode")
 	}
 
 	timeout, err := time.ParseDuration(p.config.Timeout)
