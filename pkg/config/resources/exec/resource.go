@@ -57,7 +57,7 @@ func (e *Exec) Process() error {
 		}
 	}
 
-	if e.Timeout == "" && !e.Daemon {
+	if e.Timeout == "" {
 		e.Timeout = "300s"
 	}
 
