@@ -352,7 +352,8 @@ func (p *Provider) generateOutput() error {
 		return fmt.Errorf("unable to read output file: %w", err)
 	}
 
-	output := map[string]string{}
+	output := make(map[string]cty.Value)
+
 	outs := strings.Split(string(d), "\n")
 	for _, v := range outs {
 		parts := strings.Split(v, "=")
@@ -360,7 +361,7 @@ func (p *Provider) generateOutput() error {
 			continue
 		}
 
-		output[parts[0]] = parts[1]
+		output[parts[0]] = cty.StringVal(parts[1])
 	}
 
 	values := map[string]cty.Value{}
