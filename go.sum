@@ -1174,8 +1174,15 @@ github.com/jumppad-labs/go-cty v0.0.0-20230804061424-9e985cb751f6 h1:1ADItCWr5pr
 github.com/jumppad-labs/go-cty v0.0.0-20230804061424-9e985cb751f6/go.mod h1:YKQzy/7pZ7iq2jNFzy5go57xdxdWoLLpaEp4u238AE0=
 github.com/jumppad-labs/gohup v0.4.0 h1:0OplHvnKnOLkqWm417sRHLSiJ4xGeb8LiSSAJ51QrYg=
 github.com/jumppad-labs/gohup v0.4.0/go.mod h1:JYvZnemxJlWDyx8RbDNcCBLZSvIrYlYLnkQqR1BKFW4=
+<<<<<<< HEAD
 github.com/jumppad-labs/hclconfig v0.29.0 h1:ZJKsei7agJ8wEx+r0iZQsOKWYxWvN8Wldd5/897xBxk=
 github.com/jumppad-labs/hclconfig v0.29.0/go.mod h1:UiDq9kWaSsw5MQp0iDej2oxvo0E+Xwx7UVuEDlzetnw=
+=======
+github.com/jumppad-labs/hclconfig v0.28.2-0.20250513065622-4556e0f28745 h1:qpKlLIKrxhwZzShCCXIlfBxClXQhsVK1yZrF6HTCtYE=
+github.com/jumppad-labs/hclconfig v0.28.2-0.20250513065622-4556e0f28745/go.mod h1:UiDq9kWaSsw5MQp0iDej2oxvo0E+Xwx7UVuEDlzetnw=
+github.com/jumppad-labs/hclconfig v0.30.1-0.20250527100114-61949d3d5ab1 h1:nxas6mcfmDcEjQzh2y2A2+GCUrGZ1W3cm6th/qZPgZQ=
+github.com/jumppad-labs/hclconfig v0.30.1-0.20250527100114-61949d3d5ab1/go.mod h1:UiDq9kWaSsw5MQp0iDej2oxvo0E+Xwx7UVuEDlzetnw=
+>>>>>>> a364d15 (Use latest version of HCL Config)
 github.com/jumppad-labs/log v0.0.0-20240827082827-4404884e31a7 h1:tuoFYWXAqT5BheDlQNumY1DxvkW8bjG9JOzoxpFneZs=
 github.com/jumppad-labs/log v0.0.0-20240827082827-4404884e31a7/go.mod h1:S9jhxE2C1+jv2PlLTAow3h+ZILzvXRhd6eBjFAUcfgI=
 github.com/jumppad-labs/plugin-sdk v0.4.0 h1:deNk7h8W+6dsxj2ADP63o07Dv313vcBI8C4d1aBUO/c=

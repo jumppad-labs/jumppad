@@ -352,7 +352,8 @@ func (p *Provider) generateOutput() error {
 		return fmt.Errorf("unable to read output file: %w", err)
 	}
 
-	output := map[string]string{}
+	output := make(map[string]cty.Value)
+
 	outs := strings.Split(string(d), "\n")
 	for _, v := range outs {
 		parts := strings.Split(v, "=")
@@ -360,9 +361,10 @@ func (p *Provider) generateOutput() error {
 			continue
 		}
 
-		output[parts[0]] = parts[1]
+		output[parts[0]] = cty.StringVal(parts[1])
 	}
 
+<<<<<<< HEAD
 	values := map[string]cty.Value{}
 	for k, v := range output {
 		value, err := convert.GoToCtyValue(v)
@@ -374,6 +376,9 @@ func (p *Provider) generateOutput() error {
 	}
 
 	p.config.Output = cty.ObjectVal(values)
+=======
+	p.config.Output = cty.MapVal(output)
+>>>>>>> a364d15 (Use latest version of HCL Config)
 
 	return nil
 }
