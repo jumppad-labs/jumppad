@@ -205,7 +205,13 @@ func (p *Provider) createRemoteExec(outputPath string) error {
 		group = p.config.RunAs.Group
 	}
 
-	_, err := p.container.ExecuteScript(targetID, script, envs, p.config.WorkingDirectory, user, group, 300, p.log.StandardWriter())
+	timeout, err := time.ParseDuration(p.config.Timeout)
+	if err != nil {
+		p.log.Error("Unable to parse timeout duration", "ref", p.config.Meta.Name, "timeout", p.config.Timeout, "error", err)
+		return fmt.Errorf("unable to parse timeout duration: %w", err)
+	}
+
+	_, err = p.container.ExecuteScript(targetID, script, envs, p.config.WorkingDirectory, user, group, int(timeout.Seconds()), p.log.StandardWriter())
 	if err != nil {
 		p.log.Error("Unable to execute command", "ref", p.config.Meta.Name, "image", p.config.Image, "script", p.config.Script)
 		return fmt.Errorf("unable to execute command: in remote container: %w", err)
@@ -304,17 +310,14 @@ func (p *Provider) createLocalExec(outputPath string) (int, error) {
 	// create the folders for logs and pids
 	logPath := filepath.Join(utils.LogsDir(), fmt.Sprintf("exec_%s.log", p.config.Meta.Name))
 
-	// do we have a duration to parse
-	var d time.Duration
-	if p.config.Timeout != "" {
-		d, err = time.ParseDuration(p.config.Timeout)
-		if err != nil {
-			return 0, fmt.Errorf("unable to parse duration for timeout: %s", err)
-		}
+	if p.config.Timeout != "" && p.config.Daemon {
+		p.log.Warn("Timeout will be ignored when exec is running in daemon mode")
+	}
 
-		if p.config.Daemon {
-			p.log.Warn("Timeout will be ignored when exec is running in daemon mode")
-		}
+	timeout, err := time.ParseDuration(p.config.Timeout)
+	if err != nil {
+		p.log.Error("Unable to parse timeout duration", "ref", p.config.Meta.Name, "timeout", p.config.Timeout, "error", err)
+		return 1, fmt.Errorf("unable to parse timeout duration: %w", err)
 	}
 
 	// inject the output file into the environment
@@ -327,7 +330,7 @@ func (p *Provider) createLocalExec(outputPath string) (int, error) {
 		WorkingDirectory: p.config.WorkingDirectory,
 		RunInBackground:  p.config.Daemon,
 		LogFilePath:      logPath,
-		Timeout:          d,
+		Timeout:          timeout,
 	}
 
 	pid, err := p.command.Execute(cc)

@@ -57,6 +57,10 @@ func (e *Exec) Process() error {
 		}
 	}
 
+	if e.Timeout == "" {
+		e.Timeout = "300s"
+	}
+
 	cs, err := utils.ChecksumFromInterface(e.Script)
 	if err != nil {
 		return fmt.Errorf("unable to generate checksum for script: %s", err)
