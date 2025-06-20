@@ -19,6 +19,7 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/network"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/nomad"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/null"
+	"github.com/jumppad-labs/jumppad/pkg/config/resources/ollama"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/random"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/template"
 	"github.com/jumppad-labs/jumppad/pkg/config/resources/terraform"
@@ -51,6 +52,7 @@ func init() {
 	config.RegisterResource(network.TypeNetwork, &network.Network{}, &network.Provider{})
 	config.RegisterResource(nomad.TypeNomadCluster, &nomad.NomadCluster{}, &nomad.ClusterProvider{})
 	config.RegisterResource(nomad.TypeNomadJob, &nomad.NomadJob{}, &nomad.JobProvider{})
+	config.RegisterResource(ollama.TypeOllamaModel, &ollama.OllamaModel{}, &ollama.ModelProvider{})
 	config.RegisterResource(random.TypeRandomNumber, &random.RandomNumber{}, &random.RandomNumberProvider{})
 	config.RegisterResource(random.TypeRandomID, &random.RandomID{}, &random.RandomIDProvider{})
 	config.RegisterResource(random.TypeRandomUUID, &random.RandomUUID{}, &random.RandomUUIDProvider{})
