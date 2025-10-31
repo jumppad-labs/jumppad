@@ -6,3 +6,7 @@ dist/
 .terraform
 .terraform.lock.hcl
 output/
+
+# Test helper binaries
+pkg/clients/connector/testdata/connector-test-helper
+pkg/clients/connector/testdata/connector-test-helper.exe

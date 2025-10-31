@@ -120,14 +120,6 @@ func (c *ConnectorImpl) Start(cb *types.CertBundle) error {
 		"--log-level", ll,
 	}
 
-	// if the binary path contains a space, split this to args
-	if strings.Contains(c.options.BinaryPath, " ") {
-		parts := strings.Split(c.options.BinaryPath, " ")
-		c.options.BinaryPath = parts[0]
-
-		args = append(parts[1:], args...)
-	}
-
 	lp := &gohup.LocalProcess{}
 	o := gohup.Options{
 		Path:    c.options.BinaryPath,
