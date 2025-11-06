@@ -5,9 +5,10 @@ import (
 	"math/rand"
 	"net"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
-	"strings"
+	"runtime"
 	"testing"
 	"time"
 
@@ -22,37 +23,80 @@ import (
 var suiteTemp string
 var suiteCertBundle *types.CertBundle
 var suiteOptions ConnectorOptions
+var testBinaryPath string
 
-func getBinaryPath(t *testing.T) string {
-	currentLevel := 0
-	maxLevels := 10
+func TestMain(m *testing.M) {
+	// Build or reuse cached test helper binary
+	var err error
+	testBinaryPath, err = getOrBuildTestHelper()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to get test helper: %v\n", err)
+		os.Exit(1)
+	}
 
-	// we are running from a test so use go run main.go as the command
-	dir, _ := os.Getwd()
-	// walk backwards until we find the go.mod
-	for {
-		files, err := os.ReadDir(dir)
+	// Run all tests
+	exitCode := m.Run()
+
+	os.Exit(exitCode)
+}
+
+func getOrBuildTestHelper() (string, error) {
+	// Get the directory where this test file is located
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		return "", fmt.Errorf("unable to get current test file path")
+	}
+	testDir := filepath.Dir(filename)
+	testdataDir := filepath.Join(testDir, "testdata")
+
+	// Source and binary paths
+	helperSource := filepath.Join(testdataDir, "connector-test-helper.go")
+	binaryName := "connector-test-helper"
+	if runtime.GOOS == "windows" {
+		binaryName = "connector-test-helper.exe"
+	}
+	binaryPath := filepath.Join(testdataDir, binaryName)
+
+	// Check if binary exists and is up-to-date
+	needsBuild := false
+	binaryStat, err := os.Stat(binaryPath)
+	if os.IsNotExist(err) {
+		needsBuild = true
+	} else if err != nil {
+		return "", fmt.Errorf("failed to stat binary: %w", err)
+	} else {
+		// Check if source is newer than binary
+		sourceStat, err := os.Stat(helperSource)
 		if err != nil {
-			t.Fatal(err)
+			return "", fmt.Errorf("failed to stat source: %w", err)
 		}
-
-		for _, f := range files {
-			if strings.HasSuffix(f.Name(), "go.mod") {
-				fp, _ := filepath.Abs(dir)
-				// found the project root
-				file := filepath.Join(fp, "main.go")
-				return fmt.Sprintf("go run %s", file)
-			}
-		}
-
-		// check the parent
-		dir = filepath.Join(dir, "../")
-		fmt.Println(dir)
-		currentLevel++
-		if currentLevel > maxLevels {
-			t.Fatal("unable to find go.mod")
+		if sourceStat.ModTime().After(binaryStat.ModTime()) {
+			needsBuild = true
 		}
 	}
+
+	if needsBuild {
+		// Ensure testdata directory exists
+		if err := os.MkdirAll(testdataDir, 0755); err != nil {
+			return "", fmt.Errorf("failed to create testdata dir: %w", err)
+		}
+
+		// Build the test helper
+		cmd := exec.Command("go", "build", "-o", binaryPath, helperSource)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return "", fmt.Errorf("failed to build test helper: %w\nOutput: %s", err, output)
+		}
+	}
+
+	return binaryPath, nil
+}
+
+func getBinaryPath(t *testing.T) string {
+	if testBinaryPath == "" {
+		t.Fatal("test binary was not initialized in TestMain")
+	}
+	return testBinaryPath
 }
 
 func TestConnectorSuite(t *testing.T) {
@@ -76,6 +120,7 @@ func TestConnectorSuite(t *testing.T) {
 	t.Run("Calls expose", testExposeServiceCallsExpose)
 	t.Run("Calls remove", testRemoveServiceCallsRemove)
 	t.Run("Calls list", testListServicesCallsList)
+	t.Run("Starts with path containing spaces", testConnectorStartPathWithSpaces)
 }
 
 func testGenerateCreatesBundle(t *testing.T) {
@@ -241,4 +286,59 @@ func testListServicesCallsList(t *testing.T) {
 	assert.Len(t, svc, 1)
 
 	ts.AssertCalled(t, "ListServices", mock.Anything, mock.Anything)
+}
+
+func testConnectorStartPathWithSpaces(t *testing.T) {
+	// This test verifies that binary paths containing spaces work correctly
+	// This would have caught issue #358
+
+	localTemp := t.TempDir()
+	os.Setenv(utils.HomeEnvName(), localTemp)
+
+	// Create a directory path with spaces
+	dirWithSpaces := filepath.Join(localTemp, "path with spaces")
+	err := os.MkdirAll(dirWithSpaces, 0755)
+	assert.NoError(t, err)
+
+	// Copy test binary to the space-containing path
+	testBinary := getBinaryPath(t)
+	binaryName := filepath.Base(testBinary)
+	binaryInSpacePath := filepath.Join(dirWithSpaces, binaryName)
+
+	// Copy the test binary
+	input, err := os.ReadFile(testBinary)
+	assert.NoError(t, err)
+	err = os.WriteFile(binaryInSpacePath, input, 0755)
+	assert.NoError(t, err)
+
+	// Setup connector options with the space-containing path
+	opts := ConnectorOptions{
+		LogDirectory: filepath.Join(localTemp, "logs"),
+		BinaryPath:   binaryInSpacePath,
+		GrpcBind:     fmt.Sprintf(":%d", rand.Intn(1000)+20000),
+		HTTPBind:     fmt.Sprintf(":%d", rand.Intn(1000)+20000),
+		APIBind:      fmt.Sprintf(":%d", rand.Intn(1000)+20000),
+		LogLevel:     "info",
+		PidFile:      filepath.Join(localTemp, "connector.pid"),
+	}
+	os.MkdirAll(opts.LogDirectory, os.ModePerm)
+
+	// Generate certificates
+	c := NewConnector(opts)
+	certBundle, err := c.GenerateLocalCertBundle(utils.CertsDir(""))
+	assert.NoError(t, err)
+
+	// Start connector with binary path containing spaces
+	err = c.Start(certBundle)
+	assert.NoError(t, err, "Connector should start successfully with spaces in binary path")
+
+	// Cleanup
+	t.Cleanup(func() {
+		c.Stop()
+	})
+
+	// Verify connector is running
+	assert.Eventually(t, func() bool {
+		return c.IsRunning()
+	}, 5*time.Second, 100*time.Millisecond, "Connector should be running after start")
 }
