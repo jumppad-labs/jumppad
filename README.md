@@ -362,4 +362,4 @@ PASS
 
 ## Creating a release
 
-To create a release tag a commit `git tag <semver>` and push this to GitHub `git push origin <semver>` GitHub actions will build and create the release.
+To create a release creae a PR and ensure that the major/minor/patch tags have been added to the PR so that the semver is automatically updated.
