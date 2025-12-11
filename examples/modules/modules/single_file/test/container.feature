@@ -12,4 +12,4 @@ Scenario: Single Container from Local Blueprint
   And the info "{.HostConfig.PortBindings['8500/'][0].HostPort}" for the running container "resource.container.consul" should equal "8500"
   And the info "{.HostConfig.PortBindings['8500/'][0].HostPort}" for the running container "resource.container.consul" should contain "85"
   And the info "{.HostConfig.PortBindings['8501/']}" for the running container "resource.container.consul" should exist"
-  And a HTTP call to "http://consul.container.shipyard.run:8500/v1/status/leader" should result in status 200
+  And a HTTP call to "http://consul.container.local.jmpd.in:8500/v1/status/leader" should result in status 200

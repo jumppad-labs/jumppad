@@ -317,7 +317,7 @@ func TestClusterNomadImportDockerCopiesImages(t *testing.T) {
 
 	err := p.Create(context.Background())
 	assert.NoError(t, err)
-	md.AssertCalled(t, "CopyLocalDockerImagesToVolume", []string{"consul:1.6.1", "vault:1.6.1"}, "images.volume.shipyard.run", false)
+	md.AssertCalled(t, "CopyLocalDockerImagesToVolume", []string{"consul:1.6.1", "vault:1.6.1"}, "images.volume.local.jmpd.in", false)
 }
 
 func TestClusterNomadImportDockerCopyImageFailReturnsError(t *testing.T) {

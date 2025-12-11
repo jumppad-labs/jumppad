@@ -16,5 +16,5 @@ Feature: Modules
       | resource.sidecar.envoy                  |
       | resource.k8s_cluster.k3s                |
       | resource.docs.docs                      |
-    And a HTTP call to "http://consul.container.shipyard.run:8500/v1/agent/members" should result in status 200
-    And a HTTP call to "http://consul-http.ingress.shipyard.run:18500/v1/agent/members" should result in status 200
+    And a HTTP call to "http://consul.container.local.jmpd.in:8500/v1/agent/members" should result in status 200
+    And a HTTP call to "http://consul-http.ingress.local.jmpd.in:18500/v1/agent/members" should result in status 200

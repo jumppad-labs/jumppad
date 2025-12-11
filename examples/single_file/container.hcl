@@ -80,7 +80,7 @@ resource "container" "consul" {
     http {
       address       = "http://localhost:8500/v1/status/leader"
       success_codes = [200]
-      method        = "POST"
+      method        = "GET"
     }
   }
 }

@@ -11,7 +11,7 @@ import (
 const configNomad = `
 {
   "local_address": "localhost",
-  "remote_address": "server.dev.nomad_cluster.shipyard.run",
+  "remote_address": "server.dev.nomad_cluster.local.jmpd.in",
   "api_port": 64124,
   "remote_api_port": 4646,
   "connector_port": 64648,
@@ -36,7 +36,7 @@ func TestConfigLoadsCorrectly(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, "localhost", nc.LocalAddress)
-	assert.Equal(t, "server.dev.nomad_cluster.shipyard.run", nc.RemoteAddress)
+	assert.Equal(t, "server.dev.nomad_cluster.local.jmpd.in", nc.RemoteAddress)
 }
 
 func TestNomadConfigLoadReturnsErrorWhenFileNotExist(t *testing.T) {
