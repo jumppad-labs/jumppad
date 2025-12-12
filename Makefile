@@ -60,3 +60,6 @@ install_local:
 
 remove_local:
 	sudo mv /usr/local/bin/jumppad-old /usr/local/bin/jumppad || true
+
+build_linux:
+	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -ldflags "-X main.version=${git_commit}" -gcflags=all="-N -l" -o bin/jumppad main.go
