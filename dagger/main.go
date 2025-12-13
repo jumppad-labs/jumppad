@@ -535,10 +535,12 @@ func (d *JumppadCI) getVersion(ctx context.Context, token *dagger.Secret, src *d
 
 	// get the latest git sha from the source
 	ref, err := cli.Container().
-		From("alpine/git").
+		From("alpine/git:v2.49.1").
 		WithDirectory("/src", src).
 		WithWorkdir("/src").
-		WithExec([]string{"rev-parse", "HEAD"}).
+		WithEnvVariable("GIT_CONFIG_GLOBAL", "/tmp/gitconfig").
+		WithNewFile("/tmp/gitconfig", "[safe]\n\tdirectory = *\n").
+		WithExec([]string{"rev-parse", "HEAD"}, dagger.ContainerWithExecOpts{UseEntrypoint: true}).
 		Stdout(ctx)
 
 	if err != nil {

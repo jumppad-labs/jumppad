@@ -34,9 +34,10 @@ test_e2e_cmd: install_local
 	jumppad down
 
 dagger_build:
-	dagger call -m dagger all \
+	dagger call --progress=plain -m dagger all \
 		--output=./all_archive \
 		--src=. \
+		--github-token=GITHUB_TOKEN \
 		--notorize-cert=${QUILL_SIGN_P12} \
 		--notorize-cert-password=QUILL_SIGN_PASSWORD \
 		--notorize-key=${QUILL_NOTARY_KEY} \
