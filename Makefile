@@ -1,6 +1,6 @@
 git_commit = $(shell git log -1 --pretty=format:"%H")
 
-test_folder ?= container
+test_folder ?= build
 
 test_unit:
 	dagger call --mod=dagger --progress=plain unit-test \
@@ -23,7 +23,7 @@ test_functional_podman:
 
 test_functional_docker:
 	GOOS=linux go build -ldflags "-X main.version=${git_commit}" -gcflags=all="-N -l" -o bin/jumppad main.go
-	dagger call --mod=dagger functional-test \
+	dagger call --mod=dagger --progress=plain functional-test \
 		--src=$(shell pwd)/examples \
 		--working-directory=$(test_folder) \
 		--runtime=docker \

@@ -85,13 +85,8 @@ jobs:
       - uses: actions/checkout@v2
       
       - name: All
-        uses: dagger/dagger-for-github@v8.2.0
-        with:
-          verb: call
-          module: ./dagger
-          args: functional-test --src=./examples --working-directory=${{matrix.folder}} --jumppad=/usr/local/bin/jumppad --runtime=docker
-          version: "0.19.8"
-          dagger-flags: "--progress=plain"
+        run: |
+          jumppad test ./examples${matrix.folder}} 
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
