@@ -138,11 +138,28 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y podman
 
-      - name: Enable Podman socket
+      #- name: Enable Podman socket
+      #  run: |
+      #    sudo systemctl start podman.socket
+      #    sudo chmod 666 /run/podman/podman.sock
+      #    podman info
+
+      - name: Debug Podman socket
         run: |
+          # Start root socket
           sudo systemctl start podman.socket
-          sudo chmod 666 /run/podman/podman.sock
-          podman info
+
+          # Check it's running
+          sudo systemctl status podman.socket
+
+          # Check socket exists
+          ls -la /run/podman/podman.sock
+
+          # Test the socket directly
+          sudo curl -s --unix-socket /run/podman/podman.sock http://localhost/_ping
+
+          # Check if your user can access it
+          curl -s --unix-socket /run/podman/podman.sock http://localhost/_ping
       
       - name: Test
         env:
