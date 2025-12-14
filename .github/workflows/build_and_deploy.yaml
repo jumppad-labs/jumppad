@@ -141,6 +141,7 @@ jobs:
       - name: Enable Podman socket
         run: |
           sudo systemctl start podman.socket
+          sudo chmod 666 /run/podman/podman.sock
           podman info
       
       - name: Test
