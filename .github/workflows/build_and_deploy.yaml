@@ -86,7 +86,7 @@ jobs:
       
       - name: All
         run: |
-          jumppad test ./examples${matrix.folder}} 
+          jumppad test ./examples${{matrix.folder}} 
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
