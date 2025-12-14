@@ -143,12 +143,14 @@ jobs:
       #    sudo systemctl start podman.socket
       #    sudo chmod 666 /run/podman/podman.sock
       #    podman info
+    - name: Start Podman socket
+      run: |
+        sudo systemctl start podman.socket
+        sudo chmod 755 /run/podman
+        sudo chmod 666 /run/podman/podman.sock
 
       - name: Debug Podman socket
         run: |
-          # Start root socket
-          sudo systemctl start podman.socket
-
           # Check it's running
           sudo systemctl status podman.socket
 
