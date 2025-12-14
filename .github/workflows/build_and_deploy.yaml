@@ -145,9 +145,35 @@ jobs:
       #    podman info
       - name: Start Podman socket
         run: |
+ 
+          sudo tee /etc/containers/containers.conf << 'EOF'
+          [containers]
+          netns="private"
+          userns="host"
+          ipcns="host"
+          utsns="private"
+          cgroupns="host"
+          cgroups="disabled"
+          log_driver = "k8s-file"
+
+          [engine]
+          cgroup_manager = "cgroupfs"
+          events_logger="file"
+          runtime="crun"
+
+          [network]
+          firewall_driver="iptables"
+ 
+          sudo podman system reset --force
           sudo systemctl start podman.socket
           sudo chmod 755 /run/podman
-          sudo chmod 666 /run/podman/podman.sock
+          sudo chmod 666 /run/podman/podman.sock         EOF         sudo chmod 666 /run/podman/podman.sock
+
+      - name: Configure Podman networking
+        run: |
+          # Switch to CNI if netavark is causing issues
+          sudo mkdir -p /etc/containers/containers.conf.d/
+          echo -e "[network]\nnetwork_backend = \"cni\"" | sudo tee /etc/containers/containers.conf.d/network.conf
 
       - name: Debug Podman socket
         run: |
