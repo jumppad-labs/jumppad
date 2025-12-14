@@ -132,15 +132,22 @@ jobs:
           sudo chmod +x /usr/local/bin/jumppad
 
       - uses: actions/checkout@v2
+
+      - name: Install Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+
+      - name: Enable Podman socket
+        run: |
+          sudo systemctl enable --now podman.socket
+          sudo ln -sf /run/podman/podman.sock /var/run/docker.sock
       
-      - name: All
-        uses: dagger/dagger-for-github@v8.2.0
-        with:
-          verb: call
-          module: ./dagger
-          args: functional-test --src=./examples --working-directory=${{matrix.folder}} --jumppad=/usr/local/bin/jumppad --runtime=podman
-          version: "0.19.8"
-          dagger-flags: "--progress=plain"
+      - name: Test
+        env:
+          DOCKER_HOST: unix:///run/podman/podman.sock
+        run: |
+          jumppad test ./examples${{matrix.folder}} 
       
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
