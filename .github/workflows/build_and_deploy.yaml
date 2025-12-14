@@ -140,8 +140,7 @@ jobs:
 
       - name: Enable Podman socket
         run: |
-          sudo systemctl enable --now podman.socket
-          sudo ln -sf /run/podman/podman.sock /var/run/docker.sock
+          sudo systemctl start podman.socket
       
       - name: Test
         env:
