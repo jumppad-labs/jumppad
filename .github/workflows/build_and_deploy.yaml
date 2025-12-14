@@ -169,12 +169,6 @@ jobs:
           sudo chmod 755 /run/podman
           sudo chmod 666 /run/podman/podman.sock         EOF         sudo chmod 666 /run/podman/podman.sock
 
-      - name: Configure Podman networking
-        run: |
-          # Switch to CNI if netavark is causing issues
-          sudo mkdir -p /etc/containers/containers.conf.d/
-          echo -e "[network]\nnetwork_backend = \"cni\"" | sudo tee /etc/containers/containers.conf.d/network.conf
-
       - name: Debug Podman socket
         run: |
           # Check it's running
