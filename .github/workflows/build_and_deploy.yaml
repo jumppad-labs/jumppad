@@ -153,16 +153,15 @@ jobs:
           ipcns="host"
           utsns="private"
           cgroupns="host"
-          cgroups="disabled"
           log_driver = "k8s-file"
 
           [engine]
-          cgroup_manager = "cgroupfs"
+          cgroup_manager = "systemd"
           events_logger="file"
           runtime="crun"
-
+         
           [network]
-          firewall_driver="iptables"
+          network_backend = "cni"
           EOF
 
           sudo podman system reset --force
