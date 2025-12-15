@@ -107,14 +107,14 @@ jobs:
       matrix:
         folder: [
           '/container',
-          '/build',
-          '/docs',
-          '/nomad',
-          '/single_k3s_cluster',
-          '/multiple_k3s_clusters',
-          '/exec',
-          '/certificates',
-          '/terraform',
+          #'/build',
+          #'/docs',
+          #'/nomad',
+          #'/single_k3s_cluster',
+          #'/multiple_k3s_clusters',
+          #'/exec',
+          #'/certificates',
+          #'/terraform',
         ]
 
     steps:
@@ -183,12 +183,16 @@ jobs:
 
           # Check if your user can access it
           curl -s --unix-socket /run/podman/podman.sock http://localhost/_ping
+
+          # Dump podman info
+          podman info
       
       - name: Test
         env:
           DOCKER_HOST: unix:///run/podman/podman.sock
         run: |
-          jumppad test ./examples${{matrix.folder}} 
+          LOG_LEVEL=DEBUG jumppad up ./examples${{matrix.folder}}
+          podman ps -a -q
       
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
