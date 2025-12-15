@@ -145,21 +145,21 @@ resource "container" "consul" {
 
 }
 
-resource "sidecar" "envoy" {
-  target = resource.container.consul
-
-  image {
-    name = "envoyproxy/envoy:v${variable.envoy_version}"
-  }
-
-  environment = {
-    PORT = "${resource.container.consul.port.0.local}"
-  }
-
-  command = ["tail", "-f", "/dev/null"]
-
-  volume {
-    source      = data("config")
-    destination = "/config"
-  }
-}
+//resource "sidecar" "envoy" {
+//  target = resource.container.consul
+//
+//  image {
+//    name = "envoyproxy/envoy:v${variable.envoy_version}"
+//  }
+//
+//  environment = {
+//    PORT = "${resource.container.consul.port.0.local}"
+//  }
+//
+//  command = ["tail", "-f", "/dev/null"]
+//
+//  volume {
+//    source      = data("config")
+//    destination = "/config"
+//  }
+//}
