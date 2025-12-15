@@ -161,7 +161,8 @@ jobs:
           runtime="crun"
          
           [network]
-          network_backend = "cni"
+          network_backend = "netavark"
+          firewall_driver = "iptables"
           EOF
 
           sudo podman system reset --force
