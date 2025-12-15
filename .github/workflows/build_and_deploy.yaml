@@ -192,7 +192,17 @@ jobs:
           DOCKER_HOST: unix:///run/podman/podman.sock
         run: |
           LOG_LEVEL=DEBUG jumppad up ./examples${{matrix.folder}}
-          podman ps -a -q
+      
+      - name: Debug
+        run: |
+          sudo podman ps --format "{{.Names}} {{.Ports}}"
+
+          # Check if port is listening on host
+          sudo ss -tlnp | grep <port>
+          
+          # Test from host using container IP
+          sudo podman inspect  consul.container.local.jmpd.in --format '{{.NetworkSettings.IPAddress}}'
+          curl -s http://consul.container.local.jmpd.in:8500
       
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
