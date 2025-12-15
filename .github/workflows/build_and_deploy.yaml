@@ -163,11 +163,12 @@ jobs:
 
           [network]
           firewall_driver="iptables"
- 
+          EOF
+
           sudo podman system reset --force
           sudo systemctl start podman.socket
           sudo chmod 755 /run/podman
-          sudo chmod 666 /run/podman/podman.sock         EOF         sudo chmod 666 /run/podman/podman.sock
+          sudo chmod 666 /run/podman/podman.sock
 
       - name: Debug Podman socket
         run: |
