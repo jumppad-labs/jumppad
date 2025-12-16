@@ -206,7 +206,7 @@ jobs:
           
           # Test from host using container IP
           echo "Curl source"
-          curl -v http://localhost:8500
+          curl -v http://127.0.0.1:8500
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
