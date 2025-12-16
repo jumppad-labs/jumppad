@@ -145,17 +145,6 @@ jobs:
       #    podman info
       - name: Start Podman socket
         run: |
- 
-          sudo tee /etc/containers/containers.conf << 'EOF'
-          [containers]
-
-          [engine]
-          cgroup_manager = "cgroupfs"
-         
-          [network]
-          firewall_driver = "nftables"
-          EOF
-
           sudo podman system reset --force
           sudo systemctl start podman.socket
           sudo chmod 755 /run/podman
