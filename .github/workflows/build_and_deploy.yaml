@@ -148,21 +148,12 @@ jobs:
  
           sudo tee /etc/containers/containers.conf << 'EOF'
           [containers]
-          netns="private"
-          userns="host"
-          ipcns="host"
-          utsns="private"
-          cgroupns="host"
-          log_driver = "k8s-file"
 
           [engine]
-          cgroup_manager = "systemd"
-          events_logger="file"
-          runtime="crun"
+          cgroup_manager = "cgroupfs"
          
           [network]
-          network_backend = "netavark"
-          firewall_driver = "iptables"
+          firewall_driver = "nftables"
           EOF
 
           sudo podman system reset --force
