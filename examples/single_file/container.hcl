@@ -1,5 +1,5 @@
 variable "version" {
-  default = "consul:1.6.1"
+  default = "hashicorp/consul/1.22"
 }
 
 variable "port_range" {
@@ -37,7 +37,7 @@ resource "container" "consul" {
     name = variable.version
   }
 
-  command = ["consul", "agent", "-dev", "-client", "0.0.0.0"]
+  command = ["consul", "agent", "-dev", "-client", "0.0.0.0", "-bind", "0.0.0.0"]
 
   network {
     id         = resource.network.onprem.meta.id
@@ -63,26 +63,26 @@ resource "container" "consul" {
     destination = "/test"
   }
 
-  volume {
-    source      = resource.template.consul_config.destination
-    destination = "/config/config.hcl"
-  }
+  //volume {
+  //  source      = resource.template.consul_config.destination
+  //  destination = "/config/config.hcl"
+  //}
 
-  volume {
-    source      = "images.volume.jumppad.dev"
-    destination = "/cache"
-    type        = "volume"
-  }
+  //volume {
+  //  source      = "images.volume.jumppad.dev"
+  //  destination = "/cache"
+  //  type        = "volume"
+  //}
 
-  health_check {
-    timeout = "30s"
+  //health_check {
+  //  timeout = "60s"
 
-    http {
-      address       = "http://localhost:8500/v1/status/leader"
-      success_codes = [200]
-      method        = "GET"
-    }
-  }
+  //  http {
+  //    address       = "http://localhost:8500/v1/status/leader"
+  //    success_codes = [200]
+  //    method        = "GET"
+  //  }
+  //}
 }
 
 output "consul_addr" {

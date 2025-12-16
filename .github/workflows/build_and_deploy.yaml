@@ -191,8 +191,8 @@ jobs:
         env:
           DOCKER_HOST: unix:///run/podman/podman.sock
         run: |
-          # LOG_LEVEL=DEBUG jumppad up ./examples${{matrix.folder}}
-          podman run -it --rm -d -p 8500:8500 hashicorp/consul:1.22 consul agent -dev -bind 0.0.0.0 -client 0.0.0.0
+          LOG_LEVEL=DEBUG jumppad up ./examples${{matrix.folder}}
+          # podman run -it --rm -d -p 8500:8500 hashicorp/consul:1.22 consul agent -dev -bind 0.0.0.0 -client 0.0.0.0
           sleep 30
 
       - name: Debug
