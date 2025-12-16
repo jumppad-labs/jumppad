@@ -63,16 +63,16 @@ resource "container" "consul" {
     destination = "/test"
   }
 
-  //volume {
-  //  source      = resource.template.consul_config.destination
-  //  destination = "/config/config.hcl"
-  //}
+  volume {
+    source      = resource.template.consul_config.destination
+    destination = "/config/config.hcl"
+  }
 
-  //volume {
-  //  source      = "images.volume.jumppad.dev"
-  //  destination = "/cache"
-  //  type        = "volume"
-  //}
+  volume {
+    source      = "images.volume.jumppad.dev"
+    destination = "/cache"
+    type        = "volume"
+  }
 
   //health_check {
   //  timeout = "60s"
