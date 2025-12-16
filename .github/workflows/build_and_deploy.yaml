@@ -191,7 +191,9 @@ jobs:
         env:
           DOCKER_HOST: unix:///run/podman/podman.sock
         run: |
-          LOG_LEVEL=DEBUG jumppad up ./examples${{matrix.folder}}
+          # LOG_LEVEL=DEBUG jumppad up ./examples${{matrix.folder}}
+          podman run -it --rm -d -p 8500:8500 hashicorp/consul:1.22 consul agent -dev -bind 0.0.0.0 -client 0.0.0.0
+          sleep 30
 
       - name: Debug
         run: |
@@ -204,7 +206,7 @@ jobs:
           
           # Test from host using container IP
           echo "Curl source"
-          curl -s http://consul.container.local.jmpd.in:8500
+          curl -s http://localhost:8500
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1
