@@ -4,7 +4,7 @@ module github.com/jumppad-labs/jumppad
 // https://github.com/docker/cli/issues/4437
 // fixed it by using docker v23.0.7-0.20230714215826-f00e7af96042+incompatible
 // switch to v24.0.4+incompatible once github actions updates their docker version
-go 1.24.3
+go 1.25.0
 
 require (
 	github.com/Masterminds/semver v1.5.0
@@ -13,7 +13,7 @@ require (
 	github.com/charmbracelet/bubbletea v1.3.3
 	github.com/charmbracelet/glamour v0.8.0
 	github.com/charmbracelet/lipgloss v1.0.0
-	github.com/charmbracelet/log v0.2.2
+	github.com/charmbracelet/log v0.4.0
 	github.com/creack/pty v1.1.18
 	github.com/cucumber/godog v0.15.0
 	github.com/distribution/reference v0.6.0
@@ -237,6 +237,7 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.59.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.59.0 // indirect
 	go.opentelemetry.io/otel v1.34.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.24.0 // indirect
 	go.opentelemetry.io/otel/metric v1.34.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.34.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.34.0 // indirect

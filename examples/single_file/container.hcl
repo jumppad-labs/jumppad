@@ -1,5 +1,5 @@
 variable "version" {
-  default = "consul:1.6.1"
+  default = "hashicorp/consul/1.22"
 }
 
 variable "port_range" {
@@ -37,7 +37,7 @@ resource "container" "consul" {
     name = variable.version
   }
 
-  command = ["consul", "agent", "-dev", "-client", "0.0.0.0"]
+  command = ["consul", "agent", "-dev", "-client", "0.0.0.0", "-bind", "0.0.0.0"]
 
   network {
     id         = resource.network.onprem.meta.id
@@ -75,12 +75,12 @@ resource "container" "consul" {
   }
 
   health_check {
-    timeout = "30s"
+    timeout = "60s"
 
     http {
-      address       = "http://localhost:8500/v1/status/leader"
+      address       = "http://127.0.0.1:8500/v1/status/leader"
       success_codes = [200]
-      method        = "POST"
+      method        = "GET"
     }
   }
 }

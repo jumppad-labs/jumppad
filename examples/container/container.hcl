@@ -1,11 +1,3 @@
-variable "consul_version" {
-  default = "1.10.6"
-}
-
-variable "envoy_version" {
-  default = "1.18.4"
-}
-
 resource "template" "consul_config" {
   source = <<-EOF
   data_dir = "{{ data_dir }}"
@@ -21,7 +13,7 @@ resource "template" "consul_config" {
   
   bind_addr = "0.0.0.0"
   client_addr = "0.0.0.0"
-  advertise_addr = "10.6.0.200"
+  advertise_addr = "10.8.0.200"
   
   ports {
     grpc = 8502
@@ -43,14 +35,14 @@ resource "container" "consul_disabled" {
   disabled = true
 
   image {
-    name = "consul:${variable.consul_version}"
+    name = "hashicorp/consul:${variable.consul_version}"
   }
 }
 
 
 resource "container" "consul_capabilities" {
   image {
-    name = "consul:${variable.consul_version}"
+    name = "hashicorp/consul:${variable.consul_version}"
   }
 
   capabilities {
@@ -63,7 +55,7 @@ resource "container" "consul_capabilities" {
 
 resource "container" "consul_labels" {
   image {
-    name = "consul:${variable.consul_version}"
+    name = "hashicorp/consul:${variable.consul_version}"
   }
 
   labels = {
@@ -73,7 +65,7 @@ resource "container" "consul_labels" {
 
 resource "container" "consul" {
   image {
-    name = "consul:${variable.consul_version}"
+    name = "hashicorp/consul:${variable.consul_version}"
   }
 
   command = ["consul", "agent", "-config-file", "/config/config.hcl"]
@@ -126,12 +118,12 @@ resource "container" "consul" {
     timeout = "30s"
 
     http {
-      address       = "http://localhost:8500"
+      address       = "http://127.0.0.1:8500"
       success_codes = [200]
     }
 
     tcp {
-      address = "localhost:8500"
+      address = "127.0.0.1:8500"
     }
 
     exec {

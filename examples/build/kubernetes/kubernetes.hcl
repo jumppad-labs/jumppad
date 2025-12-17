@@ -127,7 +127,7 @@ output "cluster" {
 }
 
 output "local_address" {
-  value = "localhost"
+  value = "127.0.0.1"
 }
 
 output "local_port" {

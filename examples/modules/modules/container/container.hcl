@@ -121,12 +121,12 @@ resource "container" "consul" {
     timeout = "30s"
 
     http {
-      address       = "http://localhost:8500"
+      address       = "http://127.0.0.1:8500"
       success_codes = [200]
     }
 
     tcp {
-      address = "localhost:8500"
+      address = "127.0.0.1:8500"
     }
 
     exec {

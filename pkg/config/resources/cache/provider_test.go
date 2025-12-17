@@ -244,7 +244,7 @@ var cacheContainerInfoWithNetworks = `
     "HostnamePath": "/run/containers/storage/overlay-containers/1d77f21c6a497f9c8c861a26caf6b518b5ef4638335f5a394e7b0e6c9a8e54c2/userdata/hostname",
     "HostsPath": "/run/containers/storage/overlay-containers/1d77f21c6a497f9c8c861a26caf6b518b5ef4638335f5a394e7b0e6c9a8e54c2/userdata/hosts",
     "LogPath": "/var/lib/containers/storage/overlay-containers/1d77f21c6a497f9c8c861a26caf6b518b5ef4638335f5a394e7b0e6c9a8e54c2/userdata/ctr.log",
-    "Name": "/docker-cache.image-cache.shipyard.run",
+    "Name": "/docker-cache.image-cache.local.jmpd.in",
     "RestartCount": 0,
     "Driver": "overlay",
     "Platform": "linux",
@@ -256,7 +256,7 @@ var cacheContainerInfoWithNetworks = `
         "Binds": [
             "85d574122fb5aa224b2086e6b72f1a3a60e496855b9281773dbef7f1a69f609a:/ca:rprivate,rw,nodev,exec,nosuid,rbind",
             "77c1a944559390955002af5be4ae7da86dd3b51807a46ab3a64401f830cc3c8e:/docker_mirror_cache:rprivate,rw,nodev,exec,nosuid,rbind",
-            "images.volume.shipyard.run:/cache:z,rw,rprivate,nosuid,nodev,rbind"
+            "images.volume.local.jmpd.in:/cache:z,rw,rprivate,nosuid,nodev,rbind"
         ],
         "ContainerIDFile": "",
         "LogConfig": {
@@ -387,8 +387,8 @@ var cacheContainerInfoWithNetworks = `
         },
         {
             "Type": "volume",
-            "Name": "images.volume.shipyard.run",
-            "Source": "/var/lib/containers/storage/volumes/images.volume.shipyard.run/_data",
+            "Name": "images.volume.local.jmpd.in",
+            "Source": "/var/lib/containers/storage/volumes/images.volume.local.jmpd.in/_data",
             "Destination": "/cache",
             "Driver": "local",
             "Mode": "z",

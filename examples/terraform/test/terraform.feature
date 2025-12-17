@@ -10,7 +10,7 @@ Feature: Terraform provider
       | name                       |
       | resource.network.main      |
       | resource.container.vault   |
-    And a HTTP call to "http://localhost:8200" should result in status 200
+    And a HTTP call to "http://127.0.0.1:8200" should result in status 200
     And the following output variables should be set
       | name              | value     |
       | first             | one       |

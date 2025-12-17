@@ -581,7 +581,7 @@ exec_remote "exec_standalone" {
 
   env {
     key = "CONSUL_HTTP_ADDR"
-    value = "http://consul.container.shipyard.run:8500"
+    value = "http://consul.container.local.jmpd.in:8500"
   }
 }
 ```
@@ -602,7 +602,7 @@ Add ability to configure network aliases for containers
     name = "network.onprem"
     ip_address = "10.5.0.200"
     // Add network aliases for the container
-    aliases = ["web.ingress.container.shipyard.run", "api.ingress.container.shipyard.run"]
+    aliases = ["web.ingress.container.local.jmpd.in", "api.ingress.container.local.jmpd.in"]
   }
 ```
 
@@ -644,7 +644,7 @@ readme, after the blueprint has completed the variables will be presented to the
 title: Single Container Example
 author: Nic Jackson
 slug: container
-browser_windows: http://consul-http.ingress.shipyard.run:8500
+browser_windows: http://consul-http.ingress.local.jmpd.in:8500
 env:
   - KUBECONFIG=$HOME/.shipyard/config/k3s/kubeconfig.yaml
   - VAULT_ADDR=http://localhost:18200
@@ -701,7 +701,7 @@ eval $(shipyard env)
   which was created every time the cluster was started. Images were copied from the local machine to a Docker volume
   before being imported to the clsuter. If multiple clusters were defined in a config this process would run for each
   cluster unecessarilly slowed the startup time. Now images are cached in a persistant volume
-  `images.volume.shipyard.run` improving startup times. When a cluster starts it first checks to see if an image exits,
+  `images.volume.local.jmpd.in` improving startup times. When a cluster starts it first checks to see if an image exits,
   if it does not it will import the image from the local Docker instance.
 * Added a new feature to the `purge` command which removes the persistent image cache.
 
@@ -907,7 +907,7 @@ nomad_ingress "nomad-http" {
 ## General
 * Can now do `shipyard run` or `shipyard run .` and this equals `shipyard run ./`
 * Sidebar configuration is now optional in docs
-* Changed names of Docker resources and FQDN for resources to `[name].[type].shipyard.run`
+* Changed names of Docker resources and FQDN for resources to `[name].[type].local.jmpd.in`
 * Resources are now resolvable via DNS
 * Added interpolation helper `${home()}` to resolve the home folder from config
 * Added interpolation helper `${shipyard()}` to resolve the shipyard folder from config

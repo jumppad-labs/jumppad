@@ -1,6 +1,6 @@
 git_commit = $(shell git log -1 --pretty=format:"%H")
 
-test_folder ?= container
+test_folder ?= build
 
 test_unit:
 	dagger call --mod=dagger --progress=plain unit-test \
@@ -23,7 +23,7 @@ test_functional_podman:
 
 test_functional_docker:
 	GOOS=linux go build -ldflags "-X main.version=${git_commit}" -gcflags=all="-N -l" -o bin/jumppad main.go
-	dagger call --mod=dagger functional-test \
+	dagger call --mod=dagger --progress=plain functional-test \
 		--src=$(shell pwd)/examples \
 		--working-directory=$(test_folder) \
 		--runtime=docker \
@@ -34,9 +34,10 @@ test_e2e_cmd: install_local
 	jumppad down
 
 dagger_build:
-	dagger call -m dagger all \
+	dagger call --progress=plain -m dagger all \
 		--output=./all_archive \
 		--src=. \
+		--github-token=GITHUB_TOKEN \
 		--notorize-cert=${QUILL_SIGN_P12} \
 		--notorize-cert-password=QUILL_SIGN_PASSWORD \
 		--notorize-key=${QUILL_NOTARY_KEY} \
@@ -60,3 +61,6 @@ install_local:
 
 remove_local:
 	sudo mv /usr/local/bin/jumppad-old /usr/local/bin/jumppad || true
+
+build_linux:
+	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -ldflags "-X main.version=${git_commit}" -gcflags=all="-N -l" -o bin/jumppad main.go

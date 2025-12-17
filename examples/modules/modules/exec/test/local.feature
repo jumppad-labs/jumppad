@@ -5,4 +5,4 @@ Feature: Docker Container
 
 Scenario: Two Local Execed Apps Running As Daemon
   Given I have a running blueprint
-  Then a HTTP call to "http://localhost:8500/v1/status/leader" should result in status 200
+  Then a HTTP call to "http://127.0.0.1:8500/v1/status/leader" should result in status 200

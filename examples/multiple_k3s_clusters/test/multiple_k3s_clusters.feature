@@ -10,5 +10,5 @@ Feature: Multiple Kubernetes Clusters
       | resource.network.cloud                     |
       | module.consul_dc1.resource.k8s_cluster.dev |
       | module.consul_dc2.resource.k8s_cluster.dev |
-    And a HTTP call to "http://localhost:18500/v1/agent/members" should result in status 200
-    And a HTTP call to "http://localhost:18501/v1/agent/members" should result in status 200
+    And a HTTP call to "http://127.0.0.1:18500/v1/agent/members" should result in status 200
+    And a HTTP call to "http://127.0.0.1:18501/v1/agent/members" should result in status 200
