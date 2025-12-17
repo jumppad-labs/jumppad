@@ -486,7 +486,7 @@ func (d *JumppadCI) UpdateGemFury(
 		_, err := cli.Container().
 			From("curlimages/curl:latest").
 			WithFile(output, archives.File(output)).
-			WithExec([]string{"-F", fmt.Sprintf("package=@%s", output), url}).
+			WithExec([]string{"-F", fmt.Sprintf("package=@%s", output), url}, dagger.ContainerWithExecOpts{UseEntrypoint: true}).
 			Sync(ctx)
 
 		if err != nil {
