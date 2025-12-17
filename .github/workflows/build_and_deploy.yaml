@@ -224,7 +224,7 @@ jobs:
           verb: call
           module: ./dagger
           args: release --src=. --github-token=GITHUB_TOKEN --gemfury-token=GEMFURY_TOKEN --archives=./build_artifacts --output=./version.txt
-          version: "0.11.5"
+          version: "0.19.8"
           dagger-flags: "--progress=plain"
     
       - name: Set output
