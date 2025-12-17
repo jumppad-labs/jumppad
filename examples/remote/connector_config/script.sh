@@ -14,7 +14,7 @@
 #   }
 # }
 
-curl localhost:9091/expose -d \
+curl 127.0.0.1:9091/expose -d \
   '{
     "name":"k8s_web", 
     "local_port": 12000, 
@@ -41,7 +41,7 @@ curl localhost:9091/expose -d \
 #  
 # }
 
-curl localhost:9091/expose -d \
+curl 127.0.0.1:9091/expose -d \
   '{
     "name":"local_fake", 
     "local_port": 19090, 

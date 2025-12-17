@@ -12,8 +12,8 @@ Feature: Nomad Cluster
       | resource.network.cloud     |
       | resource.nomad_cluster.dev |
       | resource.container.consul                   |
-    And a HTTP call to "http://localhost:18500/v1/status/leader" should result in status 200
-    And a HTTP call to "http://localhost:19091" should result in status 200
+    And a HTTP call to "http://127.0.0.1:18500/v1/status/leader" should result in status 200
+    And a HTTP call to "http://127.0.0.1:19091" should result in status 200
   
   @datacenter
   Scenario: Nomad Cluster
@@ -26,8 +26,8 @@ Feature: Nomad Cluster
       | resource.network.cloud     |
       | resource.nomad_cluster.dev |
       | resource.container.consul                   |
-    And a HTTP call to "http://localhost:18500/v1/status/leader" should result in status 200
-    And a HTTP call to "http://localhost:19091" should result in status 200
+    And a HTTP call to "http://127.0.0.1:18500/v1/status/leader" should result in status 200
+    And a HTTP call to "http://127.0.0.1:19091" should result in status 200
 
   @multi-node
   Scenario: Nomad Multi-Node Cluster
@@ -40,5 +40,5 @@ Feature: Nomad Cluster
       | resource.network.cloud                      |
       | resource.nomad_cluster.dev                  |
       | resource.container.consul                   |
-    And a HTTP call to "http://localhost:18500/v1/status/leader" should result in status 200
-    And a HTTP call to "http://localhost:19091" should result in status 200
+    And a HTTP call to "http://127.0.0.1:18500/v1/status/leader" should result in status 200
+    And a HTTP call to "http://127.0.0.1:19091" should result in status 200

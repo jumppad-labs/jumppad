@@ -5,14 +5,14 @@ resource "container" "httpbin" {
 
   port {
     local = 80
-    host = 80
+    host  = 80
   }
 
   health_check {
     timeout = "30s"
 
     http {
-      address = "http://localhost/get"
+      address       = "http://127.0.0.1/get"
       success_codes = [200]
     }
   }

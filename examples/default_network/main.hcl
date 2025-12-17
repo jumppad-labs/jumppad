@@ -68,7 +68,7 @@ resource "container" "consul" {
     timeout = "60s"
 
     http {
-      address       = "http://localhost:8500/v1/status/leader"
+      address       = "http://127.0.0.1:8500/v1/status/leader"
       success_codes = [200]
       method        = "GET"
     }

@@ -1,11 +1,3 @@
-variable "consul_version" {
-  default = "1.10.6"
-}
-
-variable "envoy_version" {
-  default = "1.18.4"
-}
-
 resource "template" "consul_config" {
   source = <<-EOF
   data_dir = "{{ data_dir }}"
@@ -43,14 +35,14 @@ resource "container" "consul_disabled" {
   disabled = true
 
   image {
-    name = "consul:${variable.consul_version}"
+    name = "hashicorp/consul:${variable.consul_version}"
   }
 }
 
 
 resource "container" "consul_capabilities" {
   image {
-    name = "consul:${variable.consul_version}"
+    name = "hashicorp/consul:${variable.consul_version}"
   }
 
   capabilities {
@@ -63,7 +55,7 @@ resource "container" "consul_capabilities" {
 
 resource "container" "consul_labels" {
   image {
-    name = "consul:${variable.consul_version}"
+    name = "hashicorp/consul:${variable.consul_version}"
   }
 
   labels = {
@@ -73,7 +65,7 @@ resource "container" "consul_labels" {
 
 resource "container" "consul" {
   image {
-    name = "consul:${variable.consul_version}"
+    name = "hashicorp/consul:${variable.consul_version}"
   }
 
   command = ["consul", "agent", "-config-file", "/config/config.hcl"]
@@ -122,44 +114,44 @@ resource "container" "consul" {
     enable_host = true
   }
 
-  //health_check {
-  //  timeout = "30s"
+  health_check {
+    timeout = "30s"
 
-  //  http {
-  //    address       = "http://localhost:8500"
-  //    success_codes = [200]
-  //  }
+    http {
+      address       = "http://127.0.0.1:8500"
+      success_codes = [200]
+    }
 
-  //  tcp {
-  //    address = "localhost:8500"
-  //  }
+    tcp {
+      address = "127.0.0.1:8500"
+    }
 
-  //  exec {
-  //    script = <<-EOF
-  //      #!/bin/sh -e
+    exec {
+      script = <<-EOF
+        #!/bin/sh -e
 
-  //      ls -las
-  //    EOF
-  //  }
-  //}
+        ls -las
+      EOF
+    }
+  }
 
 }
 
-//resource "sidecar" "envoy" {
-//  target = resource.container.consul
-//
-//  image {
-//    name = "envoyproxy/envoy:v${variable.envoy_version}"
-//  }
-//
-//  environment = {
-//    PORT = "${resource.container.consul.port.0.local}"
-//  }
-//
-//  command = ["tail", "-f", "/dev/null"]
-//
-//  volume {
-//    source      = data("config")
-//    destination = "/config"
-//  }
-//}
+resource "sidecar" "envoy" {
+  target = resource.container.consul
+
+  image {
+    name = "envoyproxy/envoy:v${variable.envoy_version}"
+  }
+
+  environment = {
+    PORT = "${resource.container.consul.port.0.local}"
+  }
+
+  command = ["tail", "-f", "/dev/null"]
+
+  volume {
+    source      = data("config")
+    destination = "/config"
+  }
+}

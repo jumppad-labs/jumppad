@@ -2,7 +2,7 @@
 title: Nomad Cluster Example
 author: Nic Jackson
 slug: nomad_cluster
-browser_windows: http://localhost:18500
+browser_windows: http://127.0.0.1:18500
 ---
 
 # Nomad Cluster
@@ -10,5 +10,5 @@ browser_windows: http://localhost:18500
 This blueprint shows how you can create a Nomad cluser with Consul
 
 ```shell
-curl localhost:18500
+curl 127.0.0.1:18500
 ```

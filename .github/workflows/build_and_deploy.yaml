@@ -150,43 +150,41 @@ jobs:
           sudo chmod 755 /run/podman
           sudo chmod 666 /run/podman/podman.sock
 
-      - name: Debug Podman socket
-        run: |
-          # Check it's running
-          sudo systemctl status podman.socket
+      #- name: Debug Podman socket
+      #  run: |
+      #    # Check it's running
+      #    sudo systemctl status podman.socket
 
-          # Check socket exists
-          ls -la /run/podman/podman.sock
+      #    # Check socket exists
+      #    ls -la /run/podman/podman.sock
 
-          # Test the socket directly
-          sudo curl -s --unix-socket /run/podman/podman.sock http://localhost/_ping
+      #    # Test the socket directly
+      #    sudo curl -s --unix-socket /run/podman/podman.sock http://localhost/_ping
 
-          # Check if your user can access it
-          curl -s --unix-socket /run/podman/podman.sock http://localhost/_ping
+      #    # Check if your user can access it
+      #    curl -s --unix-socket /run/podman/podman.sock http://localhost/_ping
 
-          # Dump podman info
-          podman info
+      #    # Dump podman info
+      #    podman info
       
       - name: Test
         env:
           DOCKER_HOST: unix:///run/podman/podman.sock
         run: |
-          sudo LOG_LEVEL=DEBUG jumppad up ./examples${{matrix.folder}}
-          # podman run -it --rm -d -p 8500:8500 hashicorp/consul:1.22 consul agent -dev -bind 0.0.0.0 -client 0.0.0.0
-          sleep 30
+          sudo LOG_LEVEL=DEBUG jumppad test ./examples${{matrix.folder}}
 
-      - name: Debug
-        run: |
-          echo "Running Containers"
-          sudo podman ps --format "{{.Names}} {{.Ports}}"
+      #- name: Debug
+      #  run: |
+      #    echo "Running Containers"
+      #    sudo podman ps --format "{{.Names}} {{.Ports}}"
 
-          # Check if port is listening on host
-          echo "Check Listeners"
-          sudo ss -tlnp | grep 8500
-          
-          # Test from host using container IP
-          echo "Curl source"
-          curl -v http://127.0.0.1:8500
+      #    # Check if port is listening on host
+      #    echo "Check Listeners"
+      #    sudo ss -tlnp | grep 8500
+      #    
+      #    # Test from host using container IP
+      #    echo "Curl source"
+      #    curl -v http://127.0.0.1:8500
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1

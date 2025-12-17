@@ -15,9 +15,9 @@ Feature: Custom Docker Registries
       | name                       |
       | resource.network.cloud     |
       | module.nomad.resource.nomad_cluster.dev |
-    And a HTTP call to "http://localhost:19090" should result in status 200
-    And a HTTP call to "http://localhost:19091" should result in status 200
-    And a HTTP call to "http://localhost:19092" should result in status 200
+    And a HTTP call to "http://127.0.0.1:19090" should result in status 200
+    And a HTTP call to "http://127.0.0.1:19091" should result in status 200
+    And a HTTP call to "http://127.0.0.1:19092" should result in status 200
   
   @k8s
   Scenario: Kubernetes Cluster
@@ -30,6 +30,6 @@ Feature: Custom Docker Registries
       | name                       |
       | resource.network.cloud     |
       | module.k8s.resource.k8s_cluster.k3s   |
-    And a HTTP call to "http://localhost:29090" should result in status 200
-    And a HTTP call to "http://localhost:29091" should result in status 200
-    And a HTTP call to "http://localhost:29092" should result in status 200
+    And a HTTP call to "http://127.0.0.1:29090" should result in status 200
+    And a HTTP call to "http://127.0.0.1:29091" should result in status 200
+    And a HTTP call to "http://127.0.0.1:29092" should result in status 200

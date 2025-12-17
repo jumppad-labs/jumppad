@@ -44,14 +44,9 @@ resource "container" "consul" {
     ip_address = "10.6.0.200"
   }
 
-  //port_range {
-  //  range       = variable.port_range
-  //  enable_host = true
-  //}
-
-  port {
-    local = 8500
-    host  = 8500
+  port_range {
+    range       = variable.port_range
+    enable_host = true
   }
 
   resources {
@@ -79,15 +74,15 @@ resource "container" "consul" {
     type        = "volume"
   }
 
-  //health_check {
-  //  timeout = "60s"
+  health_check {
+    timeout = "60s"
 
-  //  http {
-  //    address       = "http://localhost:8500/v1/status/leader"
-  //    success_codes = [200]
-  //    method        = "GET"
-  //  }
-  //}
+    http {
+      address       = "http://127.0.0.1:8500/v1/status/leader"
+      success_codes = [200]
+      method        = "GET"
+    }
+  }
 }
 
 output "consul_addr" {
