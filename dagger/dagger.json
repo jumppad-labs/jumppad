@@ -8,7 +8,7 @@
     {
       "name": "brew",
       "source": "https://github.com/jumppad-labs/daggerverse/brew@main",
-      "pin": "58bf8e8c0e976e934ead444a9879d27380a37cc0"
+      "pin": "d949672adab8fe692916f8e08e885b45bb53502c"
     },
     {
       "name": "checksum",
