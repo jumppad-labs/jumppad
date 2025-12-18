@@ -7,8 +7,8 @@
   "dependencies": [
     {
       "name": "brew",
-      "source": "github.com/jumppad-labs/daggerverse/brew@f6572111270cdfa7367f672d5ef3fec2e10dba0d",
-      "pin": "f6572111270cdfa7367f672d5ef3fec2e10dba0d"
+      "source": "https://github.com/jumppad-labs/daggerverse/brew@main",
+      "pin": "58bf8e8c0e976e934ead444a9879d27380a37cc0"
     },
     {
       "name": "checksum",

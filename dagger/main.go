@@ -452,8 +452,8 @@ func (d *JumppadCI) UpdateBrew(
 		dagger.BrewFormulaOpts{
 			DarwinX86Url:   fmt.Sprintf("https://github.com/jumppad-labs/jumppad/releases/download/%s/jumppad_%s_darwin_x86_64.zip", version, version),
 			DarwinArm64Url: fmt.Sprintf("https://github.com/jumppad-labs/jumppad/releases/download/%s/jumppad_%s_darwin_arm64.zip", version, version),
-			LinuxX86Url:    fmt.Sprintf("https://github.com/jumppad-labs/jumppad/releases/download/%s/jumppad_%s_linux_x86_64.tar.g", version, version),
-			LinuxArm64Url:  fmt.Sprintf("https://github.com/jumppad-labs/jumppad/releases/download/%s/jumppad_%s_linux_arm64.tar.giz", version, version),
+			LinuxX86Url:    fmt.Sprintf("https://github.com/jumppad-labs/jumppad/releases/download/%s/jumppad_%s_linux_x86_64.tar.gz", version, version),
+			LinuxArm64Url:  fmt.Sprintf("https://github.com/jumppad-labs/jumppad/releases/download/%s/jumppad_%s_linux_arm64.tar.gz", version, version),
 		},
 	)
 
