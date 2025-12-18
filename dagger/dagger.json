@@ -12,8 +12,8 @@
     },
     {
       "name": "checksum",
-      "source": "github.com/jumppad-labs/daggerverse/checksum@1ee5ef843939f88d2da4fadf8ad3ffb2c3d6b01d",
-      "pin": "1ee5ef843939f88d2da4fadf8ad3ffb2c3d6b01d"
+      "source": "https://github.com/jumppad-labs/daggerverse/checksum@main",
+      "pin": "45014437f1e4b2474e632a7daf14e5aa8744680f"
     },
     {
       "name": "deb",
