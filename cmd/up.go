@@ -36,6 +36,7 @@ import (
 func newRunCmd(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Getter, hc http.HTTP, bc system.System, cc connector.Connector, l logger.Logger) *cobra.Command {
 	var noOpen bool
 	var force bool
+	var noCache bool
 	var variables []string
 	var variablesFile string
 
@@ -54,19 +55,20 @@ func newRunCmd(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Getter, h
   jumppad up github.com/jumppad-labs/blueprints/kubernetes-vault
 	`,
 		Args:         cobra.ArbitraryArgs,
-		RunE:         newRunCmdFunc(e, dt, bp, hc, bc, cc, &noOpen, &force, &variables, &variablesFile, l),
+		RunE:         newRunCmdFunc(e, dt, bp, hc, bc, cc, &noOpen, &force, &noCache, &variables, &variablesFile, l),
 		SilenceUsage: true,
 	}
 
 	runCmd.Flags().BoolVarP(&noOpen, "no-browser", "", false, "When set to true Jumppad will not open the browser windows defined in the blueprint")
 	runCmd.Flags().BoolVarP(&force, "force-update", "", false, "When set to true Jumppad ignores cached images or files and will download all resources")
+	runCmd.Flags().BoolVarP(&noCache, "no-cache", "", false, "When set to true Jumppad will not create the image cache proxy. Clusters will pull images directly from registries")
 	runCmd.Flags().StringSliceVarP(&variables, "var", "", nil, "Allows setting variables from the command line, variables are specified as a key and value, e.g --var key=value. Can be specified multiple times")
 	runCmd.Flags().StringVarP(&variablesFile, "vars-file", "", "", "Load variables from a location other than *.vars files in the blueprint folder. E.g --vars-file=./file.vars")
 
 	return runCmd
 }
 
-func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Getter, hc http.HTTP, bc system.System, cc connector.Connector, noOpen *bool, force *bool, variables *[]string, variablesFile *string, l logger.Logger) func(cmd *cobra.Command, args []string) error {
+func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Getter, hc http.HTTP, bc system.System, cc connector.Connector, noOpen *bool, force *bool, noCache *bool, variables *[]string, variablesFile *string, l logger.Logger) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		// create the shipyard and sub folders in the users home directory
 		utils.CreateFolders()
@@ -74,6 +76,11 @@ func newRunCmdFunc(e jumppad.Engine, dt cclients.ContainerTasks, bp getter.Gette
 		if *force {
 			bp.SetForce(true)
 			dt.SetForce(true)
+		}
+
+		// set the environment variable to disable the image cache
+		if *noCache {
+			os.Setenv("IMAGE_CACHE_DISABLED", "true")
 		}
 
 		// parse the vars into a map

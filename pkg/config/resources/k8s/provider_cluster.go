@@ -350,7 +350,8 @@ func (p *ClusterProvider) createK3s(ctx context.Context) error {
 		return fmt.Errorf("kubernetes version is not valid semantic version: %s", err)
 	}
 
-	if sv.Check(v) {
+	// only set the proxy environment variables if the image cache is not disabled
+	if sv.Check(v) && !utils.ImageCacheDisabled() {
 		// load the CA from a file
 		ca, err := os.ReadFile(filepath.Join(utils.CertsDir(""), "/root.cert"))
 		if err != nil {
@@ -367,6 +368,9 @@ func (p *ClusterProvider) createK3s(ctx context.Context) error {
 			len(p.config.Config.DockerConfig.NoProxy) > 0 {
 			cc.Environment["CONTAINERD_NO_PROXY"] = strings.Join(p.config.Config.DockerConfig.NoProxy, ",")
 		}
+	} else if sv.Check(v) {
+		// set empty PROXY_CA when cache is disabled as the entrypoint expects it
+		cc.Environment["PROXY_CA"] = ""
 	}
 
 	// add any custom environment variables

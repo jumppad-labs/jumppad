@@ -243,47 +243,52 @@ func (e *EngineImpl) ApplyWithVariables(ctx context.Context, path string, vars m
 	e.config = c
 
 	// check to see we already have an image cache
-	_, err = c.FindResourcesByType(cache.TypeImageCache)
-	if err != nil {
-		// create a new cache with the correct registries
-		ca := &cache.ImageCache{
-			ResourceBase: types.ResourceBase{
-				Meta: types.Meta{
-					Name:       "default",
-					Type:       cache.TypeImageCache,
-					ID:         "resource.image_cache.default",
-					Properties: map[string]interface{}{},
+	// only create the cache if it is not disabled
+	if !utils.ImageCacheDisabled() {
+		_, err = c.FindResourcesByType(cache.TypeImageCache)
+		if err != nil {
+			// create a new cache with the correct registries
+			ca := &cache.ImageCache{
+				ResourceBase: types.ResourceBase{
+					Meta: types.Meta{
+						Name:       "default",
+						Type:       cache.TypeImageCache,
+						ID:         "resource.image_cache.default",
+						Properties: map[string]interface{}{},
+					},
 				},
-			},
-		}
+			}
 
-		e.log.Debug("Creating new Image Cache", "id", ca.Meta.ID)
+			e.log.Debug("Creating new Image Cache", "id", ca.Meta.ID)
 
-		p := e.providers.GetProvider(ca)
-		if p == nil {
-			// this should never happen
-			panic("Unable to find provider for Image Cache, Nic assured me that you should never see this message. Sorry, the monkey has broken something again")
-		}
+			p := e.providers.GetProvider(ca)
+			if p == nil {
+				// this should never happen
+				panic("Unable to find provider for Image Cache, Nic assured me that you should never see this message. Sorry, the monkey has broken something again")
+			}
 
-		// create the cache
-		err := p.Create(ctx)
-		if err != nil {
-			ca.Meta.Properties[constants.PropertyStatus] = constants.StatusFailed
-		} else {
+			// create the cache
+			err := p.Create(ctx)
+			if err != nil {
+				ca.Meta.Properties[constants.PropertyStatus] = constants.StatusFailed
+			} else {
+				ca.Meta.Properties[constants.PropertyStatus] = constants.StatusCreated
+			}
+
 			ca.Meta.Properties[constants.PropertyStatus] = constants.StatusCreated
+
+			// add the new cache to the config
+			e.config.AppendResource(ca)
+
+			// save the state
+			config.SaveState(e.config)
+
+			if err != nil {
+				return nil, fmt.Errorf("unable to create image cache %s", err)
+			}
 		}
-
-		ca.Meta.Properties[constants.PropertyStatus] = constants.StatusCreated
-
-		// add the new cache to the config
-		e.config.AppendResource(ca)
-
-		// save the state
-		config.SaveState(e.config)
-
-		if err != nil {
-			return nil, fmt.Errorf("unable to create image cache %s", err)
-		}
+	} else {
+		e.log.Info("Image cache disabled, skipping creation")
 	}
 
 	// finally we can process and create resources
@@ -535,65 +540,68 @@ func (e *EngineImpl) createCallback(r types.Resource) error {
 
 	// did we just create a network, if so we need to attach the image cache
 	// to the network and set the dependency
-	if r.Metadata().Type == network.TypeNetwork && r.Metadata().Properties[constants.PropertyStatus] == constants.StatusCreated {
-		// get the image cache
-		e.cacheMutex.Lock()
-		ic, err := e.config.FindResource("resource.image_cache.default")
-		if err == nil {
-			e.log.Debug("Attaching image cache to network", "network", ic.Metadata().ID)
-			ic.AddDependency(r.Metadata().ID)
+	// only do this if the image cache is not disabled
+	if !utils.ImageCacheDisabled() {
+		if r.Metadata().Type == network.TypeNetwork && r.Metadata().Properties[constants.PropertyStatus] == constants.StatusCreated {
+			// get the image cache
+			e.cacheMutex.Lock()
+			ic, err := e.config.FindResource("resource.image_cache.default")
+			if err == nil {
+				e.log.Debug("Attaching image cache to network", "network", ic.Metadata().ID)
+				ic.AddDependency(r.Metadata().ID)
 
-			// reload the networks
-			np := e.providers.GetProvider(ic)
-			np.Refresh(e.ctx)
-		} else {
-			e.log.Error("Unable to find Image Cache", "error", err)
-		}
-		e.cacheMutex.Unlock()
-	}
-
-	if r.Metadata().Type == cache.TypeRegistry && r.Metadata().Properties[constants.PropertyStatus] == constants.StatusCreated {
-		// get the image cache
-		e.cacheMutex.Lock()
-		ic, err := e.config.FindResource("resource.image_cache.default")
-		if err == nil {
-			// append the registry if not all ready present and not in the default list
-
-			foundIndex := -1
-			for i, reg := range ic.(*cache.ImageCache).Registries {
-				if reg.Hostname == r.(*cache.Registry).Hostname {
-					foundIndex = i
-					//
-					break
-				}
-			}
-
-			// check if the registry is already in the registry list
-			// if so replace it as we may be overriting the authentication
-			if foundIndex >= 0 {
-				ic.(*cache.ImageCache).Registries[foundIndex] = *r.(*cache.Registry)
+				// reload the networks
+				np := e.providers.GetProvider(ic)
+				np.Refresh(e.ctx)
 			} else {
-				ic.(*cache.ImageCache).Registries = append(ic.(*cache.ImageCache).Registries, *r.(*cache.Registry))
+				e.log.Error("Unable to find Image Cache", "error", err)
 			}
-
-			e.log.Debug("Adding registry to image cache", "registry", r.(*cache.Registry).Hostname)
-
-			// we now need to stop and restart the container to pick up the new registry changes
-			np := e.providers.GetProvider(ic)
-
 			e.cacheMutex.Unlock()
+		}
 
-			err := np.Destroy(e.ctx, e.force)
-			if err != nil {
-				e.log.Error("Unable to destroy Image Cache", "error", err)
-			}
+		if r.Metadata().Type == cache.TypeRegistry && r.Metadata().Properties[constants.PropertyStatus] == constants.StatusCreated {
+			// get the image cache
+			e.cacheMutex.Lock()
+			ic, err := e.config.FindResource("resource.image_cache.default")
+			if err == nil {
+				// append the registry if not all ready present and not in the default list
 
-			err = np.Create(e.ctx)
-			if err != nil {
-				e.log.Error("Unable to create Image Cache", "error", err)
+				foundIndex := -1
+				for i, reg := range ic.(*cache.ImageCache).Registries {
+					if reg.Hostname == r.(*cache.Registry).Hostname {
+						foundIndex = i
+						//
+						break
+					}
+				}
+
+				// check if the registry is already in the registry list
+				// if so replace it as we may be overriting the authentication
+				if foundIndex >= 0 {
+					ic.(*cache.ImageCache).Registries[foundIndex] = *r.(*cache.Registry)
+				} else {
+					ic.(*cache.ImageCache).Registries = append(ic.(*cache.ImageCache).Registries, *r.(*cache.Registry))
+				}
+
+				e.log.Debug("Adding registry to image cache", "registry", r.(*cache.Registry).Hostname)
+
+				// we now need to stop and restart the container to pick up the new registry changes
+				np := e.providers.GetProvider(ic)
+
+				e.cacheMutex.Unlock()
+
+				err := np.Destroy(e.ctx, e.force)
+				if err != nil {
+					e.log.Error("Unable to destroy Image Cache", "error", err)
+				}
+
+				err = np.Create(e.ctx)
+				if err != nil {
+					e.log.Error("Unable to create Image Cache", "error", err)
+				}
+			} else {
+				e.log.Error("Unable to find Image Cache", "error", err)
 			}
-		} else {
-			e.log.Error("Unable to find Image Cache", "error", err)
 		}
 	}
 

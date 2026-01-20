@@ -717,9 +717,11 @@ func (p *ClusterProvider) createDockerConfig() (string, error) {
 		dc.Proxies.NOPROXY = strings.TrimSuffix(strings.Join(p.config.Config.DockerConfig.NoProxy, ","), ",")
 	}
 
-	// set the cache details
-	dc.Proxies.HTTP = utils.ImageCacheAddress()
-	dc.Proxies.HTTPS = utils.ImageCacheAddress()
+	// set the cache details only if the image cache is not disabled
+	if !utils.ImageCacheDisabled() {
+		dc.Proxies.HTTP = utils.ImageCacheAddress()
+		dc.Proxies.HTTPS = utils.ImageCacheAddress()
+	}
 
 	// write the config to a file
 	data, err := json.MarshalIndent(dc, "", "  ")
@@ -733,6 +735,11 @@ func (p *ClusterProvider) createDockerConfig() (string, error) {
 }
 
 func (p *ClusterProvider) appendProxyEnv(cc *ctypes.Container) error {
+	// only set the proxy environment variable if the image cache is not disabled
+	if utils.ImageCacheDisabled() {
+		return nil
+	}
+
 	// load the CA from a file
 	ca, err := os.ReadFile(filepath.Join(utils.CertsDir(""), "/root.cert"))
 	if err != nil {
