@@ -268,6 +268,7 @@ func (cr *CucumberRunner) iRunApplyAtPath(path string) error {
 	noOpen := true
 
 	// re-use the run command
+	noCache := false
 	rc := newRunCmdFunc(
 		cr.e,
 		cr.cli.ContainerTasks,
@@ -277,6 +278,7 @@ func (cr *CucumberRunner) iRunApplyAtPath(path string) error {
 		cr.cli.Connector,
 		&noOpen,
 		cr.force,
+		&noCache,
 		&cr.variables,
 		&cr.variablesFile,
 		cr.l,

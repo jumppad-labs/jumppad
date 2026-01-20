@@ -435,6 +435,12 @@ func ImageCacheAddress() string {
 	return jumppadProxyAddress
 }
 
+// ImageCacheDisabled returns true if the image cache is disabled
+// via the IMAGE_CACHE_DISABLED environment variable
+func ImageCacheDisabled() bool {
+	return os.Getenv("IMAGE_CACHE_DISABLED") == "true"
+}
+
 // get all ipaddresses in a subnet
 func SubnetIPs(subnet string) ([]string, error) {
 	_, ipnet, _ := net.ParseCIDR(subnet)
