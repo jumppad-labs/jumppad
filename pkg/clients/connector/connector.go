@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"net"
 	"os"
 	"path"
 	"path/filepath"
@@ -411,8 +412,15 @@ func getClient(cert *types.CertBundle, uri string) (shipyard.RemoteConnectionCli
 		return nil, fmt.Errorf("unable to append certs from ca pem")
 	}
 
+	serverName := uri
+	if host, _, err := net.SplitHostPort(uri); err == nil && host != "" {
+		serverName = host
+	} else if host == "" {
+		serverName = "localhost"
+	}
+
 	creds := credentials.NewTLS(&tls.Config{
-		ServerName:   uri,
+		ServerName:   serverName,
 		Certificates: []tls.Certificate{certificate},
 		RootCAs:      certPool,
 	})
