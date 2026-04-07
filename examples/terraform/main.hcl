@@ -42,7 +42,7 @@ resource "terraform" "configure_vault" {
 
   source            = "./workspace"
   working_directory = "/"
-  version           = "1.6.2"
+  version           = "1.14.8"
 }
 
 output "first" {
