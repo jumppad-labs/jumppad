@@ -75,7 +75,10 @@ func (p *TerraformProvider) Create(ctx context.Context) error {
 	// always remove the container
 	defer p.client.RemoveContainer(id, true)
 
+	logPath := filepath.Join(utils.LogsDir(), fmt.Sprintf("terraform_%s.log", p.config.Meta.Name))
+
 	err = p.terraformApply(id)
+	p.log.Info("Terraform apply log written", "ref", p.config.Meta.ID, "log", logPath)
 	if err != nil {
 		return fmt.Errorf("unable to run apply for terraform.%s: %w", p.config.Meta.Name, err)
 	}
@@ -335,8 +338,10 @@ func (p *TerraformProvider) terraformApply(containerid string) error {
 
 	_, err := p.client.ExecuteScript(containerid, script, envs, wd, "root", "", 300, planOutput)
 
-	// write the plan output to the log
+	// write the plan output to a log file and the config
 	p.config.ApplyOutput = planOutput.String()
+	logPath := filepath.Join(utils.LogsDir(), fmt.Sprintf("terraform_%s.log", p.config.Meta.Name))
+	os.WriteFile(logPath, planOutput.Bytes(), 0644)
 	p.log.Debug("terraform apply output", "id", p.config.Meta.ID, "output", planOutput)
 
 	if err != nil {
