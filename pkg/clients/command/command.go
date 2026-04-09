@@ -45,6 +45,7 @@ func (c *CommandImpl) Execute(config types.CommandConfig) (int, error) {
 		Path:    config.Command,
 		Args:    config.Args,
 		Logfile: config.LogFilePath,
+		PidDir:  utils.JumppadTemp(),
 	}
 
 	// add the default environment variables
