@@ -1,9 +1,7 @@
 module github.com/jumppad-labs/jumppad
 
-// Only use  version 1,20.5 and lower until the followinis patched
-// https://github.com/docker/cli/issues/4437
-// fixed it by using docker v23.0.7-0.20230714215826-f00e7af96042+incompatible
-// switch to v24.0.4+incompatible once github actions updates their docker version
+// Docker SDK uses API version negotiation to remain compatible with
+// older Docker daemons (see pkg/clients/container/docker.go)
 go 1.26.0
 
 require (
