@@ -31,7 +31,7 @@ require (
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	github.com/infinytum/raymond/v2 v2.0.5
 	github.com/jumppad-labs/connector v0.4.0
-	github.com/jumppad-labs/gohup v0.4.0
+	github.com/jumppad-labs/gohup v0.4.1
 	github.com/jumppad-labs/hclconfig v0.30.2
 	github.com/jumppad-labs/plugin-sdk v0.4.0
 	github.com/kennygrant/sanitize v1.2.4

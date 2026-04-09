@@ -430,6 +430,8 @@ github.com/jumppad-labs/go-cty v0.0.0-20230804061424-9e985cb751f6 h1:1ADItCWr5pr
 github.com/jumppad-labs/go-cty v0.0.0-20230804061424-9e985cb751f6/go.mod h1:YKQzy/7pZ7iq2jNFzy5go57xdxdWoLLpaEp4u238AE0=
 github.com/jumppad-labs/gohup v0.4.0 h1:0OplHvnKnOLkqWm417sRHLSiJ4xGeb8LiSSAJ51QrYg=
 github.com/jumppad-labs/gohup v0.4.0/go.mod h1:JYvZnemxJlWDyx8RbDNcCBLZSvIrYlYLnkQqR1BKFW4=
+github.com/jumppad-labs/gohup v0.4.1 h1:zi/5hkY07GFzYFnx4X7feTSyMxKM9isAzCdOTCYELg4=
+github.com/jumppad-labs/gohup v0.4.1/go.mod h1:JYvZnemxJlWDyx8RbDNcCBLZSvIrYlYLnkQqR1BKFW4=
 github.com/jumppad-labs/hclconfig v0.30.2 h1:hP1R3vOnOcB/TCzbWiVH+cLk6+eagiLHEH8w0+iMoUE=
 github.com/jumppad-labs/hclconfig v0.30.2/go.mod h1:UiDq9kWaSsw5MQp0iDej2oxvo0E+Xwx7UVuEDlzetnw=
 github.com/jumppad-labs/log v0.0.0-20240827082827-4404884e31a7 h1:tuoFYWXAqT5BheDlQNumY1DxvkW8bjG9JOzoxpFneZs=
