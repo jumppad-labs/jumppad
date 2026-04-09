@@ -19,3 +19,7 @@ output "third" {
 output "test" {
   value = "testing123"
 }
+
+output "list" {
+  value = [var.first, var.second, var.third]
+}

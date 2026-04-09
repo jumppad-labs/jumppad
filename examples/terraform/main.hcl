@@ -61,6 +61,10 @@ output "third_y" {
   value = resource.terraform.configure_vault.output.third.y
 }
 
+output "list" {
+  value = resource.terraform.configure_vault.output.list
+}
+
 output "vault_secret" {
   value = resource.terraform.configure_vault.output.vault_secret
 }

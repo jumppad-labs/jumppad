@@ -8,7 +8,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"reflect"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2/hclwrite"
@@ -366,36 +365,58 @@ func (p *TerraformProvider) generateOutput() error {
 
 	values := map[string]cty.Value{}
 	for k, v := range output {
-		m, ok := v.(map[string]interface{})
+		m, ok := v.(map[string]any)
 		if !ok {
-			return fmt.Errorf("terraform output is not in the correct format, expected map[string]interface{} for value but got %T", v)
+			return fmt.Errorf("terraform output is not in the correct format, expected map[string]any for value but got %T", v)
 		}
 
-		value, err := convert.GoToCtyValue(m["value"])
+		ctyVal, err := goToCty(m["value"])
 		if err != nil {
-			if reflect.TypeOf(m["type"]).Kind() == reflect.Slice {
-				obj := map[string]cty.Value{}
-
-				for l, w := range m["value"].(map[string]interface{}) {
-					subvalue, err := convert.GoToCtyValue(w)
-					if err != nil {
-						p.log.Error("could not convert variable", "key", l, "value", w, "error", err)
-						return err
-					}
-
-					obj[l] = subvalue
-				}
-
-				values[k] = cty.ObjectVal(obj)
-			}
-		} else {
-			values[k] = value
+			return fmt.Errorf("terraform output %q: %w", k, err)
 		}
+
+		values[k] = ctyVal
 	}
 
 	p.config.Output = cty.ObjectVal(values)
 
 	return nil
+}
+
+// goToCty recursively converts a Go value (from JSON unmarshal) into a cty.Value.
+// It handles primitives via convert.GoToCtyValue and recurses into maps and slices.
+func goToCty(val any) (cty.Value, error) {
+	switch v := val.(type) {
+	case map[string]any:
+		obj := map[string]cty.Value{}
+		for k, w := range v {
+			sub, err := goToCty(w)
+			if err != nil {
+				return cty.NilVal, fmt.Errorf("key %q: %w", k, err)
+			}
+			obj[k] = sub
+		}
+		return cty.ObjectVal(obj), nil
+	case []any:
+		if len(v) == 0 {
+			return cty.EmptyTupleVal, nil
+		}
+		elems := make([]cty.Value, len(v))
+		for i, w := range v {
+			sub, err := goToCty(w)
+			if err != nil {
+				return cty.NilVal, fmt.Errorf("index %d: %w", i, err)
+			}
+			elems[i] = sub
+		}
+		return cty.TupleVal(elems), nil
+	default:
+		ctyVal, err := convert.GoToCtyValue(val)
+		if err != nil {
+			return cty.NilVal, fmt.Errorf("cannot convert %T to cty: %w", val, err)
+		}
+		return ctyVal, nil
+	}
 }
 
 func (p *TerraformProvider) terraformDestroy(containerid string) error {
