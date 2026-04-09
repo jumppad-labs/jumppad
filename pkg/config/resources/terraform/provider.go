@@ -325,7 +325,7 @@ func (p *TerraformProvider) terraformApply(containerid string) error {
 	// add the tf vars flag if we have a file
 	script = script + tfvarFlag
 
-	script = script + `terraform output \
+	script = script + "\n" + `terraform output \
     -no-color \
     -state=/var/lib/terraform/terraform.tfstate \
     -json > /var/lib/terraform/output.json`
