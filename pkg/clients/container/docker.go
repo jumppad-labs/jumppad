@@ -73,7 +73,7 @@ type Docker interface {
 
 // NewDocker creates a new Docker client
 func NewDocker() (Docker, error) {
-	cli, err := client.NewClientWithOpts(client.WithHostFromEnv(), client.WithVersionFromEnv())
+	cli, err := client.NewClientWithOpts(client.WithHostFromEnv(), client.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil, err
 	}
