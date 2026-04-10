@@ -4,9 +4,11 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"github.com/jumppad-labs/jumppad/pkg/clients"
+	"github.com/jumppad-labs/jumppad/pkg/clients/container"
 	"github.com/jumppad-labs/jumppad/pkg/clients/connector"
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
@@ -57,10 +59,24 @@ func newDestroyCmd(cc connector.Connector, l logger.Logger) *cobra.Command {
 				return
 			}
 
-			// clean up the data folders
-			os.RemoveAll(utils.DataFolder("", os.ModePerm))
-			os.RemoveAll(utils.LibraryFolder("", os.ModePerm))
-			os.RemoveAll(utils.JumppadTemp())
+			// Clean up the data folder. Containers managed by Jumppad (for
+			// example Vault) may have written files into a mounted data folder
+			// using a UID that does not belong to the host user, so host side
+			// removal will fail with EPERM. Run a short lived alpine container
+			// to remove the folder as root.
+			dataPath := filepath.Join(utils.JumppadHome(), "data")
+			if _, err := os.Stat(dataPath); err == nil {
+				if cerr := container.CleanupHostPath(engineClients.ContainerTasks, logger, dataPath); cerr != nil {
+					logger.Error("Unable to clean data folder", "path", dataPath, "error", cerr)
+				}
+			}
+
+			if err := os.RemoveAll(utils.LibraryFolder("", os.ModePerm)); err != nil {
+				logger.Error("Unable to remove library folder", "error", err)
+			}
+			if err := os.RemoveAll(utils.JumppadTemp()); err != nil {
+				logger.Error("Unable to remove temp folder", "error", err)
+			}
 
 			// shutdown ingress when we destroy all resources
 			if cc.IsRunning() {
