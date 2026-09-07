@@ -10,7 +10,7 @@ resource "copy" "local_relative" {
 
 
 resource "copy" "http" {
-  source      = "https://www.foundanimals.org/wp-content/uploads/2023/02/twenty20_b4e89a76-af70-4567-b92a-9c3bbf335cb3.jpg"
+  source      = "https://cdn.sanity.io/images/fhoo4r9z/production/50bf44d383cccc9f35cf1209844f72e8e1cfb799-400x400.jpg?w=285&h=285&q=85&auto=format"
   destination = "${data("copy")}/http"
 }
 

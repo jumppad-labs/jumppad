@@ -2,7 +2,7 @@ module github.com/jumppad-labs/jumppad
 
 // Docker SDK uses API version negotiation to remain compatible with
 // older Docker daemons (see pkg/clients/container/docker.go)
-go 1.26.0
+go 1.27.0
 
 require (
 	github.com/Masterminds/semver v1.5.0
