@@ -158,6 +158,66 @@ func TestClusterK3SetsEnvironment(t *testing.T) {
 	assert.Equal(t, params.Environment["PROXY_CA"], "CA")
 }
 
+func TestParseClusterVersionRemovesK3sBuildSuffix(t *testing.T) {
+	v, err := parseClusterVersion("v1.29.0-k3s1")
+
+	assert.NoError(t, err)
+	assert.Equal(t, "1.29.0", v.String())
+}
+
+func TestParseClusterVersionRemovesPreReleaseAndK3sBuildSuffix(t *testing.T) {
+	v, err := parseClusterVersion("v1.37.0-rc3-k3s1")
+
+	assert.NoError(t, err)
+	assert.Equal(t, "1.37.0", v.String())
+}
+
+func TestParseClusterVersionRetainsPlainVersion(t *testing.T) {
+	v, err := parseClusterVersion("v1.27.4")
+
+	assert.NoError(t, err)
+	assert.Equal(t, "1.27.4", v.String())
+}
+
+func TestParseClusterVersionErrorsWithInvalidVersion(t *testing.T) {
+	_, err := parseClusterVersion("not-a-version")
+
+	assert.Error(t, err)
+}
+
+func TestClusterK3SetsProxyEnvironmentWithK3sBuildSuffix(t *testing.T) {
+	cc, md, mk, mc := setupClusterMocks(t)
+	cc.Image = &container.Image{Name: "shipyardrun/k3s:v1.37.0-rc3-k3s1"}
+
+	p := ClusterProvider{cc, md, mk, nil, mc, logger.NewTestLogger(t)}
+
+	err := p.Create(context.Background())
+	assert.NoError(t, err)
+
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*ctypes.Container)
+
+	assert.Equal(t, utils.ImageCacheAddress(), params.Environment["CONTAINERD_HTTP_PROXY"])
+	assert.Equal(t, utils.ImageCacheAddress(), params.Environment["CONTAINERD_HTTPS_PROXY"])
+	assert.Equal(t, "CA", params.Environment["PROXY_CA"])
+}
+
+func TestClusterK3SetsTokenArgsWithK3sBuildSuffix(t *testing.T) {
+	cc, md, mk, mc := setupClusterMocks(t)
+	cc.Image = &container.Image{Name: "shipyardrun/k3s:v1.37.0-rc3-k3s1"}
+
+	p := ClusterProvider{cc, md, mk, nil, mc, logger.NewTestLogger(t)}
+
+	err := p.Create(context.Background())
+	assert.NoError(t, err)
+
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*ctypes.Container)
+
+	assert.Contains(t, params.Command, "--disable=traefik")
+	assert.Contains(t, params.Command, "--token=mysupersecret")
+	assert.NotContains(t, params.Command, "--no-deploy=traefik")
+	assert.Empty(t, params.Environment["K3S_CLUSTER_SECRET"])
+}
+
 func TestClusterK3DoesNotSetProxyEnvironmentWithWrongVersion(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
 	cc.Image = &container.Image{Name: "jumppad.dev/k3s:v1.12.1"}

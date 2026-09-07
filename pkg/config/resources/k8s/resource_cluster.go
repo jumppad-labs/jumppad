@@ -87,7 +87,7 @@ type KubeConfig struct {
 }
 
 const k3sBaseImage = "ghcr.io/jumppad-labs/kubernetes"
-const k3sBaseVersion = "v1.31.1"
+const k3sBaseVersion = "v1.36.2"
 
 func (k *Cluster) Process() error {
 	if k.APIPort == 0 {

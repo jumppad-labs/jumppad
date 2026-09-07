@@ -244,6 +244,30 @@ func (p *ClusterProvider) getChangedImages() ([]ctypes.Image, error) {
 	return changed, nil
 }
 
+// parseClusterVersion parses the Kubernetes version from a container image tag.
+//
+// Distribution images are not tagged with strict semantic versions, k3s appends a
+// build suffix such as v1.29.0-k3s1 and pre-releases carry additional identifiers
+// such as v1.37.0-rc3-k3s1. Semver treats everything after the hyphen as a
+// pre-release, and a constraint without a pre-release never matches one, so these
+// tags would otherwise compare as lower than every constraint and silently select
+// the behaviour intended for very old clusters.
+//
+// The suffix identifies the distribution build rather than the Kubernetes release,
+// so it is discarded and only the major, minor, and patch are used for comparison.
+func parseClusterVersion(version string) (*semver.Version, error) {
+	v, err := semver.NewVersion(version)
+	if err != nil {
+		return nil, err
+	}
+
+	if v.Prerelease() == "" && v.Metadata() == "" {
+		return v, nil
+	}
+
+	return semver.NewVersion(fmt.Sprintf("%d.%d.%d", v.Major(), v.Minor(), v.Patch()))
+}
+
 func (p *ClusterProvider) createK3s(ctx context.Context) error {
 	p.log.Info("Creating Cluster", "ref", p.config.Meta.ID)
 
@@ -345,7 +369,7 @@ func (p *ClusterProvider) createK3s(ctx context.Context) error {
 		version = vParts[1]
 	}
 
-	v, err := semver.NewVersion(version)
+	v, err := parseClusterVersion(version)
 	if err != nil {
 		return fmt.Errorf("kubernetes version is not valid semantic version: %s", err)
 	}
