@@ -49,7 +49,10 @@ func (p *TemplateProvider) Create(ctx context.Context) error {
 	output := p.config.Source
 	if p.config.Variables != nil {
 
-		vars := parseVars(p.config.Variables)
+		vars, err := parseVars(p.config.Variables, "")
+		if err != nil {
+			return fmt.Errorf("error parsing template variables: %s", err)
+		}
 
 		tmpl, err := raymond.Parse(p.config.Source)
 		if err != nil {
@@ -156,48 +159,76 @@ func (p *TemplateProvider) Changed() (bool, error) {
 	return false, nil
 }
 
-// parseVars converts a map[string]cty.Value into map[string]interface
-// where the interface are generic go types like string, number, bool, slice, map
+// parseVars converts a map[string]cty.Value into map[string]any
+// where the values are generic go types like string, number, bool, slice, map.
+// path is the dotted key path built up during recursion so errors can point
+// at the exact offending variable.
 //
 // TODO move this into the parser class and add more robust testing
-func parseVars(value map[string]cty.Value) map[string]interface{} {
-	vars := map[string]interface{}{}
+func parseVars(value map[string]cty.Value, path string) (map[string]any, error) {
+	vars := map[string]any{}
 
 	for k, v := range value {
-		vars[k] = castVar(v)
+		child := k
+		if path != "" {
+			child = path + "." + k
+		}
+
+		cast, err := castVar(v, child)
+		if err != nil {
+			return nil, err
+		}
+
+		vars[k] = cast
 	}
 
-	return vars
+	return vars, nil
 }
 
-func castVar(v cty.Value) interface{} {
+func castVar(v cty.Value, path string) (any, error) {
 	if v.IsNull() {
-		return nil
+		return nil, nil
+	}
+
+	// hclconfig seeds typed-but-unknown placeholder values when a template
+	// references a variable that does not resolve. Surface this as an error
+	// rather than panicking inside AsString/True/AsBigFloat below.
+	if !v.IsKnown() {
+		return nil, fmt.Errorf(
+			"template variable %q is unknown, check that your template references are correct",
+			path,
+		)
 	}
 
 	if v.Type() == cty.String {
-		return v.AsString()
+		return v.AsString(), nil
 	} else if v.Type() == cty.Bool {
-		return v.True()
+		return v.True(), nil
 	} else if v.Type() == cty.Number {
-		return v.AsBigFloat()
+		return v.AsBigFloat(), nil
 	} else if v.Type().IsObjectType() || v.Type().IsMapType() {
-		return parseVars(v.AsValueMap())
+		return parseVars(v.AsValueMap(), path)
 	} else if v.Type().IsTupleType() || v.Type().IsListType() {
 		i := v.ElementIterator()
-		vars := []interface{}{}
+		vars := []any{}
+		idx := 0
 		for {
 			if !i.Next() {
-				// cant iterate
 				break
 			}
 
 			_, value := i.Element()
-			vars = append(vars, castVar(value))
+			cast, err := castVar(value, fmt.Sprintf("%s[%d]", path, idx))
+			if err != nil {
+				return nil, err
+			}
+
+			vars = append(vars, cast)
+			idx++
 		}
 
-		return vars
+		return vars, nil
 	}
 
-	return nil
+	return nil, nil
 }
