@@ -62,7 +62,7 @@ type NomadCluster struct {
 }
 
 const nomadBaseImage = "ghcr.io/jumppad-labs/nomad"
-const nomadBaseVersion = "v1.8.4"
+const nomadBaseVersion = "v2.0.5"
 
 type Config struct {
 	// Specifies configuration for the Docker driver.
