@@ -12,7 +12,7 @@ Feature: Copying files
       exit 1
     fi
     
-    if [ ! -f $HOME/.jumppad/data/copy/http/twenty20_b4e89a76-af70-4567-b92a-9c3bbf335cb3.jpg ]; then
+    if [ ! -f $HOME/.jumppad/data/copy/http/50bf44d383cccc9f35cf1209844f72e8e1cfb799-400x400.jpg ]; then
       exit 1
     fi
 
