@@ -57,3 +57,5 @@ Use the Context7 library ID: `/context7/jumppad-labs.github.io` for Jumppad docu
 - File operations within project directory
 - Git operations for version control
 - Tools tha can only perform read operations like find, grep, etc.
+
+@AGENTS.md
