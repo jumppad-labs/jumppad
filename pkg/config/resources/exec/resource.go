@@ -36,8 +36,13 @@ type Exec struct {
 	// output
 	PID      int       `hcl:"pid,optional" json:"pid,omitempty"`             // PID stores the ID of the created connector service if it is a local exec
 	ExitCode int       `hcl:"exit_code,optional" json:"exit_code,omitempty"` // Exit code of the process
-	Output   cty.Value `hcl:"output,optional" json:"output,omitempty"`       // output values returned from exec
+	Output   cty.Value `hcl:"output,optional" json:"-"`                      // output values returned from exec
 	Checksum string    `hcl:"checksum,optional" json:"checksum,omitempty"`   // Checksum of the script
+
+	// OutputValues holds the same values as Output so they can be saved to
+	// state, cty.Value does not serialize to JSON. It has no hcl tag so it is
+	// not exposed to the config.
+	OutputValues map[string]string `json:"output,omitempty"`
 }
 
 func (e *Exec) Process() error {
@@ -79,9 +84,23 @@ func (e *Exec) Process() error {
 			kstate := r.(*Exec)
 			e.PID = kstate.PID
 			e.ExitCode = kstate.ExitCode
-			e.Output = kstate.Output
+			e.OutputValues = kstate.OutputValues
+			if len(kstate.OutputValues) > 0 {
+				e.Output = outputToCty(kstate.OutputValues)
+			}
 		}
 	}
 
 	return nil
+}
+
+// outputToCty converts the output values into the object exposed to the
+// config as the output attribute
+func outputToCty(values map[string]string) cty.Value {
+	out := map[string]cty.Value{}
+	for k, v := range values {
+		out[k] = cty.StringVal(v)
+	}
+
+	return cty.ObjectVal(out)
 }
