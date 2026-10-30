@@ -27,4 +27,7 @@ const (
 	StorageDriverAUFS         = "aufs"
 	StorageDriverDeviceMapper = "devicemapper"
 	StorageDriverOverlay      = "overlay"
+	// StorageDriverOverlayFS is reported by Docker's containerd image store
+	// (the default on new Docker Desktop installs)
+	StorageDriverOverlayFS = "overlayfs"
 )

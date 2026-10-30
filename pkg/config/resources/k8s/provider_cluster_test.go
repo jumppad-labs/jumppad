@@ -339,6 +339,32 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 	assert.Contains(t, params.Command[5], "--tls-san=server.test.k8s-cluster.local.jmpd.in")
 }
 
+func TestClusterK3SetsSnapshotterFromStorageDriver(t *testing.T) {
+	tests := map[string]string{
+		"overlay":   "overlayfs",
+		"overlay2":  "overlayfs",
+		"overlayfs": "overlayfs", // Docker containerd image store
+		"vfs":       "native",
+	}
+
+	for driver, snapshotter := range tests {
+		t.Run(driver, func(t *testing.T) {
+			cc, md, mk, mc := setupClusterMocks(t)
+
+			testutils.RemoveOn(&md.Mock, "EngineInfo")
+			md.On("EngineInfo").Return(&ctypes.EngineInfo{StorageDriver: driver})
+
+			p := ClusterProvider{cc, md, mk, nil, mc, logger.NewTestLogger(t)}
+
+			err := p.Create(context.Background())
+			assert.NoError(t, err)
+
+			params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*ctypes.Container)
+			assert.Contains(t, params.Command, "--snapshotter="+snapshotter)
+		})
+	}
+}
+
 func TestClusterK3CreatesAServerWithAdditionalPorts(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
 

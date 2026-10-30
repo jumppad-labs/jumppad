@@ -409,7 +409,8 @@ func (p *ClusterProvider) createK3s(ctx context.Context) error {
 	// snapshotter must be set to native or the container will not start
 	snapShotter := "native"
 
-	if p.client.EngineInfo().StorageDriver == ctypes.StorageDriverOverlay || p.client.EngineInfo().StorageDriver == ctypes.StorageDriverOverlay2 {
+	if p.client.EngineInfo().StorageDriver == ctypes.StorageDriverOverlay || p.client.EngineInfo().StorageDriver == ctypes.StorageDriverOverlay2 ||
+		p.client.EngineInfo().StorageDriver == ctypes.StorageDriverOverlayFS {
 		snapShotter = "overlayfs"
 	}
 
