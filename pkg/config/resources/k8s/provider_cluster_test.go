@@ -339,15 +339,14 @@ func TestClusterK3CreatesAServer(t *testing.T) {
 	assert.Contains(t, params.Command[5], "--tls-san=server.test.k8s-cluster.local.jmpd.in")
 }
 
-func TestClusterK3SetsSnapshotterFromStorageDriver(t *testing.T) {
-	tests := map[string]string{
-		"overlay":   "overlayfs",
-		"overlay2":  "overlayfs",
-		"overlayfs": "overlayfs", // Docker containerd image store
-		"vfs":       "native",
+func TestClusterK3sUsesOverlayFSSnapshotterWithOverlayDrivers(t *testing.T) {
+	drivers := []string{
+		ctypes.StorageDriverOverlay,
+		ctypes.StorageDriverOverlay2,
+		ctypes.StorageDriverOverlayFS, // Docker containerd image store
 	}
 
-	for driver, snapshotter := range tests {
+	for _, driver := range drivers {
 		t.Run(driver, func(t *testing.T) {
 			cc, md, mk, mc := setupClusterMocks(t)
 
@@ -360,7 +359,34 @@ func TestClusterK3SetsSnapshotterFromStorageDriver(t *testing.T) {
 			assert.NoError(t, err)
 
 			params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*ctypes.Container)
-			assert.Contains(t, params.Command, "--snapshotter="+snapshotter)
+			assert.Contains(t, params.Command, "--snapshotter=overlayfs")
+		})
+	}
+}
+
+func TestClusterK3sUsesNativeSnapshotterWithNonOverlayDrivers(t *testing.T) {
+	drivers := []string{
+		ctypes.StorageDriverVFS,
+		ctypes.StorageDriverBTRFS,
+		ctypes.StorageDriverZFS,
+		ctypes.StorageDriverDeviceMapper,
+		ctypes.StorageDriverFuse,
+	}
+
+	for _, driver := range drivers {
+		t.Run(driver, func(t *testing.T) {
+			cc, md, mk, mc := setupClusterMocks(t)
+
+			testutils.RemoveOn(&md.Mock, "EngineInfo")
+			md.On("EngineInfo").Return(&ctypes.EngineInfo{StorageDriver: driver})
+
+			p := ClusterProvider{cc, md, mk, nil, mc, logger.NewTestLogger(t)}
+
+			err := p.Create(context.Background())
+			assert.NoError(t, err)
+
+			params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*ctypes.Container)
+			assert.Contains(t, params.Command, "--snapshotter=native")
 		})
 	}
 }
