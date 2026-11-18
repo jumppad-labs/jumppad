@@ -63,6 +63,11 @@ type DockerTasks struct {
 	tg            *ctar.TarGz
 	force         bool
 	defaultWait   time.Duration
+
+	// rootless is true when the engine runs without root, see oomScoreAdjFloor
+	rootless     bool
+	oomFloor     int
+	oomFloorOnce sync.Once
 }
 
 // NewDockerTasks creates a DockerTasks with the given Docker client
@@ -91,7 +96,14 @@ func NewDockerTasks(c Docker, il images.ImageLog, tg *ctar.TarGz, l logger.Logge
 		return nil, fmt.Errorf("error checking server storage driver, error: %s", err)
 	}
 
-	return &DockerTasks{engineType: t, storageDriver: info.Driver, c: c, il: il, tg: tg, l: l, defaultWait: 1 * time.Second, cpu: info.NCPU, memory: int(info.MemTotal)}, nil
+	rootless := false
+	for _, o := range info.SecurityOptions {
+		if strings.Contains(o, "name=rootless") {
+			rootless = true
+		}
+	}
+
+	return &DockerTasks{engineType: t, storageDriver: info.Driver, c: c, il: il, tg: tg, l: l, defaultWait: 1 * time.Second, cpu: info.NCPU, memory: int(info.MemTotal), rootless: rootless}, nil
 }
 
 func (d *DockerTasks) EngineInfo() *dtypes.EngineInfo {
@@ -313,7 +325,10 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 
 	// is this a priviledged container
 	hc.Privileged = c.Privileged
-	if c.Privileged {
+	// A rootless engine can't write to the host's cgroup tree, so privileged
+	// containers that manage cgroups (k3s, nomad) keep a private cgroup
+	// namespace, rooted at the cgroup delegated to the user.
+	if c.Privileged && !d.rootless {
 		hc.CgroupnsMode = "host"
 	}
 
@@ -343,6 +358,11 @@ func (d *DockerTasks) CreateContainer(c *dtypes.Container) (string, error) {
 	// disable ipv6 networking
 	if !ipv6Enabled {
 		hc.Sysctls = map[string]string{"net.ipv6.conf.all.disable_ipv6": "1"}
+	}
+
+	// rootless Podman can't lower oom_score_adj, see oomScoreAdjFloor
+	if floor := d.oomScoreAdjFloor(); hc.OomScoreAdj < floor {
+		hc.OomScoreAdj = floor
 	}
 
 	cont, err := d.c.ContainerCreate(context.Background(), dc, hc, nc, nil, c.Name)
