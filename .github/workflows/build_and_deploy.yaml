@@ -7,7 +7,7 @@ on:
 jobs:
   dagger_build:
     name: Dagger Build and Test
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     permissions:
       contents: write
 
@@ -27,7 +27,7 @@ jobs:
           verb: call
           module: ./dagger
           args: all --output=./output --src=. --github-token=GITHUB_TOKEN --notorize-cert=./cert.p12 --notorize-cert-password=QUILL_SIGN_PASSWORD --notorize-key=./key.p8 --notorize-id=${{secrets.QUILL_NOTARY_KEY_ID}} --notorize-issuer=${{secrets.QUILL_NOTARY_ISSUER}}
-          version: "0.19.8"
+          version: "0.21.11"
           dagger-flags: "--progress=plain"
 
       - name: Dagger engine logs
@@ -51,7 +51,7 @@ jobs:
 
   functional_test_docker:
     name: Test Docker
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     needs: dagger_build
 
     strategy:
@@ -102,7 +102,7 @@ jobs:
 
   functional_test_podman:
     name: Test Podman
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     needs: dagger_build
 
     strategy:
@@ -207,7 +207,7 @@ jobs:
       - functional_test_podman
     environment:
       name: release
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - name: Set keys
         run: |
@@ -223,12 +223,12 @@ jobs:
           path: ./build_artifacts
 
       - name: Release
-        uses: dagger/dagger-for-github@v5
+        uses: dagger/dagger-for-github@v8.2.0
         with:
           verb: call
           module: ./dagger
           args: release --src=. --github-token=GITHUB_TOKEN --gemfury-token=GEMFURY_TOKEN --archives=./build_artifacts --output=./version.txt
-          version: "0.19.8"
+          version: "0.21.11"
           dagger-flags: "--progress=plain"
     
       - name: Set output
@@ -245,7 +245,7 @@ jobs:
     needs: 
       - functional_test_docker
       - functional_test_podman
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - run: gh repo sync nicholasjackson/winget-pkgs -b master
         env:
