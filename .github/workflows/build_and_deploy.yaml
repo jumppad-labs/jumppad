@@ -88,20 +88,33 @@ jobs:
 
       - uses: actions/checkout@v2
 
-      # The registries example pushes to registries that resolve to loopback and
-      # use jumppad's own CA or plain HTTP. Docker's classic image store treated
-      # loopback registries as insecure; the containerd image store, the default
-      # for new Docker 29 installs, does not, so list them explicitly.
-      - name: Allow example registries
+      # The registries example pushes from the host's Docker daemon to registries
+      # that resolve to loopback. noauth (5000) and auth (5001) serve TLS with a
+      # certificate signed by jumppad's root CA, insecure (5003) is plain HTTP.
+      # Docker's classic image store treated loopback registries as insecure;
+      # the containerd image store, the default for new Docker 29 installs, does
+      # not. Generate jumppad's CA up front (jumppad reuses an existing bundle)
+      # and have Docker trust it for the TLS registries, only 5003 is insecure.
+      - name: Trust example registries
         if: matrix.folder == '/registries'
         run: |
+          certs="$HOME/.jumppad/certs"
+          mkdir -p "$certs"
+          jumppad connector generate-certs --ca "$certs"
+          jumppad connector generate-certs --leaf \
+            --root-ca "$certs/root.cert" --root-key "$certs/root.key" \
+            --dns-name localhost --dns-name '*.local.jmpd.in' --dns-name "$(hostname)" \
+            --ip-address 127.0.0.1 $(hostname -I | xargs -n1 printf -- '--ip-address=%s ') \
+            "$certs"
+
+          for registry in noauth.container.local.jmpd.in:5000 auth.container.local.jmpd.in:5001; do
+            sudo mkdir -p "/etc/docker/certs.d/$registry"
+            sudo cp "$certs/root.cert" "/etc/docker/certs.d/$registry/ca.crt"
+          done
+
           cfg=/etc/docker/daemon.json
           [ -s "$cfg" ] || echo '{}' | sudo tee "$cfg" > /dev/null
-          sudo jq '."insecure-registries" += [
-            "noauth.container.local.jmpd.in:5000",
-            "auth.container.local.jmpd.in:5001",
-            "insecure.container.local.jmpd.in:5003"
-          ]' "$cfg" | sudo tee "$cfg.new" > /dev/null
+          sudo jq '."insecure-registries" += ["insecure.container.local.jmpd.in:5003"]' "$cfg" | sudo tee "$cfg.new" > /dev/null
           sudo mv "$cfg.new" "$cfg"
           sudo systemctl restart docker
           docker info --format 'driver={{.Driver}} insecure={{json .RegistryConfig.IndexConfigs}}'
