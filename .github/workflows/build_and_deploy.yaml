@@ -7,7 +7,7 @@ on:
 jobs:
   dagger_build:
     name: Dagger Build and Test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
 
@@ -29,7 +29,11 @@ jobs:
           args: all --output=./output --src=. --github-token=GITHUB_TOKEN --notorize-cert=./cert.p12 --notorize-cert-password=QUILL_SIGN_PASSWORD --notorize-key=./key.p8 --notorize-id=${{secrets.QUILL_NOTARY_KEY_ID}} --notorize-issuer=${{secrets.QUILL_NOTARY_ISSUER}}
           version: "0.19.8"
           dagger-flags: "--progress=plain"
-      
+
+      - name: Dagger engine logs
+        if: failure()
+        run: docker ps -a --filter name=dagger-engine --format '{{.Names}}' | xargs -r -n1 docker logs --tail 200
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -47,7 +51,7 @@ jobs:
 
   functional_test_docker:
     name: Test Docker
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: dagger_build
 
     strategy:
@@ -98,7 +102,7 @@ jobs:
 
   functional_test_podman:
     name: Test Podman
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: dagger_build
 
     strategy:
@@ -203,7 +207,7 @@ jobs:
       - functional_test_podman
     environment:
       name: release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Set keys
         run: |
@@ -241,7 +245,7 @@ jobs:
     needs: 
       - functional_test_docker
       - functional_test_podman
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - run: gh repo sync nicholasjackson/winget-pkgs -b master
         env:
