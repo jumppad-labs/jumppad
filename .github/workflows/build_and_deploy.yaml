@@ -87,10 +87,28 @@ jobs:
           sudo chmod +x /usr/local/bin/jumppad
 
       - uses: actions/checkout@v2
-      
+
+      # The registries example pushes to registries that resolve to loopback and
+      # use jumppad's own CA or plain HTTP. Docker's classic image store treated
+      # loopback registries as insecure; the containerd image store, the default
+      # for new Docker 29 installs, does not, so list them explicitly.
+      - name: Allow example registries
+        if: matrix.folder == '/registries'
+        run: |
+          cfg=/etc/docker/daemon.json
+          [ -s "$cfg" ] || echo '{}' | sudo tee "$cfg" > /dev/null
+          sudo jq '."insecure-registries" += [
+            "noauth.container.local.jmpd.in:5000",
+            "auth.container.local.jmpd.in:5001",
+            "insecure.container.local.jmpd.in:5003"
+          ]' "$cfg" | sudo tee "$cfg.new" > /dev/null
+          sudo mv "$cfg.new" "$cfg"
+          sudo systemctl restart docker
+          docker info --format 'driver={{.Driver}} insecure={{json .RegistryConfig.IndexConfigs}}'
+
       - name: All
         run: |
-          jumppad test ./examples${{matrix.folder}} 
+          jumppad test ./examples${{matrix.folder}}
 
       - name: Send status to Discord
         uses: sarisia/actions-status-discord@v1

@@ -570,13 +570,20 @@ func (d *DockerTasks) PushImage(img dtypes.Image) error {
 
 	name := reference.FamiliarString(ref)
 
-	out, err := d.c.ImagePush(context.Background(), name, ipo)
+	resp, err := d.c.ImagePush(context.Background(), name, ipo)
+	if err != nil {
+		return fmt.Errorf("error pushing image: %w", err)
+	}
+	defer resp.Close()
+
+	// The daemon reports push failures, such as an untrusted certificate, as a
+	// message in the response stream, not as an error from ImagePush. Decode the
+	// stream to the debug log and return the first error it reports.
+	err = jsonmessage.DisplayJSONMessagesStream(resp, d.l.StandardWriter(), 0, false, nil)
 	if err != nil {
 		return fmt.Errorf("error pushing image: %w", err)
 	}
 
-	// write the output to the debug log
-	io.Copy(d.l.StandardWriter(), out)
 	return nil
 }
 
