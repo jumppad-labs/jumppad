@@ -107,7 +107,7 @@ func NewDockerTasks(c Docker, il images.ImageLog, tg *ctar.TarGz, l logger.Logge
 }
 
 func (d *DockerTasks) EngineInfo() *dtypes.EngineInfo {
-	return &dtypes.EngineInfo{StorageDriver: d.storageDriver, EngineType: d.engineType, CPU: d.cpu, Memory: d.memory}
+	return &dtypes.EngineInfo{StorageDriver: d.storageDriver, EngineType: d.engineType, CPU: d.cpu, Memory: d.memory, Rootless: d.rootless}
 }
 
 // SetForce sets a global override for the DockerTasks, when set to true
