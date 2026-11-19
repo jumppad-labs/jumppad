@@ -391,6 +391,33 @@ func TestClusterK3sUsesNativeSnapshotterWithNonOverlayDrivers(t *testing.T) {
 	}
 }
 
+func TestClusterK3sEnablesKubeletInUserNamespaceWhenEngineIsRootless(t *testing.T) {
+	cc, md, mk, mc := setupClusterMocks(t)
+
+	testutils.RemoveOn(&md.Mock, "EngineInfo")
+	md.On("EngineInfo").Return(&ctypes.EngineInfo{StorageDriver: ctypes.StorageDriverOverlay, Rootless: true})
+
+	p := ClusterProvider{cc, md, mk, nil, mc, logger.NewTestLogger(t)}
+
+	err := p.Create(context.Background())
+	assert.NoError(t, err)
+
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*ctypes.Container)
+	assert.Contains(t, params.Command, "--kubelet-arg=feature-gates=KubeletInUserNamespace=true")
+}
+
+func TestClusterK3sDoesNotEnableKubeletInUserNamespaceWhenEngineIsRootful(t *testing.T) {
+	cc, md, mk, mc := setupClusterMocks(t)
+
+	p := ClusterProvider{cc, md, mk, nil, mc, logger.NewTestLogger(t)}
+
+	err := p.Create(context.Background())
+	assert.NoError(t, err)
+
+	params := testutils.GetCalls(&md.Mock, "CreateContainer")[0].Arguments[0].(*ctypes.Container)
+	assert.NotContains(t, params.Command, "--kubelet-arg=feature-gates=KubeletInUserNamespace=true")
+}
+
 func TestClusterK3CreatesAServerWithAdditionalPorts(t *testing.T) {
 	cc, md, mk, mc := setupClusterMocks(t)
 

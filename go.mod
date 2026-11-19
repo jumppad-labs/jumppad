@@ -30,7 +30,7 @@ require (
 	github.com/hashicorp/hcl/v2 v2.24.0
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	github.com/infinytum/raymond/v2 v2.0.5
-	github.com/jumppad-labs/connector v0.4.0
+	github.com/jumppad-labs/connector v0.5.0
 	github.com/jumppad-labs/gohup v0.4.1
 	github.com/jumppad-labs/hclconfig v0.30.2
 	github.com/jumppad-labs/plugin-sdk v0.4.0
@@ -271,6 +271,7 @@ require (
 	golang.org/x/text v0.35.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.43.0 // indirect
+	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/api v0.274.0 // indirect
 	google.golang.org/genproto v0.0.0-20260406210006-6f92a3bedf2d // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260406210006-6f92a3bedf2d // indirect

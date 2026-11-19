@@ -10,6 +10,10 @@ type EngineInfo struct {
 	// EngineType, docker, podman, not found
 	CPU    int
 	Memory int
+
+	// Rootless is true when the engine runs without root, containers run in a
+	// user namespace and can't access host devices such as /dev/kmsg
+	Rootless bool
 }
 
 const (

@@ -55,6 +55,23 @@ func TestPushPushestheImageToTheRegistryWithoutAuth(t *testing.T) {
 	require.NotContains(t, string(authString), `"password":`)
 }
 
+func TestPushReturnsErrorWhenPushStreamReportsError(t *testing.T) {
+	stream := `{"status":"The push refers to repository [noauth.container.local.jmpd.in:5000/mine]"}
+{"errorDetail":{"message":"tls: failed to verify certificate: x509: certificate signed by unknown authority"},"error":"tls: failed to verify certificate: x509: certificate signed by unknown authority"}
+`
+
+	md := &mocks.Docker{}
+	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)
+	md.On("Info", mock.Anything).Return(system.Info{Driver: StorageDriverOverlay2}, nil)
+	md.On("ImagePush", mock.Anything, mock.Anything, mock.Anything).Return(io.NopCloser(bytes.NewBufferString(stream)), nil)
+
+	dt, err := NewDockerTasks(md, nil, nil, logger.NewTestLogger(t))
+	require.NoError(t, err)
+
+	err = dt.PushImage(dtypes.Image{Name: "noauth.container.local.jmpd.in:5000/mine:v0.1.0"})
+	require.ErrorContains(t, err, "x509: certificate signed by unknown authority")
+}
+
 func TestPushPushestheImageToTheRegistryWithAuth(t *testing.T) {
 	md := &mocks.Docker{}
 	md.On("ServerVersion", mock.Anything).Return(types.Version{}, nil)

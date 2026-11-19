@@ -1,22 +1,35 @@
+schema: 5
+written_by: dev
 name: jumppad
 command: spektacular
 agent: claude
 spec_trigger_threshold: moderate
-debug:
-    enabled: false
 spec:
     provider: file
     id_method: timestamp
     config:
-        directory: .spektacular/specs
+        directory: specs
 plan:
     provider: file
     config:
-        directory: .spektacular/plans
+        directory: plans
 changelog:
     provider: file
     config:
-        directory: .spektacular/changelog
+        directory: changelog
 repos:
     - name: jumppad
       location: .
+skills_version: 0.15.1
+epic_split_threshold: moderate
+epic:
+    provider: file
+    strict_dependencies: false
+    config:
+        directory: epics
+log:
+    provider: file
+    level: standard
+    retention: 10
+    config:
+        directory: logs

@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jumppad-labs/hclconfig/convert"
 	htypes "github.com/jumppad-labs/hclconfig/types"
 	"github.com/jumppad-labs/jumppad/pkg/clients"
 	cmdClient "github.com/jumppad-labs/jumppad/pkg/clients/command"
@@ -19,7 +18,6 @@ import (
 	"github.com/jumppad-labs/jumppad/pkg/clients/logger"
 	"github.com/jumppad-labs/jumppad/pkg/utils"
 	sdk "github.com/jumppad-labs/plugin-sdk"
-	"github.com/zclconf/go-cty/cty"
 )
 
 // checks Provider implements the sdk.Provider interface
@@ -355,7 +353,7 @@ func (p *Provider) generateOutput() error {
 		return fmt.Errorf("unable to read output file: %w", err)
 	}
 
-	output := make(map[string]cty.Value)
+	output := map[string]string{}
 
 	outs := strings.Split(string(d), "\n")
 	for _, v := range outs {
@@ -364,20 +362,11 @@ func (p *Provider) generateOutput() error {
 			continue
 		}
 
-		output[parts[0]] = cty.StringVal(parts[1])
+		output[parts[0]] = parts[1]
 	}
 
-	values := map[string]cty.Value{}
-	for k, v := range output {
-		value, err := convert.GoToCtyValue(v)
-		if err != nil {
-			return fmt.Errorf("unable to convert output value to cty: %w", err)
-		}
-
-		values[k] = value
-	}
-
-	p.config.Output = cty.ObjectVal(values)
+	p.config.OutputValues = output
+	p.config.Output = outputToCty(output)
 
 	return nil
 }

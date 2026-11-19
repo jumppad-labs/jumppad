@@ -65,6 +65,7 @@ func TestParsesOutput(t *testing.T) {
 	require.NoError(t, err)
 
 	require.True(t, e.Output.AsValueMap()["FOO"].AsString() == "BAR")
+	require.Equal(t, "BAR", e.OutputValues["FOO"])
 }
 
 func TestDeletesOutput(t *testing.T) {

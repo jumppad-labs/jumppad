@@ -21,9 +21,14 @@ Use the Context7 library ID: `/context7/jumppad-labs.github.io` for Jumppad docu
 - Include unit tests for all business logic
 - Use testify require for unit tests
 - Use Mockery for mocking interfaces
-- NEVER use table-driven tests
+- Prefer one test function per behaviour over table-driven tests
+- Table-driven tests are acceptable only for simple input-to-output mappings
+  where every case asserts the same outcome (e.g. a list of storage drivers
+  that should all select the same snapshotter); use a slice, not a map, so
+  cases run in a stable order
 - Add integration tests for HTTP handlers
-- NEVER mix postive and negative tests in the same test function
+- NEVER mix positive and negative tests in the same test function or table;
+  put each in its own test
 - Ensure tests are easy to read, favor vobocity over too much abstraction
 
 ### Project Structure

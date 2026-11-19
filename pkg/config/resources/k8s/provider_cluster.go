@@ -451,6 +451,13 @@ func (p *ClusterProvider) createK3s(ctx context.Context) error {
 		clusterToken,
 	}
 
+	// A rootless engine runs the container in a user namespace where /dev/kmsg
+	// can't be opened, without this feature gate the kubelet fails to start with
+	// "failed to create kubelet: open /dev/kmsg: operation not permitted"
+	if p.client.EngineInfo().Rootless {
+		args = append(args, "--kubelet-arg=feature-gates=KubeletInUserNamespace=true")
+	}
+
 	// expose the API server and Connector ports
 	cc.Ports = []ctypes.Port{
 		{
@@ -970,7 +977,7 @@ spec:
       containers:
       - name: connector
         imagePullPolicy: IfNotPresent
-        image: ghcr.io/jumppad-labs/connector:v0.4.0
+        image: ghcr.io/jumppad-labs/connector:v0.5.0
         ports:
           - name: grpc
             containerPort: 60000

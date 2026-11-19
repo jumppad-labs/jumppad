@@ -1,0 +1,22 @@
+name: jumppad
+command: spektacular
+agent: claude
+spec_trigger_threshold: moderate
+debug:
+    enabled: false
+spec:
+    provider: file
+    id_method: timestamp
+    config:
+        directory: .spektacular/specs
+plan:
+    provider: file
+    config:
+        directory: .spektacular/plans
+changelog:
+    provider: file
+    config:
+        directory: .spektacular/changelog
+repos:
+    - name: jumppad
+      location: .
